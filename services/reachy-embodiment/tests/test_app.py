@@ -6,7 +6,10 @@ from shared.models.embodiment import Behaviour, EmbodimentState
 
 
 def make_client() -> TestClient:
-    return TestClient(create_app(SimulatedRobotBackend()))
+    # run_presence_loop=False: these tests assert exact state after specific
+    # actions, which would race against the background idle-animation thread
+    # (see test_presence.py and test_app_presence_loop.py for that behaviour).
+    return TestClient(create_app(SimulatedRobotBackend(), run_presence_loop=False))
 
 
 def test_health() -> None:
@@ -74,3 +77,18 @@ def test_post_behaviour_with_correlation_id_and_parameters() -> None:
     )
     assert resp.status_code == 200
     assert resp.json()["last_behaviour"] == Behaviour.GREETING.value
+
+
+def test_heartbeat_endpoint_updates_last_heartbeat_at() -> None:
+    client = make_client()
+    assert client.get("/state").json()["last_heartbeat_at"] is None
+
+    resp = client.post("/heartbeat")
+    assert resp.status_code == 200
+    assert resp.json()["last_heartbeat_at"] is not None
+
+
+def test_behaviour_command_counts_as_heartbeat() -> None:
+    client = make_client()
+    resp = client.post("/behaviour/listening")
+    assert resp.json()["last_heartbeat_at"] is not None

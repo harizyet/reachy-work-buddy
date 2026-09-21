@@ -12,13 +12,14 @@ stays expressive even when the homelab is unreachable.
 
 ## Status
 
-Phase 0 (architecture freeze), Phase 1 (Jarvis reference baseline, documented
-via static source analysis — see [docs/jarvis-baseline.md](docs/jarvis-baseline.md)),
-and Phase 2 (`reachy-embodiment`'s semantic behaviour HTTP API, running
-against a simulated backend — see [services/reachy-embodiment](services/reachy-embodiment/))
-are done. See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
-phase-by-phase roadmap. Next up: Phase 3, the offline/local presence and
-fallback state machine.
+Phase 0 (architecture freeze), Phase 1 (Jarvis reference baseline — see
+[docs/jarvis-baseline.md](docs/jarvis-baseline.md)), Phase 2 (`reachy-embodiment`'s
+semantic behaviour HTTP API), and Phase 3 (its local presence loop and
+offline/fallback state machine) are done — see
+[services/reachy-embodiment](services/reachy-embodiment/). See
+[docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the phase-by-phase
+roadmap. Next up: Phase 4, the homelab control plane (`companion-core` +
+`reachy-hub` + Postgres via Docker Compose).
 
 ## Layout
 
