@@ -6,15 +6,17 @@ stays expressive even when the homelab is unreachable.
 
 - [docs/plan.md](docs/plan.md) — full technical plan, roadmap, release targets.
 - [docs/adr/](docs/adr/) — binding architecture decisions.
+- [docs/jarvis-baseline.md](docs/jarvis-baseline.md) — Phase 1 reference baseline from the upstream Jarvis project.
 - [shared/models/](shared/models/) — cross-service data contracts (`AgentSession`, `AgentResponse`, `MemoryRecord`, `EmbodimentCommand`).
 - [shared/protocols/](shared/protocols/) — HTTP route contracts shared between services.
 
 ## Status
 
-Phase 0 (architecture freeze) only: repo scaffold, ADRs, and shared schemas.
-No services are implemented yet — see [docs/plan.md §6](docs/plan.md#6-implementation-roadmap)
-for the phase-by-phase roadmap and [docs/plan.md §12](docs/plan.md#12-immediate-next-actions)
-for what comes next (Phase 1: Jarvis baseline; Phase 2: `reachy-embodiment`).
+Phase 0 (architecture freeze) and Phase 1 (Jarvis reference baseline, documented
+via static source analysis — see [docs/jarvis-baseline.md](docs/jarvis-baseline.md))
+are done. No services are implemented yet — see
+[docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the phase-by-phase
+roadmap. Next up: Phase 2, `reachy-embodiment`'s HTTP behaviour API skeleton.
 
 ## Layout
 
