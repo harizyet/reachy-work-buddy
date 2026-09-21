@@ -25,6 +25,17 @@ Telegram message resolves to `telegram_default_user_id`, matching this
 project's V0.1 scope (a personal assistant, not multi-tenant); see
 telegram_chat_registry.py.
 
+Phase 8: modular speech stack per docs/plan.md's Phase 8 row and §8's
+deployment table ("STT | Homelab initially", "TTS | Cloud initially...
+pluggable"). POST /voice/turn accepts a WAV recording, transcribes it
+(stt.py, faster-whisper), runs it through the exact same
+handle_inbound_message path every other channel uses (channel=reachy), and
+synthesizes the reply (tts.py) back to WAV. No cloud TTS key is available,
+so the concrete provider is a real local engine (espeak-ng) behind the same
+TextToSpeech protocol a cloud provider would implement later — see tts.py.
+STT/TTS providers are constructed lazily on first use, not at app startup,
+so services that never touch voice pay no model-loading cost.
+
 WebRTC, web UI, and auth (reachy-hub's full ADR 0001 ownership) are later
 phases (15) — not implemented yet.
 
@@ -44,7 +55,8 @@ from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import Response
 from pydantic import BaseModel
 
 from reachy_hub.companion_core_client import CompanionCoreClient
@@ -55,8 +67,10 @@ from reachy_hub.postgres_telegram_chat_registry import PostgresTelegramChatRegis
 from reachy_hub.response_policy import resolve_delivery_channel
 from reachy_hub.robot_registry import Robot, RobotRegistry
 from reachy_hub.session_store import SessionStore
+from reachy_hub.stt import FasterWhisperSTT, SpeechToText
 from reachy_hub.telegram_chat_registry import TelegramChatRegistry
 from reachy_hub.telegram_client import TelegramClient
+from reachy_hub.tts import EspeakTTS, TextToSpeech
 from shared.models.session import AgentSession, Channel, InteractionMode
 
 log = logging.getLogger(__name__)
@@ -100,12 +114,37 @@ def create_app(
     telegram_chat_registry: TelegramChatRegistry | None = None,
     telegram_default_user_id: str | None = None,
     run_telegram_poll_task: bool = True,
+    stt: SpeechToText | None = None,
+    tts: TextToSpeech | None = None,
+    stt_factory: Callable[[], SpeechToText] | None = None,
+    tts_factory: Callable[[], TextToSpeech] | None = None,
 ) -> FastAPI:
     client_factory = client_factory or (lambda base_url: EmbodimentClient(base_url))
     clients: dict[str, EmbodimentClient] = {}
     companion_core_client = companion_core_client or CompanionCoreClient(
         companion_core_base_url or os.environ.get("COMPANION_CORE_URL", "http://companion-core:8000")
     )
+
+    # STT/TTS are constructed lazily, on first use — loading a Whisper
+    # model is real work (seconds, plus a one-time download) that every
+    # test/instance shouldn't pay for just to import this module.
+    stt_factory = stt_factory or FasterWhisperSTT
+    tts_factory = tts_factory or EspeakTTS
+    voice_providers: dict[str, object] = {}
+    if stt is not None:
+        voice_providers["stt"] = stt
+    if tts is not None:
+        voice_providers["tts"] = tts
+
+    def get_stt() -> SpeechToText:
+        if "stt" not in voice_providers:
+            voice_providers["stt"] = stt_factory()
+        return voice_providers["stt"]  # type: ignore[return-value]
+
+    def get_tts() -> TextToSpeech:
+        if "tts" not in voice_providers:
+            voice_providers["tts"] = tts_factory()
+        return voice_providers["tts"]  # type: ignore[return-value]
 
     # Telegram is optional: no token (env or explicit) means no client, no
     # polling, and no Postgres connection for the chat registry either —
@@ -331,5 +370,34 @@ def create_app(
     @app.post("/messages")
     async def post_message(message: InboundMessage) -> MessageResponse:
         return await handle_inbound_message(message)
+
+    @app.post("/voice/turn")
+    async def voice_turn(user_id: str = Form(...), audio: UploadFile = File(...)) -> Response:  # noqa: B008
+        wav_bytes = await audio.read()
+
+        # faster-whisper and the espeak-ng subprocess are both blocking/
+        # CPU-bound; running them inline would stall the event loop for
+        # every other request while a transcription/synthesis is in flight.
+        transcript = await asyncio.to_thread(get_stt().transcribe, wav_bytes)
+        if not transcript:
+            raise HTTPException(status_code=422, detail="no speech detected in audio")
+
+        response = await handle_inbound_message(
+            InboundMessage(user_id=user_id, channel=Channel.REACHY, text=transcript)
+        )
+        reply_wav = await asyncio.to_thread(get_tts().synthesize, response.reply)
+
+        # Headers are the debugging/observability path (no client UI exists
+        # yet to consume these) — ASCII-encoded defensively since HTTP
+        # headers aren't safe for arbitrary text; this is a real limitation
+        # for non-ASCII replies, not something Phase 8 needs to solve.
+        return Response(
+            content=reply_wav,
+            media_type="audio/wav",
+            headers={
+                "X-Transcript": transcript.encode("ascii", errors="backslashreplace").decode("ascii"),
+                "X-Reply-Text": response.reply.encode("ascii", errors="backslashreplace").decode("ascii"),
+            },
+        )
 
     return app

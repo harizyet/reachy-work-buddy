@@ -17,10 +17,31 @@ dev = [
 [tool.uv.workspace]
 members = ["services/reachy-embodiment", "services/reachy-hub", "services/companion-core"]
 
+# CPU-only torch: this machine (and the Reachy Mini) has no GPU, and the
+# default PyPI torch/torchaudio wheels pull several GB of CUDA/cuDNN
+# packages nothing here uses (reachy-embodiment's silero-vad dependency,
+# Phase 8, is the only thing that needs torch at all). Workspace-level
+# [tool.uv.sources]/[[tool.uv.index]] must live in the *root* pyproject.toml
+# — the same keys in a member's pyproject.toml are silently ignored for
+# index routing, which is what caused the first Phase 8 install to pull the
+# full CUDA stack anyway despite being declared in
+# services/reachy-embodiment/pyproject.toml.
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+torchaudio = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
 [tool.pytest.ini_options]
 # Each service has its own tests/test_app.py; default (prepend) import mode
 # would collide across services on the shared "tests" package name.
 addopts = "--import-mode=importlib"
+markers = [
+    "slow: loads a real ML model (Whisper, Silero VAD) — real work, not mocked, but too slow for the default fast loop.",
+]
 
 [build-system]
 requires = ["hatchling"]

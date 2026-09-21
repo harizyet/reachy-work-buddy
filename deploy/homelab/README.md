@@ -16,12 +16,16 @@ than needing a separate cache; nothing else has made a concrete case for
 Redis yet.
 
 Verified with real `docker compose up --build` runs against this exact file
-(Docker Compose v2, Postgres 16, Caddy 2): all five containers start; the
-robot registry and `AgentSession` state both survive a `reachy-hub`
-container restart (Postgres persistence); requests routed through Caddy
-reach reachy-embodiment/companion-core and change their reported state —
-end to end, through the actual reverse proxy, not just localhost
-port-forwarding; and, separately (not through this specific compose stack,
+(Docker Compose v2, Postgres 16, Caddy 2): all five containers start
+(`reachy-embodiment` now builds with `torch`/`silero-vad`, `reachy-hub`
+with `faster-whisper` and `espeak-ng`); the robot registry and
+`AgentSession` state both survive a `reachy-hub` container restart
+(Postgres persistence); requests routed through Caddy reach
+reachy-embodiment/companion-core and change their reported state — end to
+end, through the actual reverse proxy, not just localhost port-forwarding;
+a `POST /hub/voice/turn` request with a real synthesized WAV question,
+routed through Caddy, produced a real transcribed/routed/synthesized WAV
+reply (Phase 8); and, separately (not through this specific compose stack,
 but the same services run as plain processes), a real Telegram bot and a
 real Telegram account confirmed Phase 7's session continuity live.
 
@@ -87,6 +91,20 @@ Telegram and `curl http://localhost:8080/hub/sessions/<your user_id>` shows
 `active_channel: "telegram"` with the same `session_id` as any prior
 Reachy-channel message for that user — verified against a real bot and a
 real Telegram account, not just curl.
+
+Voice (Phase 8) — a real conversation turn over synthesized audio, no
+Telegram/text channel involved:
+
+```
+espeak-ng -v en-us --stdout "what is on my calendar today" > question.wav
+curl -X POST http://localhost:8080/hub/voice/turn \
+  -F "user_id=hariz" \
+  -F "audio=@question.wav;type=audio/wav" \
+  -D - -o reply.wav
+# -> X-Transcript / X-Reply-Text headers show what was heard and said;
+#    reply.wav is real synthesized speech — play it or re-transcribe it
+#    with the same STT provider to confirm.
+```
 
 No robot is auto-registered — `POST /hub/robots` above is a manual step.
 Automatic registration (e.g. reachy-embodiment announcing itself to

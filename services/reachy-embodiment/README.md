@@ -5,7 +5,7 @@ fallback, safety/watchdog.
 
 Must not own: email/calendar/RAG, long-term work memory (see [docs/adr/0001](../../docs/adr/0001-service-boundaries.md)).
 
-## Status (Phase 3)
+## Status (Phase 8)
 
 Implements the `GET /health`, `GET /state`, `GET /behaviours`,
 `POST /behaviour/{name}`, `POST /heartbeat` slice of the API defined in
@@ -15,7 +15,20 @@ Implements the `GET /health`, `GET /state`, `GET /behaviours`,
 `SimulatedRobotBackend` (no hardware required — see
 [robot.py](src/reachy_embodiment/robot.py)). `/gaze`, `/pose`, and
 `/audio/play` are part of the ADR 0003 contract but not implemented yet —
-they land with real hardware and the audio pipeline (Phase 8).
+they land with real hardware.
+
+**Speech (Phase 8)**: [audio/vad.py](src/reachy_embodiment/audio/vad.py) is
+a real Silero VAD wrapper adapted from the Jarvis baseline (fixed 512-sample
+chunks at 16kHz — a Silero model requirement, not a choice). It's not wired
+into a live audio stream: there's no physical Reachy microphone in this
+project's dev/test environment, and the presence loop doesn't have a
+`vad_energy` signal input surface yet either. It's implemented and tested
+against real synthesized speech now (see `tests/test_vad.py`) so that
+wiring, whenever real hardware/streaming exists, is plumbing, not new
+detection logic — same treatment as `/gaze`/`/pose`/`/audio/play` above.
+STT and TTS live in `reachy-hub`, not here — see
+[docs/plan.md §8](../../docs/plan.md) ("STT | Homelab initially") and
+`services/reachy-hub/README.md`.
 
 A real `RobotBackend` wrapping the `reachy_mini` SDK (the way Jarvis's
 `RobotController` does — see [docs/jarvis-baseline.md](../../docs/jarvis-baseline.md))
@@ -62,4 +75,14 @@ uv run --group dev pytest services/reachy-embodiment/tests
 (including one real-background-thread test proving continuous animation
 across a simulated disconnect). `tests/test_app_presence_loop.py` proves the
 same thing through the actual FastAPI app with its lifespan running, the way
-uvicorn would run it.
+uvicorn would run it. `tests/test_vad.py` feeds real synthesized speech
+(via `espeak-ng`, resampled to 16kHz) padded with real silence through the
+real Silero VAD model and checks the detected speech boundaries — not tones
+or noise, which wouldn't exercise what Silero is actually trained to
+detect. Marked `@pytest.mark.slow` (loads a real model) and skips cleanly
+without `espeak-ng` on `PATH`:
+
+```
+uv run --group dev pytest services/reachy-embodiment/tests -m "not slow"
+uv run --group dev pytest services/reachy-embodiment/tests -m slow
+```

@@ -102,6 +102,42 @@ chmod +x ~/.docker/cli-plugins/docker-compose
   re-running the suite if you see confusing collection errors —
   `find . -path ./.venv -prune -o -name __pycache__ -type d -print -exec rm -rf {} +`.
 
+## uv dependency conventions
+
+- Pinning a package to a non-default index via `[tool.uv.sources]` +
+  `[[tool.uv.index]]` only takes effect for **direct** dependencies of a
+  `pyproject.toml`. If the package (e.g. `torch`) is only pulled in
+  transitively (e.g. via `silero-vad`), the source override is silently
+  ignored and uv resolves it from the default index instead — no warning,
+  no error, it just quietly pulls the wrong build. Confirmed by isolated
+  reproduction while adding Phase 8's speech stack (see
+  `services/reachy-embodiment/pyproject.toml`'s comment on `torch`/
+  `torchaudio`): identical `[tool.uv.sources]` config resolved `torch` from
+  PyPI (pulling ~4GB of unwanted CUDA/cuDNN packages) when only
+  `silero-vad` was declared, and correctly from the CPU-only index once
+  `torch`/`torchaudio` were *also* declared as explicit direct dependencies
+  — even though nothing imports them directly. If you need a source
+  override on some other project's transitive dependency, declare that
+  dependency directly too, purely to anchor the override.
+- Workspace-level `[tool.uv.sources]` / `[[tool.uv.index]]` entries must
+  live in the **root** `pyproject.toml`, not a member's — the same keys
+  declared in `services/*/pyproject.toml` are silently ignored for index
+  routing (also confirmed by reproduction, same episode).
+- After changing `[tool.uv.sources]`/`[[tool.uv.index]]`, `uv sync` alone
+  may not pick it up if `uv.lock` already has a locked resolution for that
+  package — you likely need `uv lock --upgrade-package <name>` or, if that
+  still doesn't take (as happened here), delete `uv.lock` and run
+  `uv lock` fresh. Always confirm by grepping the regenerated `uv.lock` for
+  `source = {...}` on the package in question before trusting `uv sync`'s
+  output — don't just trust that reconfiguring the TOML worked.
+- Before adding a heavy dependency (torch, CUDA-adjacent packages, large
+  models), check whether it's actually pulling GPU wheels: `python -c
+  "import torch; print(torch.__version__)"` — a version suffixed `+cu128`
+  (or similar) means CUDA wheels were pulled onto a machine (or Reachy
+  Mini) that very likely has no GPU. Check `du -sh .venv` before and after
+  too; several GB is a strong signal something pulled unwanted CUDA
+  packages.
+
 ## Docker conventions
 
 - Each service's `Dockerfile` builds with `uv sync --frozen --no-dev --package <name>`

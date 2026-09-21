@@ -1,5 +1,12 @@
 FROM python:3.13-slim
 
+# espeak-ng: the local TTS provider (Phase 8, tts.py) — no cloud TTS key is
+# available, so this is the real, working default. A cloud provider
+# (ElevenLabs etc.) implementing the same TextToSpeech protocol removes
+# this system dependency when one is added.
+RUN apt-get update && apt-get install -y --no-install-recommends espeak-ng \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN pip install --no-cache-dir uv
 
 WORKDIR /app

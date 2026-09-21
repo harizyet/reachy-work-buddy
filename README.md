@@ -123,18 +123,34 @@ Phases 0-6 are done:
   message, produced the identical `session_id`/`conversation_id` with
   `active_channel` switched to `telegram` — the exit criterion, with no
   simulation involved on the Telegram side. Text only; voice notes wait for
-  Phase 8's speech stack.
+  a follow-up now that Phase 8 has built real STT.
+- Phase 8: modular speech stack. `reachy-hub` gained `POST /voice/turn`:
+  real local STT (`faster-whisper`) transcribes a WAV, the text flows
+  through the same `handle_inbound_message` path every channel uses, and
+  real local TTS (`espeak-ng` — no cloud key available, same
+  graceful-degradation pattern as Telegram) synthesizes the reply back to
+  WAV. `reachy-embodiment` gained a real Silero VAD wrapper for the
+  separate, latency-critical concern of live barge-in detection (not wired
+  to hardware yet — no physical Reachy in this environment). Verified live
+  at three levels: real STT/TTS round-tripping through real synthesized
+  speech in automated tests, a running process hit with `curl` (including
+  re-transcribing the WAV reply to confirm it's genuinely intelligible
+  speech), and the actual Docker images on a real network through the
+  deployed Caddy proxy. Getting a CPU-only `torch` build (rather than
+  silently pulling ~4GB of unused CUDA packages) took real `uv`
+  configuration fixes — see `AGENTS.md`.
 
 See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
-phase-by-phase roadmap. Next up: Phase 8, a modular speech stack (Silero
-VAD, faster-whisper, streaming TTS) behind provider interfaces.
+phase-by-phase roadmap. Next up: Phase 9, the privacy/response router
+(content-based routing — privacy, urgency — extending Phase 6's
+mode-based policy).
 
 ## Layout
 
 ```
 services/companion-core/     reasoning/tools/memory (Phase 5: conversation endpoint, placeholder reasoning)
-services/reachy-hub/         robot registry, sessions, mode-based routing, Telegram (Phases 4-7)
-services/reachy-embodiment/  semantic behaviour API + presence loop (Phases 2-3)
+services/reachy-hub/         robot registry, sessions, routing, Telegram, voice/STT/TTS (Phases 4-8)
+services/reachy-embodiment/  semantic behaviour API + presence loop + VAD (Phases 2-3, 8)
 clients/web-pwa/             web/PWA client (unimplemented)
 shared/models/                Pydantic data contracts shared across services
 shared/protocols/             HTTP route constants shared across services

@@ -5,7 +5,7 @@ routing, authentication, robot registry.
 
 Must not own: reasoning policy internals, raw motor control (see [docs/adr/0001](../../docs/adr/0001-service-boundaries.md)).
 
-## Status (Phase 7)
+## Status (Phase 8)
 
 **Robot registry / proxy (Phase 4)**: `POST /robots`, `GET /robots`,
 `GET /robots/{robot_id}/state`, `GET /robots/{robot_id}/behaviours`,
@@ -73,9 +73,13 @@ here.
   bot (bots can't originate a chat) and persists it — separate from
   `AgentSession` because it's channel-specific delivery plumbing, not part
   of ADR 0002's channel-agnostic session.
-- Text only. Voice notes are silently skipped (not stubbed) — Phase 8 wires
-  up STT behind a provider interface; there's nothing to transcribe with
-  yet.
+- Text only. Voice notes are silently skipped (not stubbed) — the Telegram
+  poll loop doesn't call into `stt.py` yet, even though Phase 8 built real
+  STT. Wiring `message.voice` through `stt.py` is a natural, small follow-up
+  but wasn't part of Phase 8's own exit criterion (which is about the Reachy
+  voice channel, not Telegram voice notes) — noted here rather than left
+  implicit, since it's now genuinely close to done rather than blocked on
+  missing infrastructure.
 - The poll loop **always replies on the channel the message arrived on**,
   regardless of `delivery_channel` — see ADR 0006's Consequences section
   for why that gate would otherwise silently drop the first reply to any
@@ -87,6 +91,42 @@ here.
   and a session GET showing the identical `session_id`/`conversation_id`
   as a preceding "start on Reachy" call, with `active_channel` switched to
   `telegram` — the Phase 7 exit criterion end to end.
+
+**Speech stack (Phase 8)**: `POST /voice/turn` accepts a WAV recording
+(multipart `audio` field + `user_id`), transcribes it (`stt.py`,
+`FasterWhisperSTT` — local, no API key), routes the text through the exact
+same `handle_inbound_message` path every other channel uses (channel
+`reachy`), and synthesizes the reply back to WAV (`tts.py`, `EspeakTTS` — a
+real local engine, since no cloud TTS key is available; same
+graceful-degradation-without-credentials pattern as Telegram). Per
+docs/plan.md §8's deployment table, STT/TTS run here in the homelab, not on
+reachy-embodiment — unlike Jarvis's on-device design.
+
+- Both providers are constructed **lazily**, on first use, not at app
+  startup — loading a Whisper model is real work every test/instance
+  shouldn't pay for just by importing this module.
+- `reachy-embodiment` gets its own real Silero VAD wrapper
+  (`audio/vad.py`, adapted from the Jarvis baseline) for the separate,
+  latency-critical concern of live barge-in detection — not wired to a
+  live audio stream yet (no physical Reachy microphone in this project's
+  dev/test environment), same honest scoping already used for `/gaze`,
+  `/pose`, `/audio/play`.
+- A real design bug was found and fixed while building this: the Telegram
+  poll loop (Phase 7) originally only replied when `delivery_channel`
+  matched the inbound channel — which would silently drop the very first
+  reply to any fresh session, since a new session defaults to Desk mode
+  (`delivery_channel` always `reachy`). See ADR 0006's Consequences section.
+- Getting the CPU-only `torch` build for `silero-vad` right (rather than
+  silently pulling ~4GB of unused CUDA packages) took two real fixes to
+  `uv` configuration — see `AGENTS.md`'s "uv dependency conventions" for
+  what actually worked and why the obvious approach didn't.
+- **Verified live** at three levels: automated tests with real (not
+  mocked) STT/TTS round-tripping through real synthesized speech; a real
+  running process hit with `curl` and a synthesized WAV question,
+  including re-transcribing the WAV reply to confirm it's genuinely
+  intelligible synthesized speech, not silence or noise; and the actual
+  `reachy-hub`/`companion-core` Docker images, on a real Docker network and
+  through the deployed Caddy reverse proxy, doing the same round trip.
 
 WebRTC, web UI, and auth (reachy-hub's full ADR 0001 ownership) are later
 phases (15) — not implemented yet.
@@ -102,6 +142,18 @@ TELEGRAM_BOT_TOKEN=123456:your-token \
 ```
 
 `TELEGRAM_BOT_TOKEN` is entirely optional — omit it to run without Telegram.
+`espeak-ng` must be on `PATH` for `/voice/turn` to work outside Docker (the
+`Dockerfile` installs it via `apt`); `sudo apt install espeak-ng` for local
+dev, or extract it without root the way this project's own dev environment
+did (see `AGENTS.md`).
+
+```
+curl -X POST http://localhost:8001/voice/turn \
+  -F "user_id=hariz" \
+  -F "audio=@question.wav;type=audio/wav" \
+  -o reply.wav
+# -D - to see the X-Transcript / X-Reply-Text headers too.
+```
 
 Or via the full stack — see [deploy/homelab](../../deploy/homelab/).
 
@@ -119,9 +171,20 @@ is the direct proof of Phase 5's exit criterion;
 `test_mode_change_alone_changes_delivery_channel_without_touching_the_message_text`
 is Phase 6's; `test_telegram.py::test_start_on_reachy_continue_in_telegram`
 is Phase 7's (against `httpx.MockTransport` standing in for the real
-Telegram Bot API). `test_response_policy.py` unit-tests the routing
-function in isolation, including asserting its parameter list has no
-content field. `PostgresRobotRegistry`, `PostgresSessionStore`, and the
-real Telegram Bot API itself are exercised live (real Postgres, a real bot,
-a real Telegram account — see deploy/homelab/README.md), not by the unit
-test suite.
+Telegram Bot API); `test_voice.py`'s tests are Phase 8's, chaining a real
+`espeak-ng` process for TTS and a real `faster-whisper` model for STT
+(`tiny.en`, for speed) through the same `/voice/turn` -> session ->
+companion-core path a real Reachy would use.
+`test_response_policy.py` unit-tests the routing function in isolation,
+including asserting its parameter list has no content field.
+`PostgresRobotRegistry`, `PostgresSessionStore`, and the real Telegram Bot
+API itself are exercised live (real Postgres, a real bot, a real Telegram
+account — see deploy/homelab/README.md), not by the unit test suite.
+
+Tests touching real models/subprocesses are marked `@pytest.mark.slow` and
+skip cleanly if `espeak-ng` isn't on `PATH`:
+
+```
+uv run --group dev pytest services/reachy-hub/tests -m "not slow"   # fast loop
+uv run --group dev pytest services/reachy-hub/tests -m slow         # real STT/TTS
+```
