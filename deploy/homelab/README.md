@@ -18,10 +18,12 @@ Redis yet.
 Verified with real `docker compose up --build` runs against this exact file
 (Docker Compose v2, Postgres 16, Caddy 2): all five containers start; the
 robot registry and `AgentSession` state both survive a `reachy-hub`
-container restart (Postgres persistence); and requests routed through Caddy
+container restart (Postgres persistence); requests routed through Caddy
 reach reachy-embodiment/companion-core and change their reported state —
 end to end, through the actual reverse proxy, not just localhost
-port-forwarding.
+port-forwarding; and, separately (not through this specific compose stack,
+but the same services run as plain processes), a real Telegram bot and a
+real Telegram account confirmed Phase 7's session continuity live.
 
 ## Run it
 
@@ -76,6 +78,15 @@ curl -X POST http://localhost:8080/hub/messages \
   -d '{"user_id": "hariz", "channel": "telegram", "text": "whats on my calendar"}'
 # -> delivery_channel: "phone" — same text, mode alone changed the routing
 ```
+
+Telegram (Phase 7) — optional, set `TELEGRAM_BOT_TOKEN` (and
+`TELEGRAM_DEFAULT_USER_ID`, matching the `user_id` used above) in `.env`
+before `docker compose up` to enable it. Unset, `reachy-hub` runs fine
+without any Telegram code path active. With it set: message your bot on
+Telegram and `curl http://localhost:8080/hub/sessions/<your user_id>` shows
+`active_channel: "telegram"` with the same `session_id` as any prior
+Reachy-channel message for that user — verified against a real bot and a
+real Telegram account, not just curl.
 
 No robot is auto-registered — `POST /hub/robots` above is a manual step.
 Automatic registration (e.g. reachy-embodiment announcing itself to

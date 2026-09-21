@@ -115,16 +115,25 @@ Phases 0-6 are done:
   `reachy`, then `phone`, then `web`, purely from `PATCH
   /sessions/{user_id}/mode` calls in between, with `session_id` unchanged
   throughout and the mode persisting across a `reachy-hub` restart.
+- Phase 7: Telegram as the first external channel. A real long-polling bot
+  (`reachy_hub/telegram_client.py`) feeds inbound messages through the same
+  `handle_inbound_message` path `POST /messages` uses. Verified live with a
+  real bot (`@reachy_buddy_bot`) and a real Telegram account: a session
+  started via a simulated Reachy message, continued with a real Telegram
+  message, produced the identical `session_id`/`conversation_id` with
+  `active_channel` switched to `telegram` — the exit criterion, with no
+  simulation involved on the Telegram side. Text only; voice notes wait for
+  Phase 8's speech stack.
 
 See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
-phase-by-phase roadmap. Next up: Phase 7, Telegram as the first external
-channel.
+phase-by-phase roadmap. Next up: Phase 8, a modular speech stack (Silero
+VAD, faster-whisper, streaming TTS) behind provider interfaces.
 
 ## Layout
 
 ```
 services/companion-core/     reasoning/tools/memory (Phase 5: conversation endpoint, placeholder reasoning)
-services/reachy-hub/         robot registry, sessions, mode-based routing (Phases 4-6)
+services/reachy-hub/         robot registry, sessions, mode-based routing, Telegram (Phases 4-7)
 services/reachy-embodiment/  semantic behaviour API + presence loop (Phases 2-3)
 clients/web-pwa/             web/PWA client (unimplemented)
 shared/models/                Pydantic data contracts shared across services

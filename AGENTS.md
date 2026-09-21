@@ -129,12 +129,29 @@ chmod +x ~/.docker/cli-plugins/docker-compose
 Tests passing is necessary but was repeatedly not sufficient during this
 project's early phases — several real bugs (a body/path validation
 mismatch, a Dockerfile that phones home on every boot, a heartbeat timing
-race) only surfaced when actually running live processes, real Docker
-builds, or a real `docker compose up` against real Postgres. Before
-reporting a phase or feature done, prefer demonstrating it end-to-end (curl
-against a running server, an actual container build/run, an actual compose
-stack) over trusting the test suite alone — and when the two disagree, the
-live run is the one to believe.
+race, a routing-policy gate that would have silently dropped a channel
+integration's very first reply) only surfaced when actually running live
+processes, real Docker builds, a real `docker compose up` against real
+Postgres, or (Phase 7) a real external API with a real account on the other
+end. Before reporting a phase or feature done, prefer demonstrating it
+end-to-end (curl against a running server, an actual container build/run,
+an actual compose stack, a real third-party API call) over trusting the
+test suite alone — and when the two disagree, the live run is the one to
+believe.
+
+### Secrets needed for a live check
+
+When a live verification needs a credential (an API token, etc.), don't ask
+the user to paste it into chat — ask them to write it to a local file
+first. This repo's convention: `deploy/homelab/.env.local` (or any
+`.env.*` file — the whole pattern is gitignored, unlike the bare `.env`
+entry alone, which does *not* cover `.env.local`; check `.gitignore`
+actually matches before trusting it, the way this repo's own `.env.local`
+entry had to be added when Phase 7 needed a Telegram bot token). Source it
+into a single Bash call's environment rather than printing it:
+`set -a && source deploy/homelab/.env.local && set +a`. Shell state doesn't
+persist between Bash tool calls, so this needs redoing in whichever command
+actually uses the token.
 
 ## Style
 

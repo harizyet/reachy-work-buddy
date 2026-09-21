@@ -52,11 +52,19 @@ parameter to leak through).
 ## Consequences
 
 - `POST /messages` computes `delivery_channel` after resolving/updating the
-  session, independent of companion-core's reply. Today nothing actually
-  *acts* on `delivery_channel` (no Telegram bot, no phone push, no
-  WebRTC — those are Phases 7/15); it's returned in `MessageResponse` so the
-  policy is observable and testable ahead of having real delivery
-  mechanisms to plug into it.
+  session, independent of companion-core's reply. It's returned in
+  `MessageResponse` so the policy is observable and testable.
+- **`delivery_channel` does not gate a direct reply to a direct message.**
+  A channel integration that receives an inbound message (Phase 7's
+  Telegram bot; Phase 15's WebRTC phone call) always replies on that same
+  channel — ordinary chat-bot UX, and the only way a fresh session (which
+  defaults to Desk mode, whose `delivery_channel` is always `reachy`) can
+  ever get its first Telegram reply at all. `delivery_channel` is for
+  content that doesn't already have an originating channel — proactive
+  notifications, alerts, briefings (Phases 17-18) — where the policy is the
+  *only* signal for where to push it. This split wasn't obvious until Phase
+  7 actually built a channel integration against it; earlier phases only
+  had simulated channels and couldn't surface the gap.
 - Phase 9 extends `response_policy.py` to take `AgentResponse` as a second
   input and override/refine the mode-driven default (sensitive content,
   urgent alerts, active-meeting suppression per docs §4's routing table).

@@ -45,6 +45,12 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-reachy}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-reachy_hub}
       COMPANION_CORE_URL: http://companion-core:8000
+      # Optional (Phase 7): unset means no Telegram bot, no polling — the
+      # rest of the stack works fine without it. Set TELEGRAM_BOT_TOKEN in
+      # .env to enable; TELEGRAM_DEFAULT_USER_ID must match the user_id
+      # used on other channels for cross-channel session continuity to work.
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_DEFAULT_USER_ID: ${TELEGRAM_DEFAULT_USER_ID:-default-user}
     depends_on:
       postgres:
         condition: service_healthy
