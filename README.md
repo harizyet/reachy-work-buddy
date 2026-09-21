@@ -13,7 +13,7 @@ stays expressive even when the homelab is unreachable.
 
 ## Status
 
-Phases 0-4 are done:
+Phases 0-5 are done:
 
 - Phase 0: architecture freeze (ADRs, shared schemas).
 - Phase 1: Jarvis reference baseline — [docs/jarvis-baseline.md](docs/jarvis-baseline.md).
@@ -25,16 +25,24 @@ Phases 0-4 are done:
   registry and proxies behaviour/state calls through to reachy-embodiment;
   `companion-core` reaches robots only through reachy-hub, never directly
   (ADR 0001, ADR 0003).
+- Phase 5: unified cross-channel `AgentSession` — `reachy-hub` owns a
+  Postgres-backed session per user (ADR 0002); `POST /messages` normalizes
+  an inbound `(user_id, channel, text)` and forwards a channel-agnostic turn
+  to companion-core's `POST /conversation`. Verified live, including
+  through the deployed Caddy proxy: two independent clients on different
+  channels (Reachy, Telegram) for the same user share one `session_id`/
+  `conversation_id`, with `active_channel` switching and companion-core's
+  own turn counter advancing across the switch.
 
 See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
-phase-by-phase roadmap. Next up: Phase 5, unified cross-channel
-`AgentSession`s.
+phase-by-phase roadmap. Next up: Phase 6, Desk/Office/Silent/Remote
+operating modes as deterministic output routing.
 
 ## Layout
 
 ```
-services/companion-core/     reasoning/tools/memory (Phase 4: minimal debug-only chain)
-services/reachy-hub/         robot registry, proxy to reachy-embodiment (Phase 4)
+services/companion-core/     reasoning/tools/memory (Phase 5: conversation endpoint, placeholder reasoning)
+services/reachy-hub/         robot registry + sessions, proxy to reachy-embodiment (Phases 4-5)
 services/reachy-embodiment/  semantic behaviour API + presence loop (Phases 2-3)
 clients/web-pwa/             web/PWA client (unimplemented)
 shared/models/                Pydantic data contracts shared across services

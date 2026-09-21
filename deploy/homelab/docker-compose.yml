@@ -9,8 +9,9 @@
 # testing, not production topology.
 #
 # Redis is deliberately not included yet (docs/plan.md §8 lists it as
-# "optional"); nothing in the system needs it before session/cache state
-# (Phase 5+) makes a concrete case for it.
+# "optional"); AgentSession state (Phase 5) turned out to fit fine in
+# Postgres (see reachy_hub/postgres_session_store.py) rather than needing a
+# separate cache — nothing else has made a concrete case for Redis yet.
 
 services:
   postgres:
@@ -43,9 +44,15 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-reachy}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-reachy_hub}
+      COMPANION_CORE_URL: http://companion-core:8000
     depends_on:
       postgres:
         condition: service_healthy
+    # No depends_on companion-core here: companion-core depends_on
+    # reachy-hub already, and Compose doesn't allow a startup cycle. The
+    # reachy-hub -> companion-core call only happens per-request (POST
+    # /messages), not at reachy-hub startup, so this is fine — a request
+    # arriving before companion-core is ready just gets a 502.
     expose:
       - "8000"
 

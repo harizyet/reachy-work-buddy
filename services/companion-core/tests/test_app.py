@@ -15,6 +15,7 @@ from reachy_embodiment.robot import SimulatedRobotBackend
 from reachy_hub.app import create_app as create_hub_app
 from reachy_hub.embodiment_client import EmbodimentClient
 from reachy_hub.robot_registry import InMemoryRobotRegistry, Robot
+from reachy_hub.session_store import InMemorySessionStore
 
 
 def make_chain(*, registered_robots: Sequence[Robot] = ()) -> TestClient:
@@ -23,6 +24,7 @@ def make_chain(*, registered_robots: Sequence[Robot] = ()) -> TestClient:
     registry._robots = {robot.robot_id: robot for robot in registered_robots}
     hub_app = create_hub_app(
         registry=registry,
+        session_store=InMemorySessionStore(),
         client_factory=lambda base_url: EmbodimentClient(base_url, transport=httpx.ASGITransport(app=embodiment_app)),
         run_heartbeat_task=False,
     )
@@ -41,6 +43,35 @@ def test_debug_robot_state_returns_404_for_unregistered_robot() -> None:
     with make_chain() as client:
         resp = client.get("/debug/robots/desk-1/state")
         assert resp.status_code == 404
+
+
+def test_conversation_turn_replies_and_counts_turns() -> None:
+    with make_chain() as client:
+        resp = client.post(
+            "/conversation",
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "hello"},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["turn_count"] == 1
+        assert "hello" in body["reply"]
+
+        resp = client.post(
+            "/conversation",
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "telegram", "text": "and now?"},
+        )
+        assert resp.json()["turn_count"] == 2
+
+
+def test_conversation_turn_history_is_isolated_per_session() -> None:
+    with make_chain() as client:
+        client.post(
+            "/conversation", json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "hi"}
+        )
+        resp = client.post(
+            "/conversation", json={"session_id": "s2", "conversation_id": "c2", "channel": "reachy", "text": "hi"}
+        )
+        assert resp.json()["turn_count"] == 1  # a different session starts its own count
 
 
 def test_debug_trigger_behaviour_reaches_reachy_embodiment_through_the_hub() -> None:

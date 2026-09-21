@@ -10,16 +10,18 @@ smoke-tested locally with one `docker compose up`. In a real deployment
 reachy-embodiment runs on the Reachy Mini itself (see
 [deploy/reachy](../reachy/)), not in this homelab stack.
 
-Redis is not included — nothing in the system needs it yet (see
-docs/plan.md §8: listed as "optional").
+Redis is not included — `AgentSession` state (Phase 5) fit fine in Postgres
+(see `services/reachy-hub/src/reachy_hub/postgres_session_store.py`) rather
+than needing a separate cache; nothing else has made a concrete case for
+Redis yet.
 
-Verified with a real `docker compose up --build` run against this exact
-file (Docker Compose v2, Postgres 16, Caddy 2): all five containers start,
-the robot registry survives a `reachy-hub` container restart (Postgres
-persistence), and a request routed through Caddy
-(`POST /core/debug/robots/desk-1/behaviour/greeting`) reaches
-reachy-embodiment and changes its reported state — end to end, through the
-actual reverse proxy, not just localhost port-forwarding.
+Verified with real `docker compose up --build` runs against this exact file
+(Docker Compose v2, Postgres 16, Caddy 2): all five containers start; the
+robot registry and `AgentSession` state both survive a `reachy-hub`
+container restart (Postgres persistence); and requests routed through Caddy
+reach reachy-embodiment/companion-core and change their reported state —
+end to end, through the actual reverse proxy, not just localhost
+port-forwarding.
 
 ## Run it
 
@@ -40,6 +42,23 @@ curl http://localhost:8080/core/debug/robots/desk-1/state
 curl -X POST http://localhost:8080/core/debug/robots/desk-1/behaviour/greeting
 ```
 
+Sessions (Phase 5) — two separate `curl` calls standing in for two
+different channels/clients, same user, one shared conversation:
+
+```
+curl -X POST http://localhost:8080/hub/messages \
+  -H 'Content-Type: application/json' \
+  -d '{"user_id": "hariz", "channel": "reachy", "text": "whats on my calendar"}'
+
+curl -X POST http://localhost:8080/hub/messages \
+  -H 'Content-Type: application/json' \
+  -d '{"user_id": "hariz", "channel": "telegram", "text": "continue that"}'
+# -> same session_id/conversation_id as the first call, active_channel now
+#    "telegram", and companion-core's turn counter advanced to 2.
+
+curl http://localhost:8080/hub/sessions/hariz
+```
+
 No robot is auto-registered — `POST /hub/robots` above is a manual step.
 Automatic registration (e.g. reachy-embodiment announcing itself to
 reachy-hub on startup) isn't built yet; it's a natural fit for whichever
@@ -55,8 +74,8 @@ telepresence) territory.
 
 ## Known limitation
 
-The Postgres migration in `reachy_hub/postgres_registry.py` is a single
-`CREATE TABLE IF NOT EXISTS` run at connect time — fine for the one table
-Phase 4 needs, but not a real migration tool. Revisit once companion-core or
-reachy-hub need a second table (Phase 5's `AgentSession` is the likely
-trigger).
+The Postgres migrations in `reachy_hub/postgres_registry.py` and
+`postgres_session_store.py` are each a single `CREATE TABLE IF NOT EXISTS`
+run at connect time — fine for the two tables that exist today, but not a
+real migration tool. Revisit (e.g. adopt Alembic) once a schema actually
+needs to change under existing data, not just grow by one more table.

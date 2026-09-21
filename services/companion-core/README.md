@@ -5,18 +5,25 @@ proactive workflows.
 
 Must not own: direct robot joints, UI transport (see [docs/adr/0001](../../docs/adr/0001-service-boundaries.md)).
 
-## Status (Phase 4)
+## Status (Phase 5)
 
-Minimal service proving the Phase 4 exit criterion end to end: companion-core
--> reachy-hub -> reachy-embodiment. `hub_client.py` wraps reachy-hub's robot
-API; companion-core never talks to reachy-embodiment directly (ADR 0001,
-ADR 0003).
+**Phase 4**: `/debug/robots/{robot_id}/state` and
+`/debug/robots/{robot_id}/behaviour/{name}` — a stand-in for what will
+eventually be an agent tool call, proving companion-core -> reachy-hub ->
+reachy-embodiment end to end. Don't build on `/debug/*` as a stable API; it
+goes away once real tool-calling lands (Phase 10+).
 
-The `/debug/robots/{robot_id}/state` and
-`/debug/robots/{robot_id}/behaviour/{name}` routes are a stand-in for what
-will eventually be an agent tool call — real reasoning, tool-calling,
-memory, and RAG are Phases 10-14 and are not implemented yet. Don't build on
-`/debug/*` as a stable API; it goes away once real tool-calling lands.
+**Phase 5 (ADR 0002)**: `POST /conversation` is the real, stable contract
+reachy-hub calls per turn. companion-core receives only a `session_id`,
+`conversation_id`, a channel label, and text — never anything
+channel-specific beyond that opaque label. `conversation.py`'s
+`ConversationStore` is an in-memory per-session transcript, not real memory
+(Phase 12 replaces it with a `MemoryRecord`-backed store); its only job
+right now is proving companion-core is genuinely stateful and
+channel-agnostic. The reply text itself
+(`"(turn N via <channel>) heard: <text>"`) is placeholder reasoning — Phase
+10+ replaces the body of that handler with a real agent, not the request/
+response shape.
 
 ## Run it
 
@@ -35,5 +42,5 @@ uv run --group dev pytest services/companion-core/tests
 ```
 
 Tests chain companion-core through real (in-process) reachy-hub and
-reachy-embodiment apps via nested `httpx.ASGITransport` — the full Phase 4
-call chain, exercised with no mocks and no real network.
+reachy-embodiment apps via nested `httpx.ASGITransport` — no mocks, no real
+network.
