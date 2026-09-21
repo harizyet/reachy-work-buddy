@@ -14,13 +14,14 @@ import uuid
 from datetime import UTC, datetime
 from typing import Protocol
 
-from shared.models.session import AgentSession, Channel
+from shared.models.session import AgentSession, Channel, InteractionMode
 
 
 class SessionStore(Protocol):
     async def get_by_user(self, user_id: str) -> AgentSession | None: ...
     async def get_or_create(self, user_id: str, channel: Channel) -> AgentSession: ...
     async def touch_channel(self, session: AgentSession, channel: Channel) -> AgentSession: ...
+    async def set_mode(self, session: AgentSession, mode: InteractionMode) -> AgentSession: ...
 
 
 def _new_session(user_id: str, channel: Channel) -> AgentSession:
@@ -52,6 +53,12 @@ class InMemorySessionStore:
 
     async def touch_channel(self, session: AgentSession, channel: Channel) -> AgentSession:
         session.active_channel = channel
+        session.last_active_at = datetime.now(UTC)
+        self._by_user[session.user_id] = session
+        return session
+
+    async def set_mode(self, session: AgentSession, mode: InteractionMode) -> AgentSession:
+        session.interaction_mode = mode
         session.last_active_at = datetime.now(UTC)
         self._by_user[session.user_id] = session
         return session

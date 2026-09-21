@@ -204,3 +204,52 @@ def test_different_users_get_different_sessions() -> None:
     resp_1 = client.post("/messages", json={"user_id": "hariz", "channel": "reachy", "text": "hi"})
     resp_2 = client.post("/messages", json={"user_id": "someone-else", "channel": "reachy", "text": "hi"})
     assert resp_1.json()["session_id"] != resp_2.json()["session_id"]
+
+
+def test_new_session_defaults_to_desk_mode_and_routes_to_reachy() -> None:
+    client = make_hub_with_core_app(make_embodiment_app(), create_core_app())
+    resp = client.post("/messages", json={"user_id": "hariz", "channel": "reachy", "text": "hi"})
+    body = resp.json()
+    assert body["delivery_channel"] == "reachy"
+
+    session = client.get("/sessions/hariz").json()
+    assert session["interaction_mode"] == "desk"
+
+
+def test_set_mode_404_for_unknown_user() -> None:
+    client = make_hub_with_core_app(make_embodiment_app(), create_core_app())
+    resp = client.patch("/sessions/nobody/mode", json={"interaction_mode": "office"})
+    assert resp.status_code == 404
+
+
+def test_mode_change_alone_changes_delivery_channel_without_touching_the_message_text() -> None:
+    """Phase 6 exit criterion: mode changes output routing without prompt
+    changes. Same exact text sent twice on the same channel; only the
+    session's interaction_mode differs between the two calls — the resolved
+    delivery_channel must differ deterministically as a result."""
+    client = make_hub_with_core_app(make_embodiment_app(), create_core_app())
+    text = "what's on my calendar today"
+
+    resp_desk = client.post("/messages", json={"user_id": "hariz", "channel": "telegram", "text": text})
+    assert resp_desk.json()["delivery_channel"] == "reachy"  # Desk is the default mode
+
+    mode_resp = client.patch("/sessions/hariz/mode", json={"interaction_mode": "office"})
+    assert mode_resp.status_code == 200
+    assert mode_resp.json()["interaction_mode"] == "office"
+
+    resp_office = client.post("/messages", json={"user_id": "hariz", "channel": "telegram", "text": text})
+    assert resp_office.json()["delivery_channel"] == "phone"
+
+    # The text sent was byte-for-byte identical both times; only the reply's
+    # turn count (genuine conversation progression) differs, not the input.
+    assert "heard: what's on my calendar today" in resp_desk.json()["reply"]
+    assert "heard: what's on my calendar today" in resp_office.json()["reply"]
+
+
+def test_silent_mode_falls_back_to_web_when_active_channel_is_reachy() -> None:
+    client = make_hub_with_core_app(make_embodiment_app(), create_core_app())
+    client.post("/messages", json={"user_id": "hariz", "channel": "reachy", "text": "hi"})
+    client.patch("/sessions/hariz/mode", json={"interaction_mode": "silent"})
+
+    resp = client.post("/messages", json={"user_id": "hariz", "channel": "reachy", "text": "hi again"})
+    assert resp.json()["delivery_channel"] == "web"

@@ -9,8 +9,14 @@ inbound (user_id, channel, text) to a session and forwards a channel-agnostic
 turn to companion-core; GET /sessions/{user_id} exposes session state
 directly so channel continuity is observable, not just inferred from replies.
 
+Phase 6: Desk/Office/Silent/Remote as a deterministic I/O policy per
+docs/adr/0006-response-routing.md. PATCH /sessions/{user_id}/mode sets
+interaction_mode; POST /messages includes the resulting delivery_channel,
+computed by response_policy.resolve_delivery_channel from mode + active
+channel alone — never from what companion-core replied.
+
 Telegram, WebRTC, web UI, and auth (reachy-hub's full ADR 0001 ownership)
-are later phases (6-7, 15) — not implemented yet.
+are later phases (7, 15) — not implemented yet.
 
 Per ADR 0003 ("Sent by companion-core (via reachy-hub) to
 reachy-embodiment's POST /behaviour/{name}"), reachy-hub is the service that
@@ -34,9 +40,10 @@ from reachy_hub.companion_core_client import CompanionCoreClient
 from reachy_hub.embodiment_client import EmbodimentClient
 from reachy_hub.postgres_registry import PostgresRobotRegistry
 from reachy_hub.postgres_session_store import PostgresSessionStore
+from reachy_hub.response_policy import resolve_delivery_channel
 from reachy_hub.robot_registry import Robot, RobotRegistry
 from reachy_hub.session_store import SessionStore
-from shared.models.session import AgentSession, Channel
+from shared.models.session import AgentSession, Channel, InteractionMode
 
 
 class BehaviourRequest(BaseModel):
@@ -54,7 +61,12 @@ class MessageResponse(BaseModel):
     session_id: str
     conversation_id: str
     active_channel: Channel
+    delivery_channel: Channel
     reply: str
+
+
+class SetModeRequest(BaseModel):
+    interaction_mode: InteractionMode
 
 
 def create_app(
@@ -189,6 +201,13 @@ def create_app(
             raise HTTPException(status_code=404, detail=f"no session for user '{user_id}'")
         return session
 
+    @app.patch("/sessions/{user_id}/mode")
+    async def set_session_mode(user_id: str, request: SetModeRequest) -> AgentSession:
+        session = await app.state.session_store.get_by_user(user_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail=f"no session for user '{user_id}'")
+        return await app.state.session_store.set_mode(session, request.interaction_mode)
+
     @app.post("/messages")
     async def post_message(message: InboundMessage) -> MessageResponse:
         session = await app.state.session_store.get_or_create(message.user_id, message.channel)
@@ -206,6 +225,7 @@ def create_app(
             session_id=session.session_id,
             conversation_id=session.conversation_id,
             active_channel=session.active_channel,
+            delivery_channel=resolve_delivery_channel(session.interaction_mode, session.active_channel),
             reply=result["reply"],
         )
 

@@ -11,9 +11,83 @@ stays expressive even when the homelab is unreachable.
 - [shared/models/](shared/models/) — cross-service data contracts (`AgentSession`, `AgentResponse`, `MemoryRecord`, `EmbodimentCommand`).
 - [shared/protocols/](shared/protocols/) — HTTP route contracts shared between services.
 
+## Architecture
+
+The system is three independently-deployable services, not one monolith,
+because each has a different failure mode, a different change cadence, and
+a different place it needs to run:
+
+```
+             HOMELAB
+┌───────────────────────────────┐
+│         companion-core         │
+│                                 │
+│ reasoning, tools, memory,      │
+│ RAG, calendar/email/tasks      │
+└───────────────────────────────┘
+        │
+        │ HTTP (session_id + text only)
+        ▼
+┌───────────────────────────────┐
+│           reachy-hub           │
+│                                 │
+│ sessions, channels,            │
+│ robot registry, routing        │
+└───────────────────────────────┘
+        │
+        │ HTTP (holds the network path to Reachy)
+        ▼
+           REACHY MINI
+┌───────────────────────────────┐
+│       reachy-embodiment        │
+│                                 │
+│ behaviours, presence,          │
+│ idle/fallback, safety          │
+└───────────────────────────────┘
+        │
+        ▼
+  Reachy daemon
+```
+
+companion-core has no arrow of its own into reachy-embodiment — every
+request flows straight down this chain, through reachy-hub, never around
+it.
+
+- **`reachy-embodiment`** (runs *on* the Reachy Mini, not in the homelab):
+  owns everything physical — behaviours, gaze, idle animation, motion
+  safety limits. It runs on the robot itself, and keeps a local presence
+  loop and offline/fallback state machine (ADR 0004), specifically so the
+  robot stays animated and doesn't go dead the moment the homelab's network
+  is unreachable. A bug in reasoning should never be able to freeze a motor;
+  a robot reboot should never require touching reasoning code.
+- **`companion-core`** (homelab): owns reasoning — the LLM, tools, memory,
+  RAG, calendar/email/tasks. It speaks only in `session_id` and text; it
+  has no idea whether that text arrived over Reachy's mic, Telegram, or a
+  phone call, and it never sends a command to a robot directly (ADR 0003).
+  This is the piece most likely to change fastest (new tools, new
+  reasoning strategies, swapped LLM providers) and the one making the
+  priciest external calls — isolating it means iterating on reasoning can't
+  destabilize the robot or the channel plumbing.
+- **`reachy-hub`** (homelab): owns *how the user reaches the assistant* —
+  sessions (ADR 0002), the robot registry (which robots exist and how to
+  reach them), channels (Reachy, Telegram, phone, web — only Reachy exists
+  today), and response routing (ADR 0006: which channel actually gets a
+  reply, driven by the user's Desk/Office/Silent/Remote mode). It's the one
+  service that has to know both "which network address is this robot at"
+  and "which chat app did this message come from," specifically so neither
+  companion-core nor reachy-embodiment has to.
+
+The rule threading through all three, from
+[ADR 0001](docs/adr/0001-service-boundaries.md): **cognition ≠ embodiment ≠
+transport**. Every arrow above is plain HTTP — no shared process memory —
+so any one service can be redeployed, restarted, or replaced without the
+others noticing anything worse than a normal request or a graceful
+degradation (this is exactly what Phase 3's offline-fallback and Phase 4-6's
+live restart tests verify).
+
 ## Status
 
-Phases 0-5 are done:
+Phases 0-6 are done:
 
 - Phase 0: architecture freeze (ADRs, shared schemas).
 - Phase 1: Jarvis reference baseline — [docs/jarvis-baseline.md](docs/jarvis-baseline.md).
@@ -33,16 +107,24 @@ Phases 0-5 are done:
   channels (Reachy, Telegram) for the same user share one `session_id`/
   `conversation_id`, with `active_channel` switching and companion-core's
   own turn counter advancing across the switch.
+- Phase 6: Desk/Office/Silent/Remote as a deterministic I/O policy (ADR
+  0006). `reachy-hub`'s `response_policy.resolve_delivery_channel(mode,
+  active_channel)` takes no response content as input — a structural, not
+  just behavioural, guarantee that routing is decoupled from reasoning.
+  Verified live: identical text sent on the same channel routed to
+  `reachy`, then `phone`, then `web`, purely from `PATCH
+  /sessions/{user_id}/mode` calls in between, with `session_id` unchanged
+  throughout and the mode persisting across a `reachy-hub` restart.
 
 See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
-phase-by-phase roadmap. Next up: Phase 6, Desk/Office/Silent/Remote
-operating modes as deterministic output routing.
+phase-by-phase roadmap. Next up: Phase 7, Telegram as the first external
+channel.
 
 ## Layout
 
 ```
 services/companion-core/     reasoning/tools/memory (Phase 5: conversation endpoint, placeholder reasoning)
-services/reachy-hub/         robot registry + sessions, proxy to reachy-embodiment (Phases 4-5)
+services/reachy-hub/         robot registry, sessions, mode-based routing (Phases 4-6)
 services/reachy-embodiment/  semantic behaviour API + presence loop (Phases 2-3)
 clients/web-pwa/             web/PWA client (unimplemented)
 shared/models/                Pydantic data contracts shared across services
@@ -52,13 +134,71 @@ deploy/reachy/                  Reachy-side deployment (unimplemented)
 docs/                            plan, ADRs
 ```
 
-## Dev setup
+## Setup
+
+### Prerequisites
+
+- Python 3.13+
+- [uv](https://docs.astral.sh/uv/) — package/workspace manager used by every service here
+- Docker + the Compose v2 plugin, only if you want to run the full stack
+  (`docker compose version` should print a version; if it errors with
+  "unknown command", see [AGENTS.md](AGENTS.md#dev-setup) for how to install
+  the plugin without root)
+
+### Install
 
 ```
+git clone <this repo> && cd reachy-work-buddy
 uv sync --all-packages
-uv run python -c "from shared.models import AgentSession; print(AgentSession.model_json_schema())"
+```
+
+This creates `.venv/` with all three services (`companion-core`,
+`reachy-hub`, `reachy-embodiment`) plus the shared `reachy-work-companion`
+package installed together, since they're one `uv` workspace.
+
+### Verify it worked
+
+```
 uv run --group dev pytest services shared
 uv run --group dev ruff check services shared
+uv run python -c "from shared.models import AgentSession; print(AgentSession.model_json_schema())"
 ```
 
-Or run the whole stack for real — see [deploy/homelab](deploy/homelab/).
+All tests should pass without a real Postgres or Docker — they run against
+in-memory/in-process fakes (see [AGENTS.md](AGENTS.md#testing-conventions)).
+
+### Run a single service locally
+
+Each service is a plain FastAPI app; `reachy-embodiment` needs nothing extra,
+`reachy-hub` needs a reachable Postgres, `companion-core` needs `reachy-hub`'s
+URL:
+
+```
+# terminal 1
+uv run uvicorn reachy_embodiment.app:app --app-dir services/reachy-embodiment/src --port 8001 --reload
+
+# terminal 2 (needs Postgres — e.g. `docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=pw postgres:16-alpine`)
+DATABASE_URL=postgresql://postgres:pw@localhost:5432/postgres \
+COMPANION_CORE_URL=http://localhost:8003 \
+  uv run uvicorn reachy_hub.main:app --app-dir services/reachy-hub/src --port 8002 --reload
+
+# terminal 3
+REACHY_HUB_URL=http://localhost:8002 \
+  uv run uvicorn companion_core.main:app --app-dir services/companion-core/src --port 8003 --reload
+```
+
+Each service's own README (e.g. [services/reachy-hub](services/reachy-hub/README.md))
+has example `curl` calls once it's running.
+
+### Run the whole stack (recommended)
+
+```
+cd deploy/homelab
+cp .env.example .env   # set a real POSTGRES_PASSWORD
+docker compose up -d --build
+curl http://localhost:8080/hub/health
+```
+
+See [deploy/homelab/README.md](deploy/homelab/README.md) for the full set of
+example requests (robot registration, triggering behaviours, sessions,
+operating modes).

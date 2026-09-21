@@ -104,3 +104,14 @@ class PostgresSessionStore:
         session.active_channel = channel
         session.last_active_at = now
         return session
+
+    async def set_mode(self, session: AgentSession, mode: InteractionMode) -> AgentSession:
+        now = datetime.now(UTC)
+        async with self._pool.connection() as conn:
+            await conn.execute(
+                "UPDATE sessions SET interaction_mode = %s, last_active_at = %s WHERE session_id = %s",
+                (mode.value, now, session.session_id),
+            )
+        session.interaction_mode = mode
+        session.last_active_at = now
+        return session

@@ -43,4 +43,5 @@ Core separation rules (see also `0002-agent-session.md`, `0003-embodiment-comman
   unreachable (local idle/fallback personality), per ADR 0004.
 - Any Jarvis code reused into these services must be adapted to respect this
   boundary — e.g. Jarvis's `robot/controller.py` couples directly to the
-  conversation loop and is not reused as-is (see `0005-jarvis-reuse.md`).
+  conversation loop and is not reused as-is (see `../jarvis-baseline.md`,
+  which captures the Jarvis reuse decisions in place of a separate ADR).

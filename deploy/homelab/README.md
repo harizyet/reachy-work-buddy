@@ -59,6 +59,24 @@ curl -X POST http://localhost:8080/hub/messages \
 curl http://localhost:8080/hub/sessions/hariz
 ```
 
+Operating modes (Phase 6) — same text, different mode, different resolved
+`delivery_channel`, without ever changing what was sent to companion-core:
+
+```
+curl -X POST http://localhost:8080/hub/messages \
+  -H 'Content-Type: application/json' \
+  -d '{"user_id": "hariz", "channel": "telegram", "text": "whats on my calendar"}'
+# -> delivery_channel: "reachy" (Desk is the default mode)
+
+curl -X PATCH http://localhost:8080/hub/sessions/hariz/mode \
+  -H 'Content-Type: application/json' -d '{"interaction_mode": "office"}'
+
+curl -X POST http://localhost:8080/hub/messages \
+  -H 'Content-Type: application/json' \
+  -d '{"user_id": "hariz", "channel": "telegram", "text": "whats on my calendar"}'
+# -> delivery_channel: "phone" — same text, mode alone changed the routing
+```
+
 No robot is auto-registered — `POST /hub/robots` above is a manual step.
 Automatic registration (e.g. reachy-embodiment announcing itself to
 reachy-hub on startup) isn't built yet; it's a natural fit for whichever
