@@ -16,13 +16,29 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 
 from reachy_embodiment.behaviours import DESCRIPTIONS, STATE_FOR_BEHAVIOUR
 from reachy_embodiment.presence import PresenceLoop
 from reachy_embodiment.robot import RobotBackend, SimulatedRobotBackend
 from reachy_embodiment.state import ServiceState
-from shared.models.embodiment import Behaviour, EmbodimentCommand
+from shared.models.embodiment import Behaviour
 from shared.protocols import embodiment_api as routes
+
+
+class BehaviourBody(BaseModel):
+    """Body for POST /behaviour/{name}.
+
+    Deliberately excludes behaviour_name: the URL path is the single source
+    of truth for which behaviour is being triggered. Duplicating it in the
+    body (as shared.models.embodiment.EmbodimentCommand does for the
+    conceptual companion-core -> reachy-hub payload) invites a body/path
+    mismatch, which previously surfaced as a body-validation 422 instead of
+    the path-driven 404 an unknown behaviour name should produce.
+    """
+
+    parameters: dict[str, str] = {}
+    correlation_id: str | None = None
 
 
 def create_app(backend: RobotBackend | None = None, *, run_presence_loop: bool = True) -> FastAPI:
@@ -58,7 +74,7 @@ def create_app(backend: RobotBackend | None = None, *, run_presence_loop: bool =
         return {b.value: desc for b, desc in DESCRIPTIONS.items()}
 
     @app.post(routes.BEHAVIOUR)
-    def trigger_behaviour(name: str, command: EmbodimentCommand | None = None) -> ServiceState:
+    def trigger_behaviour(name: str, body: BehaviourBody | None = None) -> ServiceState:
         try:
             behaviour = Behaviour(name)
         except ValueError:
@@ -68,7 +84,7 @@ def create_app(backend: RobotBackend | None = None, *, run_presence_loop: bool =
         # homelab is reachable, so it counts as a heartbeat too.
         presence_loop.heartbeat()
 
-        parameters = command.parameters if command else {}
+        parameters = body.parameters if body else {}
         backend.play_behaviour(behaviour, parameters)
 
         state.last_behaviour = behaviour

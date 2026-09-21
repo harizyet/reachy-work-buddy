@@ -1,0 +1,78 @@
+# Homelab control plane. Per docs/plan.md §1 non-goals, this is Docker
+# Compose, not Kubernetes, for all initial releases.
+#
+# reachy-embodiment is included here too so the whole chain
+# (companion-core -> reachy-hub -> reachy-embodiment) can be smoke-tested
+# locally with one `docker compose up`. In a real deployment,
+# reachy-embodiment runs on the Reachy Mini itself (see deploy/reachy/), not
+# in this stack — this service definition exists for local/dev integration
+# testing, not production topology.
+#
+# Redis is deliberately not included yet (docs/plan.md §8 lists it as
+# "optional"); nothing in the system needs it before session/cache state
+# (Phase 5+) makes a concrete case for it.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-reachy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-reachy_hub}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-reachy}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  reachy-embodiment:
+    build:
+      context: ../..
+      dockerfile: services/reachy-embodiment/Dockerfile
+    restart: unless-stopped
+    expose:
+      - "8000"
+
+  reachy-hub:
+    build:
+      context: ../..
+      dockerfile: services/reachy-hub/Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-reachy}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-reachy_hub}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "8000"
+
+  companion-core:
+    build:
+      context: ../..
+      dockerfile: services/companion-core/Dockerfile
+    restart: unless-stopped
+    environment:
+      REACHY_HUB_URL: http://reachy-hub:8000
+    depends_on:
+      - reachy-hub
+    expose:
+      - "8000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    ports:
+      - "8080:8080"
+    depends_on:
+      - reachy-hub
+      - companion-core
+
+volumes:
+  postgres-data:
+  caddy-data:

@@ -1,0 +1,20 @@
+# Reverse proxy in front of the homelab services, per docs/plan.md §6 Phase 4
+# ("reverse proxy via Docker Compose"). Path-based routing only for now —
+# this does NOT implement authentication (docs/plan.md §9: "Authenticate all
+# remote Hub endpoints"). Auth/TLS for real remote access is Phase 16
+# (remote telepresence) / Phase 9 (privacy router) territory, not Phase 4.
+# Do not expose this port to the public Internet as configured here.
+
+:8080 {
+	handle_path /hub/* {
+		reverse_proxy reachy-hub:8000
+	}
+
+	handle_path /core/* {
+		reverse_proxy companion-core:8000
+	}
+
+	handle /health {
+		respond "ok" 200
+	}
+}

@@ -15,9 +15,12 @@ dev = [
 ]
 
 [tool.uv.workspace]
-# Only services with their own pyproject.toml can be workspace members.
-# Add companion-core and reachy-hub here once their Phases (4+) give them one.
-members = ["services/reachy-embodiment"]
+members = ["services/reachy-embodiment", "services/reachy-hub", "services/companion-core"]
+
+[tool.pytest.ini_options]
+# Each service has its own tests/test_app.py; default (prepend) import mode
+# would collide across services on the shared "tests" package name.
+addopts = "--import-mode=importlib"
 
 [build-system]
 requires = ["hatchling"]

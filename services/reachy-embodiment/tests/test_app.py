@@ -73,10 +73,19 @@ def test_post_behaviour_with_correlation_id_and_parameters() -> None:
     client = make_client()
     resp = client.post(
         "/behaviour/greeting",
-        json={"behaviour_name": "greeting", "parameters": {"user": "hariz"}, "correlation_id": "abc-123"},
+        json={"parameters": {"user": "hariz"}, "correlation_id": "abc-123"},
     )
     assert resp.status_code == 200
     assert resp.json()["last_behaviour"] == Behaviour.GREETING.value
+
+
+def test_post_unknown_behaviour_with_body_is_still_404_not_422() -> None:
+    """The path segment is the source of truth; an invalid path behaviour
+    must 404 regardless of what's in the body (see BehaviourBody docstring
+    in app.py for the bug this guards against)."""
+    client = make_client()
+    resp = client.post("/behaviour/moonwalk", json={"parameters": {"foo": "bar"}})
+    assert resp.status_code == 404
 
 
 def test_heartbeat_endpoint_updates_last_heartbeat_at() -> None:
