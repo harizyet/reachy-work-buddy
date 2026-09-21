@@ -12,11 +12,13 @@ stays expressive even when the homelab is unreachable.
 
 ## Status
 
-Phase 0 (architecture freeze) and Phase 1 (Jarvis reference baseline, documented
-via static source analysis — see [docs/jarvis-baseline.md](docs/jarvis-baseline.md))
-are done. No services are implemented yet — see
-[docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the phase-by-phase
-roadmap. Next up: Phase 2, `reachy-embodiment`'s HTTP behaviour API skeleton.
+Phase 0 (architecture freeze), Phase 1 (Jarvis reference baseline, documented
+via static source analysis — see [docs/jarvis-baseline.md](docs/jarvis-baseline.md)),
+and Phase 2 (`reachy-embodiment`'s semantic behaviour HTTP API, running
+against a simulated backend — see [services/reachy-embodiment](services/reachy-embodiment/))
+are done. See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
+phase-by-phase roadmap. Next up: Phase 3, the offline/local presence and
+fallback state machine.
 
 ## Layout
 
@@ -33,6 +35,7 @@ docs/                plan, ADRs
 ## Dev setup
 
 ```
-uv sync
+uv sync --all-packages
 uv run python -c "from shared.models import AgentSession; print(AgentSession.model_json_schema())"
+uv run --group dev pytest services/reachy-embodiment/tests
 ```
