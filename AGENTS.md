@@ -2,6 +2,14 @@
 
 Instructions for coding agents working in this repository.
 
+**Before starting any work, read [HANDOVER.md](HANDOVER.md).** It's the
+living snapshot of exactly where the project stands right now — what's
+done, what's next, environment setup gotchas specific to this sandbox, and
+known unfixed issues — written so a session with no memory of prior ones
+can pick up correctly. Update it before you finish your session too (new
+phases done, new gotchas found, what's next), so the next session isn't
+starting blind either.
+
 ## What this is
 
 Office work companion built on Reachy Mini: a homelab reasoning/session
