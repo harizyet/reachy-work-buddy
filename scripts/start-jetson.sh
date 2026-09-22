@@ -56,7 +56,7 @@ ENV_FILE="${COMMON_ENV_FILE:-$DEFAULT_ENV_FILE}"
 # is a cheap live sanity check that this is still recognizably the same
 # board, not a re-run of that whole process.
 if [[ -r /proc/device-tree/model ]]; then
-    MODEL="$(tr -d '\0' < /proc/device-tree/model)"
+    MODEL="$(tr -d '\0' < /proc/device-tree/model || true)"
     log_info "board: $MODEL"
     [[ "$MODEL" == *"Jetson Nano"* ]] || log_warn "this doesn't look like a Jetson Nano ('$MODEL') — the recorded compatibility baseline may not apply"
 else

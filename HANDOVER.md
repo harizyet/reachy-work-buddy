@@ -666,15 +666,52 @@ Both fixes pushed; **not yet re-verified live on the Nano** — that's the
 natural next step before trusting the diagnostic report's "installed"
 line again.
 
+**Third bug: my own fix for the second bug regressed into a script-
+crashing failure, also caught live by the Nano.** The `timedatectl show
+-p NTPSynchronized --value` fallback I wrote assumed it could come back
+*empty* on some systemd builds; on this board's systemd 237, `show` in
+any form doesn't exist at all (`unrecognized option`/`Unknown operation
+show` — a hard failure every invocation, not an empty result). Worse,
+the fix used a bare, unguarded `VAR="$(cmd)"` assignment — under this
+script's `set -euo pipefail`, that failure killed the *entire script*
+immediately, before printing anything past the memory line, never even
+reaching the correct fallback logic sitting right below it. The
+original code had accidentally been safe (`|| echo unknown` lived
+*inside* the same substitution); my rewrite split that into two
+statements and dropped the guard on the first one.
+
+**Fixed properly:** removed the `show` attempt entirely (it never works
+on this systemd version, so there was nothing worth attempting first)
+and parse `timedatectl status` directly, with an explicit `|| true`
+guarding the whole pipeline (grep finding no match would otherwise hit
+the identical crash class). **Also audited every other command
+substitution in all four scripts for the same pattern** — verified
+empirically (not assumed) that `echo "text: $(cmd)"` does NOT trigger
+`set -e` even if `cmd` fails (only a bare `VAR="$(cmd)"` assignment
+does, since then the substitution's exit status *is* the statement's
+exit status) — found and fixed one more real gap
+(`check-platform.sh`'s `STATUS_JSON` daemon-status curl was called
+twice, once guarded/discarded and once completely unguarded; collapsed
+to one guarded call) plus one low-risk-but-worth-guarding case
+(`start-jetson.sh`'s device-tree `MODEL` read). Verified the actual fix
+locally with a `timedatectl` shim reproducing the Nano's exact reported
+behavior (`show` hard-fails, `status` works) — confirmed the script now
+completes with exit 0 and prints "time sync: yes" correctly, all the
+way to "=== end of report ===". Pushed; **not yet re-verified live on
+the Nano** — three bugs deep in review/fix cycles on this one line is
+itself a signal to have it confirmed live before trusting it again.
+
 **Not yet verified:** the daemon actually being installed/started via
 these launchers (systemd unit was never installed on this Nano —
 running `--check` against a genuinely-installed-and-active daemon has
 not happened yet), or anything past `--check` on real hardware. Given
-two real bugs found in this small a set of scripts, review any further
-launcher changes carefully for (a) a destructive action ordered before
-its guard flag, and (b) shell/systemd commands whose exit code doesn't
-actually mean what it looks like it means — both classes bit us here,
-neither caught by `bash -n`/shellcheck.
+three real bugs found in this small a set of scripts — a destructive
+action ordered before its guard flag, a systemd command whose exit code
+doesn't mean what it looks like, and a "fix" that introduced a worse
+crash than the bug it fixed — treat every further launcher change on
+this old-systemd Nano target as needing live verification before
+trusting it, not just `bash -n`/shellcheck (which caught none of the
+three).
 
 **Cross-session coordination note:** this Phase 22 work happened live
 across two Claude Code sessions (homelab + Nano) via `SendMessage`/cross-session

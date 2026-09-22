@@ -80,16 +80,23 @@ if command -v free >/dev/null 2>&1; then
     echo "memory: $(free -h | awk 'NR==2 {print $7" available of "$2}')"
 fi
 if command -v timedatectl >/dev/null 2>&1; then
-    # `show -p NTPSynchronized --value` can come back empty on some
-    # systemd builds without actually failing (nonzero) — confirmed live
-    # on the Jetson Nano's systemd 237, same class of "exit 0 but not
-    # useful" gotcha as the list-unit-files fix above. Fall back to
-    # parsing `status`'s "System clock synchronized:" line, present
-    # across far more systemd versions.
-    NTP_SYNC="$(timedatectl show -p NTPSynchronized --value 2>/dev/null)"
-    if [[ -z "$NTP_SYNC" ]]; then
-        NTP_SYNC="$(timedatectl status 2>/dev/null | grep -i 'system clock synchronized' | awk -F': ' '{print $2}')"
-    fi
+    # `timedatectl show` (any form: `-p X`, `--property=X`) doesn't exist
+    # at all on systemd 237 (Ubuntu 18.04/Bionic, the Jetson Nano's OS) —
+    # `timedatectl: unrecognized option`/`Unknown operation show`, a hard
+    # failure every time, not an occasionally-empty result. An earlier
+    # version of this fix assumed the latter and used a bare, unguarded
+    # command substitution to try `show` first — under this script's
+    # `set -euo pipefail` (from common.sh), that failure killed the
+    # entire script immediately, before printing anything past the
+    # memory line, never even reaching the fallback below. Caught live
+    # on the Nano. `timedatectl status`'s "System clock synchronized:"
+    # line is what's actually portable here, so it's the only method now
+    # — no fragile `show` attempt to guard in the first place.
+    # `|| true` guards the whole pipeline: under `set -o pipefail` (from
+    # common.sh), grep finding no match would otherwise fail this
+    # substitution too — the exact class of bug just found above, so
+    # guarding it explicitly here rather than assuming grep always matches.
+    NTP_SYNC="$(timedatectl status 2>/dev/null | grep -i 'system clock synchronized' | awk -F': ' '{print $2}' || true)"
     echo "time sync: ${NTP_SYNC:-unknown}"
 fi
 echo
@@ -143,8 +150,13 @@ if command -v systemctl >/dev/null 2>&1 && systemd_unit_installed reachy-mini-da
     if systemctl is-active --quiet reachy-mini-daemon; then
         DAEMON_ACTIVE=1
         echo "reachy-mini-daemon: active"
-        if curl -fsS --max-time 5 http://127.0.0.1:8000/daemon/status >/dev/null 2>&1; then
-            STATUS_JSON="$(curl -fsS http://127.0.0.1:8000/daemon/status)"
+        # One curl call, not two — a second unguarded call here would
+        # crash the whole script under set -e if the daemon became
+        # unreachable between the two (the same class of bug just fixed
+        # above: don't assume a command that just succeeded will succeed
+        # again unguarded).
+        STATUS_JSON="$(curl -fsS --max-time 5 http://127.0.0.1:8000/daemon/status 2>/dev/null || true)"
+        if [[ -n "$STATUS_JSON" ]]; then
             echo "daemon /daemon/status: reachable"
             if command -v python3 >/dev/null 2>&1; then
                 printf '%s' "$STATUS_JSON" | python3 -c '
