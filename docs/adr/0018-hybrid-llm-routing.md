@@ -3,6 +3,15 @@
 - Status: Accepted
 - Date: 2026-09-22
 
+## Post-acceptance verification
+
+Together AI / `zai-org/GLM-5.3` was subsequently verified end-to-end as the
+cloud role on 2026-09-22 in the isolated `phase21togetherverify` stack.
+Owner-authenticated hub requests verified manual cloud override and actual
+local-failure fallback, with both attempts recorded and credentials masked.
+See [HANDOVER](../../HANDOVER.md) for the run details. This supplements the
+original OVMS verification below; the design decision is unchanged.
+
 ## Decision
 
 Companion-core owns routing in `llm/router.py`. The pure `role_order`
@@ -90,6 +99,7 @@ The isolated `phase21verify` stack used real Docker images, Postgres, Caddy,
 and OVMS's discovered `OpenVINO/Qwen2.5-1.5B-Instruct-int4-ov` model. Local-only,
 unreachable-local fallback, and healthy-local manual override succeeded with
 the expected attempt records. **OVMS backed both roles in this live test**;
-no hosted cloud credentials were available, so hosted-provider verification
-remains outstanding. See [HANDOVER](../../HANDOVER.md) for final check counts,
+no hosted cloud credentials were available at that time. The subsequent
+hosted-provider check is recorded in the amendment above.
+See [HANDOVER](../../HANDOVER.md) for final check counts,
 upgrade/restart evidence, and cleanup status.

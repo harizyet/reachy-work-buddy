@@ -150,6 +150,84 @@ not a completed physical test. Clean up only disposable test resources.
 
 ## Phase 23 — production Google account settings
 
+### Cross-cutting prerequisite: schema migrations and SecretStore
+
+Complete this work before adding Google account tables or persisting OAuth
+credentials. It is a prerequisite within Phase 23, not a new numbered phase.
+Both capabilities are planned; current deployments still use startup DDL
+and store LLM API keys plaintext as documented in ADRs 0016/0018.
+
+**Database schema versioning/migrations.** Introduce Alembic with explicit,
+reviewed revisions for the shared Postgres database. Keep a single ordered
+migration history with table ownership documented for hub/core; migrations
+must not require importing either service's runtime into the other. Existing
+SQL stores can remain SQL stores; this does not require an ORM rewrite.
+
+- Inventory current and historical schema shapes, including previously
+  missing columns. Provide a fresh-database path and an explicit legacy
+  adoption path that inspects schema, repairs supported differences and
+  validates before recording a baseline revision. Never blindly stamp an
+  existing database as current or assume `CREATE TABLE IF NOT EXISTS`
+  proves its shape. Unknown schema drift fails with actionable diagnostics.
+- Run migrations once through a dedicated deployment job/command, with
+  serialization/locking and bounded failure handling. Launchers run or wait
+  for that job before starting compatible services; application startup
+  checks schema compatibility instead of independently mutating tables.
+  Retire startup DDL after migration coverage is complete.
+- Version new accounts, OAuth state, encrypted secrets, calendar selections
+  and provider metadata through this history. Use transactional changes where
+  supported, explicit handling for nontransactional steps and resumable data
+  backfills. A failed migration must not mark its revision complete.
+- Back up first, record revision/application compatibility, and define recovery
+  for interrupted or failed upgrades. Prefer a forward fix or tested backup
+  restore when downgrade would destroy data; do not promise every revision
+  is reversible. No automatic volume reset or startup downgrade.
+
+**Shared SecretStore.** Introduce a core-owned provider-neutral interface for
+credential creation/replacement, resolution, deletion and key rotation. LLM,
+Google, SMTP and future core connectors use it; avoid a Google-only token
+encryption subsystem or a general decrypt endpoint exposed through hub.
+Preserve service boundaries and least privilege: hub proxies authenticated
+settings and receives masked metadata, never decrypted provider credentials.
+
+- Use a maintained authenticated-encryption implementation, versioned records
+  and key IDs, with owner/provider/purpose bound to the encrypted value. Store
+  opaque secret references in provider settings. Keep encryption keys outside
+  Postgres in permission-restricted deployment secrets, distinct from the
+  session signing key, with documented rotation and backup/recovery.
+- Migrate both local and cloud LLM API keys from existing `llm_config` JSONB
+  into SecretStore, preserving URLs, models, policy, omitted-key behaviour,
+  explicit-null deletion and response masking. Never log secret values during
+  migration. Persist ciphertext/reference and remove the active plaintext
+  field atomically; interrupted upgrades must be safe to resume.
+- Plan a coordinated application cutover so old instances cannot rewrite
+  plaintext configuration. Include an explicit required-key preflight before
+  migration. Missing/wrong keys or tampered records fail credential use closed,
+  without falling back to legacy plaintext or echoing decryption errors.
+- Google refresh tokens and runtime-managed OAuth client secrets use this
+  store from their first write. SMTP credentials, if configured, use the same
+  interface; keep environment-injected credentials as an explicit bootstrap
+  source and never copy them to plaintext database fields. Inventory existing
+  credential sources before migration; Mailpit alone does not prove a stored
+  SMTP credential migration. Future connectors reuse the interface.
+- Rotate by key ID with a resumable re-encryption process, retaining needed
+  old keys until current records and retained backups are accounted for.
+  Historical backups/WAL and old row versions may still contain plaintext
+  LLM keys after logical migration: document restricted retention/expiry and
+  provider-key rotation rather than claiming physical erasure from an UPDATE.
+  Database encryption does not encrypt the source `.env` file automatically.
+
+Acceptance for this prerequisite uses real isolated Postgres: fresh install;
+supported older schema upgrades with seeded historical data; repeat/no-op
+upgrade; concurrent migration exclusion; injected failure and recovery; and
+backup restoration. Verify owner login, sessions, usage and settings survive.
+Migrate fixture LLM credentials, prove inference still works, inspect active
+rows for absent plaintext, and verify masking/null/partial-update semantics.
+Test tamper/wrong-key denial, key rotation with interruption and old/new-key
+backup recovery. Demonstrate reuse for Google and configured SMTP without
+sending real mail. Update ADRs' current-state notes only after implementation
+and evidence; retain their historical record of plaintext storage/startup DDL.
+
 ### Product scope
 
 Add **Settings → Accounts** to the existing operator GUI, with separate
@@ -171,7 +249,8 @@ as needed and preserve the shared conversation pipeline.
 
 ### Architecture and implementation sequence
 
-1. Write an account-integration ADR before implementation: core owns OAuth
+1. Complete the migrations/SecretStore prerequisite above and write an
+   account-integration ADR before connector implementation: core owns OAuth
    exchange/refresh, encrypted credential storage and provider adapters; hub
    owns authenticated settings proxies, browser redirect/callback transport
    and owner identity. Define shared models/routes and additive migrations.
@@ -190,8 +269,9 @@ as needed and preserve the shared conversation pipeline.
    completion. Do not weaken all owner cookies or leave callback identity
    unbound. Ordinary account mutations retain `X-Reachy-CSRF: 1`; the OAuth
    callback uses validated state/binding instead of that custom header.
-4. Store refresh tokens encrypted at rest in core, with a key outside the
-   database, documented backup/rotation and fail-closed missing-key behaviour.
+4. Store refresh tokens through the shared core SecretStore above, with a key
+   outside the database, documented backup/rotation and fail-closed missing-key
+   behaviour. Do not introduce a separate Google-specific encryption path.
    Never expose tokens in UI, URLs, logs, prompts, usage records or localStorage.
    Redact callback query strings from proxy/access logs. Preserve an existing
    refresh token when a token exchange omits it; serialize concurrent refresh
@@ -233,6 +313,8 @@ verification or grant unrestricted distribution.
 
 ### Phase 23 acceptance and production release gate
 
+- Schema migration and shared SecretStore prerequisite acceptance passes,
+  including preservation of existing data and migration of stored LLM keys.
 - Automated in-process and browser tests cover owner/CSRF enforcement,
   callback state replay/expiry/wrong owner, strict-cookie return flow, partial
   consent, missing refresh token, concurrent refresh, revoked grants, API
@@ -263,7 +345,8 @@ verification or grant unrestricted distribution.
 ## Execution boundaries
 
 Implement Phase 22 inventory/topology and launchers first, then real hardware
-acceptance and fixes. Begin Phase 23 after that baseline passes. Credentials
+acceptance and fixes. Begin Phase 23 with schema migrations and SecretStore
+after that baseline passes, then implement Google connectors. Credentials
 belong in ignored, permission-restricted local files, never chat. This plan
 does not reflash the board, launch a production stack, authorize Google access,
 or claim either phase complete.

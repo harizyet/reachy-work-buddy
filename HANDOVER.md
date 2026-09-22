@@ -205,6 +205,16 @@ implemented during this planning session, and no hardware was tested.
 Existing uncommitted hosted-cloud verification notes in this file and
 `deploy/homelab/README.md` were preserved.
 
+**Phase 23 prerequisite planned:** add Alembic schema versioning with validated
+legacy adoption and a serialized pre-start migration job, then a shared
+core-owned SecretStore before Google tables/tokens. Migrate existing local/
+cloud LLM keys from plaintext JSONB; reuse credential storage for Google,
+SMTP and future connectors. The plan includes data-preserving upgrade,
+interruption/restore tests, key rotation and historical-backup caveats.
+Neither framework nor encryption is implemented yet; current plaintext/startup
+DDL limitations still apply. ADR 0018 now records the later Together AI live
+verification in a top amendment, preserving its original design decision.
+
 **Phase 24 planned:** [docs/phase-24.md](docs/phase-24.md) defines single-owner
 enrollment, strictly >60% calibrated live owner-in-view confidence for room
 speech, separate speaker attribution before STT/conversation admission, and

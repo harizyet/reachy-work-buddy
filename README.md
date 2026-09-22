@@ -535,8 +535,9 @@ verification. **Phases 22–24 are planned, not implemented:**
 - Phase 22: original Jetson Nano/Reachy bring-up, real hardware backend,
   homelab and robot/companion-board Bash launchers with GUI access, and
   measured physical acceptance tests.
-- Phase 23: production Gmail and Google Calendar connection settings in the
-  operator UI, OAuth credential lifecycle, and read-only workflow integration.
+- Phase 23: first add versioned database migrations and a shared SecretStore
+  for LLM/Google/SMTP credentials, migrating existing plaintext LLM keys; then
+  production Gmail/Calendar settings, OAuth and read-only workflow integration.
 - Phase 24: [owner recognition and voice access control](docs/phase-24.md),
   with strictly >60% calibrated owner-in-view confidence before room speech,
   speaker attribution before voice input, and unchanged text-only action consent.
