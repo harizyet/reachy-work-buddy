@@ -2,12 +2,14 @@ from companion_core.email.models import DraftStatus, EmailDraft, EmailMessage
 from companion_core.email_intent import (
     find_draft_by_query,
     format_approve_reply,
+    format_cancel_send_reply,
     format_draft_reply,
     format_inbox_reply,
     format_send_not_approved_reply,
     format_send_not_found_reply,
-    format_send_success_reply,
+    format_send_queued_reply,
     match_approve,
+    match_cancel_send,
     match_draft,
     match_list_inbox,
     match_send,
@@ -52,6 +54,14 @@ def test_match_approve_returns_none_for_unrelated_text() -> None:
     assert match_approve("what's next") is None
 
 
+def test_match_approve_tolerates_stt_punctuation() -> None:
+    """See memory_intent.py's equivalent test — STT transcripts add
+    punctuation (commas, trailing periods) a literal prefix match would
+    otherwise reject."""
+    assert match_approve("Approve draft, bob@example.com.") == "bob@example.com"
+    assert match_send("Send draft, bob@example.com.") == "bob@example.com"
+
+
 def test_format_inbox_reply_empty() -> None:
     assert format_inbox_reply([]) == "Your inbox is empty."
 
@@ -86,9 +96,22 @@ def test_format_approve_reply_found() -> None:
     assert "send draft" in reply.lower()
 
 
-def test_format_send_success_reply() -> None:
-    reply = format_send_success_reply(_draft(status=DraftStatus.SENT))
-    assert "Sent" in reply
+def test_match_cancel_send_prefixes() -> None:
+    assert match_cancel_send("cancel send bob@example.com") == "bob@example.com"
+    assert match_cancel_send("undo send bob@example.com") == "bob@example.com"
+    assert match_cancel_send("what's next") is None
+
+
+def test_format_send_queued_reply_mentions_delay_and_cancel() -> None:
+    reply = format_send_queued_reply(_draft(status=DraftStatus.QUEUED), delay_seconds=600)
+    assert "10 minutes" in reply
+    assert "cancel send" in reply.lower()
+    assert "a@example.com" in reply
+
+
+def test_format_cancel_send_reply() -> None:
+    reply = format_cancel_send_reply(_draft(status=DraftStatus.APPROVED))
+    assert "Cancelled" in reply
     assert "a@example.com" in reply
 
 

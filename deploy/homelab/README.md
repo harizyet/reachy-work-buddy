@@ -54,7 +54,14 @@ Mailpit's own message list staying empty, not just the HTTP response —
 and, once approved, produced a real SMTP message that actually arrived in
 Mailpit, with the draft surviving a `companion-core` restart via Postgres
 and a repeat send on an already-sent draft correctly rejected (Phase 14);
-and, separately (not
+a spoken ("voice", via `POST /hub/voice/turn` with real synthesized
+speech, real STT transcription) attempt to confirm a pending memory-forget
+was refused while the identical typed confirmation succeeded — the memory
+genuinely gone from `/core/memories` and then restorable — an email send
+was queued (not dispatched) for ~10 minutes, cancelled with Mailpit
+staying at zero messages, then re-queued and left running for the full
+real ~10-minute delay, producing a real SMTP message in Mailpit once due
+(ADR 0011); and, separately (not
 through this specific compose stack, but the same services run as plain
 processes), a real Telegram bot and a real Telegram account confirmed
 Phase 7's session continuity live.
@@ -264,11 +271,47 @@ curl -X POST http://localhost:8080/core/conversation \
 curl -X POST http://localhost:8080/core/conversation \
   -H 'Content-Type: application/json' \
   -d '{"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "send draft boss@example.com"}'
-# -> "Sent the email to boss@example.com..." — now check
-#    http://localhost:8025 (Mailpit's UI) or its API:
+# -> "Sending the email to boss@example.com in about 10 minutes..." — see
+#    ADR 0011 below for the delay; check http://localhost:8025 (Mailpit's
+#    UI) or its API once the window has passed:
 curl http://localhost:8025/api/v1/messages
 
 curl http://localhost:8080/core/emails/drafts   # same data via the direct API
+```
+
+ADR 0011 (destructive-action consent, voice exclusion, delayed send) —
+memory forgetting requires text confirmation, voice is refused outright,
+and email sending is delay-queued with an undo window, all through Caddy:
+
+```
+curl -X POST http://localhost:8080/core/conversation \
+  -H 'Content-Type: application/json' \
+  -d '{"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "remember that my manager is Alice"}'
+
+curl -X POST http://localhost:8080/core/conversation \
+  -H 'Content-Type: application/json' \
+  -d '{"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "forget Alice"}'
+# -> "To permanently forget \"my manager is Alice\", say: yes forget Alice"
+
+# Voice can never confirm a destructive action — say the confirmation out
+# loud through the real voice pipeline and it's refused, whatever it
+# transcribes to:
+espeak-ng -v en-us --stdout "yes forget Alice" > confirm.wav
+curl -X POST http://localhost:8080/hub/voice/turn \
+  -F "user_id=hariz" -F "audio=@confirm.wav;type=audio/wav" -D - -o reply.wav
+# -> X-Reply-Text: "For your security, I can't accept that confirmation by
+#    voice. Please confirm from a text channel like Telegram."
+
+curl -X POST http://localhost:8080/core/conversation \
+  -H 'Content-Type: application/json' \
+  -d '{"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "yes forget Alice"}'
+# -> "Forgotten: ..." — gone from /core/memories, but never actually
+#    deleted: it's a soft delete, so the undo always works:
+curl -X POST http://localhost:8080/core/memories/<memory_id>/restore
+
+# Email sending queues instead of dispatching, and can be cancelled before
+# its ~10-minute window elapses:
+curl -X POST http://localhost:8080/core/emails/drafts/<draft_id>/cancel-send
 ```
 
 No robot is auto-registered — `POST /hub/robots` above is a manual step.
@@ -290,10 +333,16 @@ The Postgres migrations in `reachy_hub/postgres_registry.py`,
 `postgres_session_store.py`, `postgres_telegram_chat_registry.py`,
 `postgres_audit_log.py`, `companion_core/calendar/postgres_store.py`,
 `companion_core/tasks/postgres_store.py`, `companion_core/memory/
-postgres_store.py`, `companion_core/rag/postgres_store.py`, and
-`companion_core/email/postgres_store.py` are each a single `CREATE TABLE
-IF NOT EXISTS` (plus, for `rag/`, a one-time `CREATE EXTENSION IF NOT
-EXISTS vector`) run at connect time — fine for the tables that exist
-today, but not a real migration tool. Revisit (e.g. adopt Alembic) once a
-schema actually needs to change under existing data, not just grow by one
-more table.
+postgres_store.py`, `companion_core/rag/postgres_store.py`,
+`companion_core/email/postgres_store.py`, and `companion_core/consent/
+postgres_store.py` are each a single `CREATE TABLE IF NOT EXISTS` (plus,
+for `rag/`, a one-time `CREATE EXTENSION IF NOT EXISTS vector`) run at
+connect time — fine for the tables that exist today, but not a real
+migration tool. This bit ADR 0011 in particular: `forgotten_at`
+(`memories`) and `dispatch_at` (`email_drafts`) are new columns on
+existing tables, which `CREATE TABLE IF NOT EXISTS` does not add to an
+already-existing table — a deployment from before that ADR needs a manual
+`ALTER TABLE ... ADD COLUMN` before upgrading (a fresh volume, as used for
+all the live verification in this README, has no such problem). Revisit
+(e.g. adopt Alembic) once a schema actually needs to change under existing
+data, not just grow by one more table or column.

@@ -3,6 +3,11 @@
 Per ADR 0002, companion-core is channel-agnostic: it only ever receives a
 session_id, conversation_id, and text — never "this came from Telegram" as
 anything but an opaque channel label for its own optional use.
+`input_modality` (ADR 0011) is a deliberate, narrow exception to that
+agnosticism: whether a turn was typed or spoken is a security-relevant
+signal (destructive-action confirmation refuses voice), not a
+channel-identity one, so it travels alongside `channel` rather than being
+folded into it.
 """
 
 from __future__ import annotations
@@ -25,7 +30,9 @@ class CompanionCoreClient:
     async def aclose(self) -> None:
         await self._client.aclose()
 
-    async def send_turn(self, session_id: str, conversation_id: str, channel: str, text: str) -> dict[str, Any]:
+    async def send_turn(
+        self, session_id: str, conversation_id: str, channel: str, text: str, *, input_modality: str = "text"
+    ) -> dict[str, Any]:
         resp = await self._client.post(
             "/conversation",
             json={
@@ -33,6 +40,7 @@ class CompanionCoreClient:
                 "conversation_id": conversation_id,
                 "channel": channel,
                 "text": text,
+                "input_modality": input_modality,
             },
         )
         resp.raise_for_status()

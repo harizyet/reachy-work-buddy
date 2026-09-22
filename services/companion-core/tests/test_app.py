@@ -5,6 +5,7 @@ mocks or real sockets. Both sibling services are importable here only
 because uv installs all workspace members into one shared dev venv.
 """
 
+import asyncio
 import hashlib
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
@@ -12,6 +13,7 @@ from datetime import UTC, datetime, timedelta
 import httpx
 from companion_core.app import create_app
 from companion_core.calendar.store import InMemoryCalendarStore
+from companion_core.consent.store import InMemoryConfirmationStore
 from companion_core.email.models import EmailDraft
 from companion_core.email.store import InMemoryEmailStore
 from companion_core.memory.store import InMemoryMemoryStore
@@ -62,6 +64,7 @@ def make_chain(*, registered_robots: Sequence[Robot] = ()) -> TestClient:
     async def fake_send(draft: EmailDraft) -> None:
         sent_emails.append(draft)
 
+    email_store = InMemoryEmailStore()
     core_app = create_app(
         hub_base_url="http://reachy-hub",
         transport=httpx.ASGITransport(app=hub_app),
@@ -69,11 +72,20 @@ def make_chain(*, registered_robots: Sequence[Robot] = ()) -> TestClient:
         task_store=InMemoryTaskStore(),
         memory_store=InMemoryMemoryStore(),
         rag_store=InMemoryDocumentStore(embed_fn=_fake_embed),
-        email_store=InMemoryEmailStore(),
+        email_store=email_store,
         email_send_fn=fake_send,
+        confirmation_store=InMemoryConfirmationStore(),
+        # The real dispatch loop only ever sends what's actually due (10
+        # minutes out by default) — disabled here so tests stay
+        # deterministic; test_email_workflow.py covers the loop itself
+        # with a real short-interval task, and tests below that need to
+        # prove dispatch call dispatch_due_drafts directly with a
+        # controlled `now` via client.email_store.
+        run_email_dispatch_task=False,
     )
     client = TestClient(core_app)
     client.sent_emails = sent_emails
+    client.email_store = email_store
     return client
 
 
@@ -360,9 +372,29 @@ def test_memory_endpoints_directly() -> None:
         assert list_resp.status_code == 200
         assert len(list_resp.json()) == 1
 
-        assert client.delete(f"/memories/{memory_id}").json() == {"forgotten": True}
-        assert client.delete(f"/memories/{memory_id}").status_code == 404
+        # docs/adr/0011: deleting a memory is now a two-step, confirmed API.
+        request_resp = client.post(f"/memories/{memory_id}/request-forget")
+        assert request_resp.status_code == 200
+        confirmation_id = request_resp.json()["id"]
+
+        confirm_resp = client.post(
+            f"/memories/{memory_id}/forget/confirm", json={"confirmation_id": confirmation_id}
+        )
+        assert confirm_resp.status_code == 200
+        assert confirm_resp.json()["forgotten_at"] is not None
         assert client.get("/memories").json() == []
+
+        # A second confirm attempt with the same (now-consumed) id fails.
+        assert (
+            client.post(f"/memories/{memory_id}/forget/confirm", json={"confirmation_id": confirmation_id}).status_code
+            == 404
+        )
+
+        # The undo: restoring brings it back into /memories.
+        restore_resp = client.post(f"/memories/{memory_id}/restore")
+        assert restore_resp.status_code == 200
+        assert restore_resp.json()["forgotten_at"] is None
+        assert len(client.get("/memories").json()) == 1
 
 
 def test_agent_answers_conversationally_with_document_and_section_provenance() -> None:
@@ -420,10 +452,12 @@ def test_document_endpoints_directly() -> None:
         assert list_resp.json() == ["Doc A", "Doc B"]
 
 
-def test_agent_cannot_send_email_without_approval() -> None:
+def test_agent_cannot_send_email_without_approval_and_send_is_delayed() -> None:
     """Phase 14 exit criterion: "No code path sends mail without approval
     gate" — drafted conversationally, sending before approval is refused
-    and nothing is dispatched; only after approval does it actually send."""
+    and nothing is dispatched. docs/adr/0011 extends this: even once
+    approved, "send draft X" only queues a delayed dispatch, cancellable
+    conversationally, and voice can't approve or trigger a send at all."""
     with make_chain() as client:
         draft_resp = client.post(
             "/conversation",
@@ -448,6 +482,20 @@ def test_agent_cannot_send_email_without_approval() -> None:
         assert "approval" in premature_send.json()["reply"].lower()
         assert client.sent_emails == []
 
+        # Voice can't approve — text-only, docs/adr/0011.
+        voice_approve = client.post(
+            "/conversation",
+            json={
+                "session_id": "s1",
+                "conversation_id": "c1",
+                "channel": "reachy",
+                "text": "approve draft bob",
+                "input_modality": "voice",
+            },
+        )
+        assert "voice" in voice_approve.json()["reply"].lower()
+        assert "text" in voice_approve.json()["reply"].lower()
+
         approve_resp = client.post(
             "/conversation",
             json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "approve draft bob"},
@@ -458,34 +506,73 @@ def test_agent_cannot_send_email_without_approval() -> None:
             "/conversation",
             json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "send draft bob"},
         )
-        assert "Sent" in send_resp.json()["reply"]
-        assert len(client.sent_emails) == 1
-        assert client.sent_emails[0].to == "bob@example.com"
+        reply = send_resp.json()["reply"]
+        assert "10 minutes" in reply
+        assert "cancel send" in reply.lower()
+        assert client.sent_emails == []  # queued, not dispatched
 
+        assert client.get("/emails/drafts").json()[0]["status"] == "queued"
 
-def test_email_direct_api_approval_gate() -> None:
-    with make_chain() as client:
-        draft_resp = client.post(
-            "/emails/drafts", json={"to": "alice@example.com", "subject": "Hi", "body": "hello there"}
+        # Cancelling (any modality) reverts the queue — no dispatch will
+        # happen, proven at the workflow level in test_email_workflow.py.
+        cancel_resp = client.post(
+            "/conversation",
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "cancel send bob"},
         )
-        assert draft_resp.status_code == 200
-        draft_id = draft_resp.json()["id"]
+        assert "Cancelled" in cancel_resp.json()["reply"]
+        assert client.get("/emails/drafts").json()[0]["status"] == "approved"
 
-        # Sending an unapproved draft is rejected, not silently dispatched.
-        send_before_approval = client.post(f"/emails/drafts/{draft_id}/send")
-        assert send_before_approval.status_code == 409
-        assert client.sent_emails == []
 
-        approve_resp = client.post(f"/emails/drafts/{draft_id}/approve")
-        assert approve_resp.status_code == 200
-        assert approve_resp.json()["status"] == "approved"
+def test_email_direct_api_delayed_send_gate_and_dispatch() -> None:
+    async def run() -> None:
+        from companion_core.email.workflow import dispatch_due_drafts
 
-        send_resp = client.post(f"/emails/drafts/{draft_id}/send")
-        assert send_resp.status_code == 200
-        assert send_resp.json()["status"] == "sent"
-        assert len(client.sent_emails) == 1
+        with make_chain() as client:
+            draft_resp = client.post(
+                "/emails/drafts", json={"to": "alice@example.com", "subject": "Hi", "body": "hello there"}
+            )
+            assert draft_resp.status_code == 200
+            draft_id = draft_resp.json()["id"]
 
-        assert client.post("/emails/drafts/nonexistent/send").status_code == 404
+            # Sending an unapproved draft is rejected, not silently dispatched.
+            send_before_approval = client.post(f"/emails/drafts/{draft_id}/send")
+            assert send_before_approval.status_code == 409
+            assert client.sent_emails == []
+
+            approve_resp = client.post(f"/emails/drafts/{draft_id}/approve")
+            assert approve_resp.status_code == 200
+            assert approve_resp.json()["status"] == "approved"
+
+            send_resp = client.post(f"/emails/drafts/{draft_id}/send")
+            assert send_resp.status_code == 200
+            assert send_resp.json()["status"] == "queued"  # not "sent" — delayed
+            assert send_resp.json()["dispatch_at"] is not None
+            assert client.sent_emails == []
+
+            assert client.post("/emails/drafts/nonexistent/send").status_code == 404
+
+            # Cancel undoes the queue — back to approved, nothing sent even
+            # once the original dispatch_at has clearly passed.
+            cancel_resp = client.post(f"/emails/drafts/{draft_id}/cancel-send")
+            assert cancel_resp.status_code == 200
+            assert cancel_resp.json()["status"] == "approved"
+
+            async def record_send(draft) -> None:
+                client.sent_emails.append(draft)
+
+            future = datetime.now(UTC) + timedelta(minutes=30)
+            dispatched = await dispatch_due_drafts(client.email_store, send_fn=record_send, now=future)
+            assert dispatched == 0
+            assert client.sent_emails == []
+
+            # Re-queue and actually let it dispatch this time.
+            client.post(f"/emails/drafts/{draft_id}/send")
+            dispatched = await dispatch_due_drafts(client.email_store, send_fn=record_send, now=future)
+            assert dispatched == 1
+            assert len(client.sent_emails) == 1
+            assert (await client.email_store.get_draft(draft_id)).status.value == "sent"
+
+    asyncio.run(run())
 
 
 def test_email_inbox_seeding_and_listing() -> None:

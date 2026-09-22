@@ -1,5 +1,5 @@
 """Postgres-backed EmailStore. See store.py for the interface and the
-approval-gate note in models.py/workflow.py."""
+approval-gate/delayed-queue note in models.py/workflow.py."""
 
 from __future__ import annotations
 
@@ -26,12 +26,13 @@ CREATE TABLE IF NOT EXISTS email_drafts (
     status TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL,
     approved_at TIMESTAMPTZ,
+    dispatch_at TIMESTAMPTZ,
     sent_at TIMESTAMPTZ
 )
 """
 
 _RECEIVED_COLUMNS = "id, sender, subject, body, received_at"
-_DRAFT_COLUMNS = '"to", subject, body, in_reply_to, status, created_at, approved_at, sent_at'
+_DRAFT_COLUMNS = '"to", subject, body, in_reply_to, status, created_at, approved_at, dispatch_at, sent_at'
 _DRAFT_COLUMNS_WITH_ID = f"id, {_DRAFT_COLUMNS}"
 
 
@@ -49,7 +50,8 @@ def _draft_from_row(row: tuple) -> EmailDraft:
         status=DraftStatus(row[5]),
         created_at=row[6],
         approved_at=row[7],
-        sent_at=row[8],
+        dispatch_at=row[8],
+        sent_at=row[9],
     )
 
 
@@ -90,7 +92,8 @@ class PostgresEmailStore:
         draft = EmailDraft(to=to, subject=subject, body=body, in_reply_to=in_reply_to)
         async with self._pool.connection() as conn:
             await conn.execute(
-                f"INSERT INTO email_drafts ({_DRAFT_COLUMNS_WITH_ID}) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                f"INSERT INTO email_drafts ({_DRAFT_COLUMNS_WITH_ID}) "
+                f"VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     draft.id,
                     draft.to,
@@ -100,6 +103,7 @@ class PostgresEmailStore:
                     draft.status.value,
                     draft.created_at,
                     draft.approved_at,
+                    draft.dispatch_at,
                     draft.sent_at,
                 ),
             )
@@ -133,6 +137,36 @@ class PostgresEmailStore:
             )
             row = await cur.fetchone()
             return _draft_from_row(row) if row else None
+
+    async def queue_draft(self, draft_id: str, *, dispatch_at: datetime) -> EmailDraft | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"UPDATE email_drafts SET status = %s, dispatch_at = %s "
+                f"WHERE id = %s AND status = %s RETURNING {_DRAFT_COLUMNS_WITH_ID}",
+                (DraftStatus.QUEUED.value, dispatch_at, draft_id, DraftStatus.APPROVED.value),
+            )
+            row = await cur.fetchone()
+            return _draft_from_row(row) if row else None
+
+    async def cancel_queued_draft(self, draft_id: str) -> EmailDraft | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"UPDATE email_drafts SET status = %s, dispatch_at = NULL "
+                f"WHERE id = %s AND status = %s RETURNING {_DRAFT_COLUMNS_WITH_ID}",
+                (DraftStatus.APPROVED.value, draft_id, DraftStatus.QUEUED.value),
+            )
+            row = await cur.fetchone()
+            return _draft_from_row(row) if row else None
+
+    async def list_due(self, now: datetime) -> list[EmailDraft]:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"SELECT {_DRAFT_COLUMNS_WITH_ID} FROM email_drafts "
+                f"WHERE status = %s AND dispatch_at IS NOT NULL AND dispatch_at <= %s",
+                (DraftStatus.QUEUED.value, now),
+            )
+            rows = await cur.fetchall()
+            return [_draft_from_row(row) for row in rows]
 
     async def mark_sent(self, draft_id: str) -> EmailDraft | None:
         now = datetime.now(UTC)

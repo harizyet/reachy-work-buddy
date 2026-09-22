@@ -43,11 +43,14 @@ class MemoryStore(Protocol):
     async def recall(self, query: str, *, type: MemoryType | None = None) -> list[MemoryRecord]: ...
     async def list_memories(self, type: MemoryType | None = None) -> list[MemoryRecord]: ...
     async def get(self, memory_id: str) -> MemoryRecord | None: ...
-    async def forget(self, memory_id: str) -> bool: ...
+    async def forget(self, memory_id: str) -> MemoryRecord | None: ...
+    async def restore(self, memory_id: str) -> MemoryRecord | None: ...
+    async def find_forgotten(self, query: str) -> list[MemoryRecord]: ...
 
 
-def _not_expired(record: MemoryRecord, now: datetime) -> bool:
-    return record.expires_at is None or record.expires_at > now
+def _is_visible(record: MemoryRecord, now: datetime) -> bool:
+    not_expired = record.expires_at is None or record.expires_at > now
+    return not_expired and record.forgotten_at is None
 
 
 class InMemoryMemoryStore:
@@ -84,7 +87,7 @@ class InMemoryMemoryStore:
         matches = [
             r
             for r in self._records.values()
-            if _not_expired(r, now) and lowered in r.content.lower() and (type is None or r.type == type)
+            if _is_visible(r, now) and lowered in r.content.lower() and (type is None or r.type == type)
         ]
         matches.sort(key=lambda r: r.created_at)
         for record in matches:
@@ -93,14 +96,30 @@ class InMemoryMemoryStore:
 
     async def list_memories(self, type: MemoryType | None = None) -> list[MemoryRecord]:
         now = datetime.now(UTC)
-        results = [r for r in self._records.values() if _not_expired(r, now) and (type is None or r.type == type)]
+        results = [r for r in self._records.values() if _is_visible(r, now) and (type is None or r.type == type)]
         return sorted(results, key=lambda r: r.created_at)
 
     async def get(self, memory_id: str) -> MemoryRecord | None:
         record = self._records.get(memory_id)
-        if record is None or not _not_expired(record, datetime.now(UTC)):
+        if record is None or not _is_visible(record, datetime.now(UTC)):
             return None
         return record
 
-    async def forget(self, memory_id: str) -> bool:
-        return self._records.pop(memory_id, None) is not None
+    async def forget(self, memory_id: str) -> MemoryRecord | None:
+        record = self._records.get(memory_id)
+        if record is None or record.forgotten_at is not None:
+            return None
+        record.forgotten_at = datetime.now(UTC)
+        return record
+
+    async def restore(self, memory_id: str) -> MemoryRecord | None:
+        record = self._records.get(memory_id)
+        if record is None or record.forgotten_at is None:
+            return None
+        record.forgotten_at = None
+        return record
+
+    async def find_forgotten(self, query: str) -> list[MemoryRecord]:
+        lowered = query.lower()
+        matches = [r for r in self._records.values() if r.forgotten_at is not None and lowered in r.content.lower()]
+        return sorted(matches, key=lambda r: r.forgotten_at, reverse=True)

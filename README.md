@@ -54,6 +54,14 @@ the engineering detail and live-verification evidence behind each item):
 - **Email drafting with a real approval gate** — draft a reply
   conversationally, and it genuinely cannot be sent until you explicitly
   approve it; a real SMTP send only happens after that, never before.
+- **Destructive actions require text confirmation, never voice** —
+  forgetting a memory (or anything destructive added later) only *asks*
+  for confirmation; confirming it by voice is refused outright, by design,
+  not by prompting. Bulk/mass-destructive actions ("delete everything")
+  have no confirmation path at all — blocked unconditionally.
+- **Every destructive action can be undone** — forgetting a memory is a
+  soft delete you can restore; sending an email queues for ~10 minutes
+  with a cancel window before it actually goes out.
 - **Runs for real** — one `docker compose up` brings up the whole stack
   (reasoning, hub, embodiment, Postgres, a reverse proxy) on your own
   homelab; every feature above has been verified against that actual
@@ -270,20 +278,47 @@ Phases 0-14 are done:
   conversationally; "approve draft X" moves it from `draft` to `approved`;
   "send draft X" only dispatches if it's already `approved`. The exit
   criterion ("No code path sends mail without approval gate") is a
-  structural property: `email/workflow.py`'s `send_approved_draft` is the
-  *only* function anywhere in this codebase that calls a sender, and it
-  always checks approval status first — both the conversational path and
-  the direct API (`POST /emails/drafts/{id}/send`) go through it, nothing
-  bypasses it. No cloud email API key was available, so sending speaks
-  real SMTP directly (`email/sender.py`) to a local Mailpit container in
-  the homelab stack — a real SMTP protocol handshake, but no personal
-  mailbox involved. Verified live through the real deployed Caddy stack:
-  sending before approval was refused with nothing dispatched (confirmed
-  against Mailpit's own message list, not just the HTTP response),
-  approving then sending produced a real SMTP message that actually
-  arrived in Mailpit, sending an already-sent draft again correctly
-  404/409'd, and the draft's data survived a `companion-core` restart via
-  Postgres.
+  structural property: only one function anywhere in this codebase ever
+  calls a sender (see ADR 0011 below for what it became), and it always
+  checks approval status first — both the conversational path and the
+  direct API go through it, nothing bypasses it. No cloud email API key
+  was available, so sending speaks real SMTP directly (`email/sender.py`)
+  to a local Mailpit container in the homelab stack — a real SMTP protocol
+  handshake, but no personal mailbox involved. Verified live through the
+  real deployed Caddy stack: sending before approval was refused with
+  nothing dispatched (confirmed against Mailpit's own message list, not
+  just the HTTP response), approving then sending produced a real SMTP
+  message that actually arrived in Mailpit, sending an already-sent draft
+  again correctly 404/409'd, and the draft's data survived a
+  `companion-core` restart via Postgres.
+- ADR 0011 (destructive-action consent — a cross-cutting safety refactor
+  inserted ahead of Phase 15, not itself a numbered phase): explicit
+  instruction that, ahead of any future real Gmail/Outlook/live-calendar
+  connector, destructive actions need a hard, structural safety mechanism.
+  Two rules, enforced in one place (`companion_core/consent/gate.py`): a
+  destructive action can never be requested at bulk/mass scope (`delete
+  the whole mailbox` has no path to confirmation, ever — proven by a
+  direct unit test, not a documented intention), and a destructive-action
+  confirmation can never come from voice, regardless of what the audio
+  transcribes to. `InputModality` (typed vs. spoken — distinct from
+  `Channel`, which means "which device") is threaded end to end from
+  reachy-hub's `/voice/turn` through to companion-core so that signal
+  actually survives the trip. Memory forgetting became this codebase's
+  first real user of the gate — "forget X" only requests a confirmation,
+  "yes forget X" (text-only) is what actually forgets it, and forgetting
+  is now a soft delete (`restore X` always works, any modality, no gate —
+  undoing must never be harder than the action it undoes). Email approval
+  and the send-trigger both now require text too, and "send draft X" no
+  longer dispatches immediately: it queues a real send ~10 minutes out, a
+  background loop is what actually dispatches once due, and "cancel send
+  X" (any modality) reverts it before then. Verified live through the real
+  deployed Caddy stack: a spoken ("voice") confirmation attempt through
+  `/voice/turn` was refused while the equivalent typed confirmation
+  succeeded; a queued email send was cancelled with nothing reaching
+  Mailpit, and a separate queued send was left to actually dispatch once
+  its window passed, producing a real SMTP message in Mailpit. See
+  [docs/adr/0011](docs/adr/0011-destructive-action-consent.md) for the
+  full design.
 
 See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
 phase-by-phase roadmap. Next up: Phase 15, calling Reachy (PWA + WebRTC
@@ -293,7 +328,7 @@ listens/thinks/speaks).
 ## Layout
 
 ```
-services/companion-core/     reasoning/tools/memory, privacy, calendar, tasks, RAG, email (Phases 5, 9-14)
+services/companion-core/     reasoning/tools/memory, privacy, calendar, tasks, RAG, email, consent gate (Phases 5, 9-14, ADR 0011)
 services/reachy-hub/         robot registry, sessions, routing, Telegram, voice/STT/TTS, audit, reminders (Phases 4-10)
 services/reachy-embodiment/  semantic behaviour API + presence loop + VAD (Phases 2-3, 8)
 clients/web-pwa/             web/PWA client (unimplemented)

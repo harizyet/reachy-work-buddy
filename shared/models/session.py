@@ -22,6 +22,24 @@ class Channel(StrEnum):
     PHONE = "phone"
 
 
+class InputModality(StrEnum):
+    """Was this turn typed or spoken? Distinct from Channel, which means
+    "which client/device" — voice input on the Reachy channel and a future
+    typed-on-Reachy-touchscreen message would share `channel=reachy` but
+    differ here. Exists specifically so destructive-action confirmation
+    (docs/adr/0011) can refuse anything that arrived as VOICE: voice input
+    is unauthenticated ambient audio, easy to spoof or mishear, and this
+    system's one hard security rule is that it never authorizes a
+    destructive action from it, textual-consent-only. Threaded end to end:
+    reachy-hub's InboundMessage -> handle_inbound_message ->
+    CompanionCoreClient.send_turn -> companion-core's
+    ConversationTurnRequest. Only `voice_turn` (real STT transcription)
+    ever constructs VOICE; every other inbound path defaults to TEXT."""
+
+    TEXT = "text"
+    VOICE = "voice"
+
+
 class PrivacyContext(StrEnum):
     """Ambient privacy state of the user's current physical situation.
 

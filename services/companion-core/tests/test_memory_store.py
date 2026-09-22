@@ -89,14 +89,62 @@ def test_unexpired_memory_with_future_expiry_is_still_recalled() -> None:
     asyncio.run(run())
 
 
-def test_forget_removes_a_memory() -> None:
+def test_forget_is_a_soft_delete() -> None:
+    """docs/adr/0011: forgetting hides a record from recall/list/get, but
+    never removes it — "any action performed should always be able to be
+    undone" — so restore() can always bring it back."""
+
     async def run() -> None:
         store = InMemoryMemoryStore()
         record = await store.add_memory(content="forget me", source="conversation")
 
-        assert await store.forget(record.id) is True
+        forgotten = await store.forget(record.id)
+        assert forgotten is not None
+        assert forgotten.forgotten_at is not None
         assert await store.get(record.id) is None
-        assert await store.forget(record.id) is False  # already gone
+        assert await store.recall("forget me") == []
+        assert await store.list_memories() == []
+        assert await store.forget(record.id) is None  # already forgotten
+
+    asyncio.run(run())
+
+
+def test_restore_undoes_a_forget() -> None:
+    async def run() -> None:
+        store = InMemoryMemoryStore()
+        record = await store.add_memory(content="forget me", source="conversation")
+        await store.forget(record.id)
+
+        restored = await store.restore(record.id)
+        assert restored is not None
+        assert restored.forgotten_at is None
+        assert await store.get(record.id) is not None
+        assert len(await store.recall("forget me")) == 1
+        assert await store.restore(record.id) is None  # already restored, not forgotten
+
+    asyncio.run(run())
+
+
+def test_restore_unknown_memory_returns_none() -> None:
+    async def run() -> None:
+        store = InMemoryMemoryStore()
+        assert await store.restore("nonexistent") is None
+
+    asyncio.run(run())
+
+
+def test_find_forgotten_matches_content_substring() -> None:
+    async def run() -> None:
+        store = InMemoryMemoryStore()
+        record = await store.add_memory(content="my manager is Alice", source="conversation")
+        await store.forget(record.id)
+        await store.add_memory(content="unrelated fact", source="conversation")  # never forgotten
+
+        found = await store.find_forgotten("alice")
+        assert len(found) == 1
+        assert found[0].id == record.id
+
+        assert await store.find_forgotten("unrelated") == []  # not forgotten, so not found here
 
     asyncio.run(run())
 

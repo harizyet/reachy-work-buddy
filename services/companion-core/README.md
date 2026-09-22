@@ -186,16 +186,16 @@ calendar) — and "summarize"/"draft" don't attempt real writing either
 (there's no LLM in this codebase yet); a draft's body is the user's text
 verbatim, the same way "remember that X" (Phase 12) stores X verbatim.
 
-- `email/models.py`'s `EmailDraft.status` (`draft` -> `approved` -> `sent`,
-  or `rejected`) is the mechanism behind the exit criterion ("No code path
-  sends mail without approval gate"), and `email/workflow.py`'s
-  `send_approved_draft` is what makes it structural rather than a claim:
-  it is the *only* function anywhere in this codebase that calls an
-  `EmailSender`, and it always checks `status == APPROVED` first, raising
-  `DraftNotApprovedError` otherwise — no sender call happens before that
-  check, not "happens not to" but *cannot*, since there is exactly one
-  call site and it's gated. Both `POST /emails/drafts/{id}/send` and the
-  conversational "send draft X" path go through this one function.
+- `email/models.py`'s `EmailDraft.status` (`draft` -> `approved` -> `sent`
+  at the time this phase landed; ADR 0011 below inserted a `queued` step
+  between them, and `rejected`/`cancelled`) is the mechanism behind the
+  exit criterion ("No code path sends mail without approval gate"): only
+  one function anywhere in this codebase ever calls an `EmailSender` (see
+  ADR 0011 for what it became), and it always checks approval status
+  first — no sender call happens before that check, not "happens not to"
+  but *cannot*, since there is exactly one call site and it's gated. Both
+  the direct API and the conversational "send draft X" path go through
+  this one function.
 - `email_intent.py` — same placeholder-matcher honesty as the other
   `*_intent.py` modules: "draft email to X about Y" creates a draft
   (Prepare tier, docs/plan.md §9 — no confirmation needed just to create
@@ -213,14 +213,67 @@ verbatim, the same way "remember that X" (Phase 12) stores X verbatim.
   that the right exception was raised.
 - `POST /emails/received`, `GET /emails/received`, `POST /emails/drafts`,
   `GET /emails/drafts`, `POST /emails/drafts/{id}/approve`,
-  `POST /emails/drafts/{id}/send` — the direct API.
-- **Verified live**: through the real deployed Caddy stack, a draft
+  `POST /emails/drafts/{id}/send` — the direct API (ADR 0011 added
+  `POST /emails/drafts/{id}/cancel-send`).
+- **Verified live** (at the time this phase landed; see ADR 0011 below for
+  what changed since): through the real deployed Caddy stack, a draft
   created conversationally could not be sent before approval — confirmed
   against Mailpit's own message list staying empty, not just the HTTP
   reply — then, once approved, produced a real SMTP message that actually
   arrived in Mailpit; a second send attempt on the now-sent draft
-  correctly 409'd; and the draft's data (including its `sent`/`approved`
-  timestamps) survived a `companion-core` container restart via Postgres.
+  correctly 409'd; and the draft's data survived a `companion-core`
+  container restart via Postgres.
+
+**ADR 0011** (destructive-action consent — a cross-cutting safety refactor
+inserted ahead of Phase 15, not itself a numbered phase): explicit
+instruction that, ahead of any future real Gmail/Outlook/live-calendar
+connector, this codebase needs a hard, structural safety mechanism for
+destructive actions — see
+[docs/adr/0011](../../docs/adr/0011-destructive-action-consent.md) for the
+full design. `consent/` — `ConfirmationStore` Protocol,
+`PostgresConfirmationStore`/`InMemoryConfirmationStore`, and `gate.py`,
+where the two hard rules actually live: `request_confirmation` refuses
+`ActionScope.BULK` unconditionally (no row is ever created — "delete
+everything" has no path to confirmation, proven by a direct unit test, not
+a documented intention), and `confirm_action`/`require_text` refuse
+`InputModality.VOICE` unconditionally, regardless of what the audio
+transcribed to. `InputModality` (shared/models/session.py) is threaded
+end to end from reachy-hub's `/voice/turn` — the only place that ever
+produces `VOICE` — through to `ConversationTurnRequest` here, since it's a
+security signal (typed vs. spoken) distinct from `Channel` (which device).
+
+- Memory forgetting became this codebase's first real user of the gate:
+  `memory_intent.py` gained `match_forget`/`match_confirm_forget`/
+  `match_restore` — "forget X" only *requests* a confirmation (`SINGLE`
+  scope, since it targets one recalled record), "yes forget X" is the only
+  thing that actually calls `MemoryStore.forget()`, gated behind
+  `confirm_action`. Forgetting became a soft delete
+  (`MemoryRecord.forgotten_at`, `shared/models/memory.py`) so it can always
+  be undone: `recall`/`list_memories`/`get` treat a forgotten record the
+  same way they already treated an expired one, and "restore X" (any
+  modality, no confirmation gate — undoing must never be harder than the
+  action it undoes) clears the flag. `DELETE /memories/{id}` no longer
+  exists — replaced by `POST /memories/{id}/request-forget`,
+  `POST /memories/{id}/forget/confirm`, and `POST /memories/{id}/restore`.
+- Email approval and the send-trigger both now call `require_text` and
+  refuse voice. "send draft X" no longer dispatches immediately even once
+  approved: `email/workflow.py`'s `queue_draft_for_sending` moves the
+  draft to a new `QUEUED` status with `dispatch_at` ~10 minutes out;
+  `run_dispatch_loop` (started from `create_app`'s lifespan, same
+  real-background-task pattern as reachy-hub's heartbeat loop, unit-tested
+  both as a deterministic-time step function and as one real short-interval
+  task per AGENTS.md's convention) is the only code that actually calls
+  the `EmailSender` now, and only for what's due. "cancel send X" (any
+  modality, `POST /emails/drafts/{id}/cancel-send`) reverts `QUEUED` back
+  to `APPROVED` — the undo.
+- **Verified live**: through the real deployed Caddy stack, an attempt to
+  confirm a pending memory-forget by voice (via `/voice/turn`, real
+  synthesized speech) was refused, while the identical confirmation typed
+  as text succeeded and the memory was genuinely gone from `/memories`,
+  then restorable; a queued email send was cancelled with Mailpit's
+  message list staying empty; a separate queued send was left to actually
+  dispatch once its window elapsed, producing a real SMTP message in
+  Mailpit.
 
 ## Run it
 

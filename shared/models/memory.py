@@ -26,6 +26,12 @@ class MemoryRecord(BaseModel):
     and otherwise unused anywhere in the codebase until Phase 12 actually
     implemented this model. Consolidated when building the real
     implementation rather than carrying forward a duplicate concept.
+
+    `forgotten_at` (docs/adr/0011): forgetting is a soft delete, not a row
+    removal — "any action performed should always be able to be undone"
+    means a forgotten memory can be restored, so the record itself
+    outlives the forget. `recall`/`list_memories`/`get` all exclude
+    forgotten records exactly the way they already exclude expired ones.
     """
 
     id: str
@@ -38,3 +44,4 @@ class MemoryRecord(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     last_accessed: datetime | None = None
     expires_at: datetime | None = None
+    forgotten_at: datetime | None = None

@@ -85,10 +85,35 @@ the conversational "send draft X" path, and it always checks
 `DraftStatus.APPROVED` first. No cloud email API key was available either,
 so the real sender (`email/sender.py`) speaks plain SMTP directly — in the
 homelab compose stack, to a local Mailpit container, not a real mailbox.
+
+ADR 0011 (destructive-action consent, a cross-cutting safety refactor
+inserted ahead of Phase 15, not itself a numbered phase): two hard rules,
+enforced structurally by consent/gate.py, not left to whatever reasoning
+eventually replaces the placeholder matchers here. (1) A destructive
+action can never be requested at bulk/mass scope — `request_confirmation`
+refuses before a row even exists, so "delete the whole mailbox" has no
+path to confirmation, confirmed or not. (2) A destructive-action
+confirmation can never come from voice — `confirm_action`/`require_text`
+refuse it regardless of what the audio transcribes to; `ConversationTurnRequest.
+input_modality` (only ever VOICE from `/voice/turn`, via reachy-hub) is
+how that signal survives the trip from audio to here. Memory's forget is
+now this codebase's first real user of the gate: "forget X" only
+*requests* a confirmation (`memory.forget`, SINGLE scope), "yes forget X"
+confirms it, and forgetting is a soft delete (`MemoryRecord.forgotten_at`)
+so "restore X" can always undo it — "any action performed should always
+be able to be undone" is architecture here, not a promise. Email's
+approve/send-trigger both now require text too, and "send draft X" no
+longer dispatches immediately: it queues a real send ~10 minutes out
+(`email/workflow.py`'s `queue_draft_for_sending`), during which
+"cancel send X" (any modality — undo is always allowed) reverts it; a
+background loop (`run_dispatch_loop`) is what actually calls the
+`EmailSender`, and only for what's due.
 """
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -104,15 +129,30 @@ from companion_core.calendar.postgres_store import PostgresCalendarStore
 from companion_core.calendar.reminders import due_reminders
 from companion_core.calendar.store import CalendarStore
 from companion_core.calendar_intent import format_next_event_reply, is_next_event_query
+from companion_core.consent.gate import (
+    ConfirmationExpiredError,
+    ConfirmationNotFoundError,
+    VoiceConfirmationNotAllowedError,
+    confirm_action,
+    request_confirmation,
+    require_text,
+)
+from companion_core.consent.models import ActionScope, ConfirmationRequest
+from companion_core.consent.postgres_store import PostgresConfirmationStore
+from companion_core.consent.store import ConfirmationStore
 from companion_core.conversation import ConversationStore
 from companion_core.email.models import DraftStatus, EmailDraft, EmailMessage
 from companion_core.email.postgres_store import PostgresEmailStore
 from companion_core.email.sender import smtp_send
 from companion_core.email.store import EmailStore
 from companion_core.email.workflow import (
+    DEFAULT_SEND_DELAY_SECONDS,
     DraftNotApprovedError,
+    DraftNotQueuedError,
     SendFn,
-    send_approved_draft,
+    cancel_queued_draft,
+    queue_draft_for_sending,
+    run_dispatch_loop,
 )
 from companion_core.hub_client import HubClient
 from companion_core.memory.postgres_store import PostgresMemoryStore
@@ -136,6 +176,7 @@ from companion_core.tasks.store import TaskStore
 from shared.models.memory import MemoryRecord, MemoryType
 from shared.models.rag import DocumentChunk, RetrievedChunk
 from shared.models.response import Privacy, Urgency
+from shared.models.session import InputModality
 
 
 class ConversationTurnRequest(BaseModel):
@@ -143,6 +184,7 @@ class ConversationTurnRequest(BaseModel):
     conversation_id: str
     channel: str
     text: str
+    input_modality: InputModality = InputModality.TEXT
 
 
 class ConversationTurnResponse(BaseModel):
@@ -160,6 +202,10 @@ class ReminderPayload(BaseModel):
 
 class CreateTaskRequest(BaseModel):
     text: str
+
+
+class ConfirmForgetRequest(BaseModel):
+    confirmation_id: str
 
 
 class CreateMemoryRequest(BaseModel):
@@ -200,7 +246,11 @@ def create_app(
     rag_store: DocumentStore | None = None,
     email_store: EmailStore | None = None,
     email_send_fn: SendFn = smtp_send,
+    email_send_delay_seconds: int = DEFAULT_SEND_DELAY_SECONDS,
+    confirmation_store: ConfirmationStore | None = None,
     database_url: str | None = None,
+    run_email_dispatch_task: bool = True,
+    email_dispatch_interval: float = 30.0,
 ) -> FastAPI:
     hub_base_url = hub_base_url or os.environ.get("REACHY_HUB_URL", "http://reachy-hub:8000")
     conversation_store = ConversationStore()
@@ -209,6 +259,7 @@ def create_app(
     owns_memory_store = memory_store is None
     owns_rag_store = rag_store is None
     owns_email_store = email_store is None
+    owns_confirmation_store = confirmation_store is None
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -228,9 +279,28 @@ def create_app(
         if owns_email_store:
             dsn = database_url or os.environ["DATABASE_URL"]
             app.state.email_store = await PostgresEmailStore.connect(dsn)
+        if owns_confirmation_store:
+            dsn = database_url or os.environ["DATABASE_URL"]
+            app.state.confirmation_store = await PostgresConfirmationStore.connect(dsn)
+
+        # Only actually dispatches drafts whose dispatch_at has passed —
+        # queueing a draft doesn't send it, this loop noticing it's due
+        # does. Same real-background-task pattern as reachy-hub's
+        # heartbeat_loop.
+        dispatch_task = (
+            asyncio.create_task(
+                run_dispatch_loop(app.state.email_store, send_fn=email_send_fn, interval_seconds=email_dispatch_interval)
+            )
+            if run_email_dispatch_task
+            else None
+        )
         try:
             yield
         finally:
+            if dispatch_task is not None:
+                dispatch_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await dispatch_task
             await app.state.hub_client.aclose()
             if owns_calendar_store:
                 await app.state.calendar_store.close()
@@ -242,6 +312,8 @@ def create_app(
                 await app.state.rag_store.close()
             if owns_email_store:
                 await app.state.email_store.close()
+            if owns_confirmation_store:
+                await app.state.confirmation_store.close()
 
     app = FastAPI(title="companion-core", lifespan=lifespan)
     app.state.conversation_store = conversation_store
@@ -255,6 +327,8 @@ def create_app(
         app.state.rag_store = rag_store
     if not owns_email_store:
         app.state.email_store = email_store
+    if not owns_confirmation_store:
+        app.state.confirmation_store = confirmation_store
 
     @app.get("/health")
     async def health() -> dict[str, str]:
@@ -269,9 +343,13 @@ def create_app(
         search_query = match_search(turn.text)
         memory_capture_text = memory_intent.match_capture(turn.text)
         memory_recall_query = memory_intent.match_recall(turn.text)
+        confirm_forget_query = memory_intent.match_confirm_forget(turn.text)
+        forget_query = memory_intent.match_forget(turn.text)
+        restore_query = memory_intent.match_restore(turn.text)
         rag_query = rag_intent.match_query(turn.text)
         draft_request = email_intent.match_draft(turn.text)
         approve_query = email_intent.match_approve(turn.text)
+        cancel_send_query = email_intent.match_cancel_send(turn.text)
         send_query = email_intent.match_send(turn.text)
 
         if is_next_event_query(turn.text):
@@ -316,6 +394,58 @@ def create_app(
             found = await app.state.memory_store.recall(memory_recall_query)
             reply = memory_intent.format_recall_reply(found, memory_recall_query)
             privacy = memory_intent.most_restrictive_privacy(found, default=classify_privacy(turn.text))
+        elif confirm_forget_query:
+            # docs/adr/0011: the only place memory.forget is actually
+            # invoked, and only after confirm_action has verified this
+            # wasn't a voice-sourced attempt.
+            pending = await app.state.confirmation_store.find_pending("memory.forget", confirm_forget_query)
+            if pending is None:
+                reply = memory_intent.format_confirmation_not_found_reply(confirm_forget_query)
+            else:
+                try:
+                    confirmed = await confirm_action(
+                        app.state.confirmation_store, pending.id, input_modality=turn.input_modality
+                    )
+                    record = await app.state.memory_store.forget(confirmed.target_id)
+                    reply = (
+                        memory_intent.format_forgotten_reply(record)
+                        if record
+                        else memory_intent.format_confirmation_not_found_reply(confirm_forget_query)
+                    )
+                except VoiceConfirmationNotAllowedError:
+                    reply = memory_intent.format_voice_confirmation_blocked_reply()
+                except (ConfirmationNotFoundError, ConfirmationExpiredError):
+                    reply = memory_intent.format_confirmation_not_found_reply(confirm_forget_query)
+            privacy = Privacy.WORK_PRIVATE
+        elif forget_query:
+            # Only *requests* a confirmation — never deletes anything
+            # itself. request_confirmation is always called at SINGLE
+            # scope here (one recalled record); it would refuse BULK
+            # outright if anything ever asked for that (docs/adr/0011).
+            found = await app.state.memory_store.recall(forget_query)
+            if not found:
+                reply = memory_intent.format_forget_not_found_reply(forget_query)
+            else:
+                target = found[0]
+                await request_confirmation(
+                    app.state.confirmation_store,
+                    action_type="memory.forget",
+                    target_id=target.id,
+                    description=target.content,
+                    scope=ActionScope.SINGLE,
+                )
+                reply = memory_intent.format_forget_confirmation_reply(target, forget_query)
+            privacy = Privacy.WORK_PRIVATE
+        elif restore_query:
+            # The undo — no confirmation gate, any modality: undoing must
+            # never be harder than the destructive action it reverses.
+            found = await app.state.memory_store.find_forgotten(restore_query)
+            if not found:
+                reply = memory_intent.format_restore_not_found_reply(restore_query)
+            else:
+                restored = await app.state.memory_store.restore(found[0].id)
+                reply = memory_intent.format_restored_reply(restored)
+            privacy = Privacy.WORK_PRIVATE
         elif rag_query:
             results = await app.state.rag_store.search(rag_query)
             reply = rag_intent.format_answer(results, rag_query)
@@ -330,22 +460,50 @@ def create_app(
             reply = email_intent.format_draft_reply(draft)
             privacy = Privacy.WORK_PRIVATE
         elif approve_query:
-            pending = await app.state.email_store.list_drafts(DraftStatus.DRAFT)
-            matched = email_intent.find_draft_by_query(pending, approve_query)
-            approved = await app.state.email_store.approve_draft(matched.id) if matched else None
-            reply = email_intent.format_approve_reply(approved, approve_query)
+            # docs/adr/0011: approval is consent for an outbound
+            # communication — text-only, same rule as memory.forget's
+            # confirmation.
+            try:
+                require_text(turn.input_modality)
+                pending = await app.state.email_store.list_drafts(DraftStatus.DRAFT)
+                matched = email_intent.find_draft_by_query(pending, approve_query)
+                approved = await app.state.email_store.approve_draft(matched.id) if matched else None
+                reply = email_intent.format_approve_reply(approved, approve_query)
+            except VoiceConfirmationNotAllowedError:
+                reply = memory_intent.format_voice_confirmation_blocked_reply()
+            privacy = Privacy.WORK_PRIVATE
+        elif cancel_send_query:
+            # The undo — no text-only gate: cancelling is always safe and
+            # must never be harder than the send it's cancelling.
+            candidates = await app.state.email_store.list_drafts(DraftStatus.QUEUED)
+            matched = email_intent.find_draft_by_query(candidates, cancel_send_query)
+            if matched is None:
+                reply = email_intent.format_send_not_found_reply(cancel_send_query)
+            else:
+                cancelled = await cancel_queued_draft(app.state.email_store, matched.id)
+                reply = email_intent.format_cancel_send_reply(cancelled)
             privacy = Privacy.WORK_PRIVATE
         elif send_query:
-            candidates = await app.state.email_store.list_drafts()
-            matched = email_intent.find_draft_by_query(candidates, send_query)
-            if matched is None:
-                reply = email_intent.format_send_not_found_reply(send_query)
-            else:
-                try:
-                    sent = await send_approved_draft(app.state.email_store, matched.id, send_fn=email_send_fn)
-                    reply = email_intent.format_send_success_reply(sent)
-                except DraftNotApprovedError:
-                    reply = email_intent.format_send_not_approved_reply(matched)
+            # "send draft X" only *queues* it ~10 minutes out — docs/adr/0011's
+            # delay-before-dispatch window — and requires text, same as
+            # approval. run_dispatch_loop (started in lifespan) is what
+            # actually calls email_send_fn later, once due.
+            try:
+                require_text(turn.input_modality)
+                candidates = await app.state.email_store.list_drafts()
+                matched = email_intent.find_draft_by_query(candidates, send_query)
+                if matched is None:
+                    reply = email_intent.format_send_not_found_reply(send_query)
+                else:
+                    try:
+                        queued = await queue_draft_for_sending(
+                            app.state.email_store, matched.id, delay_seconds=email_send_delay_seconds
+                        )
+                        reply = email_intent.format_send_queued_reply(queued, email_send_delay_seconds)
+                    except DraftNotApprovedError:
+                        reply = email_intent.format_send_not_approved_reply(matched)
+            except VoiceConfirmationNotAllowedError:
+                reply = memory_intent.format_voice_confirmation_blocked_reply()
             privacy = Privacy.WORK_PRIVATE
         else:
             reply = f"(turn {len(history)} via {turn.channel}) heard: {turn.text}"
@@ -411,12 +569,50 @@ def create_app(
     async def recall_memories(q: str, type: MemoryType | None = None) -> list[MemoryRecord]:
         return await app.state.memory_store.recall(q, type=type)
 
-    @app.delete("/memories/{memory_id}")
-    async def forget_memory(memory_id: str) -> dict[str, bool]:
-        forgotten = await app.state.memory_store.forget(memory_id)
-        if not forgotten:
+    @app.post("/memories/{memory_id}/request-forget")
+    async def request_forget_memory(memory_id: str) -> ConfirmationRequest:
+        """docs/adr/0011: forgetting is destructive, so deleting a memory
+        is now a two-step API too — this only *requests* a confirmation
+        (SINGLE scope; request_confirmation refuses BULK unconditionally).
+        Nothing is deleted until POST /memories/{id}/forget/confirm."""
+        record = await app.state.memory_store.get(memory_id)
+        if record is None:
             raise HTTPException(status_code=404, detail=f"no memory '{memory_id}'")
-        return {"forgotten": True}
+        return await request_confirmation(
+            app.state.confirmation_store,
+            action_type="memory.forget",
+            target_id=record.id,
+            description=record.content,
+            scope=ActionScope.SINGLE,
+        )
+
+    @app.post("/memories/{memory_id}/forget/confirm")
+    async def confirm_forget_memory(memory_id: str, request: ConfirmForgetRequest) -> MemoryRecord:
+        # A direct API call is never voice — only /voice/turn's transcribed
+        # conversational path can ever be — but confirm_action still runs
+        # the same check, so this endpoint can't become a silent bypass of
+        # the rule if that assumption ever stops holding.
+        try:
+            confirmed = await confirm_action(
+                app.state.confirmation_store, request.confirmation_id, input_modality=InputModality.TEXT
+            )
+        except (ConfirmationNotFoundError, ConfirmationExpiredError) as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        if confirmed.target_id != memory_id:
+            raise HTTPException(status_code=400, detail="confirmation_id does not match this memory")
+        record = await app.state.memory_store.forget(memory_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail=f"no memory '{memory_id}'")
+        return record
+
+    @app.post("/memories/{memory_id}/restore")
+    async def restore_memory(memory_id: str) -> MemoryRecord:
+        """The undo — no confirmation needed, matches the conversational
+        "restore X" path: undoing must never be harder than forgetting."""
+        record = await app.state.memory_store.restore(memory_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail=f"no forgotten memory '{memory_id}'")
+        return record
 
     @app.post("/documents")
     async def ingest_document(request: CreateDocumentRequest) -> list[DocumentChunk]:
@@ -464,7 +660,11 @@ def create_app(
     async def approve_email_draft(draft_id: str) -> EmailDraft:
         """Act-tier confirmation (docs/plan.md §9) — the only thing that
         moves a draft from DRAFT to APPROVED, which is what
-        send_approved_draft requires before it will dispatch anything."""
+        queue_draft_for_sending requires before it will queue anything. A
+        direct API call is never voice (see forget/confirm's comment on
+        the same point), so this always passes require_text — the check
+        stays here anyway so it can't silently stop holding."""
+        require_text(InputModality.TEXT)
         approved = await app.state.email_store.approve_draft(draft_id)
         if approved is None:
             raise HTTPException(status_code=404, detail=f"no pending draft '{draft_id}'")
@@ -472,11 +672,26 @@ def create_app(
 
     @app.post("/emails/drafts/{draft_id}/send")
     async def send_email_draft(draft_id: str) -> EmailDraft:
+        """docs/adr/0011: queues the send ~10 minutes out rather than
+        dispatching immediately — the "changed your mind" window. See
+        POST /emails/drafts/{id}/cancel-send for the undo, and
+        run_dispatch_loop (started in lifespan) for what actually sends."""
+        require_text(InputModality.TEXT)
         try:
-            return await send_approved_draft(app.state.email_store, draft_id, send_fn=email_send_fn)
+            return await queue_draft_for_sending(app.state.email_store, draft_id, delay_seconds=email_send_delay_seconds)
         except LookupError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         except DraftNotApprovedError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    @app.post("/emails/drafts/{draft_id}/cancel-send")
+    async def cancel_email_send(draft_id: str) -> EmailDraft:
+        """The undo — no text-only gate, always allowed."""
+        try:
+            return await cancel_queued_draft(app.state.email_store, draft_id)
+        except LookupError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except DraftNotQueuedError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     @app.get("/tasks")

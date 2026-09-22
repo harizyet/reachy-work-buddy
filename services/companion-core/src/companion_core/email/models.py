@@ -10,11 +10,15 @@ these are seeded through an operator/setup API rather than pulled from a
 real mailbox.
 
 `EmailDraft.status` is the mechanism behind Phase 14's exit criterion ("No
-code path sends mail without approval gate"): a draft starts at DRAFT, an
-explicit `POST /emails/drafts/{id}/approve` call moves it to APPROVED, and
-only `email/workflow.py`'s `send_approved_draft` — the single function
-anywhere in this codebase that invokes an `EmailSender` — will actually
-dispatch a draft, and only once it's checked the status is APPROVED.
+code path sends mail without approval gate") and docs/adr/0011's delayed-
+send requirement: DRAFT -> APPROVED (explicit `POST
+/emails/drafts/{id}/approve`, text-only per the ADR) -> QUEUED ("send
+draft X", also text-only — `dispatch_at` set ~10 minutes out) -> SENT,
+once `email/workflow.py`'s background dispatch loop — the only code that
+ever invokes an `EmailSender` — actually sends it. QUEUED -> CANCELLED is
+the undo: any channel, any modality, always allowed, since undoing is the
+safe direction and should never be harder than the destructive action
+itself.
 """
 
 from __future__ import annotations
@@ -29,7 +33,9 @@ from pydantic import BaseModel, Field
 class DraftStatus(StrEnum):
     DRAFT = "draft"
     APPROVED = "approved"
+    QUEUED = "queued"
     SENT = "sent"
+    CANCELLED = "cancelled"
     REJECTED = "rejected"
 
 
@@ -50,4 +56,5 @@ class EmailDraft(BaseModel):
     status: DraftStatus = DraftStatus.DRAFT
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     approved_at: datetime | None = None
+    dispatch_at: datetime | None = None
     sent_at: datetime | None = None

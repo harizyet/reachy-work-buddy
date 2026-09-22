@@ -2,7 +2,12 @@ from shared.models.embodiment import Behaviour, EmbodimentCommand, EmbodimentSta
 from shared.models.memory import MemoryRecord, MemoryType
 from shared.models.rag import DocumentChunk, RetrievedChunk
 from shared.models.response import AgentResponse, PreferredChannel, Privacy, Urgency
-from shared.models.session import AgentSession, InteractionMode, PrivacyContext
+from shared.models.session import (
+    AgentSession,
+    InputModality,
+    InteractionMode,
+    PrivacyContext,
+)
 
 __all__ = [
     "AgentResponse",
@@ -11,6 +16,7 @@ __all__ = [
     "DocumentChunk",
     "EmbodimentCommand",
     "EmbodimentState",
+    "InputModality",
     "InteractionMode",
     "MemoryRecord",
     "MemoryType",

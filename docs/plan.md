@@ -263,6 +263,12 @@ robot-facing daemon remains inside the trusted network boundary.
 
 ## 9. Security, Privacy, and Permission Model
 
+See [docs/adr/0011](adr/0011-destructive-action-consent.md) for the binding
+implementation of "explicit confirmation" below: destructive actions are
+gated in code (`companion_core/consent/`), voice can never provide that
+confirmation, and bulk/mass-destructive actions have no path to
+confirmation at all, regardless of who's asking.
+
 - Default-deny for consequential tool actions.
 - Read-only first for calendar, email and documents.
 - Explicit preview/confirmation for email sends and calendar changes.

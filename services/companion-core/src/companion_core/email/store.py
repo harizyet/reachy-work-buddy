@@ -1,9 +1,10 @@
 """Email storage: received messages (seeded, see models.py) and drafts
-with an approval-gated status. Approving a draft here only flips a status
-flag — it does not send anything; only email/workflow.py's
-send_approved_draft ever calls an EmailSender, and only after checking
-that status. Single mailbox, not scoped per user — same precedent as
-calendar/tasks (this is a personal assistant, not multi-tenant).
+with an approval-gated, delay-queued status. queue_draft/cancel_queued_draft
+only flip status flags — they do not send anything; only
+email/workflow.py's dispatch_due_drafts ever calls an EmailSender, and
+only after checking QUEUED status and dispatch_at. Single mailbox, not
+scoped per user — same precedent as calendar/tasks (this is a personal
+assistant, not multi-tenant).
 """
 
 from __future__ import annotations
@@ -28,6 +29,12 @@ class EmailStore(Protocol):
     async def get_draft(self, draft_id: str) -> EmailDraft | None: ...
 
     async def approve_draft(self, draft_id: str) -> EmailDraft | None: ...
+
+    async def queue_draft(self, draft_id: str, *, dispatch_at: datetime) -> EmailDraft | None: ...
+
+    async def cancel_queued_draft(self, draft_id: str) -> EmailDraft | None: ...
+
+    async def list_due(self, now: datetime) -> list[EmailDraft]: ...
 
     async def mark_sent(self, draft_id: str) -> EmailDraft | None: ...
 
@@ -68,6 +75,29 @@ class InMemoryEmailStore:
         draft.status = DraftStatus.APPROVED
         draft.approved_at = datetime.now(UTC)
         return draft
+
+    async def queue_draft(self, draft_id: str, *, dispatch_at: datetime) -> EmailDraft | None:
+        draft = self._drafts.get(draft_id)
+        if draft is None or draft.status != DraftStatus.APPROVED:
+            return None
+        draft.status = DraftStatus.QUEUED
+        draft.dispatch_at = dispatch_at
+        return draft
+
+    async def cancel_queued_draft(self, draft_id: str) -> EmailDraft | None:
+        draft = self._drafts.get(draft_id)
+        if draft is None or draft.status != DraftStatus.QUEUED:
+            return None
+        draft.status = DraftStatus.APPROVED
+        draft.dispatch_at = None
+        return draft
+
+    async def list_due(self, now: datetime) -> list[EmailDraft]:
+        return [
+            d
+            for d in self._drafts.values()
+            if d.status == DraftStatus.QUEUED and d.dispatch_at is not None and d.dispatch_at <= now
+        ]
 
     async def mark_sent(self, draft_id: str) -> EmailDraft | None:
         draft = self._drafts.get(draft_id)

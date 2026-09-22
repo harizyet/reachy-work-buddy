@@ -58,6 +58,16 @@ routed channel is Telegram and a chat_id is already known, the reminder is
 actually delivered; otherwise the routing decision is still computed,
 audited, and returned so it's observable even without a live delivery path.
 
+ADR 0011 (destructive-action consent, a cross-cutting safety refactor
+inserted ahead of Phase 15): `InboundMessage`/`MessageResponse` now carry
+`input_modality` — only `POST /voice/turn` ever sets it to `VOICE`,
+everything else defaults to `TEXT` — threaded through to companion-core so
+it can refuse to accept a destructive-action confirmation that arrived as
+voice, regardless of what it transcribes to. reachy-hub does no
+enforcement itself here (companion-core's consent/ module does, since
+that's where the destructive tools/stores live); reachy-hub's only job is
+not losing the signal in transit.
+
 WebRTC, web UI, and auth (reachy-hub's full ADR 0001 ownership) are later
 phases (15) — not implemented yet.
 
@@ -96,7 +106,7 @@ from reachy_hub.telegram_chat_registry import TelegramChatRegistry
 from reachy_hub.telegram_client import TelegramClient
 from reachy_hub.tts import EspeakTTS, TextToSpeech
 from shared.models.response import Privacy
-from shared.models.session import AgentSession, Channel, InteractionMode
+from shared.models.session import AgentSession, Channel, InputModality, InteractionMode
 
 log = logging.getLogger(__name__)
 
@@ -110,6 +120,12 @@ class InboundMessage(BaseModel):
     user_id: str
     channel: Channel
     text: str
+    # docs/adr/0011 (destructive-action consent): only voice_turn (real STT)
+    # ever sets VOICE.
+    # Everything else — typed messages, Telegram — defaults to TEXT, which
+    # is what makes destructive-action confirmation possible from voice at
+    # all: it's always refused.
+    input_modality: InputModality = InputModality.TEXT
 
 
 class MessageResponse(BaseModel):
@@ -446,7 +462,11 @@ def create_app(
 
         try:
             result = await companion_core_client.send_turn(
-                session.session_id, session.conversation_id, message.channel.value, message.text
+                session.session_id,
+                session.conversation_id,
+                message.channel.value,
+                message.text,
+                input_modality=message.input_modality.value,
             )
         except httpx.HTTPError as exc:
             raise HTTPException(status_code=502, detail=f"companion-core unreachable: {exc}") from exc
@@ -490,7 +510,9 @@ def create_app(
             raise HTTPException(status_code=422, detail="no speech detected in audio")
 
         response = await handle_inbound_message(
-            InboundMessage(user_id=user_id, channel=Channel.REACHY, text=transcript)
+            InboundMessage(
+                user_id=user_id, channel=Channel.REACHY, text=transcript, input_modality=InputModality.VOICE
+            )
         )
         reply_wav = await asyncio.to_thread(get_tts().synthesize, response.reply)
 

@@ -1,5 +1,5 @@
-"""Postgres-backed MemoryStore. See store.py for the interface and the
-expiry-at-read-time note."""
+"""Postgres-backed MemoryStore. See store.py for the interface, the
+expiry-at-read-time note, and forget()'s soft-delete note (docs/adr/0011)."""
 
 from __future__ import annotations
 
@@ -22,16 +22,17 @@ CREATE TABLE IF NOT EXISTS memories (
     sensitivity TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL,
     last_accessed TIMESTAMPTZ,
-    expires_at TIMESTAMPTZ
+    expires_at TIMESTAMPTZ,
+    forgotten_at TIMESTAMPTZ
 )
 """
 
 _COLUMNS = (
     "id, type, content, source, project_scope, confidence, "
-    "sensitivity, created_at, last_accessed, expires_at"
+    "sensitivity, created_at, last_accessed, expires_at, forgotten_at"
 )
 
-_NOT_EXPIRED_SQL = "(expires_at IS NULL OR expires_at > %s)"
+_VISIBLE_SQL = "(expires_at IS NULL OR expires_at > %s) AND forgotten_at IS NULL"
 
 
 def _from_row(row: tuple) -> MemoryRecord:
@@ -46,6 +47,7 @@ def _from_row(row: tuple) -> MemoryRecord:
         created_at=row[7],
         last_accessed=row[8],
         expires_at=row[9],
+        forgotten_at=row[10],
     )
 
 
@@ -88,7 +90,7 @@ class PostgresMemoryStore:
         )
         async with self._pool.connection() as conn:
             await conn.execute(
-                f"INSERT INTO memories ({_COLUMNS}) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                f"INSERT INTO memories ({_COLUMNS}) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     record.id,
                     record.type.value,
@@ -100,6 +102,7 @@ class PostgresMemoryStore:
                     record.created_at,
                     record.last_accessed,
                     record.expires_at,
+                    record.forgotten_at,
                 ),
             )
         return record
@@ -109,14 +112,13 @@ class PostgresMemoryStore:
         async with self._pool.connection() as conn:
             if type is None:
                 cur = await conn.execute(
-                    f"SELECT {_COLUMNS} FROM memories "
-                    f"WHERE {_NOT_EXPIRED_SQL} AND content ILIKE %s ORDER BY created_at",
+                    f"SELECT {_COLUMNS} FROM memories WHERE {_VISIBLE_SQL} AND content ILIKE %s ORDER BY created_at",
                     (now, f"%{query}%"),
                 )
             else:
                 cur = await conn.execute(
                     f"SELECT {_COLUMNS} FROM memories "
-                    f"WHERE {_NOT_EXPIRED_SQL} AND content ILIKE %s AND type = %s ORDER BY created_at",
+                    f"WHERE {_VISIBLE_SQL} AND content ILIKE %s AND type = %s ORDER BY created_at",
                     (now, f"%{query}%", type.value),
                 )
             rows = await cur.fetchall()
@@ -137,11 +139,11 @@ class PostgresMemoryStore:
         async with self._pool.connection() as conn:
             if type is None:
                 cur = await conn.execute(
-                    f"SELECT {_COLUMNS} FROM memories WHERE {_NOT_EXPIRED_SQL} ORDER BY created_at", (now,)
+                    f"SELECT {_COLUMNS} FROM memories WHERE {_VISIBLE_SQL} ORDER BY created_at", (now,)
                 )
             else:
                 cur = await conn.execute(
-                    f"SELECT {_COLUMNS} FROM memories WHERE {_NOT_EXPIRED_SQL} AND type = %s ORDER BY created_at",
+                    f"SELECT {_COLUMNS} FROM memories WHERE {_VISIBLE_SQL} AND type = %s ORDER BY created_at",
                     (now, type.value),
                 )
             rows = await cur.fetchall()
@@ -151,12 +153,37 @@ class PostgresMemoryStore:
         now = datetime.now(UTC)
         async with self._pool.connection() as conn:
             cur = await conn.execute(
-                f"SELECT {_COLUMNS} FROM memories WHERE id = %s AND {_NOT_EXPIRED_SQL}", (memory_id, now)
+                f"SELECT {_COLUMNS} FROM memories WHERE id = %s AND {_VISIBLE_SQL}", (memory_id, now)
             )
             row = await cur.fetchone()
             return _from_row(row) if row else None
 
-    async def forget(self, memory_id: str) -> bool:
+    async def forget(self, memory_id: str) -> MemoryRecord | None:
+        now = datetime.now(UTC)
         async with self._pool.connection() as conn:
-            cur = await conn.execute("DELETE FROM memories WHERE id = %s", (memory_id,))
-            return cur.rowcount > 0
+            cur = await conn.execute(
+                f"UPDATE memories SET forgotten_at = %s WHERE id = %s AND forgotten_at IS NULL RETURNING {_COLUMNS}",
+                (now, memory_id),
+            )
+            row = await cur.fetchone()
+            return _from_row(row) if row else None
+
+    async def restore(self, memory_id: str) -> MemoryRecord | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"UPDATE memories SET forgotten_at = NULL "
+                f"WHERE id = %s AND forgotten_at IS NOT NULL RETURNING {_COLUMNS}",
+                (memory_id,),
+            )
+            row = await cur.fetchone()
+            return _from_row(row) if row else None
+
+    async def find_forgotten(self, query: str) -> list[MemoryRecord]:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"SELECT {_COLUMNS} FROM memories WHERE forgotten_at IS NOT NULL AND content ILIKE %s "
+                f"ORDER BY forgotten_at DESC",
+                (f"%{query}%",),
+            )
+            rows = await cur.fetchall()
+            return [_from_row(row) for row in rows]

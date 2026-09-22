@@ -16,6 +16,7 @@ import httpx
 import pytest
 from companion_core.app import create_app as _create_core_app
 from companion_core.calendar.store import InMemoryCalendarStore
+from companion_core.consent.store import InMemoryConfirmationStore
 from companion_core.email.store import InMemoryEmailStore
 from companion_core.memory.store import InMemoryMemoryStore
 from companion_core.rag.store import InMemoryDocumentStore
@@ -41,6 +42,8 @@ def create_core_app(**kwargs):
     kwargs.setdefault("memory_store", InMemoryMemoryStore())
     kwargs.setdefault("rag_store", InMemoryDocumentStore())
     kwargs.setdefault("email_store", InMemoryEmailStore())
+    kwargs.setdefault("confirmation_store", InMemoryConfirmationStore())
+    kwargs.setdefault("run_email_dispatch_task", False)
     return _create_core_app(**kwargs)
 
 

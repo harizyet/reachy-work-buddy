@@ -5,6 +5,11 @@ pattern matchers, not real NLU, and no real drafting/summarization either
 just stores Y verbatim as the body, the same way "remember that X" stores
 X verbatim. Phase 14's exit criterion is about the approval *gate*
 (email/workflow.py), not about the writing being sophisticated.
+
+cancel-send matcher (docs/adr/0011): "cancel send X" reverts a QUEUED
+draft back to APPROVED before its ~10-minute delay elapses — the "changed
+your mind" undo, deliberately not gated the way approve/send are, since
+undoing must always be at least as easy as the action it undoes.
 """
 
 from __future__ import annotations
@@ -16,6 +21,7 @@ from companion_core.email.models import EmailDraft, EmailMessage
 _INBOX_PHRASES = ("what's in my inbox", "whats in my inbox", "read my email", "check my inbox", "list emails")
 _DRAFT_PATTERN = re.compile(r"^draft (?:an? )?email to (\S+) about (.+)$", re.IGNORECASE)
 _APPROVE_PREFIXES = ("approve draft ", "approve the draft to ", "approve email to ")
+_CANCEL_SEND_PREFIXES = ("cancel send ", "cancel the send to ", "undo send ")
 _SEND_PREFIXES = ("send draft ", "send the draft to ", "send email to ")
 
 
@@ -32,16 +38,28 @@ def match_draft(text: str) -> tuple[str, str] | None:
     return match.group(1), match.group(2).strip()
 
 
+_TRAILING_PUNCTUATION = ".,!?"
+
+
 def _match_prefix(text: str, prefixes: tuple[str, ...]) -> str | None:
-    lowered = text.strip().lower()
+    # Strips commas/trailing punctuation before matching — see
+    # memory_intent.py's module docstring for why (STT transcripts add
+    # punctuation a literal prefix match would otherwise reject).
+    normalized = text.strip().replace(",", "")
+    lowered = normalized.lower()
     for prefix in prefixes:
         if lowered.startswith(prefix):
-            return text.strip()[len(prefix) :].strip() or None
+            remainder = normalized[len(prefix) :].strip().rstrip(_TRAILING_PUNCTUATION).strip()
+            return remainder or None
     return None
 
 
 def match_approve(text: str) -> str | None:
     return _match_prefix(text, _APPROVE_PREFIXES)
+
+
+def match_cancel_send(text: str) -> str | None:
+    return _match_prefix(text, _CANCEL_SEND_PREFIXES)
 
 
 def match_send(text: str) -> str | None:
@@ -63,6 +81,21 @@ def format_draft_reply(draft: EmailDraft) -> str:
     )
 
 
+def format_send_queued_reply(draft: EmailDraft, delay_seconds: int) -> str:
+    minutes = delay_seconds // 60
+    return (
+        f"Sending the email to {draft.to} in about {minutes} minutes. "
+        f'Say "cancel send {draft.to}" before then if you change your mind.'
+    )
+
+
+def format_cancel_send_reply(draft: EmailDraft) -> str:
+    return (
+        f"Cancelled — the email to {draft.to} will not send. It's back to approved; "
+        f'say "send draft {draft.to}" to requeue it.'
+    )
+
+
 def format_approve_reply(draft: EmailDraft | None, query: str) -> str:
     if draft is None:
         return f"I couldn't find a pending draft matching '{query}'."
@@ -72,10 +105,6 @@ def format_approve_reply(draft: EmailDraft | None, query: str) -> str:
 def find_draft_by_query(drafts: list[EmailDraft], query: str) -> EmailDraft | None:
     lowered = query.lower()
     return next((d for d in drafts if lowered in d.to.lower() or lowered in d.subject.lower()), None)
-
-
-def format_send_success_reply(draft: EmailDraft) -> str:
-    return f"Sent the email to {draft.to}: '{draft.subject}'."
 
 
 def format_send_not_found_reply(query: str) -> str:
