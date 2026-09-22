@@ -160,6 +160,22 @@ open_browser_or_print() {
     fi
 }
 
+# --- systemd -------------------------------------------------------------
+
+# systemd_unit_installed NAME (without .service) — true only if the unit
+# actually exists. `systemctl list-unit-files NAME.service >/dev/null 2>&1`
+# looks like the obvious check but is WRONG: on at least systemd 237
+# (Ubuntu 18.04/Bionic, the Jetson Nano's OS — confirmed live during
+# Phase 22 verification), it exits 0 even for a completely made-up unit
+# name — "0 unit files listed" is still exit code 0, it only errors on
+# malformed input. Checking `--no-legend` output actually has a row is
+# the real test. (`systemctl cat NAME.service` also correctly fails for
+# an unknown unit and would work too; this was the fix verified live.)
+systemd_unit_installed() {
+    local unit="$1"
+    systemctl list-unit-files --no-legend "${unit}.service" 2>/dev/null | grep -q .
+}
+
 # --- misc -------------------------------------------------------------
 
 require_cmd() {

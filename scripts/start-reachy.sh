@@ -92,7 +92,7 @@ done
 # present and watching (see HANDOVER.md). --check only ever reports
 # status; it does not call `systemctl start` under any circumstance.
 require_cmd systemctl "reachy-mini-daemon is supervised via systemd — see deploy/reachy/README.md for install steps."
-if ! systemctl list-unit-files "${DAEMON_SERVICE}.service" >/dev/null 2>&1; then
+if ! systemd_unit_installed "$DAEMON_SERVICE"; then
     die "${DAEMON_SERVICE}.service is not installed. This is a first-time install step, not something this launcher does automatically — see deploy/reachy/install-reachy-venv.sh and reachy-mini-daemon.service, and deploy/reachy/README.md."
 fi
 

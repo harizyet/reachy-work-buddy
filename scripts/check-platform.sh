@@ -80,7 +80,17 @@ if command -v free >/dev/null 2>&1; then
     echo "memory: $(free -h | awk 'NR==2 {print $7" available of "$2}')"
 fi
 if command -v timedatectl >/dev/null 2>&1; then
-    echo "time sync: $(timedatectl show -p NTPSynchronized --value 2>/dev/null || echo unknown)"
+    # `show -p NTPSynchronized --value` can come back empty on some
+    # systemd builds without actually failing (nonzero) — confirmed live
+    # on the Jetson Nano's systemd 237, same class of "exit 0 but not
+    # useful" gotcha as the list-unit-files fix above. Fall back to
+    # parsing `status`'s "System clock synchronized:" line, present
+    # across far more systemd versions.
+    NTP_SYNC="$(timedatectl show -p NTPSynchronized --value 2>/dev/null)"
+    if [[ -z "$NTP_SYNC" ]]; then
+        NTP_SYNC="$(timedatectl status 2>/dev/null | grep -i 'system clock synchronized' | awk -F': ' '{print $2}')"
+    fi
+    echo "time sync: ${NTP_SYNC:-unknown}"
 fi
 echo
 
@@ -127,7 +137,7 @@ fi
 
 # --- embodiment-host role -------------------------------------------------
 DAEMON_ACTIVE=0
-if command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files reachy-mini-daemon.service >/dev/null 2>&1; then
+if command -v systemctl >/dev/null 2>&1 && systemd_unit_installed reachy-mini-daemon; then
     echo "--- Embodiment-host role ---"
     echo "reachy-mini-daemon.service: installed"
     if systemctl is-active --quiet reachy-mini-daemon; then

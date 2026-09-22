@@ -634,15 +634,47 @@ contract table.
   Verified with a faked `systemctl` shim: confirmed `--check` calls only
   `list-unit-files`/`is-active`, and non-`--check` mode still correctly
   attempts `start` (regression-checked, not just the fix in isolation).
-- **Not yet verified:** `start-reachy.sh`/`start-jetson.sh`/
-  `check-platform.sh --test-hardware` against real Nano/daemon hardware
-  end-to-end (this session verified the WSS layer against real Docker
-  containers standing in for hub/robot, but not through these specific
-  launcher scripts on the actual Nano); `shellcheck`/`bash -n` both pass
-  clean on all four scripts + the shared lib. Given the safety bug just
-  found, review any further launcher changes for the same class of
-  mistake — a destructive/real-hardware action placed before its guard
-  flag is checked — before trusting `--check` again without re-verifying.
+**Launcher scripts: live-verified on the real Jetson Nano (2026-09-22),
+one more bug found and fixed.** The Nano session pulled the `--check`
+safety fix, independently reviewed the diff itself before running
+anything (confirmed the guard genuinely sits before `sudo systemctl
+start` and always exits first), then ran `check-platform.sh`,
+`start-jetson.sh --check`, and `start-reachy.sh --check` for real —
+nothing started, moved, or was installed; verified afterward via
+`systemctl is-active` (inactive) and `docker ps -a` (empty).
+
+**Second bug found along the way:** `systemctl list-unit-files
+NAME.service >/dev/null 2>&1` — used by both `check-platform.sh` and
+`start-reachy.sh` to detect whether `reachy-mini-daemon.service` is
+installed — **exits 0 even for a unit that doesn't exist at all**, on
+this board's systemd 237 (Ubuntu 18.04/Bionic); it only errors on
+malformed input, not "zero matches" (confirmed with a made-up unit name
+too, so not specific to this one service). Not a safety issue (`--check`
+still never started anything either way), but it meant the diagnostic
+report always claimed "installed" regardless of truth, and non-`--check`
+mode would have skipped the clear "not installed, see
+install-reachy-venv.sh" error in favor of a less helpful "failed to
+start" message pointing at the wrong fix. **Fixed:** added
+`systemd_unit_installed()` to `scripts/lib/common.sh` (checks
+`list-unit-files --no-legend` actually has a result row, not just exit
+code), used by both call sites; verified locally with a shim
+reproducing the Nano's exact exit-0-empty-output behavior. Also
+tightened `check-platform.sh`'s "time sync: unknown" line (same class
+of gotcha — `timedatectl show -p NTPSynchronized --value` can return
+empty without failing) with a fallback to parsing `timedatectl status`.
+Both fixes pushed; **not yet re-verified live on the Nano** — that's the
+natural next step before trusting the diagnostic report's "installed"
+line again.
+
+**Not yet verified:** the daemon actually being installed/started via
+these launchers (systemd unit was never installed on this Nano —
+running `--check` against a genuinely-installed-and-active daemon has
+not happened yet), or anything past `--check` on real hardware. Given
+two real bugs found in this small a set of scripts, review any further
+launcher changes carefully for (a) a destructive action ordered before
+its guard flag, and (b) shell/systemd commands whose exit code doesn't
+actually mean what it looks like it means — both classes bit us here,
+neither caught by `bash -n`/shellcheck.
 
 **Cross-session coordination note:** this Phase 22 work happened live
 across two Claude Code sessions (homelab + Nano) via `SendMessage`/cross-session
