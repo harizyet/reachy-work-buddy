@@ -394,6 +394,24 @@ Phases 0-15 are done:
   page shell itself is still served unauthenticated by `StaticFiles` even
   though every API call it makes requires the token).
 
+- Docker build speed (cross-cutting, ahead of Phase 17, not itself a
+  phase — same treatment ADR 0011 got): there was no root `.dockerignore`
+  at all, and every service `Dockerfile` builds with context `../..` (repo
+  root), so every `docker compose build` was shipping the entire repo —
+  including `.venv`, ~1.6GB — to the Docker daemon as build context on
+  every single build, before a single `COPY` ran. Added a root
+  `.dockerignore` (mirrors `.gitignore`, plus `docs/`/`.claude/`, neither
+  referenced by any Dockerfile) and `RUN --mount=type=cache,...` around
+  every `uv sync` (and reachy-hub's `apt-get`), so repeated builds reuse
+  previously downloaded packages instead of re-fetching them from the
+  network each time — cache mounts need BuildKit (`# syntax=docker/
+  dockerfile:1` + the `docker buildx` CLI plugin), which every Dockerfile
+  now requires outright rather than silently degrading without it.
+  Verified live: a full cold build (build cache pruned) of all three
+  services took 73s; a one-line-change incremental rebuild of just
+  reachy-hub, with cache mounts warm, took 21s. See AGENTS.md's Docker
+  conventions section.
+
 See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
 phase-by-phase roadmap. Next up: Phase 17, interruption intelligence.
 

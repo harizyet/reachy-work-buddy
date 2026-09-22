@@ -39,6 +39,28 @@ interruption. Actions: ignore/queue/text/gesture/interrupt." Exit
 criterion: "Routine notifications defer correctly while user is
 occupied.") Not started.
 
+**Docker build speed (cross-cutting, ahead of Phase 17, not itself a
+phase — same treatment ADR 0011 got):** there was no root `.dockerignore`
+at all until now, and every service `Dockerfile` builds with context
+`../..` (repo root) — every `docker compose build` was shipping the
+*entire* repo, including `.venv` (~1.6GB) and `.git`, to the Docker daemon
+on every single build, before a single `COPY` ran. Added a root
+`.dockerignore` (mirrors `.gitignore` plus `docs/`/`.claude/`, neither of
+which any Dockerfile references) and `RUN --mount=type=cache,...` around
+every `uv sync` (and reachy-hub's `apt-get`) so repeated builds reuse
+previously downloaded wheels/packages instead of re-fetching from the
+network every time. Cache mounts need BuildKit (`docker buildx` — was also
+missing in this sandbox, installed the same way as the `docker compose`
+plugin; see AGENTS.md's Dev setup section) — without it these Dockerfiles
+now fail outright on the first `--mount`, not just slowly. Measured live in
+this sandbox after installing `buildx`: a full cold build (cache pruned,
+`docker builder prune -af`) of all three services took **73s**; a
+one-line-change incremental rebuild of just `reachy-hub` (cache mounts hot)
+took **21s**. No prior-to-this-change timing was captured to compare
+against directly, but shipping 1.6GB of context on every build was
+self-evidently the dominant cost, not apt/uv download time — see
+AGENTS.md's Docker conventions section.
+
 ADRs on record: 0001 (service boundaries), 0002 (agent session), 0003
 (embodiment command API), 0004 (offline fallback), 0006 (response
 routing), 0010 (calendar), 0011 (destructive-action consent — voice can
@@ -80,6 +102,18 @@ an ADR and a mention in the relevant phase's README "Status" entry.
     -o ~/.docker/cli-plugins/docker-compose
   chmod +x ~/.docker/cli-plugins/docker-compose
   ```
+- `docker buildx` is *also* not preinstalled here, separately from
+  compose above — discovered while optimizing build speed (see AGENTS.md's
+  Dev setup section for the install command). Every `Dockerfile` now
+  starts with `# syntax=docker/dockerfile:1` and uses
+  `RUN --mount=type=cache,...`, both BuildKit-only — without `buildx`,
+  `docker build`/`docker compose build` fall back to the legacy builder
+  and fail outright (not slowly — a hard error on the first `--mount`).
+  Confirmed in this sandbox: `docker info` already showed a containerd
+  snapshotter, but `docker buildx` itself was still missing until
+  installed; check `docker buildx version` first, it may already be
+  present. Like `/tmp/espeak-extract`, this is a `~/.docker/cli-plugins/`
+  install and may not survive across sessions — expect to redo it.
 - `espeak-ng` is not preinstalled and apt may not have root. It's been
   extracted without root before, to `/tmp/espeak-extract/usr/bin/` — check
   if it's still there; if not, redo it:

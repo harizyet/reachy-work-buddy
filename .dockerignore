@@ -1,0 +1,29 @@
+# Every service Dockerfile builds with context `../..` (repo root, see
+# deploy/homelab/docker-compose.yml) and COPYs only pyproject.toml,
+# uv.lock, shared/, its own services/<name>/, and (reachy-hub only)
+# clients/web-pwa/. With no .dockerignore at all, every `docker compose
+# build` shipped the *entire* repo to the Docker daemon as build context
+# on every single build — including .venv (~1.6GB) and .git — before a
+# single COPY instruction even ran. That was almost certainly the
+# dominant cost in "docker compose takes a long time," not apt/uv
+# download time. None of the paths below are referenced by any
+# Dockerfile's COPY list.
+
+.venv/
+**/.venv/
+.git/
+__pycache__/
+**/__pycache__/
+*.pyc
+**/*.pyc
+.pytest_cache/
+**/.pytest_cache/
+.ruff_cache/
+**/.ruff_cache/
+*.egg-info/
+**/*.egg-info/
+dist/
+build/
+vendor/
+docs/
+.claude/

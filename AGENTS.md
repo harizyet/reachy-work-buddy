@@ -78,6 +78,27 @@ curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-co
 chmod +x ~/.docker/cli-plugins/docker-compose
 ```
 
+Every service `Dockerfile` starts with `# syntax=docker/dockerfile:1` and
+uses `RUN --mount=type=cache,...` (see Docker conventions below) — both
+need BuildKit, which needs the `docker buildx` CLI plugin. Without it,
+`docker build`/`docker compose build` silently fall back to the legacy
+builder, which doesn't understand `--mount` and fails outright. Same
+symptom as `docker compose` itself: may not be preinstalled in a sandboxed
+dev environment. If `docker buildx version` errors, install it the same
+way as the compose plugin above:
+
+```
+mkdir -p ~/.docker/cli-plugins
+BUILDX_TAG=$(curl -fsSL https://api.github.com/repos/docker/buildx/releases/latest | grep -o '"tag_name": "[^"]*"' | cut -d'"' -f4)
+BUILDX_ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+curl -fsSL "https://github.com/docker/buildx/releases/download/${BUILDX_TAG}/buildx-${BUILDX_TAG}.linux-${BUILDX_ARCH}" \
+  -o ~/.docker/cli-plugins/docker-buildx
+chmod +x ~/.docker/cli-plugins/docker-buildx
+```
+
+Once installed, plain `docker build`/`docker compose build` pick it up
+automatically — no `DOCKER_BUILDKIT=1` or other flag needed.
+
 ## Testing conventions
 
 - Every service's tests live in `services/<name>/tests/`, and every test
@@ -167,6 +188,22 @@ chmod +x ~/.docker/cli-plugins/docker-compose
   timeout causes spurious `DISCONNECTED` flips under real container startup
   jitter, even though every unit test passes. When touching either
   interval, retest with a real `docker compose up`, not just pytest.
+- The root `.dockerignore` is load-bearing, not cosmetic: every service
+  `Dockerfile` builds with context `../..` (repo root — see
+  `docker-compose.yml`), so with no `.dockerignore` at all, every build
+  shipped the *entire* repo (including `.venv`, ~1.6GB) to the Docker
+  daemon as build context before a single `COPY` ran. Found while
+  optimizing build time — this dominated over apt/uv download time, not
+  the other way around. When adding a new large/generated directory
+  anywhere in the repo, add it here too, the same reflex as adding it to
+  `.gitignore`.
+- Every `Dockerfile` uses `RUN --mount=type=cache,target=/root/.cache/uv`
+  around its `uv sync` step (and `/var/cache/apt` + `/var/lib/apt/lists`
+  in reachy-hub's, around `apt-get`) so repeated builds reuse previously
+  downloaded wheels/packages instead of re-fetching them from the network
+  every time — this needs BuildKit (see Dev setup's `docker buildx` note
+  above); without it these Dockerfiles fail outright, they don't silently
+  degrade to slow-but-working.
 
 ## Verifying claims
 
