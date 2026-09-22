@@ -241,6 +241,63 @@ and server-enforced activation gates. No manual threshold editing is required.
 No recognition code, enrollment or hardware tests were performed. Phases
 22–24 remain planned; implement in roadmap order.
 
+**Phase 22 inventory done, dependency blocker found (2026-09-22):** a
+Claude Code session running directly on the physical Jetson Nano
+(`reachy-mini` hostname) did Phase 22 deliverable 1. Device identity was
+verified with raw hardware output (device-tree model, `nv_tegra_release`,
+etc.) before trusting anything else it reported — see the "Device
+verification" section of
+[docs/verification/phase-22-inventory-2026-09-22.md](docs/verification/phase-22-inventory-2026-09-22.md)
+for the full report and how to re-verify a future cross-session claim like
+this. Key findings:
+
+- Genuine original Jetson Nano, JetPack 4.6.1 (L4T R32.7.1, EOL), glibc
+  2.27, Ubuntu 18.04 Bionic, 3.9GB RAM, Reachy Mini confirmed attached via
+  USB device identity (camera/audio/motor-controller, not inferred).
+- **This repo cannot `uv sync` on this board at all, on any of the three
+  services** — not just the torch-heavy ones. Root cause: this board's
+  glibc 2.27 vs. manylinux_2_28+-only wheels (torch for
+  companion-core/reachy-embodiment, onnxruntime via faster-whisper for
+  reachy-hub). This is a platform-wide ABI gap, not a per-service pin
+  problem. Untested candidate fix: a newer-glibc Docker base image, since
+  container userland glibc doesn't depend on host glibc for CPU-only
+  workloads — not yet pursued (see below).
+- A **pre-existing, working** Python 3.10 venv (`~/reachy-venv`) with a
+  real `reachy_mini` SDK (1.8.4) already does real motor control on this
+  box (`~/reachy/hello.py`), entirely independent of this repo's own
+  dependency chain. Likely the real integration target for `RobotBackend`.
+- **No second "Reachy onboard computer" exists.** Camera/audio/motor
+  controller are all USB-attached directly to the Nano; the only working
+  robot SDK reachable is on this same box. The owner decided: accept the
+  Nano as the sole/required embodiment host rather than pursue a second
+  host. [ADR 0004 was amended](docs/adr/0004-offline-fallback.md#phase-22-topology-amendment-2026-09-22)
+  — homelab-outage survivability is unaffected, but the old "Jetson
+  offline has no effect" guarantee no longer holds for this topology:
+  Jetson offline now honestly means the robot is inert. `docs/phase-22-23.md`'s
+  architecture table was updated to match (no more "if present" hedge).
+
+**Next work directed at the Nano session (in progress, not yet reported
+back):** investigate whether `reachy-embodiment` should target
+`~/reachy-venv` directly (Python 3.10, working SDK) instead of this
+repo's `uv`/Python-3.13 environment for the Nano deployment specifically
+— checking whether the rest of that service's dependency tree is
+Python-3.10-compatible, whether `~/reachy-venv` has any reproducible
+build recipe or is one-off manual setup, and whether `reachy_mini` 1.8.4's
+API looks compatible with the existing `RobotBackend`/`SimulatedRobotBackend`
+interface in `services/reachy-embodiment/src/`. Read-only investigation
+only; no installs/edits/commits were authorized on the Nano. The
+newer-glibc-Docker-container alternative was explicitly deprioritized by
+the owner in favor of this venv-targeting investigation, not ruled out —
+worth revisiting if the venv approach turns out not to be viable.
+
+**Cross-session coordination note:** this Phase 22 work happened live
+across two Claude Code sessions (homelab + Nano) via `SendMessage`/cross-session
+messaging, not a single session doing everything. If you're continuing
+this work in a fresh session, check `ListAgents` for a live Nano-side peer
+before re-deriving inventory facts by hand — but re-verify device identity
+yourself the same way (raw `/proc/device-tree/model` etc.) rather than
+trusting a peer's self-description, the same caution this session applied.
+
 Phase 21 upgrades a current Phase 19/20 database additively. Earlier
 missing-column caveats below remain relevant only to older schemas.
 

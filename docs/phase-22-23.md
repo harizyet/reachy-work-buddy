@@ -19,17 +19,20 @@ Phase 22 transport amendment in [ADR 0019](adr/0019-robot-initiated-hub-connecti
 | Machine | Responsibility |
 |---|---|
 | Homelab | Core, hub, Postgres, Caddy, inference/STT/TTS, operator web GUI, Google credentials and connectors |
-| Reachy onboard computer, if present | Daemon, real embodiment backend, local presence and fallback |
-| Original Jetson Nano | Companion-board startup/diagnostics and browser access to the hub GUI; optional acceleration only after a measured compatibility check |
+| Reachy onboard computer | **Confirmed absent** for this deployment (2026-09-22 inventory) — Reachy Mini has no independent onboard Linux compute; camera/audio/motor-controller are all USB-attached to the Nano |
+| Original Jetson Nano | **Confirmed the sole robot-attached machine and required embodiment host**, not an optional accelerator — see the [ADR 0004 topology amendment](adr/0004-offline-fallback.md#phase-22-topology-amendment-2026-09-22). Also serves companion-board startup/diagnostics and browser access to the hub GUI |
 | Operator laptop/phone | Same authenticated web GUI, chat, call and telepresence pages |
 
-**Resolve physical topology before deployment implementation.** ADR 0004
-requires embodiment to survive a Jetson outage. If this is a Lite or the Nano
-is the only robot-side computer, that guarantee cannot be met by running the
-only embodiment process on the Nano. Record a reviewed ADR amendment and
-revised outage acceptance criteria, or provide an independent local runtime;
-do not silently relocate the only presence loop. One process owns hardware;
-do not run competing simulated and real robot registrations.
+**Physical topology resolved (2026-09-22).** ADR 0004 required embodiment to
+survive a Jetson outage; physical inventory confirmed the Nano is the only
+robot-side computer, so that guarantee cannot be met by running the only
+embodiment process on it. Recorded as a reviewed
+[ADR 0004 amendment](adr/0004-offline-fallback.md#phase-22-topology-amendment-2026-09-22):
+the homelab-outage guarantee stands unchanged; the Jetson-outage guarantee is
+revised to no longer apply for this topology (Jetson offline means the robot
+is inert, not degraded-but-alive) rather than silently relocating or
+duplicating the presence loop. One process owns hardware; do not run
+competing simulated and real robot registrations.
 
 The original Nano uses the JetPack 4 family, which is end-of-life. This repo
 requires Python >=3.13 and pins CPU PyTorch/torchaudio: neither ARM64 wheel
