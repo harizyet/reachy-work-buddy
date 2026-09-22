@@ -22,32 +22,38 @@ conflict once you notice it.
 
 ## Where things stand
 
-**Phases 0-17 are done** (see README.md's Status section for full detail
-and live-verification evidence per phase). Last completed: **Phase 17,
-"Interruption intelligence"** — a third pure policy function
-(`reachy_hub/interruption_policy.py`: `is_occupied`/`decide_action`/
-`downgrade_for_presence`) alongside `response_policy.py`'s two, deciding
-whether/how aggressively to deliver a proactive notification (today:
-calendar reminders only) — never *where*, that's still unchanged. New
-session state (`AgentSession.dnd`, a now-settable `privacy_context`) and a
-Postgres-backed `notification_queue`, both wired into
-`POST /calendar/check-reminders/{user_id}`. No background poller: queued
-notifications flush the moment `PATCH /sessions/{user_id}/dnd` turns DND
-off or `PATCH /sessions/{user_id}/privacy-context` leaves `MEETING`.
-Verified live (see README's Phase 17 entry for the exact curl sequence):
-DND + a 10-min-out reminder queued and stayed undelivered; DND + a
-2-min-out (URGENT-graded) reminder triggered a real robot gesture
-(`important_notice`, confirmed via `GET /robots/{id}/state`); turning DND
-off auto-flushed the queue and the audit trail showed the full
-`queue -> gesture -> interrupt` history. See
-[docs/adr/0014](docs/adr/0014-interruption-intelligence.md).
+**Phases 0-18 are done** (see README.md's Status section for full detail
+and live-verification evidence per phase). Last completed: **Phase 18,
+"Daily briefing"** — `companion-core`'s new `briefing.py` (`build_briefing`,
+exposed as `GET /briefing`) composes calendar/tasks/email/reminders/project
+events (project events = recent `project_scope`'d episodic memory, the
+honest existing stand-in — no dedicated "project events" store exists)
+into one prioritized list, pure composition over the four stores Phases
+10-12/14 already built, no new storage. `reachy-hub`'s new
+`POST /briefing/{user_id}` is the one caller: it fires `Behaviour.GREETING`
+unconditionally on a reachable robot ("Reachy greets"), then routes the
+detailed text through the *exact* same `resolve_delivery_channel`/
+`apply_privacy_override`/`decide_action`/`downgrade_for_presence` pipeline
+Phase 17's `check_reminders` uses, forced `Privacy.WORK_PRIVATE` so it can
+never land on Reachy's speaker ("...privately delivered") — reusing
+Phase 17's interruption engine exactly the way ADR 0014's Consequences
+section said this phase would. An imminent event legitimately appears
+twice (once as an urgency-graded `REMINDER`, once as part of the full-day
+`CALENDAR` schedule) — deliberate, not a bug; see
+[docs/adr/0015](docs/adr/0015-daily-briefing.md). Verified live through the
+deployed Caddy stack: an event 3 minutes out produced a briefing whose top
+item was that urgent reminder, `/robots/desk-1/state` immediately showed
+`last_behaviour: "greeting"`, `delivery_channel` was `telegram` (never
+`reachy`, despite Desk mode); with DND on and that URGENT reminder still
+present, the greeting still fired but the detailed delivery came back
+`action: "gesture"`, recorded in `GET /audit/hariz` — the same
+occupied+URGENT carve-out ADR 0014 already established, not new logic.
 
-**Next up: Phase 18 — Daily briefing** (docs/plan.md row: "Combine
-calendar/tasks/email/reminders/project events into prioritized arrival
-briefing." Exit criterion: "Reachy greets; detailed briefing is privately
-delivered.") Not started. It's the next natural producer to feed into
-Phase 17's interruption engine (`decide_action`/`ReminderRoutingResult`-
-shaped flow), the way calendar reminders are today.
+**Next up: nothing from docs/plan.md's roadmap table — Phase 18 was the
+last row.** Check docs/plan.md §7's release-target lists (V0.1/V0.2/V0.3)
+for what's still open beyond the numbered phases (e.g. `clients/web-pwa/`
+and `deploy/reachy/` are both still unimplemented per the repo layout
+section above) before assuming there's nothing left to do.
 
 **Postgres schema-addition caveat (no migration framework yet, same as ADR
 0010's precedent):** Phase 17 added `dnd`/`last_interruption_at` columns to
@@ -89,7 +95,10 @@ never confirm a destructive action, bulk-destructive actions are always
 blocked, email sends are delay-queued with an undo window), 0012 (Call
 Reachy WebRTC — push-to-talk, not continuous VAD), 0013 (remote
 telepresence — shared-bearer-token auth, fail-closed; polled-JPEG WebRTC
-camera transport; speak-through-robot bypasses companion-core entirely).
+camera transport; speak-through-robot bypasses companion-core entirely),
+0014 (interruption intelligence — whether/how aggressively to deliver a
+proactive notification), 0015 (daily briefing — reuses 0014's engine for
+the detailed content, adds an unconditional greet gesture on top).
 Note: 0005, 0007-0009 don't exist as separate ADRs — those phases didn't
 need one.
 

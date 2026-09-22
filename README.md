@@ -148,7 +148,7 @@ live restart tests verify).
 
 ## Status
 
-Phases 0-17 are done:
+Phases 0-18 are done:
 
 - Phase 0: architecture freeze (ADRs, shared schemas).
 - Phase 1: Jarvis reference baseline — [docs/jarvis-baseline.md](docs/jarvis-baseline.md).
@@ -439,8 +439,34 @@ Phases 0-17 are done:
   `last_interruption_at`, and the audit trail (`GET /audit/hariz`) showed
   the full `queue` -> `gesture` -> `interrupt` (flush) action history.
 
+- Phase 18 (daily briefing, ADR 0015): `POST /briefing/{user_id}` combines
+  calendar/tasks/email/reminders/project events into one prioritized list
+  (`companion_core/briefing.py`'s `build_briefing`, exposed as `GET
+  /briefing`) — no new storage, reuses the four stores Phases 10-12/14
+  already built. Two independent acts: `Behaviour.GREETING` fires
+  unconditionally on a reachable robot ("Reachy greets"), while the
+  detailed text is routed through the exact same
+  `resolve_delivery_channel`/`apply_privacy_override`/`decide_action`
+  pipeline `check_reminders` (Phase 17) uses, forced `Privacy.WORK_PRIVATE`
+  so it can never land on Reachy's speaker ("...privately delivered").
+  Reminders and the day's calendar deliberately overlap (an imminent event
+  is a subset of the schedule, not a separate source); the 5-minute
+  urgency-proximity rule is shared, not duplicated, between
+  `/calendar/reminders/due` and the briefing via
+  `calendar/reminders.reminder_urgency`. Verified live through the deployed
+  Caddy stack: an event 3 minutes out produced a briefing whose top item
+  was that urgency-graded reminder, the registered (simulated) robot's
+  `/robots/desk-1/state` immediately showed `last_behaviour: "greeting"`,
+  and the response's `delivery_channel` was `telegram`, never `reachy`,
+  despite Desk mode's default routing (Desk's base channel is Reachy, but
+  the briefing is forced work-private); with DND on and an URGENT reminder
+  present, the greeting still fired unconditionally but the detailed
+  content came back `action: "gesture"` with `GET /audit/hariz` recording
+  it — the occupied+URGENT carve-out from ADR 0014, reused rather than
+  reimplemented.
+
 See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
-phase-by-phase roadmap. Next up: Phase 18, daily briefing.
+phase-by-phase roadmap. Phases 0-18 are now done.
 
 ## Layout
 

@@ -117,16 +117,17 @@ import contextlib
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from companion_core import email_intent, memory_intent, rag_intent
+from companion_core.briefing import BriefingItem, build_briefing
 from companion_core.calendar.models import CalendarEvent
 from companion_core.calendar.postgres_store import PostgresCalendarStore
-from companion_core.calendar.reminders import due_reminders
+from companion_core.calendar.reminders import due_reminders, reminder_urgency
 from companion_core.calendar.store import CalendarStore
 from companion_core.calendar_intent import format_next_event_reply, is_next_event_query
 from companion_core.consent.gate import (
@@ -567,10 +568,24 @@ def create_app(
                 # demonstrate routine-notification deferral with real calendar
                 # data. 5 minutes chosen to match this endpoint's own
                 # within_minutes default (15) leaving room for a NORMAL band.
-                urgency=Urgency.URGENT if event.start - now <= timedelta(minutes=5) else Urgency.NORMAL,
+                urgency=reminder_urgency(event, now),
             )
             for event in events
         ]
+
+    @app.get("/briefing")
+    async def get_briefing() -> list[BriefingItem]:
+        """Phase 18 (docs/adr/0015): combines calendar/tasks/email/reminders/
+        project events into one prioritized list. Like /calendar/reminders/due,
+        this is a pure on-demand query, not a subscription — reachy-hub's
+        POST /briefing/{user_id} calls it and does the greet + routing."""
+        return await build_briefing(
+            calendar_store=app.state.calendar_store,
+            task_store=app.state.task_store,
+            email_store=app.state.email_store,
+            memory_store=app.state.memory_store,
+            now=datetime.now(UTC),
+        )
 
     @app.post("/memories")
     async def create_memory(request: CreateMemoryRequest) -> MemoryRecord:

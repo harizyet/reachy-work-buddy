@@ -56,6 +56,14 @@ class CompanionCoreClient:
         resp.raise_for_status()
         return resp.json()
 
+    async def get_briefing(self) -> list[dict[str, Any]]:
+        """Phase 18 (docs/adr/0015): the prioritized calendar/tasks/email/
+        reminders/project-events list companion-core's briefing.py builds.
+        Same on-demand, no-subscription shape as due_reminders above."""
+        resp = await self._client.get("/briefing")
+        resp.raise_for_status()
+        return resp.json()
+
     async def events_in_progress(self, now: datetime) -> list[dict[str, Any]]:
         """Phase 17 (docs/adr/0014): the "calendar" signal feeding
         interruption_policy.is_occupied — reuses the existing

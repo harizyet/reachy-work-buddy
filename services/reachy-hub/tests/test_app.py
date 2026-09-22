@@ -509,6 +509,82 @@ def test_leaving_meeting_privacy_context_flushes_queue() -> None:
     assert client.get("/notifications/hariz").json() == []
 
 
+# --- Phase 18: daily briefing (docs/adr/0015) ---
+
+
+def test_briefing_404_for_unknown_user() -> None:
+    client = make_hub_with_core_app(make_embodiment_app(), create_core_app())
+    resp = client.post("/briefing/nobody")
+    assert resp.status_code == 404
+
+
+def test_briefing_greets_and_delivers_privately() -> None:
+    """Phase 18 exit criterion: "Reachy greets; detailed briefing is
+    privately delivered."""
+    core_app = create_core_app()
+    embodiment_app = make_embodiment_app()
+    client = make_hub_with_core_app(embodiment_app, core_app)
+    client.post("/messages", json={"user_id": "hariz", "channel": "telegram", "text": "hi"})
+    client.post("/robots", json={"robot_id": "desk-1", "base_url": "http://desk-1.local"})
+
+    core_client = TestClient(core_app)
+    soon = (datetime.now(UTC) + timedelta(minutes=3)).isoformat()
+    core_client.post("/calendar/events", json={"title": "Standup", "start": soon, "end": soon})
+
+    resp = client.post("/briefing/hariz")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["greeted"] is True
+    assert any("Standup" in item["text"] for item in body["items"])
+    assert "Standup" in body["text"]
+    # Desk mode's base channel is Reachy, but a briefing is forced
+    # work-private, so it can never land on Reachy's speaker.
+    assert body["delivery_channel"] != "reachy"
+
+    # The greeting gesture actually fired on the real (simulated) robot.
+    state = client.get("/robots/desk-1/state").json()
+    assert state["last_behaviour"] == "greeting"
+
+
+def test_briefing_defers_detailed_content_while_dnd_is_on() -> None:
+    """The greeting still happens (arrival is unconditional), but the
+    detailed content is queued, same as a routine reminder would be."""
+    core_app = create_core_app()
+    embodiment_app = make_embodiment_app()
+    client = make_hub_with_core_app(embodiment_app, core_app)
+    client.post("/messages", json={"user_id": "hariz", "channel": "telegram", "text": "hi"})
+    client.post("/robots", json={"robot_id": "desk-1", "base_url": "http://desk-1.local"})
+    client.patch("/sessions/hariz/dnd", json={"dnd": True})
+
+    core_client = TestClient(core_app)
+    later = (datetime.now(UTC) + timedelta(minutes=10)).isoformat()
+    core_client.post("/calendar/events", json={"title": "Later standup", "start": later, "end": later})
+
+    resp = client.post("/briefing/hariz")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["greeted"] is True
+    assert body["action"] == "queue"
+    assert body["delivered"] is False
+
+    queued = client.get("/notifications/hariz").json()
+    assert len(queued) == 1
+    assert "Later standup" in queued[0]["text"]
+
+
+def test_briefing_with_nothing_to_report_still_greets() -> None:
+    client = make_hub_with_core_app(make_embodiment_app(), create_core_app())
+    client.post("/messages", json={"user_id": "hariz", "channel": "telegram", "text": "hi"})
+    client.post("/robots", json={"robot_id": "desk-1", "base_url": "http://desk-1.local"})
+
+    resp = client.post("/briefing/hariz")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["greeted"] is True
+    assert body["items"] == []
+    assert body["text"] == "Nothing on your briefing right now."
+
+
 def test_manual_flush_endpoint_delivers_queued_notifications() -> None:
     core_app = create_core_app()
     client = make_hub_with_core_app(make_embodiment_app(), core_app)

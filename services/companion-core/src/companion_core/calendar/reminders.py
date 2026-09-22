@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 
 from companion_core.calendar.models import CalendarEvent
 from companion_core.calendar.store import CalendarStore
+from shared.models.response import Urgency
 
 
 async def due_reminders(store: CalendarStore, now: datetime, within_minutes: int) -> list[CalendarEvent]:
@@ -23,3 +24,12 @@ async def due_reminders(store: CalendarStore, now: datetime, within_minutes: int
     # that haven't started yet.
     candidates = await store.list_events(now, window_end)
     return [event for event in candidates if now <= event.start <= window_end]
+
+
+def reminder_urgency(event: CalendarEvent, now: datetime) -> Urgency:
+    """Phase 17 (docs/adr/0014): graded by proximity, not hardcoded, so the
+    interruption engine has a real URGENT/NORMAL distinction to defer
+    against. Extracted out of app.py's `/calendar/reminders/due` so Phase
+    18's briefing (briefing.py) grades its own reminder items with the
+    exact same rule instead of duplicating the 5-minute constant."""
+    return Urgency.URGENT if event.start - now <= timedelta(minutes=5) else Urgency.NORMAL

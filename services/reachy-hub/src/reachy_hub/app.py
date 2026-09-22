@@ -102,6 +102,18 @@ Per ADR 0003 ("Sent by companion-core (via reachy-hub) to
 reachy-embodiment's POST /behaviour/{name}"), reachy-hub is the service that
 actually holds the network path/credentials to each robot; companion-core
 never talks to reachy-embodiment directly.
+
+Phase 18 (daily briefing, ADR 0015): `POST /briefing/{user_id}` combines
+companion-core's calendar/tasks/email/reminders/project-events
+(`companion_core.briefing.build_briefing`, exposed as `GET /briefing`) into
+one prioritized list. "Reachy greets" is an unconditional arrival gesture
+(`Behaviour.GREETING`) — the detailed text is routed through the exact same
+`resolve_delivery_channel`/`apply_privacy_override`/`decide_action` pipeline
+`POST /calendar/check-reminders/{user_id}` (Phase 17) uses, forced
+`Privacy.WORK_PRIVATE` so it can never land on Reachy's speaker — the
+literal mechanism behind "detailed briefing is privately delivered". No new
+storage: it reuses `notification_queue`/`audit_log` exactly as they already
+exist.
 """
 
 from __future__ import annotations
@@ -197,6 +209,22 @@ class SetPrivacyContextRequest(BaseModel):
 
 class ReminderRoutingResult(BaseModel):
     event_id: str
+    text: str
+    delivery_channel: Channel
+    action: InterruptionAction
+    delivered: bool
+
+
+class BriefingItemResult(BaseModel):
+    category: str
+    text: str
+    privacy: Privacy
+    urgency: Urgency
+
+
+class BriefingDeliveryResult(BaseModel):
+    greeted: bool
+    items: list[BriefingItemResult]
     text: str
     delivery_channel: Channel
     action: InterruptionAction
@@ -697,6 +725,110 @@ def create_app(
             )
 
         return results
+
+    def _overall_urgency(items: list[dict]) -> Urgency:
+        """Phase 18 (docs/adr/0015): a single proactive delivery needs one
+        urgency to feed decide_action — the highest urgency among the
+        briefing's items, so one imminent meeting is enough to earn the
+        whole briefing a GESTURE while occupied. LOW (not NORMAL) when
+        there's nothing to report at all, so an empty briefing never
+        out-prioritizes a real notification competing for the same
+        cooldown."""
+        urgencies = {Urgency(item["urgency"]) for item in items}
+        if Urgency.URGENT in urgencies:
+            return Urgency.URGENT
+        if Urgency.NORMAL in urgencies:
+            return Urgency.NORMAL
+        return Urgency.LOW
+
+    def _format_briefing_text(items: list[dict]) -> str:
+        if not items:
+            return "Nothing on your briefing right now."
+        return "Daily briefing:\n" + "\n".join(f"- {item['text']}" for item in items)
+
+    @app.post("/briefing/{user_id}")
+    async def deliver_briefing(user_id: str) -> BriefingDeliveryResult:
+        """Phase 18 (docs/adr/0015): "Reachy greets; detailed briefing is
+        privately delivered." The greeting gesture is unconditional (a wave
+        costs nothing and isn't itself private information) — the detailed
+        content is what goes through the exact same occupied-aware routing
+        check_reminders (Phase 17) uses, reusing decide_action/
+        ReminderRoutingResult-shaped flow per ADR 0014's own forward note."""
+        session = await app.state.session_store.get_by_user(user_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail=f"no session for user '{user_id}'")
+
+        now = datetime.now(UTC)
+        try:
+            items = await companion_core_client.get_briefing()
+            current_events = await companion_core_client.events_in_progress(now)
+        except httpx.HTTPError as exc:
+            raise HTTPException(status_code=502, detail=f"companion-core unreachable: {exc}") from exc
+
+        available = await robot_available()
+        greeted = False
+        if available:
+            await trigger_gesture(Behaviour.GREETING)
+            greeted = True
+
+        occupied = is_occupied(
+            dnd=session.dnd,
+            privacy_context=session.privacy_context,
+            event_in_progress=bool(current_events),
+        )
+        urgency = _overall_urgency(items)
+        action = decide_action(
+            occupied=occupied,
+            urgency=urgency,
+            last_interruption_at=session.last_interruption_at,
+            now=now,
+        )
+        action = downgrade_for_presence(action, robot_available=available)
+
+        text = _format_briefing_text(items)
+        base_channel = resolve_delivery_channel(session.interaction_mode, session.active_channel)
+        # "...privately delivered": forced WORK_PRIVATE, the same mechanism
+        # check_reminders uses to keep aggregated work data off Reachy's
+        # speaker regardless of mode — a briefing is inherently a work-data
+        # aggregate, not classified per-item privacy at delivery time.
+        delivery_channel = apply_privacy_override(base_channel, Privacy.WORK_PRIVATE, session.active_channel)
+
+        await app.state.audit_log.record(
+            user_id=user_id,
+            session_id=session.session_id,
+            channel=session.active_channel,
+            mode=session.interaction_mode,
+            privacy=Privacy.WORK_PRIVATE,
+            base_channel=base_channel,
+            delivery_channel=delivery_channel,
+            action=action,
+        )
+
+        delivered = False
+        if action is InterruptionAction.QUEUE:
+            await app.state.notification_queue.enqueue(
+                user_id=user_id,
+                text=text,
+                privacy=Privacy.WORK_PRIVATE,
+                urgency=urgency,
+                source_event_id=None,
+            )
+        elif action is not InterruptionAction.IGNORE:
+            if action is InterruptionAction.GESTURE:
+                await trigger_gesture(Behaviour.IMPORTANT_NOTICE)
+            if delivery_channel == Channel.TELEGRAM:
+                delivered = await push_to_telegram(user_id, text)
+            if action is InterruptionAction.INTERRUPT:
+                session = await app.state.session_store.record_interruption(session, now)
+
+        return BriefingDeliveryResult(
+            greeted=greeted,
+            items=[BriefingItemResult(**item) for item in items],
+            text=text,
+            delivery_channel=delivery_channel,
+            action=action,
+            delivered=delivered,
+        )
 
     async def handle_inbound_message(message: InboundMessage) -> MessageResponse:
         """Shared by POST /messages and the Telegram poll loop — the same

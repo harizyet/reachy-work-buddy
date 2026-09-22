@@ -233,6 +233,29 @@ def test_reminders_due_grades_urgency_by_proximity() -> None:
         assert reminders[0]["urgency"] == "normal"
 
 
+def test_briefing_endpoint_combines_calendar_and_tasks() -> None:
+    """Phase 18 (docs/adr/0015): GET /briefing composes real data across
+    stores, not a placeholder — reachy-hub's POST /briefing/{user_id} just
+    relays this list."""
+    with make_chain() as client:
+        soon = (datetime.now(UTC) + timedelta(minutes=5)).isoformat()
+        client.post("/calendar/events", json={"title": "Standup", "start": soon, "end": soon})
+        client.post("/conversation", json={
+            "session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "remind me to buy milk"
+        })
+
+        resp = client.get("/briefing")
+        assert resp.status_code == 200
+        items = resp.json()
+        categories = {item["category"] for item in items}
+        assert "reminder" in categories
+        assert "task" in categories
+        assert any("buy milk" in item["text"] for item in items)
+        # Reminders (urgency-graded) lead a prioritized list.
+        assert items[0]["category"] == "reminder"
+        assert items[0]["urgency"] == "urgent"
+
+
 def test_agent_can_record_and_retrieve_a_follow_up() -> None:
     """Phase 11 exit criterion: agent can record and later retrieve
     explicit follow-ups, through the conversational path (not the direct
