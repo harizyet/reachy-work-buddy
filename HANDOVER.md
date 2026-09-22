@@ -276,19 +276,53 @@ this. Key findings:
   Jetson offline now honestly means the robot is inert. `docs/phase-22-23.md`'s
   architecture table was updated to match (no more "if present" hedge).
 
-**Next work directed at the Nano session (in progress, not yet reported
-back):** investigate whether `reachy-embodiment` should target
-`~/reachy-venv` directly (Python 3.10, working SDK) instead of this
-repo's `uv`/Python-3.13 environment for the Nano deployment specifically
-— checking whether the rest of that service's dependency tree is
-Python-3.10-compatible, whether `~/reachy-venv` has any reproducible
-build recipe or is one-off manual setup, and whether `reachy_mini` 1.8.4's
-API looks compatible with the existing `RobotBackend`/`SimulatedRobotBackend`
-interface in `services/reachy-embodiment/src/`. Read-only investigation
-only; no installs/edits/commits were authorized on the Nano. The
-newer-glibc-Docker-container alternative was explicitly deprioritized by
-the owner in favor of this venv-targeting investigation, not ruled out —
-worth revisiting if the venv approach turns out not to be viable.
+**`~/reachy-venv` investigation done (2026-09-22, read-only):** targeting
+`reachy-embodiment` at `~/reachy-venv`'s Python 3.10 does **not** fix the
+torch/onnxruntime glibc wall above — confirmed the wall is
+Python-version-independent (no torch/onnxruntime aarch64 wheel below
+manylinux_2_28 exists for any CPython version). `reachy-embodiment`'s own
+code also already requires Python ≥3.11 (`datetime.UTC`, `enum.StrEnum`),
+independent of the repo's declared 3.13 floor — running it under 3.10
+would fail on import regardless of dependencies. See the full report's
+"Follow-up investigation" section for detail, including the reasoning
+behind each conclusion.
+
+**Genuinely useful finding underneath that, though:** `ReachyMini` (the
+Python SDK class) is itself only an HTTP client to `reachy-mini-daemon`'s
+own FastAPI server — the daemon process holds all the native complexity
+(PyGObject, custom-built GStreamer 1.24, Rust kinematics/motor-controller
+extensions), not the client library. So `reachy-embodiment`'s
+`RobotBackend` doesn't need to share an interpreter with `reachy-venv` at
+all: the daemon runs standalone under `reachy-venv` (already proven
+working via `~/reachy/hello.py`), and `RobotBackend` becomes a thin
+HTTP/websocket client to it — matching this repo's existing
+services-talk-HTTP-only convention. `goto_target`/`play_move`/etc. map
+reasonably onto `play_behaviour(name, parameters)`; `capture_frame()` is a
+real mismatch needing actual work, since `ReachyMini`'s media surface is
+session-oriented (`acquire_media`/`release_media`/`start_recording`) not
+a stateless per-frame poll. The daemon's own HTTP/websocket API surface
+(needed to implement this client) has not been investigated yet.
+
+Also found: `~/reachy-venv` and its GStreamer/daemon setup is
+**reconstructible from `~/.bash_history` only, not from any checked-in
+script or recipe** — real, valuable setup work (Python 3.10 built from
+source, custom GStreamer with a hand-patched compile error, PyGObject
+version trial-and-error, Rust-built `gst-plugin-webrtc`) that would need
+manual history-replaying to reproduce on a reflashed SD card today. No
+systemd unit exists for the daemon either; it's only been run manually
+for testing. Worth capturing as a real install script + service
+regardless of the Python-target decision, before relying on it for
+Phase 22's "repeatable deployment" deliverable.
+
+**Open decisions before further Nano work (not yet made):**
+1. Torch/VAD blocker: pursue the newer-glibc container route (previously
+   deprioritized, not ruled out), defer/reimplement VAD without torch for
+   the Nano deployment specifically, or explicitly rule out
+   building-torch-from-source as infeasible.
+2. Whether/when to have the Nano session write a real install
+   script + systemd unit for `reachy-venv`/`reachy-mini-daemon`, and
+   investigate the daemon's HTTP/websocket API surface for the
+   `RobotBackend` client implementation.
 
 **Cross-session coordination note:** this Phase 22 work happened live
 across two Claude Code sessions (homelab + Nano) via `SendMessage`/cross-session

@@ -159,26 +159,151 @@ likely be treated as confirmed-absent for this specific physical setup,
 pending confirmation that Reachy Mini hardware truly has no onboard
 compute beyond what's visible from the USB side.
 
+## Follow-up investigation: targeting `~/reachy-venv` (2026-09-22, read-only)
+
+Investigated whether `reachy-embodiment` should run under `~/reachy-venv`'s
+Python 3.10 instead of this repo's `uv`/3.13 environment. Read-only
+throughout: no installs into `reachy-venv`, no repo edits, no commits.
+
+**Finding: this would not have fixed the dependency wall above.** The
+torch/onnxruntime blocker is a **glibc-floor issue, Python-version
+independent**, confirmed against actual PyPI/download.pytorch.org wheel
+tags:
+
+- `torch` 2.9.0/2.9.1+cpu aarch64: every build from cp310 through cp314t
+  is `manylinux_2_28_aarch64` — including cp310, `reachy-venv`'s exact
+  version. No cp310 aarch64 torch wheel satisfies this board's glibc 2.27
+  either.
+- `onnxruntime` 1.30.0 aarch64: cp311+ only, also `manylinux_2_28` —
+  doesn't ship a cp310 wheel at all (reachy-hub's blocker, separately).
+
+`silero-vad`'s torch dependency (`services/reachy-embodiment/src/.../audio/vad.py`,
+real barge-in-detection functionality, not incidental) would hit the
+identical error under Python 3.10 as under 3.13.
+
+Separately, `reachy-embodiment`'s own source already requires **Python
+≥3.11** independent of the repo's declared `>=3.13` floor: `app.py` and
+`presence.py` use `from datetime import UTC`, and
+`shared/models/embodiment.py` (imported for `Behaviour`/`EmbodimentState`)
+uses `enum.StrEnum` — both added in 3.11. Confirmed directly:
+`from datetime import UTC` raises `ImportError` on `reachy-venv`'s Python
+3.10.18. Running this service under that venv would fail on import before
+dependencies were even reached.
+
+**However, the `reachy_mini` SDK's own compiled packages are not the
+blocker at all** — checked directly on PyPI:
+
+- `reachy_mini` 1.8.4 is pure-Python (`py3-none-any`), no version pin.
+- `reachy_mini_motor_controller` 1.5.6 and `reachy_mini_rust_kinematics`
+  1.0.3 both ship `cp313-cp313-manylinux_2_17_aarch64` wheels —
+  `manylinux_2_17` is far more permissive than this board's glibc 2.27.
+  These install cleanly under Python 3.13 today.
+
+So there is no SDK-compatibility reason to run `reachy-embodiment` on
+Python 3.10. The only real blocker is torch (via VAD), unresolved
+regardless of venv/Python choice, until one of: (a) a
+manylinux_2_28-capable environment (the container route, still
+deprioritized, not ruled out), (b) VAD deferred/reimplemented without
+torch for the Nano deployment specifically, or (c) building torch from
+source (assessed as very likely infeasible on Nano-class hardware/toolchain,
+not attempted).
+
+### Is `~/reachy-venv` reproducible?
+
+**Reconstructible from `~/.bash_history`, but not currently captured as a
+script or recipe anywhere** — no `requirements.txt`, no install script,
+nothing checked in. Sequence found, in order:
+
+1. Built Python 3.10.18 from source (`./configure --prefix=/opt/python310 && make -j4 && sudo make altinstall`) — Ubuntu 18.04's apt tops out at 3.6.
+2. `python3.10 -m venv ~/reachy-venv`; `pip install reachy-mini` — clean off PyPI, no special index.
+3. `apt install`ed GTK/cairo dev headers for PyGObject, with undocumented
+   trial-and-error version pinning: `PyGObject==3.46.0` tried and
+   abandoned for `3.44.1`, no recorded reason.
+4. udev rules + `dialout` group membership for serial access — this part
+   *is* durably captured, in `/etc/udev/rules.d/99-reachy-mini.rules`.
+5. Built **GStreamer 1.24 from source via meson**
+   (`/opt/gstreamer-1.24`), including hand-patching `gstdrmdumb.c` (a
+   `DRM_FORMAT_NV15` compile error, guarded with `#ifdef`) — the distro
+   package wasn't usable for whatever media pipeline `reachy_mini` needs.
+6. Built `gst-plugins-rs` from source via a freshly-installed Rust
+   toolchain, specifically `gst-plugin-webrtc`, manually installed the
+   resulting `.so` into GStreamer's plugin dir.
+7. `~/.asoundrc` set up via `reachy_mini.media.audio_utils.write_asoundrc_to_home()`
+   for the ReSpeaker audio card; verified with raw `gst-launch-1.0`/`arecord`/`aplay`.
+8. Manually ran `reachy-mini-daemon --headless --log-level DEBUG` to test.
+
+**Verdict: reproducible by a human replaying bash history, not from a
+documented/scripted deployment.** No systemd service exists — the daemon
+is not currently running (confirmed via `ps`/`systemctl`), only invoked
+manually for testing. A reflashed SD card would need this exact 8-step
+sequence redone from memory/history, including the undocumented PyGObject
+trial-and-error and the GStreamer source patch. This is real, valuable,
+undocumented setup work that currently lives nowhere durable — worth
+capturing as an actual install script independent of what's decided about
+`reachy-embodiment`'s own Python target.
+
+### `RobotBackend` vs. the `reachy_mini` API shape
+
+**Architectural finding (the important one):** `ReachyMini.__init__`'s
+signature (`robot_name, host="reachy-mini.local", port=8000,
+connection_mode="auto", spawn_daemon=False, use_sim=False, ...`) reveals
+that **the `ReachyMini` Python class is itself an HTTP client to
+`reachy-mini-daemon`'s own FastAPI server** — it does not talk to
+serial/USB hardware in-process. All the heavy native complexity
+(PyGObject, custom GStreamer, Rust kinematics/motor-controller
+extensions) lives in the **daemon process**, reachable over
+`localhost:8000` (or network).
+
+This reframes the question: `reachy-embodiment` does not need to share an
+interpreter with `reachy-venv` at all. The daemon can run standalone
+under `reachy-venv` (already proven working) as its own supervised
+process, while `reachy-embodiment`'s `RobotBackend` implementation is a
+thin HTTP/websocket client to it, running under whatever Python
+`reachy-embodiment` itself ends up on. This matches this repo's own
+"services talk HTTP only" convention (AGENTS.md) closely — the daemon
+slots in as one more HTTP dependency, not a shared-interpreter one. It
+does **not** remove the torch/VAD blocker above, but it does mean the
+motor/camera/audio control piece specifically has a clean, non-invasive
+integration path, already anticipated by `robot.py`'s existing comment
+about "wrapping the reachy_mini SDK the way Jarvis's RobotController does."
+
+- **Reasonable fit:** `ReachyMini.goto_target()` / `set_target()` /
+  `play_move()` / `async_play_move()` / `cancel_move()` map conceptually
+  onto `RobotBackend.play_behaviour(name, parameters)` — named behaviours
+  translating into specific pose/move sequences, the pattern the existing
+  code comment already expects.
+- **Real mismatch worth flagging:** `RobotBackend.capture_frame() ->
+  bytes` is a stateless "give me one JPEG" call. `ReachyMini`'s media
+  surface is session-oriented instead — `acquire_media()` /
+  `release_media()` / `media_released` / `start_recording()` /
+  `stop_recording()` — closer to "open a stream, hold it, close it."
+  Implementing `capture_frame()` on top of this needs real state
+  management (acquire once, pull frames from a live session, decide when
+  to release), not a 1:1 method mapping.
+- No obvious `connected`/`sim` property was found on `ReachyMini` itself;
+  that status likely needs to come from the daemon's own connection/health
+  state instead — the daemon CLI has `--sim`/`--mockup-sim`/`--headless`
+  flags, so the daemon clearly tracks this, just not surfaced as a simple
+  client-side property from what was seen. Not investigated further:
+  `reachy-mini-daemon`'s actual HTTP/websocket API surface for
+  camera/audio/status.
+
 ## Open questions / next steps
 
-1. **Dependency compat:** test whether a newer-glibc Docker base (Ubuntu
-   22.04+) run on this Nano's kernel allows `uv sync` to succeed for
-   CPU-only wheels, now that Docker itself is present (compose/buildx
-   still need installing per AGENTS.md's Dev setup section). If that
-   fails too, the fallback is deciding whether `reachy-embodiment`
-   specifically should target the pre-existing `~/reachy-venv` (Python
-   3.10, already has the real `reachy_mini` SDK working) instead of this
-   repo's `uv`-managed 3.13 environment for the Nano deployment
-   specifically — a real architectural choice, not something to decide
-   unilaterally mid-inventory.
-2. **ADR 0004 amendment:** resolve whether the Nano being the sole
-   robot-attached machine is accepted (revising the outage-survivability
-   guarantee) or whether an independent local-fallback runtime needs to
-   exist elsewhere before Phase 22 can proceed on the "real hardware
-   adapter" deliverable.
-3. Decide whether to leave `~/reachy-work-buddy` on the Nano as-is, wipe
-   it, or hand off a specific next test (e.g. the container/newer-glibc
-   route above).
+1. **Torch/VAD blocker (unresolved):** decide between the deprioritized
+   container route, deferring/reimplementing VAD without torch for the
+   Nano deployment, or accepting torch-from-source as infeasible and
+   ruling it out explicitly.
+2. **`reachy-venv`/daemon reproducibility:** decide whether to capture the
+   8-step manual sequence above as a real install script (and give the
+   daemon a systemd unit) before relying on it as part of Phase 22's
+   "repeatable deployment" deliverable.
+3. **`reachy-mini-daemon` API surface:** not yet investigated — needed
+   before implementing `RobotBackend`'s HTTP client, especially for the
+   `capture_frame()` session-vs-stateless mismatch and daemon-side
+   connection/sim status.
+4. Decide whether to leave `~/reachy-work-buddy` on the Nano as-is, wipe
+   it, or hand off a specific next test.
 
 No code, ADRs, or launcher scripts were written or modified as part of
 this inventory pass.
