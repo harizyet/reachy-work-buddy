@@ -63,13 +63,32 @@ writing code in case something changed in between:
   `companion_core/app.py`'s `/conversation` fallback reply is a literal
   placeholder string (`f"(turn {n} via {channel}) heard: {text}"`) — every
   existing calendar/task/memory/email "AI" behaviour is deterministic
-  keyword matching (`*_intent.py`), never an LLM call. Phase 19 is
-  scoped to include a real pluggable LLM client (an `OpenAICompatibleChatProvider`
-  over httpx — one implementation covers both a cloud key and a local
-  server like Ollama/LM Studio, since they share the same
-  `/chat/completions` shape) precisely so the new "LLM utilization"
-  dashboard has genuine data, not zeros. Only the existing intent-matching
-  fallback branch changes; every deterministic intent path is untouched.
+  keyword matching (`*_intent.py`), never an LLM call. Phase 19 is scoped
+  to include a real pluggable LLM client (an `OpenAICompatibleChatProvider`
+  over httpx) precisely so the new "LLM utilization" dashboard has genuine
+  data, not zeros. **Update (this session): the primary local target is a
+  self-hosted [OpenVINO Model Server](https://docs.openvino.ai/2026/model-server/ovms_what_is_openvino_model_server.html)
+  (OVMS) instance**, not a generic "Ollama/LM Studio" placeholder — the
+  user already runs (or plans to run) LLM inference locally via OpenVINO.
+  Confirmed via docs.openvino.ai: as of the 2025/2026 docs, OVMS exposes
+  an OpenAI-compatible `/v1/chat/completions` endpoint (`/v3/...` is the
+  older alias, kept until 2027 but no longer the recommended path) — the
+  *exact* same wire shape `OpenAICompatibleChatProvider` already targets
+  for a cloud key. This means **no separate OpenVINO code path is
+  needed**: pointing `base_url` at `http://<ovms-host>:<port>/v1` (and
+  `api_key` left unset, since OVMS doesn't require one locally) is enough;
+  the one client implementation already covers cloud, OVMS, Ollama, LM
+  Studio, and vLLM identically. One OVMS-specific gotcha worth remembering
+  when actually wiring this up: OVMS requires the request's `"model"`
+  field to match the model name in *its own* model-repository config, not
+  an arbitrary string — the UI's "model" field's help text/placeholder
+  should say so, and live verification needs a real OVMS instance running
+  a real model to prove the local path end-to-end (see AGENTS.md's
+  "Secrets needed for a live check" convention if that instance needs a
+  reachable-but-non-default URL/credential — ask the user rather than
+  guessing at deploy-specific details). Only the existing intent-matching
+  fallback branch in `/conversation` changes; every deterministic intent
+  path is untouched.
 - **Today's only browser auth is a shared `REMOTE_UI_TOKEN` pasted into a
   text field** (`reachy_hub/app.py`'s `require_remote_auth`,
   `clients/web-pwa/telepresence.js`'s token input + `localStorage`). Phase
@@ -94,6 +113,36 @@ inventing one was explicitly scoped out) and `llm_usage_log`. New
 reachy-hub storage planned: `users`. All three are net-new Postgres tables
 — same "needs `docker compose down -v` against a pre-Phase-19 volume"
 caveat as every prior phase's schema addition once this actually lands.
+**Forward-compat note for whoever builds this:** key `llm_settings` by a
+`role` column (`'local'`/`'cloud'`) from day one, seeding just the one
+`'local'` row initially — Phase 21 (below) adds a second row and reworking
+a fixed-id single-row schema afterward is avoidable if this is done now.
+
+**Also planned (not started): Phase 20 — Web Chat Channel and Phase 21 —
+Hybrid Local/Cloud LLM Routing**, both added to docs/plan.md's roadmap
+table this session, both depending on Phase 19 landing first. Full plans:
+`~/.claude/plans/phase-20-web-chat-channel.md` and
+`~/.claude/plans/phase-21-hybrid-llm-routing.md` (on the machine that
+planned them — docs/plan.md's Phase 20/21 rows plus this summary are
+enough to reconstruct both if those files aren't available to a new
+session). The one finding worth flagging up front: **Phase 20 turned out
+to be mostly a frontend task**, not a backend one — `shared/models/session.py`
+already has `Channel.WEB` and `reachy-hub`'s `POST /messages` is already
+fully channel-agnostic (the reply text always comes back in the HTTP
+response regardless of `delivery_channel`, which only ever governs
+*proactive* pushes, not direct replies — see `app.py`'s own comment on
+this at the Telegram poll loop). So "talk to the buddy through the
+browser" needs a chat UI page and a real Telegram-health signal
+(`app.state.telegram_last_poll_at`/`_error`, tracked in the existing
+`telegram_poll_loop`) feeding Phase 19's `/status`, not new conversational
+backend logic. Phase 21 defines "local model is insufficient" two ways
+only — the local call failed outright, or the user manually says so (a
+routing-policy setting plus a per-message `force_frontier` override,
+threaded through the same way `input_modality`/ADR 0011 already is) —
+deliberately **not** an automatic quality judgment, which would need
+another LLM-as-judge call and is out of scope, matching this codebase's
+existing discipline of honest, non-speculative classifiers
+(`privacy_classifier.py`, `calendar_intent.py`).
 
 **Postgres schema-addition caveat (no migration framework yet, same as ADR
 0010's precedent):** Phase 17 added `dnd`/`last_interruption_at` columns to
