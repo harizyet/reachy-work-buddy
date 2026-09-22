@@ -113,6 +113,7 @@ import os
 import secrets
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 
 import httpx
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
@@ -123,7 +124,14 @@ from pydantic import BaseModel
 from reachy_hub.audit_log import AuditEntry, AuditLog
 from reachy_hub.companion_core_client import CompanionCoreClient
 from reachy_hub.embodiment_client import EmbodimentClient
+from reachy_hub.interruption_policy import (
+    decide_action,
+    downgrade_for_presence,
+    is_occupied,
+)
+from reachy_hub.notification_queue import NotificationQueue, QueuedNotification
 from reachy_hub.postgres_audit_log import PostgresAuditLog
+from reachy_hub.postgres_notification_queue import PostgresNotificationQueue
 from reachy_hub.postgres_registry import PostgresRobotRegistry
 from reachy_hub.postgres_session_store import PostgresSessionStore
 from reachy_hub.postgres_telegram_chat_registry import PostgresTelegramChatRegistry
@@ -136,8 +144,15 @@ from reachy_hub.telegram_client import TelegramClient
 from reachy_hub.tts import EspeakTTS, TextToSpeech
 from reachy_hub.webrtc import CallTurnHandler, negotiate_call, negotiate_telepresence
 from shared.models.embodiment import Behaviour
-from shared.models.response import Privacy
-from shared.models.session import AgentSession, Channel, InputModality, InteractionMode
+from shared.models.interruption import InterruptionAction
+from shared.models.response import Privacy, Urgency
+from shared.models.session import (
+    AgentSession,
+    Channel,
+    InputModality,
+    InteractionMode,
+    PrivacyContext,
+)
 
 log = logging.getLogger(__name__)
 
@@ -172,10 +187,19 @@ class SetModeRequest(BaseModel):
     interaction_mode: InteractionMode
 
 
+class SetDndRequest(BaseModel):
+    dnd: bool
+
+
+class SetPrivacyContextRequest(BaseModel):
+    privacy_context: PrivacyContext
+
+
 class ReminderRoutingResult(BaseModel):
     event_id: str
     text: str
     delivery_channel: Channel
+    action: InterruptionAction
     delivered: bool
 
 
@@ -221,6 +245,7 @@ def create_app(
     stt_factory: Callable[[], SpeechToText] | None = None,
     tts_factory: Callable[[], TextToSpeech] | None = None,
     audit_log: AuditLog | None = None,
+    notification_queue: NotificationQueue | None = None,
     remote_ui_token: str | None = None,
 ) -> FastAPI:
     # Phase 16/ADR 0013: fail closed. Unset means the whole remote-control
@@ -347,6 +372,7 @@ def create_app(
     owns_registry = registry is None
     owns_session_store = session_store is None
     owns_audit_log = audit_log is None
+    owns_notification_queue = notification_queue is None
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -367,6 +393,9 @@ def create_app(
         if owns_audit_log:
             dsn = database_url or os.environ["DATABASE_URL"]
             app.state.audit_log = await PostgresAuditLog.connect(dsn)
+        if owns_notification_queue:
+            dsn = database_url or os.environ["DATABASE_URL"]
+            app.state.notification_queue = await PostgresNotificationQueue.connect(dsn)
 
         heartbeat_task = (
             asyncio.create_task(heartbeat_loop(app.state.registry, heartbeat_interval))
@@ -404,6 +433,8 @@ def create_app(
                 await app.state.telegram_chat_registry.close()
             if owns_audit_log:
                 await app.state.audit_log.close()
+            if owns_notification_queue:
+                await app.state.notification_queue.close()
 
     app = FastAPI(title="reachy-hub", lifespan=lifespan)
     app.state.webrtc_connections = set()
@@ -415,6 +446,8 @@ def create_app(
         app.state.telegram_chat_registry = telegram_chat_registry
     if not owns_audit_log:
         app.state.audit_log = audit_log
+    if not owns_notification_queue:
+        app.state.notification_queue = notification_queue
 
     async def get_robot_or_404(robot_id: str) -> Robot:
         robot = await app.state.registry.get(robot_id)
@@ -478,9 +511,114 @@ def create_app(
             raise HTTPException(status_code=404, detail=f"no session for user '{user_id}'")
         return await app.state.session_store.set_mode(session, request.interaction_mode)
 
+    @app.patch("/sessions/{user_id}/dnd")
+    async def set_session_dnd(user_id: str, request: SetDndRequest) -> AgentSession:
+        session = await app.state.session_store.get_by_user(user_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail=f"no session for user '{user_id}'")
+        session = await app.state.session_store.set_dnd(session, request.dnd)
+        # Turning DND off is one of the two natural hooks this phase uses
+        # instead of a background poller (docs/adr/0014) — deliver whatever
+        # queued up while occupied, right now.
+        if not request.dnd:
+            await flush_notifications(user_id, session)
+        return session
+
+    @app.patch("/sessions/{user_id}/privacy-context")
+    async def set_session_privacy_context(user_id: str, request: SetPrivacyContextRequest) -> AgentSession:
+        session = await app.state.session_store.get_by_user(user_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail=f"no session for user '{user_id}'")
+        was_meeting = session.privacy_context == PrivacyContext.MEETING
+        session = await app.state.session_store.set_privacy_context(session, request.privacy_context)
+        if was_meeting and request.privacy_context != PrivacyContext.MEETING:
+            await flush_notifications(user_id, session)
+        return session
+
     @app.get("/audit/{user_id}")
     async def get_audit_log(user_id: str, limit: int = 50) -> list[AuditEntry]:
         return await app.state.audit_log.list_for_user(user_id, limit=limit)
+
+    @app.get("/notifications/{user_id}")
+    async def list_notifications(user_id: str) -> list[QueuedNotification]:
+        return await app.state.notification_queue.list_for_user(user_id)
+
+    @app.post("/notifications/{user_id}/flush")
+    async def flush_notifications_endpoint(user_id: str) -> list[ReminderRoutingResult]:
+        session = await app.state.session_store.get_by_user(user_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail=f"no session for user '{user_id}'")
+        return await flush_notifications(user_id, session)
+
+    async def push_to_telegram(user_id: str, text: str) -> bool:
+        if telegram_client is None:
+            return False
+        chat_id = await app.state.telegram_chat_registry.get_chat_id(user_id)
+        if chat_id is None:
+            return False
+        delivered = False
+        with contextlib.suppress(httpx.HTTPError):
+            await telegram_client.send_message(chat_id, text)
+            delivered = True
+        return delivered
+
+    async def robot_available() -> bool:
+        """Best-effort "presence" check (docs/adr/0014): is there a robot
+        registered and actually reachable to perform a gesture right now?
+        A GESTURE action downgrades to TEXT when this is false rather than
+        silently no-op'ing the robot half of "phone alert plus attention
+        gesture"."""
+        for robot in await app.state.registry.list():
+            with contextlib.suppress(httpx.HTTPError):
+                state = await get_client(robot).get_state()
+                if state.get("embodiment_state") != "disconnected":
+                    return True
+        return False
+
+    async def trigger_gesture(behaviour: Behaviour) -> None:
+        for robot in await app.state.registry.list():
+            with contextlib.suppress(httpx.HTTPError):
+                await get_client(robot).trigger_behaviour(behaviour.value)
+
+    async def flush_notifications(user_id: str, session: AgentSession) -> list[ReminderRoutingResult]:
+        """Deliver everything queued for `user_id` right now. Shared by the
+        explicit POST /notifications/{user_id}/flush and the two PATCH
+        endpoints above whose whole point is "the user is no longer
+        occupied" — not itself re-gated by interruption_policy, since the
+        occupied condition that caused the queueing has, by construction,
+        just ended."""
+        queued = await app.state.notification_queue.clear_for_user(user_id)
+        results: list[ReminderRoutingResult] = []
+        for notification in queued:
+            base_channel = resolve_delivery_channel(session.interaction_mode, session.active_channel)
+            delivery_channel = apply_privacy_override(base_channel, notification.privacy, session.active_channel)
+
+            await app.state.audit_log.record(
+                user_id=user_id,
+                session_id=session.session_id,
+                channel=session.active_channel,
+                mode=session.interaction_mode,
+                privacy=notification.privacy,
+                base_channel=base_channel,
+                delivery_channel=delivery_channel,
+                action=InterruptionAction.INTERRUPT,
+            )
+
+            delivered = False
+            if delivery_channel == Channel.TELEGRAM:
+                delivered = await push_to_telegram(user_id, notification.text)
+            session = await app.state.session_store.record_interruption(session, datetime.now(UTC))
+
+            results.append(
+                ReminderRoutingResult(
+                    event_id=notification.source_event_id or notification.id,
+                    text=notification.text,
+                    delivery_channel=delivery_channel,
+                    action=InterruptionAction.INTERRUPT,
+                    delivered=delivered,
+                )
+            )
+        return results
 
     @app.post("/calendar/check-reminders/{user_id}")
     async def check_reminders(user_id: str, within_minutes: int = 15) -> list[ReminderRoutingResult]:
@@ -488,16 +626,34 @@ def create_app(
         if session is None:
             raise HTTPException(status_code=404, detail=f"no session for user '{user_id}'")
 
+        now = datetime.now(UTC)
         try:
             reminders = await companion_core_client.due_reminders(within_minutes=within_minutes)
+            current_events = await companion_core_client.events_in_progress(now)
         except httpx.HTTPError as exc:
             raise HTTPException(status_code=502, detail=f"companion-core unreachable: {exc}") from exc
+
+        occupied = is_occupied(
+            dnd=session.dnd,
+            privacy_context=session.privacy_context,
+            event_in_progress=bool(current_events),
+        )
+        available = await robot_available()
 
         results: list[ReminderRoutingResult] = []
         for reminder in reminders:
             privacy = Privacy(reminder["privacy"])
+            urgency = Urgency(reminder["urgency"])
             base_channel = resolve_delivery_channel(session.interaction_mode, session.active_channel)
             delivery_channel = apply_privacy_override(base_channel, privacy, session.active_channel)
+
+            action = decide_action(
+                occupied=occupied,
+                urgency=urgency,
+                last_interruption_at=session.last_interruption_at,
+                now=now,
+            )
+            action = downgrade_for_presence(action, robot_available=available)
 
             await app.state.audit_log.record(
                 user_id=user_id,
@@ -507,21 +663,35 @@ def create_app(
                 privacy=privacy,
                 base_channel=base_channel,
                 delivery_channel=delivery_channel,
+                action=action,
             )
 
             delivered = False
-            if delivery_channel == Channel.TELEGRAM and telegram_client is not None:
-                chat_id = await app.state.telegram_chat_registry.get_chat_id(user_id)
-                if chat_id is not None:
-                    with contextlib.suppress(httpx.HTTPError):
-                        await telegram_client.send_message(chat_id, reminder["text"])
-                        delivered = True
+            if action is InterruptionAction.QUEUE:
+                await app.state.notification_queue.enqueue(
+                    user_id=user_id,
+                    text=reminder["text"],
+                    privacy=privacy,
+                    urgency=urgency,
+                    source_event_id=reminder["event_id"],
+                )
+            elif action is not InterruptionAction.IGNORE:
+                if action is InterruptionAction.GESTURE:
+                    # docs §4: "Urgent event -> phone alert plus Reachy
+                    # attention gesture" — the gesture is additional to,
+                    # not instead of, the push below.
+                    await trigger_gesture(Behaviour.IMPORTANT_NOTICE)
+                if delivery_channel == Channel.TELEGRAM:
+                    delivered = await push_to_telegram(user_id, reminder["text"])
+                if action is InterruptionAction.INTERRUPT:
+                    session = await app.state.session_store.record_interruption(session, now)
 
             results.append(
                 ReminderRoutingResult(
                     event_id=reminder["event_id"],
                     text=reminder["text"],
                     delivery_channel=delivery_channel,
+                    action=action,
                     delivered=delivered,
                 )
             )

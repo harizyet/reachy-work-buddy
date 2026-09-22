@@ -117,7 +117,7 @@ import contextlib
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import httpx
 from fastapi import FastAPI, HTTPException
@@ -554,13 +554,20 @@ def create_app(
 
     @app.get("/calendar/reminders/due")
     async def reminders_due(within_minutes: int = 15) -> list[ReminderPayload]:
-        events = await due_reminders(app.state.calendar_store, datetime.now(UTC), within_minutes)
+        now = datetime.now(UTC)
+        events = await due_reminders(app.state.calendar_store, now, within_minutes)
         return [
             ReminderPayload(
                 event_id=event.id,
                 text=f"Reminder: '{event.title}' starts at {event.start.strftime('%H:%M')}.",
                 privacy=Privacy.WORK_PRIVATE,
-                urgency=Urgency.URGENT,
+                # Phase 17 (docs/adr/0014): graded, not hardcoded — reachy-hub's
+                # interruption engine needs a real distinction between "starting
+                # imminently" and "just came into the reminder window" to ever
+                # demonstrate routine-notification deferral with real calendar
+                # data. 5 minutes chosen to match this endpoint's own
+                # within_minutes default (15) leaving room for a NORMAL band.
+                urgency=Urgency.URGENT if event.start - now <= timedelta(minutes=5) else Urgency.NORMAL,
             )
             for event in events
         ]

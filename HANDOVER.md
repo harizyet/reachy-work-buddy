@@ -22,22 +22,43 @@ conflict once you notice it.
 
 ## Where things stand
 
-**Phases 0-16 are done** (see README.md's Status section for full detail
-and live-verification evidence per phase). Last completed: **Phase 16,
-"Remote telepresence"** — reachy-hub's first real authentication
-(`REMOTE_UI_TOKEN`, fail-closed), a real WebRTC camera video track (polled
-JPEG from reachy-embodiment's new `GET /camera/frame`), and
-speak-through-robot (`POST /robots/{id}/speak`) that bypasses
-companion-core entirely — verified live with companion-core's container
-actually stopped (`docker compose stop companion-core`). New page:
-`clients/web-pwa/telepresence.html`. See
-[docs/adr/0013](docs/adr/0013-remote-telepresence.md).
+**Phases 0-17 are done** (see README.md's Status section for full detail
+and live-verification evidence per phase). Last completed: **Phase 17,
+"Interruption intelligence"** — a third pure policy function
+(`reachy_hub/interruption_policy.py`: `is_occupied`/`decide_action`/
+`downgrade_for_presence`) alongside `response_policy.py`'s two, deciding
+whether/how aggressively to deliver a proactive notification (today:
+calendar reminders only) — never *where*, that's still unchanged. New
+session state (`AgentSession.dnd`, a now-settable `privacy_context`) and a
+Postgres-backed `notification_queue`, both wired into
+`POST /calendar/check-reminders/{user_id}`. No background poller: queued
+notifications flush the moment `PATCH /sessions/{user_id}/dnd` turns DND
+off or `PATCH /sessions/{user_id}/privacy-context` leaves `MEETING`.
+Verified live (see README's Phase 17 entry for the exact curl sequence):
+DND + a 10-min-out reminder queued and stayed undelivered; DND + a
+2-min-out (URGENT-graded) reminder triggered a real robot gesture
+(`important_notice`, confirmed via `GET /robots/{id}/state`); turning DND
+off auto-flushed the queue and the audit trail showed the full
+`queue -> gesture -> interrupt` history. See
+[docs/adr/0014](docs/adr/0014-interruption-intelligence.md).
 
-**Next up: Phase 17 — Interruption intelligence** (docs/plan.md row:
-"Inputs: calendar, presence, meeting, DND, urgency, privacy, last
-interruption. Actions: ignore/queue/text/gesture/interrupt." Exit
-criterion: "Routine notifications defer correctly while user is
-occupied.") Not started.
+**Next up: Phase 18 — Daily briefing** (docs/plan.md row: "Combine
+calendar/tasks/email/reminders/project events into prioritized arrival
+briefing." Exit criterion: "Reachy greets; detailed briefing is privately
+delivered.") Not started. It's the next natural producer to feed into
+Phase 17's interruption engine (`decide_action`/`ReminderRoutingResult`-
+shaped flow), the way calendar reminders are today.
+
+**Postgres schema-addition caveat (no migration framework yet, same as ADR
+0010's precedent):** Phase 17 added `dnd`/`last_interruption_at` columns to
+`sessions`, an `action` column to `audit_log`, and a whole new
+`notification_queue` table. `CREATE TABLE IF NOT EXISTS` does not retrofit
+columns onto an already-running dev Postgres volume — a session continuing
+against a pre-Phase-17 volume needs `docker compose down -v` before the new
+columns/table exist. Confirmed clean in this sandbox because the volume
+used for live verification was already down-and-recreated from a prior
+session's `.env`; if a future session hits a column-does-not-exist error
+from `postgres_session_store.py`/`postgres_audit_log.py`, this is why.
 
 **Docker build speed (cross-cutting, ahead of Phase 17, not itself a
 phase — same treatment ADR 0011 got):** there was no root `.dockerignore`

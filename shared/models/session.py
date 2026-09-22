@@ -65,5 +65,13 @@ class AgentSession(BaseModel):
     active_channel: Channel
     interaction_mode: InteractionMode = InteractionMode.DESK
     privacy_context: PrivacyContext = PrivacyContext.UNKNOWN
+    # Phase 17 (docs/adr/0014): explicit "don't interrupt me" toggle,
+    # independent of privacy_context/interaction_mode — a user in Desk mode
+    # who is heads-down still wants routine notifications deferred.
+    dnd: bool = False
+    # Phase 17: set only when interruption_policy.decide_action returns
+    # INTERRUPT — drives that policy's cooldown so back-to-back proactive
+    # interruptions don't become annoying (docs/plan.md's risk table).
+    last_interruption_at: datetime | None = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     last_active_at: datetime = Field(default_factory=datetime.utcnow)

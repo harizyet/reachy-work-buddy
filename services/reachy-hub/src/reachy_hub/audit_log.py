@@ -8,6 +8,12 @@ accountability — whether the privacy override fired. A privacy-sensitive
 reply that got routed to Reachy anyway would be exactly the kind of
 workplace-privacy leak docs/plan.md §4 is about; the audit trail is what
 lets that be checked after the fact, not just trusted at request time.
+
+Phase 17 (docs/adr/0014): `action` records interruption_policy.py's
+decision for proactive notifications (calendar reminders today). It's
+optional/defaults to None because /messages and /voice/turn's direct
+replies never go through that policy — only the reminder/notification path
+sets it, keeping every other call site's signature unchanged.
 """
 
 from __future__ import annotations
@@ -18,6 +24,7 @@ from typing import Protocol
 
 from pydantic import BaseModel
 
+from shared.models.interruption import InterruptionAction
 from shared.models.response import Privacy
 from shared.models.session import Channel, InteractionMode
 
@@ -32,6 +39,7 @@ class AuditEntry(BaseModel):
     base_channel: Channel
     delivery_channel: Channel
     overridden: bool
+    action: InterruptionAction | None = None
     created_at: datetime
 
 
@@ -46,6 +54,7 @@ class AuditLog(Protocol):
         privacy: Privacy,
         base_channel: Channel,
         delivery_channel: Channel,
+        action: InterruptionAction | None = None,
     ) -> AuditEntry: ...
 
     async def list_for_user(self, user_id: str, limit: int = 50) -> list[AuditEntry]: ...
@@ -60,6 +69,7 @@ def _new_entry(
     privacy: Privacy,
     base_channel: Channel,
     delivery_channel: Channel,
+    action: InterruptionAction | None = None,
 ) -> AuditEntry:
     return AuditEntry(
         id=str(uuid.uuid4()),
@@ -71,6 +81,7 @@ def _new_entry(
         base_channel=base_channel,
         delivery_channel=delivery_channel,
         overridden=base_channel != delivery_channel,
+        action=action,
         created_at=datetime.now(UTC),
     )
 
@@ -89,6 +100,7 @@ class InMemoryAuditLog:
         privacy: Privacy,
         base_channel: Channel,
         delivery_channel: Channel,
+        action: InterruptionAction | None = None,
     ) -> AuditEntry:
         entry = _new_entry(
             user_id=user_id,
@@ -98,6 +110,7 @@ class InMemoryAuditLog:
             privacy=privacy,
             base_channel=base_channel,
             delivery_channel=delivery_channel,
+            action=action,
         )
         self._entries.setdefault(user_id, []).append(entry)
         return entry

@@ -5,6 +5,7 @@ from __future__ import annotations
 from psycopg_pool import AsyncConnectionPool
 
 from reachy_hub.audit_log import AuditEntry, _new_entry
+from shared.models.interruption import InterruptionAction
 from shared.models.response import Privacy
 from shared.models.session import Channel, InteractionMode
 
@@ -19,6 +20,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
     base_channel TEXT NOT NULL,
     delivery_channel TEXT NOT NULL,
     overridden BOOLEAN NOT NULL,
+    action TEXT,
     created_at TIMESTAMPTZ NOT NULL
 )
 """
@@ -29,10 +31,11 @@ ON audit_log (user_id, created_at DESC)
 """
 
 _COLUMNS = (
-    "id, user_id, session_id, channel, mode, privacy, base_channel, delivery_channel, overridden, created_at"
+    "id, user_id, session_id, channel, mode, privacy, base_channel, "
+    "delivery_channel, overridden, action, created_at"
 )
 
-_INSERT_SQL = f"INSERT INTO audit_log ({_COLUMNS}) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+_INSERT_SQL = f"INSERT INTO audit_log ({_COLUMNS}) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
 
 
 def _from_row(row: tuple) -> AuditEntry:
@@ -46,7 +49,8 @@ def _from_row(row: tuple) -> AuditEntry:
         base_channel=Channel(row[6]),
         delivery_channel=Channel(row[7]),
         overridden=row[8],
-        created_at=row[9],
+        action=InterruptionAction(row[9]) if row[9] is not None else None,
+        created_at=row[10],
     )
 
 
@@ -77,6 +81,7 @@ class PostgresAuditLog:
         privacy: Privacy,
         base_channel: Channel,
         delivery_channel: Channel,
+        action: InterruptionAction | None = None,
     ) -> AuditEntry:
         entry = _new_entry(
             user_id=user_id,
@@ -86,6 +91,7 @@ class PostgresAuditLog:
             privacy=privacy,
             base_channel=base_channel,
             delivery_channel=delivery_channel,
+            action=action,
         )
         async with self._pool.connection() as conn:
             await conn.execute(
@@ -100,6 +106,7 @@ class PostgresAuditLog:
                     entry.base_channel.value,
                     entry.delivery_channel.value,
                     entry.overridden,
+                    entry.action.value if entry.action is not None else None,
                     entry.created_at,
                 ),
             )

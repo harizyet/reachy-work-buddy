@@ -24,6 +24,7 @@ from reachy_hub.app import create_app
 from reachy_hub.audit_log import InMemoryAuditLog
 from reachy_hub.companion_core_client import CompanionCoreClient
 from reachy_hub.embodiment_client import EmbodimentClient
+from reachy_hub.notification_queue import InMemoryNotificationQueue
 from reachy_hub.robot_registry import InMemoryRobotRegistry
 from reachy_hub.session_store import InMemorySessionStore
 
@@ -58,6 +59,7 @@ def make_hub_with_core_app(embodiment_app, core_app, **kwargs) -> TestClient:
         registry=InMemoryRobotRegistry(),
         session_store=InMemorySessionStore(),
         audit_log=InMemoryAuditLog(),
+        notification_queue=InMemoryNotificationQueue(),
         client_factory=lambda base_url: EmbodimentClient(base_url, transport=httpx.ASGITransport(app=embodiment_app)),
         companion_core_client=CompanionCoreClient(
             "http://companion-core", transport=httpx.ASGITransport(app=core_app)
@@ -70,15 +72,19 @@ def make_hub_with_core_app(embodiment_app, core_app, **kwargs) -> TestClient:
     return client
 
 
-def make_hub_client(embodiment_app, *, registry=None, session_store=None, audit_log=None, **kwargs) -> TestClient:
+def make_hub_client(
+    embodiment_app, *, registry=None, session_store=None, audit_log=None, notification_queue=None, **kwargs
+) -> TestClient:
     registry = registry or InMemoryRobotRegistry()
     session_store = session_store or InMemorySessionStore()
     audit_log = audit_log or InMemoryAuditLog()
+    notification_queue = notification_queue or InMemoryNotificationQueue()
     kwargs.setdefault("remote_ui_token", TEST_REMOTE_TOKEN)
     app = create_app(
         registry=registry,
         session_store=session_store,
         audit_log=audit_log,
+        notification_queue=notification_queue,
         client_factory=lambda base_url: EmbodimentClient(base_url, transport=httpx.ASGITransport(app=embodiment_app)),
         run_heartbeat_task=False,
         **kwargs,
@@ -155,6 +161,7 @@ def test_heartbeat_background_task_pings_registered_robots() -> None:
         registry=registry,
         session_store=InMemorySessionStore(),
         audit_log=InMemoryAuditLog(),
+        notification_queue=InMemoryNotificationQueue(),
         client_factory=lambda base_url: EmbodimentClient(base_url, transport=httpx.ASGITransport(app=embodiment_app)),
         run_heartbeat_task=True,
         heartbeat_interval=0.05,
@@ -201,6 +208,7 @@ def test_two_test_clients_share_one_conversation_state_across_channels() -> None
         registry=InMemoryRobotRegistry(),
         session_store=InMemorySessionStore(),
         audit_log=InMemoryAuditLog(),
+        notification_queue=InMemoryNotificationQueue(),
         client_factory=lambda base_url: EmbodimentClient(base_url, transport=httpx.ASGITransport(app=embodiment_app)),
         companion_core_client=CompanionCoreClient(
             "http://companion-core", transport=httpx.ASGITransport(app=core_app)
@@ -413,3 +421,104 @@ def test_check_reminders_returns_empty_list_when_nothing_is_due() -> None:
     resp = client.post("/calendar/check-reminders/hariz")
     assert resp.status_code == 200
     assert resp.json() == []
+
+
+# --- Phase 17: interruption intelligence (docs/adr/0014) ---
+
+
+def _seed_reminder(core_app, *, minutes_out: float, title: str = "Standup") -> None:
+    core_client = TestClient(core_app)
+    start = (datetime.now(UTC) + timedelta(minutes=minutes_out)).isoformat()
+    core_client.post("/calendar/events", json={"title": title, "start": start, "end": start})
+
+
+def test_routine_reminder_defers_to_queue_while_dnd_is_on() -> None:
+    """Phase 17 exit criterion: routine notifications defer correctly while
+    the user is occupied."""
+    core_app = create_core_app()
+    client = make_hub_with_core_app(make_embodiment_app(), core_app)
+    client.post("/messages", json={"user_id": "hariz", "channel": "telegram", "text": "hi"})
+    client.patch("/sessions/hariz/dnd", json={"dnd": True})
+
+    # 10 minutes out grades NORMAL (companion-core's reminders_due only
+    # grades URGENT within 5 minutes) -> occupied + NORMAL -> QUEUE.
+    _seed_reminder(core_app, minutes_out=10)
+
+    resp = client.post("/calendar/check-reminders/hariz")
+    assert resp.status_code == 200
+    results = resp.json()
+    assert len(results) == 1
+    assert results[0]["action"] == "queue"
+    assert results[0]["delivered"] is False
+
+    queued = client.get("/notifications/hariz").json()
+    assert len(queued) == 1
+    assert "Standup" in queued[0]["text"]
+
+
+def test_urgent_reminder_still_gestures_while_occupied() -> None:
+    core_app = create_core_app()
+    embodiment_app = make_embodiment_app()
+    client = make_hub_with_core_app(embodiment_app, core_app)
+    client.post("/messages", json={"user_id": "hariz", "channel": "telegram", "text": "hi"})
+    client.post("/robots", json={"robot_id": "desk-1", "base_url": "http://desk-1.local"})
+    client.patch("/sessions/hariz/dnd", json={"dnd": True})
+
+    # 2 minutes out grades URGENT -> occupied + URGENT -> GESTURE.
+    _seed_reminder(core_app, minutes_out=2)
+
+    resp = client.post("/calendar/check-reminders/hariz")
+    assert resp.status_code == 200
+    results = resp.json()
+    assert results[0]["action"] == "gesture"
+
+    # A real robot was registered and reachable (real in-process embodiment
+    # app, per this file's ASGITransport convention), so the gesture actually
+    # fired rather than downgrading to TEXT.
+    state = client.get("/robots/desk-1/state").json()
+    assert state["last_behaviour"] == "important_notice"
+
+
+def test_queued_notifications_flush_when_dnd_turns_off() -> None:
+    core_app = create_core_app()
+    client = make_hub_with_core_app(make_embodiment_app(), core_app)
+    client.post("/messages", json={"user_id": "hariz", "channel": "telegram", "text": "hi"})
+    client.patch("/sessions/hariz/dnd", json={"dnd": True})
+    _seed_reminder(core_app, minutes_out=10)
+    client.post("/calendar/check-reminders/hariz")
+    assert len(client.get("/notifications/hariz").json()) == 1
+
+    resp = client.patch("/sessions/hariz/dnd", json={"dnd": False})
+    assert resp.status_code == 200
+    assert client.get("/notifications/hariz").json() == []
+
+    audit = client.get("/audit/hariz").json()
+    assert audit[0]["action"] == "interrupt"
+
+
+def test_leaving_meeting_privacy_context_flushes_queue() -> None:
+    core_app = create_core_app()
+    client = make_hub_with_core_app(make_embodiment_app(), core_app)
+    client.post("/messages", json={"user_id": "hariz", "channel": "telegram", "text": "hi"})
+    client.patch("/sessions/hariz/privacy-context", json={"privacy_context": "meeting"})
+    _seed_reminder(core_app, minutes_out=10)
+    client.post("/calendar/check-reminders/hariz")
+    assert len(client.get("/notifications/hariz").json()) == 1
+
+    client.patch("/sessions/hariz/privacy-context", json={"privacy_context": "unknown"})
+    assert client.get("/notifications/hariz").json() == []
+
+
+def test_manual_flush_endpoint_delivers_queued_notifications() -> None:
+    core_app = create_core_app()
+    client = make_hub_with_core_app(make_embodiment_app(), core_app)
+    client.post("/messages", json={"user_id": "hariz", "channel": "telegram", "text": "hi"})
+    client.patch("/sessions/hariz/dnd", json={"dnd": True})
+    _seed_reminder(core_app, minutes_out=10)
+    client.post("/calendar/check-reminders/hariz")
+
+    resp = client.post("/notifications/hariz/flush")
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+    assert resp.json()[0]["action"] == "interrupt"
+    assert client.get("/notifications/hariz").json() == []

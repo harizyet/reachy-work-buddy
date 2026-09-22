@@ -12,6 +12,7 @@ folded into it.
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from typing import Any
 
 import httpx
@@ -52,5 +53,18 @@ class CompanionCoreClient:
         this is a pure query, not a subscription; reachy-hub calls it
         on demand."""
         resp = await self._client.get("/calendar/reminders/due", params={"within_minutes": within_minutes})
+        resp.raise_for_status()
+        return resp.json()
+
+    async def events_in_progress(self, now: datetime) -> list[dict[str, Any]]:
+        """Phase 17 (docs/adr/0014): the "calendar" signal feeding
+        interruption_policy.is_occupied — reuses the existing
+        GET /calendar/events range query (no new companion-core endpoint)
+        with a tight window around `now` to ask "is a meeting happening
+        right now", not "what's coming up"."""
+        resp = await self._client.get(
+            "/calendar/events",
+            params={"start": now.isoformat(), "end": (now + timedelta(seconds=1)).isoformat()},
+        )
         resp.raise_for_status()
         return resp.json()

@@ -18,17 +18,20 @@ CREATE TABLE IF NOT EXISTS sessions (
     interaction_mode TEXT NOT NULL,
     privacy_context TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL,
-    last_active_at TIMESTAMPTZ NOT NULL
+    last_active_at TIMESTAMPTZ NOT NULL,
+    dnd BOOLEAN NOT NULL DEFAULT false,
+    last_interruption_at TIMESTAMPTZ
 )
 """
 
 _COLUMNS = (
     "session_id, user_id, conversation_id, active_channel, "
-    "interaction_mode, privacy_context, created_at, last_active_at"
+    "interaction_mode, privacy_context, created_at, last_active_at, "
+    "dnd, last_interruption_at"
 )
 
 _INSERT_SQL = f"""
-INSERT INTO sessions ({_COLUMNS}) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+INSERT INTO sessions ({_COLUMNS}) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 ON CONFLICT (user_id) DO NOTHING
 """
 
@@ -43,6 +46,8 @@ def _from_row(row: tuple) -> AgentSession:
         privacy_context=PrivacyContext(row[5]),
         created_at=row[6],
         last_active_at=row[7],
+        dnd=row[8],
+        last_interruption_at=row[9],
     )
 
 
@@ -86,6 +91,8 @@ class PostgresSessionStore:
                     session.privacy_context.value,
                     session.created_at,
                     session.last_active_at,
+                    session.dnd,
+                    session.last_interruption_at,
                 ),
             )
         # ON CONFLICT DO NOTHING means a concurrent get_or_create for the
@@ -114,4 +121,35 @@ class PostgresSessionStore:
             )
         session.interaction_mode = mode
         session.last_active_at = now
+        return session
+
+    async def set_dnd(self, session: AgentSession, dnd: bool) -> AgentSession:
+        now = datetime.now(UTC)
+        async with self._pool.connection() as conn:
+            await conn.execute(
+                "UPDATE sessions SET dnd = %s, last_active_at = %s WHERE session_id = %s",
+                (dnd, now, session.session_id),
+            )
+        session.dnd = dnd
+        session.last_active_at = now
+        return session
+
+    async def set_privacy_context(self, session: AgentSession, privacy_context: PrivacyContext) -> AgentSession:
+        now = datetime.now(UTC)
+        async with self._pool.connection() as conn:
+            await conn.execute(
+                "UPDATE sessions SET privacy_context = %s, last_active_at = %s WHERE session_id = %s",
+                (privacy_context.value, now, session.session_id),
+            )
+        session.privacy_context = privacy_context
+        session.last_active_at = now
+        return session
+
+    async def record_interruption(self, session: AgentSession, at: datetime) -> AgentSession:
+        async with self._pool.connection() as conn:
+            await conn.execute(
+                "UPDATE sessions SET last_interruption_at = %s WHERE session_id = %s",
+                (at, session.session_id),
+            )
+        session.last_interruption_at = at
         return session

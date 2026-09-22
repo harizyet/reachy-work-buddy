@@ -23,6 +23,7 @@ from reachy_hub.app import create_app
 from reachy_hub.audit_log import InMemoryAuditLog
 from reachy_hub.companion_core_client import CompanionCoreClient
 from reachy_hub.embodiment_client import EmbodimentClient
+from reachy_hub.notification_queue import InMemoryNotificationQueue
 from reachy_hub.robot_registry import InMemoryRobotRegistry
 from reachy_hub.session_store import InMemorySessionStore
 from reachy_hub.telegram_chat_registry import InMemoryTelegramChatRegistry
@@ -77,6 +78,7 @@ def make_hub_app(fake_api: FakeTelegramBotAPI, **kwargs):
         registry=InMemoryRobotRegistry(),
         session_store=InMemorySessionStore(),
         audit_log=InMemoryAuditLog(),
+        notification_queue=InMemoryNotificationQueue(),
         client_factory=lambda base_url: EmbodimentClient(base_url, transport=httpx.ASGITransport(app=embodiment_app)),
         companion_core_client=CompanionCoreClient(
             "http://companion-core", transport=httpx.ASGITransport(app=core_app)
@@ -95,6 +97,7 @@ def test_telegram_disabled_by_default_without_a_token() -> None:
         registry=InMemoryRobotRegistry(),
         session_store=InMemorySessionStore(),
         audit_log=InMemoryAuditLog(),
+        notification_queue=InMemoryNotificationQueue(),
         companion_core_client=CompanionCoreClient("http://companion-core", transport=httpx.ASGITransport(app=create_core_app())),
         run_heartbeat_task=False,
         telegram_bot_token=None,

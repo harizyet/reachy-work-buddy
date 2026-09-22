@@ -14,7 +14,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Protocol
 
-from shared.models.session import AgentSession, Channel, InteractionMode
+from shared.models.session import AgentSession, Channel, InteractionMode, PrivacyContext
 
 
 class SessionStore(Protocol):
@@ -22,6 +22,9 @@ class SessionStore(Protocol):
     async def get_or_create(self, user_id: str, channel: Channel) -> AgentSession: ...
     async def touch_channel(self, session: AgentSession, channel: Channel) -> AgentSession: ...
     async def set_mode(self, session: AgentSession, mode: InteractionMode) -> AgentSession: ...
+    async def set_dnd(self, session: AgentSession, dnd: bool) -> AgentSession: ...
+    async def set_privacy_context(self, session: AgentSession, privacy_context: PrivacyContext) -> AgentSession: ...
+    async def record_interruption(self, session: AgentSession, at: datetime) -> AgentSession: ...
 
 
 def _new_session(user_id: str, channel: Channel) -> AgentSession:
@@ -60,5 +63,22 @@ class InMemorySessionStore:
     async def set_mode(self, session: AgentSession, mode: InteractionMode) -> AgentSession:
         session.interaction_mode = mode
         session.last_active_at = datetime.now(UTC)
+        self._by_user[session.user_id] = session
+        return session
+
+    async def set_dnd(self, session: AgentSession, dnd: bool) -> AgentSession:
+        session.dnd = dnd
+        session.last_active_at = datetime.now(UTC)
+        self._by_user[session.user_id] = session
+        return session
+
+    async def set_privacy_context(self, session: AgentSession, privacy_context: PrivacyContext) -> AgentSession:
+        session.privacy_context = privacy_context
+        session.last_active_at = datetime.now(UTC)
+        self._by_user[session.user_id] = session
+        return session
+
+    async def record_interruption(self, session: AgentSession, at: datetime) -> AgentSession:
+        session.last_interruption_at = at
         self._by_user[session.user_id] = session
         return session

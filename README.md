@@ -148,7 +148,7 @@ live restart tests verify).
 
 ## Status
 
-Phases 0-15 are done:
+Phases 0-17 are done:
 
 - Phase 0: architecture freeze (ADRs, shared schemas).
 - Phase 1: Jarvis reference baseline — [docs/jarvis-baseline.md](docs/jarvis-baseline.md).
@@ -412,8 +412,35 @@ Phases 0-15 are done:
   reachy-hub, with cache mounts warm, took 21s. See AGENTS.md's Docker
   conventions section.
 
+- Phase 17 (interruption intelligence, ADR 0014): a third pure policy
+  function alongside `response_policy.py`'s two —
+  `interruption_policy.is_occupied`/`decide_action`/`downgrade_for_presence`
+  decide whether/how aggressively to deliver a proactive notification
+  (today: calendar reminders), never *where* (that's still
+  `resolve_delivery_channel`/`apply_privacy_override`, unchanged). Gates
+  proactive notifications only — `/messages`/`/voice/turn` direct replies
+  are never deferred. New session state: `AgentSession.dnd` (`PATCH
+  /sessions/{user_id}/dnd`) and a settable `privacy_context` (`PATCH
+  /sessions/{user_id}/privacy-context`, `MEETING` now usable, not just a
+  dead enum value); both auto-flush a new Postgres-backed
+  `notification_queue` (`GET`/`POST /notifications/{user_id}[/flush]`) the
+  moment the occupied condition ends — no background poller, matching ADR
+  0010's precedent. companion-core's `/calendar/reminders/due` now grades
+  urgency by proximity (URGENT within 5 minutes, NORMAL otherwise) instead
+  of hardcoding URGENT for everything, so the engine has real NORMAL/URGENT
+  data to defer against. Verified live through the deployed Caddy stack: a
+  reminder 10 minutes out with DND on came back `action="queue"`,
+  nothing delivered, and showed up in `GET /notifications/hariz`; a second
+  reminder 2 minutes out (graded URGENT) with DND still on came back
+  `action="gesture"`, and the registered (simulated) robot's
+  `/robots/desk-1/state` showed `last_behaviour: "important_notice"` —
+  the real embodiment gesture actually fired, not just decided; turning
+  DND back off auto-flushed the queued notification, set
+  `last_interruption_at`, and the audit trail (`GET /audit/hariz`) showed
+  the full `queue` -> `gesture` -> `interrupt` (flush) action history.
+
 See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
-phase-by-phase roadmap. Next up: Phase 17, interruption intelligence.
+phase-by-phase roadmap. Next up: Phase 18, daily briefing.
 
 ## Layout
 

@@ -217,6 +217,22 @@ def test_reminders_due_endpoint() -> None:
         assert reminders[0]["urgency"] == "urgent"
 
 
+def test_reminders_due_grades_urgency_by_proximity() -> None:
+    """Phase 17 (docs/adr/0014): reachy-hub's interruption engine needs a
+    real NORMAL/URGENT distinction to demonstrate deferral with real
+    calendar data — a reminder further than 5 minutes out is NORMAL, not
+    URGENT."""
+    with make_chain() as client:
+        further_out = (datetime.now(UTC) + timedelta(minutes=10)).isoformat()
+        client.post("/calendar/events", json={"title": "Later standup", "start": further_out, "end": further_out})
+
+        resp = client.get("/calendar/reminders/due", params={"within_minutes": 15})
+        assert resp.status_code == 200
+        reminders = resp.json()
+        assert len(reminders) == 1
+        assert reminders[0]["urgency"] == "normal"
+
+
 def test_agent_can_record_and_retrieve_a_follow_up() -> None:
     """Phase 11 exit criterion: agent can record and later retrieve
     explicit follow-ups, through the conversational path (not the direct
