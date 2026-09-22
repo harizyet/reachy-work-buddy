@@ -98,7 +98,7 @@ def test_play_behaviour_posts_to_mapped_move() -> None:
 
     backend = make_backend(handler)
     backend.play_behaviour(Behaviour.GREETING, {})
-    assert calls == ["/move/play/recorded-move-dataset/default/greeting"]
+    assert calls == ["/move/play/recorded-move-dataset/pollen-robotics/reachy-mini-emotions-library/welcoming1"]
 
 
 def test_play_behaviour_logs_and_does_not_raise_on_daemon_error() -> None:
@@ -116,6 +116,29 @@ def test_play_behaviour_skips_unmapped_behaviour_without_raising() -> None:
     backend = ReachyDaemonBackend("http://daemon.test", behaviour_moves={})
     backend._client = httpx.Client(base_url="http://daemon.test", transport=httpx.MockTransport(handler))
     backend.play_behaviour(Behaviour.GREETING, {})  # must not raise
+
+
+def test_default_mapping_uses_real_verified_move_names() -> None:
+    """Locks in the real, live-verified move library (Phase 22 Nano
+    testing) as the default mapping, and locks in that the continuous
+    idle-loop behaviours are deliberately left unmapped rather than
+    forced onto a misleading one-shot emotive move — see robot.py's
+    _DEFAULT_BEHAVIOUR_MOVES comment for why."""
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request.url.path)
+        return httpx.Response(200, json={"uuid": "abc"})
+
+    backend = make_backend(handler)
+
+    backend.play_behaviour(Behaviour.WAITING, {})
+    assert calls == ["/move/play/recorded-move-dataset/pollen-robotics/reachy-mini-emotions-library/waiting"]
+
+    calls.clear()
+    for behaviour in (Behaviour.IDLE_BREATHING, Behaviour.SUBTLE_SCAN, Behaviour.ANTENNA_TWITCH):
+        backend.play_behaviour(behaviour, {})
+    assert calls == []  # no daemon call at all: these are genuinely unmapped, not mapped-to-a-bad-move
 
 
 def test_play_audio_uploads_then_plays_and_returns_duration() -> None:

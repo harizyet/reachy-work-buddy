@@ -109,14 +109,48 @@ class RobotBackendError(RuntimeError):
 
 
 # Default move-dataset/name mapping for POST /move/play/recorded-move-
-# dataset/{dataset}/{move_name}. UNVERIFIED: no live daemon has been
-# queried for what datasets/move names actually exist — this guesses that
-# a dataset named "default" has one move per Behaviour value, keyed by the
-# same string the Behaviour enum already uses. Override via
-# ReachyDaemonBackend(behaviour_moves=...) once the real dataset contents
-# are inventoried; an unmapped/rejected move logs and no-ops rather than
-# raising, so one bad mapping entry doesn't take down every behaviour call.
-_DEFAULT_MOVE_DATASET = "default"
+# dataset/{dataset}/{move_name}. VERIFIED against the real daemon's
+# actual bundled datasets during Phase 22 live hardware testing on the
+# Jetson Nano — the daemon preloads exactly two, and there is no
+# "default" dataset (an earlier version of this mapping guessed one,
+# wrongly; every behaviour would have 404'd). Move names below were
+# enumerated directly from the real HuggingFace dataset contents
+# (`RecordedMoves("pollen-robotics/...")`), not guessed from Behaviour's
+# own string values — only `waiting` happens to be an exact string match.
+#
+# Deliberately incomplete: the continuous idle-loop behaviours
+# (idle_breathing, subtle_scan, antenna_twitch, driven by presence.py's
+# ~3s cycle) have no real match in either dataset — both are one-shot
+# emotive/dance animations, not a breathing-style loop — so they're left
+# unmapped rather than forced onto a misleading "closest available"
+# move; play_behaviour() already logs and no-ops for an unmapped
+# behaviour, the same safe fallback an unrecognized move name gets.
+# goodbye/sent_to_phone/meeting_soon are similarly left unmapped — no
+# real move in either dataset fits them either. speaking is intentionally
+# unmapped too: POST /audio/play's real playback works independently of
+# any behaviour-triggered move.
+#
+# Override via ReachyDaemonBackend(behaviour_moves=...) for a different
+# mapping (e.g. once a project-specific recorded-move dataset exists).
+_EMOTIONS_DATASET = "pollen-robotics/reachy-mini-emotions-library"
+_DANCES_DATASET = "pollen-robotics/reachy-mini-dances-library"
+
+_DEFAULT_BEHAVIOUR_MOVES: dict[Behaviour, tuple[str, str]] = {
+    Behaviour.LISTENING: (_EMOTIONS_DATASET, "attentive1"),
+    Behaviour.THINKING: (_EMOTIONS_DATASET, "thoughtful1"),
+    Behaviour.ACKNOWLEDGEMENT: (_EMOTIONS_DATASET, "yes1"),
+    Behaviour.UNDERSTOOD: (_EMOTIONS_DATASET, "understanding1"),
+    Behaviour.UNCERTAIN: (_EMOTIONS_DATASET, "uncertain1"),
+    Behaviour.GREETING: (_EMOTIONS_DATASET, "welcoming1"),
+    Behaviour.WAITING: (_EMOTIONS_DATASET, "waiting"),
+    Behaviour.TASK_COMPLETE: (_EMOTIONS_DATASET, "success1"),
+    Behaviour.CANNOT_COMPLY: (_EMOTIONS_DATASET, "no_sad1"),
+    Behaviour.INCOMING_MESSAGE: (_EMOTIONS_DATASET, "surprised1"),
+    Behaviour.IMPORTANT_NOTICE: (_EMOTIONS_DATASET, "surprised2"),
+    Behaviour.DO_NOT_DISTURB: (_EMOTIONS_DATASET, "serenity1"),
+    Behaviour.SLEEP: (_EMOTIONS_DATASET, "sleep1"),
+    Behaviour.WAKE: (_EMOTIONS_DATASET, "wake-mini-up"),
+}
 
 
 class ReachyDaemonBackend:
@@ -141,11 +175,7 @@ class ReachyDaemonBackend:
     ) -> None:
         self._client = httpx.Client(base_url=base_url, timeout=command_timeout)
         self._status_timeout = status_timeout
-        self._behaviour_moves = (
-            behaviour_moves
-            if behaviour_moves is not None
-            else {behaviour: (_DEFAULT_MOVE_DATASET, behaviour.value) for behaviour in Behaviour}
-        )
+        self._behaviour_moves = behaviour_moves if behaviour_moves is not None else dict(_DEFAULT_BEHAVIOUR_MOVES)
 
     def _fetch_status(self) -> dict | None:
         try:
