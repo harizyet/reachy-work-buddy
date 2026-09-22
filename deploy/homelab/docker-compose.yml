@@ -15,7 +15,11 @@
 
 services:
   postgres:
-    image: postgres:16-alpine
+    # pgvector/pgvector, not plain postgres: Phase 13's RAG document store
+    # needs the pgvector extension (`CREATE EXTENSION vector`) for
+    # similarity search. This image is the same Postgres 16 with that
+    # extension pre-built in, nothing else about it differs.
+    image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-reachy}
@@ -69,10 +73,11 @@ services:
     restart: unless-stopped
     environment:
       REACHY_HUB_URL: http://reachy-hub:8000
-      # Phase 10: companion-core's own Postgres connection (calendar store)
-      # — previously entirely stateless. Shares the same Postgres instance
-      # as reachy-hub, different tables (a single-tenant homelab has no
-      # reason to run two database containers).
+      # Phase 10: companion-core's own Postgres connection (calendar store,
+      # later joined by tasks/memory/rag) — previously entirely stateless.
+      # Shares the same Postgres instance as reachy-hub, different tables
+      # (a single-tenant homelab has no reason to run two database
+      # containers).
       DATABASE_URL: postgresql://${POSTGRES_USER:-reachy}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-reachy_hub}
     depends_on:
       postgres:

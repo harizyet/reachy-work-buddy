@@ -53,6 +53,20 @@ task capture (Phase 11) is, not calendar's read-only-to-the-agent design.
 never against `conversation.py`'s per-session transcript — which is the
 literal mechanism behind the exit criterion, "Stored work fact can be
 recalled later without transcript dumping."
+
+Phase 13: RAG, per docs/plan.md's Phase 13 row ("Document ingestion,
+embeddings/vector store, provenance-aware retrieval") — see rag/. No cloud
+embeddings key was available, so `rag/embeddings.py` embeds locally with a
+small sentence-transformers model, same graceful-degradation pattern as
+Phase 8's local STT/TTS; the vector store is Postgres + pgvector
+(`rag/postgres_store.py`), per docs/plan.md §8. `POST /conversation`
+recognizes doc-lookup phrasings (rag_intent.py, same placeholder-matcher
+pattern as calendar/task/memory intent) and answers from
+`DocumentStore.search` results. The exit criterion ("Answers identify
+their supporting document/section/page where available") is
+`rag_intent.format_answer`'s job: it always names the source document, and
+the section too when the retrieved chunk has one — there's no `page`,
+since nothing here ingests PDFs.
 """
 
 from __future__ import annotations
@@ -66,7 +80,7 @@ import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from companion_core import memory_intent
+from companion_core import memory_intent, rag_intent
 from companion_core.calendar.models import CalendarEvent
 from companion_core.calendar.postgres_store import PostgresCalendarStore
 from companion_core.calendar.reminders import due_reminders
@@ -77,6 +91,8 @@ from companion_core.hub_client import HubClient
 from companion_core.memory.postgres_store import PostgresMemoryStore
 from companion_core.memory.store import MemoryStore
 from companion_core.privacy_classifier import classify_privacy
+from companion_core.rag.postgres_store import PostgresDocumentStore
+from companion_core.rag.store import DocumentStore
 from companion_core.task_intent import (
     format_capture_reply,
     format_complete_reply,
@@ -91,6 +107,7 @@ from companion_core.tasks.models import Task, TaskStatus
 from companion_core.tasks.postgres_store import PostgresTaskStore
 from companion_core.tasks.store import TaskStore
 from shared.models.memory import MemoryRecord, MemoryType
+from shared.models.rag import DocumentChunk, RetrievedChunk
 from shared.models.response import Privacy, Urgency
 
 
@@ -127,6 +144,12 @@ class CreateMemoryRequest(BaseModel):
     expires_at: datetime | None = None
 
 
+class CreateDocumentRequest(BaseModel):
+    title: str
+    content: str
+    source: str = "api"
+
+
 def create_app(
     *,
     hub_base_url: str | None = None,
@@ -134,6 +157,7 @@ def create_app(
     calendar_store: CalendarStore | None = None,
     task_store: TaskStore | None = None,
     memory_store: MemoryStore | None = None,
+    rag_store: DocumentStore | None = None,
     database_url: str | None = None,
 ) -> FastAPI:
     hub_base_url = hub_base_url or os.environ.get("REACHY_HUB_URL", "http://reachy-hub:8000")
@@ -141,6 +165,7 @@ def create_app(
     owns_calendar_store = calendar_store is None
     owns_task_store = task_store is None
     owns_memory_store = memory_store is None
+    owns_rag_store = rag_store is None
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -154,6 +179,9 @@ def create_app(
         if owns_memory_store:
             dsn = database_url or os.environ["DATABASE_URL"]
             app.state.memory_store = await PostgresMemoryStore.connect(dsn)
+        if owns_rag_store:
+            dsn = database_url or os.environ["DATABASE_URL"]
+            app.state.rag_store = await PostgresDocumentStore.connect(dsn)
         try:
             yield
         finally:
@@ -164,6 +192,8 @@ def create_app(
                 await app.state.task_store.close()
             if owns_memory_store:
                 await app.state.memory_store.close()
+            if owns_rag_store:
+                await app.state.rag_store.close()
 
     app = FastAPI(title="companion-core", lifespan=lifespan)
     app.state.conversation_store = conversation_store
@@ -173,6 +203,8 @@ def create_app(
         app.state.task_store = task_store
     if not owns_memory_store:
         app.state.memory_store = memory_store
+    if not owns_rag_store:
+        app.state.rag_store = rag_store
 
     @app.get("/health")
     async def health() -> dict[str, str]:
@@ -187,6 +219,7 @@ def create_app(
         search_query = match_search(turn.text)
         memory_capture_text = memory_intent.match_capture(turn.text)
         memory_recall_query = memory_intent.match_recall(turn.text)
+        rag_query = rag_intent.match_query(turn.text)
 
         if is_next_event_query(turn.text):
             event = await app.state.calendar_store.next_event(datetime.now(UTC))
@@ -230,6 +263,10 @@ def create_app(
             found = await app.state.memory_store.recall(memory_recall_query)
             reply = memory_intent.format_recall_reply(found, memory_recall_query)
             privacy = memory_intent.most_restrictive_privacy(found, default=classify_privacy(turn.text))
+        elif rag_query:
+            results = await app.state.rag_store.search(rag_query)
+            reply = rag_intent.format_answer(results, rag_query)
+            privacy = classify_privacy(reply)
         else:
             reply = f"(turn {len(history)} via {turn.channel}) heard: {turn.text}"
             privacy = classify_privacy(turn.text)
@@ -300,6 +337,22 @@ def create_app(
         if not forgotten:
             raise HTTPException(status_code=404, detail=f"no memory '{memory_id}'")
         return {"forgotten": True}
+
+    @app.post("/documents")
+    async def ingest_document(request: CreateDocumentRequest) -> list[DocumentChunk]:
+        """Operator/setup API, not an agent tool — nothing here crawls or
+        pulls in documents on its own; this is how they get in at all."""
+        return await app.state.rag_store.ingest_document(
+            title=request.title, content=request.content, source=request.source
+        )
+
+    @app.get("/documents")
+    async def list_documents() -> list[str]:
+        return await app.state.rag_store.list_documents()
+
+    @app.get("/documents/search")
+    async def search_documents(q: str, top_k: int = 3) -> list[RetrievedChunk]:
+        return await app.state.rag_store.search(q, top_k=top_k)
 
     @app.get("/tasks")
     async def list_tasks(status: TaskStatus | None = None) -> list[Task]:

@@ -8,12 +8,12 @@ stays expressive even when the homelab is unreachable.
 - [docs/plan.md](docs/plan.md) — full technical plan, roadmap, release targets.
 - [docs/adr/](docs/adr/) — binding architecture decisions.
 - [docs/jarvis-baseline.md](docs/jarvis-baseline.md) — Phase 1 reference baseline from the upstream Jarvis project.
-- [shared/models/](shared/models/) — cross-service data contracts (`AgentSession`, `AgentResponse`, `MemoryRecord`, `EmbodimentCommand`).
+- [shared/models/](shared/models/) — cross-service data contracts (`AgentSession`, `AgentResponse`, `MemoryRecord`, `DocumentChunk`, `EmbodimentCommand`).
 - [shared/protocols/](shared/protocols/) — HTTP route contracts shared between services.
 
 ## Features
 
-What the system can actually do today (Phases 0-12; see Status below for
+What the system can actually do today (Phases 0-13; see Status below for
 the engineering detail and live-verification evidence behind each item):
 
 - **Talk to Reachy** — a semantic behaviour API and a local presence loop
@@ -47,6 +47,10 @@ the engineering detail and live-verification evidence behind each item):
   and recall it later with "do you remember X"; the reply surfaces only
   the matching fact, with provenance and a sensitivity classification
   attached, never a dump of the surrounding conversation.
+- **Answers from your own documents** — ingest a document and ask about it
+  conversationally; the answer always names which document (and section,
+  when the document has headings) it came from, real semantic search, not
+  a keyword grep.
 - **Runs for real** — one `docker compose up` brings up the whole stack
   (reasoning, hub, embodiment, Postgres, a reverse proxy) on your own
   homelab; every feature above has been verified against that actual
@@ -128,7 +132,7 @@ live restart tests verify).
 
 ## Status
 
-Phases 0-12 are done:
+Phases 0-13 are done:
 
 - Phase 0: architecture freeze (ADRs, shared schemas).
 - Phase 1: Jarvis reference baseline — [docs/jarvis-baseline.md](docs/jarvis-baseline.md).
@@ -234,15 +238,37 @@ Phases 0-12 are done:
   fact recorded conversationally, interleaved with unrelated turns and a
   second unrelated fact, was recalled later with only the matching fact in
   the reply — and it survived a `companion-core` restart via Postgres.
+- Phase 13: RAG. companion-core gets a `DocumentStore` (`rag/`) — document
+  ingestion (`rag/chunking.py` splits on markdown headings for section
+  provenance and packs paragraphs into ~800-char chunks), local embeddings
+  (`rag/embeddings.py`, a small sentence-transformers model — no cloud
+  embeddings key was available, same graceful-degradation pattern as Phase
+  8's local STT/TTS), and Postgres + pgvector for storage/similarity search
+  (docs/plan.md §8 names pgvector as the starting vector store; the
+  homelab Postgres image switched from `postgres:16-alpine` to
+  `pgvector/pgvector:pg16`). "search docs for X" / "what do the docs say
+  about X" answers conversationally from real semantic retrieval, and the
+  reply always names the source document (and section, when the document
+  has headings) — the exit criterion, "Answers identify their supporting
+  document/section/page where available" (no `page`: nothing here ingests
+  PDFs). Verified live through the real deployed Caddy stack: two
+  documents ingested, a time-off question correctly retrieved the Vacation
+  Policy chunk (not the Expense Policy one) with its section named, and
+  the same data survived a `companion-core` restart via Postgres. Getting
+  there took two real-infrastructure-only bugs a passing test suite never
+  caught: an uncommitted `CREATE EXTENSION` left pool connections in
+  status INTRANS, and a bare vector query parameter needed an explicit
+  `::vector` cast or Postgres tried to match it against `double precision[]`
+  instead.
 
 See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
-phase-by-phase roadmap. Next up: Phase 13, RAG (retrieval over stored
-company knowledge).
+phase-by-phase roadmap. Next up: Phase 14, email (read/summarize/draft/
+preview/approve/send, with a hard approval gate before any send).
 
 ## Layout
 
 ```
-services/companion-core/     reasoning/tools/memory, privacy, calendar, tasks (Phases 5, 9-12)
+services/companion-core/     reasoning/tools/memory, privacy, calendar, tasks, RAG (Phases 5, 9-13)
 services/reachy-hub/         robot registry, sessions, routing, Telegram, voice/STT/TTS, audit, reminders (Phases 4-10)
 services/reachy-embodiment/  semantic behaviour API + presence loop + VAD (Phases 2-3, 8)
 clients/web-pwa/             web/PWA client (unimplemented)

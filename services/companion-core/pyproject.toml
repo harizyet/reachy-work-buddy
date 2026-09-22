@@ -8,7 +8,16 @@ dependencies = [
     "uvicorn[standard]>=0.30",
     "httpx>=0.27",
     "psycopg[binary,pool]>=3.2",
+    "pgvector>=0.3",
     "reachy-work-companion",
+    "sentence-transformers>=3.0",
+    # torch: nothing here imports it directly — sentence-transformers
+    # depends on it. Declared as an explicit direct dependency anyway to
+    # anchor the root pyproject.toml's CPU-only [tool.uv.sources] override,
+    # which is silently ignored for a package that's only ever transitive
+    # (see the root pyproject.toml comment; same issue reachy-embodiment
+    # hit with silero-vad in Phase 8).
+    "torch",
 ]
 
 [tool.uv.sources]

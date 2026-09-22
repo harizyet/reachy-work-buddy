@@ -5,6 +5,7 @@ mocks or real sockets. Both sibling services are importable here only
 because uv installs all workspace members into one shared dev venv.
 """
 
+import hashlib
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 
@@ -12,7 +13,26 @@ import httpx
 from companion_core.app import create_app
 from companion_core.calendar.store import InMemoryCalendarStore
 from companion_core.memory.store import InMemoryMemoryStore
+from companion_core.rag.store import InMemoryDocumentStore
 from companion_core.tasks.store import InMemoryTaskStore
+
+_FAKE_EMBED_DIM = 16
+
+
+def _fake_embed(texts: list[str]) -> list[list[float]]:
+    """Deterministic bag-of-words stand-in for rag/embeddings.py's real
+    model — fast, repeatable cosine-similarity results without loading
+    real sentence-transformers weights (hashlib, not the builtin hash(),
+    since str hashing is randomized per-process by default)."""
+    vectors = []
+    for text in texts:
+        vector = [0.0] * _FAKE_EMBED_DIM
+        for word in text.lower().split():
+            bucket = int(hashlib.md5(word.encode()).hexdigest(), 16) % _FAKE_EMBED_DIM
+            vector[bucket] += 1.0
+        norm = sum(v * v for v in vector) ** 0.5
+        vectors.append([v / norm for v in vector] if norm else vector)
+    return vectors
 from fastapi.testclient import TestClient
 from reachy_embodiment.app import create_app as create_embodiment_app
 from reachy_embodiment.robot import SimulatedRobotBackend
@@ -38,6 +58,7 @@ def make_chain(*, registered_robots: Sequence[Robot] = ()) -> TestClient:
         calendar_store=InMemoryCalendarStore(),
         task_store=InMemoryTaskStore(),
         memory_store=InMemoryMemoryStore(),
+        rag_store=InMemoryDocumentStore(embed_fn=_fake_embed),
     )
     return TestClient(core_app)
 
@@ -328,6 +349,61 @@ def test_memory_endpoints_directly() -> None:
         assert client.delete(f"/memories/{memory_id}").json() == {"forgotten": True}
         assert client.delete(f"/memories/{memory_id}").status_code == 404
         assert client.get("/memories").json() == []
+
+
+def test_agent_answers_conversationally_with_document_and_section_provenance() -> None:
+    """Phase 13 exit criterion: "Answers identify their supporting
+    document/section/page where available"."""
+    with make_chain() as client:
+        ingest_resp = client.post(
+            "/documents",
+            json={
+                "title": "Vacation Policy",
+                "content": "# Requesting time off\nSubmit a request in Workday at least two weeks in advance.",
+                "source": "hr.md",
+            },
+        )
+        assert ingest_resp.status_code == 200
+        assert ingest_resp.json()[0]["section"] == "Requesting time off"
+
+        resp = client.post(
+            "/conversation",
+            json={
+                "session_id": "s1",
+                "conversation_id": "c1",
+                "channel": "reachy",
+                "text": "search docs for requesting time off",
+            },
+        )
+        assert resp.status_code == 200
+        reply = resp.json()["reply"]
+        assert "Vacation Policy" in reply  # document provenance
+        assert "Requesting time off" in reply  # section provenance
+        assert "Workday" in reply  # the actual answer content
+
+        # Also retrievable via the direct API.
+        search_resp = client.get("/documents/search", params={"q": "time off"})
+        assert search_resp.status_code == 200
+        assert search_resp.json()[0]["chunk"]["document_title"] == "Vacation Policy"
+
+
+def test_rag_query_with_no_documents_ingested_says_so() -> None:
+    with make_chain() as client:
+        resp = client.post(
+            "/conversation",
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "look up parking"},
+        )
+        assert "couldn't find" in resp.json()["reply"]
+
+
+def test_document_endpoints_directly() -> None:
+    with make_chain() as client:
+        client.post("/documents", json={"title": "Doc A", "content": "alpha content"})
+        client.post("/documents", json={"title": "Doc B", "content": "beta content"})
+
+        list_resp = client.get("/documents")
+        assert list_resp.status_code == 200
+        assert list_resp.json() == ["Doc A", "Doc B"]
 
 
 def test_debug_trigger_behaviour_reaches_reachy_embodiment_through_the_hub() -> None:

@@ -5,7 +5,7 @@ proactive workflows.
 
 Must not own: direct robot joints, UI transport (see [docs/adr/0001](../../docs/adr/0001-service-boundaries.md)).
 
-## Status (Phase 12)
+## Status (Phase 13)
 
 **Phase 4**: `/debug/robots/{robot_id}/state` and
 `/debug/robots/{robot_id}/behaviour/{name}` — a stand-in for what will
@@ -131,6 +131,51 @@ not a separate cleanup pass.
   `companion-core` container restart via Postgres; `DELETE
   /memories/{id}` removed it and a second delete correctly 404'd.
 
+**Phase 13**: RAG. `rag/` — `DocumentStore` Protocol, `PostgresDocumentStore`
+(production, Postgres + the pgvector extension — docs/plan.md §8 names
+pgvector as the starting vector store; `deploy/homelab`'s Postgres image
+switched from `postgres:16-alpine` to `pgvector/pgvector:pg16`),
+`InMemoryDocumentStore` (tests, plain Python cosine similarity, no
+pgvector needed). No cloud embeddings key was available, so
+`rag/embeddings.py` embeds locally with a small sentence-transformers
+model (`all-MiniLM-L6-v2`, 384 dims, lazily loaded) — same
+graceful-degradation-without-credentials pattern as Phase 8's local
+STT/TTS.
+
+- `rag/chunking.py` splits ingested content on markdown-style `#` headings
+  for section provenance, then packs consecutive same-section paragraphs
+  into ~800-char chunks; a document without headings just gets
+  `section=None` chunks. No `page` field anywhere in this phase — nothing
+  here parses PDFs, so a page number would be fabricated.
+- Both store implementations take an injectable `embed_fn` (defaulting to
+  the real model) specifically so unit tests don't have to load real
+  ML weights — tests inject a deterministic fake bag-of-words embedder and
+  get fast, repeatable cosine-similarity results; a `slow`-marked test
+  pair (`test_real_embedding_model_*`) exercises the real model, same
+  split as the presence/heartbeat loop tests AGENTS.md documents.
+- `rag_intent.py` recognizes "search docs for X" / "what do the docs say
+  about X" and `POST /conversation` answers from `DocumentStore.search`
+  results. `rag_intent.format_answer` is what actually satisfies the exit
+  criterion ("Answers identify their supporting document/section/page
+  where available") — it always names the source document, and the
+  section too when the retrieved chunk has one.
+- `POST /documents` (operator/setup API, not an agent tool — nothing here
+  crawls documents on its own), `GET /documents`, `GET /documents/search`
+  — the direct API.
+- **Verified live**, and two real-infrastructure-only bugs surfaced that
+  every unit test missed (both fixed, see `rag/postgres_store.py`'s
+  comments): an uncommitted `CREATE EXTENSION IF NOT EXISTS vector`
+  inside the connection pool's per-connection `configure` callback left
+  connections stuck in status INTRANS (fixed by running it once, on its
+  own connection, before the pool opens); and a bare vector query
+  parameter was sent as `double precision[]`, which pgvector's `<=>`
+  operator doesn't accept against `vector` (fixed with an explicit
+  `::vector` cast in the SQL). With both fixed: two documents ingested
+  through Caddy, a time-off question correctly retrieved the Vacation
+  Policy chunk (not the unrelated Expense Policy one) with its section
+  named in the reply, and the same data survived a `companion-core`
+  container restart via Postgres/pgvector.
+
 ## Run it
 
 ```
@@ -154,11 +199,17 @@ network. `test_whats_next_answers_from_real_calendar_data` is the direct
 proof of Phase 10's exit criterion;
 `test_agent_can_record_and_retrieve_a_follow_up` is Phase 11's;
 `test_agent_can_remember_and_recall_a_work_fact_without_transcript_dumping`
-is Phase 12's. `test_calendar_store.py`/`test_calendar_intent.py`,
-`test_task_store.py`/`test_task_intent.py`, and
-`test_memory_store.py`/`test_memory_intent.py` unit-test the stores and
-matchers in isolation (wrapped in `asyncio.run` — no `pytest-asyncio`/anyio
-plugin is installed anywhere in this codebase, so a raw `async def
-test_...` would silently no-op rather than fail). `PostgresCalendarStore`,
-`PostgresTaskStore`, and `PostgresMemoryStore` themselves are exercised
-live (see deploy/homelab/README.md), not by the unit test suite.
+is Phase 12's;
+`test_agent_answers_conversationally_with_document_and_section_provenance`
+is Phase 13's. `test_calendar_store.py`/`test_calendar_intent.py`,
+`test_task_store.py`/`test_task_intent.py`,
+`test_memory_store.py`/`test_memory_intent.py`, and
+`test_rag_store.py`/`test_rag_intent.py`/`test_chunking.py` unit-test the
+stores and matchers in isolation (wrapped in `asyncio.run` — no
+`pytest-asyncio`/anyio plugin is installed anywhere in this codebase, so a
+raw `async def test_...` would silently no-op rather than fail).
+`PostgresCalendarStore`, `PostgresTaskStore`, `PostgresMemoryStore`, and
+`PostgresDocumentStore` themselves are exercised live (see
+deploy/homelab/README.md), not by the unit test suite — `test_rag_store.py`
+does have two `slow`-marked tests that load the real embedding model, still
+in-process/no-Postgres, distinct from the Postgres-only live verification.

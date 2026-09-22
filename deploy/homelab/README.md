@@ -1,8 +1,9 @@
 # deploy/homelab
 
-Docker Compose deployment for `companion-core`, `reachy-hub`, PostgreSQL,
-and a Caddy reverse proxy. Kubernetes is explicitly out of scope for initial
-releases (see docs/plan.md §1 non-goals).
+Docker Compose deployment for `companion-core`, `reachy-hub`, PostgreSQL
+(with the pgvector extension, for Phase 13's document store), and a Caddy
+reverse proxy. Kubernetes is explicitly out of scope for initial releases
+(see docs/plan.md §1 non-goals).
 
 `reachy-embodiment` is also included in this compose file, purely so the
 full chain (companion-core -> reachy-hub -> reachy-embodiment) can be
@@ -37,7 +38,16 @@ alice@example.com") was recalled later, through both the conversational
 path and the direct API, with the reply containing only the matching fact
 and none of the other turns exchanged in between — the actual exit
 criterion, not just a passing test — and it survived a `companion-core`
-container restart via Postgres (Phase 12); and, separately (not
+container restart via Postgres (Phase 12); two documents ingested through
+Caddy, with a time-off question through the conversational path correctly
+retrieving the Vacation Policy chunk (not the unrelated Expense Policy
+one, by real semantic similarity, not keyword matching) with its section
+named in the reply, and the same data surviving a `companion-core`
+container restart via Postgres/pgvector (Phase 13) — getting there
+surfaced two bugs no unit test caught: an uncommitted `CREATE EXTENSION`
+left pool connections stuck mid-transaction, and a bare vector query
+parameter needed an explicit `::vector` cast or Postgres tried to match it
+against `double precision[]` instead; and, separately (not
 through this specific compose stack, but the same services run as plain
 processes), a real Telegram bot and a real Telegram account confirmed
 Phase 7's session continuity live.
@@ -195,6 +205,29 @@ curl "http://localhost:8080/core/memories/recall?q=alice@example.com"   # same d
 curl http://localhost:8080/core/memories                                # everything stored
 ```
 
+RAG (Phase 13) — documents ingested, then answered from conversationally
+with the source document/section named, through Caddy:
+
+```
+curl -X POST http://localhost:8080/core/documents \
+  -H 'Content-Type: application/json' \
+  -d '{"title": "Vacation Policy", "content": "# Requesting time off\nSubmit a request in Workday at least two weeks in advance.", "source": "hr.md"}'
+
+curl -X POST http://localhost:8080/core/documents \
+  -H 'Content-Type: application/json' \
+  -d '{"title": "Expense Policy", "content": "# Filing expenses\nSubmit receipts in Concur within 30 days of purchase.", "source": "finance.md"}'
+
+curl -X POST http://localhost:8080/core/conversation \
+  -H 'Content-Type: application/json' \
+  -d '{"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "search docs for requesting time off"}'
+# -> "From 'Vacation Policy', section 'Requesting time off': Submit a
+#    request in Workday at least two weeks in advance." — the *other*
+#    ingested document, Expense Policy, is never surfaced for this query
+
+curl "http://localhost:8080/core/documents/search?q=requesting+time+off"   # same data via the direct API
+curl http://localhost:8080/core/documents                                   # every ingested document's title
+```
+
 No robot is auto-registered — `POST /hub/robots` above is a manual step.
 Automatic registration (e.g. reachy-embodiment announcing itself to
 reachy-hub on startup) isn't built yet; it's a natural fit for whichever
@@ -212,9 +245,11 @@ telepresence) territory.
 
 The Postgres migrations in `reachy_hub/postgres_registry.py`,
 `postgres_session_store.py`, `postgres_telegram_chat_registry.py`,
-`postgres_audit_log.py`, `companion_core/calendar/postgres_store.py`, and
-`companion_core/tasks/postgres_store.py` are each a single `CREATE TABLE IF
-NOT EXISTS` run at connect time — fine for the tables that exist today, but
-not a real migration tool. Revisit (e.g. adopt Alembic) once a schema
-actually needs to change under existing data, not just grow by one more
-table.
+`postgres_audit_log.py`, `companion_core/calendar/postgres_store.py`,
+`companion_core/tasks/postgres_store.py`, `companion_core/memory/
+postgres_store.py`, and `companion_core/rag/postgres_store.py` are each a
+single `CREATE TABLE IF NOT EXISTS` (plus, for `rag/`, a one-time `CREATE
+EXTENSION IF NOT EXISTS vector`) run at connect time — fine for the tables
+that exist today, but not a real migration tool. Revisit (e.g. adopt
+Alembic) once a schema actually needs to change under existing data, not
+just grow by one more table.
