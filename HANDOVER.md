@@ -106,17 +106,32 @@ writing code in case something changed in between:
 
 New static dashboard planned at `clients/operator-ui/` (plain HTML/JS, no
 framework — matches `clients/web-pwa/`'s existing convention), served by
-`reachy-hub` at `/ui`. New companion-core storage planned: `llm_settings`
-(single row, api key never returned unmasked, stored plaintext — no
+`reachy-hub` at `/ui`. New companion-core storage planned: `llm_config`
+(single row, single `JSONB` column holding a serialized `LLMConfig` — see
+below — api key never returned unmasked, stored plaintext — no
 encryption-at-rest precedent exists in this codebase to build on, and
 inventing one was explicitly scoped out) and `llm_usage_log`. New
 reachy-hub storage planned: `users`. All three are net-new Postgres tables
 — same "needs `docker compose down -v` against a pre-Phase-19 volume"
 caveat as every prior phase's schema addition once this actually lands.
-**Forward-compat note for whoever builds this:** key `llm_settings` by a
-`role` column (`'local'`/`'cloud'`) from day one, seeding just the one
-`'local'` row initially — Phase 21 (below) adds a second row and reworking
-a fixed-id single-row schema afterward is avoidable if this is done now.
+**Update (this session): the LLM config shape is role-based from day one,
+not provider-name-based** — `LLMRole` (`LOCAL`/`CLOUD`) each pointing at
+its own `ProviderConfig` (`provider` kind, `base_url`, `model`, `api_key`),
+plus a top-level `routing` mode, all one `LLMConfig` object:
+```
+LLMConfig(local=ProviderConfig(...), cloud=ProviderConfig|None, routing=LLMRoutingConfig(mode=...))
+```
+Phase 19 only ever populates `local` (`routing.mode` stays at its
+`LOCAL_ONLY` default) — Phase 21 (below) populates `cloud` and adds the
+actual routing engine. Because the whole `LLMConfig` is stored as one
+JSONB blob and `GET/PUT /settings/llm` already speak this nested shape,
+Phase 21 is a pure data/logic addition, never a schema rework. The
+`router.py` this enables is deliberately ignorant of what's actually
+configured behind a role — it dispatches on `LLMRole`, never on
+provider/vendor identity, which is exactly what makes "local happens to be
+OVMS today, vLLM tomorrow" a non-event for the routing logic. Full detail
+in `~/.claude/plans/declarative-wibbling-cascade.md` §1 (updated this
+session) and `~/.claude/plans/phase-21-hybrid-llm-routing.md` §1.
 
 **Also planned (not started): Phase 20 — Web Chat Channel and Phase 21 —
 Hybrid Local/Cloud LLM Routing**, both added to docs/plan.md's roadmap
@@ -136,9 +151,10 @@ browser" needs a chat UI page and a real Telegram-health signal
 (`app.state.telegram_last_poll_at`/`_error`, tracked in the existing
 `telegram_poll_loop`) feeding Phase 19's `/status`, not new conversational
 backend logic. Phase 21 defines "local model is insufficient" two ways
-only — the local call failed outright, or the user manually says so (a
-routing-policy setting plus a per-message `force_frontier` override,
-threaded through the same way `input_modality`/ADR 0011 already is) —
+only — the local call failed outright, or the user manually says so (the
+`LLMConfig.routing.mode` setting plus a per-message `force_frontier`
+override, threaded through the same way `input_modality`/ADR 0011
+already is) —
 deliberately **not** an automatic quality judgment, which would need
 another LLM-as-judge call and is out of scope, matching this codebase's
 existing discipline of honest, non-speculative classifiers
