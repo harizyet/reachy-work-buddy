@@ -12,9 +12,18 @@ from datetime import UTC, datetime, timedelta
 import httpx
 from companion_core.app import create_app
 from companion_core.calendar.store import InMemoryCalendarStore
+from companion_core.email.models import EmailDraft
+from companion_core.email.store import InMemoryEmailStore
 from companion_core.memory.store import InMemoryMemoryStore
 from companion_core.rag.store import InMemoryDocumentStore
 from companion_core.tasks.store import InMemoryTaskStore
+from fastapi.testclient import TestClient
+from reachy_embodiment.app import create_app as create_embodiment_app
+from reachy_embodiment.robot import SimulatedRobotBackend
+from reachy_hub.app import create_app as create_hub_app
+from reachy_hub.embodiment_client import EmbodimentClient
+from reachy_hub.robot_registry import InMemoryRobotRegistry, Robot
+from reachy_hub.session_store import InMemorySessionStore
 
 _FAKE_EMBED_DIM = 16
 
@@ -33,13 +42,6 @@ def _fake_embed(texts: list[str]) -> list[list[float]]:
         norm = sum(v * v for v in vector) ** 0.5
         vectors.append([v / norm for v in vector] if norm else vector)
     return vectors
-from fastapi.testclient import TestClient
-from reachy_embodiment.app import create_app as create_embodiment_app
-from reachy_embodiment.robot import SimulatedRobotBackend
-from reachy_hub.app import create_app as create_hub_app
-from reachy_hub.embodiment_client import EmbodimentClient
-from reachy_hub.robot_registry import InMemoryRobotRegistry, Robot
-from reachy_hub.session_store import InMemorySessionStore
 
 
 def make_chain(*, registered_robots: Sequence[Robot] = ()) -> TestClient:
@@ -52,6 +54,14 @@ def make_chain(*, registered_robots: Sequence[Robot] = ()) -> TestClient:
         client_factory=lambda base_url: EmbodimentClient(base_url, transport=httpx.ASGITransport(app=embodiment_app)),
         run_heartbeat_task=False,
     )
+    # Records what would have been sent instead of opening a real SMTP
+    # connection — tests assert against this list to prove the approval
+    # gate (email/workflow.py) rather than trusting a mocked send call.
+    sent_emails: list[EmailDraft] = []
+
+    async def fake_send(draft: EmailDraft) -> None:
+        sent_emails.append(draft)
+
     core_app = create_app(
         hub_base_url="http://reachy-hub",
         transport=httpx.ASGITransport(app=hub_app),
@@ -59,8 +69,12 @@ def make_chain(*, registered_robots: Sequence[Robot] = ()) -> TestClient:
         task_store=InMemoryTaskStore(),
         memory_store=InMemoryMemoryStore(),
         rag_store=InMemoryDocumentStore(embed_fn=_fake_embed),
+        email_store=InMemoryEmailStore(),
+        email_send_fn=fake_send,
     )
-    return TestClient(core_app)
+    client = TestClient(core_app)
+    client.sent_emails = sent_emails
+    return client
 
 
 def test_health() -> None:
@@ -404,6 +418,94 @@ def test_document_endpoints_directly() -> None:
         list_resp = client.get("/documents")
         assert list_resp.status_code == 200
         assert list_resp.json() == ["Doc A", "Doc B"]
+
+
+def test_agent_cannot_send_email_without_approval() -> None:
+    """Phase 14 exit criterion: "No code path sends mail without approval
+    gate" — drafted conversationally, sending before approval is refused
+    and nothing is dispatched; only after approval does it actually send."""
+    with make_chain() as client:
+        draft_resp = client.post(
+            "/conversation",
+            json={
+                "session_id": "s1",
+                "conversation_id": "c1",
+                "channel": "reachy",
+                "text": "draft email to bob@example.com about the quarterly numbers",
+            },
+        )
+        assert draft_resp.status_code == 200
+        reply = draft_resp.json()["reply"]
+        assert "bob@example.com" in reply
+        assert "approve" in reply.lower()
+
+        # Sending before approval must fail, and must not dispatch anything.
+        premature_send = client.post(
+            "/conversation",
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "send draft bob"},
+        )
+        assert premature_send.status_code == 200
+        assert "approval" in premature_send.json()["reply"].lower()
+        assert client.sent_emails == []
+
+        approve_resp = client.post(
+            "/conversation",
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "approve draft bob"},
+        )
+        assert "Approved" in approve_resp.json()["reply"]
+
+        send_resp = client.post(
+            "/conversation",
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "send draft bob"},
+        )
+        assert "Sent" in send_resp.json()["reply"]
+        assert len(client.sent_emails) == 1
+        assert client.sent_emails[0].to == "bob@example.com"
+
+
+def test_email_direct_api_approval_gate() -> None:
+    with make_chain() as client:
+        draft_resp = client.post(
+            "/emails/drafts", json={"to": "alice@example.com", "subject": "Hi", "body": "hello there"}
+        )
+        assert draft_resp.status_code == 200
+        draft_id = draft_resp.json()["id"]
+
+        # Sending an unapproved draft is rejected, not silently dispatched.
+        send_before_approval = client.post(f"/emails/drafts/{draft_id}/send")
+        assert send_before_approval.status_code == 409
+        assert client.sent_emails == []
+
+        approve_resp = client.post(f"/emails/drafts/{draft_id}/approve")
+        assert approve_resp.status_code == 200
+        assert approve_resp.json()["status"] == "approved"
+
+        send_resp = client.post(f"/emails/drafts/{draft_id}/send")
+        assert send_resp.status_code == 200
+        assert send_resp.json()["status"] == "sent"
+        assert len(client.sent_emails) == 1
+
+        assert client.post("/emails/drafts/nonexistent/send").status_code == 404
+
+
+def test_email_inbox_seeding_and_listing() -> None:
+    with make_chain() as client:
+        seed_resp = client.post(
+            "/emails/received", json={"sender": "boss@example.com", "subject": "Q3 report", "body": "see attached"}
+        )
+        assert seed_resp.status_code == 200
+
+        resp = client.post(
+            "/conversation",
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "what's in my inbox"},
+        )
+        assert resp.status_code == 200
+        reply = resp.json()["reply"]
+        assert "Q3 report" in reply
+        assert "boss@example.com" in reply
+        assert resp.json()["privacy"] == "work-private"
+
+        assert client.get("/emails/received").json()[0]["subject"] == "Q3 report"
 
 
 def test_debug_trigger_behaviour_reaches_reachy_embodiment_through_the_hub() -> None:

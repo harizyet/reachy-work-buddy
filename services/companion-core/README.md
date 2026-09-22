@@ -5,7 +5,7 @@ proactive workflows.
 
 Must not own: direct robot joints, UI transport (see [docs/adr/0001](../../docs/adr/0001-service-boundaries.md)).
 
-## Status (Phase 13)
+## Status (Phase 14)
 
 **Phase 4**: `/debug/robots/{robot_id}/state` and
 `/debug/robots/{robot_id}/behaviour/{name}` — a stand-in for what will
@@ -176,6 +176,52 @@ STT/TTS.
   named in the reply, and the same data survived a `companion-core`
   container restart via Postgres/pgvector.
 
+**Phase 14**: email. `email/` — `EmailStore` Protocol, `PostgresEmailStore`
+(production, same shared-Postgres-instance pattern as `calendar/`/
+`tasks/`/`memory/`, two tables: received messages and drafts),
+`InMemoryEmailStore` (tests). No external email credential was available,
+so "read" means listing `EmailMessage`s seeded through `POST
+/emails/received` (operator/setup API, same no-external-sync honesty as
+calendar) — and "summarize"/"draft" don't attempt real writing either
+(there's no LLM in this codebase yet); a draft's body is the user's text
+verbatim, the same way "remember that X" (Phase 12) stores X verbatim.
+
+- `email/models.py`'s `EmailDraft.status` (`draft` -> `approved` -> `sent`,
+  or `rejected`) is the mechanism behind the exit criterion ("No code path
+  sends mail without approval gate"), and `email/workflow.py`'s
+  `send_approved_draft` is what makes it structural rather than a claim:
+  it is the *only* function anywhere in this codebase that calls an
+  `EmailSender`, and it always checks `status == APPROVED` first, raising
+  `DraftNotApprovedError` otherwise — no sender call happens before that
+  check, not "happens not to" but *cannot*, since there is exactly one
+  call site and it's gated. Both `POST /emails/drafts/{id}/send` and the
+  conversational "send draft X" path go through this one function.
+- `email_intent.py` — same placeholder-matcher honesty as the other
+  `*_intent.py` modules: "draft email to X about Y" creates a draft
+  (Prepare tier, docs/plan.md §9 — no confirmation needed just to create
+  a preview); "approve draft X" / "send draft X" match against pending/any
+  drafts by recipient or subject substring.
+- No cloud email API key was available either, so the real sender
+  (`email/sender.py`) speaks plain SMTP directly via `aiosmtplib` — in
+  `deploy/homelab`, to a local Mailpit container (a real SMTP protocol
+  handshake, but no personal mailbox), not a cloud provider.
+- Both store and sender are injectable at `create_app(email_store=...,
+  email_send_fn=...)`, same pattern as `rag_store`'s `embed_fn` — tests
+  inject a fake `send_fn` that records calls to a list instead of opening
+  a real network connection, and assert that list stays empty whenever the
+  gate should have blocked dispatch (`test_email_workflow.py`), not just
+  that the right exception was raised.
+- `POST /emails/received`, `GET /emails/received`, `POST /emails/drafts`,
+  `GET /emails/drafts`, `POST /emails/drafts/{id}/approve`,
+  `POST /emails/drafts/{id}/send` — the direct API.
+- **Verified live**: through the real deployed Caddy stack, a draft
+  created conversationally could not be sent before approval — confirmed
+  against Mailpit's own message list staying empty, not just the HTTP
+  reply — then, once approved, produced a real SMTP message that actually
+  arrived in Mailpit; a second send attempt on the now-sent draft
+  correctly 409'd; and the draft's data (including its `sent`/`approved`
+  timestamps) survived a `companion-core` container restart via Postgres.
+
 ## Run it
 
 ```
@@ -201,15 +247,21 @@ proof of Phase 10's exit criterion;
 `test_agent_can_remember_and_recall_a_work_fact_without_transcript_dumping`
 is Phase 12's;
 `test_agent_answers_conversationally_with_document_and_section_provenance`
-is Phase 13's. `test_calendar_store.py`/`test_calendar_intent.py`,
+is Phase 13's; `test_agent_cannot_send_email_without_approval` and
+`test_email_direct_api_approval_gate` are Phase 14's — both check the
+fake `send_fn`'s call list, not just HTTP status codes or reply text.
+`test_calendar_store.py`/`test_calendar_intent.py`,
 `test_task_store.py`/`test_task_intent.py`,
-`test_memory_store.py`/`test_memory_intent.py`, and
-`test_rag_store.py`/`test_rag_intent.py`/`test_chunking.py` unit-test the
-stores and matchers in isolation (wrapped in `asyncio.run` — no
-`pytest-asyncio`/anyio plugin is installed anywhere in this codebase, so a
-raw `async def test_...` would silently no-op rather than fail).
-`PostgresCalendarStore`, `PostgresTaskStore`, `PostgresMemoryStore`, and
-`PostgresDocumentStore` themselves are exercised live (see
-deploy/homelab/README.md), not by the unit test suite — `test_rag_store.py`
-does have two `slow`-marked tests that load the real embedding model, still
-in-process/no-Postgres, distinct from the Postgres-only live verification.
+`test_memory_store.py`/`test_memory_intent.py`,
+`test_rag_store.py`/`test_rag_intent.py`/`test_chunking.py`, and
+`test_email_store.py`/`test_email_intent.py`/`test_email_workflow.py`
+unit-test the stores, matchers, and (for email) the approval-gate workflow
+in isolation (wrapped in `asyncio.run` — no `pytest-asyncio`/anyio plugin
+is installed anywhere in this codebase, so a raw `async def test_...`
+would silently no-op rather than fail).
+`PostgresCalendarStore`, `PostgresTaskStore`, `PostgresMemoryStore`,
+`PostgresDocumentStore`, and `PostgresEmailStore` themselves are exercised
+live (see deploy/homelab/README.md), not by the unit test suite —
+`test_rag_store.py` does have two `slow`-marked tests that load the real
+embedding model, still in-process/no-Postgres, distinct from the
+Postgres-only live verification.

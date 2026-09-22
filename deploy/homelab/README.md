@@ -1,9 +1,10 @@
 # deploy/homelab
 
 Docker Compose deployment for `companion-core`, `reachy-hub`, PostgreSQL
-(with the pgvector extension, for Phase 13's document store), and a Caddy
-reverse proxy. Kubernetes is explicitly out of scope for initial releases
-(see docs/plan.md §1 non-goals).
+(with the pgvector extension, for Phase 13's document store), Mailpit
+(Phase 14's local SMTP target), and a Caddy reverse proxy. Kubernetes is
+explicitly out of scope for initial releases (see docs/plan.md §1
+non-goals).
 
 `reachy-embodiment` is also included in this compose file, purely so the
 full chain (companion-core -> reachy-hub -> reachy-embodiment) can be
@@ -47,7 +48,13 @@ container restart via Postgres/pgvector (Phase 13) — getting there
 surfaced two bugs no unit test caught: an uncommitted `CREATE EXTENSION`
 left pool connections stuck mid-transaction, and a bare vector query
 parameter needed an explicit `::vector` cast or Postgres tried to match it
-against `double precision[]` instead; and, separately (not
+against `double precision[]` instead; an email drafted conversationally
+through Caddy could not be sent before approval — confirmed against
+Mailpit's own message list staying empty, not just the HTTP response —
+and, once approved, produced a real SMTP message that actually arrived in
+Mailpit, with the draft surviving a `companion-core` restart via Postgres
+and a repeat send on an already-sent draft correctly rejected (Phase 14);
+and, separately (not
 through this specific compose stack, but the same services run as plain
 processes), a real Telegram bot and a real Telegram account confirmed
 Phase 7's session continuity live.
@@ -228,6 +235,42 @@ curl "http://localhost:8080/core/documents/search?q=requesting+time+off"   # sam
 curl http://localhost:8080/core/documents                                   # every ingested document's title
 ```
 
+Email (Phase 14) — drafted, blocked from sending until approved, then
+sent for real via Mailpit, all through Caddy:
+
+```
+curl -X POST http://localhost:8080/core/emails/received \
+  -H 'Content-Type: application/json' \
+  -d '{"sender": "boss@example.com", "subject": "Q3 report", "body": "Can you send me the Q3 numbers?"}'
+
+curl -X POST http://localhost:8080/core/conversation \
+  -H 'Content-Type: application/json' \
+  -d '{"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "what'"'"'s in my inbox"}'
+
+curl -X POST http://localhost:8080/core/conversation \
+  -H 'Content-Type: application/json' \
+  -d '{"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "draft email to boss@example.com about the Q3 numbers are attached"}'
+
+curl -X POST http://localhost:8080/core/conversation \
+  -H 'Content-Type: application/json' \
+  -d '{"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "send draft boss@example.com"}'
+# -> "That draft to boss@example.com needs approval first..." — refused,
+#    nothing dispatched (check http://localhost:8025, Mailpit's UI, stays empty)
+
+curl -X POST http://localhost:8080/core/conversation \
+  -H 'Content-Type: application/json' \
+  -d '{"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "approve draft boss@example.com"}'
+
+curl -X POST http://localhost:8080/core/conversation \
+  -H 'Content-Type: application/json' \
+  -d '{"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "send draft boss@example.com"}'
+# -> "Sent the email to boss@example.com..." — now check
+#    http://localhost:8025 (Mailpit's UI) or its API:
+curl http://localhost:8025/api/v1/messages
+
+curl http://localhost:8080/core/emails/drafts   # same data via the direct API
+```
+
 No robot is auto-registered — `POST /hub/robots` above is a manual step.
 Automatic registration (e.g. reachy-embodiment announcing itself to
 reachy-hub on startup) isn't built yet; it's a natural fit for whichever
@@ -247,9 +290,10 @@ The Postgres migrations in `reachy_hub/postgres_registry.py`,
 `postgres_session_store.py`, `postgres_telegram_chat_registry.py`,
 `postgres_audit_log.py`, `companion_core/calendar/postgres_store.py`,
 `companion_core/tasks/postgres_store.py`, `companion_core/memory/
-postgres_store.py`, and `companion_core/rag/postgres_store.py` are each a
-single `CREATE TABLE IF NOT EXISTS` (plus, for `rag/`, a one-time `CREATE
-EXTENSION IF NOT EXISTS vector`) run at connect time — fine for the tables
-that exist today, but not a real migration tool. Revisit (e.g. adopt
-Alembic) once a schema actually needs to change under existing data, not
-just grow by one more table.
+postgres_store.py`, `companion_core/rag/postgres_store.py`, and
+`companion_core/email/postgres_store.py` are each a single `CREATE TABLE
+IF NOT EXISTS` (plus, for `rag/`, a one-time `CREATE EXTENSION IF NOT
+EXISTS vector`) run at connect time — fine for the tables that exist
+today, but not a real migration tool. Revisit (e.g. adopt Alembic) once a
+schema actually needs to change under existing data, not just grow by one
+more table.

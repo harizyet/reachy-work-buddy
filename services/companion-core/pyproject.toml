@@ -9,6 +9,7 @@ dependencies = [
     "httpx>=0.27",
     "psycopg[binary,pool]>=3.2",
     "pgvector>=0.3",
+    "aiosmtplib>=3.0",
     "reachy-work-companion",
     "sentence-transformers>=3.0",
     # torch: nothing here imports it directly — sentence-transformers

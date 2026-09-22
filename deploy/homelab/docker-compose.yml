@@ -33,6 +33,19 @@ services:
       timeout: 3s
       retries: 10
 
+  mailpit:
+    # Phase 14's SMTP target — a real local SMTP server (real protocol
+    # handshake) with a web UI to inspect what got "sent", so the send
+    # path can be verified for real without needing a real mailbox or
+    # personal credentials. Exposed on 8025 for the UI; SMTP stays
+    # internal-only (companion-core talks to it as "mailpit:1025").
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+    expose:
+      - "1025"
+
   reachy-embodiment:
     build:
       context: ../..
@@ -79,10 +92,17 @@ services:
       # (a single-tenant homelab has no reason to run two database
       # containers).
       DATABASE_URL: postgresql://${POSTGRES_USER:-reachy}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-reachy_hub}
+      # Phase 14: real SMTP send, to the local Mailpit container above —
+      # not a real mailbox. No SMTP_FROM override; email/sender.py's
+      # default is fine here.
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
     depends_on:
       postgres:
         condition: service_healthy
       reachy-hub:
+        condition: service_started
+      mailpit:
         condition: service_started
     expose:
       - "8000"

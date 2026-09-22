@@ -67,6 +67,24 @@ their supporting document/section/page where available") is
 `rag_intent.format_answer`'s job: it always names the source document, and
 the section too when the retrieved chunk has one — there's no `page`,
 since nothing here ingests PDFs.
+
+Phase 14: email, per docs/plan.md's Phase 14 row ("Read/summarize/draft/
+preview/approve/send") — see email/. No external email credential was
+available, so "read" means listing seeded `EmailMessage`s (`POST
+/emails/received`, operator/setup API, same no-external-sync honesty as
+calendar), and "summarize" is out of scope until there's a real LLM in this
+codebase (same as "draft" below) — not attempted, not faked. `POST
+/conversation` recognizes draft/approve/send phrasings (email_intent.py,
+same placeholder-matcher honesty as the other *_intent.py modules); a
+draft's body is the user's text verbatim, the same way "remember that X"
+stores X verbatim. The exit criterion ("No code path sends mail without
+approval gate") is a structural property, not a claim: `email/workflow.py`'s
+`send_approved_draft` is the *only* function anywhere in this codebase
+that calls an `EmailSender`, both from `POST /emails/drafts/{id}/send` and
+the conversational "send draft X" path, and it always checks
+`DraftStatus.APPROVED` first. No cloud email API key was available either,
+so the real sender (`email/sender.py`) speaks plain SMTP directly — in the
+homelab compose stack, to a local Mailpit container, not a real mailbox.
 """
 
 from __future__ import annotations
@@ -80,13 +98,22 @@ import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from companion_core import memory_intent, rag_intent
+from companion_core import email_intent, memory_intent, rag_intent
 from companion_core.calendar.models import CalendarEvent
 from companion_core.calendar.postgres_store import PostgresCalendarStore
 from companion_core.calendar.reminders import due_reminders
 from companion_core.calendar.store import CalendarStore
 from companion_core.calendar_intent import format_next_event_reply, is_next_event_query
 from companion_core.conversation import ConversationStore
+from companion_core.email.models import DraftStatus, EmailDraft, EmailMessage
+from companion_core.email.postgres_store import PostgresEmailStore
+from companion_core.email.sender import smtp_send
+from companion_core.email.store import EmailStore
+from companion_core.email.workflow import (
+    DraftNotApprovedError,
+    SendFn,
+    send_approved_draft,
+)
 from companion_core.hub_client import HubClient
 from companion_core.memory.postgres_store import PostgresMemoryStore
 from companion_core.memory.store import MemoryStore
@@ -150,6 +177,19 @@ class CreateDocumentRequest(BaseModel):
     source: str = "api"
 
 
+class ReceiveEmailRequest(BaseModel):
+    sender: str
+    subject: str
+    body: str
+
+
+class CreateDraftRequest(BaseModel):
+    to: str
+    subject: str
+    body: str
+    in_reply_to: str | None = None
+
+
 def create_app(
     *,
     hub_base_url: str | None = None,
@@ -158,6 +198,8 @@ def create_app(
     task_store: TaskStore | None = None,
     memory_store: MemoryStore | None = None,
     rag_store: DocumentStore | None = None,
+    email_store: EmailStore | None = None,
+    email_send_fn: SendFn = smtp_send,
     database_url: str | None = None,
 ) -> FastAPI:
     hub_base_url = hub_base_url or os.environ.get("REACHY_HUB_URL", "http://reachy-hub:8000")
@@ -166,6 +208,7 @@ def create_app(
     owns_task_store = task_store is None
     owns_memory_store = memory_store is None
     owns_rag_store = rag_store is None
+    owns_email_store = email_store is None
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -182,6 +225,9 @@ def create_app(
         if owns_rag_store:
             dsn = database_url or os.environ["DATABASE_URL"]
             app.state.rag_store = await PostgresDocumentStore.connect(dsn)
+        if owns_email_store:
+            dsn = database_url or os.environ["DATABASE_URL"]
+            app.state.email_store = await PostgresEmailStore.connect(dsn)
         try:
             yield
         finally:
@@ -194,6 +240,8 @@ def create_app(
                 await app.state.memory_store.close()
             if owns_rag_store:
                 await app.state.rag_store.close()
+            if owns_email_store:
+                await app.state.email_store.close()
 
     app = FastAPI(title="companion-core", lifespan=lifespan)
     app.state.conversation_store = conversation_store
@@ -205,6 +253,8 @@ def create_app(
         app.state.memory_store = memory_store
     if not owns_rag_store:
         app.state.rag_store = rag_store
+    if not owns_email_store:
+        app.state.email_store = email_store
 
     @app.get("/health")
     async def health() -> dict[str, str]:
@@ -220,6 +270,9 @@ def create_app(
         memory_capture_text = memory_intent.match_capture(turn.text)
         memory_recall_query = memory_intent.match_recall(turn.text)
         rag_query = rag_intent.match_query(turn.text)
+        draft_request = email_intent.match_draft(turn.text)
+        approve_query = email_intent.match_approve(turn.text)
+        send_query = email_intent.match_send(turn.text)
 
         if is_next_event_query(turn.text):
             event = await app.state.calendar_store.next_event(datetime.now(UTC))
@@ -267,6 +320,33 @@ def create_app(
             results = await app.state.rag_store.search(rag_query)
             reply = rag_intent.format_answer(results, rag_query)
             privacy = classify_privacy(reply)
+        elif email_intent.match_list_inbox(turn.text):
+            messages = await app.state.email_store.list_received()
+            reply = email_intent.format_inbox_reply(messages)
+            privacy = Privacy.WORK_PRIVATE
+        elif draft_request:
+            to, body = draft_request
+            draft = await app.state.email_store.create_draft(to=to, subject=body, body=body)
+            reply = email_intent.format_draft_reply(draft)
+            privacy = Privacy.WORK_PRIVATE
+        elif approve_query:
+            pending = await app.state.email_store.list_drafts(DraftStatus.DRAFT)
+            matched = email_intent.find_draft_by_query(pending, approve_query)
+            approved = await app.state.email_store.approve_draft(matched.id) if matched else None
+            reply = email_intent.format_approve_reply(approved, approve_query)
+            privacy = Privacy.WORK_PRIVATE
+        elif send_query:
+            candidates = await app.state.email_store.list_drafts()
+            matched = email_intent.find_draft_by_query(candidates, send_query)
+            if matched is None:
+                reply = email_intent.format_send_not_found_reply(send_query)
+            else:
+                try:
+                    sent = await send_approved_draft(app.state.email_store, matched.id, send_fn=email_send_fn)
+                    reply = email_intent.format_send_success_reply(sent)
+                except DraftNotApprovedError:
+                    reply = email_intent.format_send_not_approved_reply(matched)
+            privacy = Privacy.WORK_PRIVATE
         else:
             reply = f"(turn {len(history)} via {turn.channel}) heard: {turn.text}"
             privacy = classify_privacy(turn.text)
@@ -353,6 +433,51 @@ def create_app(
     @app.get("/documents/search")
     async def search_documents(q: str, top_k: int = 3) -> list[RetrievedChunk]:
         return await app.state.rag_store.search(q, top_k=top_k)
+
+    @app.post("/emails/received")
+    async def receive_email(request: ReceiveEmailRequest) -> EmailMessage:
+        """Operator/setup API, not an agent tool — no external inbox sync
+        exists, so this is how messages get into the store at all (same
+        no-external-sync honesty as /calendar/events)."""
+        return await app.state.email_store.add_received(
+            sender=request.sender, subject=request.subject, body=request.body
+        )
+
+    @app.get("/emails/received")
+    async def list_received_emails() -> list[EmailMessage]:
+        return await app.state.email_store.list_received()
+
+    @app.post("/emails/drafts")
+    async def create_email_draft(request: CreateDraftRequest) -> EmailDraft:
+        """Direct/API draft creation, alongside the conversational path —
+        Prepare tier (docs/plan.md §9): generates a preview, no external
+        change, no approval needed just to create it."""
+        return await app.state.email_store.create_draft(
+            to=request.to, subject=request.subject, body=request.body, in_reply_to=request.in_reply_to
+        )
+
+    @app.get("/emails/drafts")
+    async def list_email_drafts(status: DraftStatus | None = None) -> list[EmailDraft]:
+        return await app.state.email_store.list_drafts(status)
+
+    @app.post("/emails/drafts/{draft_id}/approve")
+    async def approve_email_draft(draft_id: str) -> EmailDraft:
+        """Act-tier confirmation (docs/plan.md §9) — the only thing that
+        moves a draft from DRAFT to APPROVED, which is what
+        send_approved_draft requires before it will dispatch anything."""
+        approved = await app.state.email_store.approve_draft(draft_id)
+        if approved is None:
+            raise HTTPException(status_code=404, detail=f"no pending draft '{draft_id}'")
+        return approved
+
+    @app.post("/emails/drafts/{draft_id}/send")
+    async def send_email_draft(draft_id: str) -> EmailDraft:
+        try:
+            return await send_approved_draft(app.state.email_store, draft_id, send_fn=email_send_fn)
+        except LookupError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except DraftNotApprovedError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     @app.get("/tasks")
     async def list_tasks(status: TaskStatus | None = None) -> list[Task]:

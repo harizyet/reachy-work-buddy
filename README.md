@@ -13,7 +13,7 @@ stays expressive even when the homelab is unreachable.
 
 ## Features
 
-What the system can actually do today (Phases 0-13; see Status below for
+What the system can actually do today (Phases 0-14; see Status below for
 the engineering detail and live-verification evidence behind each item):
 
 - **Talk to Reachy** — a semantic behaviour API and a local presence loop
@@ -51,6 +51,9 @@ the engineering detail and live-verification evidence behind each item):
   conversationally; the answer always names which document (and section,
   when the document has headings) it came from, real semantic search, not
   a keyword grep.
+- **Email drafting with a real approval gate** — draft a reply
+  conversationally, and it genuinely cannot be sent until you explicitly
+  approve it; a real SMTP send only happens after that, never before.
 - **Runs for real** — one `docker compose up` brings up the whole stack
   (reasoning, hub, embodiment, Postgres, a reverse proxy) on your own
   homelab; every feature above has been verified against that actual
@@ -132,7 +135,7 @@ live restart tests verify).
 
 ## Status
 
-Phases 0-13 are done:
+Phases 0-14 are done:
 
 - Phase 0: architecture freeze (ADRs, shared schemas).
 - Phase 1: Jarvis reference baseline — [docs/jarvis-baseline.md](docs/jarvis-baseline.md).
@@ -260,15 +263,37 @@ Phases 0-13 are done:
   status INTRANS, and a bare vector query parameter needed an explicit
   `::vector` cast or Postgres tried to match it against `double precision[]`
   instead.
+- Phase 14: email. companion-core gets an `EmailStore` (`email/`) —
+  received messages seeded through an operator API (no external inbox sync
+  available, same no-external-sync honesty as calendar) and drafts with an
+  approval-gated `status`. "draft email to X about Y" creates a draft
+  conversationally; "approve draft X" moves it from `draft` to `approved`;
+  "send draft X" only dispatches if it's already `approved`. The exit
+  criterion ("No code path sends mail without approval gate") is a
+  structural property: `email/workflow.py`'s `send_approved_draft` is the
+  *only* function anywhere in this codebase that calls a sender, and it
+  always checks approval status first — both the conversational path and
+  the direct API (`POST /emails/drafts/{id}/send`) go through it, nothing
+  bypasses it. No cloud email API key was available, so sending speaks
+  real SMTP directly (`email/sender.py`) to a local Mailpit container in
+  the homelab stack — a real SMTP protocol handshake, but no personal
+  mailbox involved. Verified live through the real deployed Caddy stack:
+  sending before approval was refused with nothing dispatched (confirmed
+  against Mailpit's own message list, not just the HTTP response),
+  approving then sending produced a real SMTP message that actually
+  arrived in Mailpit, sending an already-sent draft again correctly
+  404/409'd, and the draft's data survived a `companion-core` restart via
+  Postgres.
 
 See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
-phase-by-phase roadmap. Next up: Phase 14, email (read/summarize/draft/
-preview/approve/send, with a hard approval gate before any send).
+phase-by-phase roadmap. Next up: Phase 15, calling Reachy (PWA + WebRTC
+real-time audio, private earbuds conversation while Reachy visibly
+listens/thinks/speaks).
 
 ## Layout
 
 ```
-services/companion-core/     reasoning/tools/memory, privacy, calendar, tasks, RAG (Phases 5, 9-13)
+services/companion-core/     reasoning/tools/memory, privacy, calendar, tasks, RAG, email (Phases 5, 9-14)
 services/reachy-hub/         robot registry, sessions, routing, Telegram, voice/STT/TTS, audit, reminders (Phases 4-10)
 services/reachy-embodiment/  semantic behaviour API + presence loop + VAD (Phases 2-3, 8)
 clients/web-pwa/             web/PWA client (unimplemented)

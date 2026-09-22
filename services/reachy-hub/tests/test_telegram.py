@@ -11,6 +11,7 @@ import time
 import httpx
 from companion_core.app import create_app as _create_core_app
 from companion_core.calendar.store import InMemoryCalendarStore
+from companion_core.email.store import InMemoryEmailStore
 from companion_core.memory.store import InMemoryMemoryStore
 from companion_core.rag.store import InMemoryDocumentStore
 from companion_core.tasks.store import InMemoryTaskStore
@@ -32,6 +33,7 @@ def create_core_app(**kwargs):
     kwargs.setdefault("task_store", InMemoryTaskStore())
     kwargs.setdefault("memory_store", InMemoryMemoryStore())
     kwargs.setdefault("rag_store", InMemoryDocumentStore())
+    kwargs.setdefault("email_store", InMemoryEmailStore())
     return _create_core_app(**kwargs)
 
 
