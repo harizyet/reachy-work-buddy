@@ -17,8 +17,16 @@ class HubClient:
         *,
         transport: httpx.AsyncBaseTransport | None = None,
         timeout: float = 5.0,
+        bearer_token: str | None = None,
     ) -> None:
-        self._client = httpx.AsyncClient(base_url=base_url, transport=transport, timeout=timeout)
+        # Phase 16/ADR 0013: reachy-hub's /robots/{id}/... routes became
+        # auth-gated (REMOTE_UI_TOKEN) once they became part of the
+        # remote-control surface. companion-core's /debug/robots/... proxy
+        # is a legitimate, trusted internal caller of those same routes, so
+        # it needs the same shared token, not a separate one — this is an
+        # internal homelab-to-homelab call, not the remote UI itself.
+        headers = {"Authorization": f"Bearer {bearer_token}"} if bearer_token else None
+        self._client = httpx.AsyncClient(base_url=base_url, transport=transport, timeout=timeout, headers=headers)
 
     async def aclose(self) -> None:
         await self._client.aclose()

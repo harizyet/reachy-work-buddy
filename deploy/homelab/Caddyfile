@@ -1,9 +1,14 @@
 # Reverse proxy in front of the homelab services, per docs/plan.md §6 Phase 4
-# ("reverse proxy via Docker Compose"). Path-based routing only for now —
-# this does NOT implement authentication (docs/plan.md §9: "Authenticate all
-# remote Hub endpoints"). Auth/TLS for real remote access is Phase 16
-# (remote telepresence) / Phase 9 (privacy router) territory, not Phase 4.
-# Do not expose this port to the public Internet as configured here.
+# ("reverse proxy via Docker Compose"). Path-based routing only — no TLS
+# termination here. Phase 16/ADR 0013 added authentication for reachy-hub's
+# remote-control surface (/robots/*, /webrtc/telepresence/offer,
+# /robots/*/speak — see reachy_hub/app.py's require_remote_auth and
+# REMOTE_UI_TOKEN), which is what docs/plan.md §9's "Authenticate all
+# remote Hub endpoints" asked for. TLS is still not implemented — do not
+# expose this port to the public Internet as configured here; real
+# "overseas" remote use needs a VPN/tunnel (e.g. Tailscale) or TLS added at
+# this Caddy layer, neither of which has anything to verify against in this
+# environment.
 
 :8080 {
 	handle_path /hub/* {

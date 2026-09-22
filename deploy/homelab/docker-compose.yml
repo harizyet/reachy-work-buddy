@@ -68,6 +68,12 @@ services:
       # used on other channels for cross-channel session continuity to work.
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_DEFAULT_USER_ID: ${TELEGRAM_DEFAULT_USER_ID:-default-user}
+      # Phase 16/ADR 0013: unset means the whole remote-control surface
+      # (/robots/*, /webrtc/telepresence/offer, /robots/*/speak) 503s —
+      # fail closed, not open. Set REMOTE_UI_TOKEN in .env to enable remote
+      # telepresence. companion-core needs the same value (below) since its
+      # /debug/robots/... proxy calls these same gated routes internally.
+      REMOTE_UI_TOKEN: ${REMOTE_UI_TOKEN:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -105,6 +111,10 @@ services:
       # this compose file's own default behavior still matches production.
       EMAIL_SEND_DELAY_SECONDS: ${EMAIL_SEND_DELAY_SECONDS:-}
       EMAIL_DISPATCH_INTERVAL_SECONDS: ${EMAIL_DISPATCH_INTERVAL_SECONDS:-}
+      # Phase 16/ADR 0013: same value as reachy-hub's, above — companion-
+      # core's HubClient sends it as a bearer token to reach reachy-hub's
+      # now-gated /robots/{id}/... routes from /debug/robots/....
+      REMOTE_UI_TOKEN: ${REMOTE_UI_TOKEN:-}
     depends_on:
       postgres:
         condition: service_healthy

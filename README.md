@@ -353,18 +353,57 @@ Phases 0-15 are done:
   machine than the Docker host needs reachy-hub's WebRTC media reachable
   directly — Caddy only proxies the signaling POST, not the RTP audio).
 
+- Phase 16 (remote telepresence, ADR 0013): reachy-hub's first real
+  authentication — a shared bearer token (`REMOTE_UI_TOKEN`), fail-closed
+  (an unset token 503s the whole remote-control surface rather than
+  allowing unauthenticated access), gating `/robots/{id}/state`,
+  `/behaviours`, `/behaviour/{name}` (ungated since Phase 4) plus two new
+  routes. `POST /robots/{id}/speak` synthesizes text with the same local
+  `tts.py` `/voice/turn` uses and plays it through the robot via a new
+  `reachy-embodiment` `POST /audio/play` — no `companion_core_client` call
+  anywhere in that path. `POST /webrtc/telepresence/offer`
+  (`webrtc.negotiate_telepresence`) streams the robot's camera to the
+  browser: a new `GET /camera/frame` on reachy-embodiment (polled JPEG,
+  `SimulatedRobotBackend.capture_frame` — no physical camera exists in
+  this environment, same standing limitation as every embodiment phase)
+  wrapped into a real `CameraPollTrack` WebRTC video track. Also finally
+  puts the long-unused `EmbodimentState.REMOTE` (added Phase 3, never set
+  by anything until now) to work. New page:
+  `clients/web-pwa/telepresence.html`. Verified live through the real
+  deployed Caddy stack: unauthenticated and wrong-token requests to
+  `/robots/desk-1/state` both got real 401s, a real token got a real 200;
+  `POST /speak` produced a real synthesized WAV played through the
+  (simulated) robot; a real `GET /camera/frame` returned real JPEG bytes;
+  a real (non-browser) `aiortc` client negotiated
+  `/webrtc/telepresence/offer` and received a real, non-empty 320x240
+  video frame over the peer connection, with the robot's state
+  transitioning to `remote` while connected and back to `idle` after the
+  connection closed; and, with the `companion-core` container stopped
+  (`docker compose stop companion-core`), `POST /messages` correctly 502'd
+  while `/speak`, `/robots/{id}/state`, and `/behaviour/{name}` all kept
+  working — the exit criterion ("control basic Reachy functions without
+  Companion Core"), proven against a real stopped container, not asserted.
+  A real Docker-build-only bug surfaced and got fixed along the way:
+  reachy-embodiment's own image lacked `python-multipart` (needed by
+  `UploadFile`/`File()`) — invisible in the test suite because
+  `uv sync --all-packages`'s one shared dev venv let reachy-hub's copy of
+  that dependency cover it silently, but not in reachy-embodiment's own
+  `--package reachy-embodiment` Docker image. See
+  [docs/adr/0013](docs/adr/0013-remote-telepresence.md) for the full design
+  and its known limitations (no TLS termination at Caddy, the telepresence
+  page shell itself is still served unauthenticated by `StaticFiles` even
+  though every API call it makes requires the token).
+
 See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
-phase-by-phase roadmap. Next up: Phase 16, remote telepresence
-(camera/status/manual behaviours/speak-through-robot via a secure remote
-UI).
+phase-by-phase roadmap. Next up: Phase 17, interruption intelligence.
 
 ## Layout
 
 ```
 services/companion-core/     reasoning/tools/memory, privacy, calendar, tasks, RAG, email, consent gate (Phases 5, 9-14, ADR 0011)
-services/reachy-hub/         robot registry, sessions, routing, Telegram, voice/STT/TTS, WebRTC calls, audit, reminders (Phases 4-10, 15)
-services/reachy-embodiment/  semantic behaviour API + presence loop + VAD (Phases 2-3, 8)
-clients/web-pwa/             "Call Reachy" WebRTC PWA (Phase 15)
+services/reachy-hub/         robot registry, sessions, routing, Telegram, voice/STT/TTS, WebRTC calls + telepresence, auth, audit, reminders (Phases 4-10, 15-16)
+services/reachy-embodiment/  semantic behaviour API + presence loop + VAD + camera/audio-play (Phases 2-3, 8, 16)
+clients/web-pwa/             "Call Reachy" + telepresence WebRTC PWA (Phases 15-16)
 shared/models/                Pydantic data contracts shared across services
 shared/protocols/             HTTP route constants shared across services
 deploy/homelab/                Docker Compose: companion-core, reachy-hub, postgres, caddy

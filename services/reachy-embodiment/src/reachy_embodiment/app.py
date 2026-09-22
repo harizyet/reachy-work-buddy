@@ -3,10 +3,16 @@
 Implements the GET /health, GET /state, GET /behaviours, POST /behaviour/{name}
 contract from docs/adr/0003-embodiment-command-api.md, plus POST /heartbeat
 and the offline-fallback presence loop from docs/adr/0004-offline-fallback.md.
-/gaze, /pose, and /audio/play are part of the ADR 0003 contract but have no
-real implementation to back them yet (motion primitives land with real
-hardware, audio playback in a later phase) — they're left out here rather
-than stubbed, to avoid dead endpoints.
+
+Phase 16/ADR 0013 (remote telepresence) implements two of the three
+previously-deferred ADR 0003 endpoints: GET /camera/frame (a single JPEG,
+polled by reachy-hub's WebRTC video track) and POST /audio/play (plays a
+WAV through the robot's speaker — or logs it, no physical speaker exists in
+this environment, see robot.py). /gaze and /pose remain deferred — no motion
+primitives exist to back them without real hardware, still left out rather
+than stubbed, to avoid dead endpoints. POST /remote is new (not part of ADR
+0003's original list): reachy-hub calls it to mark a telepresence session's
+start/end, driving the long-unused EmbodimentState.REMOTE.
 """
 
 from __future__ import annotations
@@ -15,14 +21,15 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.responses import Response
 from pydantic import BaseModel
 
 from reachy_embodiment.behaviours import DESCRIPTIONS, STATE_FOR_BEHAVIOUR
 from reachy_embodiment.presence import PresenceLoop
 from reachy_embodiment.robot import RobotBackend, SimulatedRobotBackend
 from reachy_embodiment.state import ServiceState
-from shared.models.embodiment import Behaviour
+from shared.models.embodiment import Behaviour, EmbodimentState
 from shared.protocols import embodiment_api as routes
 
 
@@ -39,6 +46,10 @@ class BehaviourBody(BaseModel):
 
     parameters: dict[str, str] = {}
     correlation_id: str | None = None
+
+
+class RemoteBody(BaseModel):
+    active: bool
 
 
 def create_app(backend: RobotBackend | None = None, *, run_presence_loop: bool = True) -> FastAPI:
@@ -97,6 +108,36 @@ def create_app(backend: RobotBackend | None = None, *, run_presence_loop: bool =
     @app.post(routes.HEARTBEAT)
     def heartbeat() -> ServiceState:
         presence_loop.heartbeat()
+        return state
+
+    @app.get(routes.CAMERA_FRAME)
+    def camera_frame() -> Response:
+        presence_loop.heartbeat()
+        return Response(content=backend.capture_frame(), media_type="image/jpeg")
+
+    @app.post(routes.REMOTE)
+    def set_remote(body: RemoteBody) -> ServiceState:
+        presence_loop.heartbeat()
+        state.remote_active = body.active
+        state.embodiment_state = EmbodimentState.REMOTE if body.active else EmbodimentState.IDLE
+        return state
+
+    @app.post(routes.AUDIO_PLAY)
+    async def audio_play(audio: UploadFile = File(...)) -> ServiceState:  # noqa: B008
+        wav_bytes = await audio.read()
+        presence_loop.heartbeat()
+
+        state.embodiment_state = EmbodimentState.SPEAKING
+        state.last_behaviour = Behaviour.SPEAKING
+        state.last_behaviour_at = datetime.now(UTC)
+
+        backend.play_audio(wav_bytes)
+
+        # No physical speaker blocks for real playback time here (see
+        # robot.py), so there's nothing to schedule a revert against — it
+        # happens synchronously within this same request, same as every
+        # other state transition in this module.
+        state.embodiment_state = EmbodimentState.REMOTE if state.remote_active else EmbodimentState.IDLE
         return state
 
     return app

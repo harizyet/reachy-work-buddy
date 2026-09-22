@@ -251,6 +251,7 @@ def create_app(
     database_url: str | None = None,
     run_email_dispatch_task: bool = True,
     email_dispatch_interval: float | None = None,
+    hub_bearer_token: str | None = None,
 ) -> FastAPI:
     hub_base_url = hub_base_url or os.environ.get("REACHY_HUB_URL", "http://reachy-hub:8000")
     # Both env-overridable, same pattern as hub_base_url above — default
@@ -273,9 +274,15 @@ def create_app(
     owns_email_store = email_store is None
     owns_confirmation_store = confirmation_store is None
 
+    # Phase 16/ADR 0013: reachy-hub's REMOTE_UI_TOKEN, shared with this
+    # internal caller — see hub_client.py's constructor comment. `or None`
+    # for the same docker-compose `${VAR:-}` reason as the email env
+    # lookups above.
+    hub_bearer_token = hub_bearer_token or os.environ.get("REMOTE_UI_TOKEN") or None
+
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        app.state.hub_client = HubClient(hub_base_url, transport=transport)
+        app.state.hub_client = HubClient(hub_base_url, transport=transport, bearer_token=hub_bearer_token)
         if owns_calendar_store:
             dsn = database_url or os.environ["DATABASE_URL"]
             app.state.calendar_store = await PostgresCalendarStore.connect(dsn)

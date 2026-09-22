@@ -9,6 +9,18 @@ dependencies = [
     "reachy-work-companion",
     "silero-vad>=5.1",
     "numpy>=2.0",
+    # Phase 16/ADR 0013: JPEG-encodes SimulatedRobotBackend.capture_frame's
+    # synthetic camera frames. No CUDA/GPU concerns (pure-Python/C image
+    # lib), unlike torch below.
+    "pillow>=10.0",
+    # Required by FastAPI's UploadFile/File() (POST /audio/play). Found by
+    # actually running the built Docker container, not by the test suite:
+    # `uv sync --all-packages` installs every workspace member into one
+    # shared dev venv (see AGENTS.md), so reachy-hub's own
+    # python-multipart dependency silently covered this package too in
+    # dev/tests — reachy-embodiment's own Docker image, built with
+    # `--package reachy-embodiment` only, does not get that for free.
+    "python-multipart>=0.0.9",
     # torch/torchaudio: nothing here imports these directly — silero-vad
     # depends on both. They're still declared as explicit direct
     # dependencies (not left purely transitive) because uv's [tool.uv.sources]

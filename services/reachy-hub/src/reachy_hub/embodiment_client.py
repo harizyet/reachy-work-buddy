@@ -58,3 +58,18 @@ class EmbodimentClient:
         resp = await self._client.post(routes.HEARTBEAT)
         resp.raise_for_status()
         return resp.json()
+
+    async def get_camera_frame(self) -> bytes:
+        resp = await self._client.get(routes.CAMERA_FRAME)
+        resp.raise_for_status()
+        return resp.content
+
+    async def set_remote(self, active: bool) -> dict[str, Any]:
+        resp = await self._client.post(routes.REMOTE, json={"active": active})
+        resp.raise_for_status()
+        return resp.json()
+
+    async def play_audio(self, wav_bytes: bytes) -> dict[str, Any]:
+        resp = await self._client.post(routes.AUDIO_PLAY, files={"audio": ("reply.wav", wav_bytes, "audio/wav")})
+        resp.raise_for_status()
+        return resp.json()

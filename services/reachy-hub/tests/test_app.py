@@ -43,7 +43,17 @@ def make_embodiment_app(**kwargs):
     return create_embodiment_app(SimulatedRobotBackend(), run_presence_loop=False, **kwargs)
 
 
+# Phase 16/ADR 0013: every /robots/{robot_id}/... call in this file needs
+# this header now that those routes are auth-gated. A fixed test token
+# (not None) is the default here so existing tests keep exercising the
+# routes themselves rather than the 401/503 auth paths — those get their
+# own dedicated tests below.
+TEST_REMOTE_TOKEN = "test-remote-token"
+AUTH_HEADERS = {"Authorization": f"Bearer {TEST_REMOTE_TOKEN}"}
+
+
 def make_hub_with_core_app(embodiment_app, core_app, **kwargs) -> TestClient:
+    kwargs.setdefault("remote_ui_token", TEST_REMOTE_TOKEN)
     app = create_app(
         registry=InMemoryRobotRegistry(),
         session_store=InMemorySessionStore(),
@@ -55,13 +65,16 @@ def make_hub_with_core_app(embodiment_app, core_app, **kwargs) -> TestClient:
         run_heartbeat_task=False,
         **kwargs,
     )
-    return TestClient(app)
+    client = TestClient(app)
+    client.headers.update(AUTH_HEADERS)
+    return client
 
 
 def make_hub_client(embodiment_app, *, registry=None, session_store=None, audit_log=None, **kwargs) -> TestClient:
     registry = registry or InMemoryRobotRegistry()
     session_store = session_store or InMemorySessionStore()
     audit_log = audit_log or InMemoryAuditLog()
+    kwargs.setdefault("remote_ui_token", TEST_REMOTE_TOKEN)
     app = create_app(
         registry=registry,
         session_store=session_store,
@@ -70,7 +83,9 @@ def make_hub_client(embodiment_app, *, registry=None, session_store=None, audit_
         run_heartbeat_task=False,
         **kwargs,
     )
-    return TestClient(app)
+    client = TestClient(app)
+    client.headers.update(AUTH_HEADERS)
+    return client
 
 
 def test_health() -> None:

@@ -77,6 +77,7 @@ def test_real_webrtc_call_round_trips_real_audio_and_drives_real_embodiment() ->
             run_heartbeat_task=False,
             stt_factory=lambda: FasterWhisperSTT(model_size="tiny.en"),
             tts_factory=EspeakTTS,
+            remote_ui_token="test-remote-token",
         )
         robot = Robot(robot_id="desk-1", base_url="http://desk-1.local")
         await hub_app.state.registry.register(robot)
@@ -150,7 +151,9 @@ def test_real_webrtc_call_round_trips_real_audio_and_drives_real_embodiment() ->
             assert "speaking" in statuses
             assert any(arr.any() for arr in received_frames), "no real (non-silent) reply audio was ever received"
 
-            robot_state = await http.get("/robots/desk-1/state")
+            robot_state = await http.get(
+                "/robots/desk-1/state", headers={"Authorization": "Bearer test-remote-token"}
+            )
             assert robot_state.status_code == 200
             # By the time real audio has arrived the call already passed
             # through listening/thinking/speaking on the real embodiment.

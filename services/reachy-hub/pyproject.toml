@@ -13,6 +13,10 @@ dependencies = [
     "python-multipart>=0.0.9",
     "aiortc>=1.9",
     "numpy>=2.0",
+    # Phase 16/ADR 0013: decodes reachy-embodiment's JPEG camera frames into
+    # av.VideoFrame for the telepresence WebRTC track (webrtc.py's
+    # CameraPollTrack).
+    "pillow>=10.0",
 ]
 
 [tool.uv.sources]

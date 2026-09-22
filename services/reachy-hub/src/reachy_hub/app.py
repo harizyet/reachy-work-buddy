@@ -82,8 +82,21 @@ Reachy's speaker, which doesn't exist as a code path here at all (no
 physical Reachy in this environment, same as every other voice-touching
 phase).
 
-Web UI and auth beyond this (reachy-hub's full ADR 0001 ownership) are
-later work — not implemented yet.
+Phase 16 (remote telepresence, ADR 0013): reachy-hub's first real
+authentication — a shared bearer token (`REMOTE_UI_TOKEN`), checked by
+`require_remote_auth` and applied to the whole remote-control surface
+(`/robots/{robot_id}/state`, `/behaviours`, `/behaviour/{name}`, plus the
+two new routes below). Fails *closed*: an unset token 503s every gated
+route rather than allowing unauthenticated access, the opposite default
+from every other optional integration here — see ADR 0013 for why.
+`POST /robots/{robot_id}/speak` synthesizes text with the same local
+`tts.py` `/voice/turn` uses and plays it through the robot via
+`EmbodimentClient.play_audio` — no `companion_core_client` call anywhere
+in that path, which is what satisfies the phase's "without Companion
+Core" exit criterion. `POST /webrtc/telepresence/offer`
+(`webrtc.negotiate_telepresence`) streams the robot's camera to the
+browser over a second, unrelated `RTCPeerConnection` from "Call Reachy"'s
+— video-only, no reasoning, no audio.
 
 Per ADR 0003 ("Sent by companion-core (via reachy-hub) to
 reachy-embodiment's POST /behaviour/{name}"), reachy-hub is the service that
@@ -97,11 +110,12 @@ import asyncio
 import contextlib
 import logging
 import os
+import secrets
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 
 import httpx
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -120,7 +134,7 @@ from reachy_hub.stt import FasterWhisperSTT, SpeechToText
 from reachy_hub.telegram_chat_registry import TelegramChatRegistry
 from reachy_hub.telegram_client import TelegramClient
 from reachy_hub.tts import EspeakTTS, TextToSpeech
-from reachy_hub.webrtc import CallTurnHandler, negotiate_call
+from reachy_hub.webrtc import CallTurnHandler, negotiate_call, negotiate_telepresence
 from shared.models.embodiment import Behaviour
 from shared.models.response import Privacy
 from shared.models.session import AgentSession, Channel, InputModality, InteractionMode
@@ -177,6 +191,16 @@ class WebRTCAnswerResponse(BaseModel):
     type: str
 
 
+class SpeakRequest(BaseModel):
+    text: str
+
+
+class TelepresenceOfferRequest(BaseModel):
+    sdp: str
+    type: str
+    robot_id: str
+
+
 def create_app(
     *,
     registry: RobotRegistry | None = None,
@@ -197,7 +221,26 @@ def create_app(
     stt_factory: Callable[[], SpeechToText] | None = None,
     tts_factory: Callable[[], TextToSpeech] | None = None,
     audit_log: AuditLog | None = None,
+    remote_ui_token: str | None = None,
 ) -> FastAPI:
+    # Phase 16/ADR 0013: fail closed. Unset means the whole remote-control
+    # surface below 503s rather than silently allowing unauthenticated
+    # access — the opposite default from every other optional integration
+    # in this file (Telegram, cloud TTS), deliberately: those degrade a
+    # convenience by being absent, this gates real robot control exposed on
+    # a port the Caddyfile itself documents as public-reachable.
+    remote_ui_token = remote_ui_token or os.environ.get("REMOTE_UI_TOKEN")
+
+    def require_remote_auth(authorization: str | None = Header(default=None)) -> None:
+        if remote_ui_token is None:
+            raise HTTPException(status_code=503, detail="remote UI is not configured (set REMOTE_UI_TOKEN)")
+        if authorization is None or not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="missing bearer token")
+        provided = authorization.removeprefix("Bearer ")
+        if not secrets.compare_digest(provided, remote_ui_token):
+            raise HTTPException(status_code=401, detail="invalid bearer token")
+
+
     client_factory = client_factory or (lambda base_url: EmbodimentClient(base_url))
     clients: dict[str, EmbodimentClient] = {}
     companion_core_client = companion_core_client or CompanionCoreClient(
@@ -392,7 +435,7 @@ def create_app(
     async def list_robots() -> list[Robot]:
         return await app.state.registry.list()
 
-    @app.get("/robots/{robot_id}/state")
+    @app.get("/robots/{robot_id}/state", dependencies=[Depends(require_remote_auth)])
     async def robot_state(robot_id: str) -> dict:
         robot = await get_robot_or_404(robot_id)
         try:
@@ -400,7 +443,7 @@ def create_app(
         except httpx.HTTPError as exc:
             raise HTTPException(status_code=502, detail=f"robot '{robot_id}' unreachable: {exc}") from exc
 
-    @app.get("/robots/{robot_id}/behaviours")
+    @app.get("/robots/{robot_id}/behaviours", dependencies=[Depends(require_remote_auth)])
     async def robot_behaviours(robot_id: str) -> dict:
         robot = await get_robot_or_404(robot_id)
         try:
@@ -408,7 +451,7 @@ def create_app(
         except httpx.HTTPError as exc:
             raise HTTPException(status_code=502, detail=f"robot '{robot_id}' unreachable: {exc}") from exc
 
-    @app.post("/robots/{robot_id}/behaviour/{name}")
+    @app.post("/robots/{robot_id}/behaviour/{name}", dependencies=[Depends(require_remote_auth)])
     async def trigger_robot_behaviour(robot_id: str, name: str, request: BehaviourRequest | None = None) -> dict:
         robot = await get_robot_or_404(robot_id)
         request = request or BehaviourRequest()
@@ -601,6 +644,48 @@ def create_app(
             if pc.connectionState in ("failed", "closed"):
                 app.state.webrtc_connections.discard(pc)
                 await pc.close()
+
+        return WebRTCAnswerResponse(sdp=answer_sdp, type=answer_type)
+
+    @app.post("/robots/{robot_id}/speak", dependencies=[Depends(require_remote_auth)])
+    async def speak_through_robot(robot_id: str, request: SpeakRequest) -> dict:
+        """Phase 16/ADR 0013: synthesizes text and plays it through the
+        robot directly — no companion_core_client call anywhere in this
+        path, unlike /messages, /voice/turn, and /webrtc/offer, which all
+        route through handle_inbound_message. This is what actually
+        satisfies "control basic Reachy functions without Companion
+        Core," not just the auth gate above."""
+        robot = await get_robot_or_404(robot_id)
+        client = get_client(robot)
+        wav_bytes = await asyncio.to_thread(get_tts().synthesize, request.text)
+        try:
+            return await client.play_audio(wav_bytes)
+        except httpx.HTTPError as exc:
+            raise HTTPException(status_code=502, detail=f"robot '{robot_id}' unreachable: {exc}") from exc
+
+    @app.post("/webrtc/telepresence/offer", dependencies=[Depends(require_remote_auth)])
+    async def webrtc_telepresence_offer(request: TelepresenceOfferRequest) -> WebRTCAnswerResponse:
+        robot = await get_robot_or_404(request.robot_id)
+        client = get_client(robot)
+
+        with contextlib.suppress(httpx.HTTPError):
+            await client.set_remote(True)
+
+        async def frame_source() -> bytes:
+            return await client.get_camera_frame()
+
+        answer_sdp, answer_type, pc = await negotiate_telepresence(
+            offer_sdp=request.sdp, offer_type=request.type, frame_source=frame_source
+        )
+        app.state.webrtc_connections.add(pc)
+
+        @pc.on("connectionstatechange")
+        async def on_connection_state_change() -> None:
+            if pc.connectionState in ("failed", "closed"):
+                app.state.webrtc_connections.discard(pc)
+                await pc.close()
+                with contextlib.suppress(httpx.HTTPError):
+                    await client.set_remote(False)
 
         return WebRTCAnswerResponse(sdp=answer_sdp, type=answer_type)
 

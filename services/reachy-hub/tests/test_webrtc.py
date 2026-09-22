@@ -14,8 +14,10 @@ from io import BytesIO
 
 import av
 import numpy as np
+from PIL import Image
 from reachy_hub.webrtc import (
     CallTurnHandler,
+    CameraPollTrack,
     RecordingBuffer,
     SilentAudioTrack,
     WavPlaybackTrack,
@@ -201,6 +203,32 @@ def test_recording_buffer_stops_capturing_once_disarmed() -> None:
     with wave.open(BytesIO(wav_bytes), "rb") as wf:
         samples = np.frombuffer(wf.readframes(wf.getnframes()), dtype="<i2").tolist()
         assert samples == [1, 2]
+
+
+def _jpeg_bytes(color: tuple[int, int, int]) -> bytes:
+    image = Image.new("RGB", (16, 12), color=color)
+    buf = BytesIO()
+    image.save(buf, format="JPEG")
+    return buf.getvalue()
+
+
+def test_camera_poll_track_wraps_polled_jpegs_as_video_frames() -> None:
+    async def run() -> None:
+        served = [_jpeg_bytes((255, 0, 0)), _jpeg_bytes((0, 255, 0))]
+
+        async def frame_source() -> bytes:
+            return served.pop(0)
+
+        track = CameraPollTrack(frame_source)
+
+        first = await track.recv()
+        assert isinstance(first, av.VideoFrame)
+        assert (first.width, first.height) == (16, 12)
+
+        second = await track.recv()
+        assert second.pts > first.pts  # timestamps actually advance
+
+    asyncio.run(run())
 
 
 def test_recording_buffer_take_wav_resets_for_next_utterance() -> None:

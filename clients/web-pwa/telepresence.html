@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reachy Telepresence</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #111318;
+      color: #eee;
+      margin: 0;
+      padding: 16px;
+      box-sizing: border-box;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 20px; }
+    input, textarea {
+      display: block;
+      width: 100%;
+      margin: 6px 0;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #444;
+      background: #1c1f26;
+      color: #eee;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+    button {
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: none;
+      font-size: 15px;
+      cursor: pointer;
+      background: #2a2f3a;
+      color: #eee;
+      margin: 4px 4px 4px 0;
+    }
+    button:disabled { opacity: 0.4; cursor: default; }
+    #connect { background: #5b8cff; color: white; }
+    video {
+      width: 100%;
+      border-radius: 8px;
+      background: #000;
+      margin-top: 10px;
+      aspect-ratio: 4 / 3;
+    }
+    section { margin-top: 20px; }
+    #status { font-size: 13px; opacity: 0.8; margin-top: 6px; min-height: 18px; }
+    #behaviours { display: flex; flex-wrap: wrap; }
+    #behaviours button { font-size: 13px; padding: 6px 10px; }
+  </style>
+</head>
+<body>
+  <h1>Reachy Telepresence</h1>
+
+  <section id="setup">
+    <input id="token" placeholder="remote UI token" type="password" />
+    <input id="robotId" placeholder="robot_id" value="desk-1" />
+    <button id="connect">Connect</button>
+    <div id="status">not connected</div>
+  </section>
+
+  <section>
+    <video id="cameraFeed" autoplay playsinline muted></video>
+  </section>
+
+  <section>
+    <h2>Manual behaviours</h2>
+    <div id="behaviours"></div>
+  </section>
+
+  <section>
+    <h2>Speak through robot</h2>
+    <textarea id="speakText" rows="2" placeholder="Type what Reachy should say..."></textarea>
+    <button id="speak" disabled>Speak</button>
+  </section>
+
+  <script src="telepresence.js"></script>
+</body>
+</html>

@@ -22,23 +22,33 @@ conflict once you notice it.
 
 ## Where things stand
 
-**Phases 0-15 are done** (see README.md's Status section for full detail
-and live-verification evidence per phase). Last completed: **Phase 15,
-"Call Reachy"** — real WebRTC audio between a PWA (`clients/web-pwa/`) and
-`reachy-hub`, committed as `5003116`.
+**Phases 0-16 are done** (see README.md's Status section for full detail
+and live-verification evidence per phase). Last completed: **Phase 16,
+"Remote telepresence"** — reachy-hub's first real authentication
+(`REMOTE_UI_TOKEN`, fail-closed), a real WebRTC camera video track (polled
+JPEG from reachy-embodiment's new `GET /camera/frame`), and
+speak-through-robot (`POST /robots/{id}/speak`) that bypasses
+companion-core entirely — verified live with companion-core's container
+actually stopped (`docker compose stop companion-core`). New page:
+`clients/web-pwa/telepresence.html`. See
+[docs/adr/0013](docs/adr/0013-remote-telepresence.md).
 
-**Next up: Phase 16 — Remote telepresence** (docs/plan.md row: "Camera/
-status/manual behaviours/speak-through-robot via secure remote UI." Exit
-criterion: "Overseas user can control basic Reachy functions without
-Companion Core.") Not started.
+**Next up: Phase 17 — Interruption intelligence** (docs/plan.md row:
+"Inputs: calendar, presence, meeting, DND, urgency, privacy, last
+interruption. Actions: ignore/queue/text/gesture/interrupt." Exit
+criterion: "Routine notifications defer correctly while user is
+occupied.") Not started.
 
 ADRs on record: 0001 (service boundaries), 0002 (agent session), 0003
 (embodiment command API), 0004 (offline fallback), 0006 (response
 routing), 0010 (calendar), 0011 (destructive-action consent — voice can
 never confirm a destructive action, bulk-destructive actions are always
 blocked, email sends are delay-queued with an undo window), 0012 (Call
-Reachy WebRTC — push-to-talk, not continuous VAD). Note: 0005, 0007-0009
-don't exist as separate ADRs — those phases didn't need one.
+Reachy WebRTC — push-to-talk, not continuous VAD), 0013 (remote
+telepresence — shared-bearer-token auth, fail-closed; polled-JPEG WebRTC
+camera transport; speak-through-robot bypasses companion-core entirely).
+Note: 0005, 0007-0009 don't exist as separate ADRs — those phases didn't
+need one.
 
 A cross-cutting safety refactor (ADR 0011) landed *ahead of* Phase 15, not
 as a numbered phase itself — the user asked for it explicitly mid-session
@@ -88,6 +98,11 @@ an ADR and a mention in the relevant phase's README "Status" entry.
   ~10-minute default), set in `.env`: `EMAIL_SEND_DELAY_SECONDS=10` and
   `EMAIL_DISPATCH_INTERVAL_SECONDS=2`. Leave unset for anything meant to
   reflect real production behavior.
+- Phase 16: `REMOTE_UI_TOKEN` in `.env` enables the remote-control surface
+  (`/robots/*`, `/webrtc/telepresence/offer`, `/robots/*/speak`) — unset
+  means every one of those 503s. Needed on **both** `reachy-hub` and
+  `companion-core` (companion-core's `/debug/robots/...` proxy needs the
+  same shared value — see `hub_client.py`).
 
 ## Known pre-existing issues (not yet fixed, found during later-phase live testing)
 

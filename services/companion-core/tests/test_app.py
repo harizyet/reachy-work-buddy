@@ -47,6 +47,9 @@ def _fake_embed(texts: list[str]) -> list[list[float]]:
     return vectors
 
 
+_TEST_REMOTE_UI_TOKEN = "test-remote-token"
+
+
 def make_chain(*, registered_robots: Sequence[Robot] = ()) -> TestClient:
     embodiment_app = create_embodiment_app(SimulatedRobotBackend(), run_presence_loop=False)
     registry = InMemoryRobotRegistry()
@@ -56,6 +59,10 @@ def make_chain(*, registered_robots: Sequence[Robot] = ()) -> TestClient:
         session_store=InMemorySessionStore(),
         client_factory=lambda base_url: EmbodimentClient(base_url, transport=httpx.ASGITransport(app=embodiment_app)),
         run_heartbeat_task=False,
+        # Phase 16/ADR 0013: /robots/{id}/... became auth-gated; companion-
+        # core's /debug/robots/... proxy needs the same shared token (see
+        # hub_client.py) to keep reaching them.
+        remote_ui_token=_TEST_REMOTE_UI_TOKEN,
     )
     # Records what would have been sent instead of opening a real SMTP
     # connection — tests assert against this list to prove the approval
@@ -83,6 +90,7 @@ def make_chain(*, registered_robots: Sequence[Robot] = ()) -> TestClient:
         # prove dispatch call dispatch_due_drafts directly with a
         # controlled `now` via client.email_store.
         run_email_dispatch_task=False,
+        hub_bearer_token=_TEST_REMOTE_UI_TOKEN,
     )
     client = TestClient(core_app)
     client.sent_emails = sent_emails

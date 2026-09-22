@@ -28,6 +28,17 @@ Docker's default bridge networking NATs the container's ICE host
 candidates. Untested in this environment (no real browser, no second
 machine); live verification here uses a real (non-browser) aiortc Python
 client, itself a genuine WebRTC peer, not a mock.
+
+Phase 16/ADR 0013 (remote telepresence) adds a second, unrelated
+negotiation path in this same module: `negotiate_telepresence` wires a
+video-only, hub-to-browser `CameraPollTrack` sourced from
+reachy-embodiment's `GET /camera/frame` (polled MJPEG-over-HTTP, wrapped
+into a real WebRTC video track — same "real transport, simulated content"
+precedent as `SilentAudioTrack`/`WavPlaybackTrack` above, since no
+physical camera exists in this environment either). It's a separate
+function/route from `negotiate_call` on purpose: telepresence carries no
+reasoning and no companion-core involvement at all, and sharing one
+endpoint for two purposes would need offer-shape sniffing for no benefit.
 """
 
 from __future__ import annotations
@@ -45,6 +56,7 @@ import av
 import numpy as np
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.mediastreams import AudioFrame, MediaStreamTrack
+from PIL import Image
 
 from shared.models.embodiment import Behaviour
 
@@ -53,6 +65,9 @@ log = logging.getLogger(__name__)
 _FRAME_MS = 20
 _SILENCE_SAMPLE_RATE = 48000
 _SAMPLES_PER_SILENT_FRAME = _SILENCE_SAMPLE_RATE * _FRAME_MS // 1000
+# Camera frames are polled over HTTP, not pushed — 5fps is plenty to prove
+# a live feed (see CameraPollTrack) without hammering reachy-embodiment.
+_CAMERA_FPS = 5
 
 TranscribeFn = Callable[[bytes], str]
 SynthesizeFn = Callable[[str], bytes]
@@ -61,6 +76,9 @@ TriggerBehaviourFn = Callable[[Behaviour], Awaitable[None]]
 # actual InboundMessage/handle_inbound_message call, so this module never
 # needs to import app.py's InboundMessage (would be circular).
 AskAgentFn = Callable[[str], Awaitable[str]]
+# Returns a single JPEG-encoded frame — app.py's closure adapts this to an
+# EmbodimentClient.get_camera_frame() call.
+FrameSourceFn = Callable[[], Awaitable[bytes]]
 
 
 def encode_wav(chunks: list[bytes], *, sample_rate: int, channels: int, sampwidth: int = 2) -> bytes:
@@ -297,6 +315,50 @@ async def negotiate_call(
                     )
 
             asyncio.ensure_future(handle())
+
+    offer = RTCSessionDescription(sdp=offer_sdp, type=offer_type)
+    await pc.setRemoteDescription(offer)
+    answer = await pc.createAnswer()
+    await pc.setLocalDescription(answer)
+
+    return pc.localDescription.sdp, pc.localDescription.type, pc
+
+
+class CameraPollTrack(MediaStreamTrack):
+    """Video track for Phase 16/ADR 0013 telepresence: polls `frame_source`
+    (reachy-embodiment's GET /camera/frame) at _CAMERA_FPS and re-emits each
+    JPEG as a real WebRTC video frame. Not a proper push-driven video
+    stream — the same MJPEG-over-HTTP pattern many real IP cameras use at
+    the transport level — but a genuine `av.VideoFrame` the browser decodes
+    like any other video track."""
+
+    kind = "video"
+
+    def __init__(self, frame_source: FrameSourceFn) -> None:
+        super().__init__()
+        self._frame_source = frame_source
+        self._pts = 0
+
+    async def recv(self) -> av.VideoFrame:
+        await asyncio.sleep(1 / _CAMERA_FPS)
+        jpeg_bytes = await self._frame_source()
+        image = Image.open(io.BytesIO(jpeg_bytes)).convert("RGB")
+        frame = av.VideoFrame.from_image(image)
+        frame.pts = self._pts
+        frame.time_base = Fraction(1, _CAMERA_FPS)
+        self._pts += 1
+        return frame
+
+
+async def negotiate_telepresence(
+    *, offer_sdp: str, offer_type: str, frame_source: FrameSourceFn
+) -> tuple[str, str, RTCPeerConnection]:
+    """Wires a video-only peer connection: reachy-hub only ever sends the
+    robot's camera feed here, the browser has nothing to send back — no
+    audio track, no data channel, no companion-core involvement at all
+    (that's what makes this satisfy "without Companion Core")."""
+    pc = RTCPeerConnection()
+    pc.addTrack(CameraPollTrack(frame_source))
 
     offer = RTCSessionDescription(sdp=offer_sdp, type=offer_type)
     await pc.setRemoteDescription(offer)
