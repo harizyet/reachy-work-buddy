@@ -461,6 +461,86 @@ clearly" requirement).
   (repeatable deployment/launchers) and fold live `RobotBackend`
   verification into that pass's acceptance testing.
 
+**Phase 22 deliverable 3 (repeatable deployment), first piece — ADR 0019
+WSS control connection: connectivity substrate implemented and verified
+live, command routing deliberately deferred.** Owner-scoped decisions for
+this slice: robot credentials are in-memory + `ROBOT_TOKENS` env var (not
+Postgres — avoids one more ad hoc startup-DDL table right before Phase
+23's migration framework), and this pass builds auth/registration/
+generation-fencing/heartbeat/reconnect only, not semantic command routing
+over the new connection (existing HTTP `EmbodimentClient` is completely
+untouched and still how reachy-hub actually drives reachy-embodiment).
+
+- `shared/protocols/robot_ws.py` (route `/robots/connect` + protocol
+  version) and `shared/models/robot_ws.py` (Register/Registered/
+  Heartbeat/HeartbeatAck/Error messages, WS close codes) are the wire
+  contract both sides import — explicitly scoped to connectivity only;
+  command/result/cancellation schemas are a follow-up.
+- Hub side: `robot_credential_store.py` (`InMemoryRobotCredentialStore`,
+  reuses `user_store.py`'s PBKDF2 hash/verify so plaintext tokens are
+  never retained past provisioning; `load_from_env()` parses
+  `ROBOT_TOKENS` as `{robot_id: token}` JSON, fails closed — unset means
+  no robot can authenticate, same pattern as `REMOTE_UI_TOKEN`).
+  `robot_connection_manager.py` (`RobotConnectionManager`, one
+  authoritative connection per `robot_id`, process-local in-memory only
+  per ADR 0019, atomic generation fencing that closes a superseded
+  connection with code 4409). `robot_ws.py` installs the actual
+  `/robots/connect` WebSocket route: rejects before `accept()` on
+  missing/wrong credentials (surfaces as HTTP 403 to a real client, or
+  `WebSocketDisconnect(4401)` under Starlette's TestClient — same
+  behavior, different client-side framing), validates the register
+  payload's `robot_id` matches the authenticated header identity and the
+  protocol version matches, then runs a heartbeat/watchdog loop (2s/5s
+  defaults) where *any* received message counts as liveness, not just
+  explicit acks. Wired into `create_app` via new
+  `robot_credential_store`/`robot_connection_manager` params.
+- Robot side: `robot_ws_client.py`'s `RobotWSClient` connects out,
+  registers, answers hub heartbeats, and reconnects forever (until its
+  `run()` task is cancelled) with exponential backoff+jitter (1s
+  doubling to 30s cap, per ADR 0019). Wired into `reachy_embodiment/app.py`
+  via `HUB_WS_URL`/`ROBOT_ID`/`ROBOT_TOKEN` env vars — unset (the default)
+  means no outbound connection is attempted at all, so every existing
+  dev/simulation workflow is completely unaffected.
+- New deps: `websockets>=13.0` added explicitly to reachy-embodiment
+  (imports it directly; reachy-hub doesn't need a direct declaration
+  since it only uses uvicorn's own server-side WS support, not the
+  client API).
+- **Verified for real, not just unit tests** (34 new tests across both
+  services, all passing, ruff clean, 345/345 full suite): built real
+  Docker images for both services; ran a live `reachy-hub` container
+  against a disposable Postgres and connected a real `websockets` client
+  from the host over the mapped port — full register/heartbeat/ack round
+  trip worked, and a wrong-token attempt was correctly rejected (HTTP
+  403, never reaching `accept()`); built and ran a real `reachy-embodiment`
+  container pointed at the hub container over actual Docker networking
+  (`HUB_WS_URL=ws://reachy-hub-phase22-test:8000`) — hub logs showed a
+  real accepted connection from the embodiment container's real IP,
+  stable with no reconnect loop; **stopped the hub container and watched
+  the embodiment container detect the loss and retry with backoff for
+  real** (`[Errno -3] Temporary failure in name resolution` while the hub
+  was down, no crash, no tight loop); **started a fresh hub container and
+  watched the embodiment container reconnect automatically** within its
+  backoff schedule, no manual intervention. All disposable containers/
+  images/network removed afterward.
+- **What was NOT verified:** real TLS/Caddy in front of the WS route (the
+  live test used a direct port mapping, not the documented HTTPS/WSS
+  production path); real network changes/half-open connections (ADR
+  0019's "physical LAN/Wi-Fi changes" acceptance row); multiple hub
+  workers (explicitly out of scope — ADR 0019 requires one worker until
+  connection routing across workers is designed); credential rotation/
+  revocation exercised live (the store supports `revoke()`, not
+  exercised end-to-end here); and obviously anything against the actual
+  Jetson Nano or real Reachy Mini hardware — this was homelab-machine-only,
+  two generic containers standing in for hub and robot.
+- **Explicitly not done, by design, this pass:** semantic command routing
+  over the WS connection (`play_behaviour`/`capture_frame`/`play_audio`
+  still only ever go over HTTP via `EmbodimentClient`), the separate
+  outbound HTTPS media transfer path ADR 0019 also calls for, token
+  provisioning/rotation tooling beyond the env-var loader, and the Bash
+  launchers (`start-homelab.sh`/`start-reachy.sh`/`start-jetson.sh`/
+  `check-platform.sh`) that would actually establish this connection on
+  real hardware. All still open deliverable-3 work.
+
 **Cross-session coordination note:** this Phase 22 work happened live
 across two Claude Code sessions (homelab + Nano) via `SendMessage`/cross-session
 messaging, not a single session doing everything. If you're continuing

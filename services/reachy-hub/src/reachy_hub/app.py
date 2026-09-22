@@ -159,7 +159,13 @@ from reachy_hub.postgres_registry import PostgresRobotRegistry
 from reachy_hub.postgres_session_store import PostgresSessionStore
 from reachy_hub.postgres_telegram_chat_registry import PostgresTelegramChatRegistry
 from reachy_hub.response_policy import apply_privacy_override, resolve_delivery_channel
+from reachy_hub.robot_connection_manager import RobotConnectionManager
+from reachy_hub.robot_credential_store import RobotCredentialStore
+from reachy_hub.robot_credential_store import (
+    load_from_env as load_robot_tokens_from_env,
+)
 from reachy_hub.robot_registry import Robot, RobotRegistry
+from reachy_hub.robot_ws import install_robot_ws_routes
 from reachy_hub.session_store import SessionStore
 from reachy_hub.stt import FasterWhisperSTT, SpeechToText
 from reachy_hub.telegram_chat_registry import TelegramChatRegistry
@@ -294,6 +300,10 @@ def create_app(
     admin_username: str | None = None,
     admin_password: str | None = None,
     session_cookie_secure: bool | None = None,
+    robot_credential_store: RobotCredentialStore | None = None,
+    robot_connection_manager: RobotConnectionManager | None = None,
+    robot_ws_heartbeat_interval: float = 2.0,
+    robot_ws_watchdog_timeout: float = 5.0,
 ) -> FastAPI:
     # Phase 16/ADR 0013: fail closed. Unset means the whole remote-control
     # surface below 503s rather than silently allowing unauthenticated
@@ -510,6 +520,25 @@ def create_app(
     install_operator_routes(app, require_remote_auth, companion_core_client, get_client,
                             login_enabled=bool(session_secret_key), telegram_enabled=telegram_enabled,
                             default_user_id=telegram_default_user_id)
+
+    # ADR 0019 (Phase 22): robot-initiated WSS control connection.
+    # robot_connection_manager is always process-local in-memory (never
+    # restored across restarts, ADR 0019) — no env/Postgres wiring makes
+    # sense for it, unlike every other app.state.* store above.
+    # robot_credential_store defaults to ROBOT_TOKENS (see
+    # robot_credential_store.py); unset means no robot can authenticate,
+    # same fail-closed default as REMOTE_UI_TOKEN above.
+    robot_credential_store = robot_credential_store or load_robot_tokens_from_env()
+    robot_connection_manager = robot_connection_manager or RobotConnectionManager()
+    app.state.robot_credential_store = robot_credential_store
+    app.state.robot_connection_manager = robot_connection_manager
+    install_robot_ws_routes(
+        app,
+        robot_credential_store,
+        robot_connection_manager,
+        heartbeat_interval=robot_ws_heartbeat_interval,
+        watchdog_timeout=robot_ws_watchdog_timeout,
+    )
     app.state.webrtc_connections = set()
     if not owns_registry:
         app.state.registry = registry

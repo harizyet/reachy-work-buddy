@@ -17,6 +17,8 @@ start/end, driving the long-unused EmbodimentState.REMOTE.
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -33,9 +35,12 @@ from reachy_embodiment.robot import (
     RobotBackend,
     SimulatedRobotBackend,
 )
+from reachy_embodiment.robot_ws_client import RobotWSClient
 from reachy_embodiment.state import ServiceState
 from shared.models.embodiment import Behaviour, EmbodimentState
 from shared.protocols import embodiment_api as routes
+
+log = logging.getLogger(__name__)
 
 
 def _default_backend() -> RobotBackend:
@@ -54,6 +59,21 @@ def _default_backend() -> RobotBackend:
         daemon_url = os.environ.get("REACHY_DAEMON_URL", "http://127.0.0.1:8000")
         return ReachyDaemonBackend(daemon_url)
     raise ValueError(f"unknown ROBOT_BACKEND {kind!r}; expected 'simulated' or 'reachy_daemon'")
+
+
+def _default_robot_ws_client(backend: RobotBackend) -> RobotWSClient | None:
+    """Builds the ADR 0019 WS client from `HUB_WS_URL`/`ROBOT_ID`/
+    `ROBOT_TOKEN`. Returns None (no outbound connection attempted) unless
+    all three are set — this is additive to the HTTP dev/simulation
+    workflow, not a requirement for it; a dev instance with none of these
+    set behaves exactly as every prior phase did.
+    """
+    hub_ws_url = os.environ.get("HUB_WS_URL")
+    robot_id = os.environ.get("ROBOT_ID")
+    robot_token = os.environ.get("ROBOT_TOKEN")
+    if not (hub_ws_url and robot_id and robot_token):
+        return None
+    return RobotWSClient(hub_ws_url, robot_id, robot_token, sim=backend.sim)
 
 
 class BehaviourBody(BaseModel):
@@ -75,25 +95,45 @@ class RemoteBody(BaseModel):
     active: bool
 
 
-def create_app(backend: RobotBackend | None = None, *, run_presence_loop: bool = True) -> FastAPI:
+def create_app(
+    backend: RobotBackend | None = None,
+    *,
+    run_presence_loop: bool = True,
+    robot_ws_client: RobotWSClient | None = None,
+    run_robot_ws_client: bool = True,
+) -> FastAPI:
     backend = backend or _default_backend()
     state = ServiceState(connected=backend.connected, sim=backend.sim)
     presence_loop = PresenceLoop(backend, state)
+    if robot_ws_client is None and run_robot_ws_client:
+        robot_ws_client = _default_robot_ws_client(backend)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         if run_presence_loop:
             presence_loop.start()
+        ws_task: asyncio.Task[None] | None = None
+        if robot_ws_client is not None and run_robot_ws_client:
+            ws_task = asyncio.create_task(robot_ws_client.run())
         try:
             yield
         finally:
             if run_presence_loop:
                 presence_loop.stop()
+            if ws_task is not None:
+                ws_task.cancel()
+                try:
+                    await ws_task
+                except asyncio.CancelledError:
+                    pass
+                except Exception:
+                    log.exception("robot WS client task raised during shutdown")
 
     app = FastAPI(title="reachy-embodiment", lifespan=lifespan)
     app.state.backend = backend
     app.state.service_state = state
     app.state.presence_loop = presence_loop
+    app.state.robot_ws_client = robot_ws_client
 
     @app.get(routes.HEALTH)
     def health() -> dict[str, str]:

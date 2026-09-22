@@ -51,6 +51,14 @@ dependencies = [
     # to talk to each other (root pyproject.toml's dev group, their own
     # pyproject.tomls) — no new pattern introduced.
     "httpx>=0.27",
+    # Phase 22: RobotWSClient's outbound connection to reachy-hub per ADR
+    # 0019. uvicorn[standard] already pulls this in transitively (for its
+    # own server-side WS support), but this service's own code imports it
+    # directly (`import websockets`) — declared explicitly per this
+    # repo's established rule (see the silero-vad/onnxruntime comment
+    # above): never rely on a package being present only because
+    # something else happens to pull it in transitively.
+    "websockets>=13.0",
     # Phase 22: ReachyDaemonBackend.capture_frame() reads one frame directly
     # from /dev/video0 via V4L2 while the daemon has released media control
     # (POST /media/release) — the daemon itself exposes no REST single-frame
