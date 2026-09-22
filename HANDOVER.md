@@ -536,10 +536,94 @@ untouched and still how reachy-hub actually drives reachy-embodiment).
   over the WS connection (`play_behaviour`/`capture_frame`/`play_audio`
   still only ever go over HTTP via `EmbodimentClient`), the separate
   outbound HTTPS media transfer path ADR 0019 also calls for, token
-  provisioning/rotation tooling beyond the env-var loader, and the Bash
-  launchers (`start-homelab.sh`/`start-reachy.sh`/`start-jetson.sh`/
-  `check-platform.sh`) that would actually establish this connection on
-  real hardware. All still open deliverable-3 work.
+  provisioning/rotation tooling beyond the env-var loader. The Bash
+  launchers below now exist.
+
+**Phase 22 deliverable 3, second piece — Bash launchers, done and mostly
+live-verified.** `scripts/lib/common.sh` (shared `--env-file`/`--no-browser`/
+`--check`/`--help` parsing, logging, bounded HTTP waits, browser-open-or-
+print, secret-redaction helper) plus `scripts/start-homelab.sh`,
+`scripts/start-reachy.sh`, `scripts/start-jetson.sh`,
+`scripts/check-platform.sh`, matching docs/phase-22-23.md's launcher
+contract table.
+
+- `deploy/homelab/docker-compose.yml`: `reachy-embodiment` and `mailpit`
+  are now gated behind a `simulation` Compose profile — a bare `docker
+  compose up` (what `start-homelab.sh` runs by default) no longer starts
+  either; `--simulation` (`--profile simulation`) does. `SMTP_HOST`/
+  `SMTP_PORT`/`SMTP_FROM` and a new `ROBOT_TOKENS` passthrough are now
+  `.env`-overridable for production. Verified live: `docker compose
+  config --services` resolves to exactly the right 4 vs. 6 services in
+  each mode; a real production-mode `up` (no simulation) started
+  Postgres/hub/core/Caddy and served `/hub/health` through Caddy with
+  no reachy-embodiment/mailpit containers created.
+- `start-homelab.sh`: validates config, starts the stack (with `--build`/
+  `--simulation` as needed), waits for hub health, reports whether
+  `ROBOT_TOKENS` is configured, opens/prints the GUI. **Found and fixed a
+  real bug by actually running it**: the shared arg parser originally
+  used `readarray -t REMAINING < <(parse_common_args "$@")`, which runs
+  the function in a process-substitution subshell — every
+  `COMMON_ENV_FILE`/`COMMON_NO_BROWSER`/`COMMON_CHECK_ONLY` assignment
+  inside it was silently discarded once the subshell exited, so
+  `--check` did nothing and the very first live test of this script
+  actually built and started the whole stack instead of validating and
+  exiting. Fixed by having `parse_common_args` populate a global array
+  (`COMMON_REMAINING_ARGS`) via a plain function call instead of stdout
+  + subshell. Re-verified after the fix: `--check` now genuinely starts
+  nothing; a real start (production mode) came up correctly; running it
+  a second time created zero duplicate containers (`docker compose up
+  -d`'s own idempotency); `--simulation` correctly added
+  `reachy-embodiment`/`mailpit` (6 services vs. 4). All test
+  containers/images/volumes removed after.
+- `start-reachy.sh`: checks `reachy-mini-daemon` (systemd) is active and
+  reports real hardware (`simulation_enabled`/`mockup_sim_enabled` both
+  false) before doing anything else — refuses to proceed against a
+  simulated daemon. Runs `reachy-embodiment` as a Docker container with
+  the exact device/group-passthrough shape verified live on the Nano
+  during this session (`--device`/`--group-add` by GID,
+  `host.docker.internal` for reaching the host-run daemon), idempotent
+  (won't duplicate an already-running container). **Honest limitation,
+  documented in the script's own header and in
+  `deploy/reachy/.env.example`**: command routing over the new WSS
+  connection isn't built yet, so this script *also* still registers the
+  robot's HTTP `base_url` with the hub the old way
+  (`ROBOT_HTTP_BASE_URL`) — real behaviour/camera/audio commands
+  currently need that, contradicting ADR 0019's "no inbound robot ports"
+  end goal until command routing actually moves onto WS. Verified
+  live on this homelab machine: `--help` output, and graceful/clear
+  failure at each expected step (missing env file, daemon not
+  installed) — could not be verified end-to-end against a real daemon
+  from here (no Reachy hardware on this machine).
+- `start-jetson.sh`: Nano-specific sanity checks (device-tree model,
+  `/etc/nv_tegra_release`, hub reachability — all non-fatal/informational)
+  then delegates to `start-reachy.sh` via `exec`, per the topology
+  decision that the Nano is this deployment's embodiment host. Verified
+  live (on this non-Nano machine, so the model check correctly warned):
+  `--help`, and delegation actually happening and failing at the same
+  step `start-reachy.sh` would on its own.
+- `check-platform.sh`: non-destructive report covering host info, Docker
+  toolchain, homelab role (compose config validity, redacted env status),
+  and embodiment-host role (daemon status, device/group presence,
+  container health) — whichever sections apply to the host it's run on.
+  `--test-hardware` requires interactive confirmation (or `--yes`) before
+  triggering one bounded `wake_up` move; never attempted in this session
+  (no owner present, no real daemon here). Verified live on this
+  homelab machine: correctly detected the homelab role, correctly
+  reported all secrets as redacted ("set"/"unset" only, never values).
+- **Also found and fixed while building this:** the root `.gitignore`'s
+  `.env.*` pattern was silently swallowing any *new* `.env.example` file
+  outside `deploy/homelab/` (whose copy only stayed tracked because it
+  predated that gitignore rule) — `deploy/reachy/.env.example` (added
+  this session) never showed up in `git status` until this was caught
+  and fixed with a `!.env.example`/`!**/.env.example` negation. Worth
+  checking for this pattern again if a future `.env.example` in some
+  other new directory mysteriously doesn't show as untracked.
+- **Not yet verified:** `start-reachy.sh`/`start-jetson.sh`/
+  `check-platform.sh --test-hardware` against real Nano/daemon hardware
+  end-to-end (this session verified the WSS layer against real Docker
+  containers standing in for hub/robot, but not through these specific
+  launcher scripts on the actual Nano); `shellcheck`/`bash -n` both pass
+  clean on all four scripts + the shared lib.
 
 **Cross-session coordination note:** this Phase 22 work happened live
 across two Claude Code sessions (homelab + Nano) via `SendMessage`/cross-session

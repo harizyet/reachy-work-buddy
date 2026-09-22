@@ -3,6 +3,15 @@ __pycache__/
 .venv/
 .env
 .env.*
+# .env.* above is meant to catch real secret files (.env.local,
+# .env.production, etc.) — not committed template/example files. Without
+# this negation, `.env.*` silently swallows any NEW `.env.example` added
+# in a directory other than deploy/homelab (whose copy predates this
+# gitignore rule and so stayed tracked by accident, not by working as
+# intended). Found live: deploy/reachy/.env.example was silently untracked
+# during Phase 22 until this was added — `git status` never mentioned it.
+!.env.example
+!**/.env.example
 *.egg-info/
 .pytest_cache/
 .ruff_cache/

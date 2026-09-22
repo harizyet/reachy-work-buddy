@@ -39,18 +39,31 @@ services:
     # path can be verified for real without needing a real mailbox or
     # personal credentials. Exposed on 8025 for the UI; SMTP stays
     # internal-only (companion-core talks to it as "mailpit:1025").
+    #
+    # Phase 22: gated behind the "simulation" profile — a production
+    # deployment must point companion-core's SMTP_HOST/PORT at a real
+    # relay (see .env.example), not this fake mailbox. `docker compose
+    # --profile simulation up` (what scripts/start-homelab.sh's
+    # `--simulation` flag passes) includes it; a bare `up` does not.
     image: axllent/mailpit:latest
     restart: unless-stopped
+    profiles: ["simulation"]
     ports:
       - "8025:8025"
     expose:
       - "1025"
 
   reachy-embodiment:
+    # Phase 22: gated behind the "simulation" profile, matching the
+    # module docstring above this file — production reachy-embodiment
+    # runs on the Reachy Mini/Jetson itself (deploy/reachy/), started by
+    # scripts/start-reachy.sh, not in this stack. A bare `docker compose
+    # up` no longer starts this service; `--profile simulation` does.
     build:
       context: ../..
       dockerfile: services/reachy-embodiment/Dockerfile
     restart: unless-stopped
+    profiles: ["simulation"]
     expose:
       - "8000"
 
@@ -78,6 +91,13 @@ services:
       # telepresence. companion-core needs the same value (below) since its
       # /debug/robots/... proxy calls these same gated routes internally.
       REMOTE_UI_TOKEN: ${REMOTE_UI_TOKEN:-}
+      # Phase 22/ADR 0019: unset means no robot can authenticate the WSS
+      # control connection (fails closed, same pattern as REMOTE_UI_TOKEN
+      # above) — required for a real robot to connect in production, not
+      # needed for `--simulation` (reachy-embodiment's HTTP path doesn't
+      # use this at all). See scripts/start-reachy.sh/start-jetson.sh and
+      # services/reachy-hub/src/reachy_hub/robot_credential_store.py.
+      ROBOT_TOKENS: ${ROBOT_TOKENS:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -102,11 +122,15 @@ services:
       # (a single-tenant homelab has no reason to run two database
       # containers).
       DATABASE_URL: postgresql://${POSTGRES_USER:-reachy}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-reachy_hub}
-      # Phase 14: real SMTP send, to the local Mailpit container above —
-      # not a real mailbox. No SMTP_FROM override; email/sender.py's
-      # default is fine here.
-      SMTP_HOST: mailpit
-      SMTP_PORT: "1025"
+      # Phase 14: defaults to the local Mailpit container above — not a
+      # real mailbox, only started with `--profile simulation`. Phase 22:
+      # a production deployment must override SMTP_HOST/PORT/FROM in
+      # .env to point at a real relay; sender.py has no SMTP auth support
+      # yet (Phase 23's SecretStore work), so this only works with an
+      # unauthenticated relay/smarthost for now — see .env.example.
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_FROM: ${SMTP_FROM:-}
       # ADR 0011: real production default is 10 minutes (unset both). For
       # local/dev testing, override in .env — e.g.
       # EMAIL_SEND_DELAY_SECONDS=10 EMAIL_DISPATCH_INTERVAL_SECONDS=2 — to
@@ -124,8 +148,13 @@ services:
         condition: service_healthy
       reachy-hub:
         condition: service_started
-      mailpit:
-        condition: service_started
+      # No mailpit dependency here (Phase 22): it's now `--simulation`-only
+      # (see its own profile comment above), so a production `up` without
+      # that flag doesn't include it at all — Compose refuses to start a
+      # service that depends_on one gated out by profile. SMTP is only
+      # touched when an email actually sends, not at companion-core
+      # startup, so this doesn't need a startup-order guarantee anyway —
+      # same reasoning as the reachy-hub/companion-core comment below.
     expose:
       - "8000"
 
