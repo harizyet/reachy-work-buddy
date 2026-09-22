@@ -3,6 +3,16 @@
 - Status: Accepted
 - Date: 2026-09-22
 
+## Phase 19 amendment
+
+[ADR 0016](0016-operator-ui.md) extends the authentication decision below:
+browser telepresence now uses the owner login/session cookie and removes
+the pasted-token/localStorage flow. API bearer authentication remains
+supported. A protected route returns 503 only when neither supported
+mechanism is configured; missing credentials otherwise return 401. The
+camera transport, embodiment boundary, and speak-through-robot decisions
+below remain in force. The following records the original Phase 16 design.
+
 ## Context
 
 docs/plan.md's Phase 16 row: "Camera/status/manual behaviours/

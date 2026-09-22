@@ -361,8 +361,8 @@ Phases 0-19 are done:
 
 - Phase 16 (remote telepresence, ADR 0013): reachy-hub's first real
   authentication — a shared bearer token (`REMOTE_UI_TOKEN`), fail-closed
-  (an unset token 503s the whole remote-control surface rather than
-  allowing unauthenticated access), gating `/robots/{id}/state`,
+  (at Phase 16, an unset token returned 503 on the remote-control surface
+  rather than allowing unauthenticated access), gating `/robots/{id}/state`,
   `/behaviours`, `/behaviour/{name}` (ungated since Phase 4) plus two new
   routes. `POST /robots/{id}/speak` synthesizes text with the same local
   `tts.py` `/voice/turn` uses and plays it through the robot via a new
@@ -398,7 +398,8 @@ Phases 0-19 are done:
   [docs/adr/0013](docs/adr/0013-remote-telepresence.md) for the full design
   and its known limitations (no TLS termination at Caddy, the telepresence
   page shell itself is still served unauthenticated by `StaticFiles` even
-  though every API call it makes requires the token).
+  though its protected API calls required the token at Phase 16; Phase 19
+  adds owner-cookie access and replaces the browser token field).
 
 - Docker build speed (cross-cutting, ahead of Phase 17, not itself a
   phase — same treatment ADR 0011 got): there was no root `.dockerignore`
@@ -569,6 +570,15 @@ REACHY_HUB_URL=http://localhost:8002 \
 
 Each service's own README (e.g. [services/reachy-hub](services/reachy-hub/README.md))
 has example `curl` calls once it's running.
+
+### Operator dashboard
+
+After configuring the owner and starting the stack, open `/hub/ui/` through
+Caddy for component status, LLM settings/usage, and session mode/DND.
+See [deployment setup](deploy/homelab/README.md#operator-dashboard-phase-19)
+for `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `SESSION_SECRET_KEY`, and the OVMS
+host-networking override. The Phase 19 verification stack was temporary;
+its test credentials are not a permanent deployment login.
 
 ### Run the whole stack (recommended)
 

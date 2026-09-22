@@ -29,10 +29,11 @@ phase's functionality "while you're in there."
 ## Repo layout
 
 ```
-services/companion-core/     reasoning/tools/memory — FastAPI, uv workspace member
-services/reachy-hub/         robot registry + proxy to reachy-embodiment — FastAPI, uv workspace member
+services/companion-core/     reasoning/tools/memory + LLM config/inference/usage — FastAPI, uv workspace member
+services/reachy-hub/         sessions/channels/auth/operator UI + robot proxy — FastAPI, uv workspace member
 services/reachy-embodiment/  semantic behaviour API + presence loop — FastAPI, uv workspace member
-clients/web-pwa/             web/PWA client (unimplemented)
+clients/web-pwa/             Call Reachy + telepresence WebRTC PWA
+clients/operator-ui/         owner dashboard — static HTML/JS/CSS, served by reachy-hub
 shared/models/               Pydantic data contracts shared across services (AgentSession, AgentResponse, MemoryRecord, EmbodimentCommand)
 shared/protocols/            HTTP route constants shared across services (import these, don't hardcode path strings)
 deploy/homelab/              Docker Compose: companion-core, reachy-hub, postgres, caddy
@@ -131,6 +132,51 @@ automatically — no `DOCKER_BUILDKIT=1` or other flag needed.
   re-running the suite if you see confusing collection errors —
   `find . -path ./.venv -prune -o -name __pycache__ -type d -print -exec rm -rf {} +`.
 
+## Operator UI and inference conventions (Phase 19)
+
+Binding details are in [ADR 0016](docs/adr/0016-operator-ui.md). Phase 19 is
+complete; web chat (Phase 20) and hybrid inference routing (Phase 21) remain
+separate work. Preserve these boundaries when extending the implementation:
+
+- Hub owns login, browser assets, component monitoring, and authenticated
+  proxies. Core owns provider settings, inference, and usage stores.
+  Import LLM contracts from `shared/models/llm.py` and route constants from
+  `shared/protocols/operator_api.py`; never import core runtime code into hub.
+- Both `/ui/` on the direct hub and `/hub/ui/` through Caddy must work.
+  Keep frontend API paths relative to the mount. Include static assets in
+  the hub Docker image and check desktop/mobile layouts in a real browser.
+- Browser access uses the owner session cookie; API bearer access must
+  continue working. Extend `require_remote_auth` for new operator routes.
+  Cookie mutations and login/logout require `X-Reachy-CSRF: 1`. Do not
+  reintroduce credentials in localStorage or expose core's settings/usage
+  through Caddy's `/core/` debug proxy.
+- Bootstrap creates the owner only when the users table is empty. Changing
+  `ADMIN_PASSWORD` later does not reset it. Keep `SESSION_SECRET_KEY` stable
+  across restarts; set `SESSION_COOKIE_SECURE=true` for HTTPS deployments.
+- Phase 19 supports only `local` with `routing.mode=local_only`;
+  `cloud` is reserved and must remain null until Phase 21. The local slot
+  may target any compatible endpoint; provider vendor does not define role.
+- Partial settings updates preserve omitted fields. Explicit `api_key: null`
+  removes a key; `local: null` disables inference. Responses mask credentials;
+  validation errors and usage logs must not echo keys or raw provider errors.
+  Keys are plaintext in Postgres, as explicitly documented in ADR 0016.
+- Only the generic conversation branch calls the model. Keep deterministic
+  intent/consent handlers authoritative, same-session turns serialized, and
+  private-context labels preserved in generated follow-ups. Transcript
+  context remains in memory, separate from durable work memory.
+- Utilization is actual attempted calls, tokens, errors, and latency, not
+  GPU load or inferred costs. Missing token counts remain null. Telegram's
+  current status is configuration only, not a poll-health assertion.
+
+When adding core stores, update every test factory: core's `make_chain`
+and bare-app factory, plus hub's `test_app.py`, `test_telegram.py`,
+`test_voice.py`, `test_webrtc_call_live.py`, and `test_operator.py` factories.
+Explicitly inject `InMemoryLLMSettingsStore` and `InMemoryLLMUsageStore`;
+production defaults connect to Postgres during lifespan. Owner-auth tests
+should inject a seeded `InMemoryUserStore` with a test signing key; bearer
+route tests should use a fixed test token. See `test_llm.py` and
+`test_operator.py` for success, failure, masking, and authentication coverage.
+
 ## uv dependency conventions
 
 - Pinning a package to a non-default index via `[tool.uv.sources]` +
@@ -205,6 +251,25 @@ automatically — no `DOCKER_BUILDKIT=1` or other flag needed.
   above); without it these Dockerfiles fail outright, they don't silently
   degrade to slow-but-working.
 
+### Isolated live verification and schema changes
+
+Use a separate Compose project (`-p <test-project>`) and temporary
+credentials for integration checks. Inspect existing containers first,
+wait for `/hub/health` after startup, and remove only that test project's
+containers and disposable volumes afterward. Never use `down -v` against
+an existing user deployment as routine cleanup. Leave unrelated services
+(such as the local `ovms` inference container) running.
+
+Phase 19 adds new tables (`users`, `llm_config`, `llm_usage_log`), so an
+up-to-date Phase 18 volume needs no reset. `CREATE TABLE IF NOT EXISTS`
+does not add columns to older tables: older-version upgrades need explicit
+schema changes that preserve existing data, not automatic volume deletion.
+
+For OVMS, discover the model with `GET /v1/models`; do not guess its name.
+A container's `localhost` is not the host. Use the documented host-gateway
+override or a reachable LAN URL. Exercise a real completion and inspect
+usage; an HTTP stub verifies only the protocol, not real model inference.
+
 ## Verifying claims
 
 Tests passing is necessary but was repeatedly not sufficient during this
@@ -238,7 +303,7 @@ actually uses the token.
 
 Follow the general engineering conventions already established: no
 premature abstraction, no speculative endpoints for future phases (see
-`reachy-embodiment`'s deliberately-unimplemented `/gaze`, `/pose`,
-`/audio/play`), comments explain *why* (a constraint, a bug that was fixed,
-a non-obvious ordering requirement), not *what*. `ruff check` must pass
+`reachy-embodiment`'s deliberately-unimplemented `/gaze` and `/pose`;
+`/audio/play` was implemented in Phase 16). Comments explain *why* (a
+constraint, a bug that was fixed, a non-obvious ordering requirement), not *what*. `ruff check` must pass
 clean before considering a change finished.

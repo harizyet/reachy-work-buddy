@@ -42,8 +42,9 @@ input values. Telepresence now uses the owner cookie and removes the old
 localStorage token.
 
 `require_remote_auth` accepts either the existing `REMOTE_UI_TOKEN` bearer
-or an owner session. No configured mechanism returns 503; missing or
-invalid credentials return 401 once configured. Mode/DND/privacy-context
+or an owner session. When neither mechanism is configured, protected
+routes return 503; missing or invalid credentials return 401 once
+configured. Mode/DND/privacy-context
 mutations, status, settings, and usage are gated. Existing conversational
 channels retain their previous access contract. This is not a wholesale
 auth retrofit of historical APIs.
@@ -120,3 +121,17 @@ notifications use their existing per-user endpoints, not new copies in
 - Real deployment verification used Chromium, Caddy, Postgres, and the
   existing OVMS `OpenVINO/Qwen2.5-1.5B-Instruct-int4-ov` model. A hosted
   paid provider was not needed for this phase's local-inference criterion.
+
+## Implementation references
+
+- [Agent conventions](../../AGENTS.md#operator-ui-and-inference-conventions-phase-19)
+- [Dashboard workflow](../../clients/operator-ui/README.md)
+- [Hub API and owner authentication](../../services/reachy-hub/README.md#operator-ui-phase-19)
+- [Core inference and settings](../../services/companion-core/README.md)
+- [Deployment and OVMS networking](../../deploy/homelab/README.md#operator-dashboard-phase-19)
+- [Current verification snapshot and next phase](../../HANDOVER.md)
+
+This ADR extends [ADR 0013](0013-remote-telepresence.md)'s browser auth
+while preserving bearer access. Phase 19's verification used an isolated
+Compose project; it did not install permanent owner credentials or leave
+the companion stack running. See deployment setup to start it for use.

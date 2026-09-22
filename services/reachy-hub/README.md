@@ -5,7 +5,7 @@ routing, authentication, robot registry.
 
 Must not own: reasoning policy internals, raw motor control (see [docs/adr/0001](../../docs/adr/0001-service-boundaries.md)).
 
-## Status (Phase 15)
+## Status (through Phase 19)
 
 **Robot registry / proxy (Phase 4)**: `POST /robots`, `GET /robots`,
 `GET /robots/{robot_id}/state`, `GET /robots/{robot_id}/behaviours`,
@@ -297,7 +297,6 @@ uv run --group dev pytest services/reachy-hub/tests -m "not slow"   # fast loop
 uv run --group dev pytest services/reachy-hub/tests -m slow         # real STT/TTS
 ```
 
-
 ## Operator UI (Phase 19)
 
 The owner dashboard is at `/ui/` (Caddy: `/hub/ui/`). Configure
@@ -313,3 +312,29 @@ Session mode/DND/privacy-context PATCH routes now require authentication,
 as do `/status`, `/settings/llm`, and `/llm/usage`. `/status` reports
 component probes and Telegram configuration; audit/notifications retain
 their separate per-user routes. Telepresence shares the login cookie.
+
+Operator API paths below are relative to hub (prefix `/hub` through Caddy):
+
+| Method / path | Access and behavior |
+|---|---|
+| `POST /auth/login` | Username/password JSON plus `X-Reachy-CSRF: 1`; sets owner cookie |
+| `POST /auth/logout` | CSRF header; clears the browser cookie |
+| `GET /auth/me` | Owner cookie; bearer-only access does not create a browser login |
+| `GET /status` | Owner cookie or bearer; core/robot probes, LLM configuration/usage, Telegram configured flag |
+| `GET`, `PUT /settings/llm` | Authenticated proxy to core; partial PUT, masked replies |
+| `GET /llm/usage` | Authenticated proxy; `limit=1..500`, `since_hours=1..8760` (defaults 50/24) |
+| `PATCH /sessions/{user_id}/mode`, `/dnd`, `/privacy-context` | Cookie plus CSRF, or bearer; requires an existing session |
+
+`operator.py` registers the operator routes; `user_store.py` provides
+in-memory and Postgres owner stores. Shared route constants are in
+`shared/protocols/operator_api.py`. A missing auth mechanism returns 503
+on protected routes; once configured, missing/invalid credentials return
+401. Missing CSRF headers on cookie mutations return 403. A configured
+bearer remains sufficient for existing machine clients.
+
+Core conversation calls allow 70 seconds for the provider's 60-second
+HTTP timeout. Health/monitoring requests retain the shorter client timeout.
+The dashboard polls every 10 seconds; failed probes are reported as
+unavailable without hiding successful components. It is not a database or
+GPU telemetry dashboard. See [ADR 0016](../../docs/adr/0016-operator-ui.md)
+for trust boundaries and signed-cookie limitations.

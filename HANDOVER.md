@@ -1,6 +1,6 @@
 # HANDOVER.md
 
-Living document. A new Claude Code session starts with **zero memory** of
+Living document. A new coding-agent session starts with **zero memory** of
 prior sessions — this file is how it picks up where the last one left off.
 Read this before doing anything else, then update it before you finish
 your session (new phases done, new gotchas found, what's next).
@@ -83,7 +83,8 @@ reset**. Do not destroy user data to add these tables. Earlier phases'
 missing-column caveats remain relevant to older volumes.
 
 **Also planned (not started): Phase 20 — Web Chat Channel and Phase 21 —
-Hybrid Local/Cloud LLM Routing**, both recorded in docs/plan.md's roadmap; Phase 19's prerequisites are now implemented. Full plans:
+Hybrid Local/Cloud LLM Routing**, both recorded in docs/plan.md's roadmap;
+Phase 19's prerequisites are now implemented. Full plans:
 `~/.claude/plans/phase-20-web-chat-channel.md` and
 `~/.claude/plans/phase-21-hybrid-llm-routing.md` (on the machine that
 planned them — docs/plan.md's Phase 20/21 rows plus this summary are
@@ -113,8 +114,9 @@ existing discipline of honest, non-speculative classifiers
 `sessions`, an `action` column to `audit_log`, and a whole new
 `notification_queue` table. `CREATE TABLE IF NOT EXISTS` does not retrofit
 columns onto an already-running dev Postgres volume — a session continuing
-against a pre-Phase-17 volume needs `docker compose down -v` before the new
-columns/table exist. Confirmed clean in this sandbox because the volume
+against a pre-Phase-17 volume needs explicit schema changes for those
+columns. Preserve deployment data; recreate volumes only for disposable
+test stacks. Confirmed clean in this sandbox because the volume
 used for live verification was already down-and-recreated from a prior
 session's `.env`; if a future session hits a column-does-not-exist error
 from `postgres_session_store.py`/`postgres_audit_log.py`, this is why.
@@ -178,17 +180,18 @@ an ADR and a mention in the relevant phase's README "Status" entry.
 
 ## Environment setup gotchas (this sandbox specifically)
 
-- `docker compose` (v2 plugin) is not preinstalled here. Install without
-  root:
+- `docker compose` and `docker buildx` were present during Phase 19
+  verification. Check their versions first in a new session. If Compose is
+  missing, install without root:
   ```
   mkdir -p ~/.docker/cli-plugins
   curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-$(uname -m)" \
     -o ~/.docker/cli-plugins/docker-compose
   chmod +x ~/.docker/cli-plugins/docker-compose
   ```
-- `docker buildx` is *also* not preinstalled here, separately from
-  compose above — discovered while optimizing build speed (see AGENTS.md's
-  Dev setup section for the install command). Every `Dockerfile` now
+- `docker buildx` was missing in an earlier sandbox, separately from
+  Compose — see AGENTS.md's Dev setup section for the install command if
+  the version check fails. Every `Dockerfile` now
   starts with `# syntax=docker/dockerfile:1` and uses
   `RUN --mount=type=cache,...`, both BuildKit-only — without `buildx`,
   `docker build`/`docker compose build` fall back to the legacy builder
@@ -216,11 +219,16 @@ an ADR and a mention in the relevant phase's README "Status" entry.
   ~10-minute default), set in `.env`: `EMAIL_SEND_DELAY_SECONDS=10` and
   `EMAIL_DISPATCH_INTERVAL_SECONDS=2`. Leave unset for anything meant to
   reflect real production behavior.
-- Phase 16: `REMOTE_UI_TOKEN` in `.env` enables the remote-control surface
-  (`/robots/*`, `/webrtc/telepresence/offer`, `/robots/*/speak`) — unset
-  means every one of those 503s. Needed on **both** `reachy-hub` and
-  `companion-core` (companion-core's `/debug/robots/...` proxy needs the
-  same shared value — see `hub_client.py`).
+- Phase 19: set `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and
+  `SESSION_SECRET_KEY` for browser login. Existing bearer clients still use
+  `REMOTE_UI_TOKEN`; the protected remote-control routes return 503 only
+  when neither bearer nor owner-session access is configured. Core's
+  `/debug/robots/...` proxy still needs the shared bearer token in both
+  services because it does not use a browser cookie.
+- The Phase 19 temporary stack and credentials were removed after testing.
+  Only the existing `ovms` container remained running. The user's deployment
+  `.env` and volumes were not replaced; `/hub/ui/` requires starting their
+  configured stack before it is reachable.
 
 ## Current verification gotchas
 
@@ -240,31 +248,28 @@ an ADR and a mention in the relevant phase's README "Status" entry.
   revocation list. The default deployment remains trusted homelab/VPN;
   see ADR 0016 for the exact authentication boundary and limitations.
 
-## Live verification workflow (established pattern, every phase)
+## Live verification workflow
 
-Tests passing is necessary but not sufficient — see AGENTS.md's
-"Verifying claims" section for why (several real bugs only ever surfaced
-running live infrastructure, not from the test suite). Every phase in this
-project has been verified via:
-```
-cd deploy/homelab
-cp .env.example .env   # if not already present; set a real POSTGRES_PASSWORD
-docker compose up -d --build
-# ... exercise the feature via curl / a real client, through Caddy on :8080 ...
-docker compose down -v   # clean up when done — do this every time
-```
-Background the `docker compose up -d --build` call if it might exceed a
-tool timeout (it regularly does when pulling new base images/deps), and
-wait for the completion notification rather than polling.
+Use the isolated-stack guidance in [AGENTS.md](AGENTS.md#isolated-live-verification-and-schema-changes).
+Prepare temporary credentials in a restricted local file and use a named
+Compose project. Reuse the same project name, env file, and override files
+for build/start/restart/cleanup. Wait for `/hub/health`, then test the UI,
+API, real inference, usage, and persistence through Caddy. `down -v` is
+appropriate only for that disposable test project, never for an existing
+user deployment. Phase 19 used `phase19verify` and left `ovms` untouched.
+
+The 278-test and live-browser evidence above is from the implementation
+session. The follow-up documentation pass corrected agent conventions,
+authenticated API examples, stale status headings, schema-upgrade guidance,
+and ADR cross-references; it made no runtime changes or new live-test claims.
 
 ## Conventions this file won't repeat (see AGENTS.md for all of them)
 
 - `--import-mode=importlib` + no `__init__.py` in service `tests/` dirs.
 - Every new companion-core store needs to be injected into
   `services/companion-core/tests/test_app.py`'s `make_chain` **and** the
-  three reachy-hub test wrapper files (`test_app.py`, `test_telegram.py`,
-  `test_voice.py`) — this has bitten every phase that added a new store;
-  it'll bite the next one too if forgotten.
+  reachy-hub test factories, including WebRTC and operator tests — see
+  AGENTS.md's Phase 19 conventions for the complete list.
 - `uv.lock`/`[tool.uv.sources]` gotchas for GPU-adjacent or CPU-only
   packages (torch, etc.) — read AGENTS.md's "uv dependency conventions"
   before adding any ML/heavy dependency.

@@ -5,7 +5,7 @@ proactive workflows.
 
 Must not own: direct robot joints, UI transport (see [docs/adr/0001](../../docs/adr/0001-service-boundaries.md)).
 
-## Status (Phase 14)
+## Status (through Phase 19)
 
 **Phase 4**: `/debug/robots/{robot_id}/state` and
 `/debug/robots/{robot_id}/behaviour/{name}` — a stand-in for what will
@@ -319,7 +319,6 @@ live (see deploy/homelab/README.md), not by the unit test suite —
 embedding model, still in-process/no-Postgres, distinct from the
 Postgres-only live verification.
 
-
 **Phase 19 (ADR 0016)**: `llm/` owns runtime settings, the compatible HTTP
 chat provider, and usage accounting. `GET/PUT /settings/llm` use the shared
 role-based config, mask credentials, and merge partial edits; explicit
@@ -327,3 +326,41 @@ null removes a provider/key. `GET /llm/usage?limit=50&since_hours=24` returns
 recent calls plus whole-window totals and role totals. The new Postgres
 `llm_config` and `llm_usage_log` tables persist across restarts. These routes
 are internal; browser clients use reachy-hub's authenticated proxies.
+
+Phase 19 configuration example (send via hub's authenticated proxy for
+browser/operator access):
+
+```json
+{
+  "local": {
+    "provider": "openai-compatible",
+    "base_url": "http://host.docker.internal:8000/v1",
+    "model": "OpenVINO/Qwen2.5-1.5B-Instruct-int4-ov"
+  },
+  "cloud": null,
+  "routing": {"mode": "local_only"}
+}
+```
+
+The host URL requires the deployment guide's host-gateway override. Use
+`GET /v1/models` on the actual provider to discover its configured model.
+The provider key is optional. An omitted key keeps its stored value;
+`api_key: null` removes it. `local: null` restores the unconfigured echo
+fallback. Invalid or incomplete provider settings return 422 without
+credential-bearing validation input. Cloud configuration/routing is not
+enabled until Phase 21.
+
+Usage entries contain role, model, timestamp, returned token counts,
+latency, success and a sanitized error. Missing counts remain null;
+`unreported_token_calls` identifies those calls in the summary. Summary
+and `by_role` cover the requested time window, independently of the recent
+`entries` limit. A provider failure still creates a usage entry and an
+unavailable reply; it does not silently fall back to the echo.
+
+The model has no tool executor. Same-session turns serialize, assistant
+replies join the in-memory history, and the provider receives at most the
+latest 39 messages. Generated follow-ups retain the conversation's
+strongest privacy label. A core restart clears this transcript, while
+settings and usage survive in Postgres. `test_llm.py` covers protocol
+shape, failures, masking/partial updates, usage windows, history ordering,
+and private follow-ups; injected stores avoid real Postgres in unit tests.

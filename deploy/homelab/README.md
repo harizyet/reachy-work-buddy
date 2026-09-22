@@ -18,10 +18,10 @@ than needing a separate cache; nothing else has made a concrete case for
 Redis yet.
 
 Verified with real `docker compose up --build` runs against this exact file
-(Docker Compose v2, Postgres 16, Caddy 2): all five containers start
+(Postgres 16, Caddy 2): all six containers start
 (`reachy-embodiment` now builds with `torch`/`silero-vad`, `reachy-hub`
 with `faster-whisper` and `espeak-ng`, `companion-core` now connects to
-Postgres for the first time ever); the robot registry, `AgentSession`
+Postgres for its persistent stores); the robot registry, `AgentSession`
 state, audit log, and calendar data all survive container restarts
 (Postgres persistence); requests routed through Caddy reach
 reachy-embodiment/companion-core and change their reported state — end to
@@ -87,6 +87,7 @@ curl -X POST http://localhost:8080/hub/robots \
   -H 'Content-Type: application/json' \
   -d '{"robot_id": "desk-1", "base_url": "http://reachy-embodiment:8000"}'
 
+# These core debug proxies need REMOTE_UI_TOKEN configured in both services.
 curl http://localhost:8080/core/debug/robots/desk-1/state
 curl -X POST http://localhost:8080/core/debug/robots/desk-1/behaviour/greeting
 ```
@@ -109,20 +110,24 @@ curl http://localhost:8080/hub/sessions/hariz
 ```
 
 Operating modes (Phase 6) — same text, different mode, different resolved
-`delivery_channel`, without ever changing what was sent to companion-core:
+`delivery_channel`. Since Phase 19, the PATCH needs a configured bearer
+token (shown below) or an owner cookie with the CSRF header. Use a public
+greeting and a fresh `mode-demo` user for this example; previous private
+context can keep generated follow-ups private:
 
 ```
 curl -X POST http://localhost:8080/hub/messages \
   -H 'Content-Type: application/json' \
-  -d '{"user_id": "hariz", "channel": "telegram", "text": "whats on my calendar"}'
+  -d '{"user_id": "mode-demo", "channel": "telegram", "text": "hello"}'
 # -> delivery_channel: "reachy" (Desk is the default mode)
 
-curl -X PATCH http://localhost:8080/hub/sessions/hariz/mode \
+curl -X PATCH http://localhost:8080/hub/sessions/mode-demo/mode \
+  -H "Authorization: Bearer $REMOTE_UI_TOKEN" \
   -H 'Content-Type: application/json' -d '{"interaction_mode": "office"}'
 
 curl -X POST http://localhost:8080/hub/messages \
   -H 'Content-Type: application/json' \
-  -d '{"user_id": "hariz", "channel": "telegram", "text": "whats on my calendar"}'
+  -d '{"user_id": "mode-demo", "channel": "telegram", "text": "hello"}'
 # -> delivery_channel: "phone" — same text, mode alone changed the routing
 ```
 
@@ -345,15 +350,17 @@ later phase adds real robot provisioning.
 
 ## Caddy
 
-`Caddyfile` does path-based routing only (`/hub/*` -> reachy-hub, `/core/*`
--> companion-core). It does **not** implement authentication yet — see
-docs/plan.md §9. Do not expose this port to the public Internet as
-configured here; auth/TLS for real remote access is Phase 16 (remote
-telepresence) territory.
+`Caddyfile` routes `/hub/*` to reachy-hub and `/core/*` to companion-core.
+Hub enforces authentication on remote control and the Phase 19 operator
+API; Caddy blocks `/core/settings/*` and `/core/llm/*` to prevent bypassing
+those gates. Other historical core/debug/conversation APIs retain their
+trusted-network access model. Caddy does not terminate TLS in this setup;
+use the documented homelab/VPN boundary or configure HTTPS before remote
+use. See [ADR 0016](../../docs/adr/0016-operator-ui.md).
 
 ## Known limitation
 
-The Postgres migrations in `reachy_hub/postgres_registry.py`,
+The Postgres schema initializers in `reachy_hub/postgres_registry.py`,
 `postgres_session_store.py`, `postgres_telegram_chat_registry.py`,
 `postgres_audit_log.py`, `companion_core/calendar/postgres_store.py`,
 `companion_core/tasks/postgres_store.py`, `companion_core/memory/
@@ -369,7 +376,9 @@ already-existing table — a deployment from before that ADR needs a manual
 `ALTER TABLE ... ADD COLUMN` before upgrading (a fresh volume, as used for
 all the live verification in this README, has no such problem). Revisit
 (e.g. adopt Alembic) once a schema actually needs to change under existing
-data, not just grow by one more table or column.
+data. Phase 19 adds only new tables; it does not require a reset of a
+current Phase 18 database. Do not use volume deletion to upgrade existing
+user data.
 
 ## Operator dashboard (Phase 19)
 
