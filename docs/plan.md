@@ -186,7 +186,7 @@ the daemon APIs. [3]
 ## 6. Implementation Roadmap
 
 Implementation status (2026-09-22): Phases 0–21 are implemented, including
-the hosted-cloud verification recorded in HANDOVER.md. Phases 22–23 are
+the hosted-cloud verification recorded in HANDOVER.md. Phases 22–24 are
 planned, not implemented; see the [deployment and accounts acceptance plan](phase-22-23.md).
 Phase 22 starts with the confirmed original Jetson Nano's compatibility and
 physical topology inventory. See
@@ -219,6 +219,7 @@ physical topology inventory. See
 | Phase 21 — Hybrid local/cloud LLM routing | The "Optional hybrid local/cloud inference routing" item this doc's own §7 V0.3 list already named but never phased. Phase 19's LLM config is role-based from the start (`LLMRole.LOCAL`/`LLMRole.CLOUD`, each pointing at its own provider settings) precisely so this phase is additive: it populates the `CLOUD` role and adds a routing engine (`router.py`) that dispatches purely on role, never on which concrete provider backs it — local-only, cloud-only, or local-with-automatic-cloud-fallback (default once cloud is configured) — escalating to a configured frontier model (OpenAI, Anthropic, etc., still via the same OpenAI-compatible `ChatProvider` abstraction Phase 19 built) when the local call fails outright, plus a manual per-message override or standing routing policy for when the user judges the local model's answer insufficient, since a real automatic quality judgment would need another LLM call to arbitrate and is deliberately out of scope for v1 (same honesty-about-scope discipline as this codebase's other placeholder classifiers). | The agent keeps working on a local-only OpenVINO setup; when a cloud role is also configured, a failed local call can fall back automatically, while a valid but unsatisfying answer requires an explicit user override, and the Phase 19 utilization dashboard shows the `LOCAL`/`CLOUD` usage split. See [ADR 0018](adr/0018-hybrid-llm-routing.md) (implemented; OVMS dispatch and hosted Together AI verification recorded in HANDOVER.md). |
 | Phase 22 — Physical deployment and acceptance testing | Inventory original Jetson Nano and Reachy topology; prove runtime compatibility; implement real robot backend and homelab/Reachy/Nano Bash launchers with GUI access; run the [acceptance plan](phase-22-23.md). | Cold starts, physical motion/media, privacy, channels, outage recovery, backup restore, 8-hour desk run and 24-hour idle soak pass with hardware evidence. Planned, not implemented. |
 | Phase 23 — Production Google account settings | Owner-authenticated Gmail/Calendar Accounts UI, OAuth, encrypted credentials and read-only adapters integrated into existing workflows; see the [accounts plan](phase-22-23.md). | Real-account connect/read/refresh/restart/revoke/reconnect/disconnect and privacy/isolation checks pass; applicable Google production requirements verified; repeat hardware acceptance with accounts. Planned, not implemented. |
+| Phase 24 — Owner recognition and voice access control | Web-portal owner enrollment, calibration and user-run accuracy testing; live face verification, speaker attribution, authenticated input and continuous room-audio gates; see the [recognition plan](phase-24.md). | Audible conversation requires fresh owner-in-view confidence strictly >60% plus privacy/liveness checks; unknown or ambiguous speakers cannot enter the conversation pipeline; spoof/outage/API-bypass tests pass on hardware; consequential actions retain authenticated text-only consent. Planned, not implemented. |
 
 ## 7. Release Targets
 
@@ -341,6 +342,7 @@ baseline reference. [1]
 3. Run the physical acceptance matrix, fix blockers, and record measured results before marking Phase 22 complete.
 4. Implement Phase 23's account-integration ADR, Google setup, Accounts UI, OAuth storage and read-only adapters.
 5. Verify real Google access and repeat deployment/privacy/recovery tests before production rollout.
+6. Implement Phase 24 owner enrollment, calibrated recognition and speaker/output gates; pass the [hardware and adversarial acceptance matrix](phase-24.md#acceptance-and-release-gate) before enabling ambient owner-only voice.
 
 ## 13. Key Engineering Risks
 

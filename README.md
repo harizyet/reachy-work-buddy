@@ -530,13 +530,18 @@ Phases 0-20 are done:
 
 See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
 phase-by-phase roadmap. Phases 0-21 are implemented, including hosted-cloud
-verification. **Phases 22–23 are planned, not implemented:**
+verification. **Phases 22–24 are planned, not implemented:**
 
 - Phase 22: original Jetson Nano/Reachy bring-up, real hardware backend,
   homelab and robot/companion-board Bash launchers with GUI access, and
   measured physical acceptance tests.
 - Phase 23: production Gmail and Google Calendar connection settings in the
   operator UI, OAuth credential lifecycle, and read-only workflow integration.
+- Phase 24: [owner recognition and voice access control](docs/phase-24.md),
+  with strictly >60% calibrated owner-in-view confidence before room speech,
+  speaker attribution before voice input, and unchanged text-only action consent.
+  Enrollment, calibration and user-run accuracy tests live in the web portal,
+  with results reviewed before activating a profile.
 
 See the [detailed plan and pass criteria](docs/phase-22-23.md). The first gate
 is hardware/runtime inventory and service placement: current ADRs require

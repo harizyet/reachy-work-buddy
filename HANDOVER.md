@@ -205,6 +205,21 @@ implemented during this planning session, and no hardware was tested.
 Existing uncommitted hosted-cloud verification notes in this file and
 `deploy/homelab/README.md` were preserved.
 
+**Phase 24 planned:** [docs/phase-24.md](docs/phase-24.md) defines single-owner
+enrollment, strictly >60% calibrated live owner-in-view confidence for room
+speech, separate speaker attribution before STT/conversation admission, and
+continuous output cancellation on presence loss. Recognition never authorizes
+email/calendar writes; authenticated text-only consent remains mandatory.
+The scope includes API identity/modality bypasses, replay/liveness tests,
+biometric retention, Nano failure behaviour and physical acceptance targets.
+User clarification: calibration must run through the project's web portal,
+with user-run accuracy tests. The plan now specifies a guided enroll/calibrate/
+test/review/activate workflow using actual robot sensors, held-out labelled
+trials, false-accept/reject reports, isolated diagnostics, versioned profiles
+and server-enforced activation gates. No manual threshold editing is required.
+No recognition code, enrollment or hardware tests were performed. Phases
+22–24 remain planned; implement in roadmap order.
+
 Phase 21 upgrades a current Phase 19/20 database additively. Earlier
 missing-column caveats below remain relevant only to older schemas.
 
