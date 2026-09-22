@@ -30,9 +30,11 @@ reply (Phase 8); a sensitive-content payload sent through Caddy in Office
 mode correctly resolved to `phone`, never `reachy` (Phase 9); a real
 calendar event added through Caddy produced a real "what's next" answer,
 and a reminder for an imminent meeting correctly routed away from Reachy
-(Phase 10); and, separately (not through this specific compose stack, but
-the same services run as plain processes), a real Telegram bot and a real
-Telegram account confirmed Phase 7's session continuity live.
+(Phase 10); a task recorded conversationally through Caddy was retrieved
+in a later turn and via the direct API (Phase 11); and, separately (not
+through this specific compose stack, but the same services run as plain
+processes), a real Telegram bot and a real Telegram account confirmed
+Phase 7's session continuity live.
 
 ## Run it
 
@@ -147,6 +149,23 @@ curl -X POST "http://localhost:8080/hub/calendar/check-reminders/hariz?within_mi
 #    calendar content is always work-private
 ```
 
+Tasks (Phase 11) — recorded and retrieved conversationally, the exit
+criterion, through Caddy:
+
+```
+curl -X POST http://localhost:8080/core/conversation \
+  -H 'Content-Type: application/json' \
+  -d '{"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "remind me to water the plants"}'
+
+curl -X POST http://localhost:8080/core/conversation \
+  -H 'Content-Type: application/json' \
+  -d '{"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "what are my tasks"}'
+# -> "Your open tasks: water the plants." — a real recorded follow-up,
+#    retrieved in a later turn
+
+curl http://localhost:8080/core/tasks   # the same data via the direct API
+```
+
 No robot is auto-registered — `POST /hub/robots` above is a manual step.
 Automatic registration (e.g. reachy-embodiment announcing itself to
 reachy-hub on startup) isn't built yet; it's a natural fit for whichever
@@ -164,8 +183,9 @@ telepresence) territory.
 
 The Postgres migrations in `reachy_hub/postgres_registry.py`,
 `postgres_session_store.py`, `postgres_telegram_chat_registry.py`,
-`postgres_audit_log.py`, and `companion_core/calendar/postgres_store.py`
-are each a single `CREATE TABLE IF NOT EXISTS` run at connect time — fine
-for the tables that exist today, but not a real migration tool. Revisit
-(e.g. adopt Alembic) once a schema actually needs to change under existing
-data, not just grow by one more table.
+`postgres_audit_log.py`, `companion_core/calendar/postgres_store.py`, and
+`companion_core/tasks/postgres_store.py` are each a single `CREATE TABLE IF
+NOT EXISTS` run at connect time — fine for the tables that exist today, but
+not a real migration tool. Revisit (e.g. adopt Alembic) once a schema
+actually needs to change under existing data, not just grow by one more
+table.

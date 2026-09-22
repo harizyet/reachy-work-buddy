@@ -5,7 +5,7 @@ proactive workflows.
 
 Must not own: direct robot joints, UI transport (see [docs/adr/0001](../../docs/adr/0001-service-boundaries.md)).
 
-## Status (Phase 10)
+## Status (Phase 11)
 
 **Phase 4**: `/debug/robots/{robot_id}/state` and
 `/debug/robots/{robot_id}/behaviour/{name}` — a stand-in for what will
@@ -60,6 +60,35 @@ transcript.
   calendar data survived a container restart via Postgres persistence
   (first time this service has had anything to lose).
 
+**Phase 11**: tasks/notes/reminders. `tasks/` — `TaskStore` Protocol,
+`PostgresTaskStore` (production, same shared-Postgres-instance pattern as
+`calendar/`), `InMemoryTaskStore` (tests). **Unlike calendar, capturing a
+task genuinely is the agent action** — "Agent can record... explicit
+follow-ups" (Phase 11's exit criterion) means `POST /conversation` itself
+calls `TaskStore.add_task` directly, no separate admin/confirmation gate,
+since recording a task is low-stakes and easily undoable (unlike a
+calendar write, still admin-only, or an email send, Phase 14, which will
+need one).
+
+- `task_intent.py` — capture/list/complete/search phrase matchers (same
+  placeholder honesty as `calendar_intent.py`): "remind me to X" / "add
+  task X" captures; "what are my tasks" lists open ones; "complete task X"
+  / "done with X" marks the first open task whose text contains X as done;
+  "search tasks for X" finds matches regardless of status.
+- `GET /tasks`, `POST /tasks`, `POST /tasks/{id}/complete`,
+  `GET /tasks/search` — the direct API, for anything that isn't going
+  through a conversation turn (e.g. a future web UI).
+- Unlike calendar, task content isn't forced to any particular `Privacy`
+  level — docs/plan.md §4's routing table calls out calendar/email
+  specifically as privacy-sensitive; tasks aren't, so replies go through
+  the normal `classify_privacy(text)` path like the generic placeholder
+  reply.
+- **Verified live**: recorded a follow-up conversationally, retrieved it
+  in a later turn and via the direct API, completed and searched it
+  conversationally, and confirmed task data (including completed status)
+  survives a `companion-core` restart — through both a real running
+  process and the full deployed `docker compose`/Caddy stack.
+
 ## Run it
 
 ```
@@ -80,9 +109,12 @@ uv run --group dev pytest services/companion-core/tests
 Tests chain companion-core through real (in-process) reachy-hub and
 reachy-embodiment apps via nested `httpx.ASGITransport` — no mocks, no real
 network. `test_whats_next_answers_from_real_calendar_data` is the direct
-proof of Phase 10's exit criterion. `test_calendar_store.py` and
-`test_calendar_intent.py` unit-test the store and matcher in isolation
-(wrapped in `asyncio.run` — no `pytest-asyncio`/anyio plugin is installed
-anywhere in this codebase, so a raw `async def test_...` would silently
-no-op rather than fail). `PostgresCalendarStore` itself is exercised live
-(see deploy/homelab/README.md), not by the unit test suite.
+proof of Phase 10's exit criterion;
+`test_agent_can_record_and_retrieve_a_follow_up` is Phase 11's.
+`test_calendar_store.py`/`test_calendar_intent.py` and
+`test_task_store.py`/`test_task_intent.py` unit-test the stores and
+matchers in isolation (wrapped in `asyncio.run` — no `pytest-asyncio`/anyio
+plugin is installed anywhere in this codebase, so a raw `async def
+test_...` would silently no-op rather than fail). `PostgresCalendarStore`
+and `PostgresTaskStore` themselves are exercised live (see
+deploy/homelab/README.md), not by the unit test suite.

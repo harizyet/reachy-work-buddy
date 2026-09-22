@@ -11,6 +11,43 @@ stays expressive even when the homelab is unreachable.
 - [shared/models/](shared/models/) — cross-service data contracts (`AgentSession`, `AgentResponse`, `MemoryRecord`, `EmbodimentCommand`).
 - [shared/protocols/](shared/protocols/) — HTTP route contracts shared between services.
 
+## Features
+
+What the system can actually do today (Phases 0-11; see Status below for
+the engineering detail and live-verification evidence behind each item):
+
+- **Talk to Reachy** — a semantic behaviour API and a local presence loop
+  keep the robot animated and idle-expressive on its own, and falling back
+  gracefully (not going dead) whenever the homelab is unreachable.
+- **One conversation, any channel** — start on Reachy, continue on
+  Telegram, and it's the same session: same `session_id`, same history,
+  no re-introducing yourself.
+- **Real voice conversations** — speak a question (as audio in), get a
+  real transcription (local Whisper), a real reply, and a real synthesized
+  voice reply back out, with no cloud STT/TTS key required.
+- **Telegram as a first-class channel** — a real bot you can message
+  directly, backed by the same session/routing machinery as every other
+  channel.
+- **Desk / Office / Silent / Remote modes** — tell it where you are and it
+  changes *where replies go* (Reachy's speaker, your phone, a text
+  channel) without touching what it says.
+- **Privacy-aware routing** — sensitive or work-private content (salary,
+  confidential info, calendar/schedule details) is never spoken aloud
+  through Reachy's speaker, in any mode, even Desk — it's rerouted to a
+  private text channel instead.
+- **A calendar it can actually answer from** — ask "what's next" and get
+  a real answer from real stored events; meeting reminders get checked and
+  routed through the same privacy-aware policy as everything else.
+- **Remembers your follow-ups** — say "remind me to X" and it's genuinely
+  recorded; ask "what are my tasks" later (even after a restart) and get
+  it back. Complete and search them conversationally too.
+- **A full audit trail** — every routing decision (which channel, why,
+  whether privacy overrode the default) is logged and queryable per user.
+- **Runs for real** — one `docker compose up` brings up the whole stack
+  (reasoning, hub, embodiment, Postgres, a reverse proxy) on your own
+  homelab; every feature above has been verified against that actual
+  deployed stack, not just unit tests.
+
 ## Architecture
 
 The system is three independently-deployable services, not one monolith,
@@ -87,7 +124,7 @@ live restart tests verify).
 
 ## Status
 
-Phases 0-10 are done:
+Phases 0-11 are done:
 
 - Phase 0: architecture freeze (ADRs, shared schemas).
 - Phase 1: Jarvis reference baseline — [docs/jarvis-baseline.md](docs/jarvis-baseline.md).
@@ -166,14 +203,26 @@ Phases 0-10 are done:
   is work-private. Two more existing tests broke and were fixed the same
   way as Phase 9's — their example text collided with the new intent
   matcher/classifier, and the new behavior was correct both times.
+- Phase 11: tasks/notes/reminders. companion-core gets a `TaskStore`
+  (`tasks/`, same Postgres-backed pattern as calendar) — but unlike
+  calendar's read-only-to-the-agent design, capturing a task genuinely
+  *is* the agent action: `POST /conversation` recognizes "remind me to
+  X"/"add task X" and calls `TaskStore.add_task` directly, no
+  confirmation gate, since recording a task is low-stakes and easily
+  undoable. "what are my tasks" / "complete task X" / "search tasks for
+  X" round out capture/list/complete/search. Verified live: a follow-up
+  recorded conversationally was retrieved in a later turn, via the direct
+  API, and after a full `companion-core` restart, through both a real
+  process and the deployed Caddy stack.
 
 See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
-phase-by-phase roadmap. Next up: Phase 11, tasks/notes/reminders.
+phase-by-phase roadmap. Next up: Phase 12, work memory (profile, working,
+and episodic memory with provenance, sensitivity, and expiry).
 
 ## Layout
 
 ```
-services/companion-core/     reasoning/tools/memory, privacy, calendar (Phases 5, 9-10)
+services/companion-core/     reasoning/tools/memory, privacy, calendar, tasks (Phases 5, 9-11)
 services/reachy-hub/         robot registry, sessions, routing, Telegram, voice/STT/TTS, audit, reminders (Phases 4-10)
 services/reachy-embodiment/  semantic behaviour API + presence loop + VAD (Phases 2-3, 8)
 clients/web-pwa/             web/PWA client (unimplemented)

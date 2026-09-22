@@ -11,6 +11,7 @@ from datetime import UTC, datetime, timedelta
 import httpx
 from companion_core.app import create_app
 from companion_core.calendar.store import InMemoryCalendarStore
+from companion_core.tasks.store import InMemoryTaskStore
 from fastapi.testclient import TestClient
 from reachy_embodiment.app import create_app as create_embodiment_app
 from reachy_embodiment.robot import SimulatedRobotBackend
@@ -34,6 +35,7 @@ def make_chain(*, registered_robots: Sequence[Robot] = ()) -> TestClient:
         hub_base_url="http://reachy-hub",
         transport=httpx.ASGITransport(app=hub_app),
         calendar_store=InMemoryCalendarStore(),
+        task_store=InMemoryTaskStore(),
     )
     return TestClient(core_app)
 
@@ -155,6 +157,104 @@ def test_reminders_due_endpoint() -> None:
         assert "Soon" in reminders[0]["text"]
         assert reminders[0]["privacy"] == "work-private"
         assert reminders[0]["urgency"] == "urgent"
+
+
+def test_agent_can_record_and_retrieve_a_follow_up() -> None:
+    """Phase 11 exit criterion: agent can record and later retrieve
+    explicit follow-ups, through the conversational path (not the direct
+    API) — the actual thing a user would say."""
+    with make_chain() as client:
+        resp = client.post(
+            "/conversation",
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "remind me to buy milk"},
+        )
+        assert resp.status_code == 200
+        assert "buy milk" in resp.json()["reply"]
+
+        resp = client.post(
+            "/conversation",
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "what are my tasks"},
+        )
+        assert "buy milk" in resp.json()["reply"]
+
+        # Also retrievable via the direct API, not just conversationally.
+        list_resp = client.get("/tasks")
+        assert list_resp.status_code == 200
+        assert list_resp.json()[0]["text"] == "buy milk"
+        assert list_resp.json()[0]["status"] == "open"
+
+
+def test_complete_and_search_tasks_conversationally() -> None:
+    with make_chain() as client:
+        client.post(
+            "/conversation",
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "add task buy milk"},
+        )
+        client.post(
+            "/conversation",
+            json={
+                "session_id": "s1",
+                "conversation_id": "c1",
+                "channel": "reachy",
+                "text": "add task call dentist",
+            },
+        )
+
+        complete_resp = client.post(
+            "/conversation",
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "complete task milk"},
+        )
+        assert "buy milk" in complete_resp.json()["reply"]
+
+        # Completed task no longer shows up in the open-task list.
+        list_resp = client.post(
+            "/conversation",
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "what are my tasks"},
+        )
+        assert "buy milk" not in list_resp.json()["reply"]
+        assert "call dentist" in list_resp.json()["reply"]
+
+        search_resp = client.post(
+            "/conversation",
+            json={
+                "session_id": "s1",
+                "conversation_id": "c1",
+                "channel": "reachy",
+                "text": "search tasks for milk",
+            },
+        )
+        assert "buy milk" in search_resp.json()["reply"]
+
+        # search_tasks doesn't filter by status — the completed task is
+        # still findable, unlike the open-tasks list above.
+        assert client.get("/tasks/search", params={"q": "milk"}).json()[0]["status"] == "done"
+
+
+def test_complete_unmatched_task_via_conversation() -> None:
+    with make_chain() as client:
+        resp = client.post(
+            "/conversation",
+            json={
+                "session_id": "s1",
+                "conversation_id": "c1",
+                "channel": "reachy",
+                "text": "complete task something that does not exist",
+            },
+        )
+        assert "couldn't find" in resp.json()["reply"]
+
+
+def test_task_endpoints_directly() -> None:
+    with make_chain() as client:
+        create_resp = client.post("/tasks", json={"text": "buy milk"})
+        assert create_resp.status_code == 200
+        task_id = create_resp.json()["id"]
+
+        complete_resp = client.post(f"/tasks/{task_id}/complete")
+        assert complete_resp.status_code == 200
+        assert complete_resp.json()["status"] == "done"
+
+        assert client.post("/tasks/nonexistent-id/complete").status_code == 404
 
 
 def test_debug_trigger_behaviour_reaches_reachy_embodiment_through_the_hub() -> None:

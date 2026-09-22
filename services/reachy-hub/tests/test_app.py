@@ -12,6 +12,7 @@ from datetime import UTC, datetime, timedelta
 import httpx
 from companion_core.app import create_app as _create_core_app
 from companion_core.calendar.store import InMemoryCalendarStore
+from companion_core.tasks.store import InMemoryTaskStore
 from fastapi.testclient import TestClient
 from reachy_embodiment.app import create_app as create_embodiment_app
 from reachy_embodiment.robot import SimulatedRobotBackend
@@ -25,6 +26,7 @@ from reachy_hub.session_store import InMemorySessionStore
 
 def create_core_app(**kwargs):
     kwargs.setdefault("calendar_store", InMemoryCalendarStore())
+    kwargs.setdefault("task_store", InMemoryTaskStore())
     return _create_core_app(**kwargs)
 
 

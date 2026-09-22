@@ -29,6 +29,16 @@ is a placeholder keyword matcher (same honesty-about-scope as
 privacy_classifier.py) that answers "what's next" using real stored
 calendar data — Phase 10's exit criterion is that the *answer* is real,
 not that the question-understanding is sophisticated.
+
+Phase 11: tasks/notes/reminders, per docs/plan.md's Phase 11 row ("Capture,
+list, complete and search basic work items") — see tasks/. Unlike
+calendar, capturing a task *is* the agent action this phase is about
+("Agent can record... explicit follow-ups"): `POST /conversation`
+recognizes capture/list/complete/search phrasings (task_intent.py, same
+placeholder-matcher honesty as calendar_intent.py) and calls `TaskStore`
+directly — no separate admin/confirmation gate, since recording a task is
+low-stakes and easily undoable (docs/plan.md §9's permission tiers), unlike
+a calendar write (still admin-only, ADR 0010) or an email send (Phase 14).
 """
 
 from __future__ import annotations
@@ -50,6 +60,19 @@ from companion_core.calendar_intent import format_next_event_reply, is_next_even
 from companion_core.conversation import ConversationStore
 from companion_core.hub_client import HubClient
 from companion_core.privacy_classifier import classify_privacy
+from companion_core.task_intent import (
+    format_capture_reply,
+    format_complete_reply,
+    format_list_reply,
+    format_search_reply,
+    is_list_query,
+    match_capture,
+    match_complete,
+    match_search,
+)
+from companion_core.tasks.models import Task, TaskStatus
+from companion_core.tasks.postgres_store import PostgresTaskStore
+from companion_core.tasks.store import TaskStore
 from shared.models.response import Privacy, Urgency
 
 
@@ -73,16 +96,22 @@ class ReminderPayload(BaseModel):
     urgency: Urgency
 
 
+class CreateTaskRequest(BaseModel):
+    text: str
+
+
 def create_app(
     *,
     hub_base_url: str | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
     calendar_store: CalendarStore | None = None,
+    task_store: TaskStore | None = None,
     database_url: str | None = None,
 ) -> FastAPI:
     hub_base_url = hub_base_url or os.environ.get("REACHY_HUB_URL", "http://reachy-hub:8000")
     conversation_store = ConversationStore()
     owns_calendar_store = calendar_store is None
+    owns_task_store = task_store is None
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -90,17 +119,24 @@ def create_app(
         if owns_calendar_store:
             dsn = database_url or os.environ["DATABASE_URL"]
             app.state.calendar_store = await PostgresCalendarStore.connect(dsn)
+        if owns_task_store:
+            dsn = database_url or os.environ["DATABASE_URL"]
+            app.state.task_store = await PostgresTaskStore.connect(dsn)
         try:
             yield
         finally:
             await app.state.hub_client.aclose()
             if owns_calendar_store:
                 await app.state.calendar_store.close()
+            if owns_task_store:
+                await app.state.task_store.close()
 
     app = FastAPI(title="companion-core", lifespan=lifespan)
     app.state.conversation_store = conversation_store
     if not owns_calendar_store:
         app.state.calendar_store = calendar_store
+    if not owns_task_store:
+        app.state.task_store = task_store
 
     @app.get("/health")
     async def health() -> dict[str, str]:
@@ -109,6 +145,10 @@ def create_app(
     @app.post("/conversation")
     async def conversation_turn(turn: ConversationTurnRequest) -> ConversationTurnResponse:
         history = conversation_store.append(turn.session_id, turn.channel, turn.text)
+
+        capture_text = match_capture(turn.text)
+        complete_query = match_complete(turn.text)
+        search_query = match_search(turn.text)
 
         if is_next_event_query(turn.text):
             event = await app.state.calendar_store.next_event(datetime.now(UTC))
@@ -119,6 +159,24 @@ def create_app(
             # this reply reveals schedule details, so this isn't inferred
             # from turn.text the way the generic placeholder reply is.
             privacy = Privacy.WORK_PRIVATE
+        elif capture_text:
+            task = await app.state.task_store.add_task(capture_text)
+            reply = format_capture_reply(task)
+            privacy = classify_privacy(turn.text)
+        elif complete_query:
+            open_tasks = await app.state.task_store.list_tasks(TaskStatus.OPEN)
+            matched = next((t for t in open_tasks if complete_query.lower() in t.text.lower()), None)
+            completed = await app.state.task_store.complete_task(matched.id) if matched else None
+            reply = format_complete_reply(completed, complete_query)
+            privacy = classify_privacy(turn.text)
+        elif search_query:
+            found = await app.state.task_store.search_tasks(search_query)
+            reply = format_search_reply(found, search_query)
+            privacy = classify_privacy(turn.text)
+        elif is_list_query(turn.text):
+            open_tasks = await app.state.task_store.list_tasks(TaskStatus.OPEN)
+            reply = format_list_reply(open_tasks)
+            privacy = classify_privacy(turn.text)
         else:
             reply = f"(turn {len(history)} via {turn.channel}) heard: {turn.text}"
             privacy = classify_privacy(turn.text)
@@ -159,6 +217,28 @@ def create_app(
             )
             for event in events
         ]
+
+    @app.get("/tasks")
+    async def list_tasks(status: TaskStatus | None = None) -> list[Task]:
+        return await app.state.task_store.list_tasks(status)
+
+    @app.post("/tasks")
+    async def create_task(request: CreateTaskRequest) -> Task:
+        """Direct/API capture, alongside the conversational path in
+        /conversation — e.g. for a future web UI that isn't going through a
+        chat turn at all."""
+        return await app.state.task_store.add_task(request.text)
+
+    @app.post("/tasks/{task_id}/complete")
+    async def complete_task_by_id(task_id: str) -> Task:
+        task = await app.state.task_store.complete_task(task_id)
+        if task is None:
+            raise HTTPException(status_code=404, detail=f"no task '{task_id}'")
+        return task
+
+    @app.get("/tasks/search")
+    async def search_tasks_endpoint(q: str) -> list[Task]:
+        return await app.state.task_store.search_tasks(q)
 
     @app.get("/debug/robots/{robot_id}/state")
     async def debug_robot_state(robot_id: str) -> dict:
