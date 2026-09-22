@@ -314,15 +314,45 @@ for testing. Worth capturing as a real install script + service
 regardless of the Python-target decision, before relying on it for
 Phase 22's "repeatable deployment" deliverable.
 
-**Open decisions before further Nano work (not yet made):**
-1. Torch/VAD blocker: pursue the newer-glibc container route (previously
-   deprioritized, not ruled out), defer/reimplement VAD without torch for
-   the Nano deployment specifically, or explicitly rule out
-   building-torch-from-source as infeasible.
-2. Whether/when to have the Nano session write a real install
-   script + systemd unit for `reachy-venv`/`reachy-mini-daemon`, and
-   investigate the daemon's HTTP/websocket API surface for the
-   `RobotBackend` client implementation.
+**Owner decided (2026-09-22):** pursue the newer-glibc container route for
+the torch/VAD blocker, and have the Nano session write the install
+script/systemd unit + investigate the daemon API surface now (not wait).
+All three landed:
+
+- **Container test: BLOCKED on physical access, not yet resolved.**
+  `docker compose`/`buildx` installed cleanly (confirms AGENTS.md's
+  install snippets work on this board). `docker run` fails with
+  permission-denied on the daemon socket — the Nano session's user is in
+  `sudo` but a coding-agent session cannot supply an interactive sudo
+  password. **Needs a human at the Nano's actual keyboard/SSH session**
+  to run `sudo usermod -aG docker reachy` (or grant scoped passwordless
+  sudo) before the torch-in-container test can proceed. This is now the
+  hard blocker on Phase 22's dependency question.
+- **Install script + systemd unit: landed** at
+  `deploy/reachy/install-reachy-venv.sh` and
+  `deploy/reachy/reachy-mini-daemon.service` (see
+  `deploy/reachy/README.md`'s new section). Transcribed from the Nano's
+  bash history, **not re-run end to end** — validate on a clean SD card
+  before trusting it unattended. One unresolved fragile step flagged
+  inline: a `PyGObject` version pin whose original failure mode wasn't
+  captured.
+- **Daemon HTTP/WS API surface: investigated**, full endpoint map in
+  `docs/verification/phase-22-inventory-2026-09-22.md`'s corresponding
+  section. Key results: `GET /daemon/status` is the `connected`/`sim`
+  source that was missing from the `ReachyMini` client class itself;
+  camera access is WebRTC-only with no REST single-frame endpoint
+  (confirms `capture_frame()` needs real implementation work, not a 1:1
+  mapping); sound playback is upload-then-play, two calls; and — a real
+  find — `GET /state/doa` exposes a daemon-computed `speech_detected`
+  boolean that might serve as a **torch-free barge-in signal specific to
+  the Nano**, sidestepping the glibc wall for that one piece of
+  functionality. Not evaluated for accuracy/latency; flagged as an option.
+
+**Next work:** get a human to unblock the Nano's `docker` group access,
+then resume the container test. In parallel/alternatively, evaluate the
+`/state/doa` VAD-alternative idea. `RobotBackend`'s real implementation
+has not been started — the daemon API investigation above is prep for
+that, not the implementation itself.
 
 **Cross-session coordination note:** this Phase 22 work happened live
 across two Claude Code sessions (homelab + Nano) via `SendMessage`/cross-session

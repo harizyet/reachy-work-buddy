@@ -1,0 +1,45 @@
+[Unit]
+Description=Reachy Mini daemon (reachy-venv, Python 3.10 / JetPack 4 Nano)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=reachy
+Group=reachy
+WorkingDirectory=/home/reachy
+
+# The reachy_mini package itself is a thin HTTP/WS client (see
+# reachy_mini.reachy_mini.ReachyMini.__init__'s host/port args) — this unit
+# runs the actual daemon process that owns the serial/camera/audio hardware
+# and exposes the FastAPI server other processes (including reachy-embodiment,
+# once it exists) talk to over localhost.
+#
+# Same MALLOC_ARENA_MAX cap Pollen's own packaged AP-launcher unit uses
+# (reachy_mini/daemon/app/services/wireless/reachy-mini-daemon.service in
+# this venv) — kept here on the same reasoning (small RAM board), not
+# independently re-verified as necessary on this specific Nano's 4GB.
+Environment=MALLOC_ARENA_MAX=2
+Environment=GST_ROOT=/opt/gstreamer-1.24
+Environment=PATH=/opt/gstreamer-1.24/bin:/home/reachy/reachy-venv/bin:/usr/bin:/bin
+Environment=LD_LIBRARY_PATH=/opt/gstreamer-1.24/lib/aarch64-linux-gnu:/opt/gstreamer-1.24/lib
+Environment=PKG_CONFIG_PATH=/opt/gstreamer-1.24/lib/aarch64-linux-gnu/pkgconfig:/opt/gstreamer-1.24/lib/pkgconfig:/opt/gstreamer-1.24/share/pkgconfig
+Environment=GST_PLUGIN_PATH=/opt/gst-plugins-rs/lib/aarch64-linux-gnu:/opt/gstreamer-1.24/lib/aarch64-linux-gnu/gstreamer-1.0:/opt/gstreamer-1.24/lib/gstreamer-1.0
+
+# --headless: no local GUI session managing the daemon on this board.
+# Deliberately NOT --no-media (keep camera/audio managed) and NOT --sim
+# (real hardware is attached — see docs/verification/phase-22-inventory-
+# 2026-09-22.md). Flags beyond this weren't validated against a real
+# supervised run in this pass; treat as a starting point, not a
+# verified-correct final invocation.
+#
+# Default --fastapi-host is 127.0.0.1 (0.0.0.0 only with --wireless-version)
+# — the daemon is localhost-only unless told otherwise, which is fine as
+# long as reachy-embodiment runs on this same Nano, per Phase 22's plan.
+ExecStart=/home/reachy/reachy-venv/bin/reachy-mini-daemon --headless --log-level INFO
+
+Restart=on-failure
+RestartSec=3s
+
+[Install]
+WantedBy=multi-user.target

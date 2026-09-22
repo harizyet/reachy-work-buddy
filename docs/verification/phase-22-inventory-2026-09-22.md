@@ -288,22 +288,129 @@ about "wrapping the reachy_mini SDK the way Jarvis's RobotController does."
   `reachy-mini-daemon`'s actual HTTP/websocket API surface for
   camera/audio/status.
 
+## Newer-glibc container test for torch/onnxruntime — BLOCKED on sudo access (2026-09-22)
+
+`docker compose` v2 (v5.5.1) and `docker buildx` (v0.37.1) installed
+cleanly via AGENTS.md's exact snippets — confirms that gotcha doc is
+accurate for this board.
+
+`docker run` itself then failed: `permission denied ... connect:
+permission denied` on the Docker daemon socket. The Nano session's user
+(`reachy`) is in the `sudo` group, but `sudo` requires an interactive
+password unavailable to a non-interactive coding-agent session — no
+workaround was attempted (no searching for stored credentials, no
+privilege-escalation attempts). **Needs a human with the actual Nano
+login** to run `sudo usermod -aG docker reachy` once (then a fresh login
+picks up the group) — or grant scoped passwordless sudo for testing —
+before this test can proceed. Once unblocked: pull an `ubuntu:22.04`
+(or similar) arm64 image, `pip install torch==2.9.1+cpu --index-url
+https://download.pytorch.org/whl/cpu` inside it, and check whether it
+installs/imports, plus assess resource overhead and whether
+`/dev/video0`/`/dev/ttyACM0`/`/dev/snd/*` device passthrough into a
+container is viable for actually running `reachy-embodiment`
+containerized long-term (not just proving the wheel installs).
+
+## `reachy-mini-daemon` HTTP/WS API surface (2026-09-22, design prep, read-only)
+
+Read from `reachy_mini/daemon/app/routers/` in the venv (source only —
+the daemon wasn't started, to avoid disturbing idle hardware state).
+FastAPI-generated, so `/docs`/`/openapi.json` are live once it runs.
+Prep for designing `RobotBackend`'s HTTP client; `RobotBackend` itself was
+not implemented.
+
+- **Motion/pose** (`move.py`, prefix `/move`): `POST /move/goto`
+  (`{head_pose, antennas, body_yaw, duration, interpolation}` → `{uuid}`,
+  async/tracked); `POST /move/stop` (cancel by uuid); `POST
+  /move/play/wake_up`, `POST /move/play/goto_sleep`; `POST
+  /move/play/recorded-move-dataset/{dataset}/{move_name}` — plays a named
+  recorded move, the natural target for `play_behaviour(name, params)`;
+  `POST /move/set_target` (immediate single-frame target, rejected with
+  `{"status":"ignored"}` if a move is already running); `WS
+  /move/ws/set_target` (streaming version); `WS /move/ws/updates` (move
+  lifecycle events by uuid). `motors.py`: `GET /motors/status`, `POST
+  /motors/set_mode/{mode}` (enabled/disabled/gravity_compensation).
+- **Camera** (`camera.py`, prefix `/camera`): only `GET /camera/specs`
+  (resolution list, intrinsics `K`, distortion `D`) — **no REST
+  single-frame endpoint exists**; video is WebRTC-only
+  (`gstwebrtc-api-2.0.0.min.js`, `sdk_ws.py`'s `/ws/sdk`,
+  `media_server.py`). Confirms the earlier-flagged mismatch:
+  `RobotBackend.capture_frame() -> bytes` has no 1:1 daemon equivalent —
+  implementing it needs either a minimal WebRTC/GStreamer receiver inside
+  `reachy-embodiment` to pull one frame off the stream, or using
+  `/media/release` + direct V4L2/OpenCV access on `/dev/video0` while
+  media is released from the daemon, bypassing the daemon's own camera
+  path for that one call.
+- **Audio/media** (`media.py`, prefix `/media`): `POST /media/release` /
+  `POST /media/acquire` (daemon gives up/reclaims camera+audio for direct
+  external access — the release-then-OpenCV/sounddevice path above);
+  `GET /media/status` → `{available, released, no_media}`. Playback is
+  two-step: `POST /media/sounds/upload` (multipart, extension-allowlisted
+  + content-validated) returns a server path, then `POST
+  /media/play_sound {"file": ...}` plays it — no duration is returned, so
+  `RobotBackend.play_audio()`'s duration return would still need
+  client-side computation from the WAV header, same as
+  `SimulatedRobotBackend` already does. `POST /media/stop_sound`, `POST
+  /media/clear_incoming_audio` (barge-in: drop buffered outgoing audio).
+  `POST /media/wobbling/enable|disable` — audio-reactive head movement,
+  unrelated to the current `RobotBackend` contract, possible future nicety.
+- **Connection/status** (`daemon.py` prefix `/daemon`, `state.py` prefix
+  `/state`): `GET /daemon/status` → `DaemonStatus{state,
+  simulation_enabled, mockup_sim_enabled, backend_status, error, wlan_ip,
+  version, hardware_id, camera_specs_name, no_media, media_released}` —
+  **this is the `connected`/`sim` source** not found on the `ReachyMini`
+  client class itself: `simulation_enabled`/`mockup_sim_enabled` map to
+  `.sim`, `state`/`backend_status`/`error` map to `.connected`. `GET
+  /daemon/hardware-id` — stable robot ID (audio device's USB serial),
+  same across reboots — a possible cross-check against the udev-detected
+  serial above. `GET /daemon/robot-app-lock-status` — free /
+  local_app / remote_session, i.e. whether another client already holds
+  the robot; relevant if `reachy-embodiment` and a manually-run SDK
+  script could ever race for control. `GET /state/full` — batched
+  present pose/joints/body-yaw/antennas snapshot; `WS /state/ws/full` —
+  same, streamed at configurable frequency.
+- **Possible alternative to torch/Silero VAD on the Nano specifically:**
+  `GET /state/doa` returns `{angle, speech_detected}` — direction-of-arrival
+  *and* a speech-detected boolean, computed by the daemon itself from the
+  mic array (not raw audio samples, just the boolean + angle). Not a
+  drop-in replacement for Silero's actual purpose in
+  `services/reachy-embodiment/src/.../audio/vad.py` (barge-in timing
+  precision may differ, and full STT still needs the raw audio), but
+  worth evaluating as reachy-embodiment's presence-loop barge-in signal
+  *specifically on the Nano*, since it would sidestep the glibc wall
+  entirely for that one piece. Accuracy/latency not evaluated — flagged
+  as an option, not a decision.
+- Default `--fastapi-host` is `127.0.0.1` (`0.0.0.0` only with
+  `--wireless-version`) — localhost-only unless told otherwise, fine as
+  long as `reachy-embodiment` runs on this same Nano, which is what
+  Phase 22's architecture already calls for. Reflected in
+  `deploy/reachy/reachy-mini-daemon.service`.
+
+## Install script + systemd unit landed (2026-09-22)
+
+The 8-step manual sequence for `~/reachy-venv`/GStreamer/`gst-plugins-rs`
+was transcribed into `deploy/reachy/install-reachy-venv.sh`, plus
+`deploy/reachy/reachy-mini-daemon.service` to supervise the daemon. **Not
+re-run end to end** — the source Nano already had a working environment
+from prior manual setup, and a full from-scratch rebuild (Python +
+GStreamer + gst-plugins-rs all from source) takes a long time on
+Nano-class hardware, so it wasn't attempted before landing. Treat as a
+faithful transcription and strong first draft, not independently proven;
+validate on a clean SD card before relying on it. The unresolved
+PyGObject `3.46.0`-vs-`3.44.1` question (see earlier section) is flagged
+inline in the script rather than guessed at.
+
 ## Open questions / next steps
 
-1. **Torch/VAD blocker (unresolved):** decide between the deprioritized
-   container route, deferring/reimplementing VAD without torch for the
-   Nano deployment, or accepting torch-from-source as infeasible and
-   ruling it out explicitly.
-2. **`reachy-venv`/daemon reproducibility:** decide whether to capture the
-   8-step manual sequence above as a real install script (and give the
-   daemon a systemd unit) before relying on it as part of Phase 22's
-   "repeatable deployment" deliverable.
-3. **`reachy-mini-daemon` API surface:** not yet investigated — needed
-   before implementing `RobotBackend`'s HTTP client, especially for the
-   `capture_frame()` session-vs-stateless mismatch and daemon-side
-   connection/sim status.
-4. Decide whether to leave `~/reachy-work-buddy` on the Nano as-is, wipe
+1. **Torch/VAD blocker (unresolved):** the container test is blocked on
+   Docker group/sudo access on the physical Nano (needs a human at the
+   keyboard) — pick back up once unblocked. Alternatively/additionally,
+   evaluate the daemon's own `/state/doa` `speech_detected` signal as a
+   torch-free barge-in source for the Nano specifically (see above).
+2. **Install script validation:** not yet re-run end to end on a clean
+   image; the PyGObject pin risk is unresolved.
+3. Decide whether to leave `~/reachy-work-buddy` on the Nano as-is, wipe
    it, or hand off a specific next test.
 
-No code, ADRs, or launcher scripts were written or modified as part of
-this inventory pass.
+No `RobotBackend` implementation, ADR changes beyond the topology
+amendment already recorded, or launcher scripts were written as part of
+this pass.
