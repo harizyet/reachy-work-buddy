@@ -155,8 +155,16 @@ assumption doesn't silently stop holding unnoticed.
   — any caller that assumed synchronous send (there were none inside this
   codebase; Phase 14's own tests were updated) needs to poll
   `GET /emails/drafts` or wait for the dispatch loop.
-- `deploy/homelab`'s `companion-core` service needs no new environment
-  variables for this — `EMAIL_SEND_DELAY_SECONDS`-equivalent behavior is a
-  `create_app()` constructor parameter (`email_send_delay_seconds`,
-  default 600), not read from the environment, since nothing yet needs it
-  configurable per-deployment.
+- **Addendum**: the ~10-minute delay is now `EMAIL_SEND_DELAY_SECONDS`/
+  `EMAIL_DISPATCH_INTERVAL_SECONDS`-env-overridable (`create_app`'s
+  `email_send_delay_seconds`/`email_dispatch_interval` parameters default
+  to `None` and fall back to the env var, then the real default, rather
+  than hardcoding it) — reversing the original claim above that nothing
+  needed this configurable. A genuine ~10-minute wait on every manual/live
+  verification of the send path turned out to be exactly that need;
+  `deploy/homelab/.env.example` documents the override
+  (`EMAIL_SEND_DELAY_SECONDS=10`, `EMAIL_DISPATCH_INTERVAL_SECONDS=2` for
+  local testing), and the compose file leaves both unset by default so
+  production behavior is unchanged. The two hard rules (bulk block, voice
+  block) are not affected — only how long an already-approved, already
+  text-confirmed send waits before dispatch.

@@ -19,6 +19,7 @@ from companion_core.email.store import InMemoryEmailStore
 from companion_core.memory.store import InMemoryMemoryStore
 from companion_core.rag.store import InMemoryDocumentStore
 from companion_core.tasks.store import InMemoryTaskStore
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from reachy_embodiment.app import create_app as create_embodiment_app
 from reachy_embodiment.robot import SimulatedRobotBackend
@@ -593,6 +594,59 @@ def test_email_inbox_seeding_and_listing() -> None:
         assert resp.json()["privacy"] == "work-private"
 
         assert client.get("/emails/received").json()[0]["subject"] == "Q3 report"
+
+
+def _make_bare_core_app() -> FastAPI:
+    """A minimal companion-core app (in-memory stores, no reachy-hub chain
+    needed) for testing create_app's own construction behavior directly —
+    used here for EMAIL_SEND_DELAY_SECONDS resolution, not the conversation
+    flow the rest of this file chains through reachy-hub for."""
+    return create_app(
+        transport=httpx.ASGITransport(app=create_hub_app(run_heartbeat_task=False)),
+        calendar_store=InMemoryCalendarStore(),
+        task_store=InMemoryTaskStore(),
+        memory_store=InMemoryMemoryStore(),
+        rag_store=InMemoryDocumentStore(embed_fn=_fake_embed),
+        email_store=InMemoryEmailStore(),
+        email_send_fn=lambda draft: asyncio.sleep(0),
+        confirmation_store=InMemoryConfirmationStore(),
+        run_email_dispatch_task=False,
+    )
+
+
+def _queue_a_draft_and_get_dispatch_at(client: TestClient) -> datetime:
+    draft_resp = client.post("/emails/drafts", json={"to": "a@example.com", "subject": "Hi", "body": "hi"})
+    draft_id = draft_resp.json()["id"]
+    client.post(f"/emails/drafts/{draft_id}/approve")
+    send_resp = client.post(f"/emails/drafts/{draft_id}/send")
+    assert send_resp.status_code == 200
+    return datetime.fromisoformat(send_resp.json()["dispatch_at"])
+
+
+def test_email_send_delay_defaults_to_ten_minutes_when_env_unset() -> None:
+    with TestClient(_make_bare_core_app()) as client:
+        gap = _queue_a_draft_and_get_dispatch_at(client) - datetime.now(UTC)
+        assert timedelta(minutes=9) < gap < timedelta(minutes=11)
+
+
+def test_email_send_delay_env_override_shortens_it(monkeypatch) -> None:
+    """ADR 0011's ~10-minute default is a real-time cost during manual/live
+    testing — EMAIL_SEND_DELAY_SECONDS lets it be shortened without a code
+    change."""
+    monkeypatch.setenv("EMAIL_SEND_DELAY_SECONDS", "5")
+    with TestClient(_make_bare_core_app()) as client:
+        gap = _queue_a_draft_and_get_dispatch_at(client) - datetime.now(UTC)
+        assert gap < timedelta(seconds=30)  # the overridden 5s, not the real 10 minutes
+
+
+def test_email_send_delay_env_empty_string_falls_through_to_default(monkeypatch) -> None:
+    """docker-compose's `${VAR:-}` produces an empty string, not an unset
+    var, when EMAIL_SEND_DELAY_SECONDS isn't set in .env — int("") would
+    otherwise crash instead of falling through to the real default."""
+    monkeypatch.setenv("EMAIL_SEND_DELAY_SECONDS", "")
+    with TestClient(_make_bare_core_app()) as client:
+        gap = _queue_a_draft_and_get_dispatch_at(client) - datetime.now(UTC)
+        assert timedelta(minutes=9) < gap < timedelta(minutes=11)
 
 
 def test_debug_trigger_behaviour_reaches_reachy_embodiment_through_the_hub() -> None:

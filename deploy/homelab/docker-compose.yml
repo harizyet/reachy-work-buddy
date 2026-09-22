@@ -97,6 +97,14 @@ services:
       # default is fine here.
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
+      # ADR 0011: real production default is 10 minutes (unset both). For
+      # local/dev testing, override in .env — e.g.
+      # EMAIL_SEND_DELAY_SECONDS=10 EMAIL_DISPATCH_INTERVAL_SECONDS=2 — to
+      # avoid a genuine 10-minute wait every time the send path needs
+      # exercising. Left unset here rather than given a short default, so
+      # this compose file's own default behavior still matches production.
+      EMAIL_SEND_DELAY_SECONDS: ${EMAIL_SEND_DELAY_SECONDS:-}
+      EMAIL_DISPATCH_INTERVAL_SECONDS: ${EMAIL_DISPATCH_INTERVAL_SECONDS:-}
     depends_on:
       postgres:
         condition: service_healthy

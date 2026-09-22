@@ -246,13 +246,25 @@ def create_app(
     rag_store: DocumentStore | None = None,
     email_store: EmailStore | None = None,
     email_send_fn: SendFn = smtp_send,
-    email_send_delay_seconds: int = DEFAULT_SEND_DELAY_SECONDS,
+    email_send_delay_seconds: int | None = None,
     confirmation_store: ConfirmationStore | None = None,
     database_url: str | None = None,
     run_email_dispatch_task: bool = True,
-    email_dispatch_interval: float = 30.0,
+    email_dispatch_interval: float | None = None,
 ) -> FastAPI:
     hub_base_url = hub_base_url or os.environ.get("REACHY_HUB_URL", "http://reachy-hub:8000")
+    # Both env-overridable, same pattern as hub_base_url above — default
+    # stays the real ~10 minutes (ADR 0011), but a deployment (e.g. a
+    # staging/test compose override) can shorten both the delay and how
+    # often the dispatch loop checks for due drafts, without a code change.
+    # `or None` on the env lookups: docker-compose's `${VAR:-}` substitutes
+    # an empty string, not an unset variable, when VAR isn't set in .env —
+    # `int("")` would otherwise raise instead of falling through to the
+    # default.
+    if email_send_delay_seconds is None:
+        email_send_delay_seconds = int(os.environ.get("EMAIL_SEND_DELAY_SECONDS") or DEFAULT_SEND_DELAY_SECONDS)
+    if email_dispatch_interval is None:
+        email_dispatch_interval = float(os.environ.get("EMAIL_DISPATCH_INTERVAL_SECONDS") or 30.0)
     conversation_store = ConversationStore()
     owns_calendar_store = calendar_store is None
     owns_task_store = task_store is None
