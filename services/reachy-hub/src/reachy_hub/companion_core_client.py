@@ -34,17 +34,18 @@ class CompanionCoreClient:
         await self._client.aclose()
 
     async def send_turn(
-        self, session_id: str, conversation_id: str, channel: str, text: str, *, input_modality: str = "text"
+        self, session_id: str, conversation_id: str, channel: str, text: str, *, input_modality: str = "text", force_frontier: bool = False
     ) -> dict[str, Any]:
         resp = await self._client.post(
             "/conversation",
-            timeout=70.0,
+            timeout=130.0,
             json={
                 "session_id": session_id,
                 "conversation_id": conversation_id,
                 "channel": channel,
                 "text": text,
                 "input_modality": input_modality,
+                "force_frontier": force_frontier,
             },
         )
         resp.raise_for_status()

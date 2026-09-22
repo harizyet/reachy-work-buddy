@@ -24,7 +24,7 @@
         <p id="chat-telegram" class="channel-notice" role="status">Checking Telegram…</p>
         <p class="muted">Messages shown here stay in this tab and disappear on refresh. Your companion session continues across channels.</p>
         <div id="chat-transcript" class="chat-transcript" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions text"><p id="chat-empty">Send a message to start or continue your conversation.</p></div>
-        <form id="chat-form"><label for="chat-text">Message<textarea id="chat-text" rows="3" placeholder="Ask Reachy something…" required disabled></textarea></label><div class="chat-compose-footer"><span id="chat-status" role="status"></span><button id="chat-send" disabled>Send</button></div></form>
+        <form id="chat-form"><label for="chat-text">Message<textarea id="chat-text" rows="3" placeholder="Ask Reachy something…" required disabled></textarea></label><label class="check"><input id="force-frontier" type="checkbox"> Use frontier model for this message (sends conversation context to cloud)</label><div class="chat-compose-footer"><span id="chat-status" role="status"></span><button id="chat-send" disabled>Send</button></div></form>
       </section>
       <div id="overview-pane">
       <div class="section-title"><h2>System overview</h2><span id="updated">Checking status…</span></div>
@@ -37,12 +37,19 @@
         </section>
         <section class="card"><span class="eyebrow">INFERENCE</span><h2>Language model</h2>
           <p>Connect a local server or a hosted compatible endpoint. Changes apply to the next conversation turn.</p>
-          <form id="llm"><fieldset id="llm-fields" disabled><label>Base URL<input id="base-url" type="url" required placeholder="http://ovms-host:8000/v1"></label>
-          <label>Model name<input id="model" required placeholder="Model name configured on your server"></label><small>For OpenVINO Model Server, use its exact configured model name.</small>
+          <form id="llm"><fieldset id="llm-fields" disabled><label>Base URL<input id="base-url" type="url" placeholder="http://ovms-host:8000/v1"></label>
+          <label>Model name<input id="model" placeholder="Model name configured on your server"></label><small>For OpenVINO Model Server, use its exact configured model name.</small>
           <label>API key <span class="muted">(optional)</span><input id="api-key" type="password" autocomplete="new-password" placeholder="Leave blank to keep the saved key"></label><small id="key-state">No saved key</small>
-          <label class="check"><input type="checkbox" id="clear-key"> Remove saved key</label><button>Save model</button><button type="button" id="disable-llm" class="secondary">Disable model</button></fieldset></form>
+          <label class="check"><input type="checkbox" id="clear-key"> Remove saved key</label><h3>Cloud provider (optional)</h3>
+          <label>Cloud base URL<input id="cloud-base-url" type="url" placeholder="https://provider.example/v1"></label>
+          <label>Cloud model<input id="cloud-model"></label>
+          <label>Cloud API key<input id="cloud-api-key" type="password" autocomplete="new-password" placeholder="Leave blank to keep the saved key"></label><small id="cloud-key-state">No saved key</small>
+          <label class="check"><input type="checkbox" id="cloud-clear-key"> Remove saved cloud key</label>
+          <label>Routing<select id="llm-routing"><option value="local_only">Local only</option><option value="local_with_cloud_fallback">Local, then cloud on failure</option><option value="cloud_only">Cloud only</option></select></label>
+          <p class="muted">Cloud routing sends the conversation context to that provider. Blank URL and model remove a provider; blank keys retain saved credentials.</p>
+          <button>Save model</button><button type="button" id="disable-llm" class="secondary">Disable all models</button></fieldset></form>
         </section>
-        <section class="card wide"><span class="eyebrow">LAST 24 HOURS</span><h2>LLM utilization</h2><p id="usage-summary">Loading…</p><div class="table-wrap"><table><thead><tr><th>Time</th><th>Role / model</th><th>Result</th><th>Input / output tokens</th><th>Latency</th></tr></thead><tbody id="usage-rows"></tbody></table></div></section>
+        <section class="card wide"><span class="eyebrow">LAST 24 HOURS</span><h2>LLM utilization</h2><p id="usage-summary">Loading…</p><p id="role-usage"></p><p id="latest-escalation"></p><div class="table-wrap"><table><thead><tr><th>Time</th><th>Role / model</th><th>Result</th><th>Input / output tokens</th><th>Latency</th></tr></thead><tbody id="usage-rows"></tbody></table></div></section>
         <section class="card"><h2>Recent activity</h2><ul id="audit"><li>Load a session to view activity.</li></ul></section>
         <section class="card"><h2>Queued notifications</h2><ul id="notifications"><li>Load a session to view notifications.</li></ul></section>
       </div>

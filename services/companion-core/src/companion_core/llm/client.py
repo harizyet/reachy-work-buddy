@@ -1,12 +1,14 @@
 import asyncio
 from time import perf_counter
-from typing import Protocol
+from typing import Literal, Protocol
 
 import httpx
 from pydantic import BaseModel, Field
 
 from companion_core.llm.store import LLMUsageStore
-from shared.models.llm import LLMUsageEntry, ProviderConfig
+from shared.models.llm import LLMRole, LLMUsageEntry, ProviderConfig
+
+PROVIDER_TIMEOUT_SECONDS = 60
 
 
 class ChatProvider(Protocol):
@@ -36,13 +38,27 @@ class _Completion(BaseModel):
 
 
 class OpenAICompatibleChatProvider:
-    def __init__(self, config: ProviderConfig, usage: LLMUsageStore, *, transport=None):
+    def __init__(
+        self,
+        config: ProviderConfig,
+        usage: LLMUsageStore,
+        *,
+        transport=None,
+        role: LLMRole = LLMRole.LOCAL,
+        escalation_reason: Literal["manual", "error"] | None = None,
+    ):
+        self.role = role
+        self.escalation_reason = escalation_reason
         self.config = config
         self.usage = usage
         self.transport = transport
 
     async def complete(self, history: list[dict[str, str]]) -> str:
-        entry = LLMUsageEntry(model=self.config.model)
+        entry = LLMUsageEntry(
+            model=self.config.model,
+            role=self.role,
+            escalation_reason=self.escalation_reason,
+        )
         start = perf_counter()
         try:
             headers = (
@@ -51,9 +67,14 @@ class OpenAICompatibleChatProvider:
                 else {}
             )
             # Redirects must never carry credentials to a different endpoint.
-            async with httpx.AsyncClient(
-                transport=self.transport, timeout=60, follow_redirects=False
-            ) as client:
+            async with (
+                asyncio.timeout(PROVIDER_TIMEOUT_SECONDS),
+                httpx.AsyncClient(
+                    transport=self.transport,
+                    timeout=PROVIDER_TIMEOUT_SECONDS,
+                    follow_redirects=False,
+                ) as client,
+            ):
                 response = await client.post(
                     self.config.base_url + "/chat/completions",
                     headers=headers,
@@ -76,7 +97,7 @@ class OpenAICompatibleChatProvider:
         except asyncio.CancelledError:
             entry.error_message = "cancelled"
             raise
-        except (httpx.HTTPError, ValueError, TypeError):
+        except (httpx.HTTPError, TimeoutError, ValueError, TypeError):
             # Exception strings may contain keys, URLs, or private provider output.
             entry.error_message = (
                 "provider request failed or returned an invalid completion"

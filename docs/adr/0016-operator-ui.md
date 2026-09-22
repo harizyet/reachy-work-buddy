@@ -3,6 +3,14 @@
 - Status: Accepted
 - Date: 2026-09-22
 
+## Phase 21 amendment
+
+[ADR 0018](0018-hybrid-llm-routing.md) enables the cloud role and role-based
+routing, adds the one-message frontier override and escalation accounting,
+and supersedes the earlier timeout limits: provider 60 seconds total,
+hub 130 seconds, browser chat 135 seconds. Phase-specific statements below
+record the original implementation.
+
 ## Phase 20 amendment
 
 [ADR 0017](0017-web-chat-channel.md) adds a Chat tab to this same UI and

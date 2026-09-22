@@ -22,7 +22,39 @@ conflict once you notice it.
 
 ## Where things stand
 
-**Phases 0-20 are done.** Last completed: **Phase 20 — Web chat channel**.
+**Phases 0-21 are implemented.** Last implementation: **Phase 21 — Hybrid
+local/cloud LLM routing**. Hosted-provider verification awaits credentials.
+See [ADR 0018](docs/adr/0018-hybrid-llm-routing.md).
+
+- Core `llm/router.py` dispatches local-only, cloud-only, or local then cloud
+  on actual failure. No automatic quality judgment. `force_frontier` travels
+  hub → core and skips local for one generic turn; intents/consent still win.
+- Cloud uses the existing compatible provider contract. First cloud setup
+  defaults to fallback if local exists, otherwise cloud-only; explicit routing
+  wins and subsequent edits preserve policy/omitted keys. Cloud policies
+  require their providers. Disable both roles with local-only to restore echo.
+- UI exposes cloud configuration, routing policy, one-message frontier toggle,
+  role usage totals and latest escalation reason/time within the usage window.
+  Cloud receives bounded conversation context, as explained in the UI.
+- Usage persists each actual attempt and nullable `escalation_reason`:
+  `manual` or `error`. Startup adds the column idempotently without resetting
+  existing volumes; config remains JSONB. Reads map columns by name.
+- Provider deadline 60 seconds total, hub timeout 130, browser 135. External
+  cancellation does not fall back. Same-session turns still serialize.
+
+**Phase 21 verification:** 300 Python tests passed (two existing deprecation
+warnings), clean Ruff/JS/whitespace checks, and Chromium chat regression.
+Real Docker/Postgres/Caddy/OVMS verification (`phase21verify`) covered local
+success, unreachable-local fallback (both attempts logged), healthy-local
+manual override, cloud settings and usage in Chromium at desktop/mobile,
+and persistence across hub/core restart. An old-shape usage table was
+upgraded and its seeded historical row survived with a null reason.
+**OVMS backed both roles**; this is live dispatch/inference evidence, not a
+hosted-cloud test. No `CLOUD_LLM_*` credentials were available in `.env.local`.
+The temporary stack and volumes were removed; `ovms` remains untouched.
+
+### Phase 20 foundation (historical verification)
+
 See [ADR 0017](docs/adr/0017-web-chat-channel.md), the root README Status,
 and [chat deployment notes](deploy/homelab/README.md#web-chat-phase-20).
 
@@ -49,8 +81,8 @@ and [chat deployment notes](deploy/homelab/README.md#web-chat-phase-20).
   clears errors; failures mark unhealthy immediately; 60 seconds without
   success is stale. This measures polling, not outbound delivery or LLM
   health; a slow message-processing batch can also become stale.
-- No new schema, dependency, or core runtime changes. Phase 21 routing is
-  deliberately still unimplemented.
+- Phase 20 itself added no schema, dependency, or core runtime changes.
+  Phase 21 additions are recorded above.
 
 **Phase 20 verification:** 287 Python tests passed, including speech and
 WebRTC; Ruff, JavaScript syntax, and whitespace checks passed. The committed
@@ -91,8 +123,8 @@ See [ADR 0016](docs/adr/0016-operator-ui.md) and
   labels in generated follow-ups. Transcript history still resets on restart.
 - Shared config contracts are in `shared/models/llm.py`, not a service
   package, so the hub proxy can validate without crossing runtime service
-  boundaries. `LLMConfig` stores `local`, reserved `cloud: null`, and
-  `routing.mode: local_only` as one JSONB row in `llm_config`. Partial PUT
+  boundaries. `LLMConfig` stores local/cloud providers and routing policy as one JSONB
+  row in `llm_config` (the cloud role became active in Phase 21). Partial PUT
   merges fields; omitted keys retain credentials, explicit null removes
   them. Keys are masked in API responses but **plaintext at rest**.
 - `llm_usage_log` records role/model/token counts/latency/success/errors,
@@ -122,20 +154,15 @@ mapping documented in deployment setup. The temporary verification stack
 uses its own credentials/volumes and is removed after verification; these
 credentials are not user deployment settings.
 
-**Next up: Phase 21 — Hybrid local/cloud LLM routing.** The plan is at
-`~/.claude/plans/phase-21-hybrid-llm-routing.md` (if unavailable, use
-`docs/plan.md`'s Phase 21 row). Populate the reserved cloud role, expand
-routing modes, and introduce role-based routing without changing the
-JSONB table. “Local is insufficient” means an outright provider failure
-or an explicit user choice, not an automatic LLM quality judge. A planned
-per-message `force_frontier` override must be threaded through the shared
-conversation path; do not invent a web-only reasoning path.
+**Next work:** complete the hosted-cloud live check once the user supplies
+`CLOUD_LLM_BASE_URL`, `CLOUD_LLM_MODEL`, and `CLOUD_LLM_API_KEY` in gitignored
+`deploy/homelab/.env.local`. These are verification inputs, not automatic
+runtime configuration. Use an isolated stack, configure its cloud role, and
+repeat fallback/manual checks. No Phase 22 is defined in `docs/plan.md` yet;
+agree on the next scope before implementing later functionality.
 
-Current configuration still permits only `local` and `local_only`, with
-`cloud: null`. Phase 19/20 ADRs and implemented code supersede the earlier
-planning files. Neither phase requires deleting a current Phase 18 volume:
-Phase 19 added new tables; Phase 20 added no schema. Earlier missing-column
-caveats remain relevant only to older volumes.
+Phase 21 upgrades a current Phase 19/20 database additively. Earlier
+missing-column caveats below remain relevant only to older schemas.
 
 **Postgres schema-addition caveat (no migration framework yet, same as ADR
 0010's precedent):** Phase 17 added `dnd`/`last_interruption_at` columns to
@@ -288,7 +315,7 @@ API, real inference, usage, and persistence through Caddy. `down -v` is
 appropriate only for that disposable test project, never for an existing
 user deployment. Phase 20 used `phase20verify` and left `ovms` untouched.
 
-The latest evidence above is from the Phase 20 implementation session.
+The latest evidence above is from the Phase 21 implementation session.
 Agent conventions, roadmap, ADRs, UI/service/deployment guides, and this
 handover were updated alongside the implementation.
 

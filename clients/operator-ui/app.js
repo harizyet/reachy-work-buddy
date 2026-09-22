@@ -4,6 +4,8 @@ const base = new URL('../', window.location.href).pathname.replace(/\/$/, '');
 let loggedIn = false;
 let polling = false;
 let selectedUser = null;
+let hasSavedCloud = false;
+let routingEdited = false;
 const chat = createChat({
   api, isLoggedIn: () => loggedIn,
   onUserChange(user) {
@@ -31,7 +33,7 @@ function notice(text) { $('notice').textContent = text; }
 function showLogin() {
   loggedIn = false; selectedUser = null;
   $('login-panel').hidden = false; $('dashboard').hidden = true; $('nav').hidden = true;
-  $('api-key').value = ''; $('password').value = '';
+  $('api-key').value = ''; $('cloud-api-key').value = ''; $('password').value = '';
   chat.reset(); showView('overview');
 }
 async function api(path, options = {}) {
@@ -57,6 +59,12 @@ function submit(form, action) {
   });
 }
 function renderSettings(config) {
+  hasSavedCloud = Boolean(config.cloud); routingEdited = false;
+  $('cloud-base-url').value = config.cloud?.base_url || '';
+  $('cloud-model').value = config.cloud?.model || '';
+  $('cloud-key-state').textContent = config.cloud?.api_key ? `Saved key: ${config.cloud.api_key}` : 'No saved key';
+  $('cloud-api-key').value = ''; $('cloud-clear-key').checked = false;
+  $('llm-routing').value = config.routing?.mode || 'local_only';
   $('base-url').value = config.local?.base_url || '';
   $('model').value = config.local?.model || '';
   $('key-state').textContent = config.local?.api_key ? `Saved key: ${config.local.api_key}` : 'No saved key';
@@ -88,6 +96,12 @@ async function refresh() {
     for (const robot of status.robots) component(robot.robot_id, robot.data?.embodiment_state || robot.status, robot.status !== 'ok');
     if (usage) {
     const s = usage.summary;
+    $('role-usage').textContent = ['local', 'cloud'].map(role => {
+      const counts = usage.by_role?.[role];
+      return `${role}: ${counts?.calls ?? 0} calls · ${counts?.errors ?? 0} errors · ${counts?.prompt_tokens ?? 0} input / ${counts?.completion_tokens ?? 0} output tokens`;
+    }).join(' | ');
+    const escalation = usage.latest_escalation;
+    $('latest-escalation').textContent = escalation ? `Latest escalation: ${escalation.reason === 'manual' ? 'manual request' : 'local error'} · ${new Date(escalation.at).toLocaleString()}` : 'No escalation in this usage window.';
     $('usage-summary').textContent = `${s.calls} calls · ${s.errors} errors · ${s.prompt_tokens} input / ${s.completion_tokens} output tokens · ${Math.round(s.avg_latency_ms)} ms average${s.unreported_token_calls ? ` · ${s.unreported_token_calls} calls without full token counts` : ''}`;
     $('usage-rows').replaceChildren();
     for (const entry of usage.entries) {
@@ -104,6 +118,7 @@ async function refresh() {
     } else {
       $('usage-summary').textContent = 'Usage unavailable — companion core is not responding.';
       $('usage-rows').replaceChildren();
+      $('role-usage').textContent = ''; $('latest-escalation').textContent = '';
     }
     if ($('llm-fields').disabled && status.companion_core.status === 'ok') renderSettings(await api('/settings/llm'));
     if (selectedUser) await loadActivity(selectedUser);
@@ -153,15 +168,25 @@ submit('session-controls', async () => {
   await api(`/sessions/${selectedUser}/dnd`, {method: 'PATCH', body: JSON.stringify({dnd: $('dnd').checked})});
   notice('Session settings saved.'); await loadSession(); await chat.refreshSession();
 });
+$('llm-routing').addEventListener('change', () => { routingEdited = true; });
+for (const id of ['cloud-base-url', 'cloud-model']) $(id).addEventListener('input', () => {
+  if (!hasSavedCloud && !routingEdited) $('llm-routing').value = $('base-url').value.trim() ? 'local_with_cloud_fallback' : 'cloud_only';
+});
 submit('llm', async () => {
-  const local = {base_url: $('base-url').value.trim(), model: $('model').value.trim()};
-  if ($('clear-key').checked) local.api_key = null;
-  else if ($('api-key').value) local.api_key = $('api-key').value;
-  renderSettings(await api('/settings/llm', {method: 'PUT', body: JSON.stringify({local})}));
+  function provider(prefix) {
+    const value = {base_url: $(prefix + 'base-url').value.trim(), model: $(prefix + 'model').value.trim()};
+    if (!value.base_url && !value.model) return null;
+    if (!value.base_url || !value.model) throw new Error('Each provider needs both a URL and model name.');
+    if ($(prefix + 'clear-key').checked) value.api_key = null;
+    else if ($(prefix + 'api-key').value) value.api_key = $(prefix + 'api-key').value;
+    return value;
+  }
+  const config = {local: provider(''), cloud: provider('cloud-'), routing: {mode: $('llm-routing').value}};
+  renderSettings(await api('/settings/llm', {method: 'PUT', body: JSON.stringify(config)}));
   notice('Model settings saved.'); await refresh();
 });
 $('disable-llm').addEventListener('click', async () => {
-  try { renderSettings(await api('/settings/llm', {method: 'PUT', body: JSON.stringify({local: null})})); notice('Model disabled.'); await refresh(); }
+  try { renderSettings(await api('/settings/llm', {method: 'PUT', body: JSON.stringify({local: null, cloud: null, routing: {mode: 'local_only'}})})); notice('Model disabled.'); await refresh(); }
   catch (error) { notice(error.message); }
 });
 api('/auth/me').then(enter).catch(error => { showLogin(); if (error.message !== 'Login required') notice(error.message); });

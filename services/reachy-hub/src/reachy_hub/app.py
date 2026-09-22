@@ -197,6 +197,7 @@ class InboundMessage(BaseModel):
     # is what makes destructive-action confirmation possible from voice at
     # all: it's always refused.
     input_modality: InputModality = InputModality.TEXT
+    force_frontier: bool = False
 
 
 class MessageResponse(BaseModel):
@@ -889,6 +890,7 @@ def create_app(
                 message.channel.value,
                 message.text,
                 input_modality=message.input_modality.value,
+                force_frontier=message.force_frontier,
             )
         except httpx.HTTPError as exc:
             raise HTTPException(status_code=502, detail=f"companion-core unreachable: {exc}") from exc

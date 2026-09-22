@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from psycopg_pool import AsyncConnectionPool
 
@@ -64,6 +65,10 @@ class PostgresLLMUsageStore:
                 id TEXT PRIMARY KEY, at TIMESTAMPTZ NOT NULL, role TEXT NOT NULL,
                 model TEXT NOT NULL, prompt_tokens INTEGER, completion_tokens INTEGER,
                 latency_ms DOUBLE PRECISION NOT NULL, success BOOLEAN NOT NULL, error_message TEXT)""")
+            # Additive upgrade preserves Phase 19/20 usage and existing volumes.
+            await conn.execute(
+                "ALTER TABLE llm_usage_log ADD COLUMN IF NOT EXISTS escalation_reason TEXT"
+            )
             await conn.execute(
                 "CREATE INDEX IF NOT EXISTS llm_usage_at_idx ON llm_usage_log (at DESC)"
             )
@@ -76,18 +81,18 @@ class PostgresLLMUsageStore:
         async with self._pool.connection() as conn:
             await conn.execute(
                 """INSERT INTO llm_usage_log
-                (id, at, role, model, prompt_tokens, completion_tokens, latency_ms, success, error_message)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                (id, at, role, model, prompt_tokens, completion_tokens, latency_ms, success, error_message, escalation_reason)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                 tuple(entry.model_dump().values()),
             )
 
     @staticmethod
     def _entries(rows):
-        fields = list(LLMUsageEntry.model_fields)
-        return [LLMUsageEntry.model_validate(dict(zip(fields, row))) for row in rows]
+        return [LLMUsageEntry.model_validate(row) for row in rows]
 
     async def list_recent(self, limit: int) -> list[LLMUsageEntry]:
         async with self._pool.connection() as conn:
+            conn.row_factory = dict_row
             cur = await conn.execute(
                 "SELECT * FROM llm_usage_log ORDER BY at DESC LIMIT %s", (limit,)
             )
@@ -95,6 +100,7 @@ class PostgresLLMUsageStore:
 
     async def summary(self, since: datetime) -> dict:
         async with self._pool.connection() as conn:
+            conn.row_factory = dict_row
             cur = await conn.execute(
                 "SELECT * FROM llm_usage_log WHERE at >= %s", (since,)
             )

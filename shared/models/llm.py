@@ -1,11 +1,12 @@
-"""Role-based runtime LLM configuration; only local routing is enabled in Phase 19."""
+"""Role-based runtime LLM configuration; local/cloud routing is selected independently of provider identity."""
 
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import Literal
 from urllib.parse import urlsplit
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class LLMRole(StrEnum):
@@ -51,6 +52,8 @@ class ProviderConfig(BaseModel):
 
 class LLMRoutingMode(StrEnum):
     LOCAL_ONLY = "local_only"
+    CLOUD_ONLY = "cloud_only"
+    LOCAL_WITH_CLOUD_FALLBACK = "local_with_cloud_fallback"
 
 
 class LLMRoutingConfig(BaseModel):
@@ -61,10 +64,20 @@ class LLMRoutingConfig(BaseModel):
 class LLMConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     local: ProviderConfig | None = None
-    # Reserved shape, not an enabled cloud-routing implementation.
-    cloud: None = None
+    cloud: ProviderConfig | None = None
     routing: LLMRoutingConfig = Field(default_factory=LLMRoutingConfig)
     updated_at: datetime | None = None
+
+    @model_validator(mode="after")
+    def validate_routing(self):
+        if self.routing.mode != LLMRoutingMode.LOCAL_ONLY and self.cloud is None:
+            raise ValueError("Cloud routing requires a configured cloud provider")
+        if (
+            self.routing.mode == LLMRoutingMode.LOCAL_WITH_CLOUD_FALLBACK
+            and self.local is None
+        ):
+            raise ValueError("Fallback routing requires a configured local provider")
+        return self
 
 
 class ProviderPatch(BaseModel):
@@ -78,7 +91,7 @@ class ProviderPatch(BaseModel):
 class LLMConfigPatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
     local: ProviderPatch | None = None
-    cloud: None = None
+    cloud: ProviderPatch | None = None
     routing: LLMRoutingConfig = Field(default_factory=LLMRoutingConfig)
 
 
@@ -92,3 +105,4 @@ class LLMUsageEntry(BaseModel):
     latency_ms: float = 0
     success: bool = False
     error_message: str | None = None
+    escalation_reason: Literal["manual", "error"] | None = None

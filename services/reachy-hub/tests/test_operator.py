@@ -36,6 +36,7 @@ def make_client(**kwargs):
         llm_settings_store=InMemoryLLMSettingsStore(),
         llm_usage_store=InMemoryLLMUsageStore(),
         run_email_dispatch_task=False,
+        llm_transport=kwargs.pop("llm_transport", None),
     )
     embodiment = create_embodiment_app(SimulatedRobotBackend(), run_presence_loop=False)
     users = InMemoryUserStore()
@@ -267,3 +268,41 @@ def test_web_chat_continues_the_same_session_and_keeps_direct_replies():
     # Page login is not an API authentication retrofit (ADR 0017).
     client.post('/auth/logout', headers=CSRF)
     assert client.post('/messages', json={'user_id': 'other', 'channel': 'web', 'text': 'Hello'}).status_code == 200
+
+
+def test_web_frontier_override_reaches_core_and_cloud_usage():
+    seen = []
+
+    def respond(request):
+        seen.append(request.url.host)
+        return httpx.Response(
+            200, json={"choices": [{"message": {"content": "Cloud answer"}}]}
+        )
+
+    client = make_client(llm_transport=httpx.MockTransport(respond))
+    login(client)
+    result = client.put(
+        "/settings/llm",
+        headers=CSRF,
+        json={
+            "local": {"base_url": "http://local", "model": "l"},
+            "cloud": {"base_url": "http://cloud", "model": "c"},
+            "routing": {"mode": "local_only"},
+        },
+    )
+    assert result.status_code == 200
+    reply = client.post(
+        "/messages",
+        json={
+            "user_id": "owner",
+            "channel": "web",
+            "text": "Hello",
+            "force_frontier": True,
+        },
+    )
+    assert reply.json()["reply"] == "Cloud answer"
+    assert seen == ["cloud"]
+    usage = client.get("/llm/usage").json()
+    assert usage["by_role"]["cloud"]["calls"] == 1
+    assert usage["latest_escalation"]["reason"] == "manual"
+    assert client.get("/status").json()["llm"]["configured"]

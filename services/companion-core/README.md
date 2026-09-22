@@ -345,10 +345,9 @@ browser/operator access):
 The host URL requires the deployment guide's host-gateway override. Use
 `GET /v1/models` on the actual provider to discover its configured model.
 The provider key is optional. An omitted key keeps its stored value;
-`api_key: null` removes it. `local: null` restores the unconfigured echo
-fallback. Invalid or incomplete provider settings return 422 without
-credential-bearing validation input. Cloud configuration/routing is not
-enabled until Phase 21.
+`api_key: null` removes it. With both roles null and local-only policy,
+the unconfigured echo fallback remains. Invalid or incomplete provider settings return 422 without
+credential-bearing validation input. Phase 21 enables cloud configuration and routing as described below.
 
 Usage entries contain role, model, timestamp, returned token counts,
 latency, success and a sanitized error. Missing counts remain null;
@@ -364,3 +363,27 @@ strongest privacy label. A core restart clears this transcript, while
 settings and usage survive in Postgres. `test_llm.py` covers protocol
 shape, failures, masking/partial updates, usage windows, history ordering,
 and private follow-ups; injected stores avoid real Postgres in unit tests.
+
+
+## Hybrid routing (Phase 21)
+
+`llm/router.py` dispatches by role. `routing.mode` accepts `local_only`,
+`cloud_only`, or `local_with_cloud_fallback`. The latter calls cloud only
+when local actually fails; no answer-quality scoring is performed.
+`POST /conversation` accepts `force_frontier: true` to call cloud directly
+for that generic turn. Missing cloud returns unavailable. Deterministic
+intents and consent retain precedence.
+
+First cloud setup without an explicit routing patch chooses fallback when
+local exists, otherwise cloud-only. Later partial edits preserve policy
+and omitted credentials. Removing a provider required by the policy needs
+a simultaneous policy change; invalid combinations return 422 atomically.
+Disable all inference with `{"local": null, "cloud": null, "routing":
+{"mode": "local_only"}}`.
+
+Every attempt records its actual role. Usage adds `escalation_reason`
+(`manual`, `error`, or null) and `latest_escalation` within the summary
+window. Startup adds a nullable column to old usage tables without losing
+rows. Settings stay in the existing JSONB row. Each attempt has a 60-second
+total deadline; cancellation does not trigger fallback. See
+[ADR 0018](../../docs/adr/0018-hybrid-llm-routing.md) for details and limits.

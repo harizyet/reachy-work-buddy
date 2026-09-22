@@ -338,3 +338,195 @@ def test_simultaneous_channels_keep_user_assistant_order():
             assert [m["role"] for m in seen[1]] == ["user", "assistant", "user"]
 
     asyncio.run(run())
+
+
+@pytest.mark.parametrize(
+    "mode,force,failure,roles,reason",
+    [
+        ("local_only", False, False, ["local"], None),
+        ("local_only", False, True, ["local"], None),
+        ("local_with_cloud_fallback", False, False, ["local"], None),
+        ("local_with_cloud_fallback", False, True, ["local", "cloud"], "error"),
+        ("cloud_only", False, False, ["cloud"], None),
+        ("local_only", True, False, ["cloud"], "manual"),
+        ("local_with_cloud_fallback", True, False, ["cloud"], "manual"),
+        ("cloud_only", True, False, ["cloud"], "manual"),
+    ],
+)
+def test_role_routing_and_attempt_accounting(mode, force, failure, roles, reason):
+    seen = []
+
+    def respond(request):
+        role = request.url.host
+        seen.append(role)
+        if role == "local" and failure:
+            raise httpx.ConnectError("secret URL", request=request)
+        return httpx.Response(200, json={"choices": [{"message": {"content": role}}]})
+
+    client = TestClient(core_app(llm_transport=httpx.MockTransport(respond)))
+    assert (
+        client.put(
+            "/settings/llm",
+            json={
+                "local": {"base_url": "http://local/v1", "model": "same-model"},
+                "cloud": {"base_url": "http://cloud/v1", "model": "same-model"},
+                "routing": {"mode": mode},
+            },
+        ).status_code
+        == 200
+    )
+    reply = client.post(
+        "/conversation",
+        json={
+            "session_id": "s",
+            "conversation_id": "c",
+            "channel": "web",
+            "text": "Hello there",
+            "force_frontier": force,
+        },
+    ).json()["reply"]
+    assert seen == roles
+    assert (
+        reply == roles[-1]
+        if not (failure and roles == ["local"])
+        else "unavailable" in reply
+    )
+    usage = client.get("/llm/usage").json()
+    assert usage["summary"]["calls"] == len(roles)
+    assert usage["by_role"]["cloud"]["calls"] == roles.count("cloud")
+    assert usage["by_role"]["local"]["errors"] == int(failure and "local" in roles)
+    assert [e["role"] for e in reversed(usage["entries"])] == roles
+    assert usage["entries"][0]["escalation_reason"] == reason
+    assert (
+        usage["latest_escalation"]["reason"] if reason else usage["latest_escalation"]
+    ) == reason
+    assert "secret URL" not in str(usage)
+
+
+def test_cloud_partial_settings_preserve_keys_and_explicit_policy():
+    client = TestClient(core_app())
+    local = {"base_url": "http://local/v1", "model": "local", "api_key": "local-secret"}
+    cloud = {
+        "base_url": "https://cloud/v1",
+        "model": "cloud",
+        "api_key": "cloud-secret",
+    }
+    client.put("/settings/llm", json={"local": local})
+    result = client.put("/settings/llm", json={"cloud": cloud}).json()
+    assert result["routing"]["mode"] == "local_with_cloud_fallback"
+    assert result["local"]["model"] == "local"
+    result = client.put(
+        "/settings/llm", json={"routing": {"mode": "local_only"}}
+    ).json()
+    result = client.put("/settings/llm", json={"cloud": {"model": "new"}}).json()
+    assert result["routing"]["mode"] == "local_only"
+    assert result["cloud"]["api_key"] == "********cret"
+    assert result["local"]["api_key"] == "********cret"
+    assert (
+        client.put("/settings/llm", json={"cloud": {"api_key": None}}).json()["cloud"][
+            "api_key"
+        ]
+        is None
+    )
+    assert client.put("/settings/llm", json={"cloud": None}).status_code == 200
+    assert (
+        client.put(
+            "/settings/llm", json={"cloud": cloud, "routing": {"mode": "local_only"}}
+        ).json()["routing"]["mode"]
+        == "local_only"
+    )
+
+
+def test_missing_frontier_never_falls_back_to_local_and_intents_still_win():
+    def unexpected(request):
+        pytest.fail(
+            "An explicit cloud request or deterministic intent must not call local"
+        )
+
+    client = TestClient(core_app(llm_transport=httpx.MockTransport(unexpected)))
+    turn = {
+        "session_id": "s",
+        "conversation_id": "c",
+        "channel": "web",
+        "text": "Hello",
+        "force_frontier": True,
+    }
+    assert "unavailable" in client.post("/conversation", json=turn).json()["reply"]
+    client.put(
+        "/settings/llm", json={"local": {"base_url": "http://local", "model": "local"}}
+    )
+    assert "unavailable" in client.post("/conversation", json=turn).json()["reply"]
+    turn["text"] = "remind me to review the report"
+    assert "unavailable" not in client.post("/conversation", json=turn).json()["reply"]
+    assert client.get("/llm/usage").json()["summary"]["calls"] == 0
+
+
+def test_cloud_failure_and_cancellation_do_not_retry():
+    async def run():
+        from companion_core.llm.router import route_completion
+
+        from shared.models.llm import LLMConfig
+
+        config = LLMConfig(
+            local={"base_url": "http://local", "model": "l"},
+            cloud={"base_url": "http://cloud", "model": "c"},
+            routing={"mode": "local_with_cloud_fallback"},
+        )
+        store = InMemoryLLMUsageStore()
+        with pytest.raises(ProviderUnavailable):
+            await route_completion(
+                config,
+                [],
+                store,
+                transport=httpx.MockTransport(lambda r: httpx.Response(503)),
+            )
+        assert len(await store.list_recent(10)) == 2
+        calls = []
+
+        def cancel(request):
+            calls.append(request.url.host)
+            raise asyncio.CancelledError()
+
+        with pytest.raises(asyncio.CancelledError):
+            await route_completion(
+                config, [], store, transport=httpx.MockTransport(cancel)
+            )
+        assert calls == ["local"]
+        assert (await store.list_recent(1))[0].error_message == "cancelled"
+
+    asyncio.run(run())
+
+
+def test_total_provider_deadline_triggers_fallback(monkeypatch):
+    import companion_core.llm.client as client_module
+    from companion_core.llm.router import route_completion
+
+    from shared.models.llm import LLMConfig
+
+    monkeypatch.setattr(client_module, "PROVIDER_TIMEOUT_SECONDS", 0.02)
+
+    async def run():
+        async def respond(request):
+            if request.url.host == "local":
+                await asyncio.sleep(1)
+            return httpx.Response(
+                200, json={"choices": [{"message": {"content": "cloud"}}]}
+            )
+
+        config = LLMConfig(
+            local={"base_url": "http://local", "model": "l"},
+            cloud={"base_url": "http://cloud", "model": "c"},
+            routing={"mode": "local_with_cloud_fallback"},
+        )
+        store = InMemoryLLMUsageStore()
+        assert (
+            await route_completion(
+                config, [], store, transport=httpx.MockTransport(respond)
+            )
+            == "cloud"
+        )
+        entries = await store.list_recent(2)
+        assert entries[1].error_message != "cancelled"
+        assert entries[0].escalation_reason == "error"
+
+    asyncio.run(run())

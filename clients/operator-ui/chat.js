@@ -16,6 +16,7 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
   function controls() {
     el('chat-send').disabled = pending || !user || !isLoggedIn() || el('chat-user').value.trim() !== user;
     el('chat-text').disabled = !user || !isLoggedIn();
+    el('force-frontier').disabled = pending || !isLoggedIn();
     el('chat-user').disabled = pending;
     el('chat-use-user').disabled = pending;
     el('clear-chat').disabled = pending;
@@ -65,6 +66,7 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
       user = next;
       clearView();
       el('chat-text').value = '';
+      el('force-frontier').checked = false;
       el('chat-status').textContent = '';
       el('chat-session').textContent = `User: ${user} · Loading session…`;
     }
@@ -96,6 +98,7 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
     if (!isLoggedIn() || !user || pending || !text || el('chat-user').value.trim() !== user) return;
     const version = generation;
     const recipient = user;
+    const forceFrontier = el('force-frontier').checked;
     pending = true;
     requestController = new AbortController();
     const signal = requestController.signal;
@@ -105,16 +108,17 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
     el('chat-status').textContent = 'Sending…';
     // Do not automatically retry an ambiguous failure: a task or confirmation
     // may already have been processed even when its reply was lost.
-    const timeout = setTimeout(() => requestController?.abort(), 75000);
+    const timeout = setTimeout(() => requestController?.abort(), 135000);
     try {
       await api('/auth/me', {signal});
       if (generation !== version || !isLoggedIn()) return;
       item = appendMessage('You', text);
       el('chat-text').value = '';
+      el('force-frontier').checked = false;
       sent = true;
       const result = await api('/messages', {
         method: 'POST', signal,
-        body: JSON.stringify({user_id: recipient, channel: 'web', text, input_modality: 'text'}),
+        body: JSON.stringify({user_id: recipient, channel: 'web', text, input_modality: 'text', ...(forceFrontier ? {force_frontier: true} : {})}),
       });
       if (generation !== version || !isLoggedIn()) return;
       appendMessage('Reachy', result.reply);
@@ -157,7 +161,7 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
       requestController?.abort(); requestController = null;
       user = null; pending = false;
       clearView();
-      el('chat-user').value = ''; el('chat-text').value = '';
+      el('chat-user').value = ''; el('chat-text').value = ''; el('force-frontier').checked = false;
       el('chat-session').textContent = 'Loading session…';
       el('chat-status').textContent = '';
       controls();

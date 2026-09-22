@@ -518,9 +518,18 @@ Phases 0-20 are done:
   worked; the channel-continuity call was simulated through hub, not a real
   Telegram-account message. No core runtime, schema, or dependency change.
 
+- Phase 21: [Hybrid LLM routing](docs/adr/0018-hybrid-llm-routing.md).
+  Local-only, cloud-only, and local-with-error-fallback policies; a one-turn
+  frontier override travels through the shared conversation path. Cloud
+  settings, per-role utilization, and latest escalation reason/time are
+  visible in the operator UI. An additive usage column preserves old data.
+  **300 Python tests passed**, plus Chromium regression and real
+  Docker/Postgres/Caddy/OVMS checks. OVMS backed both roles in live routing
+  tests; a hosted cloud endpoint remains unverified without credentials.
+
 See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
-phase-by-phase roadmap. Phases 0-20 are now done. Next: Phase 21, hybrid
-local/cloud LLM routing.
+phase-by-phase roadmap. Phases 0-21 are implemented. Hosted cloud
+verification remains pending credentials; no Phase 22 is defined yet.
 
 ## Layout
 

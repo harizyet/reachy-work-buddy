@@ -414,7 +414,7 @@ services:
 
 A server elsewhere on the LAN can instead use its LAN URL. A hosted
 compatible provider uses the same form with its base URL and key. Phase 19
-has one active provider slot; hybrid local/cloud routing is Phase 21.
+now supports both provider roles and hybrid routing; see Phase 21 below.
 Blank key input preserves the saved key; the checkbox removes it. Keys are
 masked in API responses but stored plaintext in Postgres and backups.
 
@@ -465,3 +465,27 @@ The Telegram-channel continuity test used `POST /messages`, not a real
 Telegram-account exchange. The disposable stack was removed afterward;
 the existing OVMS container was left running. Do not invalidate an actual
 bot token or remove user volumes to reproduce the outage test.
+
+
+## Hybrid LLM routing (Phase 21)
+
+Configure local and optional cloud providers in Overview → Language model.
+Use each provider's compatible chat endpoint base URL (normally ending in
+`/v1`) and exact model name. Native vendor APIs need a compatible gateway;
+no native vendor SDK adapter is included. Cloud configuration and inference
+are owned by core and stored in Postgres, not Compose environment variables.
+Select the standing routing policy, or use Chat's one-message frontier toggle.
+
+Upgrading a current Phase 19/20 database requires no reset: startup adds
+nullable `llm_usage_log.escalation_reason` idempotently. Existing config and
+usage survive. Cloud requests send bounded conversation history; keys remain
+plaintext in the database and backups, with masked operator responses.
+
+For an assisted hosted-provider verification, put `CLOUD_LLM_BASE_URL`,
+`CLOUD_LLM_MODEL`, and `CLOUD_LLM_API_KEY` in gitignored `.env.local`, never
+chat. These are verification inputs, not automatically imported runtime
+settings. The operator UI is the normal configuration path. The Phase 21
+live check used an isolated stack and OVMS for both roles, proving local
+inference, error fallback, manual dispatch, usage and persistence. A real
+hosted-provider check remains pending credentials. See
+[ADR 0018](../../docs/adr/0018-hybrid-llm-routing.md).

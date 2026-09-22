@@ -153,11 +153,11 @@ web chat. Hybrid inference routing remains separate Phase 21 work. Preserve thes
 - Bootstrap creates the owner only when the users table is empty. Changing
   `ADMIN_PASSWORD` later does not reset it. Keep `SESSION_SECRET_KEY` stable
   across restarts; set `SESSION_COOKIE_SECURE=true` for HTTPS deployments.
-- Phase 19 supports only `local` with `routing.mode=local_only`;
-  `cloud` is reserved and must remain null until Phase 21. The local slot
-  may target any compatible endpoint; provider vendor does not define role.
+- Phase 21 enables both local/cloud roles and three routing policies; see
+  the hybrid inference conventions below. Either slot may target any
+  compatible endpoint; provider vendor does not define role.
 - Partial settings updates preserve omitted fields. Explicit `api_key: null`
-  removes a key; `local: null` disables inference. Responses mask credentials;
+  removes a key; disabling inference requires both roles null and local-only. Responses mask credentials;
   validation errors and usage logs must not echo keys or raw provider errors.
   Keys are plaintext in Postgres, as explicitly documented in ADR 0016.
 - Only the generic conversation branch calls the model. Keep deterministic
@@ -333,3 +333,25 @@ premature abstraction, no speculative endpoints for future phases (see
 `/audio/play` was implemented in Phase 16). Comments explain *why* (a
 constraint, a bug that was fixed, a non-obvious ordering requirement), not *what*. `ruff check` must pass
 clean before considering a change finished.
+
+
+## Hybrid inference conventions (Phase 21)
+
+- Core `llm/router.py` selects roles, never vendors/models. Fallback requires
+  an actual provider failure; a weak but valid answer is not auto-escalated.
+  `force_frontier` is channel-independent metadata and bypasses routing
+  policy, but never deterministic intents or consent checks.
+- Both roles receive bounded conversation history. Delivery privacy labels
+  do not prevent transmission to a configured cloud role. Preserve the UI's
+  context-sharing explanation and one-message override reset.
+- Keep all attempts in usage, including a failed local call before fallback.
+  Log only sanitized failures and `manual`/`error` escalation reasons. The
+  latest escalation covers the summary window, not just displayed entries.
+- The usage-store startup adds `escalation_reason` idempotently; preserve
+  old rows and map reads by column name. Never reset a deployment volume
+  for this upgrade. Existing JSONB configuration remains compatible.
+- Provider total deadline is 60 seconds; hub conversation timeout is 130,
+  browser chat 135. Cancellation must not trigger another provider attempt.
+- A local server backing both roles verifies dispatch, not a hosted cloud
+  integration. State that distinction in verification reports. See
+  [ADR 0018](docs/adr/0018-hybrid-llm-routing.md) for policy/default semantics.

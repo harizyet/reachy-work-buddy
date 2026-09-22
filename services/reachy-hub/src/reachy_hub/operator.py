@@ -121,7 +121,7 @@ def install_operator_routes(
             ],
             "llm": {
                 "status": settings["status"],
-                "configured": bool(settings.get("data", {}).get("local"))
+                "configured": bool(settings.get("data", {}).get("local") or settings.get("data", {}).get("cloud"))
                 if settings["status"] == "ok"
                 else None,
                 "usage": usage_result,

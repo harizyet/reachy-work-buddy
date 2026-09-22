@@ -83,10 +83,13 @@ test('web chat handles identities, replies, failures, login expiry, and fresh ta
     assert.equal(await page.locator('#chat-transcript script, #chat-transcript img').count(), 0);
     assert.match(await page.locator('#chat-session').textContent(), /office.*DND: on.*web/);
 
+    await page.locator('#force-frontier').check();
     failReply = true;
     await page.locator('#chat-text').fill('Failed turn'); await page.locator('#chat-send').click();
     await page.waitForFunction(() => document.getElementById('chat-status').textContent.includes('may have been processed'));
     assert.equal(messages.length, 2);
+    assert.equal(messages[1].force_frontier, true);
+    assert.equal(await page.locator('#force-frontier').isChecked(), false);
     assert.equal(await page.locator('#chat-text').inputValue(), 'Failed turn');
     assert.equal(await page.locator('.from-reachy').count(), 1);
     failReply = false;
@@ -105,6 +108,7 @@ test('web chat handles identities, replies, failures, login expiry, and fresh ta
     await page.locator('#chat-send').click();
     await page.waitForFunction(() => document.querySelectorAll('.from-reachy').length === 1);
     assert.equal(messages.at(-1).user_id, 'different-user');
+    assert.equal(messages.at(-1).force_frontier, undefined);
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.locator('#clear-chat').click();
     assert.equal(await page.locator('.chat-message').count(), 0);

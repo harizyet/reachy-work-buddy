@@ -159,11 +159,12 @@ from companion_core.email.workflow import (
     run_dispatch_loop,
 )
 from companion_core.hub_client import HubClient
-from companion_core.llm.client import OpenAICompatibleChatProvider, ProviderUnavailable
+from companion_core.llm.client import ProviderUnavailable
 from companion_core.llm.postgres_store import (
     PostgresLLMSettingsStore,
     PostgresLLMUsageStore,
 )
+from companion_core.llm.router import route_completion
 from companion_core.llm.store import LLMSettingsStore, LLMUsageStore, masked_config
 from companion_core.memory.postgres_store import PostgresMemoryStore
 from companion_core.memory.store import MemoryStore
@@ -197,6 +198,7 @@ class ConversationTurnRequest(BaseModel):
     channel: str
     text: str
     input_modality: InputModality = InputModality.TEXT
+    force_frontier: bool = False
 
 
 class ConversationTurnResponse(BaseModel):
@@ -586,16 +588,15 @@ def create_app(
             privacy = Privacy.WORK_PRIVATE
         else:
             config = await app.state.llm_settings_store.get()
-            if config.local is None:
+            if config.local is None and config.cloud is None and not turn.force_frontier:
                 reply = f"(turn {len(history)} via {turn.channel}) heard: {turn.text}"
             else:
-                provider = OpenAICompatibleChatProvider(config.local, app.state.llm_usage_store, transport=llm_transport)
                 try:
-                    reply = await provider.complete(conversation_store.messages(turn.session_id))
+                    reply = await route_completion(config, conversation_store.messages(turn.session_id), app.state.llm_usage_store, force_frontier=turn.force_frontier, transport=llm_transport)
                 except ProviderUnavailable:
                     reply = "The language model is unavailable right now. Please try again shortly."
             privacy = classify_privacy(turn.text)
-            if config.local is not None:
+            if config.local is not None or config.cloud is not None or turn.force_frontier:
                 privacy = conversation_store.reply_privacy(turn.session_id, classify_privacy(turn.text + "\n" + reply))
 
         conversation_store.record_reply(turn.session_id, reply, privacy)

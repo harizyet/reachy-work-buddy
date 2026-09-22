@@ -332,8 +332,8 @@ on protected routes; once configured, missing/invalid credentials return
 401. Missing CSRF headers on cookie mutations return 403. A configured
 bearer remains sufficient for existing machine clients.
 
-Core conversation calls allow 70 seconds for the provider's 60-second
-HTTP timeout. Health/monitoring requests retain the shorter client timeout.
+Core conversation calls allow 130 seconds for up to two provider attempts,
+each with a 60-second total deadline. Health/monitoring requests retain the shorter client timeout.
 The dashboard polls every 10 seconds; failed probes are reported as
 unavailable without hiding successful components. It is not a database or
 GPU telemetry dashboard. See [ADR 0016](../../docs/adr/0016-operator-ui.md)
@@ -365,3 +365,14 @@ measures poll freshness only: outgoing delivery and long inference/batch
 processing are not separately monitored. `test_telegram_health.py` covers
 timing/failure/recovery, and the existing loop test verifies actual wiring.
 No new schema or companion-core code is required.
+
+
+## Hybrid inference (Phase 21)
+
+`POST /messages` accepts optional `force_frontier` (default false). Hub
+forwards it unchanged to core with input modality; core alone owns provider
+selection. Settings/usage proxies now support both local/cloud roles,
+three routing modes, and escalation accounting. `/status.llm.configured`
+recognizes either configured role. Standing policy applies to all channels;
+Chat exposes a one-message override. Authentication and session delivery
+routing are unchanged. See [ADR 0018](../../docs/adr/0018-hybrid-llm-routing.md).

@@ -11,6 +11,13 @@ def merge_config(current: LLMConfig, patch: LLMConfigPatch) -> LLMConfig:
         if role in changes:
             update = changes.pop(role)
             data[role] = None if update is None else {**(data[role] or {}), **update}
+    # First cloud setup opts into fallback; explicit policy always wins.
+    if current.cloud is None and data["cloud"] is not None and "routing" not in changes:
+        data["routing"] = {
+            "mode": "local_with_cloud_fallback" if data["local"] else "cloud_only"
+        }
+    if "routing" in changes:
+        changes["routing"] = {**data["routing"], **changes["routing"]}
     data.update(changes)
     data["updated_at"] = datetime.now(UTC)
     return LLMConfig.model_validate(data)
@@ -41,7 +48,15 @@ def summarize(entries: list[LLMUsageEntry]) -> dict:
             else 0,
         }
 
+    escalations = [r for r in entries if r.escalation_reason is not None]
+    latest = max(escalations, key=lambda r: r.at) if escalations else None
     return {
+        "latest_escalation": {
+            "at": latest.at.isoformat(),
+            "reason": latest.escalation_reason,
+        }
+        if latest
+        else None,
         "summary": totals(entries),
         "by_role": {
             role.value: totals([r for r in entries if r.role == role])
