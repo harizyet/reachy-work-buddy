@@ -86,9 +86,32 @@ done
 : "${REACHY_DAEMON_URL:=http://host.docker.internal:8000}"
 
 # --- 1. confirm this is the embodiment host, daemon is up, not simulated ---
+# SAFETY: --check must never start the daemon. Starting reachy-mini-daemon
+# moves the robot by default (--wake-up-on-start) — this whole project's
+# established rule is that never happens without the owner physically
+# present and watching (see HANDOVER.md). --check only ever reports
+# status; it does not call `systemctl start` under any circumstance.
 require_cmd systemctl "reachy-mini-daemon is supervised via systemd — see deploy/reachy/README.md for install steps."
 if ! systemctl list-unit-files "${DAEMON_SERVICE}.service" >/dev/null 2>&1; then
     die "${DAEMON_SERVICE}.service is not installed. This is a first-time install step, not something this launcher does automatically — see deploy/reachy/install-reachy-venv.sh and reachy-mini-daemon.service, and deploy/reachy/README.md."
+fi
+
+DAEMON_STATUS_URL="http://127.0.0.1:8000/daemon/status"
+
+if [[ "$COMMON_CHECK_ONLY" -eq 1 ]]; then
+    if systemctl is-active --quiet "$DAEMON_SERVICE"; then
+        log_info "$DAEMON_SERVICE is active"
+        if curl -fsS --max-time 5 "$DAEMON_STATUS_URL" >/dev/null 2>&1; then
+            SIM_ENABLED="$(curl -fsS "$DAEMON_STATUS_URL" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("simulation_enabled") or d.get("mockup_sim_enabled") or False)' 2>/dev/null || echo "unknown")"
+            log_info "daemon simulation flags: $SIM_ENABLED (want: False for real hardware)"
+        else
+            log_warn "$DAEMON_STATUS_URL not reachable even though the service is active"
+        fi
+    else
+        log_info "$DAEMON_SERVICE is installed but not active (--check never starts it)"
+    fi
+    log_info "--check complete. Nothing was started or moved."
+    exit 0
 fi
 
 if systemctl is-active --quiet "$DAEMON_SERVICE"; then
@@ -98,7 +121,6 @@ else
     sudo systemctl start "$DAEMON_SERVICE" || die "failed to start $DAEMON_SERVICE — check: systemctl status $DAEMON_SERVICE"
 fi
 
-DAEMON_STATUS_URL="http://127.0.0.1:8000/daemon/status"
 wait_for_http "$DAEMON_STATUS_URL" "$DAEMON_READY_TIMEOUT" \
     || die "reachy-mini-daemon did not become ready — check: systemctl status $DAEMON_SERVICE; journalctl -u $DAEMON_SERVICE"
 
@@ -110,11 +132,6 @@ elif [[ "$SIM_ENABLED" == "unknown" ]]; then
     log_warn "could not parse daemon status to confirm sim=false (no python3, or unexpected response shape) — proceeding, but verify manually: curl $DAEMON_STATUS_URL"
 else
     log_info "confirmed real hardware: daemon simulation flags are false"
-fi
-
-if [[ "$COMMON_CHECK_ONLY" -eq 1 ]]; then
-    log_info "--check complete: daemon is active and reports real hardware. Nothing else was started."
-    exit 0
 fi
 
 # --- 2. build/run reachy-embodiment against the daemon ---------------------

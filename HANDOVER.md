@@ -618,12 +618,31 @@ contract table.
   and fixed with a `!.env.example`/`!**/.env.example` negation. Worth
   checking for this pattern again if a future `.env.example` in some
   other new directory mysteriously doesn't show as untracked.
+- **Critical safety bug found and fixed before any live Nano test (would
+  have moved the robot unsupervised):** `start-reachy.sh` originally
+  called `sudo systemctl start reachy-mini-daemon` *before* checking
+  `COMMON_CHECK_ONLY` — meaning `--check` would have actually started
+  the daemon (which moves the robot by default via `--wake-up-on-start`)
+  if it wasn't already running, directly contradicting both the script's
+  own documented "`--check`: start nothing" contract and this whole
+  project's established rule that the daemon never starts without the
+  owner physically present. Caught during review before asking the Nano
+  session to run anything — not caught by `bash -n`/shellcheck, which
+  can't reason about *when* a command runs relative to a flag check.
+  Fixed: `--check` now only ever reads `systemctl is-active` and queries
+  `/daemon/status` if already active; it never calls `systemctl start`.
+  Verified with a faked `systemctl` shim: confirmed `--check` calls only
+  `list-unit-files`/`is-active`, and non-`--check` mode still correctly
+  attempts `start` (regression-checked, not just the fix in isolation).
 - **Not yet verified:** `start-reachy.sh`/`start-jetson.sh`/
   `check-platform.sh --test-hardware` against real Nano/daemon hardware
   end-to-end (this session verified the WSS layer against real Docker
   containers standing in for hub/robot, but not through these specific
   launcher scripts on the actual Nano); `shellcheck`/`bash -n` both pass
-  clean on all four scripts + the shared lib.
+  clean on all four scripts + the shared lib. Given the safety bug just
+  found, review any further launcher changes for the same class of
+  mistake — a destructive/real-hardware action placed before its guard
+  flag is checked — before trusting `--check` again without re-verifying.
 
 **Cross-session coordination note:** this Phase 22 work happened live
 across two Claude Code sessions (homelab + Nano) via `SendMessage`/cross-session
