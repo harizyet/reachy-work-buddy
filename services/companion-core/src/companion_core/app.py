@@ -10,6 +10,12 @@ per turn (ADR 0002) — companion-core receives only a session_id,
 conversation_id, channel label, and text, never "this came from Telegram"
 as anything but an opaque string. The reasoning inside is a placeholder
 (echoes turn count) until Phase 10+ replaces it with a real agent.
+
+Phase 9: the response now carries real (if simplistic) `Privacy`/`Urgency`
+metadata (privacy_classifier.py) — companion-core *proposes* this per
+docs/plan.md §4 ("the LLM may propose metadata"); reachy-hub's response
+router (Phase 9, ADR 0006) has final, enforced authority over what actually
+happens with it.
 """
 
 from __future__ import annotations
@@ -24,6 +30,8 @@ from pydantic import BaseModel
 
 from companion_core.conversation import ConversationStore
 from companion_core.hub_client import HubClient
+from companion_core.privacy_classifier import classify_privacy
+from shared.models.response import Privacy
 
 
 class ConversationTurnRequest(BaseModel):
@@ -36,6 +44,7 @@ class ConversationTurnRequest(BaseModel):
 class ConversationTurnResponse(BaseModel):
     reply: str
     turn_count: int
+    privacy: Privacy
 
 
 def create_app(*, hub_base_url: str | None = None, transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
@@ -61,7 +70,7 @@ def create_app(*, hub_base_url: str | None = None, transport: httpx.AsyncBaseTra
     async def conversation_turn(turn: ConversationTurnRequest) -> ConversationTurnResponse:
         history = conversation_store.append(turn.session_id, turn.channel, turn.text)
         reply = f"(turn {len(history)} via {turn.channel}) heard: {turn.text}"
-        return ConversationTurnResponse(reply=reply, turn_count=len(history))
+        return ConversationTurnResponse(reply=reply, turn_count=len(history), privacy=classify_privacy(turn.text))
 
     @app.get("/debug/robots/{robot_id}/state")
     async def debug_robot_state(robot_id: str) -> dict:

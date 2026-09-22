@@ -26,7 +26,7 @@ different phases:
    answer must never go to Reachy's speaker even in Desk mode if the room
    isn't actually private). This is Phase 9's scope ("Privacy/response
    router: implement response metadata, deterministic routing, audit
-   events") and is **not** implemented yet.
+   events") and is now implemented — see the Phase 9 addendum below.
 
 ## Decision
 
@@ -65,14 +65,53 @@ parameter to leak through).
   *only* signal for where to push it. This split wasn't obvious until Phase
   7 actually built a channel integration against it; earlier phases only
   had simulated channels and couldn't surface the gap.
-- Phase 9 extends `response_policy.py` to take `AgentResponse` as a second
-  input and override/refine the mode-driven default (sensitive content,
-  urgent alerts, active-meeting suppression per docs §4's routing table).
-  Until then, privacy/urgency fields on `AgentResponse` exist in the shared
-  model but nothing reads them for routing purposes — don't wire that up
-  early; it belongs to Phase 9 once there's real reasoning behind those
-  fields worth routing on.
 - Setting `interaction_mode` is a session-level action
   (`PATCH /sessions/{user_id}/mode`), not a per-message parameter — a user
   doesn't restate their mode on every turn any more than they restate which
   channel they're on.
+
+## Phase 9 addendum: privacy override + audit
+
+`response_policy.apply_privacy_override(base_channel, privacy, active_channel)`
+is a **second, separate function**, not a modification of
+`resolve_delivery_channel` — that function's narrow signature (mode,
+active_channel only) is itself a structural guarantee with its own test
+(`test_policy_is_pure_and_ignores_anything_but_mode_and_channel`), and a
+privacy override must not erode it. `apply_privacy_override` can only ever
+veto a `Reachy` delivery `resolve_delivery_channel` already chose; it never
+introduces routing to a channel the mode policy didn't pick.
+
+Privacy is proposed by companion-core (`privacy_classifier.py` — a
+placeholder keyword classifier, same honesty-about-scope as every other
+placeholder in this codebase; Phase 10+ replaces the classification logic,
+not the contract) and enforced here:
+
+| `privacy` | Effect on a `Reachy` base delivery |
+|---|---|
+| `public` | No change |
+| `work-private` | Vetoed — falls back to the active channel (or `web` if that's also Reachy) |
+| `sensitive` | Vetoed — same fallback |
+
+Both non-public levels are treated the same and the veto applies
+**regardless of mode** — including Desk, which Phase 6 treats as "private
+room" for mode-only routing purposes. Docs §4's routing table says
+sensitive content goes to "a private channel only," full stop; this system
+has no way to verify Desk mode actually means a private room right now, so
+the override doesn't carve out an exception for it. This was confirmed to
+matter, not just a theoretical concern: an earlier Phase 6 test used
+calendar-flavored example text and started failing once this classifier
+landed, because Desk mode no longer spoke it aloud — the test's text was
+fixed, not the policy.
+
+Urgency-driven behavior (phone alert + Reachy attention gesture) and
+active-meeting/DND-driven queueing, both in docs §4's routing table, are
+**not** implemented — they need infrastructure (push notifications, a
+queue) this phase's exit criterion didn't require. `AgentResponse.urgency`
+is round-tripped as metadata (audit-logged) but nothing acts on it yet.
+
+Every routing decision is recorded via `audit_log.py`
+(`AuditEntry`: user, session, channel, mode, privacy, base_channel,
+delivery_channel, whether an override fired) and exposed at
+`GET /audit/{user_id}` — the "audit events" half of Phase 9's deliverable,
+and the mechanism that makes "the policy engine has final authority"
+checkable after the fact, not just trusted at request time.

@@ -87,7 +87,7 @@ live restart tests verify).
 
 ## Status
 
-Phases 0-6 are done:
+Phases 0-9 are done:
 
 - Phase 0: architecture freeze (ADRs, shared schemas).
 - Phase 1: Jarvis reference baseline — [docs/jarvis-baseline.md](docs/jarvis-baseline.md).
@@ -139,17 +139,28 @@ Phases 0-6 are done:
   deployed Caddy proxy. Getting a CPU-only `torch` build (rather than
   silently pulling ~4GB of unused CUDA packages) took real `uv`
   configuration fixes — see `AGENTS.md`.
+- Phase 9: privacy/response router (ADR 0006 addendum). companion-core now
+  proposes a `Privacy` classification per turn; `reachy-hub`'s
+  `apply_privacy_override` — a *second* function alongside Phase 6's
+  `resolve_delivery_channel`, not a modification of it — enforces that
+  sensitive/work-private content can never be spoken aloud via Reachy,
+  regardless of mode (including Desk, which Phase 6 otherwise always routes
+  there). Every routing decision is recorded in a new Postgres-backed audit
+  log (`GET /audit/{user_id}`). Verified live: a private payload stayed off
+  Reachy in both Desk and Office mode, through a running process, the real
+  deployed Caddy stack, and with audit entries surviving a `reachy-hub`
+  restart. An existing Phase 6 test broke when this landed (its example
+  text happened to match a new privacy keyword) — fixed the test's text,
+  not the new behavior, since the new behavior was correct.
 
 See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
-phase-by-phase roadmap. Next up: Phase 9, the privacy/response router
-(content-based routing — privacy, urgency — extending Phase 6's
-mode-based policy).
+phase-by-phase roadmap. Next up: Phase 10, read-only calendar integration.
 
 ## Layout
 
 ```
-services/companion-core/     reasoning/tools/memory (Phase 5: conversation endpoint, placeholder reasoning)
-services/reachy-hub/         robot registry, sessions, routing, Telegram, voice/STT/TTS (Phases 4-8)
+services/companion-core/     reasoning/tools/memory, privacy classification (Phases 5, 9)
+services/reachy-hub/         robot registry, sessions, routing, Telegram, voice/STT/TTS, audit (Phases 4-9)
 services/reachy-embodiment/  semantic behaviour API + presence loop + VAD (Phases 2-3, 8)
 clients/web-pwa/             web/PWA client (unimplemented)
 shared/models/                Pydantic data contracts shared across services

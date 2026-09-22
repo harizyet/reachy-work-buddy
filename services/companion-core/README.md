@@ -5,7 +5,7 @@ proactive workflows.
 
 Must not own: direct robot joints, UI transport (see [docs/adr/0001](../../docs/adr/0001-service-boundaries.md)).
 
-## Status (Phase 5)
+## Status (Phase 9)
 
 **Phase 4**: `/debug/robots/{robot_id}/state` and
 `/debug/robots/{robot_id}/behaviour/{name}` — a stand-in for what will
@@ -24,6 +24,14 @@ channel-agnostic. The reply text itself
 (`"(turn N via <channel>) heard: <text>"`) is placeholder reasoning — Phase
 10+ replaces the body of that handler with a real agent, not the request/
 response shape.
+
+**Phase 9**: `POST /conversation` now also returns a `privacy` field,
+computed by `privacy_classifier.classify_privacy` — a keyword-based
+placeholder (same honesty-about-scope as the rest of the reasoning here;
+Phase 10+ replaces the classification logic, not the response contract).
+companion-core only *proposes* this; `reachy-hub`'s response router (ADR
+0006) has final, enforced authority over what actually happens with it —
+see `services/reachy-hub/README.md`.
 
 ## Run it
 

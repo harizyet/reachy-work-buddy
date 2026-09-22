@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 from reachy_embodiment.app import create_app as create_embodiment_app
 from reachy_embodiment.robot import SimulatedRobotBackend
 from reachy_hub.app import create_app
+from reachy_hub.audit_log import InMemoryAuditLog
 from reachy_hub.companion_core_client import CompanionCoreClient
 from reachy_hub.embodiment_client import EmbodimentClient
 from reachy_hub.robot_registry import InMemoryRobotRegistry
@@ -28,6 +29,7 @@ def make_hub_with_core_app(embodiment_app, core_app, **kwargs) -> TestClient:
     app = create_app(
         registry=InMemoryRobotRegistry(),
         session_store=InMemorySessionStore(),
+        audit_log=InMemoryAuditLog(),
         client_factory=lambda base_url: EmbodimentClient(base_url, transport=httpx.ASGITransport(app=embodiment_app)),
         companion_core_client=CompanionCoreClient(
             "http://companion-core", transport=httpx.ASGITransport(app=core_app)
@@ -38,12 +40,14 @@ def make_hub_with_core_app(embodiment_app, core_app, **kwargs) -> TestClient:
     return TestClient(app)
 
 
-def make_hub_client(embodiment_app, *, registry=None, session_store=None, **kwargs) -> TestClient:
+def make_hub_client(embodiment_app, *, registry=None, session_store=None, audit_log=None, **kwargs) -> TestClient:
     registry = registry or InMemoryRobotRegistry()
     session_store = session_store or InMemorySessionStore()
+    audit_log = audit_log or InMemoryAuditLog()
     app = create_app(
         registry=registry,
         session_store=session_store,
+        audit_log=audit_log,
         client_factory=lambda base_url: EmbodimentClient(base_url, transport=httpx.ASGITransport(app=embodiment_app)),
         run_heartbeat_task=False,
         **kwargs,
@@ -117,6 +121,7 @@ def test_heartbeat_background_task_pings_registered_robots() -> None:
     hub_app = create_app(
         registry=registry,
         session_store=InMemorySessionStore(),
+        audit_log=InMemoryAuditLog(),
         client_factory=lambda base_url: EmbodimentClient(base_url, transport=httpx.ASGITransport(app=embodiment_app)),
         run_heartbeat_task=True,
         heartbeat_interval=0.05,
@@ -162,6 +167,7 @@ def test_two_test_clients_share_one_conversation_state_across_channels() -> None
     hub_app = create_app(
         registry=InMemoryRobotRegistry(),
         session_store=InMemorySessionStore(),
+        audit_log=InMemoryAuditLog(),
         client_factory=lambda base_url: EmbodimentClient(base_url, transport=httpx.ASGITransport(app=embodiment_app)),
         companion_core_client=CompanionCoreClient(
             "http://companion-core", transport=httpx.ASGITransport(app=core_app)
@@ -226,9 +232,19 @@ def test_mode_change_alone_changes_delivery_channel_without_touching_the_message
     """Phase 6 exit criterion: mode changes output routing without prompt
     changes. Same exact text sent twice on the same channel; only the
     session's interaction_mode differs between the two calls — the resolved
-    delivery_channel must differ deterministically as a result."""
+    delivery_channel must differ deterministically as a result.
+
+    Deliberately uses ordinary/public text — this test is about mode-only
+    routing (Phase 6). A calendar-flavored example was used here originally
+    and started failing once Phase 9 landed real content-based privacy
+    overrides: "calendar" is one of Phase 9's own work-private keywords, so
+    Desk mode no longer routed it to Reachy. That's Phase 9 correctly doing
+    its job, not a bug — see
+    test_private_content_is_never_spoken_via_reachy_even_in_desk_mode below
+    for the test that exercises exactly that interaction on purpose.
+    """
     client = make_hub_with_core_app(make_embodiment_app(), create_core_app())
-    text = "what's on my calendar today"
+    text = "what's the weather like today"
 
     resp_desk = client.post("/messages", json={"user_id": "hariz", "channel": "telegram", "text": text})
     assert resp_desk.json()["delivery_channel"] == "reachy"  # Desk is the default mode
@@ -242,8 +258,8 @@ def test_mode_change_alone_changes_delivery_channel_without_touching_the_message
 
     # The text sent was byte-for-byte identical both times; only the reply's
     # turn count (genuine conversation progression) differs, not the input.
-    assert "heard: what's on my calendar today" in resp_desk.json()["reply"]
-    assert "heard: what's on my calendar today" in resp_office.json()["reply"]
+    assert "heard: what's the weather like today" in resp_desk.json()["reply"]
+    assert "heard: what's the weather like today" in resp_office.json()["reply"]
 
 
 def test_silent_mode_falls_back_to_web_when_active_channel_is_reachy() -> None:
@@ -253,3 +269,61 @@ def test_silent_mode_falls_back_to_web_when_active_channel_is_reachy() -> None:
 
     resp = client.post("/messages", json={"user_id": "hariz", "channel": "reachy", "text": "hi again"})
     assert resp.json()["delivery_channel"] == "web"
+
+
+def test_private_content_is_never_spoken_via_reachy_even_in_desk_mode() -> None:
+    """Phase 9: the router has final authority over privacy, overriding
+    what mode alone would otherwise pick. Desk mode normally always routes
+    to Reachy (Phase 6) — a real difference from that default, not just a
+    restatement of Office mode already avoiding Reachy."""
+    client = make_hub_with_core_app(make_embodiment_app(), create_core_app())
+
+    resp = client.post(
+        "/messages", json={"user_id": "hariz", "channel": "telegram", "text": "what is my salary this year"}
+    )
+    body = resp.json()
+    assert body["privacy"] == "sensitive"
+    assert body["delivery_channel"] != "reachy"
+    assert body["delivery_channel"] == "telegram"  # falls back to the active channel
+
+
+def test_private_test_payload_cannot_be_spoken_in_office_mode() -> None:
+    """Phase 9 exit criterion, literal wording."""
+    client = make_hub_with_core_app(make_embodiment_app(), create_core_app())
+    client.patch("/sessions/hariz/mode", json={"interaction_mode": "office"})
+
+    resp = client.post(
+        "/messages", json={"user_id": "hariz", "channel": "telegram", "text": "this is confidential information"}
+    )
+    body = resp.json()
+    assert body["privacy"] == "sensitive"
+    assert body["delivery_channel"] != "reachy"
+
+
+def test_audit_log_records_the_routing_decision_and_override() -> None:
+    client = make_hub_with_core_app(make_embodiment_app(), create_core_app())
+    client.post("/messages", json={"user_id": "hariz", "channel": "telegram", "text": "hello there"})
+    client.post("/messages", json={"user_id": "hariz", "channel": "telegram", "text": "what is my salary"})
+
+    entries = client.get("/audit/hariz").json()
+    assert len(entries) == 2
+
+    # Most recent first.
+    sensitive_entry, public_entry = entries
+    assert sensitive_entry["privacy"] == "sensitive"
+    assert sensitive_entry["base_channel"] == "reachy"  # Desk mode would have spoken it
+    assert sensitive_entry["delivery_channel"] == "telegram"
+    assert sensitive_entry["overridden"] is True
+
+    assert public_entry["privacy"] == "public"
+    assert public_entry["overridden"] is False
+    assert public_entry["base_channel"] == public_entry["delivery_channel"] == "reachy"
+
+
+def test_audit_log_is_scoped_per_user() -> None:
+    client = make_hub_with_core_app(make_embodiment_app(), create_core_app())
+    client.post("/messages", json={"user_id": "hariz", "channel": "reachy", "text": "hi"})
+    client.post("/messages", json={"user_id": "someone-else", "channel": "reachy", "text": "hi"})
+
+    assert len(client.get("/audit/hariz").json()) == 1
+    assert len(client.get("/audit/someone-else").json()) == 1

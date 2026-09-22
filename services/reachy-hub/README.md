@@ -5,7 +5,7 @@ routing, authentication, robot registry.
 
 Must not own: reasoning policy internals, raw motor control (see [docs/adr/0001](../../docs/adr/0001-service-boundaries.md)).
 
-## Status (Phase 8)
+## Status (Phase 9)
 
 **Robot registry / proxy (Phase 4)**: `POST /robots`, `GET /robots`,
 `GET /robots/{robot_id}/state`, `GET /robots/{robot_id}/behaviours`,
@@ -52,9 +52,8 @@ includes `delivery_channel`, computed by
   one. Verified live: identical text sent twice on the same channel routed
   to `reachy`, then `phone`, then (via a channel switch while silent)
   `web`, purely from `PATCH .../mode` calls in between.
-- Content-based routing (privacy, urgency, active-meeting suppression) is
-  Phase 9's extension of this same policy, not implemented yet — see
-  ADR 0006's Consequences section for why that's deliberately deferred.
+- Content-based routing (privacy) is Phase 9's extension of this same
+  policy — see below.
 
 **Telegram (Phase 7)**: `telegram_client.py` is a thin Bot API wrapper
 (long-polling `getUpdates`, not a webhook — no public HTTPS endpoint story
@@ -128,6 +127,40 @@ reachy-embodiment — unlike Jarvis's on-device design.
   `reachy-hub`/`companion-core` Docker images, on a real Docker network and
   through the deployed Caddy reverse proxy, doing the same round trip.
 
+**Privacy/response router (Phase 9, ADR 0006 addendum)**: companion-core
+now proposes a `Privacy` classification per turn (`privacy_classifier.py` —
+a placeholder keyword classifier, same honesty-about-scope as the rest of
+companion-core's reasoning); `response_policy.apply_privacy_override`
+enforces it, as a **second function**, not a modification of
+`resolve_delivery_channel` (whose narrow, content-free signature stays
+exactly as Phase 6 left it — that's a tested structural guarantee, not
+just a convention). A `work-private` or `sensitive` response can never be
+delivered via Reachy's speaker, regardless of mode — including Desk, which
+Phase 6 otherwise always routes to Reachy.
+
+- `MessageResponse` now includes `privacy`; every routing decision is
+  recorded via `audit_log.py` (`PostgresAuditLog` / `InMemoryAuditLog`,
+  same Protocol pattern as everything else) and exposed at
+  `GET /audit/{user_id}` — the "audit events" half of Phase 9's deliverable.
+- Urgency-driven behavior (phone alert + Reachy gesture) and active-meeting
+  suppression, both in docs §4's routing table, are **not** implemented —
+  they need push-notification/queueing infrastructure this phase's exit
+  criterion didn't require.
+- A real interaction was found while building this, not invented for the
+  test: an existing Phase 6 test used calendar-flavored example text, and
+  started failing once this classifier landed — "calendar" is one of the
+  placeholder's own work-private keywords, so Desk mode correctly stopped
+  routing it to Reachy. The test's example text was fixed (Phase 6's test
+  is about mode-only routing and needs genuinely public content); the new
+  behavior was correct.
+- **Verified live** at three levels: automated tests exercising the real
+  classifier -> real override -> real audit-log chain; a running process
+  hit with `curl` showing a sensitive payload staying off Reachy in both
+  Desk and Office mode, with the audit log correctly marking only the Desk
+  case as `overridden: true` (Office already wouldn't have used Reachy);
+  and the same sequence through the real deployed Caddy stack, with the
+  audit entries surviving a `reachy-hub` restart via Postgres.
+
 WebRTC, web UI, and auth (reachy-hub's full ADR 0001 ownership) are later
 phases (15) — not implemented yet.
 
@@ -163,10 +196,10 @@ Or via the full stack — see [deploy/homelab](../../deploy/homelab/).
 uv run --group dev pytest services/reachy-hub/tests
 ```
 
-Tests use `InMemoryRobotRegistry`/`InMemorySessionStore` and chain against
-real (in-process) reachy-embodiment and companion-core apps via
-`httpx.ASGITransport` — no mocks, no real network, no real Postgres
-required. `test_two_test_clients_share_one_conversation_state_across_channels`
+Tests use `InMemoryRobotRegistry`/`InMemorySessionStore`/`InMemoryAuditLog`
+and chain against real (in-process) reachy-embodiment and companion-core
+apps via `httpx.ASGITransport` — no mocks, no real network, no real
+Postgres required. `test_two_test_clients_share_one_conversation_state_across_channels`
 is the direct proof of Phase 5's exit criterion;
 `test_mode_change_alone_changes_delivery_channel_without_touching_the_message_text`
 is Phase 6's; `test_telegram.py::test_start_on_reachy_continue_in_telegram`
@@ -174,12 +207,16 @@ is Phase 7's (against `httpx.MockTransport` standing in for the real
 Telegram Bot API); `test_voice.py`'s tests are Phase 8's, chaining a real
 `espeak-ng` process for TTS and a real `faster-whisper` model for STT
 (`tiny.en`, for speed) through the same `/voice/turn` -> session ->
-companion-core path a real Reachy would use.
-`test_response_policy.py` unit-tests the routing function in isolation,
-including asserting its parameter list has no content field.
-`PostgresRobotRegistry`, `PostgresSessionStore`, and the real Telegram Bot
-API itself are exercised live (real Postgres, a real bot, a real Telegram
-account — see deploy/homelab/README.md), not by the unit test suite.
+companion-core path a real Reachy would use;
+`test_private_content_is_never_spoken_via_reachy_even_in_desk_mode` and
+`test_private_test_payload_cannot_be_spoken_in_office_mode` are Phase 9's.
+`test_response_policy.py` unit-tests both routing functions in isolation,
+including asserting `resolve_delivery_channel`'s parameter list still has
+no content field after Phase 9 added a *second* function alongside it.
+`PostgresRobotRegistry`, `PostgresSessionStore`, `PostgresAuditLog`, and
+the real Telegram Bot API itself are exercised live (real Postgres, a real
+bot, a real Telegram account — see deploy/homelab/README.md), not by the
+unit test suite.
 
 Tests touching real models/subprocesses are marked `@pytest.mark.slow` and
 skip cleanly if `espeak-ng` isn't on `PATH`:

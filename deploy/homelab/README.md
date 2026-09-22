@@ -18,16 +18,18 @@ Redis yet.
 Verified with real `docker compose up --build` runs against this exact file
 (Docker Compose v2, Postgres 16, Caddy 2): all five containers start
 (`reachy-embodiment` now builds with `torch`/`silero-vad`, `reachy-hub`
-with `faster-whisper` and `espeak-ng`); the robot registry and
-`AgentSession` state both survive a `reachy-hub` container restart
+with `faster-whisper` and `espeak-ng`); the robot registry, `AgentSession`
+state, and audit log all survive a `reachy-hub` container restart
 (Postgres persistence); requests routed through Caddy reach
 reachy-embodiment/companion-core and change their reported state — end to
 end, through the actual reverse proxy, not just localhost port-forwarding;
 a `POST /hub/voice/turn` request with a real synthesized WAV question,
 routed through Caddy, produced a real transcribed/routed/synthesized WAV
-reply (Phase 8); and, separately (not through this specific compose stack,
-but the same services run as plain processes), a real Telegram bot and a
-real Telegram account confirmed Phase 7's session continuity live.
+reply (Phase 8); a sensitive-content payload sent through Caddy in Office
+mode correctly resolved to `phone`, never `reachy` (Phase 9); and,
+separately (not through this specific compose stack, but the same services
+run as plain processes), a real Telegram bot and a real Telegram account
+confirmed Phase 7's session continuity live.
 
 ## Run it
 
@@ -106,6 +108,21 @@ curl -X POST http://localhost:8080/hub/voice/turn \
 #    with the same STT provider to confirm.
 ```
 
+Privacy/response router (Phase 9) — the exit criterion, live: a private
+payload can't be spoken in Office mode, and the router still refuses even
+in Desk mode (which normally always speaks via Reachy):
+
+```
+curl -X POST http://localhost:8080/hub/messages \
+  -H 'Content-Type: application/json' \
+  -d '{"user_id": "hariz", "channel": "telegram", "text": "what is my salary this year"}'
+# -> privacy: "sensitive", delivery_channel: "telegram" (never "reachy",
+#    even though hariz is in the default Desk mode)
+
+curl http://localhost:8080/hub/audit/hariz
+# -> the routing decision, with "overridden": true recorded
+```
+
 No robot is auto-registered — `POST /hub/robots` above is a manual step.
 Automatic registration (e.g. reachy-embodiment announcing itself to
 reachy-hub on startup) isn't built yet; it's a natural fit for whichever
@@ -121,8 +138,9 @@ telepresence) territory.
 
 ## Known limitation
 
-The Postgres migrations in `reachy_hub/postgres_registry.py` and
-`postgres_session_store.py` are each a single `CREATE TABLE IF NOT EXISTS`
-run at connect time — fine for the two tables that exist today, but not a
-real migration tool. Revisit (e.g. adopt Alembic) once a schema actually
-needs to change under existing data, not just grow by one more table.
+The Postgres migrations in `reachy_hub/postgres_registry.py`,
+`postgres_session_store.py`, `postgres_telegram_chat_registry.py`, and
+`postgres_audit_log.py` are each a single `CREATE TABLE IF NOT EXISTS` run
+at connect time — fine for the tables that exist today, but not a real
+migration tool. Revisit (e.g. adopt Alembic) once a schema actually needs
+to change under existing data, not just grow by one more table.

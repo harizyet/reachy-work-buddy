@@ -19,6 +19,7 @@ from fastapi.testclient import TestClient
 from reachy_embodiment.app import create_app as create_embodiment_app
 from reachy_embodiment.robot import SimulatedRobotBackend
 from reachy_hub.app import create_app
+from reachy_hub.audit_log import InMemoryAuditLog
 from reachy_hub.companion_core_client import CompanionCoreClient
 from reachy_hub.embodiment_client import EmbodimentClient
 from reachy_hub.robot_registry import InMemoryRobotRegistry
@@ -35,6 +36,7 @@ def make_hub_client(**kwargs) -> TestClient:
     app = create_app(
         registry=InMemoryRobotRegistry(),
         session_store=InMemorySessionStore(),
+        audit_log=InMemoryAuditLog(),
         client_factory=lambda base_url: EmbodimentClient(base_url, transport=httpx.ASGITransport(app=embodiment_app)),
         companion_core_client=CompanionCoreClient(
             "http://companion-core", transport=httpx.ASGITransport(app=core_app)

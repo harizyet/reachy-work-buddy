@@ -36,6 +36,17 @@ TextToSpeech protocol a cloud provider would implement later — see tts.py.
 STT/TTS providers are constructed lazily on first use, not at app startup,
 so services that never touch voice pay no model-loading cost.
 
+Phase 9: privacy/response router per ADR 0006's Consequences section and
+docs/plan.md §9 ("Implement response metadata, deterministic routing, audit
+events"). companion-core now proposes a `Privacy` classification per turn;
+response_policy.apply_privacy_override enforces it — a response classified
+sensitive/work-private can never be spoken aloud via Reachy, regardless of
+mode, overriding whatever resolve_delivery_channel (Phase 6) would
+otherwise have chosen. This is deliberately a *second* function, not a
+modification of resolve_delivery_channel, which stays exactly as narrow as
+Phase 6 made it (see response_policy.py). Every routing decision is
+recorded via audit_log.py; GET /audit/{user_id} exposes it.
+
 WebRTC, web UI, and auth (reachy-hub's full ADR 0001 ownership) are later
 phases (15) — not implemented yet.
 
@@ -59,18 +70,21 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel
 
+from reachy_hub.audit_log import AuditEntry, AuditLog
 from reachy_hub.companion_core_client import CompanionCoreClient
 from reachy_hub.embodiment_client import EmbodimentClient
+from reachy_hub.postgres_audit_log import PostgresAuditLog
 from reachy_hub.postgres_registry import PostgresRobotRegistry
 from reachy_hub.postgres_session_store import PostgresSessionStore
 from reachy_hub.postgres_telegram_chat_registry import PostgresTelegramChatRegistry
-from reachy_hub.response_policy import resolve_delivery_channel
+from reachy_hub.response_policy import apply_privacy_override, resolve_delivery_channel
 from reachy_hub.robot_registry import Robot, RobotRegistry
 from reachy_hub.session_store import SessionStore
 from reachy_hub.stt import FasterWhisperSTT, SpeechToText
 from reachy_hub.telegram_chat_registry import TelegramChatRegistry
 from reachy_hub.telegram_client import TelegramClient
 from reachy_hub.tts import EspeakTTS, TextToSpeech
+from shared.models.response import Privacy
 from shared.models.session import AgentSession, Channel, InteractionMode
 
 log = logging.getLogger(__name__)
@@ -92,6 +106,7 @@ class MessageResponse(BaseModel):
     conversation_id: str
     active_channel: Channel
     delivery_channel: Channel
+    privacy: Privacy
     reply: str
 
 
@@ -118,6 +133,7 @@ def create_app(
     tts: TextToSpeech | None = None,
     stt_factory: Callable[[], SpeechToText] | None = None,
     tts_factory: Callable[[], TextToSpeech] | None = None,
+    audit_log: AuditLog | None = None,
 ) -> FastAPI:
     client_factory = client_factory or (lambda base_url: EmbodimentClient(base_url))
     clients: dict[str, EmbodimentClient] = {}
@@ -224,6 +240,7 @@ def create_app(
 
     owns_registry = registry is None
     owns_session_store = session_store is None
+    owns_audit_log = audit_log is None
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -241,6 +258,9 @@ def create_app(
         if owns_telegram_chat_registry:
             dsn = database_url or os.environ["DATABASE_URL"]
             app.state.telegram_chat_registry = await PostgresTelegramChatRegistry.connect(dsn)
+        if owns_audit_log:
+            dsn = database_url or os.environ["DATABASE_URL"]
+            app.state.audit_log = await PostgresAuditLog.connect(dsn)
 
         heartbeat_task = (
             asyncio.create_task(heartbeat_loop(app.state.registry, heartbeat_interval))
@@ -273,6 +293,8 @@ def create_app(
                 await app.state.session_store.close()
             if owns_telegram_chat_registry:
                 await app.state.telegram_chat_registry.close()
+            if owns_audit_log:
+                await app.state.audit_log.close()
 
     app = FastAPI(title="reachy-hub", lifespan=lifespan)
     if not owns_registry:
@@ -281,6 +303,8 @@ def create_app(
         app.state.session_store = session_store
     if not owns_telegram_chat_registry:
         app.state.telegram_chat_registry = telegram_chat_registry
+    if not owns_audit_log:
+        app.state.audit_log = audit_log
 
     async def get_robot_or_404(robot_id: str) -> Robot:
         robot = await app.state.registry.get(robot_id)
@@ -344,6 +368,10 @@ def create_app(
             raise HTTPException(status_code=404, detail=f"no session for user '{user_id}'")
         return await app.state.session_store.set_mode(session, request.interaction_mode)
 
+    @app.get("/audit/{user_id}")
+    async def get_audit_log(user_id: str, limit: int = 50) -> list[AuditEntry]:
+        return await app.state.audit_log.list_for_user(user_id, limit=limit)
+
     async def handle_inbound_message(message: InboundMessage) -> MessageResponse:
         """Shared by POST /messages and the Telegram poll loop — the same
         normalization path regardless of which channel a message arrived
@@ -359,11 +387,26 @@ def create_app(
         except httpx.HTTPError as exc:
             raise HTTPException(status_code=502, detail=f"companion-core unreachable: {exc}") from exc
 
+        privacy = Privacy(result["privacy"])
+        base_channel = resolve_delivery_channel(session.interaction_mode, session.active_channel)
+        delivery_channel = apply_privacy_override(base_channel, privacy, session.active_channel)
+
+        await app.state.audit_log.record(
+            user_id=message.user_id,
+            session_id=session.session_id,
+            channel=message.channel,
+            mode=session.interaction_mode,
+            privacy=privacy,
+            base_channel=base_channel,
+            delivery_channel=delivery_channel,
+        )
+
         return MessageResponse(
             session_id=session.session_id,
             conversation_id=session.conversation_id,
             active_channel=session.active_channel,
-            delivery_channel=resolve_delivery_channel(session.interaction_mode, session.active_channel),
+            delivery_channel=delivery_channel,
+            privacy=privacy,
             reply=result["reply"],
         )
 
