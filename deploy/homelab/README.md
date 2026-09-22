@@ -486,6 +486,10 @@ For an assisted hosted-provider verification, put `CLOUD_LLM_BASE_URL`,
 chat. These are verification inputs, not automatically imported runtime
 settings. The operator UI is the normal configuration path. The Phase 21
 live check used an isolated stack and OVMS for both roles, proving local
-inference, error fallback, manual dispatch, usage and persistence. A real
-hosted-provider check remains pending credentials. See
+inference, error fallback, manual dispatch, usage and persistence. A
+follow-up isolated check (`phase21togetherverify`, see HANDOVER.md) added a
+real hosted provider — Together AI's compatible endpoint with
+`zai-org/GLM-5.3` as the cloud role — and confirmed local success, manual
+`force_frontier` escalation, and real error-triggered fallback all produce
+correctly-labeled usage rows and masked settings responses. See
 [ADR 0018](../../docs/adr/0018-hybrid-llm-routing.md).

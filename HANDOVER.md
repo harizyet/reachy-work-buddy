@@ -23,7 +23,7 @@ conflict once you notice it.
 ## Where things stand
 
 **Phases 0-21 are implemented.** Last implementation: **Phase 21 — Hybrid
-local/cloud LLM routing**. Hosted-provider verification awaits credentials.
+local/cloud LLM routing**, now including a real hosted-provider live check.
 See [ADR 0018](docs/adr/0018-hybrid-llm-routing.md).
 
 - Core `llm/router.py` dispatches local-only, cloud-only, or local then cloud
@@ -52,6 +52,40 @@ upgraded and its seeded historical row survived with a null reason.
 **OVMS backed both roles**; this is live dispatch/inference evidence, not a
 hosted-cloud test. No `CLOUD_LLM_*` credentials were available in `.env.local`.
 The temporary stack and volumes were removed; `ovms` remains untouched.
+
+**Hosted-cloud live check (2026-09-22, `phase21togetherverify`):** the
+owner chose Together AI's compatible endpoint (`https://api.together.xyz/v1`)
+with model `zai-org/GLM-5.3` as the cloud role, key in gitignored
+`deploy/homelab/.env.local` as `TOGETHER_API_KEY` (also mirrored under the
+`CLOUD_LLM_*` names this file had been waiting on). A disposable isolated
+Compose project (own throwaway Postgres/session-secret/admin creds, OVMS
+as local role via `host.docker.internal:8000/v1` + the documented
+`extra_hosts: host-gateway` override) verified, all through the owner-auth
+hub API, not just curl-to-Together:
+- Local-only success (OVMS reply, tokens/latency logged, `escalation_reason: null`).
+- `force_frontier: true` on one message dispatched straight to Together and
+  logged `escalation_reason: "manual"` with a real GLM-5.3 reply.
+- Pointing local at an unreachable URL and sending a normal message produced
+  a real error-triggered fallback: the failed local attempt logged with a
+  sanitized `error_message` (no URL/key), the successful cloud attempt right
+  after logged `escalation_reason: "error"`, and the user still got a real
+  cloud reply.
+- `GET /llm/usage` reflected all of the above correctly in both `entries`
+  and `by_role` summaries; `PUT /settings/llm` masked the cloud key in every
+  response.
+- **Gotcha specific to this model:** GLM-5.3 is a reasoning model — its
+  `reasoning_content` competes with `content` for the same token budget.
+  A raw `curl` with `max_tokens: 10` came back with empty `content` (all
+  budget spent on `reasoning_content`, `finish_reason: "length"`), which
+  would trip `client.py`'s "Empty completion" `ValueError` → provider
+  failure → fallback. `companion_core/llm/client.py` sends no `max_tokens`
+  at all, so it takes Together's provider default, which was large enough
+  in every check above (54-420 completion tokens) — but if cloud replies
+  ever start coming back empty/truncated in production, check
+  `finish_reason` on the raw response before assuming it's a routing bug;
+  it's likely this model spending its budget on reasoning first.
+- Local config was restored to the correct OVMS URL before teardown; the
+  disposable stack and its volumes were removed, `ovms` left running.
 
 ### Phase 20 foundation (historical verification)
 
@@ -154,12 +188,22 @@ mapping documented in deployment setup. The temporary verification stack
 uses its own credentials/volumes and is removed after verification; these
 credentials are not user deployment settings.
 
-**Next work:** complete the hosted-cloud live check once the user supplies
-`CLOUD_LLM_BASE_URL`, `CLOUD_LLM_MODEL`, and `CLOUD_LLM_API_KEY` in gitignored
-`deploy/homelab/.env.local`. These are verification inputs, not automatic
-runtime configuration. Use an isolated stack, configure its cloud role, and
-repeat fallback/manual checks. No Phase 22 is defined in `docs/plan.md` yet;
-agree on the next scope before implementing later functionality.
+**Next work:** the hosted-cloud live check is done (see
+`phase21togetherverify` above) — Together AI / `zai-org/GLM-5.3` is
+verified end-to-end, but no production stack has this cloud config applied
+yet; that's still a normal operator-UI action against the real deployment,
+not something this session did to the user's actual running instance. Phases 22–23 are now planned in
+[docs/phase-22-23.md](docs/phase-22-23.md) and the roadmap, not implemented.
+The user confirmed an **original Jetson Nano**; OS/JetPack, Reachy variant
+and physical wiring remain unknown. Start Phase 22 with that inventory and
+resolve the ADR 0004 conflict if Nano would be the only embodiment host.
+The plan defines real backend work, homelab/Reachy/Nano Bash launchers with
+GUI access, measurable physical acceptance and soak tests. Phase 23 adds
+production read-only Gmail/Calendar Accounts settings, OAuth, encrypted
+credentials and live integration acceptance. No scripts or connectors were
+implemented during this planning session, and no hardware was tested.
+Existing uncommitted hosted-cloud verification notes in this file and
+`deploy/homelab/README.md` were preserved.
 
 Phase 21 upgrades a current Phase 19/20 database additively. Earlier
 missing-column caveats below remain relevant only to older schemas.

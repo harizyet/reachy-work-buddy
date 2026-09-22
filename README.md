@@ -525,11 +525,22 @@ Phases 0-20 are done:
   visible in the operator UI. An additive usage column preserves old data.
   **300 Python tests passed**, plus Chromium regression and real
   Docker/Postgres/Caddy/OVMS checks. OVMS backed both roles in live routing
-  tests; a hosted cloud endpoint remains unverified without credentials.
+  tests; the subsequent Together AI hosted-provider check verified manual
+  override and error fallback (see HANDOVER.md for evidence).
 
 See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
-phase-by-phase roadmap. Phases 0-21 are implemented. Hosted cloud
-verification remains pending credentials; no Phase 22 is defined yet.
+phase-by-phase roadmap. Phases 0-21 are implemented, including hosted-cloud
+verification. **Phases 22–23 are planned, not implemented:**
+
+- Phase 22: original Jetson Nano/Reachy bring-up, real hardware backend,
+  homelab and robot/companion-board Bash launchers with GUI access, and
+  measured physical acceptance tests.
+- Phase 23: production Gmail and Google Calendar connection settings in the
+  operator UI, OAuth credential lifecycle, and read-only workflow integration.
+
+See the [detailed plan and pass criteria](docs/phase-22-23.md). The first gate
+is hardware/runtime inventory and service placement: current ADRs require
+Reachy's fallback to survive a Jetson outage.
 
 ## Layout
 

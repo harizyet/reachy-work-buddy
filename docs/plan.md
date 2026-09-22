@@ -185,8 +185,11 @@ the daemon APIs. [3]
 
 ## 6. Implementation Roadmap
 
-Implementation status (2026-09-22): Phases 0–21 are implemented. Hosted cloud
-verification for Phase 21 awaits credentials; no Phase 22 is defined. See
+Implementation status (2026-09-22): Phases 0–21 are implemented, including
+the hosted-cloud verification recorded in HANDOVER.md. Phases 22–23 are
+planned, not implemented; see the [deployment and accounts acceptance plan](phase-22-23.md).
+Phase 22 starts with the confirmed original Jetson Nano's compatibility and
+physical topology inventory. See
 [README Status](../README.md#status) for verification evidence and
 [ADR 0016](adr/0016-operator-ui.md) for the implemented operator API.
 
@@ -213,7 +216,9 @@ verification for Phase 21 awaits credentials; no Phase 22 is defined. See
 | Phase 18 — Daily briefing | Combine calendar/tasks/email/reminders/project events into prioritized arrival briefing. | Reachy greets; detailed briefing is privately delivered. |
 | Phase 19 — Operator UI | Login-gated web dashboard: live component health, LLM utilization, and controls for mode/DND/LLM provider settings (cloud API key, or a local base URL — primary local target is a self-hosted [OpenVINO Model Server](https://docs.openvino.ai/2026/model-server/ovms_what_is_openvino_model_server.html) instance, reachable over its OpenAI-compatible `/v1/chat/completions` endpoint). Adds a real pluggable LLM client to replace the previously unconfigured `/conversation` fallback when a provider is set — one `OpenAICompatibleChatProvider` implementation, since OVMS, OpenAI's own API, Ollama, LM Studio and vLLM all speak the same `POST {base_url}/chat/completions` shape, so "cloud key" vs "local OpenVINO URL" is only ever a `base_url`/`api_key` difference, never a code fork — so the utilization view reflects genuine calls. Also adds a real single-owner login (replacing the pasted-token flow `REMOTE_UI_TOKEN`/`clients/web-pwa/telepresence.js` use today) so the dashboard isn't gated by a shared secret typed into a text field. | An operator can log in, see every component's live status, and change mode/DND/LLM settings — including pointing the agent at a locally running OpenVINO Model Server by URL alone, no redeploy — without a shell. See [docs/adr/0016](adr/0016-operator-ui.md) (implemented and verified with real OVMS). |
 | Phase 20 — Web chat channel | A text chat view in the browser (served alongside the Phase 19 dashboard) that talks to the buddy through the exact same `Channel.WEB`/`POST /messages` path every other channel already uses — no new conversational logic, just a UI for a channel this codebase already models. Exists both as a first-class regular way to talk to the buddy and as the fallback when Telegram (or any other channel) is down; the Phase 19 status dashboard is extended to show Telegram's actual poll-loop health, not just "token configured", so an outage is visible before the user needs the fallback. | A full text conversation can be held entirely through the browser, with the same session/mode/privacy routing every other channel gets; if Telegram stops responding, the dashboard shows it and the web chat still works. See [docs/adr/0017](adr/0017-web-chat-channel.md) (implemented; verified with real OVMS and a real Telegram polling failure). |
-| Phase 21 — Hybrid local/cloud LLM routing | The "Optional hybrid local/cloud inference routing" item this doc's own §7 V0.3 list already named but never phased. Phase 19's LLM config is role-based from the start (`LLMRole.LOCAL`/`LLMRole.CLOUD`, each pointing at its own provider settings) precisely so this phase is additive: it populates the `CLOUD` role and adds a routing engine (`router.py`) that dispatches purely on role, never on which concrete provider backs it — local-only, cloud-only, or local-with-automatic-cloud-fallback (default once cloud is configured) — escalating to a configured frontier model (OpenAI, Anthropic, etc., still via the same OpenAI-compatible `ChatProvider` abstraction Phase 19 built) when the local call fails outright, plus a manual per-message override or standing routing policy for when the user judges the local model's answer insufficient, since a real automatic quality judgment would need another LLM call to arbitrate and is deliberately out of scope for v1 (same honesty-about-scope discipline as this codebase's other placeholder classifiers). | The agent keeps working on a local-only OpenVINO setup; when a cloud role is also configured, a failed local call can fall back automatically, while a valid but unsatisfying answer requires an explicit user override, and the Phase 19 utilization dashboard shows the `LOCAL`/`CLOUD` usage split. See [ADR 0018](adr/0018-hybrid-llm-routing.md) (implemented; live dispatch verified using OVMS for both roles, hosted cloud verification pending credentials). |
+| Phase 21 — Hybrid local/cloud LLM routing | The "Optional hybrid local/cloud inference routing" item this doc's own §7 V0.3 list already named but never phased. Phase 19's LLM config is role-based from the start (`LLMRole.LOCAL`/`LLMRole.CLOUD`, each pointing at its own provider settings) precisely so this phase is additive: it populates the `CLOUD` role and adds a routing engine (`router.py`) that dispatches purely on role, never on which concrete provider backs it — local-only, cloud-only, or local-with-automatic-cloud-fallback (default once cloud is configured) — escalating to a configured frontier model (OpenAI, Anthropic, etc., still via the same OpenAI-compatible `ChatProvider` abstraction Phase 19 built) when the local call fails outright, plus a manual per-message override or standing routing policy for when the user judges the local model's answer insufficient, since a real automatic quality judgment would need another LLM call to arbitrate and is deliberately out of scope for v1 (same honesty-about-scope discipline as this codebase's other placeholder classifiers). | The agent keeps working on a local-only OpenVINO setup; when a cloud role is also configured, a failed local call can fall back automatically, while a valid but unsatisfying answer requires an explicit user override, and the Phase 19 utilization dashboard shows the `LOCAL`/`CLOUD` usage split. See [ADR 0018](adr/0018-hybrid-llm-routing.md) (implemented; OVMS dispatch and hosted Together AI verification recorded in HANDOVER.md). |
+| Phase 22 — Physical deployment and acceptance testing | Inventory original Jetson Nano and Reachy topology; prove runtime compatibility; implement real robot backend and homelab/Reachy/Nano Bash launchers with GUI access; run the [acceptance plan](phase-22-23.md). | Cold starts, physical motion/media, privacy, channels, outage recovery, backup restore, 8-hour desk run and 24-hour idle soak pass with hardware evidence. Planned, not implemented. |
+| Phase 23 — Production Google account settings | Owner-authenticated Gmail/Calendar Accounts UI, OAuth, encrypted credentials and read-only adapters integrated into existing workflows; see the [accounts plan](phase-22-23.md). | Real-account connect/read/refresh/restart/revoke/reconnect/disconnect and privacy/isolation checks pass; applicable Google production requirements verified; repeat hardware acceptance with accounts. Planned, not implemented. |
 
 ## 7. Release Targets
 
@@ -331,15 +336,11 @@ baseline reference. [1]
 
 ## 12. Immediate Next Actions
 
-1. Create `reachy-work-companion` repository and write architecture decision records for the four main boundaries: Core, Hub, Embodiment, Daemon.
-2. Clone/run upstream Jarvis in simulation and establish a behavioural baseline.
-3. Define the first `EmbodimentCommand` schema and implement `/health`, `/state`, `/behaviours`, and `/behaviour/{name}`.
-4. Implement 5–8 semantic behaviours using existing Reachy recorded moves before creating new animations.
-5. Add a local presence/fallback state machine on the Reachy side.
-6. Deploy minimal Homelab Hub/Core with Docker Compose and prove remote behaviour invocation.
-7. Implement AgentSession before integrating Telegram.
-8. Add Telegram text as the first external channel; then add voice notes.
-9. Only after sessions and routing are stable, extract/adapt Jarvis audio components.
+1. Inventory the original Jetson Nano and Reachy model, OS/runtime, physical connection and device access; resolve service placement against ADR 0004.
+2. Implement Phase 22's real backend, supervised deployment and Bash launchers, including GUI access, per the [detailed plan](phase-22-23.md).
+3. Run the physical acceptance matrix, fix blockers, and record measured results before marking Phase 22 complete.
+4. Implement Phase 23's account-integration ADR, Google setup, Accounts UI, OAuth storage and read-only adapters.
+5. Verify real Google access and repeat deployment/privacy/recovery tests before production rollout.
 
 ## 13. Key Engineering Risks
 
