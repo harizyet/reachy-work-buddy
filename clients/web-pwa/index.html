@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Call Reachy</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #111318;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+    input {
+      display: block;
+      width: 240px;
+      margin: 6px auto;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #444;
+      background: #1c1f26;
+      color: #eee;
+    }
+    button {
+      padding: 12px 20px;
+      border-radius: 8px;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #connect { background: #5b8cff; color: white; margin-top: 12px; }
+    #talk {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      background: #2a2f3a;
+      color: #eee;
+      font-size: 18px;
+      margin-top: 24px;
+      user-select: none;
+      touch-action: none;
+    }
+    #talk:disabled { opacity: 0.4; }
+    #talk.armed { background: #ff5b5b; }
+    #status { margin-top: 16px; font-size: 14px; opacity: 0.8; min-height: 20px; }
+    audio { margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Call Reachy</h1>
+  <div id="setup">
+    <input id="userId" placeholder="user_id" value="hariz" />
+    <input id="robotId" placeholder="robot_id" value="desk-1" />
+    <button id="connect">Call Reachy</button>
+  </div>
+  <button id="talk" disabled>Hold to talk</button>
+  <div id="status">not connected</div>
+  <audio id="remoteAudio" autoplay></audio>
+  <script src="app.js"></script>
+</body>
+</html>

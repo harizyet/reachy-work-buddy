@@ -61,7 +61,13 @@ genuinely gone from `/core/memories` and then restorable — an email send
 was queued (not dispatched) for ~10 minutes, cancelled with Mailpit
 staying at zero messages, then re-queued and left running for the full
 real ~10-minute delay, producing a real SMTP message in Mailpit once due
-(ADR 0011); and, separately (not
+(ADR 0011); a real (non-browser) `aiortc` Python client negotiated a real
+WebRTC call through Caddy (`POST /hub/webrtc/offer`), sent real
+synthesized speech, and got real non-silent synthesized reply audio back,
+with the real embodiment's `last_behaviour` observed transitioning through
+`listening`/`thinking`/`speaking` over the same call, and the PWA's own
+static files served correctly through Caddy at `/hub/app/` (Phase 15, ADR
+0012); and, separately (not
 through this specific compose stack, but the same services run as plain
 processes), a real Telegram bot and a real Telegram account confirmed
 Phase 7's session continuity live.
@@ -313,6 +319,24 @@ curl -X POST http://localhost:8080/core/memories/<memory_id>/restore
 # its ~10-minute window elapses:
 curl -X POST http://localhost:8080/core/emails/drafts/<draft_id>/cancel-send
 ```
+
+Call Reachy (Phase 15, ADR 0012) — open the PWA in a browser on the same
+machine as the Docker host (see the ADR for the known cross-machine
+limitation), register a robot first exactly as above, then:
+
+```
+open http://localhost:8080/hub/app/   # or just navigate there in a browser
+```
+
+Enter a `user_id`/`robot_id` (matching a registered robot), click "Call
+Reachy," allow microphone access, then hold the talk button, speak, and
+release. The status text shows `listening` -> `thinking` -> `speaking` as
+the real embodiment's behaviour changes in step, and the reply plays back
+through the browser/earbuds — never through Reachy's speaker. There's no
+browser available in this repo's own dev/CI environment, so the live
+verification above used a real `aiortc` Python client as a stand-in
+"browser" instead — see `services/reachy-hub/tests/test_webrtc_call_live.py`
+for the same flow, automated.
 
 No robot is auto-registered — `POST /hub/robots` above is a manual step.
 Automatic registration (e.g. reachy-embodiment announcing itself to

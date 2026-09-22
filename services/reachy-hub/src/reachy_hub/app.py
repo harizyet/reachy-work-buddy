@@ -68,8 +68,22 @@ enforcement itself here (companion-core's consent/ module does, since
 that's where the destructive tools/stores live); reachy-hub's only job is
 not losing the signal in transit.
 
-WebRTC, web UI, and auth (reachy-hub's full ADR 0001 ownership) are later
-phases (15) — not implemented yet.
+Phase 15: "Call Reachy" — real WebRTC audio between clients/web-pwa/ and
+`POST /webrtc/offer` (webrtc.py), push-to-talk turn-taking over a
+"control" RTCDataChannel (see webrtc.py's module docstring for why not
+continuous VAD), reusing the exact same STT/TTS providers and
+`handle_inbound_message` path every other channel uses —
+`InboundMessage(channel=Channel.WEB, input_modality=InputModality.VOICE)`.
+Each turn triggers the robot's real `listening`/`thinking`/`speaking`
+behaviours (already in `Behaviour`'s vocabulary, ADR 0003) through the
+existing `EmbodimentClient`, synchronized with the actual reply audio,
+which only ever flows back over the peer connection — never through
+Reachy's speaker, which doesn't exist as a code path here at all (no
+physical Reachy in this environment, same as every other voice-touching
+phase).
+
+Web UI and auth beyond this (reachy-hub's full ADR 0001 ownership) are
+later work — not implemented yet.
 
 Per ADR 0003 ("Sent by companion-core (via reachy-hub) to
 reachy-embodiment's POST /behaviour/{name}"), reachy-hub is the service that
@@ -89,6 +103,7 @@ from contextlib import asynccontextmanager
 import httpx
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from reachy_hub.audit_log import AuditEntry, AuditLog
@@ -105,6 +120,8 @@ from reachy_hub.stt import FasterWhisperSTT, SpeechToText
 from reachy_hub.telegram_chat_registry import TelegramChatRegistry
 from reachy_hub.telegram_client import TelegramClient
 from reachy_hub.tts import EspeakTTS, TextToSpeech
+from reachy_hub.webrtc import CallTurnHandler, negotiate_call
+from shared.models.embodiment import Behaviour
 from shared.models.response import Privacy
 from shared.models.session import AgentSession, Channel, InputModality, InteractionMode
 
@@ -146,6 +163,18 @@ class ReminderRoutingResult(BaseModel):
     text: str
     delivery_channel: Channel
     delivered: bool
+
+
+class WebRTCOfferRequest(BaseModel):
+    sdp: str
+    type: str
+    user_id: str
+    robot_id: str
+
+
+class WebRTCAnswerResponse(BaseModel):
+    sdp: str
+    type: str
 
 
 def create_app(
@@ -316,6 +345,9 @@ def create_app(
                     task.cancel()
                     with contextlib.suppress(asyncio.CancelledError):
                         await task
+            for pc in list(app.state.webrtc_connections):
+                await pc.close()
+            app.state.webrtc_connections.clear()
             for client in clients.values():
                 await client.aclose()
             await companion_core_client.aclose()
@@ -331,6 +363,7 @@ def create_app(
                 await app.state.audit_log.close()
 
     app = FastAPI(title="reachy-hub", lifespan=lifespan)
+    app.state.webrtc_connections = set()
     if not owns_registry:
         app.state.registry = registry
     if not owns_session_store:
@@ -528,5 +561,55 @@ def create_app(
                 "X-Reply-Text": response.reply.encode("ascii", errors="backslashreplace").decode("ascii"),
             },
         )
+
+    @app.post("/webrtc/offer")
+    async def webrtc_offer(request: WebRTCOfferRequest) -> WebRTCAnswerResponse:
+        robot = await get_robot_or_404(request.robot_id)
+        client = get_client(robot)
+
+        async def trigger_behaviour(behaviour: Behaviour) -> None:
+            # A failed behaviour trigger (robot briefly unreachable) must
+            # not break the call — same graceful-degradation as the
+            # heartbeat loop above, not a reason to drop the audio turn.
+            with contextlib.suppress(httpx.HTTPError):
+                await client.trigger_behaviour(behaviour.value)
+
+        async def ask_agent(transcript: str) -> str:
+            response = await handle_inbound_message(
+                InboundMessage(
+                    user_id=request.user_id,
+                    channel=Channel.WEB,
+                    text=transcript,
+                    input_modality=InputModality.VOICE,
+                )
+            )
+            return response.reply
+
+        turn_handler = CallTurnHandler(
+            transcribe=get_stt().transcribe,
+            synthesize=get_tts().synthesize,
+            trigger_behaviour=trigger_behaviour,
+            ask_agent=ask_agent,
+        )
+        answer_sdp, answer_type, pc = await negotiate_call(
+            offer_sdp=request.sdp, offer_type=request.type, turn_handler=turn_handler
+        )
+        app.state.webrtc_connections.add(pc)
+
+        @pc.on("connectionstatechange")
+        async def on_connection_state_change() -> None:
+            if pc.connectionState in ("failed", "closed"):
+                app.state.webrtc_connections.discard(pc)
+                await pc.close()
+
+        return WebRTCAnswerResponse(sdp=answer_sdp, type=answer_type)
+
+    # clients/web-pwa/ — the "Call Reachy" UI itself. Served by reachy-hub
+    # (ADR 0001: reachy-hub owns web UI), reachable through Caddy at
+    # /hub/app/ (Caddy's handle_path strips the /hub prefix before
+    # forwarding). html=True serves index.html for the directory root.
+    web_pwa_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "clients", "web-pwa")
+    if os.path.isdir(web_pwa_dir):
+        app.mount("/app", StaticFiles(directory=web_pwa_dir, html=True), name="web-pwa")
 
     return app

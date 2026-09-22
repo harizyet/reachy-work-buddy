@@ -5,7 +5,7 @@ routing, authentication, robot registry.
 
 Must not own: reasoning policy internals, raw motor control (see [docs/adr/0001](../../docs/adr/0001-service-boundaries.md)).
 
-## Status (Phase 10)
+## Status (Phase 15)
 
 **Robot registry / proxy (Phase 4)**: `POST /robots`, `GET /robots`,
 `GET /robots/{robot_id}/state`, `GET /robots/{robot_id}/behaviours`,
@@ -182,8 +182,48 @@ channel yet, e.g. Phone/Remote).
   `overridden: true` in the audit trail, same as any other privacy
   override.
 
-WebRTC, web UI, and auth (reachy-hub's full ADR 0001 ownership) are later
-phases (15) — not implemented yet.
+**ADR 0011 (destructive-action consent, ahead of Phase 15)**:
+`InboundMessage`/`MessageResponse` carry `input_modality`; only
+`/voice/turn` ever sets `VOICE`. reachy-hub does no destructive-action
+enforcement itself (companion-core's `consent/` module does) — reachy-hub's
+job is only not losing the signal in transit.
+
+**Phase 15 ("Call Reachy", ADR 0012)**: real WebRTC audio between
+`clients/web-pwa/` and `POST /webrtc/offer` (`webrtc.py`), push-to-talk
+turn-taking over a `"control"` `RTCDataChannel` (not continuous VAD — see
+ADR 0012 for why), reusing the exact same `stt.py`/`tts.py` providers and
+`handle_inbound_message` path every other channel uses
+(`channel=Channel.WEB`, `input_modality=InputModality.VOICE` — same
+ADR-0011 rule as `/voice/turn`: a WebRTC call can never confirm a
+destructive action either). Each turn drives the target robot's real
+`listening`/`thinking`/`speaking` behaviours (already in `Behaviour`'s
+vocabulary, ADR 0003) through the existing `EmbodimentClient`, and only
+the peer connection ever carries the reply audio — Reachy has no speaker
+output wired to hardware at all in this environment, so "no room audio"
+holds by construction.
+
+- `webrtc.py`'s `CallTurnHandler` (pure orchestration: STT -> thinking ->
+  agent -> speaking -> TTS) is deliberately separate from the aiortc/SDP
+  plumbing (`negotiate_call`, `SilentAudioTrack`, `WavPlaybackTrack`,
+  `RecordingBuffer`) — same split as `email/workflow.py` vs.
+  `email/sender.py` in companion-core.
+- `WavPlaybackTrack` always resamples to 48kHz mono before framing — a
+  real bug surfaced live-testing this: aiortc's `RTCRtpSender` locks its
+  Opus encoder/resampler to the *first* frame's format and doesn't
+  re-adapt on `replaceTrack`, so swapping in `tts.py`'s ~22050Hz espeak-ng
+  output without resampling raised `ValueError: Frame does not match
+  AudioResampler setup` deep inside aiortc's encode path.
+- `clients/web-pwa/` is served directly by reachy-hub (`StaticFiles`
+  mounted at `/app`) — reachable through Caddy at `/hub/app/`. No build
+  step: plain HTML/JS/CSS.
+- **Verified live**: a real (non-browser) `aiortc` Python client
+  negotiated a real call through the deployed Caddy stack
+  (`/hub/webrtc/offer`), sent real synthesized speech, and received real
+  non-silent synthesized reply audio back; the real embodiment's
+  `last_behaviour` was observed transitioning through
+  `listening`/`thinking`/`speaking` over the same call; the PWA's static
+  files (`index.html`, `app.js`, `manifest.json`) all served correctly
+  through Caddy at `/hub/app/`.
 
 ## Run it
 
@@ -235,11 +275,19 @@ companion-core path a real Reachy would use;
 including asserting `resolve_delivery_channel`'s parameter list still has
 no content field after Phase 9 added a *second* function alongside it.
 `test_check_reminders_routes_through_the_same_policy_as_messages` is Phase
-10's. `PostgresRobotRegistry`, `PostgresSessionStore`, `PostgresAuditLog`,
-`PostgresCalendarStore` (companion-core's, exercised through this chain),
-and the real Telegram Bot API itself are exercised live (real Postgres, a
-real bot, a real Telegram account — see deploy/homelab/README.md), not by
-the unit test suite.
+10's. `test_webrtc.py` unit-tests `encode_wav`/`CallTurnHandler`/
+`SilentAudioTrack`/`WavPlaybackTrack`/`RecordingBuffer` in isolation (real
+`av.AudioFrame` objects, no actual peer connection);
+`test_webrtc_call_live.py::test_real_webrtc_call_round_trips_real_audio_and_drives_real_embodiment`
+is Phase 15's — a real `aiortc` client peer (not a mock, not a browser)
+negotiates a real call against `POST /webrtc/offer`, sends real
+synthesized speech, and asserts real non-silent reply audio came back
+plus the real embodiment's behaviour transitions. `PostgresRobotRegistry`,
+`PostgresSessionStore`, `PostgresAuditLog`, `PostgresCalendarStore`
+(companion-core's, exercised through this chain), and the real Telegram
+Bot API itself are exercised live (real Postgres, a real bot, a real
+Telegram account — see deploy/homelab/README.md), not by the unit test
+suite.
 
 Tests touching real models/subprocesses are marked `@pytest.mark.slow` and
 skip cleanly if `espeak-ng` isn't on `PATH`:

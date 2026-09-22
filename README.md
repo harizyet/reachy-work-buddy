@@ -13,7 +13,7 @@ stays expressive even when the homelab is unreachable.
 
 ## Features
 
-What the system can actually do today (Phases 0-14; see Status below for
+What the system can actually do today (Phases 0-15; see Status below for
 the engineering detail and live-verification evidence behind each item):
 
 - **Talk to Reachy** — a semantic behaviour API and a local presence loop
@@ -62,6 +62,11 @@ the engineering detail and live-verification evidence behind each item):
 - **Every destructive action can be undone** — forgetting a memory is a
   soft delete you can restore; sending an email queues for ~10 minutes
   with a cancel window before it actually goes out.
+- **Call Reachy over WebRTC** — a real-time private audio call from a
+  browser/PWA, push-to-talk, with Reachy's real embodiment visibly
+  listening, thinking, and speaking in step with the call — the reply
+  audio only ever plays back to your earbuds, never through Reachy's own
+  speaker.
 - **Runs for real** — one `docker compose up` brings up the whole stack
   (reasoning, hub, embodiment, Postgres, a reverse proxy) on your own
   homelab; every feature above has been verified against that actual
@@ -143,7 +148,7 @@ live restart tests verify).
 
 ## Status
 
-Phases 0-14 are done:
+Phases 0-15 are done:
 
 - Phase 0: architecture freeze (ADRs, shared schemas).
 - Phase 1: Jarvis reference baseline — [docs/jarvis-baseline.md](docs/jarvis-baseline.md).
@@ -320,18 +325,46 @@ Phases 0-14 are done:
   [docs/adr/0011](docs/adr/0011-destructive-action-consent.md) for the
   full design.
 
+- Phase 15 ("Call Reachy", ADR 0012): real WebRTC audio between
+  `clients/web-pwa/` (previously scaffolding-only) and reachy-hub's new
+  `POST /webrtc/offer` (`webrtc.py`, `aiortc`). Push-to-talk, not
+  continuous VAD — a "control" `RTCDataChannel` carries `start_talk`/
+  `end_talk` around a hold-to-talk button, chosen deliberately over
+  building new real-time VAD infrastructure this codebase doesn't have;
+  the turn itself reuses the exact same whole-utterance STT/TTS pipeline
+  and `handle_inbound_message` path every other channel uses
+  (`channel=web`, `input_modality=voice` — the same ADR 0011 rule as
+  `/voice/turn`: a WebRTC call can't confirm a destructive action either).
+  Each turn drives the target robot's real `listening`/`thinking`/
+  `speaking` behaviours (already in `Behaviour`'s vocabulary since ADR
+  0003 — no reachy-embodiment changes needed) in step with the actual
+  reply audio, which only ever flows over the peer connection — Reachy has
+  no speaker output wired to hardware in this environment, so "no room
+  audio" holds by construction. Verified live through the real deployed
+  Caddy stack: a real (non-browser) `aiortc` Python client negotiated a
+  real call, sent real synthesized speech, and received real non-silent
+  reply audio back, with the real embodiment observed transitioning
+  through listening/thinking/speaking over the same call — a real
+  `replaceTrack`-vs-Opus-resampler bug (aiortc locks its encoder to the
+  first frame's format) surfaced and got fixed along the way, something a
+  mocked transport would never have caught. See
+  [docs/adr/0012](docs/adr/0012-call-reachy-webrtc.md) for the full design
+  and its one known, untested-here limitation (a browser on a different
+  machine than the Docker host needs reachy-hub's WebRTC media reachable
+  directly — Caddy only proxies the signaling POST, not the RTP audio).
+
 See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
-phase-by-phase roadmap. Next up: Phase 15, calling Reachy (PWA + WebRTC
-real-time audio, private earbuds conversation while Reachy visibly
-listens/thinks/speaks).
+phase-by-phase roadmap. Next up: Phase 16, remote telepresence
+(camera/status/manual behaviours/speak-through-robot via a secure remote
+UI).
 
 ## Layout
 
 ```
 services/companion-core/     reasoning/tools/memory, privacy, calendar, tasks, RAG, email, consent gate (Phases 5, 9-14, ADR 0011)
-services/reachy-hub/         robot registry, sessions, routing, Telegram, voice/STT/TTS, audit, reminders (Phases 4-10)
+services/reachy-hub/         robot registry, sessions, routing, Telegram, voice/STT/TTS, WebRTC calls, audit, reminders (Phases 4-10, 15)
 services/reachy-embodiment/  semantic behaviour API + presence loop + VAD (Phases 2-3, 8)
-clients/web-pwa/             web/PWA client (unimplemented)
+clients/web-pwa/             "Call Reachy" WebRTC PWA (Phase 15)
 shared/models/                Pydantic data contracts shared across services
 shared/protocols/             HTTP route constants shared across services
 deploy/homelab/                Docker Compose: companion-core, reachy-hub, postgres, caddy

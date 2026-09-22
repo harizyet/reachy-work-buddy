@@ -13,6 +13,9 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 COPY shared/ shared/
 COPY services/reachy-hub/ services/reachy-hub/
+# The "Call Reachy" PWA (Phase 15) — reachy-hub serves it directly (ADR
+# 0001: reachy-hub owns web UI), see app.py's StaticFiles mount.
+COPY clients/web-pwa/ clients/web-pwa/
 
 RUN uv sync --frozen --no-dev --package reachy-hub
 
