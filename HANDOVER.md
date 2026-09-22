@@ -393,12 +393,73 @@ clean (300/300 tests, ruff clean). Committed on the homelab side.
 
 **Phase 22's dependency-blocker thread is now fully resolved:** container
 install works, non-root device access works, memory fits, and the
-underlying `silero-vad` bug is fixed. Next work is `RobotBackend`'s real
-implementation, using the daemon API map already gathered above — not
-started yet. The `/state/doa` VAD-alternative idea is no longer required
-(the torch path is proven viable) but remains available if ever wanted;
-would need the owner physically present since daemon start moves the
-robot by default.
+underlying `silero-vad` bug is fixed. The `/state/doa` VAD-alternative
+idea is no longer required (the torch path is proven viable) but remains
+available if ever wanted; would need the owner physically present since
+daemon start moves the robot by default.
+
+**Phase 22 deliverable 2 (`RobotBackend` real implementation): done, but
+unverified against a live daemon.** `ReachyDaemonBackend` in
+`services/reachy-embodiment/src/reachy_embodiment/robot.py` implements
+the `RobotBackend` protocol as an HTTP client to `reachy-mini-daemon`,
+selected via `ROBOT_BACKEND=reachy_daemon`/`REACHY_DAEMON_URL` (env vars,
+`_default_backend()` in `app.py`; defaults to simulated when unset, same
+as every prior phase, but an *unrecognized* value now raises at startup
+rather than silently falling back — Phase 22's "real mode must fail
+clearly" requirement).
+
+- `connected`/`sim` query the daemon's `GET /daemon/status`; unreachable
+  daemon → `connected=False`, `sim=True` (never claims confirmed real
+  hardware when it can't verify). `PresenceLoop` now re-checks
+  `backend.connected` periodically (`connection_check_seconds`, default
+  2s) instead of only once at startup — previously `ServiceState.connected`
+  never updated after boot regardless of backend, a real gap for a
+  backend whose daemon connection can drop independently of homelab
+  heartbeats. Bounded/rate-limited so a real backend's blocking HTTP
+  check doesn't stall the 30Hz idle-animation loop.
+- `play_behaviour` posts to `POST /move/play/recorded-move-dataset/{dataset}/{move_name}`,
+  mapped from `Behaviour` via a configurable, **unverified** default
+  mapping (dataset `"default"`, move name = the Behaviour's own string
+  value) — no real dataset/move-name inventory has been done against a
+  live daemon. A failed/missing move logs and no-ops rather than raising,
+  so one bad mapping entry doesn't break every behaviour call.
+- `capture_frame()` implements the V4L2/OpenCV-direct-access path
+  (`/media/release` → `cv2.VideoCapture("/dev/video0")` → one frame →
+  `/media/acquire`, always re-acquiring even on failure) discussed in the
+  inventory report, since the daemon has no REST single-frame endpoint.
+  Adds `opencv-python-headless` as a new dependency (manylinux2014 wheels,
+  more permissive than the manylinux_2_28 floor that blocked torch/
+  onnxruntime — expected fine given the proven container path, not yet
+  confirmed on real hardware).
+- `play_audio()` uploads via `POST /media/sounds/upload` then
+  `POST /media/play_sound`; the upload response's field name is a guess
+  among plausible keys (`path`/`file`/`filename`/`name`) since no live
+  response has been inspected — raises `RobotBackendError` clearly if
+  none match, rather than silently mis-playing or guessing further.
+- **What was actually verified (not just unit-tested):** real `uv sync
+  --frozen --package reachy-embodiment --no-dev` install succeeds
+  (matches the Docker build shape); a real `docker build` of
+  `services/reachy-embodiment/Dockerfile` succeeds with the new deps
+  (`onnxruntime`/`opencv-python-headless`/`httpx` all resolve correctly);
+  the built container actually run and hit over HTTP — default (simulated)
+  backend serves `/health`/`/state` correctly; `ROBOT_BACKEND=reachy_daemon`
+  pointed at an unreachable URL starts cleanly, reports
+  `connected:false, sim:true` honestly, and `/behaviour/greeting` still
+  returns 200 (logs the failed daemon call, doesn't crash the request);
+  an unrecognized `ROBOT_BACKEND` value crashes at import/startup with a
+  clear `ValueError`, not a silent sim fallback. Full suite: 317/317
+  tests pass (15 new `ReachyDaemonBackend` tests against
+  `httpx.MockTransport`, 2 new presence-loop connection-check tests),
+  ruff clean. **What was NOT verified: anything against the real daemon**
+  — no live `reachy-mini-daemon` has been started this whole Phase 22
+  session (starting it moves the robot via `--wake-up-on-start` by
+  default and needs the owner physically present/supervising), so the
+  move-name mapping, upload-response field name, and status field
+  semantics are all still best-effort reads of daemon source, not
+  confirmed live behaviour. Next: either get the owner present to start
+  the daemon and do a real end-to-end pass, or continue to deliverable 3
+  (repeatable deployment/launchers) and fold live `RobotBackend`
+  verification into that pass's acceptance testing.
 
 **Cross-session coordination note:** this Phase 22 work happened live
 across two Claude Code sessions (homelab + Nano) via `SendMessage`/cross-session

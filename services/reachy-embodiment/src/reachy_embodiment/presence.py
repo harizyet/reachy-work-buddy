@@ -55,12 +55,14 @@ class PresenceLoop:
         heartbeat_timeout: float = 5.0,
         idle_cycle_seconds: float = 3.0,
         tick_hz: float = 30.0,
+        connection_check_seconds: float = 2.0,
     ) -> None:
         self._backend = backend
         self._state = state
         self._heartbeat_timeout = heartbeat_timeout
         self._idle_cycle_seconds = idle_cycle_seconds
         self._tick_interval = 1.0 / tick_hz
+        self._connection_check_seconds = connection_check_seconds
 
         self._lock = threading.Lock()
         self._thread: threading.Thread | None = None
@@ -68,6 +70,7 @@ class PresenceLoop:
 
         self._last_heartbeat_at = datetime.now(UTC)
         self._last_idle_tick_monotonic = 0.0
+        self._last_connection_check_monotonic = 0.0
         self._idle_index = 0
 
     def start(self) -> None:
@@ -101,6 +104,7 @@ class PresenceLoop:
         deterministically without depending on real wall-clock sleeps."""
         with self._lock:
             self._check_watchdog(now)
+            self._check_backend_connection(monotonic_now)
             self._maybe_play_idle(monotonic_now)
 
     def _check_watchdog(self, now: datetime) -> None:
@@ -108,6 +112,27 @@ class PresenceLoop:
         if elapsed > self._heartbeat_timeout and self._state.embodiment_state != EmbodimentState.DISCONNECTED:
             log.warning("no heartbeat for %.1fs, entering DISCONNECTED", elapsed)
             self._state.embodiment_state = EmbodimentState.DISCONNECTED
+
+    def _check_backend_connection(self, monotonic_now: float) -> None:
+        """Refreshes `state.connected` from the backend periodically.
+
+        Phase 22 (real hardware): ServiceState.connected/sim were
+        previously only ever set once, at app startup, from the backend's
+        properties at construction time — accurate for
+        SimulatedRobotBackend (always True) but not for a real backend
+        whose daemon connection can be lost independently of homelab
+        heartbeats. Bounded to `connection_check_seconds` because a real
+        backend's `connected` does a blocking HTTP call; checking every
+        tick would stall idle animation on every failed request.
+        """
+        if monotonic_now - self._last_connection_check_monotonic < self._connection_check_seconds:
+            return
+        self._last_connection_check_monotonic = monotonic_now
+
+        connected = self._backend.connected
+        if connected != self._state.connected:
+            log.info("backend connection changed: %s -> %s", self._state.connected, connected)
+            self._state.connected = connected
 
     def _maybe_play_idle(self, monotonic_now: float) -> None:
         if self._state.embodiment_state in _HOMELAB_DRIVEN_STATES:

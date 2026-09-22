@@ -75,6 +75,56 @@ def test_homelab_driven_state_is_not_overridden_by_idle_cycle() -> None:
     assert state.last_behaviour is None
 
 
+class _FakeBackend(SimulatedRobotBackend):
+    """A SimulatedRobotBackend whose `connected` can be flipped by the test,
+    standing in for a real backend whose daemon connection can drop
+    independently of homelab heartbeats (Phase 22)."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.connected_value = True
+        self.connected_call_count = 0
+
+    @property
+    def connected(self) -> bool:
+        self.connected_call_count += 1
+        return self.connected_value
+
+
+def test_connection_check_updates_state_connected_on_change() -> None:
+    backend = _FakeBackend()
+    state = ServiceState(connected=True, sim=True)
+    loop = PresenceLoop(backend, state, heartbeat_timeout=1000.0, idle_cycle_seconds=1000.0, connection_check_seconds=2.0)
+    loop._last_heartbeat_at = datetime.now(UTC)
+
+    backend.connected_value = False
+    loop.tick(datetime.now(UTC), 100.0)  # first check always fires (last check starts at 0.0)
+    assert state.connected is False
+
+    backend.connected_value = True
+    loop.tick(datetime.now(UTC), 100.5)  # inside the 2s window: no re-check yet
+    assert state.connected is False
+
+    loop.tick(datetime.now(UTC), 102.5)  # past the window: re-checks and picks up the change
+    assert state.connected is True
+
+
+def test_connection_check_does_not_block_idle_animation_between_checks() -> None:
+    """A real backend's `connected` does a blocking HTTP call; this proves
+    the idle cycle isn't gated on the connection check firing every tick."""
+    backend = _FakeBackend()
+    state = ServiceState(connected=True, sim=True)
+    loop = PresenceLoop(backend, state, heartbeat_timeout=1000.0, idle_cycle_seconds=0.5, connection_check_seconds=1000.0)
+    loop._last_heartbeat_at = datetime.now(UTC)
+
+    loop.tick(datetime.now(UTC), 100.0)
+    first_check_count = backend.connected_call_count
+    assert state.last_behaviour is not None  # idle cycle still fired
+
+    loop.tick(datetime.now(UTC), 100.1)
+    assert backend.connected_call_count == first_check_count  # no extra connection check yet
+
+
 def test_real_thread_animates_continuously_and_survives_disconnect() -> None:
     """End-to-end proof of the Phase 3 exit criterion: Reachy keeps
     animating even once the (simulated) homelab stops sending heartbeats."""

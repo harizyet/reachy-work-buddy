@@ -17,6 +17,7 @@ start/end, driving the long-unused EmbodimentState.REMOTE.
 
 from __future__ import annotations
 
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -27,10 +28,32 @@ from pydantic import BaseModel
 
 from reachy_embodiment.behaviours import DESCRIPTIONS, STATE_FOR_BEHAVIOUR
 from reachy_embodiment.presence import PresenceLoop
-from reachy_embodiment.robot import RobotBackend, SimulatedRobotBackend
+from reachy_embodiment.robot import (
+    ReachyDaemonBackend,
+    RobotBackend,
+    SimulatedRobotBackend,
+)
 from reachy_embodiment.state import ServiceState
 from shared.models.embodiment import Behaviour, EmbodimentState
 from shared.protocols import embodiment_api as routes
+
+
+def _default_backend() -> RobotBackend:
+    """Selects the backend from `ROBOT_BACKEND`/`REACHY_DAEMON_URL`.
+
+    Deliberately does not fall back to SimulatedRobotBackend on a bad/
+    unrecognized ROBOT_BACKEND value — Phase 22's plan requires real mode
+    to fail clearly rather than silently behave like simulation. Defaults
+    to simulated only when the variable is entirely unset, matching every
+    prior phase's behaviour before this one existed.
+    """
+    kind = os.environ.get("ROBOT_BACKEND", "simulated").strip().lower()
+    if kind in ("simulated", "sim"):
+        return SimulatedRobotBackend()
+    if kind in ("reachy_daemon", "reachy-daemon", "real"):
+        daemon_url = os.environ.get("REACHY_DAEMON_URL", "http://127.0.0.1:8000")
+        return ReachyDaemonBackend(daemon_url)
+    raise ValueError(f"unknown ROBOT_BACKEND {kind!r}; expected 'simulated' or 'reachy_daemon'")
 
 
 class BehaviourBody(BaseModel):
@@ -53,7 +76,7 @@ class RemoteBody(BaseModel):
 
 
 def create_app(backend: RobotBackend | None = None, *, run_presence_loop: bool = True) -> FastAPI:
-    backend = backend or SimulatedRobotBackend()
+    backend = backend or _default_backend()
     state = ServiceState(connected=backend.connected, sim=backend.sim)
     presence_loop = PresenceLoop(backend, state)
 

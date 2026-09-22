@@ -46,6 +46,23 @@ dependencies = [
     # listed directly too.
     "torch",
     "torchaudio",
+    # Phase 22: ReachyDaemonBackend's HTTP client to reachy-mini-daemon.
+    # Same package/version floor companion-core and reachy-hub already use
+    # to talk to each other (root pyproject.toml's dev group, their own
+    # pyproject.tomls) — no new pattern introduced.
+    "httpx>=0.27",
+    # Phase 22: ReachyDaemonBackend.capture_frame() reads one frame directly
+    # from /dev/video0 via V4L2 while the daemon has released media control
+    # (POST /media/release) — the daemon itself exposes no REST single-frame
+    # endpoint, only WebRTC (see docs/verification/phase-22-inventory-
+    # 2026-09-22.md's daemon API section). -headless: no GUI/Qt bindings
+    # needed on a server process. Ships permissive manylinux2014 wheels, not
+    # the manylinux_2_28 floor that blocked torch/onnxruntime natively on
+    # the Nano's glibc 2.27 — expected to install fine either natively or in
+    # the newer-glibc container path proven during Phase 22 verification,
+    # but not yet confirmed against a live daemon/camera; treat as a first
+    # draft pending that verification.
+    "opencv-python-headless>=4.9",
 ]
 
 [tool.uv.sources]
