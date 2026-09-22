@@ -330,6 +330,37 @@ and reboot for it to take effect — done by the owner). Once unblocked:
 proven, and non-root device access is now also proven — only the RAM
 headroom question remains open.**
 
+## Real bug found and fixed: `silero-vad` missing its own `onnxruntime` requirement (2026-09-22)
+
+Found during the memory load test below, **platform-independent, not
+Nano-specific**: `silero-vad` 6.2.2 (what this repo's unpinned
+`silero-vad>=5.1` currently resolves to) unconditionally imports
+`onnxruntime` from its `sequence_vad.py` at module load time, but its own
+wheel metadata does **not** declare `onnxruntime` as a required
+dependency — only under an opt-in `onnx-cpu`/`onnx-gpu` extra that
+nothing in this repo requested. Reproduced directly: `uv sync --frozen
+--package reachy-embodiment --no-dev` (matching this service's actual
+Docker build shape) followed by `from silero_vad import VADIterator,
+load_silero_vad` (exactly what `audio/vad.py` does) raised
+`ModuleNotFoundError: No module named 'onnxruntime'`.
+
+This had been silently masked in every dev/CI run so far because `uv sync
+--all-packages` shares one venv across all three services (AGENTS.md), and
+`reachy-hub`'s `faster-whisper` dependency pulls `onnxruntime` in
+transitively for itself — the same class of masking AGENTS.md already
+documents for `python-multipart`. `reachy-embodiment`'s own Docker image,
+built with `--package reachy-embodiment` only, gets none of that; it would
+have failed to start on any platform, not just this Nano.
+
+**Fixed:** `services/reachy-embodiment/pyproject.toml` now declares
+`silero-vad[onnx-cpu]>=5.1` instead of the bare extra-less pin. Re-locked
+(`uv lock`), verified the isolated `--package reachy-embodiment` install
+now imports cleanly, restored the full workspace venv, and re-ran the
+full suite: **300/300 tests pass**, `ruff check services shared` clean.
+Committed on the homelab side, not by the Nano session (which correctly
+reported this as a finding rather than patching it itself, per its
+read-only instructions).
+
 ## Non-root device passthrough — RESOLVED, works correctly (2026-09-22)
 
 Follow-up to the root-only passthrough caveat above.
@@ -457,15 +488,58 @@ validate on a clean SD card before relying on it. The unresolved
 PyGObject `3.46.0`-vs-`3.44.1` question (see earlier section) is flagged
 inline in the script rather than guessed at.
 
+## Memory load test — RESOLVED, comfortable headroom (2026-09-22)
+
+Scope corrected first: `reachy-embodiment`'s actual dependency set is
+narrower than "the full multi-service stack" — just `fastapi`,
+`uvicorn[standard]`, `silero-vad` (torch/torchaudio/now onnxruntime),
+`numpy`, `pillow`, `python-multipart` (per its `pyproject.toml`).
+`sentence-transformers`/`faster-whisper` belong to `companion-core`/
+`reachy-hub`, which run in the homelab, not on the Nano.
+
+Container: `ubuntu:22.04` (glibc 2.35), Python 3.13.15, venv with the
+full corrected dependency set including `onnxruntime` (the fix above).
+Measured `VmRSS` from `/proc/self/status` inside the test process at each
+stage; inference used a 512-sample (32ms@16kHz) chunk matching
+`vad.py`'s exact `CHUNK_SAMPLES`/`VADIterator` call shape, plus 20 more
+for steady state:
+
+| Stage | Process VmRSS | `docker stats` container total |
+|---|---|---|
+| Process started, no imports | 30.7MB | — |
+| torch imported | 220.0MB | — |
+| silero_vad imported (incl. onnxruntime) | 242.6MB | 505.6MiB |
+| Silero model loaded | 250.9MB | 521.6MiB |
+| After 1 inference | 274.7MB | 537MiB |
+| After 20 more inferences (steady state) | 277.8MB | 538MiB |
+
+Host `free -h`, desktop running normally throughout (not closed to
+flatter the number):
+
+- Before test: `used 1.9G / free 601M / available 1.7G` (swap 227M used)
+- At peak (container ~538MiB): `used 2.1G / free 495-502M / available
+  1.6G` (swap unchanged)
+- After container removed: `used 1.9G / free 663M / available 1.7G`
+  (swap 235M, negligible drift)
+
+**Verdict: fits comfortably, does not get tight.** Peak container
+footprint (~538MiB, mostly torch's own ~190MB import baseline) barely
+dents the ~1.6-1.7GB available on this 3.9GB board — available memory
+dropped only ~100MB at peak vs. baseline, swap didn't move. FastAPI/
+uvicorn overhead on top is tens of MB, not hundreds; the full service
+should sit comfortably under ~600-700MB resident, leaving well over 1GB
+headroom alongside the existing desktop session.
+
 ## Open questions / next steps
 
-1. **Torch/VAD blocker (container route: install proven, device access
-   proven, RAM headroom the last open question):** decide whether to
-   load-test the full stack's memory footprint under the container on
-   this specific 3.9GB, non-headless board, evaluate the daemon's own
-   `/state/doa` `speech_detected` signal as a torch-free alternative
-   instead (needs the owner present — daemon start moves the robot by
-   default), or both.
+1. **Torch/VAD dependency question: fully resolved.** Container install
+   works, non-root device access works, memory footprint fits
+   comfortably. The `silero-vad[onnx-cpu]` fix is committed. No remaining
+   blocker on this thread; next is `RobotBackend` implementation design
+   (using the daemon API map above) or, optionally, still evaluating
+   `/state/doa`'s `speech_detected` as an even-lighter-weight alternative
+   (not required now that the torch path is proven viable; would need
+   the owner present since daemon start moves the robot by default).
 2. **Install script validation:** not yet re-run end to end on a clean
    image; the PyGObject pin risk is unresolved.
 3. Decide whether to leave `~/reachy-work-buddy` on the Nano as-is, wipe

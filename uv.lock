@@ -1164,7 +1164,7 @@ dependencies = [
     { name = "pillow" },
     { name = "python-multipart" },
     { name = "reachy-work-companion" },
-    { name = "silero-vad" },
+    { name = "silero-vad", extra = ["onnx-cpu"] },
     { name = "torch", version = "2.9.1", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
     { name = "torch", version = "2.9.1+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
     { name = "torchaudio", version = "2.9.1", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.15' and platform_machine == 'aarch64' and platform_python_implementation == 'CPython' and sys_platform == 'linux') or sys_platform == 'darwin'" },
@@ -1179,7 +1179,7 @@ requires-dist = [
     { name = "pillow", specifier = ">=10.0" },
     { name = "python-multipart", specifier = ">=0.0.9" },
     { name = "reachy-work-companion", editable = "." },
-    { name = "silero-vad", specifier = ">=5.1" },
+    { name = "silero-vad", extras = ["onnx-cpu"], specifier = ">=5.1" },
     { name = "torch", index = "https://download.pytorch.org/whl/cpu" },
     { name = "torchaudio", index = "https://download.pytorch.org/whl/cpu" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
@@ -1552,6 +1552,11 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a7/56/ebfabcd5bc5a8ba801d7165d517c45dc70dd2a36c140a716a91e72a19b05/silero_vad-6.2.2.tar.gz", hash = "sha256:d7bcf19452cb24e8852a128d131df34ce5ada032d958a19bfd2fb0083df90707", size = 29271295, upload-time = "2026-09-17T15:02:39.692Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7f/ea/1231f12527b333dc2e6490b89fe2da8849e6d0f5b50f976399b2fd222cc0/silero_vad-6.2.2-py3-none-any.whl", hash = "sha256:0037883f87b39f63414fcc4a707bcecc77c0347b0bd00cb7303b9e5e0f47b3b9", size = 11315950, upload-time = "2026-09-17T15:02:37.288Z" },
+]
+
+[package.optional-dependencies]
+onnx-cpu = [
+    { name = "onnxruntime" },
 ]
 
 [[package]]

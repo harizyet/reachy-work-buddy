@@ -367,15 +367,38 @@ remaining open concern before calling this a settled deployment path.
   the Nano**, sidestepping the glibc wall for that one piece of
   functionality. Not evaluated for accuracy/latency; flagged as an option.
 
-**Next work:** decide whether to load-test the full stack's memory
-footprint under the container on this specific board (the last open
-question), evaluate the `/state/doa` VAD-alternative instead or in
-addition (needs the owner physically present, since starting the daemon
-moves the robot via `--wake-up-on-start` by default), or proceed straight
-to `RobotBackend` implementation design given the container path is now
-mechanically proven. `RobotBackend`'s real implementation has not been
-started — the daemon API investigation above is prep for that, not the
-implementation itself.
+**Memory load test: RESOLVED, comfortable headroom.** Correction first:
+`reachy-embodiment`'s real dependency set is narrower than "the full
+stack" — fastapi/uvicorn/silero-vad(torch+onnxruntime)/numpy/pillow only;
+`sentence-transformers`/`faster-whisper` belong to `companion-core`/
+`reachy-hub` in the homelab, not the Nano. Peak container footprint
+measured at ~538MiB (torch import is ~190MB of that baseline); host
+available memory only dropped ~100MB from baseline at peak, swap didn't
+move, on a board with ~1.6-1.7GB available. **Fits comfortably — this
+concern is closed.**
+
+**Real bug found and fixed during this test (platform-independent, not
+Nano-specific):** `silero-vad` 6.2.2 (what `silero-vad>=5.1` currently
+resolves to) unconditionally imports `onnxruntime` but doesn't declare it
+as a required dependency — only under an unrequested `onnx-cpu` extra.
+This was silently masked in every dev/CI run because the shared
+`--all-packages` dev venv gets `onnxruntime` for free via `reachy-hub`'s
+`faster-whisper` (same masking class AGENTS.md already documents for
+`python-multipart`) — `reachy-embodiment`'s own isolated Docker build
+would have failed to start on any platform. **Fixed:**
+`services/reachy-embodiment/pyproject.toml` now declares
+`silero-vad[onnx-cpu]>=5.1`; re-locked, verified the isolated
+`--package reachy-embodiment` install imports cleanly, full suite re-run
+clean (300/300 tests, ruff clean). Committed on the homelab side.
+
+**Phase 22's dependency-blocker thread is now fully resolved:** container
+install works, non-root device access works, memory fits, and the
+underlying `silero-vad` bug is fixed. Next work is `RobotBackend`'s real
+implementation, using the daemon API map already gathered above — not
+started yet. The `/state/doa` VAD-alternative idea is no longer required
+(the torch path is proven viable) but remains available if ever wanted;
+would need the owner physically present since daemon start moves the
+robot by default.
 
 **Cross-session coordination note:** this Phase 22 work happened live
 across two Claude Code sessions (homelab + Nano) via `SendMessage`/cross-session

@@ -7,7 +7,20 @@ dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
     "reachy-work-companion",
-    "silero-vad>=5.1",
+    # silero-vad's sequence_vad.py (its __init__ imports it unconditionally)
+    # requires onnxruntime, but the base package's own Requires-Dist does
+    # not include it — only the "onnx-cpu"/"onnx-gpu" extras do. An
+    # unqualified "silero-vad>=5.1" resolves cleanly with uv/pip but fails
+    # at import time (`ModuleNotFoundError: No module named 'onnxruntime'`)
+    # on any environment where nothing else transitively pulls onnxruntime
+    # in. Found via `uv sync --package reachy-embodiment` in isolation
+    # (this service's actual Docker build shape) during Phase 22 Nano
+    # verification — the shared multi-package dev venv (AGENTS.md) had
+    # masked it, because reachy-hub's faster-whisper pulls onnxruntime in
+    # transitively for itself. The "onnx-cpu" extra is the correct fix,
+    # matching this repo's CPU-only convention (see torch/torchaudio's
+    # source override in the root pyproject.toml).
+    "silero-vad[onnx-cpu]>=5.1",
     "numpy>=2.0",
     # Phase 16/ADR 0013: JPEG-encodes SimulatedRobotBackend.capture_frame's
     # synthetic camera frames. No CUDA/GPU concerns (pure-Python/C image
