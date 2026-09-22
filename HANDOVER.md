@@ -49,11 +49,51 @@ present, the greeting still fired but the detailed delivery came back
 `action: "gesture"`, recorded in `GET /audit/hariz` — the same
 occupied+URGENT carve-out ADR 0014 already established, not new logic.
 
-**Next up: nothing from docs/plan.md's roadmap table — Phase 18 was the
-last row.** Check docs/plan.md §7's release-target lists (V0.1/V0.2/V0.3)
-for what's still open beyond the numbered phases (e.g. `clients/web-pwa/`
-and `deploy/reachy/` are both still unimplemented per the repo layout
-section above) before assuming there's nothing left to do.
+**Next up: Phase 19 — Operator UI** (added to docs/plan.md's roadmap table
+in this session; not started, planned but deliberately not yet
+implemented — the user asked to plan-and-record only this round). Full
+plan is in this session's approved plan file
+(`~/.claude/plans/declarative-wibbling-cascade.md` on the machine that
+planned it — if that file isn't available to a new session, docs/plan.md's
+Phase 19 row plus the summary below is enough to reconstruct it). Two load-
+bearing findings from planning this phase, both worth re-checking before
+writing code in case something changed in between:
+
+- **There is still no real LLM anywhere in this codebase.**
+  `companion_core/app.py`'s `/conversation` fallback reply is a literal
+  placeholder string (`f"(turn {n} via {channel}) heard: {text}"`) — every
+  existing calendar/task/memory/email "AI" behaviour is deterministic
+  keyword matching (`*_intent.py`), never an LLM call. Phase 19 is
+  scoped to include a real pluggable LLM client (an `OpenAICompatibleChatProvider`
+  over httpx — one implementation covers both a cloud key and a local
+  server like Ollama/LM Studio, since they share the same
+  `/chat/completions` shape) precisely so the new "LLM utilization"
+  dashboard has genuine data, not zeros. Only the existing intent-matching
+  fallback branch changes; every deterministic intent path is untouched.
+- **Today's only browser auth is a shared `REMOTE_UI_TOKEN` pasted into a
+  text field** (`reachy_hub/app.py`'s `require_remote_auth`,
+  `clients/web-pwa/telepresence.js`'s token input + `localStorage`). Phase
+  19 adds a real single-owner login (username/password, stdlib
+  `pbkdf2_hmac` hashing — no new dependency for that part — plus a signed
+  session cookie via `itsdangerous`, the one new third-party dependency
+  this phase needs). `require_remote_auth` is *extended*, not replaced:
+  bearer token still works, session cookie is a second accepted path, so
+  nothing depending on `REMOTE_UI_TOKEN` today breaks. Session-mutation
+  routes that are currently wide open (`PATCH /sessions/{user_id}/mode`,
+  `/dnd`, `/privacy-context`) get gated behind this for the first time —
+  expect to touch a lot of existing `test_app.py` call sites when that
+  lands, the same kind of bulk test update Phase 16 already did once for
+  `/robots/*`.
+
+New static dashboard planned at `clients/operator-ui/` (plain HTML/JS, no
+framework — matches `clients/web-pwa/`'s existing convention), served by
+`reachy-hub` at `/ui`. New companion-core storage planned: `llm_settings`
+(single row, api key never returned unmasked, stored plaintext — no
+encryption-at-rest precedent exists in this codebase to build on, and
+inventing one was explicitly scoped out) and `llm_usage_log`. New
+reachy-hub storage planned: `users`. All three are net-new Postgres tables
+— same "needs `docker compose down -v` against a pre-Phase-19 volume"
+caveat as every prior phase's schema addition once this actually lands.
 
 **Postgres schema-addition caveat (no migration framework yet, same as ADR
 0010's precedent):** Phase 17 added `dnd`/`last_interruption_at` columns to

@@ -205,6 +205,7 @@ the daemon APIs. [3]
 | Phase 16 — Remote telepresence | Camera/status/manual behaviours/speak-through-robot via secure remote UI. | Overseas user can control basic Reachy functions without Companion Core. |
 | Phase 17 — Interruption intelligence | Inputs: calendar, presence, meeting, DND, urgency, privacy, last interruption. Actions: ignore/queue/text/gesture/interrupt. | Routine notifications defer correctly while user is occupied. |
 | Phase 18 — Daily briefing | Combine calendar/tasks/email/reminders/project events into prioritized arrival briefing. | Reachy greets; detailed briefing is privately delivered. |
+| Phase 19 — Operator UI | Login-gated web dashboard: live component health, LLM utilization, and controls for mode/DND/LLM provider settings (cloud API key or local base URL). Adds a real pluggable LLM client (companion-core has none yet — `/conversation`'s fallback reply is still a placeholder) so the utilization view reflects genuine calls, and a real single-owner login (replacing the pasted-token flow `REMOTE_UI_TOKEN`/`clients/web-pwa/telepresence.js` use today) so the dashboard isn't gated by a shared secret typed into a text field. | An operator can log in, see every component's live status, and change mode/DND/LLM settings without a shell. See [docs/adr/0016](adr/0016-operator-ui.md) (to be written alongside implementation). |
 
 ## 7. Release Targets
 
@@ -238,6 +239,8 @@ preserving physical embodiment.
 - Office-context awareness and better privacy inference.
 - Remote telepresence controls.
 - Optional hybrid local/cloud inference routing.
+- Login-gated operator UI: component health/LLM utilization dashboard,
+  mode/DND/LLM-provider controls (Phase 19).
 
 ## 8. Deployment Plan
 
