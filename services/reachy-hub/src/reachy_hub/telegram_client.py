@@ -39,7 +39,13 @@ class TelegramClient:
             params["offset"] = offset
         resp = await self._client.get("/getUpdates", params=params)
         resp.raise_for_status()
-        return resp.json()["result"]
+        payload = resp.json()
+        updates = payload.get("result") if isinstance(payload, dict) else None
+        if (not isinstance(payload, dict) or payload.get("ok") is not True
+                or not isinstance(updates, list)
+                or any(not isinstance(u, dict) or type(u.get("update_id")) is not int for u in updates)):
+            raise ValueError("Invalid Telegram polling response")
+        return updates
 
     async def send_message(self, chat_id: int, text: str) -> dict[str, Any]:
         resp = await self._client.post("/sendMessage", json={"chat_id": chat_id, "text": text})

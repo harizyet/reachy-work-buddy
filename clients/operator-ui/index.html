@@ -13,6 +13,20 @@
       <form id="login"><label>Username<input id="username" required autocomplete="username"></label><label>Password<input id="password" required type="password" autocomplete="current-password"></label><button>Log in</button></form>
     </section>
     <div id="dashboard" hidden>
+      <div class="view-switch" role="group" aria-label="Dashboard view">
+        <button id="overview-tab" aria-pressed="true" aria-controls="overview-pane">Overview</button>
+        <button id="chat-tab" class="secondary" aria-pressed="false" aria-controls="chat-pane">Chat</button>
+      </div>
+      <section id="chat-pane" hidden aria-labelledby="chat-title" class="card chat-card">
+        <div class="section-title"><div><span class="eyebrow">YOUR COMPANION</span><h2 id="chat-title">Chat with Reachy</h2></div><button id="clear-chat" class="secondary" type="button">Clear view</button></div>
+        <form id="chat-user-form" class="chat-user-form"><label for="chat-user">User ID<input id="chat-user" required autocomplete="off" placeholder="Loading default user…"></label><button id="chat-use-user" class="secondary">Use this user</button></form>
+        <p id="chat-session" role="status">Loading session…</p>
+        <p id="chat-telegram" class="channel-notice" role="status">Checking Telegram…</p>
+        <p class="muted">Messages shown here stay in this tab and disappear on refresh. Your companion session continues across channels.</p>
+        <div id="chat-transcript" class="chat-transcript" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions text"><p id="chat-empty">Send a message to start or continue your conversation.</p></div>
+        <form id="chat-form"><label for="chat-text">Message<textarea id="chat-text" rows="3" placeholder="Ask Reachy something…" required disabled></textarea></label><div class="chat-compose-footer"><span id="chat-status" role="status"></span><button id="chat-send" disabled>Send</button></div></form>
+      </section>
+      <div id="overview-pane">
       <div class="section-title"><h2>System overview</h2><span id="updated">Checking status…</span></div>
       <div id="components" class="components"></div>
       <div class="grid">
@@ -32,7 +46,8 @@
         <section class="card"><h2>Recent activity</h2><ul id="audit"><li>Load a session to view activity.</li></ul></section>
         <section class="card"><h2>Queued notifications</h2><ul id="notifications"><li>Load a session to view notifications.</li></ul></section>
       </div>
+      </div>
     </div>
-  </main><footer>Reachy Work Companion · Operator UI</footer><script src="app.js" defer></script>
+  </main><footer>Reachy Work Companion · Operator UI</footer><script src="chat.js" defer></script><script src="app.js" defer></script>
 </body>
 </html>

@@ -396,8 +396,8 @@ tokens, errors and latency, and edits LLM configuration immediately. Load
 the same user ID your conversational channel uses (normally
 `TELEGRAM_DEFAULT_USER_ID`, default `default-user`) to change mode/DND or
 see its activity and queued notifications. The session must already exist
-from a conversation. Telegram's indicator reports configuration only;
-live poll health is Phase 20.
+from a conversation. Telegram's indicator now reports live poll freshness
+and sanitized failures.
 
 For OVMS, enter its reachable base URL including `/v1`, the exact model
 name from `GET /v1/models`, and leave the API key blank if none is required.
@@ -433,3 +433,35 @@ Core settings and usage cannot be accessed through Caddy's `/core/` debug
 proxy. Use the authenticated `/hub/settings/llm` and `/hub/llm/usage`
 endpoints. Phase 19 adds only new tables, so it does not require deleting
 an existing Phase 18 Postgres volume.
+
+
+## Web chat (Phase 20)
+
+Open `/hub/ui/`, log in, and choose Chat. It uses the existing messages API
+and the configured `TELEGRAM_DEFAULT_USER_ID` (default `default-user`). Use
+the same user ID across channels to preserve session context; a first web
+message can also start a new session. The user selector is shared with
+Overview, and chat displays mode, DND, and active channel.
+
+Replies appear in the browser regardless of routing metadata. The visible
+transcript clears on refresh/logout/user changes; “Clear view” only clears
+that display. Core's in-memory context and durable work memory are separate.
+The UI verifies login before sending, but the historical `/hub/messages`
+API remains open within the trusted private-network boundary. No new chat
+history endpoint, schema migration, environment setting, or dependency is
+needed.
+
+Telegram status now includes a last successful poll, sanitized error, and
+`healthy`. It becomes healthy after the first successful poll (idle long
+polls can take 25 seconds), fails on a poll error, and becomes stale after
+60 seconds without success. The indicator measures polling, not outbound
+message delivery; long message processing can also make it stale. Web chat
+remains usable during Telegram failures as long as hub/core are available.
+
+Phase 20 was verified in an isolated `phase20verify` Compose project with
+Chromium and real OVMS inference. An intentionally invalid test bot token
+produced a real Telegram HTTP 401 while web messages still received replies.
+The Telegram-channel continuity test used `POST /messages`, not a real
+Telegram-account exchange. The disposable stack was removed afterward;
+the existing OVMS container was left running. Do not invalidate an actual
+bot token or remove user volumes to reproduce the outage test.

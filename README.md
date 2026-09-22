@@ -13,7 +13,7 @@ stays expressive even when the homelab is unreachable.
 
 ## Features
 
-What the system can actually do today (Phases 0-19; see Status below for
+What the system can actually do today (Phases 0-20; see Status below for
 the engineering detail and live-verification evidence behind each item):
 
 - **Talk to Reachy** — a semantic behaviour API and a local presence loop
@@ -67,6 +67,10 @@ the engineering detail and live-verification evidence behind each item):
   listening, thinking, and speaking in step with the call — the reply
   audio only ever plays back to your earbuds, never through Reachy's own
   speaker.
+- **Chat in your browser** — the dashboard's Chat tab continues the same
+  companion session as Telegram, even while Telegram polling is down.
+  Mode/DND and active-channel indicators stay visible; the displayed
+  transcript lasts only for the current tab view.
 - **Owner dashboard** — log in at `/hub/ui/` to inspect component status,
   model calls/tokens/latency, and change mode, DND, or model settings.
 - **Real configurable inference** — generic conversation replies can use
@@ -154,7 +158,7 @@ live restart tests verify).
 
 ## Status
 
-Phases 0-19 are done:
+Phases 0-20 are done:
 
 - Phase 0: architecture freeze (ADRs, shared schemas).
 - Phase 1: Jarvis reference baseline — [docs/jarvis-baseline.md](docs/jarvis-baseline.md).
@@ -497,8 +501,26 @@ Phases 0-19 are done:
   robot health remained visible. The verification stack used a separate Compose project and
   temporary credentials, leaving the existing OVMS container alone.
 
+- Phase 20: [Web chat channel](docs/adr/0017-web-chat-channel.md). The
+  operator UI's Chat tab reuses `Channel.WEB` / `POST /messages`, displays
+  direct replies regardless of routing metadata, defaults to the configured
+  Telegram user ID, and shows mode/DND/active channel. The visible transcript
+  stays in the tab and clears on refresh/logout/user changes; no new history
+  store or endpoint. Sends avoid duplicate pending submissions and automatic
+  retries, preserve drafts after failures, and discard late logout results.
+  Telegram status now reports the last successful poll, a sanitized error,
+  and health requiring an error-free poll less than 60 seconds old.
+  Verified with **287 passing Python tests**, clean Ruff/JS checks, a
+  committed Chromium regression, and real Docker/Postgres/Caddy/OVMS browser
+  flows at desktop and mobile widths. A web → Telegram-channel HTTP request
+  → web conversation retained IDs/context and recalled “Teal.” A real
+  invalid-token Bot API 401 marked Telegram unhealthy while chat still
+  worked; the channel-continuity call was simulated through hub, not a real
+  Telegram-account message. No core runtime, schema, or dependency change.
+
 See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
-phase-by-phase roadmap. Phases 0-19 are now done. Next: Phase 20, web chat channel.
+phase-by-phase roadmap. Phases 0-20 are now done. Next: Phase 21, hybrid
+local/cloud LLM routing.
 
 ## Layout
 
@@ -507,7 +529,7 @@ services/companion-core/     reasoning/tools/memory, privacy, calendar, tasks, R
 services/reachy-hub/         robot registry, sessions, routing, Telegram, voice/STT/TTS, WebRTC calls + telepresence, auth, audit, reminders (Phases 4-10, 15-16)
 services/reachy-embodiment/  semantic behaviour API + presence loop + VAD + camera/audio-play (Phases 2-3, 8, 16)
 clients/web-pwa/             "Call Reachy" + telepresence WebRTC PWA (Phases 15-16)
-clients/operator-ui/         owner dashboard, status, LLM usage/settings (Phase 19)
+clients/operator-ui/         owner dashboard + web chat, status, LLM settings (Phases 19–20)
 shared/models/                Pydantic data contracts shared across services
 shared/protocols/             HTTP route constants shared across services
 deploy/homelab/                Docker Compose: companion-core, reachy-hub, postgres, caddy
@@ -574,7 +596,10 @@ has example `curl` calls once it's running.
 ### Operator dashboard
 
 After configuring the owner and starting the stack, open `/hub/ui/` through
-Caddy for component status, LLM settings/usage, and session mode/DND.
+Caddy for component status, LLM settings/usage, session mode/DND, and the
+Chat tab. The configured Telegram user ID is selected by default so chat
+continues the same session. See [web chat](deploy/homelab/README.md#web-chat-phase-20)
+for transcript and access limits.
 See [deployment setup](deploy/homelab/README.md#operator-dashboard-phase-19)
 for `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `SESSION_SECRET_KEY`, and the OVMS
 host-networking override. The Phase 19 verification stack was temporary;

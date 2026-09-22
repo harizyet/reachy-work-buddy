@@ -215,3 +215,55 @@ def test_credential_validation_is_redacted_and_ui_redirect_is_relative():
     assert response.status_code == 422 and "do-not-echo" not in response.text
     response = client.get("/ui", follow_redirects=False)
     assert response.headers["location"] == "ui/"
+
+
+def test_status_exposes_poll_health_and_configured_default_user():
+    from datetime import UTC, datetime, timedelta
+
+    from reachy_hub.telegram_client import TelegramClient
+
+    telegram = TelegramClient('not-a-real-token', transport=httpx.MockTransport(
+        lambda request: httpx.Response(200, json={'ok': True, 'result': []})
+    ))
+    client = make_client(telegram_client=telegram, telegram_default_user_id='configured-owner')
+    login(client)
+    status = client.get('/status').json()
+    assert status['default_user_id'] == 'configured-owner'
+    assert status['telegram'] == {
+        'configured': True, 'last_poll_at': None, 'last_poll_error': None, 'healthy': False,
+    }
+    health = client.app.state.telegram_poll_health
+    health.last_poll_at = datetime.now(UTC)
+    assert client.get('/status').json()['telegram']['healthy']
+    health.last_poll_error = 'Telegram polling request failed'
+    assert not client.get('/status').json()['telegram']['healthy']
+    assert client.post('/messages', json={'user_id': 'configured-owner', 'channel': 'web', 'text': 'Hello'}).status_code == 200
+    health.last_poll_error = None
+    health.last_poll_at -= timedelta(seconds=61)
+    assert not client.get('/status').json()['telegram']['healthy']
+    asyncio.run(telegram.aclose())
+
+
+def test_web_chat_continues_the_same_session_and_keeps_direct_replies():
+    client = make_client()
+    login(client)
+    web = client.post('/messages', json={'user_id': 'same-user', 'channel': 'web', 'text': 'Hello'}).json()
+    assert web['active_channel'] == 'web' and web['delivery_channel'] == 'reachy'
+    assert web['reply']  # Desk routing must never hide the synchronous web reply.
+    client.patch('/sessions/same-user/mode', json={'interaction_mode': 'office'}, headers=CSRF)
+    client.patch('/sessions/same-user/dnd', json={'dnd': True}, headers=CSRF)
+    telegram = client.post('/messages', json={
+        'user_id': 'same-user', 'channel': 'telegram', 'text': 'My salary is private',
+    }).json()
+    back = client.post('/messages', json={
+        'user_id': 'same-user', 'channel': 'web', 'text': 'My salary is private',
+    }).json()
+    assert web['session_id'] == telegram['session_id'] == back['session_id']
+    assert web['conversation_id'] == telegram['conversation_id'] == back['conversation_id']
+    assert back['reply'] and back['privacy'] == 'sensitive' and back['delivery_channel'] == 'phone'
+    session = client.get('/sessions/same-user').json()
+    assert session['active_channel'] == 'web' and session['dnd'] and session['interaction_mode'] == 'office'
+    assert len(client.get('/audit/same-user').json()) == 3
+    # Page login is not an API authentication retrofit (ADR 0017).
+    client.post('/auth/logout', headers=CSRF)
+    assert client.post('/messages', json={'user_id': 'other', 'channel': 'web', 'text': 'Hello'}).status_code == 200

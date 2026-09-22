@@ -33,7 +33,7 @@ services/companion-core/     reasoning/tools/memory + LLM config/inference/usage
 services/reachy-hub/         sessions/channels/auth/operator UI + robot proxy — FastAPI, uv workspace member
 services/reachy-embodiment/  semantic behaviour API + presence loop — FastAPI, uv workspace member
 clients/web-pwa/             Call Reachy + telepresence WebRTC PWA
-clients/operator-ui/         owner dashboard — static HTML/JS/CSS, served by reachy-hub
+clients/operator-ui/         owner dashboard + web chat — static HTML/JS/CSS, served by reachy-hub
 shared/models/               Pydantic data contracts shared across services (AgentSession, AgentResponse, MemoryRecord, EmbodimentCommand)
 shared/protocols/            HTTP route constants shared across services (import these, don't hardcode path strings)
 deploy/homelab/              Docker Compose: companion-core, reachy-hub, postgres, caddy
@@ -135,8 +135,8 @@ automatically — no `DOCKER_BUILDKIT=1` or other flag needed.
 ## Operator UI and inference conventions (Phase 19)
 
 Binding details are in [ADR 0016](docs/adr/0016-operator-ui.md). Phase 19 is
-complete; web chat (Phase 20) and hybrid inference routing (Phase 21) remain
-separate work. Preserve these boundaries when extending the implementation:
+complete, and [ADR 0017](docs/adr/0017-web-chat-channel.md) adds Phase 20
+web chat. Hybrid inference routing remains separate Phase 21 work. Preserve these boundaries when extending the implementation:
 
 - Hub owns login, browser assets, component monitoring, and authenticated
   proxies. Core owns provider settings, inference, and usage stores.
@@ -166,7 +166,7 @@ separate work. Preserve these boundaries when extending the implementation:
   context remains in memory, separate from durable work memory.
 - Utilization is actual attempted calls, tokens, errors, and latency, not
   GPU load or inferred costs. Missing token counts remain null. Telegram's
-  current status is configuration only, not a poll-health assertion.
+  Phase 20 status measures poll freshness, not outbound delivery or LLM health.
 
 When adding core stores, update every test factory: core's `make_chain`
 and bare-app factory, plus hub's `test_app.py`, `test_telegram.py`,
@@ -176,6 +176,32 @@ production defaults connect to Postgres during lifespan. Owner-auth tests
 should inject a seeded `InMemoryUserStore` with a test signing key; bearer
 route tests should use a fixed test token. See `test_llm.py` and
 `test_operator.py` for success, failure, masking, and authentication coverage.
+
+## Web chat and channel-health conventions (Phase 20)
+
+- Chat reuses `Channel.WEB` and `POST /messages`; do not add a second
+  conversation pipeline. Always render the direct reply regardless of
+  `delivery_channel`. DND affects proactive notifications, not direct replies.
+- The browser defaults to `/status.default_user_id`, which comes from
+  `TELEGRAM_DEFAULT_USER_ID`. Preserve the shared user/session across
+  channels, and make explicit user switches clear the visible transcript.
+- Chat requires owner login in the UI, but `/messages` retains its existing
+  trusted-network access contract. Do not claim the page authenticates all
+  API callers. Render text literally, never as HTML. Do not persist chat
+  transcripts in localStorage or add history endpoints without a new scope.
+- Preserve drafts on failed sends, prevent duplicate pending submissions,
+  discard late results after logout/user changes, and never auto-retry an
+  ambiguous message failure that might already have performed an action.
+- `telegram_health.py` separates one polling step from the loop. Test
+  freshness at controlled times, including the 60-second stale boundary,
+  successful empty polls, failures, and recovery. Errors/status/logs must
+  not include Telegram URLs, raw exception bodies, or bot tokens.
+- Browser regression: `node --test clients/operator-ui/tests/chat.test.cjs`
+  with Playwright available to Node (an external install or `NODE_PATH`).
+  It uses a local HTTP fixture; complement it with a real Compose/OVMS run
+  before claiming end-to-end model verification. No frontend build step is
+  required. Report simulated Telegram-channel calls separately from real
+  Telegram-account messages.
 
 ## uv dependency conventions
 

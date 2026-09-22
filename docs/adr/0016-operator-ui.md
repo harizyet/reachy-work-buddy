@@ -3,6 +3,14 @@
 - Status: Accepted
 - Date: 2026-09-22
 
+## Phase 20 amendment
+
+[ADR 0017](0017-web-chat-channel.md) adds a Chat tab to this same UI and
+extends `/status` with `default_user_id` and actual Telegram polling health.
+The original configuration-only Telegram indicator described below is
+historical. Owner authentication, inference configuration, and usage
+ownership remain as decided here.
+
 ## Context
 
 Phase 19 needs live component monitoring, mode/DND controls, and editable

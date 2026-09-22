@@ -4,11 +4,35 @@ const base = new URL('../', window.location.href).pathname.replace(/\/$/, '');
 let loggedIn = false;
 let polling = false;
 let selectedUser = null;
+const chat = createChat({
+  api, isLoggedIn: () => loggedIn,
+  onUserChange(user) {
+    if ($('user-id').value !== user) {
+      $('user-id').value = user; selectedUser = null; $('session-fields').disabled = true;
+    }
+  },
+  onBusyChange(busy) {
+    $('user-id').disabled = busy;
+    $('session-select').querySelector('button').disabled = busy;
+  },
+});
+function showView(view) {
+  const isChat = view === 'chat';
+  $('chat-pane').hidden = !isChat; $('overview-pane').hidden = isChat;
+  for (const name of ['chat', 'overview']) {
+    $(name + '-tab').setAttribute('aria-pressed', String(name === view));
+    $(name + '-tab').classList.toggle('secondary', name !== view);
+  }
+  if (isChat) void chat.refreshSession();
+}
+$('chat-tab').addEventListener('click', () => showView('chat'));
+$('overview-tab').addEventListener('click', () => showView('overview'));
 function notice(text) { $('notice').textContent = text; }
 function showLogin() {
   loggedIn = false; selectedUser = null;
   $('login-panel').hidden = false; $('dashboard').hidden = true; $('nav').hidden = true;
   $('api-key').value = ''; $('password').value = '';
+  chat.reset(); showView('overview');
 }
 async function api(path, options = {}) {
   const response = await fetch(base + path, {
@@ -19,7 +43,9 @@ async function api(path, options = {}) {
     if (response.status === 401) showLogin();
     let detail = '';
     try { detail = (await response.json()).detail; } catch { /* Non-JSON gateway failure. */ }
-    throw new Error(typeof detail === 'string' && detail ? detail : `Request failed (${response.status})`);
+    const error = new Error(typeof detail === 'string' && detail ? detail : `Request failed (${response.status})`);
+    error.status = response.status;
+    throw error;
   }
   return response.json();
 }
@@ -54,7 +80,10 @@ async function refresh() {
     component('Reachy hub', status.reachy_hub.status);
     component('Companion core', status.companion_core.status, status.companion_core.status !== 'ok');
     component('Language model', status.llm.configured === null ? 'Unavailable' : status.llm.configured ? 'Configured' : 'Not configured', !status.llm.configured);
-    component('Telegram', status.telegram.configured ? 'Configured · health not monitored' : 'Not configured', !status.telegram.configured);
+    component('Telegram', telegramLabel(status.telegram), !status.telegram.healthy);
+    chat.initializeUser(status.default_user_id);
+    chat.updateTelegram(status.telegram);
+    await chat.refreshSession();
     if (!status.robots.length) component('Robots', 'None registered', true);
     for (const robot of status.robots) component(robot.robot_id, robot.data?.embodiment_state || robot.status, robot.status !== 'ok');
     if (usage) {
@@ -79,7 +108,7 @@ async function refresh() {
     if ($('llm-fields').disabled && status.companion_core.status === 'ok') renderSettings(await api('/settings/llm'));
     if (selectedUser) await loadActivity(selectedUser);
     $('updated').textContent = `Updated ${new Date().toLocaleTimeString()}`;
-  } catch (error) { notice(`Status refresh failed: ${error.message}`); $('updated').textContent = 'Status may be stale'; }
+  } catch (error) { notice(`Status refresh failed: ${error.message}`); $('updated').textContent = 'Status may be stale'; chat.updateTelegram(null); }
   finally { polling = false; }
 }
 function renderList(id, entries, format) {
@@ -95,6 +124,7 @@ async function loadActivity(user) {
 }
 async function loadSession() {
   selectedUser = null; $('session-fields').disabled = true;
+  if (!chat.setUser($('user-id').value)) return;
   const user = encodeURIComponent($('user-id').value.trim());
   const session = await api(`/sessions/${user}`);
   selectedUser = user; $('mode').value = session.interaction_mode; $('dnd').checked = session.dnd;
@@ -121,7 +151,7 @@ submit('session-controls', async () => {
   if (!selectedUser) return;
   await api(`/sessions/${selectedUser}/mode`, {method: 'PATCH', body: JSON.stringify({interaction_mode: $('mode').value})});
   await api(`/sessions/${selectedUser}/dnd`, {method: 'PATCH', body: JSON.stringify({dnd: $('dnd').checked})});
-  notice('Session settings saved.'); await loadSession();
+  notice('Session settings saved.'); await loadSession(); await chat.refreshSession();
 });
 submit('llm', async () => {
   const local = {base_url: $('base-url').value.trim(), model: $('model').value.trim()};

@@ -5,7 +5,7 @@ routing, authentication, robot registry.
 
 Must not own: reasoning policy internals, raw motor control (see [docs/adr/0001](../../docs/adr/0001-service-boundaries.md)).
 
-## Status (through Phase 19)
+## Status (through Phase 20)
 
 **Robot registry / proxy (Phase 4)**: `POST /robots`, `GET /robots`,
 `GET /robots/{robot_id}/state`, `GET /robots/{robot_id}/behaviours`,
@@ -310,7 +310,7 @@ HttpOnly browser cookie. Login/logout and cookie-authenticated mutations
 require `X-Reachy-CSRF: 1`. Existing bearer API access remains supported.
 Session mode/DND/privacy-context PATCH routes now require authentication,
 as do `/status`, `/settings/llm`, and `/llm/usage`. `/status` reports
-component probes and Telegram configuration; audit/notifications retain
+component probes and Telegram polling health; audit/notifications retain
 their separate per-user routes. Telepresence shares the login cookie.
 
 Operator API paths below are relative to hub (prefix `/hub` through Caddy):
@@ -320,7 +320,7 @@ Operator API paths below are relative to hub (prefix `/hub` through Caddy):
 | `POST /auth/login` | Username/password JSON plus `X-Reachy-CSRF: 1`; sets owner cookie |
 | `POST /auth/logout` | CSRF header; clears the browser cookie |
 | `GET /auth/me` | Owner cookie; bearer-only access does not create a browser login |
-| `GET /status` | Owner cookie or bearer; core/robot probes, LLM configuration/usage, Telegram configured flag |
+| `GET /status` | Owner cookie or bearer; core/robot probes, LLM configuration/usage, Telegram poll health, default user ID |
 | `GET`, `PUT /settings/llm` | Authenticated proxy to core; partial PUT, masked replies |
 | `GET /llm/usage` | Authenticated proxy; `limit=1..500`, `since_hours=1..8760` (defaults 50/24) |
 | `PATCH /sessions/{user_id}/mode`, `/dnd`, `/privacy-context` | Cookie plus CSRF, or bearer; requires an existing session |
@@ -338,3 +338,30 @@ The dashboard polls every 10 seconds; failed probes are reported as
 unavailable without hiding successful components. It is not a database or
 GPU telemetry dashboard. See [ADR 0016](../../docs/adr/0016-operator-ui.md)
 for trust boundaries and signed-cookie limitations.
+
+
+## Web chat and Telegram health (Phase 20)
+
+The operator UI's Chat tab calls the existing `POST /messages` with
+`channel: web` and `input_modality: text`. Session creation/switching,
+privacy routing, direct replies, and audits are unchanged. `/messages`
+keeps its existing trusted-network access model; the UI's owner login does
+not authenticate arbitrary API clients. See [ADR 0017](../../docs/adr/0017-web-chat-channel.md).
+
+`GET /status` now adds `default_user_id` from `TELEGRAM_DEFAULT_USER_ID`,
+so browser chat joins the configured Telegram user's session. Its
+`telegram` object contains `configured`, `last_poll_at` (UTC/null),
+`last_poll_error` (sanitized/null), and `healthy`. Health requires a success
+less than 60 seconds ago with no subsequent poll error. Successful empty
+polls count; failures immediately mark unhealthy; recovery clears the error.
+Disabled/startup/stalled loops are not called healthy. These signals live
+in `app.state.telegram_poll_health` and reset on process restart.
+
+`telegram_health.py` exposes the deterministic polling step and health
+snapshot; the real loop keeps its 25-second long poll and two-second retry
+backoff. Malformed successful responses are errors too. Warnings omit raw
+exception tracebacks because Telegram URLs contain the bot token. This
+measures poll freshness only: outgoing delivery and long inference/batch
+processing are not separately monitored. `test_telegram_health.py` covers
+timing/failure/recovery, and the existing loop test verifies actual wiring.
+No new schema or companion-core code is required.

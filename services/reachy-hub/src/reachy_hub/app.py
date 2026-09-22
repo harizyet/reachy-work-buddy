@@ -164,6 +164,7 @@ from reachy_hub.session_store import SessionStore
 from reachy_hub.stt import FasterWhisperSTT, SpeechToText
 from reachy_hub.telegram_chat_registry import TelegramChatRegistry
 from reachy_hub.telegram_client import TelegramClient
+from reachy_hub.telegram_health import TelegramPollHealth, poll_updates
 from reachy_hub.tts import EspeakTTS, TextToSpeech
 from reachy_hub.user_store import PostgresUserStore, UserStore
 from reachy_hub.webrtc import CallTurnHandler, negotiate_call, negotiate_telepresence
@@ -391,9 +392,9 @@ def create_app(
         offset: int | None = None
         while True:
             try:
-                updates = await client.get_updates(offset=offset, timeout=25)
-            except httpx.HTTPError:
-                log.warning("telegram getUpdates failed, retrying in 2s", exc_info=True)
+                updates = await poll_updates(client, app.state.telegram_poll_health, offset=offset)
+            except (httpx.HTTPError, ValueError, KeyError, TypeError):
+                log.warning("%s; retrying in 2s", app.state.telegram_poll_health.last_poll_error)
                 await asyncio.sleep(2.0)
                 continue
 
@@ -499,13 +500,15 @@ def create_app(
                 await app.state.notification_queue.close()
 
     app = FastAPI(title="reachy-hub", lifespan=lifespan)
+    app.state.telegram_poll_health = TelegramPollHealth()
     app.state.user_store = user_store
     if session_secret_key:
         app.add_middleware(SessionMiddleware, secret_key=session_secret_key,
                            session_cookie="reachy_session", max_age=43200,
                            same_site="strict", https_only=session_cookie_secure)
     install_operator_routes(app, require_remote_auth, companion_core_client, get_client,
-                            login_enabled=bool(session_secret_key), telegram_enabled=telegram_enabled)
+                            login_enabled=bool(session_secret_key), telegram_enabled=telegram_enabled,
+                            default_user_id=telegram_default_user_id)
     app.state.webrtc_connections = set()
     if not owns_registry:
         app.state.registry = registry

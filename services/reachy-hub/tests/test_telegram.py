@@ -121,6 +121,8 @@ def test_inbound_telegram_message_reaches_companion_core_and_gets_a_reply() -> N
         while not fake_api.sent_messages and time.monotonic() < deadline:
             time.sleep(0.02)
 
+    assert hub_app.state.telegram_poll_health.last_poll_at is not None
+    assert hub_app.state.telegram_poll_health.last_poll_error is None
     assert fake_api.sent_messages, "expected a reply to be sent back over Telegram"
     chat_id, text = fake_api.sent_messages[0]
     assert chat_id == 555

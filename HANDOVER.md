@@ -22,8 +22,56 @@ conflict once you notice it.
 
 ## Where things stand
 
-**Phases 0-19 are done.** Last completed: **Phase 19 — Operator UI**.
-See [ADR 0016](docs/adr/0016-operator-ui.md), the README Status entry, and
+**Phases 0-20 are done.** Last completed: **Phase 20 — Web chat channel**.
+See [ADR 0017](docs/adr/0017-web-chat-channel.md), the root README Status,
+and [chat deployment notes](deploy/homelab/README.md#web-chat-phase-20).
+
+- The operator dashboard at `/hub/ui/` (direct hub: `/ui/`) now has
+  Overview and Chat views. `chat.js` sends through the existing
+  `POST /messages` with `Channel.WEB`/text modality; core's runtime is
+  unchanged. Direct replies always render, regardless of routing metadata.
+- `/status.default_user_id` comes from `TELEGRAM_DEFAULT_USER_ID`, so web
+  chat starts with the same user as the bot. The UI also supports explicit
+  user selection, shared with Overview. First send creates a session if
+  needed. Mode/DND/active-channel indicators use existing session reads.
+- The transcript is tab-local DOM only: refresh/logout/user switch clears
+  it. “Clear view” does not reset the session or erase memory. Pending
+  sends block duplicates/user changes; failures preserve drafts and warn
+  against blind retries. Plain text rendering prevents HTML injection;
+  login expiry clears the view and late logout responses are discarded.
+- UI login is checked before sending, but `/messages` itself retains its
+  existing trusted-network access contract. Do not claim a new API auth
+  boundary or durable/retrievable chat history.
+- `reachy_hub/telegram_health.py` holds `TelegramPollHealth` and the single
+  `poll_updates` step. `app.state.telegram_poll_health` resets on restart.
+  `/status.telegram` includes `configured`, `last_poll_at`, sanitized
+  `last_poll_error`, and `healthy`. Success (including empty batches)
+  clears errors; failures mark unhealthy immediately; 60 seconds without
+  success is stale. This measures polling, not outbound delivery or LLM
+  health; a slow message-processing batch can also become stale.
+- No new schema, dependency, or core runtime changes. Phase 21 routing is
+  deliberately still unimplemented.
+
+**Phase 20 verification:** 287 Python tests passed, including speech and
+WebRTC; Ruff, JavaScript syntax, and whitespace checks passed. The committed
+Chromium regression at `clients/operator-ui/tests/chat.test.cjs` uses a
+local HTTP fixture for browser behavior, including direct/proxied mounts,
+HTML-looking text, failures, user switches, refresh, and login expiry/late
+replies. Run it with Playwright available through Node's module path.
+
+A separate real Docker/Postgres/Caddy run (`phase20verify`) used the actual
+OVMS Qwen model and Chromium at desktop/390px mobile widths. A web message,
+a simulated Telegram-channel HTTP call, and another web message shared IDs
+and context; the model recalled “Teal.” Office/DND and a private calendar
+reply worked in chat. An intentionally invalid temporary Telegram token
+produced a real Bot API HTTP 401 while web chat still worked. No real
+Telegram-account message was sent; successful-poll recovery was covered by
+controlled unit tests. The temporary stack, volumes, and credentials were
+removed; the existing `ovms` container was left running.
+
+### Phase 19 foundation (still applicable)
+
+See [ADR 0016](docs/adr/0016-operator-ui.md) and
 [deployment instructions](deploy/homelab/README.md#operator-dashboard-phase-19).
 
 - `clients/operator-ui/` is served at `/ui/` (Caddy: `/hub/ui/`). Plain
@@ -54,9 +102,9 @@ See [ADR 0016](docs/adr/0016-operator-ui.md), the README Status entry, and
   bypass the authenticated hub settings/usage routes. Other existing
   conversation/internal APIs retain their previous trust boundary.
 - The old empty-string `TELEGRAM_BOT_TOKEN` polling bug is fixed. The UI
-  still reports Telegram **configured**, not healthy; poll health is Phase 20.
+  now reports polling health through the Phase 20 extension above.
 
-**Verification:** 278 tests passed including the real speech/WebRTC tests;
+**Phase 19 verification (historical):** 278 tests passed including the real speech/WebRTC tests;
 Ruff and JS syntax checks passed. Real image builds and isolated Compose
 project `phase19verify` exercised Postgres/Caddy with Chromium desktop and
 390px mobile. Real OVMS completion succeeded with persisted usage (first
@@ -74,40 +122,20 @@ mapping documented in deployment setup. The temporary verification stack
 uses its own credentials/volumes and is removed after verification; these
 credentials are not user deployment settings.
 
-**Next up: Phase 20 — Web chat channel.** Phase 21 is still planned.
-The earlier Phase 19 plan is at
-`~/.claude/plans/declarative-wibbling-cascade.md`; ADR 0016 and implemented
-code now supersede its planning assumptions. In particular, Phase 19 adds
-only new tables, so **an up-to-date Phase 18 database does not need a volume
-reset**. Do not destroy user data to add these tables. Earlier phases'
-missing-column caveats remain relevant to older volumes.
+**Next up: Phase 21 — Hybrid local/cloud LLM routing.** The plan is at
+`~/.claude/plans/phase-21-hybrid-llm-routing.md` (if unavailable, use
+`docs/plan.md`'s Phase 21 row). Populate the reserved cloud role, expand
+routing modes, and introduce role-based routing without changing the
+JSONB table. “Local is insufficient” means an outright provider failure
+or an explicit user choice, not an automatic LLM quality judge. A planned
+per-message `force_frontier` override must be threaded through the shared
+conversation path; do not invent a web-only reasoning path.
 
-**Also planned (not started): Phase 20 — Web Chat Channel and Phase 21 —
-Hybrid Local/Cloud LLM Routing**, both recorded in docs/plan.md's roadmap;
-Phase 19's prerequisites are now implemented. Full plans:
-`~/.claude/plans/phase-20-web-chat-channel.md` and
-`~/.claude/plans/phase-21-hybrid-llm-routing.md` (on the machine that
-planned them — docs/plan.md's Phase 20/21 rows plus this summary are
-enough to reconstruct both if those files aren't available to a new
-session). The one finding worth flagging up front: **Phase 20 turned out
-to be mostly a frontend task**, not a backend one — `shared/models/session.py`
-already has `Channel.WEB` and `reachy-hub`'s `POST /messages` is already
-fully channel-agnostic (the reply text always comes back in the HTTP
-response regardless of `delivery_channel`, which only ever governs
-*proactive* pushes, not direct replies — see `app.py`'s own comment on
-this at the Telegram poll loop). So "talk to the buddy through the
-browser" needs a chat UI page and a real Telegram-health signal
-(`app.state.telegram_last_poll_at`/`_error`, tracked in the existing
-`telegram_poll_loop`) feeding Phase 19's `/status`, not new conversational
-backend logic. Phase 21 defines "local model is insufficient" two ways
-only — the local call failed outright, or the user manually says so (the
-`LLMConfig.routing.mode` setting plus a per-message `force_frontier`
-override, threaded through the same way `input_modality`/ADR 0011
-already is) —
-deliberately **not** an automatic quality judgment, which would need
-another LLM-as-judge call and is out of scope, matching this codebase's
-existing discipline of honest, non-speculative classifiers
-(`privacy_classifier.py`, `calendar_intent.py`).
+Current configuration still permits only `local` and `local_only`, with
+`cloud: null`. Phase 19/20 ADRs and implemented code supersede the earlier
+planning files. Neither phase requires deleting a current Phase 18 volume:
+Phase 19 added new tables; Phase 20 added no schema. Earlier missing-column
+caveats remain relevant only to older volumes.
 
 **Postgres schema-addition caveat (no migration framework yet, same as ADR
 0010's precedent):** Phase 17 added `dnd`/`last_interruption_at` columns to
@@ -154,7 +182,8 @@ camera transport; speak-through-robot bypasses companion-core entirely),
 0014 (interruption intelligence — whether/how aggressively to deliver a
 proactive notification), 0015 (daily briefing — reuses 0014's engine for
 the detailed content, adds an unconditional greet gesture on top),
-0016 (operator UI, owner authentication, runtime inference and utilization).
+0016 (operator UI, owner authentication, runtime inference and utilization),
+0017 (web chat, transcript/access boundaries, Telegram polling health).
 Note: 0005, 0007-0009 don't exist as separate ADRs — those phases didn't
 need one.
 
@@ -225,7 +254,8 @@ an ADR and a mention in the relevant phase's README "Status" entry.
   when neither bearer nor owner-session access is configured. Core's
   `/debug/robots/...` proxy still needs the shared bearer token in both
   services because it does not use a browser cookie.
-- The Phase 19 temporary stack and credentials were removed after testing.
+- The Phase 19 and Phase 20 temporary stacks and credentials were removed
+  after testing.
   Only the existing `ovms` container remained running. The user's deployment
   `.env` and volumes were not replaced; `/hub/ui/` requires starting their
   configured stack before it is reachable.
@@ -256,12 +286,11 @@ Compose project. Reuse the same project name, env file, and override files
 for build/start/restart/cleanup. Wait for `/hub/health`, then test the UI,
 API, real inference, usage, and persistence through Caddy. `down -v` is
 appropriate only for that disposable test project, never for an existing
-user deployment. Phase 19 used `phase19verify` and left `ovms` untouched.
+user deployment. Phase 20 used `phase20verify` and left `ovms` untouched.
 
-The 278-test and live-browser evidence above is from the implementation
-session. The follow-up documentation pass corrected agent conventions,
-authenticated API examples, stale status headings, schema-upgrade guidance,
-and ADR cross-references; it made no runtime changes or new live-test claims.
+The latest evidence above is from the Phase 20 implementation session.
+Agent conventions, roadmap, ADRs, UI/service/deployment guides, and this
+handover were updated alongside the implementation.
 
 ## Conventions this file won't repeat (see AGENTS.md for all of them)
 

@@ -33,7 +33,7 @@ def require_csrf(request: Request) -> None:
 
 
 def install_operator_routes(
-    app, require_auth, core, get_robot_client, *, login_enabled, telegram_enabled
+    app, require_auth, core, get_robot_client, *, login_enabled, telegram_enabled, default_user_id
 ):
 
     @app.exception_handler(RequestValidationError)
@@ -126,6 +126,6 @@ def install_operator_routes(
                 else None,
                 "usage": usage_result,
             },
-            # This is configuration, not poll-loop health (Phase 20).
-            "telegram": {"configured": telegram_enabled},
+            "telegram": app.state.telegram_poll_health.snapshot(configured=telegram_enabled),
+            "default_user_id": default_user_id,
         }
