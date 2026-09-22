@@ -143,23 +143,41 @@ if [[ -f "${REPO_ROOT}/deploy/homelab/docker-compose.yml" ]]; then
 fi
 
 # --- embodiment-host role -------------------------------------------------
+# Section runs whenever this host plausibly could be/is an embodiment
+# host — real Reachy Mini devices present, a reachy-side env file exists,
+# or the daemon unit is installed. Deliberately NOT gated on "daemon is
+# already installed" alone: device/group/env checks are exactly the
+# things worth knowing *before* installing the daemon (found live on the
+# Nano — an earlier version of this script gated the whole section,
+# including daemon-independent info, behind that one condition, so it
+# silently vanished the moment daemon-install detection got fixed to be
+# accurate on a host where it genuinely isn't installed yet).
 DAEMON_ACTIVE=0
+HAS_REACHY_DEVICES=0
+[[ -e /dev/video0 || -e /dev/ttyACM0 || -d /dev/snd ]] && HAS_REACHY_DEVICES=1
+DAEMON_INSTALLED=0
 if command -v systemctl >/dev/null 2>&1 && systemd_unit_installed reachy-mini-daemon; then
+    DAEMON_INSTALLED=1
+fi
+
+if [[ "$HAS_REACHY_DEVICES" -eq 1 || "$DAEMON_INSTALLED" -eq 1 || -f "$REACHY_ENV" ]]; then
     echo "--- Embodiment-host role ---"
-    echo "reachy-mini-daemon.service: installed"
-    if systemctl is-active --quiet reachy-mini-daemon; then
-        DAEMON_ACTIVE=1
-        echo "reachy-mini-daemon: active"
-        # One curl call, not two — a second unguarded call here would
-        # crash the whole script under set -e if the daemon became
-        # unreachable between the two (the same class of bug just fixed
-        # above: don't assume a command that just succeeded will succeed
-        # again unguarded).
-        STATUS_JSON="$(curl -fsS --max-time 5 http://127.0.0.1:8000/daemon/status 2>/dev/null || true)"
-        if [[ -n "$STATUS_JSON" ]]; then
-            echo "daemon /daemon/status: reachable"
-            if command -v python3 >/dev/null 2>&1; then
-                printf '%s' "$STATUS_JSON" | python3 -c '
+
+    if [[ "$DAEMON_INSTALLED" -eq 1 ]]; then
+        echo "reachy-mini-daemon.service: installed"
+        if systemctl is-active --quiet reachy-mini-daemon; then
+            DAEMON_ACTIVE=1
+            echo "reachy-mini-daemon: active"
+            # One curl call, not two — a second unguarded call here would
+            # crash the whole script under set -e if the daemon became
+            # unreachable between the two (the same class of bug just
+            # fixed above: don't assume a command that just succeeded
+            # will succeed again unguarded).
+            STATUS_JSON="$(curl -fsS --max-time 5 http://127.0.0.1:8000/daemon/status 2>/dev/null || true)"
+            if [[ -n "$STATUS_JSON" ]]; then
+                echo "daemon /daemon/status: reachable"
+                if command -v python3 >/dev/null 2>&1; then
+                    printf '%s' "$STATUS_JSON" | python3 -c '
 import json, sys
 d = json.load(sys.stdin)
 print(f"  state: {d.get(\"state\")}")
@@ -167,13 +185,19 @@ print(f"  simulation_enabled: {d.get(\"simulation_enabled\")}")
 print(f"  mockup_sim_enabled: {d.get(\"mockup_sim_enabled\")}")
 print(f"  hardware_id: {d.get(\"hardware_id\")}")
 ' 2>/dev/null || echo "  (could not parse status JSON)"
+                fi
+            else
+                echo "daemon /daemon/status: NOT reachable"
             fi
         else
-            echo "daemon /daemon/status: NOT reachable"
+            echo "reachy-mini-daemon: not active"
         fi
     else
-        echo "reachy-mini-daemon: not active"
+        echo "reachy-mini-daemon.service: NOT installed (see deploy/reachy/install-reachy-venv.sh and deploy/reachy/README.md)"
     fi
+
+    # Always reported, regardless of daemon-install status — these are
+    # exactly what you'd want to know before installing.
     echo "devices: video0=$([[ -e /dev/video0 ]] && echo present || echo missing), ttyACM0=$([[ -e /dev/ttyACM0 ]] && echo present || echo missing), snd=$([[ -d /dev/snd ]] && echo present || echo missing)"
     for grp in dialout video audio; do
         getent group "$grp" >/dev/null 2>&1 && echo "group '$grp': exists (gid $(getent group "$grp" | cut -d: -f3))" || echo "group '$grp': MISSING"

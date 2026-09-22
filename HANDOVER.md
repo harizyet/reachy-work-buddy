@@ -701,17 +701,42 @@ way to "=== end of report ===". Pushed; **not yet re-verified live on
 the Nano** — three bugs deep in review/fix cycles on this one line is
 itself a signal to have it confirmed live before trusting it again.
 
+**Fix confirmed live on the Nano** — `check-platform.sh` completes with
+exit 0, "time sync: yes" prints correctly, full report through "=== end
+of report ===".
+
+**Fourth issue, a pre-existing structural gap the Nano's fresh eyes
+caught** (not a new bug from the three fixes above — it existed since
+this script was first written, just masked): the entire "Embodiment-host
+role" section, including device/group/`.env` checks that have nothing
+to do with the daemon, was gated behind `if systemd_unit_installed
+reachy-mini-daemon`. While that check was falsely always-true (bug #2
+above), the section always printed; once fixed to be accurate on a host
+where the daemon genuinely isn't installed, the whole section —
+including info that's most useful *before* installing — silently
+vanished. **Fixed:** the section now runs whenever the host plausibly
+looks like an embodiment host (real Reachy Mini devices present, a
+`deploy/reachy/.env` exists, or the daemon unit is installed), and
+device/group/`.env`/container checks are always shown within it
+regardless of daemon-install status; only the daemon-specific lines are
+conditional, with an honest "NOT installed" message instead of silently
+omitting the section. Verified locally (exit 0, correct output on this
+homelab machine, which has `/dev/snd` so the section now appropriately
+shows with honest "missing"/"NOT installed" lines rather than staying
+hidden or lying) — not yet re-verified on the Nano.
+
 **Not yet verified:** the daemon actually being installed/started via
 these launchers (systemd unit was never installed on this Nano —
 running `--check` against a genuinely-installed-and-active daemon has
 not happened yet), or anything past `--check` on real hardware. Given
-three real bugs found in this small a set of scripts — a destructive
-action ordered before its guard flag, a systemd command whose exit code
-doesn't mean what it looks like, and a "fix" that introduced a worse
-crash than the bug it fixed — treat every further launcher change on
-this old-systemd Nano target as needing live verification before
-trusting it, not just `bash -n`/shellcheck (which caught none of the
-three).
+four real issues found in this small a set of scripts across several
+review/fix rounds — a destructive action ordered before its guard flag,
+a systemd command whose exit code doesn't mean what it looks like, a
+"fix" that introduced a worse crash than the bug it fixed, and a
+structural gap masked by one of the other bugs — treat every further
+launcher change on this old-systemd Nano target as needing live
+verification before trusting it, not just `bash -n`/shellcheck (which
+caught none of the four).
 
 **Cross-session coordination note:** this Phase 22 work happened live
 across two Claude Code sessions (homelab + Nano) via `SendMessage`/cross-session
