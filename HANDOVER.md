@@ -319,15 +319,21 @@ the torch/VAD blocker, and have the Nano session write the install
 script/systemd unit + investigate the daemon API surface now (not wait).
 All three landed:
 
-- **Container test: BLOCKED on physical access, not yet resolved.**
-  `docker compose`/`buildx` installed cleanly (confirms AGENTS.md's
-  install snippets work on this board). `docker run` fails with
-  permission-denied on the daemon socket — the Nano session's user is in
-  `sudo` but a coding-agent session cannot supply an interactive sudo
-  password. **Needs a human at the Nano's actual keyboard/SSH session**
-  to run `sudo usermod -aG docker reachy` (or grant scoped passwordless
-  sudo) before the torch-in-container test can proceed. This is now the
-  hard blocker on Phase 22's dependency question.
+- **Container test: RESOLVED — works, but viability as a long-term
+  deployment path is still open.** After the owner ran `sudo usermod -aG
+  docker reachy` and rebooted, `torch==2.9.1+cpu` installs and imports
+  cleanly inside an `ubuntu:22.04` arm64 container (glibc 2.35 vs. the
+  host's 2.27 — confirmed independently as expected). **This is the fix
+  for the native `uv sync` dependency wall.** Two things are still
+  untested before committing to it: (1) **memory headroom** — this board
+  has only 3.9GB RAM and runs a full non-headless GNOME desktop, leaving
+  ~1.6GB available at idle; torch/VAD + the rest of `reachy-embodiment`'s
+  stack + container overhead + desktop wasn't load-tested and could swap
+  hard; (2) **non-root device passthrough** —
+  `/dev/video0`/`/dev/ttyACM0`/`/dev/snd/*` passthrough was only proven
+  as root (uid=0), which bypasses the `dialout`/`video`/`audio` group
+  gating `reachy-embodiment` would actually need to run under. See the
+  inventory report's corresponding section for full numbers.
 - **Install script + systemd unit: landed** at
   `deploy/reachy/install-reachy-venv.sh` and
   `deploy/reachy/reachy-mini-daemon.service` (see
@@ -348,11 +354,14 @@ All three landed:
   the Nano**, sidestepping the glibc wall for that one piece of
   functionality. Not evaluated for accuracy/latency; flagged as an option.
 
-**Next work:** get a human to unblock the Nano's `docker` group access,
-then resume the container test. In parallel/alternatively, evaluate the
-`/state/doa` VAD-alternative idea. `RobotBackend`'s real implementation
-has not been started — the daemon API investigation above is prep for
-that, not the implementation itself.
+**Next work:** decide whether to load-test the full stack's memory
+footprint under the container on this specific board, test non-root
+device passthrough, evaluate the `/state/doa` VAD-alternative instead (or
+in addition — needs the owner physically present, since starting the
+daemon moves the robot via `--wake-up-on-start` by default), or some
+combination. `RobotBackend`'s real implementation has not been started —
+the daemon API investigation above is prep for that, not the
+implementation itself.
 
 **Cross-session coordination note:** this Phase 22 work happened live
 across two Claude Code sessions (homelab + Nano) via `SendMessage`/cross-session

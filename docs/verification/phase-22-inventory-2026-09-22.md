@@ -288,27 +288,51 @@ about "wrapping the reachy_mini SDK the way Jarvis's RobotController does."
   `reachy-mini-daemon`'s actual HTTP/websocket API surface for
   camera/audio/status.
 
-## Newer-glibc container test for torch/onnxruntime — BLOCKED on sudo access (2026-09-22)
+## Newer-glibc container test for torch/onnxruntime — RESOLVED, works but with caveats (2026-09-22)
 
-`docker compose` v2 (v5.5.1) and `docker buildx` (v0.37.1) installed
-cleanly via AGENTS.md's exact snippets — confirms that gotcha doc is
-accurate for this board.
+Initially blocked on `docker run` permission-denied (Nano user not in the
+`docker` group; needed a human to run `sudo usermod -aG docker reachy`
+and reboot for it to take effect — done by the owner). Once unblocked:
 
-`docker run` itself then failed: `permission denied ... connect:
-permission denied` on the Docker daemon socket. The Nano session's user
-(`reachy`) is in the `sudo` group, but `sudo` requires an interactive
-password unavailable to a non-interactive coding-agent session — no
-workaround was attempted (no searching for stored credentials, no
-privilege-escalation attempts). **Needs a human with the actual Nano
-login** to run `sudo usermod -aG docker reachy` once (then a fresh login
-picks up the group) — or grant scoped passwordless sudo for testing —
-before this test can proceed. Once unblocked: pull an `ubuntu:22.04`
-(or similar) arm64 image, `pip install torch==2.9.1+cpu --index-url
-https://download.pytorch.org/whl/cpu` inside it, and check whether it
-installs/imports, plus assess resource overhead and whether
-`/dev/video0`/`/dev/ttyACM0`/`/dev/snd/*` device passthrough into a
-container is viable for actually running `reachy-embodiment`
-containerized long-term (not just proving the wheel installs).
+- `docker run --rm hello-world` works without sudo — group membership
+  confirmed active post-reboot.
+- Torch pin unchanged: `torch==2.9.1+cpu` (root `pyproject.toml` +
+  `uv.lock` line 239). Tested inside `ubuntu:22.04` arm64 (glibc 2.35,
+  confirmed independent of the host's 2.27 as expected).
+- `pip install torch==2.9.1+cpu --index-url
+  https://download.pytorch.org/whl/cpu` **installs and imports cleanly**:
+  `python3 -c "import torch; print(torch.__version__)"` → `2.9.1+cpu`.
+  ~80s install (network-bound). **The container route works** — this is
+  the fix for the native `uv sync` failure documented above.
+- **Resource overhead:** torch package itself 418MB; full writable
+  container layer with python3+pip+torch ~1.06GB (base `ubuntu:22.04`
+  arm64 alone is 69.8MB). Memory: torch import peak RSS ~200MB, container
+  idle post-import ~179MB. **Host context that matters:** this board has
+  3.9GB total RAM but only ~537MB free / ~1.6GB available at test time —
+  2GB already used, mostly by the full GNOME desktop session (this board
+  is non-headless, per the earlier inventory). 1.9GB swap, 168MB in use.
+  Disk isn't a concern (35GB free, ~1.1GB footprint), but **RAM is a real
+  open question**: torch/VAD + the rest of `reachy-embodiment`'s stack
+  (whisper/sentence-transformers etc.) + container overhead + the
+  existing desktop session, all inside ~1.6GB available, is a plausible
+  swap-thrashing scenario that wasn't load-tested.
+- **Device passthrough:** `--device=/dev/video0 --device=/dev/ttyACM0
+  --device=/dev/snd` all showed up inside a throwaway container with host
+  permissions/major:minor preserved. **Caveat: tested as root (uid=0)**,
+  which bypasses the `dialout`/`video`/`audio` group gating entirely —
+  not representative of how `reachy-embodiment` should actually run
+  (non-root, matching GIDs or `--group-add`). Non-root passthrough and
+  actually opening a device from inside the container (grabbing a camera
+  frame, writing to the serial port) were **not tested** — only file
+  visibility/permission bits.
+
+**Assessment: "the wheel installs in a container" is proven. "Workable
+long-term deployment path" is a maybe, not a yes.** Two things need
+checking before committing to this over the deferred-VAD or `/state/doa`
+alternatives: (1) whether this specific board — desktop-carrying, 3.9GB
+RAM, ~1.6GB available — can sustain the full stack without swapping hard,
+and (2) non-root device access from inside a container. All test
+containers/images were removed after; no repo changes made on the Nano.
 
 ## `reachy-mini-daemon` HTTP/WS API surface (2026-09-22, design prep, read-only)
 
@@ -401,11 +425,14 @@ inline in the script rather than guessed at.
 
 ## Open questions / next steps
 
-1. **Torch/VAD blocker (unresolved):** the container test is blocked on
-   Docker group/sudo access on the physical Nano (needs a human at the
-   keyboard) — pick back up once unblocked. Alternatively/additionally,
-   evaluate the daemon's own `/state/doa` `speech_detected` signal as a
-   torch-free barge-in source for the Nano specifically (see above).
+1. **Torch/VAD blocker (container route proven, viability unresolved):**
+   the container approach unblocks installation, but memory headroom on
+   this specific 3.9GB-RAM, non-headless board and non-root device
+   passthrough are both untested. Decide whether to load-test the full
+   stack's memory footprint under the container, evaluate the daemon's
+   own `/state/doa` `speech_detected` signal as a torch-free alternative
+   instead (needs the owner present — daemon start moves the robot by
+   default), or both.
 2. **Install script validation:** not yet re-run end to end on a clean
    image; the PyGObject pin risk is unresolved.
 3. Decide whether to leave `~/reachy-work-buddy` on the Nano as-is, wipe
