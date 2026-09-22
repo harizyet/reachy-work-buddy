@@ -13,7 +13,7 @@ stays expressive even when the homelab is unreachable.
 
 ## Features
 
-What the system can actually do today (Phases 0-11; see Status below for
+What the system can actually do today (Phases 0-12; see Status below for
 the engineering detail and live-verification evidence behind each item):
 
 - **Talk to Reachy** — a semantic behaviour API and a local presence loop
@@ -43,6 +43,10 @@ the engineering detail and live-verification evidence behind each item):
   it back. Complete and search them conversationally too.
 - **A full audit trail** — every routing decision (which channel, why,
   whether privacy overrode the default) is logged and queryable per user.
+- **Remembers work facts, not just follow-ups** — say "remember that X"
+  and recall it later with "do you remember X"; the reply surfaces only
+  the matching fact, with provenance and a sensitivity classification
+  attached, never a dump of the surrounding conversation.
 - **Runs for real** — one `docker compose up` brings up the whole stack
   (reasoning, hub, embodiment, Postgres, a reverse proxy) on your own
   homelab; every feature above has been verified against that actual
@@ -124,7 +128,7 @@ live restart tests verify).
 
 ## Status
 
-Phases 0-11 are done:
+Phases 0-12 are done:
 
 - Phase 0: architecture freeze (ADRs, shared schemas).
 - Phase 1: Jarvis reference baseline — [docs/jarvis-baseline.md](docs/jarvis-baseline.md).
@@ -214,15 +218,31 @@ Phases 0-11 are done:
   recorded conversationally was retrieved in a later turn, via the direct
   API, and after a full `companion-core` restart, through both a real
   process and the deployed Caddy stack.
+- Phase 12: work memory. companion-core gets a `MemoryStore` (`memory/`,
+  same Postgres-backed pattern as calendar/tasks) storing `MemoryRecord`s
+  (profile/working/episodic) with provenance (`source`), a sensitivity
+  classification (reusing `Privacy` from Phase 9 rather than a duplicate
+  enum — the two were byte-for-byte identical), and an optional expiry
+  enforced at read time, no background job (same scope discipline as
+  calendar reminders). "remember that X" captures a fact conversationally,
+  same agent-actionable pattern as Phase 11 tasks; "do you remember X" /
+  "what do you remember about X" recalls it — a targeted `MemoryStore`
+  query, structurally separate from the per-session conversation
+  transcript, which is what actually satisfies the exit criterion
+  ("recalled later without transcript dumping") rather than just being a
+  claim about it. Verified live through the real deployed Caddy stack: a
+  fact recorded conversationally, interleaved with unrelated turns and a
+  second unrelated fact, was recalled later with only the matching fact in
+  the reply — and it survived a `companion-core` restart via Postgres.
 
 See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
-phase-by-phase roadmap. Next up: Phase 12, work memory (profile, working,
-and episodic memory with provenance, sensitivity, and expiry).
+phase-by-phase roadmap. Next up: Phase 13, RAG (retrieval over stored
+company knowledge).
 
 ## Layout
 
 ```
-services/companion-core/     reasoning/tools/memory, privacy, calendar, tasks (Phases 5, 9-11)
+services/companion-core/     reasoning/tools/memory, privacy, calendar, tasks (Phases 5, 9-12)
 services/reachy-hub/         robot registry, sessions, routing, Telegram, voice/STT/TTS, audit, reminders (Phases 4-10)
 services/reachy-embodiment/  semantic behaviour API + presence loop + VAD (Phases 2-3, 8)
 clients/web-pwa/             web/PWA client (unimplemented)

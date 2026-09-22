@@ -5,7 +5,7 @@ proactive workflows.
 
 Must not own: direct robot joints, UI transport (see [docs/adr/0001](../../docs/adr/0001-service-boundaries.md)).
 
-## Status (Phase 11)
+## Status (Phase 12)
 
 **Phase 4**: `/debug/robots/{robot_id}/state` and
 `/debug/robots/{robot_id}/behaviour/{name}` — a stand-in for what will
@@ -18,7 +18,9 @@ reachy-hub calls per turn. companion-core receives only a `session_id`,
 `conversation_id`, a channel label, and text — never anything
 channel-specific beyond that opaque label. `conversation.py`'s
 `ConversationStore` is an in-memory per-session transcript, not real memory
-(Phase 12 replaces it with a `MemoryRecord`-backed store); its only job
+— it stays exactly that; Phase 12 added a genuinely separate
+`MemoryRecord`-backed store rather than promoting this transcript into one
+(see Phase 12 below for why). Its only job
 right now is proving companion-core is genuinely stateful and
 channel-agnostic. The reply text itself
 (`"(turn N via <channel>) heard: <text>"`) is placeholder reasoning — Phase
@@ -89,6 +91,46 @@ need one).
   survives a `companion-core` restart — through both a real running
   process and the full deployed `docker compose`/Caddy stack.
 
+**Phase 12**: work memory. `memory/` — `MemoryStore` Protocol,
+`PostgresMemoryStore` (production, same shared-Postgres-instance pattern as
+`calendar/`/`tasks/`), `InMemoryMemoryStore` (tests). Every stored
+`MemoryRecord` (`shared/models/memory.py`) carries provenance (`source`),
+a `sensitivity` classification, and an optional `expires_at`, enforced at
+read time only — no background cleanup job, same scope discipline used for
+calendar reminders (Phase 10). `sensitivity` reuses `Privacy`
+(`shared/models/response.py`, Phase 9) directly rather than the module's
+original `Sensitivity` enum, which turned out to be a byte-for-byte
+duplicate that had sat unused since Phase 0 until this phase gave the model
+its first real implementation — consolidated while actually building this,
+not a separate cleanup pass.
+
+- Like Phase 11 tasks, capturing a memory genuinely is the agent action:
+  `memory_intent.match_capture` recognizes "remember that X" and
+  `POST /conversation` calls `MemoryStore.add_memory` directly, sensitivity
+  classified via the existing `classify_privacy`.
+- Recall ("do you remember X" / "what do you remember about X",
+  `memory_intent.match_recall`) queries `MemoryStore.recall` — a targeted
+  content search against durable storage — and *never* touches
+  `conversation_store`. That's a structural guarantee, not just a
+  behavioral one: the recall code path has no reference to the
+  conversation transcript at all, which is what actually satisfies the
+  exit criterion ("recalled later without transcript dumping") rather than
+  merely producing a short reply that happens not to dump it today.
+  `memory_intent.most_restrictive_privacy` sets the reply's `privacy` to
+  the most restrictive sensitivity among the records returned — combining
+  a sensitive fact with public ones in one reply is still a sensitive
+  reply.
+- `GET /memories`, `POST /memories`, `GET /memories/recall`,
+  `DELETE /memories/{id}` — the direct API, e.g. for seeding profile facts
+  up front rather than waiting for them to come up in conversation.
+- **Verified live**: through the real deployed Caddy stack, a fact
+  ("remember that my manager's email is alice@example.com") recorded
+  conversationally, interleaved with an unrelated turn and a second
+  unrelated fact ("I like green tea"), was recalled later with only the
+  matching fact in the reply; the same record, same ID, survived a
+  `companion-core` container restart via Postgres; `DELETE
+  /memories/{id}` removed it and a second delete correctly 404'd.
+
 ## Run it
 
 ```
@@ -110,11 +152,13 @@ Tests chain companion-core through real (in-process) reachy-hub and
 reachy-embodiment apps via nested `httpx.ASGITransport` — no mocks, no real
 network. `test_whats_next_answers_from_real_calendar_data` is the direct
 proof of Phase 10's exit criterion;
-`test_agent_can_record_and_retrieve_a_follow_up` is Phase 11's.
-`test_calendar_store.py`/`test_calendar_intent.py` and
-`test_task_store.py`/`test_task_intent.py` unit-test the stores and
+`test_agent_can_record_and_retrieve_a_follow_up` is Phase 11's;
+`test_agent_can_remember_and_recall_a_work_fact_without_transcript_dumping`
+is Phase 12's. `test_calendar_store.py`/`test_calendar_intent.py`,
+`test_task_store.py`/`test_task_intent.py`, and
+`test_memory_store.py`/`test_memory_intent.py` unit-test the stores and
 matchers in isolation (wrapped in `asyncio.run` — no `pytest-asyncio`/anyio
 plugin is installed anywhere in this codebase, so a raw `async def
-test_...` would silently no-op rather than fail). `PostgresCalendarStore`
-and `PostgresTaskStore` themselves are exercised live (see
-deploy/homelab/README.md), not by the unit test suite.
+test_...` would silently no-op rather than fail). `PostgresCalendarStore`,
+`PostgresTaskStore`, and `PostgresMemoryStore` themselves are exercised
+live (see deploy/homelab/README.md), not by the unit test suite.

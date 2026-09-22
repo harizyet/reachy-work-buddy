@@ -31,7 +31,13 @@ mode correctly resolved to `phone`, never `reachy` (Phase 9); a real
 calendar event added through Caddy produced a real "what's next" answer,
 and a reminder for an imminent meeting correctly routed away from Reachy
 (Phase 10); a task recorded conversationally through Caddy was retrieved
-in a later turn and via the direct API (Phase 11); and, separately (not
+in a later turn and via the direct API (Phase 11); a work fact recorded
+conversationally through Caddy ("remember that my manager's email is
+alice@example.com") was recalled later, through both the conversational
+path and the direct API, with the reply containing only the matching fact
+and none of the other turns exchanged in between — the actual exit
+criterion, not just a passing test — and it survived a `companion-core`
+container restart via Postgres (Phase 12); and, separately (not
 through this specific compose stack, but the same services run as plain
 processes), a real Telegram bot and a real Telegram account confirmed
 Phase 7's session continuity live.
@@ -164,6 +170,29 @@ curl -X POST http://localhost:8080/core/conversation \
 #    retrieved in a later turn
 
 curl http://localhost:8080/core/tasks   # the same data via the direct API
+```
+
+Memory (Phase 12) — a work fact recorded and recalled conversationally,
+through Caddy, with provenance/sensitivity attached and no transcript
+dumping:
+
+```
+curl -X POST http://localhost:8080/core/conversation \
+  -H 'Content-Type: application/json' \
+  -d '{"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "remember that my manager'"'"'s email is alice@example.com"}'
+
+curl -X POST http://localhost:8080/core/conversation \
+  -H 'Content-Type: application/json' \
+  -d '{"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "remember that I like green tea"}'
+
+curl -X POST http://localhost:8080/core/conversation \
+  -H 'Content-Type: application/json' \
+  -d '{"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "do you remember alice@example.com"}'
+# -> "Here's what I remember: my manager's email is alice@example.com." —
+#    only the matching fact, not the green-tea fact or any other turn
+
+curl "http://localhost:8080/core/memories/recall?q=alice@example.com"   # same data via the direct API
+curl http://localhost:8080/core/memories                                # everything stored
 ```
 
 No robot is auto-registered — `POST /hub/robots` above is a manual step.

@@ -39,6 +39,20 @@ placeholder-matcher honesty as calendar_intent.py) and calls `TaskStore`
 directly — no separate admin/confirmation gate, since recording a task is
 low-stakes and easily undoable (docs/plan.md §9's permission tiers), unlike
 a calendar write (still admin-only, ADR 0010) or an email send (Phase 14).
+
+Phase 12: work memory, per docs/plan.md's Phase 12 row ("Profile, working
+and episodic memory with provenance, sensitivity and expiry") — see
+memory/. `MemoryRecord` (shared/models/memory.py) has existed as a
+forward-looking data contract since Phase 0; this phase is the first real
+implementation against it. `POST /conversation` recognizes "remember that
+X" (memory_intent.py, same placeholder-matcher pattern as calendar/task
+intent) and stores it via `MemoryStore.add_memory` directly — memory
+capture is the same kind of low-stakes, no-confirmation-needed agent action
+task capture (Phase 11) is, not calendar's read-only-to-the-agent design.
+"Do you remember X" recalls by content search against `MemoryStore` —
+never against `conversation.py`'s per-session transcript — which is the
+literal mechanism behind the exit criterion, "Stored work fact can be
+recalled later without transcript dumping."
 """
 
 from __future__ import annotations
@@ -52,6 +66,7 @@ import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
+from companion_core import memory_intent
 from companion_core.calendar.models import CalendarEvent
 from companion_core.calendar.postgres_store import PostgresCalendarStore
 from companion_core.calendar.reminders import due_reminders
@@ -59,6 +74,8 @@ from companion_core.calendar.store import CalendarStore
 from companion_core.calendar_intent import format_next_event_reply, is_next_event_query
 from companion_core.conversation import ConversationStore
 from companion_core.hub_client import HubClient
+from companion_core.memory.postgres_store import PostgresMemoryStore
+from companion_core.memory.store import MemoryStore
 from companion_core.privacy_classifier import classify_privacy
 from companion_core.task_intent import (
     format_capture_reply,
@@ -73,6 +90,7 @@ from companion_core.task_intent import (
 from companion_core.tasks.models import Task, TaskStatus
 from companion_core.tasks.postgres_store import PostgresTaskStore
 from companion_core.tasks.store import TaskStore
+from shared.models.memory import MemoryRecord, MemoryType
 from shared.models.response import Privacy, Urgency
 
 
@@ -100,18 +118,29 @@ class CreateTaskRequest(BaseModel):
     text: str
 
 
+class CreateMemoryRequest(BaseModel):
+    content: str
+    type: MemoryType = MemoryType.WORKING
+    project_scope: str | None = None
+    confidence: float = 1.0
+    sensitivity: Privacy | None = None
+    expires_at: datetime | None = None
+
+
 def create_app(
     *,
     hub_base_url: str | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
     calendar_store: CalendarStore | None = None,
     task_store: TaskStore | None = None,
+    memory_store: MemoryStore | None = None,
     database_url: str | None = None,
 ) -> FastAPI:
     hub_base_url = hub_base_url or os.environ.get("REACHY_HUB_URL", "http://reachy-hub:8000")
     conversation_store = ConversationStore()
     owns_calendar_store = calendar_store is None
     owns_task_store = task_store is None
+    owns_memory_store = memory_store is None
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -122,6 +151,9 @@ def create_app(
         if owns_task_store:
             dsn = database_url or os.environ["DATABASE_URL"]
             app.state.task_store = await PostgresTaskStore.connect(dsn)
+        if owns_memory_store:
+            dsn = database_url or os.environ["DATABASE_URL"]
+            app.state.memory_store = await PostgresMemoryStore.connect(dsn)
         try:
             yield
         finally:
@@ -130,6 +162,8 @@ def create_app(
                 await app.state.calendar_store.close()
             if owns_task_store:
                 await app.state.task_store.close()
+            if owns_memory_store:
+                await app.state.memory_store.close()
 
     app = FastAPI(title="companion-core", lifespan=lifespan)
     app.state.conversation_store = conversation_store
@@ -137,6 +171,8 @@ def create_app(
         app.state.calendar_store = calendar_store
     if not owns_task_store:
         app.state.task_store = task_store
+    if not owns_memory_store:
+        app.state.memory_store = memory_store
 
     @app.get("/health")
     async def health() -> dict[str, str]:
@@ -149,6 +185,8 @@ def create_app(
         capture_text = match_capture(turn.text)
         complete_query = match_complete(turn.text)
         search_query = match_search(turn.text)
+        memory_capture_text = memory_intent.match_capture(turn.text)
+        memory_recall_query = memory_intent.match_recall(turn.text)
 
         if is_next_event_query(turn.text):
             event = await app.state.calendar_store.next_event(datetime.now(UTC))
@@ -177,6 +215,21 @@ def create_app(
             open_tasks = await app.state.task_store.list_tasks(TaskStatus.OPEN)
             reply = format_list_reply(open_tasks)
             privacy = classify_privacy(turn.text)
+        elif memory_capture_text:
+            record = await app.state.memory_store.add_memory(
+                content=memory_capture_text,
+                source="conversation",
+                sensitivity=classify_privacy(memory_capture_text),
+            )
+            reply = memory_intent.format_capture_reply(record)
+            privacy = record.sensitivity
+        elif memory_recall_query:
+            # Deliberately queries MemoryStore only — never conversation_store
+            # — this is the exit criterion's "without transcript dumping" as
+            # an actual code-level guarantee, not just a claim.
+            found = await app.state.memory_store.recall(memory_recall_query)
+            reply = memory_intent.format_recall_reply(found, memory_recall_query)
+            privacy = memory_intent.most_restrictive_privacy(found, default=classify_privacy(turn.text))
         else:
             reply = f"(turn {len(history)} via {turn.channel}) heard: {turn.text}"
             privacy = classify_privacy(turn.text)
@@ -217,6 +270,36 @@ def create_app(
             )
             for event in events
         ]
+
+    @app.post("/memories")
+    async def create_memory(request: CreateMemoryRequest) -> MemoryRecord:
+        """Direct/API capture, alongside the conversational path in
+        /conversation — e.g. to seed profile facts up front rather than
+        waiting for them to come up naturally in conversation."""
+        return await app.state.memory_store.add_memory(
+            content=request.content,
+            source="api",
+            type=request.type,
+            project_scope=request.project_scope,
+            confidence=request.confidence,
+            sensitivity=request.sensitivity or classify_privacy(request.content),
+            expires_at=request.expires_at,
+        )
+
+    @app.get("/memories")
+    async def list_memories(type: MemoryType | None = None) -> list[MemoryRecord]:
+        return await app.state.memory_store.list_memories(type)
+
+    @app.get("/memories/recall")
+    async def recall_memories(q: str, type: MemoryType | None = None) -> list[MemoryRecord]:
+        return await app.state.memory_store.recall(q, type=type)
+
+    @app.delete("/memories/{memory_id}")
+    async def forget_memory(memory_id: str) -> dict[str, bool]:
+        forgotten = await app.state.memory_store.forget(memory_id)
+        if not forgotten:
+            raise HTTPException(status_code=404, detail=f"no memory '{memory_id}'")
+        return {"forgotten": True}
 
     @app.get("/tasks")
     async def list_tasks(status: TaskStatus | None = None) -> list[Task]:

@@ -11,6 +11,7 @@ from datetime import UTC, datetime, timedelta
 import httpx
 from companion_core.app import create_app
 from companion_core.calendar.store import InMemoryCalendarStore
+from companion_core.memory.store import InMemoryMemoryStore
 from companion_core.tasks.store import InMemoryTaskStore
 from fastapi.testclient import TestClient
 from reachy_embodiment.app import create_app as create_embodiment_app
@@ -36,6 +37,7 @@ def make_chain(*, registered_robots: Sequence[Robot] = ()) -> TestClient:
         transport=httpx.ASGITransport(app=hub_app),
         calendar_store=InMemoryCalendarStore(),
         task_store=InMemoryTaskStore(),
+        memory_store=InMemoryMemoryStore(),
     )
     return TestClient(core_app)
 
@@ -255,6 +257,77 @@ def test_task_endpoints_directly() -> None:
         assert complete_resp.json()["status"] == "done"
 
         assert client.post("/tasks/nonexistent-id/complete").status_code == 404
+
+
+def test_agent_can_remember_and_recall_a_work_fact_without_transcript_dumping() -> None:
+    """Phase 12 exit criterion: "Stored work fact can be recalled later
+    without transcript dumping" — recall must come from MemoryStore, not
+    from replaying the session's conversation history."""
+    with make_chain() as client:
+        capture_resp = client.post(
+            "/conversation",
+            json={
+                "session_id": "s1",
+                "conversation_id": "c1",
+                "channel": "reachy",
+                "text": "remember that my manager's email is alice@example.com",
+            },
+        )
+        assert capture_resp.status_code == 200
+        assert "alice@example.com" in capture_resp.json()["reply"]
+
+        # Unrelated turns that should never surface in the recall reply.
+        client.post(
+            "/conversation",
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "what's the weather"},
+        )
+        client.post(
+            "/conversation",
+            json={
+                "session_id": "s1",
+                "conversation_id": "c1",
+                "channel": "reachy",
+                "text": "remember that I like green tea",
+            },
+        )
+
+        recall_resp = client.post(
+            "/conversation",
+            json={
+                "session_id": "s1",
+                "conversation_id": "c1",
+                "channel": "reachy",
+                "text": "do you remember alice@example.com",
+            },
+        )
+        assert recall_resp.status_code == 200
+        body = recall_resp.json()
+        assert "alice@example.com" in body["reply"]
+        assert "green tea" not in body["reply"]  # only the matching fact, not a transcript dump
+        assert "weather" not in body["reply"]
+        assert body["privacy"] == "work-private"
+
+        # Also retrievable via the direct API.
+        recall_api = client.get("/memories/recall", params={"q": "alice@example.com"})
+        assert recall_api.status_code == 200
+        assert len(recall_api.json()) == 1
+        assert recall_api.json()[0]["content"] == "my manager's email is alice@example.com"
+
+
+def test_memory_endpoints_directly() -> None:
+    with make_chain() as client:
+        create_resp = client.post("/memories", json={"content": "meeting: project codename is Falcon"})
+        assert create_resp.status_code == 200
+        memory_id = create_resp.json()["id"]
+        assert create_resp.json()["sensitivity"] == "work-private"
+
+        list_resp = client.get("/memories")
+        assert list_resp.status_code == 200
+        assert len(list_resp.json()) == 1
+
+        assert client.delete(f"/memories/{memory_id}").json() == {"forgotten": True}
+        assert client.delete(f"/memories/{memory_id}").status_code == 404
+        assert client.get("/memories").json() == []
 
 
 def test_debug_trigger_behaviour_reaches_reachy_embodiment_through_the_hub() -> None:
