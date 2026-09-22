@@ -128,10 +128,20 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
 import httpx
-from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
-from fastapi.responses import Response
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    Request,
+    UploadFile,
+)
+from fastapi.responses import RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from starlette.middleware.sessions import SessionMiddleware
 
 from reachy_hub.audit_log import AuditEntry, AuditLog
 from reachy_hub.companion_core_client import CompanionCoreClient
@@ -142,6 +152,7 @@ from reachy_hub.interruption_policy import (
     is_occupied,
 )
 from reachy_hub.notification_queue import NotificationQueue, QueuedNotification
+from reachy_hub.operator import install_operator_routes, require_csrf
 from reachy_hub.postgres_audit_log import PostgresAuditLog
 from reachy_hub.postgres_notification_queue import PostgresNotificationQueue
 from reachy_hub.postgres_registry import PostgresRobotRegistry
@@ -154,6 +165,7 @@ from reachy_hub.stt import FasterWhisperSTT, SpeechToText
 from reachy_hub.telegram_chat_registry import TelegramChatRegistry
 from reachy_hub.telegram_client import TelegramClient
 from reachy_hub.tts import EspeakTTS, TextToSpeech
+from reachy_hub.user_store import PostgresUserStore, UserStore
 from reachy_hub.webrtc import CallTurnHandler, negotiate_call, negotiate_telepresence
 from shared.models.embodiment import Behaviour
 from shared.models.interruption import InterruptionAction
@@ -275,6 +287,11 @@ def create_app(
     audit_log: AuditLog | None = None,
     notification_queue: NotificationQueue | None = None,
     remote_ui_token: str | None = None,
+    user_store: UserStore | None = None,
+    session_secret_key: str | None = None,
+    admin_username: str | None = None,
+    admin_password: str | None = None,
+    session_cookie_secure: bool | None = None,
 ) -> FastAPI:
     # Phase 16/ADR 0013: fail closed. Unset means the whole remote-control
     # surface below 503s rather than silently allowing unauthenticated
@@ -282,17 +299,28 @@ def create_app(
     # in this file (Telegram, cloud TTS), deliberately: those degrade a
     # convenience by being absent, this gates real robot control exposed on
     # a port the Caddyfile itself documents as public-reachable.
-    remote_ui_token = remote_ui_token or os.environ.get("REMOTE_UI_TOKEN")
+    remote_ui_token = remote_ui_token or os.environ.get("REMOTE_UI_TOKEN") or None
+    session_secret_key = session_secret_key or os.environ.get("SESSION_SECRET_KEY") or None
+    admin_username = admin_username or os.environ.get("ADMIN_USERNAME") or None
+    admin_password = admin_password or os.environ.get("ADMIN_PASSWORD") or None
+    if session_cookie_secure is None:
+        session_cookie_secure = os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true"
+    owns_user_store = user_store is None and session_secret_key is not None
 
-    def require_remote_auth(authorization: str | None = Header(default=None)) -> None:
-        if remote_ui_token is None:
-            raise HTTPException(status_code=503, detail="remote UI is not configured (set REMOTE_UI_TOKEN)")
-        if authorization is None or not authorization.startswith("Bearer "):
-            raise HTTPException(status_code=401, detail="missing bearer token")
-        provided = authorization.removeprefix("Bearer ")
-        if not secrets.compare_digest(provided, remote_ui_token):
-            raise HTTPException(status_code=401, detail="invalid bearer token")
-
+    async def require_remote_auth(request: Request, authorization: str | None = Header(default=None)) -> None:
+        owner = await app.state.user_store.owner() if session_secret_key else None
+        if not remote_ui_token and not owner:
+            raise HTTPException(503, "Remote UI is not configured (set owner login or REMOTE_UI_TOKEN)")
+        if authorization is not None:
+            if (remote_ui_token and authorization.startswith("Bearer ")
+                    and secrets.compare_digest(authorization.removeprefix("Bearer ").encode(), remote_ui_token.encode())):
+                return
+            raise HTTPException(401, "Invalid bearer token")
+        if owner and request.scope.get("session", {}).get("user") == owner:
+            if request.method not in {"GET", "HEAD", "OPTIONS"}:
+                require_csrf(request)
+            return
+        raise HTTPException(401, "Authentication required")
 
     client_factory = client_factory or (lambda base_url: EmbodimentClient(base_url))
     clients: dict[str, EmbodimentClient] = {}
@@ -325,7 +353,7 @@ def create_app(
     # polling, and no Postgres connection for the chat registry either —
     # reachy-hub degrades gracefully to Reachy-only, matching every other
     # optional integration in this system.
-    telegram_bot_token = telegram_bot_token or os.environ.get("TELEGRAM_BOT_TOKEN")
+    telegram_bot_token = telegram_bot_token or os.environ.get("TELEGRAM_BOT_TOKEN") or None
     owns_telegram_client = telegram_client is None and telegram_bot_token is not None
     if owns_telegram_client:
         telegram_client = TelegramClient(telegram_bot_token)
@@ -409,6 +437,10 @@ def create_app(
         # usable even without startup/shutdown events running (e.g. a bare
         # httpx.ASGITransport). Only the Postgres-backed defaults need an
         # async connect at startup.
+        if owns_user_store:
+            app.state.user_store = await PostgresUserStore.connect(database_url or os.environ["DATABASE_URL"])
+        if session_secret_key and admin_username and admin_password:
+            await app.state.user_store.bootstrap(admin_username, admin_password)
         if owns_registry:
             dsn = database_url or os.environ["DATABASE_URL"]
             app.state.registry = await PostgresRobotRegistry.connect(dsn)
@@ -453,6 +485,8 @@ def create_app(
             await companion_core_client.aclose()
             if owns_telegram_client and telegram_client is not None:
                 await telegram_client.aclose()
+            if owns_user_store:
+                await app.state.user_store.close()
             if owns_registry:
                 await app.state.registry.close()
             if owns_session_store:
@@ -465,6 +499,13 @@ def create_app(
                 await app.state.notification_queue.close()
 
     app = FastAPI(title="reachy-hub", lifespan=lifespan)
+    app.state.user_store = user_store
+    if session_secret_key:
+        app.add_middleware(SessionMiddleware, secret_key=session_secret_key,
+                           session_cookie="reachy_session", max_age=43200,
+                           same_site="strict", https_only=session_cookie_secure)
+    install_operator_routes(app, require_remote_auth, companion_core_client, get_client,
+                            login_enabled=bool(session_secret_key), telegram_enabled=telegram_enabled)
     app.state.webrtc_connections = set()
     if not owns_registry:
         app.state.registry = registry
@@ -532,14 +573,14 @@ def create_app(
             raise HTTPException(status_code=404, detail=f"no session for user '{user_id}'")
         return session
 
-    @app.patch("/sessions/{user_id}/mode")
+    @app.patch("/sessions/{user_id}/mode", dependencies=[Depends(require_remote_auth)])
     async def set_session_mode(user_id: str, request: SetModeRequest) -> AgentSession:
         session = await app.state.session_store.get_by_user(user_id)
         if session is None:
             raise HTTPException(status_code=404, detail=f"no session for user '{user_id}'")
         return await app.state.session_store.set_mode(session, request.interaction_mode)
 
-    @app.patch("/sessions/{user_id}/dnd")
+    @app.patch("/sessions/{user_id}/dnd", dependencies=[Depends(require_remote_auth)])
     async def set_session_dnd(user_id: str, request: SetDndRequest) -> AgentSession:
         session = await app.state.session_store.get_by_user(user_id)
         if session is None:
@@ -552,7 +593,7 @@ def create_app(
             await flush_notifications(user_id, session)
         return session
 
-    @app.patch("/sessions/{user_id}/privacy-context")
+    @app.patch("/sessions/{user_id}/privacy-context", dependencies=[Depends(require_remote_auth)])
     async def set_session_privacy_context(user_id: str, request: SetPrivacyContextRequest) -> AgentSession:
         session = await app.state.session_store.get_by_user(user_id)
         if session is None:
@@ -998,5 +1039,14 @@ def create_app(
     web_pwa_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "clients", "web-pwa")
     if os.path.isdir(web_pwa_dir):
         app.mount("/app", StaticFiles(directory=web_pwa_dir, html=True), name="web-pwa")
+
+    @app.get("/ui", include_in_schema=False)
+    async def operator_ui_redirect():
+        # Relative location survives Caddy's stripped /hub prefix.
+        return RedirectResponse("ui/")
+
+    operator_ui_dir = os.path.join(os.path.dirname(web_pwa_dir), "operator-ui")
+    if os.path.isdir(operator_ui_dir):
+        app.mount("/ui", StaticFiles(directory=operator_ui_dir, html=True), name="operator-ui")
 
     return app

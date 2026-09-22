@@ -296,3 +296,20 @@ skip cleanly if `espeak-ng` isn't on `PATH`:
 uv run --group dev pytest services/reachy-hub/tests -m "not slow"   # fast loop
 uv run --group dev pytest services/reachy-hub/tests -m slow         # real STT/TTS
 ```
+
+
+## Operator UI (Phase 19)
+
+The owner dashboard is at `/ui/` (Caddy: `/hub/ui/`). Configure
+`ADMIN_USERNAME`, `ADMIN_PASSWORD`, and `SESSION_SECRET_KEY`; set
+`SESSION_COOKIE_SECURE=true` behind HTTPS. The owner is bootstrapped once
+into Postgres, never overwritten at startup. See
+[deployment setup](../../deploy/homelab/README.md#operator-dashboard-phase-19).
+
+`POST /auth/login`, `POST /auth/logout`, and `GET /auth/me` manage a signed
+HttpOnly browser cookie. Login/logout and cookie-authenticated mutations
+require `X-Reachy-CSRF: 1`. Existing bearer API access remains supported.
+Session mode/DND/privacy-context PATCH routes now require authentication,
+as do `/status`, `/settings/llm`, and `/llm/usage`. `/status` reports
+component probes and Telegram configuration; audit/notifications retain
+their separate per-user routes. Telepresence shares the login cookie.

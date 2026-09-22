@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Reachy · Operator</title><link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header><div><span class="eyebrow">WORK COMPANION</span><h1>Reachy operator</h1></div><nav id="nav" hidden><a href="../app/telepresence.html">Telepresence ↗</a><button id="logout" class="secondary">Log out</button></nav></header>
+  <p id="notice" role="status" aria-live="polite"></p>
+  <main>
+    <section id="login-panel" class="card login">
+      <span class="eyebrow">OWNER ACCESS</span><h2>Welcome back</h2><p>Log in to monitor your companion and adjust its settings.</p>
+      <form id="login"><label>Username<input id="username" required autocomplete="username"></label><label>Password<input id="password" required type="password" autocomplete="current-password"></label><button>Log in</button></form>
+    </section>
+    <div id="dashboard" hidden>
+      <div class="section-title"><h2>System overview</h2><span id="updated">Checking status…</span></div>
+      <div id="components" class="components"></div>
+      <div class="grid">
+        <section class="card"><span class="eyebrow">YOUR WORKDAY</span><h2>Session controls</h2>
+          <form id="session-select"><label>User ID<input id="user-id" value="default-user" required></label><button class="secondary">Load session</button></form>
+          <p id="session-state">Load a session to change its settings.</p>
+          <form id="session-controls"><fieldset id="session-fields" disabled><label>Mode<select id="mode"><option value="desk">Desk</option><option value="office">Office</option><option value="silent">Silent</option><option value="remote">Remote</option></select></label><label class="check"><input type="checkbox" id="dnd"> Do not disturb</label><button>Save session</button></fieldset></form>
+        </section>
+        <section class="card"><span class="eyebrow">INFERENCE</span><h2>Language model</h2>
+          <p>Connect a local server or a hosted compatible endpoint. Changes apply to the next conversation turn.</p>
+          <form id="llm"><fieldset id="llm-fields" disabled><label>Base URL<input id="base-url" type="url" required placeholder="http://ovms-host:8000/v1"></label>
+          <label>Model name<input id="model" required placeholder="Model name configured on your server"></label><small>For OpenVINO Model Server, use its exact configured model name.</small>
+          <label>API key <span class="muted">(optional)</span><input id="api-key" type="password" autocomplete="new-password" placeholder="Leave blank to keep the saved key"></label><small id="key-state">No saved key</small>
+          <label class="check"><input type="checkbox" id="clear-key"> Remove saved key</label><button>Save model</button><button type="button" id="disable-llm" class="secondary">Disable model</button></fieldset></form>
+        </section>
+        <section class="card wide"><span class="eyebrow">LAST 24 HOURS</span><h2>LLM utilization</h2><p id="usage-summary">Loading…</p><div class="table-wrap"><table><thead><tr><th>Time</th><th>Role / model</th><th>Result</th><th>Input / output tokens</th><th>Latency</th></tr></thead><tbody id="usage-rows"></tbody></table></div></section>
+        <section class="card"><h2>Recent activity</h2><ul id="audit"><li>Load a session to view activity.</li></ul></section>
+        <section class="card"><h2>Queued notifications</h2><ul id="notifications"><li>Load a session to view notifications.</li></ul></section>
+      </div>
+    </div>
+  </main><footer>Reachy Work Companion · Operator UI</footer><script src="app.js" defer></script>
+</body>
+</html>

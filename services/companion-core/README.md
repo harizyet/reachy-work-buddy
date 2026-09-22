@@ -22,10 +22,10 @@ channel-specific beyond that opaque label. `conversation.py`'s
 `MemoryRecord`-backed store rather than promoting this transcript into one
 (see Phase 12 below for why). Its only job
 right now is proving companion-core is genuinely stateful and
-channel-agnostic. The reply text itself
-(`"(turn N via <channel>) heard: <text>"`) is placeholder reasoning — Phase
-10+ replaces the body of that handler with a real agent, not the request/
-response shape.
+channel-agnostic. The original echo reply remains the unconfigured fallback. Phase 19 adds
+a real configurable provider to the generic branch; deterministic intent
+handlers still run first. The transcript now keeps user/assistant context
+for inference, but remains in memory rather than durable work memory.
 
 **Phase 9**: `POST /conversation` now also returns a `privacy` field,
 computed by `privacy_classifier.classify_privacy` — a keyword-based
@@ -183,7 +183,7 @@ STT/TTS.
 so "read" means listing `EmailMessage`s seeded through `POST
 /emails/received` (operator/setup API, same no-external-sync honesty as
 calendar) — and "summarize"/"draft" don't attempt real writing either
-(there's no LLM in this codebase yet); a draft's body is the user's text
+(email drafting remains deterministic even with Phase 19 inference); a draft's body is the user's text
 verbatim, the same way "remember that X" (Phase 12) stores X verbatim.
 
 - `email/models.py`'s `EmailDraft.status` (`draft` -> `approved` -> `sent`
@@ -318,3 +318,12 @@ live (see deploy/homelab/README.md), not by the unit test suite —
 `test_rag_store.py` does have two `slow`-marked tests that load the real
 embedding model, still in-process/no-Postgres, distinct from the
 Postgres-only live verification.
+
+
+**Phase 19 (ADR 0016)**: `llm/` owns runtime settings, the compatible HTTP
+chat provider, and usage accounting. `GET/PUT /settings/llm` use the shared
+role-based config, mask credentials, and merge partial edits; explicit
+null removes a provider/key. `GET /llm/usage?limit=50&since_hours=24` returns
+recent calls plus whole-window totals and role totals. The new Postgres
+`llm_config` and `llm_usage_log` tables persist across restarts. These routes
+are internal; browser clients use reachy-hub's authenticated proxies.

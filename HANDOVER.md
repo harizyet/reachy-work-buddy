@@ -22,120 +22,68 @@ conflict once you notice it.
 
 ## Where things stand
 
-**Phases 0-18 are done** (see README.md's Status section for full detail
-and live-verification evidence per phase). Last completed: **Phase 18,
-"Daily briefing"** — `companion-core`'s new `briefing.py` (`build_briefing`,
-exposed as `GET /briefing`) composes calendar/tasks/email/reminders/project
-events (project events = recent `project_scope`'d episodic memory, the
-honest existing stand-in — no dedicated "project events" store exists)
-into one prioritized list, pure composition over the four stores Phases
-10-12/14 already built, no new storage. `reachy-hub`'s new
-`POST /briefing/{user_id}` is the one caller: it fires `Behaviour.GREETING`
-unconditionally on a reachable robot ("Reachy greets"), then routes the
-detailed text through the *exact* same `resolve_delivery_channel`/
-`apply_privacy_override`/`decide_action`/`downgrade_for_presence` pipeline
-Phase 17's `check_reminders` uses, forced `Privacy.WORK_PRIVATE` so it can
-never land on Reachy's speaker ("...privately delivered") — reusing
-Phase 17's interruption engine exactly the way ADR 0014's Consequences
-section said this phase would. An imminent event legitimately appears
-twice (once as an urgency-graded `REMINDER`, once as part of the full-day
-`CALENDAR` schedule) — deliberate, not a bug; see
-[docs/adr/0015](docs/adr/0015-daily-briefing.md). Verified live through the
-deployed Caddy stack: an event 3 minutes out produced a briefing whose top
-item was that urgent reminder, `/robots/desk-1/state` immediately showed
-`last_behaviour: "greeting"`, `delivery_channel` was `telegram` (never
-`reachy`, despite Desk mode); with DND on and that URGENT reminder still
-present, the greeting still fired but the detailed delivery came back
-`action: "gesture"`, recorded in `GET /audit/hariz` — the same
-occupied+URGENT carve-out ADR 0014 already established, not new logic.
+**Phases 0-19 are done.** Last completed: **Phase 19 — Operator UI**.
+See [ADR 0016](docs/adr/0016-operator-ui.md), the README Status entry, and
+[deployment instructions](deploy/homelab/README.md#operator-dashboard-phase-19).
 
-**Next up: Phase 19 — Operator UI** (added to docs/plan.md's roadmap table
-in this session; not started, planned but deliberately not yet
-implemented — the user asked to plan-and-record only this round). Full
-plan is in this session's approved plan file
-(`~/.claude/plans/declarative-wibbling-cascade.md` on the machine that
-planned it — if that file isn't available to a new session, docs/plan.md's
-Phase 19 row plus the summary below is enough to reconstruct it). Two load-
-bearing findings from planning this phase, both worth re-checking before
-writing code in case something changed in between:
+- `clients/operator-ui/` is served at `/ui/` (Caddy: `/hub/ui/`). Plain
+  HTML/JS/CSS; owner login, component probes, LLM utilization, runtime model
+  configuration, existing-session mode/DND controls, audit/queue views.
+- `reachy-hub` bootstraps one owner from `ADMIN_USERNAME`/`ADMIN_PASSWORD`
+  when `SESSION_SECRET_KEY` is configured. PBKDF2 hashes in `users`;
+  signed 12-hour HttpOnly/SameSite=Strict cookie. Cookie mutations require
+  `X-Reachy-CSRF: 1`; bearer access remains supported. Telepresence uses
+  the cookie now. Session mode/DND/privacy-context PATCH routes are gated.
+- **There is now a real LLM.** Core's generic conversation branch uses
+  `llm/client.py`; deterministic intent/consent handlers are unchanged.
+  No provider means the old echo fallback; provider failures are logged
+  and return an honest unavailable reply. In-memory transcripts now hold
+  user/assistant messages, limit inference to the latest 39 messages,
+  serialize simultaneous same-session turns, and preserve private context
+  labels in generated follow-ups. Transcript history still resets on restart.
+- Shared config contracts are in `shared/models/llm.py`, not a service
+  package, so the hub proxy can validate without crossing runtime service
+  boundaries. `LLMConfig` stores `local`, reserved `cloud: null`, and
+  `routing.mode: local_only` as one JSONB row in `llm_config`. Partial PUT
+  merges fields; omitted keys retain credentials, explicit null removes
+  them. Keys are masked in API responses but **plaintext at rest**.
+- `llm_usage_log` records role/model/token counts/latency/success/errors,
+  never prompts, completions, or raw provider error bodies. A missing token
+  count is null, with an explicit unreported count in the dashboard.
+- Caddy blocks `/core/settings/*` and `/core/llm/*` so the debug proxy cannot
+  bypass the authenticated hub settings/usage routes. Other existing
+  conversation/internal APIs retain their previous trust boundary.
+- The old empty-string `TELEGRAM_BOT_TOKEN` polling bug is fixed. The UI
+  still reports Telegram **configured**, not healthy; poll health is Phase 20.
 
-- **There is still no real LLM anywhere in this codebase.**
-  `companion_core/app.py`'s `/conversation` fallback reply is a literal
-  placeholder string (`f"(turn {n} via {channel}) heard: {text}"`) — every
-  existing calendar/task/memory/email "AI" behaviour is deterministic
-  keyword matching (`*_intent.py`), never an LLM call. Phase 19 is scoped
-  to include a real pluggable LLM client (an `OpenAICompatibleChatProvider`
-  over httpx) precisely so the new "LLM utilization" dashboard has genuine
-  data, not zeros. **Update (this session): the primary local target is a
-  self-hosted [OpenVINO Model Server](https://docs.openvino.ai/2026/model-server/ovms_what_is_openvino_model_server.html)
-  (OVMS) instance**, not a generic "Ollama/LM Studio" placeholder — the
-  user already runs (or plans to run) LLM inference locally via OpenVINO.
-  Confirmed via docs.openvino.ai: as of the 2025/2026 docs, OVMS exposes
-  an OpenAI-compatible `/v1/chat/completions` endpoint (`/v3/...` is the
-  older alias, kept until 2027 but no longer the recommended path) — the
-  *exact* same wire shape `OpenAICompatibleChatProvider` already targets
-  for a cloud key. This means **no separate OpenVINO code path is
-  needed**: pointing `base_url` at `http://<ovms-host>:<port>/v1` (and
-  `api_key` left unset, since OVMS doesn't require one locally) is enough;
-  the one client implementation already covers cloud, OVMS, Ollama, LM
-  Studio, and vLLM identically. One OVMS-specific gotcha worth remembering
-  when actually wiring this up: OVMS requires the request's `"model"`
-  field to match the model name in *its own* model-repository config, not
-  an arbitrary string — the UI's "model" field's help text/placeholder
-  should say so, and live verification needs a real OVMS instance running
-  a real model to prove the local path end-to-end (see AGENTS.md's
-  "Secrets needed for a live check" convention if that instance needs a
-  reachable-but-non-default URL/credential — ask the user rather than
-  guessing at deploy-specific details). Only the existing intent-matching
-  fallback branch in `/conversation` changes; every deterministic intent
-  path is untouched.
-- **Today's only browser auth is a shared `REMOTE_UI_TOKEN` pasted into a
-  text field** (`reachy_hub/app.py`'s `require_remote_auth`,
-  `clients/web-pwa/telepresence.js`'s token input + `localStorage`). Phase
-  19 adds a real single-owner login (username/password, stdlib
-  `pbkdf2_hmac` hashing — no new dependency for that part — plus a signed
-  session cookie via `itsdangerous`, the one new third-party dependency
-  this phase needs). `require_remote_auth` is *extended*, not replaced:
-  bearer token still works, session cookie is a second accepted path, so
-  nothing depending on `REMOTE_UI_TOKEN` today breaks. Session-mutation
-  routes that are currently wide open (`PATCH /sessions/{user_id}/mode`,
-  `/dnd`, `/privacy-context`) get gated behind this for the first time —
-  expect to touch a lot of existing `test_app.py` call sites when that
-  lands, the same kind of bulk test update Phase 16 already did once for
-  `/robots/*`.
+**Verification:** 278 tests passed including the real speech/WebRTC tests;
+Ruff and JS syntax checks passed. Real image builds and isolated Compose
+project `phase19verify` exercised Postgres/Caddy with Chromium desktop and
+390px mobile. Real OVMS completion succeeded with persisted usage (first
+call: 60 input / 17 output tokens, ~1.5 s), model settings/mode/DND controls,
+credential masking, telepresence cookie access, logout, and Caddy isolation.
+Settings, usage, owner login and session controls survived service recreation.
+Stopping core showed its outage while retaining hub/robot status.
 
-New static dashboard planned at `clients/operator-ui/` (plain HTML/JS, no
-framework — matches `clients/web-pwa/`'s existing convention), served by
-`reachy-hub` at `/ui`. New companion-core storage planned: `llm_config`
-(single row, single `JSONB` column holding a serialized `LLMConfig` — see
-below — api key never returned unmasked, stored plaintext — no
-encryption-at-rest precedent exists in this codebase to build on, and
-inventing one was explicitly scoped out) and `llm_usage_log`. New
-reachy-hub storage planned: `users`. All three are net-new Postgres tables
-— same "needs `docker compose down -v` against a pre-Phase-19 volume"
-caveat as every prior phase's schema addition once this actually lands.
-**Update (this session): the LLM config shape is role-based from day one,
-not provider-name-based** — `LLMRole` (`LOCAL`/`CLOUD`) each pointing at
-its own `ProviderConfig` (`provider` kind, `base_url`, `model`, `api_key`),
-plus a top-level `routing` mode, all one `LLMConfig` object:
-```
-LLMConfig(local=ProviderConfig(...), cloud=ProviderConfig|None, routing=LLMRoutingConfig(mode=...))
-```
-Phase 19 only ever populates `local` (`routing.mode` stays at its
-`LOCAL_ONLY` default) — Phase 21 (below) populates `cloud` and adds the
-actual routing engine. Because the whole `LLMConfig` is stored as one
-JSONB blob and `GET/PUT /settings/llm` already speak this nested shape,
-Phase 21 is a pure data/logic addition, never a schema rework. The
-`router.py` this enables is deliberately ignorant of what's actually
-configured behind a role — it dispatches on `LLMRole`, never on
-provider/vendor identity, which is exactly what makes "local happens to be
-OVMS today, vLLM tomorrow" a non-event for the routing logic. Full detail
-in `~/.claude/plans/declarative-wibbling-cascade.md` §1 (updated this
-session) and `~/.claude/plans/phase-21-hybrid-llm-routing.md` §1.
+**This machine's OVMS is available:** `GET http://localhost:8000/v1/models`
+returns `OpenVINO/Qwen2.5-1.5B-Instruct-int4-ov`; no key is required. It is an
+existing Docker container named `ovms`, using GPU inference. Do not stop or
+replace it as test cleanup. Core in Compose reaches it via
+`http://host.docker.internal:8000/v1` with the `host-gateway` extra-host
+mapping documented in deployment setup. The temporary verification stack
+uses its own credentials/volumes and is removed after verification; these
+credentials are not user deployment settings.
+
+**Next up: Phase 20 — Web chat channel.** Phase 21 is still planned.
+The earlier Phase 19 plan is at
+`~/.claude/plans/declarative-wibbling-cascade.md`; ADR 0016 and implemented
+code now supersede its planning assumptions. In particular, Phase 19 adds
+only new tables, so **an up-to-date Phase 18 database does not need a volume
+reset**. Do not destroy user data to add these tables. Earlier phases'
+missing-column caveats remain relevant to older volumes.
 
 **Also planned (not started): Phase 20 — Web Chat Channel and Phase 21 —
-Hybrid Local/Cloud LLM Routing**, both added to docs/plan.md's roadmap
-table this session, both depending on Phase 19 landing first. Full plans:
+Hybrid Local/Cloud LLM Routing**, both recorded in docs/plan.md's roadmap; Phase 19's prerequisites are now implemented. Full plans:
 `~/.claude/plans/phase-20-web-chat-channel.md` and
 `~/.claude/plans/phase-21-hybrid-llm-routing.md` (on the machine that
 planned them — docs/plan.md's Phase 20/21 rows plus this summary are
@@ -203,7 +151,8 @@ telepresence — shared-bearer-token auth, fail-closed; polled-JPEG WebRTC
 camera transport; speak-through-robot bypasses companion-core entirely),
 0014 (interruption intelligence — whether/how aggressively to deliver a
 proactive notification), 0015 (daily briefing — reuses 0014's engine for
-the detailed content, adds an unconditional greet gesture on top).
+the detailed content, adds an unconditional greet gesture on top),
+0016 (operator UI, owner authentication, runtime inference and utilization).
 Note: 0005, 0007-0009 don't exist as separate ADRs — those phases didn't
 need one.
 
@@ -273,21 +222,23 @@ an ADR and a mention in the relevant phase's README "Status" entry.
   `companion-core` (companion-core's `/debug/robots/...` proxy needs the
   same shared value — see `hub_client.py`).
 
-## Known pre-existing issues (not yet fixed, found during later-phase live testing)
+## Current verification gotchas
 
-- **Telegram poll loop starts even with an unset token.**
-  `docker-compose.yml`'s `TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}`
-  always sets the container's env var to an empty string when unset in
-  `.env` (Compose substitution, not "leave unset"). reachy-hub's
-  `owns_telegram_client = telegram_client is None and telegram_bot_token
-  is not None` treats `""` as "a token was provided" (empty string is not
-  `None`), so it starts polling `https://api.telegram.org/bot/getUpdates`
-  and fails/retries forever, logging warnings. Harmless (doesn't block
-  anything, doesn't affect other features) but noisy in `docker compose
-  logs reachy-hub`. Found live-testing Phase 15, not yet fixed — low
-  priority, but worth a one-line fix (`os.environ.get("TELEGRAM_BOT_TOKEN")
-  or None`, or check `not telegram_bot_token` instead of `is not None`)
-  next time you're touching `reachy_hub/app.py`'s Telegram setup.
+- In this Codex sandbox, FastAPI TestClient can hang under socket
+  restrictions. Running the test command with approved sandbox escalation
+  resolves it. Docker and localhost HTTP/browser checks also need escalation.
+- `espeak-ng` is available at `/tmp/espeak-extract/usr/bin/espeak-ng` in
+  this session. The final full-suite command used
+  `PATH="/tmp/espeak-extract/usr/bin:$PATH" .venv/bin/pytest services shared -q`.
+- Chromium and Playwright are already cached: browser under
+  `~/.cache/ms-playwright/`, JS package under
+  `~/.npm/_npx/e41f203b7505f1fb/node_modules/playwright`. These cache paths
+  may change in later sessions. No browser dependency was added to the repo.
+- `docker compose up -d` returns before Uvicorn startup completes. Wait
+  for `/hub/health` before testing; immediate calls can get Caddy 502s.
+- Signed cookie logout clears the browser cookie, not a server-side
+  revocation list. The default deployment remains trusted homelab/VPN;
+  see ADR 0016 for the exact authentication boundary and limitations.
 
 ## Live verification workflow (established pattern, every phase)
 

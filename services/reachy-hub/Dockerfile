@@ -28,6 +28,7 @@ COPY services/reachy-hub/ services/reachy-hub/
 # The "Call Reachy" PWA (Phase 15) — reachy-hub serves it directly (ADR
 # 0001: reachy-hub owns web UI), see app.py's StaticFiles mount.
 COPY clients/web-pwa/ clients/web-pwa/
+COPY clients/operator-ui/ clients/operator-ui/
 
 # Cache-mounted uv/pip download cache: `uv sync` re-downloads every wheel
 # from the index on every build without this — a source change in

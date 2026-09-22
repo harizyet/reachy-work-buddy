@@ -117,11 +117,14 @@ import contextlib
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import httpx
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ValidationError
 
 from companion_core import email_intent, memory_intent, rag_intent
 from companion_core.briefing import BriefingItem, build_briefing
@@ -156,6 +159,12 @@ from companion_core.email.workflow import (
     run_dispatch_loop,
 )
 from companion_core.hub_client import HubClient
+from companion_core.llm.client import OpenAICompatibleChatProvider, ProviderUnavailable
+from companion_core.llm.postgres_store import (
+    PostgresLLMSettingsStore,
+    PostgresLLMUsageStore,
+)
+from companion_core.llm.store import LLMSettingsStore, LLMUsageStore, masked_config
 from companion_core.memory.postgres_store import PostgresMemoryStore
 from companion_core.memory.store import MemoryStore
 from companion_core.privacy_classifier import classify_privacy
@@ -174,10 +183,12 @@ from companion_core.task_intent import (
 from companion_core.tasks.models import Task, TaskStatus
 from companion_core.tasks.postgres_store import PostgresTaskStore
 from companion_core.tasks.store import TaskStore
+from shared.models.llm import LLMConfigPatch
 from shared.models.memory import MemoryRecord, MemoryType
 from shared.models.rag import DocumentChunk, RetrievedChunk
 from shared.models.response import Privacy, Urgency
 from shared.models.session import InputModality
+from shared.protocols.operator_api import LLM_SETTINGS, LLM_USAGE
 
 
 class ConversationTurnRequest(BaseModel):
@@ -239,6 +250,9 @@ class CreateDraftRequest(BaseModel):
 
 def create_app(
     *,
+    llm_settings_store: LLMSettingsStore | None = None,
+    llm_usage_store: LLMUsageStore | None = None,
+    llm_transport: httpx.AsyncBaseTransport | None = None,
     hub_base_url: str | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
     calendar_store: CalendarStore | None = None,
@@ -268,6 +282,8 @@ def create_app(
     if email_dispatch_interval is None:
         email_dispatch_interval = float(os.environ.get("EMAIL_DISPATCH_INTERVAL_SECONDS") or 30.0)
     conversation_store = ConversationStore()
+    owns_llm_settings = llm_settings_store is None
+    owns_llm_usage = llm_usage_store is None
     owns_calendar_store = calendar_store is None
     owns_task_store = task_store is None
     owns_memory_store = memory_store is None
@@ -284,6 +300,10 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.hub_client = HubClient(hub_base_url, transport=transport, bearer_token=hub_bearer_token)
+        if owns_llm_settings:
+            app.state.llm_settings_store = await PostgresLLMSettingsStore.connect(database_url or os.environ["DATABASE_URL"])
+        if owns_llm_usage:
+            app.state.llm_usage_store = await PostgresLLMUsageStore.connect(database_url or os.environ["DATABASE_URL"])
         if owns_calendar_store:
             dsn = database_url or os.environ["DATABASE_URL"]
             app.state.calendar_store = await PostgresCalendarStore.connect(dsn)
@@ -322,6 +342,10 @@ def create_app(
                 with contextlib.suppress(asyncio.CancelledError):
                     await dispatch_task
             await app.state.hub_client.aclose()
+            if owns_llm_settings:
+                await app.state.llm_settings_store.close()
+            if owns_llm_usage:
+                await app.state.llm_usage_store.close()
             if owns_calendar_store:
                 await app.state.calendar_store.close()
             if owns_task_store:
@@ -336,7 +360,38 @@ def create_app(
                 await app.state.confirmation_store.close()
 
     app = FastAPI(title="companion-core", lifespan=lifespan)
+
+    @app.exception_handler(RequestValidationError)
+    async def safe_validation_error(request, exc):
+        if request.url.path in (LLM_SETTINGS,):
+            return JSONResponse(status_code=422, content={"detail": "Invalid request fields"})
+        return await request_validation_exception_handler(request, exc)
+
     app.state.conversation_store = conversation_store
+    if llm_settings_store is not None:
+        app.state.llm_settings_store = llm_settings_store
+    if llm_usage_store is not None:
+        app.state.llm_usage_store = llm_usage_store
+
+    @app.get(LLM_SETTINGS)
+    async def get_llm_settings() -> dict:
+        return masked_config(await app.state.llm_settings_store.get())
+
+    @app.put(LLM_SETTINGS)
+    async def set_llm_settings(patch: LLMConfigPatch) -> dict:
+        try:
+            return masked_config(await app.state.llm_settings_store.set(patch))
+        except ValidationError:
+            # Validation errors include input values by default, potentially secrets.
+            raise HTTPException(422, "Invalid provider settings; supply a model and HTTP(S) base URL") from None
+
+    @app.get(LLM_USAGE)
+    async def get_llm_usage(limit: int = Query(50, ge=1, le=500),
+                            since_hours: int = Query(24, ge=1, le=8760)) -> dict:
+        store = app.state.llm_usage_store
+        return {"entries": [e.model_dump(mode="json") for e in await store.list_recent(limit)],
+                **await store.summary(datetime.now(UTC) - timedelta(hours=since_hours))}
+
     if not owns_calendar_store:
         app.state.calendar_store = calendar_store
     if not owns_task_store:
@@ -356,6 +411,10 @@ def create_app(
 
     @app.post("/conversation")
     async def conversation_turn(turn: ConversationTurnRequest) -> ConversationTurnResponse:
+        async with conversation_store.turn_lock(turn.session_id):
+            return await process_conversation_turn(turn)
+
+    async def process_conversation_turn(turn: ConversationTurnRequest) -> ConversationTurnResponse:
         history = conversation_store.append(turn.session_id, turn.channel, turn.text)
 
         capture_text = match_capture(turn.text)
@@ -526,9 +585,20 @@ def create_app(
                 reply = memory_intent.format_voice_confirmation_blocked_reply()
             privacy = Privacy.WORK_PRIVATE
         else:
-            reply = f"(turn {len(history)} via {turn.channel}) heard: {turn.text}"
+            config = await app.state.llm_settings_store.get()
+            if config.local is None:
+                reply = f"(turn {len(history)} via {turn.channel}) heard: {turn.text}"
+            else:
+                provider = OpenAICompatibleChatProvider(config.local, app.state.llm_usage_store, transport=llm_transport)
+                try:
+                    reply = await provider.complete(conversation_store.messages(turn.session_id))
+                except ProviderUnavailable:
+                    reply = "The language model is unavailable right now. Please try again shortly."
             privacy = classify_privacy(turn.text)
+            if config.local is not None:
+                privacy = conversation_store.reply_privacy(turn.session_id, classify_privacy(turn.text + "\n" + reply))
 
+        conversation_store.record_reply(turn.session_id, reply, privacy)
         return ConversationTurnResponse(reply=reply, turn_count=len(history), privacy=privacy)
 
     @app.post("/calendar/events")

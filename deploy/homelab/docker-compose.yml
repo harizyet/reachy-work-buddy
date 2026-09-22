@@ -61,6 +61,10 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-reachy}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-reachy_hub}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      SESSION_SECRET_KEY: ${SESSION_SECRET_KEY:-}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
       COMPANION_CORE_URL: http://companion-core:8000
       # Optional (Phase 7): unset means no Telegram bot, no polling — the
       # rest of the stack works fine without it. Set TELEGRAM_BOT_TOKEN in

@@ -17,6 +17,8 @@ from typing import Any
 
 import httpx
 
+from shared.protocols.operator_api import LLM_SETTINGS, LLM_USAGE
+
 
 class CompanionCoreClient:
     def __init__(
@@ -36,6 +38,7 @@ class CompanionCoreClient:
     ) -> dict[str, Any]:
         resp = await self._client.post(
             "/conversation",
+            timeout=70.0,
             json={
                 "session_id": session_id,
                 "conversation_id": conversation_id,
@@ -76,3 +79,23 @@ class CompanionCoreClient:
         )
         resp.raise_for_status()
         return resp.json()
+
+    async def health(self) -> dict:
+        response = await self._client.get("/health")
+        response.raise_for_status()
+        return response.json()
+
+    async def get_llm_settings(self) -> dict:
+        response = await self._client.get(LLM_SETTINGS)
+        response.raise_for_status()
+        return response.json()
+
+    async def set_llm_settings(self, patch: dict) -> dict:
+        response = await self._client.put(LLM_SETTINGS, json=patch)
+        response.raise_for_status()
+        return response.json()
+
+    async def get_llm_usage(self, *, limit: int = 50, since_hours: int = 24) -> dict:
+        response = await self._client.get(LLM_USAGE, params={"limit": limit, "since_hours": since_hours})
+        response.raise_for_status()
+        return response.json()

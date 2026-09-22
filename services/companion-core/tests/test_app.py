@@ -16,6 +16,7 @@ from companion_core.calendar.store import InMemoryCalendarStore
 from companion_core.consent.store import InMemoryConfirmationStore
 from companion_core.email.models import EmailDraft
 from companion_core.email.store import InMemoryEmailStore
+from companion_core.llm.store import InMemoryLLMSettingsStore, InMemoryLLMUsageStore
 from companion_core.memory.store import InMemoryMemoryStore
 from companion_core.rag.store import InMemoryDocumentStore
 from companion_core.tasks.store import InMemoryTaskStore
@@ -83,6 +84,8 @@ def make_chain(*, registered_robots: Sequence[Robot] = ()) -> TestClient:
         email_store=email_store,
         email_send_fn=fake_send,
         confirmation_store=InMemoryConfirmationStore(),
+        llm_settings_store=InMemoryLLMSettingsStore(),
+        llm_usage_store=InMemoryLLMUsageStore(),
         # The real dispatch loop only ever sends what's actually due (10
         # minutes out by default) — disabled here so tests stay
         # deterministic; test_email_workflow.py covers the loop itself
@@ -657,6 +660,8 @@ def _make_bare_core_app() -> FastAPI:
         email_store=InMemoryEmailStore(),
         email_send_fn=lambda draft: asyncio.sleep(0),
         confirmation_store=InMemoryConfirmationStore(),
+        llm_settings_store=InMemoryLLMSettingsStore(),
+        llm_usage_store=InMemoryLLMUsageStore(),
         run_email_dispatch_task=False,
     )
 

@@ -370,3 +370,57 @@ already-existing table — a deployment from before that ADR needs a manual
 all the live verification in this README, has no such problem). Revisit
 (e.g. adopt Alembic) once a schema actually needs to change under existing
 data, not just grow by one more table or column.
+
+## Operator dashboard (Phase 19)
+
+Set `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and a random `SESSION_SECRET_KEY`
+in your gitignored `.env` before starting the stack, then open
+[http://localhost:8080/hub/ui/](http://localhost:8080/hub/ui/).
+The password creates an account only when the `users` table is empty;
+changing the environment later does not reset the saved password. Keep the
+signing key stable across restarts. Set `SESSION_COOKIE_SECURE=true` when
+serving through HTTPS. Local HTTP access still assumes the trusted
+homelab/VPN boundary documented above.
+
+The dashboard monitors core and registered robots, reports LLM calls,
+tokens, errors and latency, and edits LLM configuration immediately. Load
+the same user ID your conversational channel uses (normally
+`TELEGRAM_DEFAULT_USER_ID`, default `default-user`) to change mode/DND or
+see its activity and queued notifications. The session must already exist
+from a conversation. Telegram's indicator reports configuration only;
+live poll health is Phase 20.
+
+For OVMS, enter its reachable base URL including `/v1`, the exact model
+name from `GET /v1/models`, and leave the API key blank if none is required.
+`localhost` inside companion-core's container is **that container**, not
+the Docker host. To reach OVMS running on the host on Linux, add this
+Compose override and use `http://host.docker.internal:8000/v1`:
+
+```yaml
+services:
+  companion-core:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+```
+
+A server elsewhere on the LAN can instead use its LAN URL. A hosted
+compatible provider uses the same form with its base URL and key. Phase 19
+has one active provider slot; hybrid local/cloud routing is Phase 21.
+Blank key input preserves the saved key; the checkbox removes it. Keys are
+masked in API responses but stored plaintext in Postgres and backups.
+
+Owner-cookie access also works in telepresence; the old browser token
+field is removed. Bearer tokens still work for API clients, including the
+newly gated session PATCH routes:
+
+```bash
+curl -H "Authorization: Bearer $REMOTE_UI_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -X PATCH http://localhost:8080/hub/sessions/default-user/dnd \
+  -d '{"dnd":true}'
+```
+
+Core settings and usage cannot be accessed through Caddy's `/core/` debug
+proxy. Use the authenticated `/hub/settings/llm` and `/hub/llm/usage`
+endpoints. Phase 19 adds only new tables, so it does not require deleting
+an existing Phase 18 Postgres volume.

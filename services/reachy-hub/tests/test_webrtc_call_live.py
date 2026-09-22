@@ -28,6 +28,7 @@ from companion_core.app import create_app as _create_core_app
 from companion_core.calendar.store import InMemoryCalendarStore
 from companion_core.consent.store import InMemoryConfirmationStore
 from companion_core.email.store import InMemoryEmailStore
+from companion_core.llm.store import InMemoryLLMSettingsStore, InMemoryLLMUsageStore
 from companion_core.memory.store import InMemoryMemoryStore
 from companion_core.rag.store import InMemoryDocumentStore
 from companion_core.tasks.store import InMemoryTaskStore
@@ -54,6 +55,8 @@ def _create_core_test_app():
         rag_store=InMemoryDocumentStore(),
         email_store=InMemoryEmailStore(),
         confirmation_store=InMemoryConfirmationStore(),
+        llm_settings_store=InMemoryLLMSettingsStore(),
+        llm_usage_store=InMemoryLLMUsageStore(),
         run_email_dispatch_task=False,
     )
 

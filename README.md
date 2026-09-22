@@ -13,7 +13,7 @@ stays expressive even when the homelab is unreachable.
 
 ## Features
 
-What the system can actually do today (Phases 0-15; see Status below for
+What the system can actually do today (Phases 0-19; see Status below for
 the engineering detail and live-verification evidence behind each item):
 
 - **Talk to Reachy** — a semantic behaviour API and a local presence loop
@@ -67,6 +67,12 @@ the engineering detail and live-verification evidence behind each item):
   listening, thinking, and speaking in step with the call — the reply
   audio only ever plays back to your earbuds, never through Reachy's own
   speaker.
+- **Owner dashboard** — log in at `/hub/ui/` to inspect component status,
+  model calls/tokens/latency, and change mode, DND, or model settings.
+- **Real configurable inference** — generic conversation replies can use
+  a local OpenVINO Model Server or another compatible endpoint, with runtime
+  configuration and persistent usage accounting. Existing tool/consent
+  handlers keep their deterministic behavior.
 - **Runs for real** — one `docker compose up` brings up the whole stack
   (reasoning, hub, embodiment, Postgres, a reverse proxy) on your own
   homelab; every feature above has been verified against that actual
@@ -148,7 +154,7 @@ live restart tests verify).
 
 ## Status
 
-Phases 0-18 are done:
+Phases 0-19 are done:
 
 - Phase 0: architecture freeze (ADRs, shared schemas).
 - Phase 1: Jarvis reference baseline — [docs/jarvis-baseline.md](docs/jarvis-baseline.md).
@@ -465,8 +471,33 @@ Phases 0-18 are done:
   it — the occupied+URGENT carve-out from ADR 0014, reused rather than
   reimplemented.
 
+- Phase 19: [Operator UI](clients/operator-ui/README.md) and
+  [ADR 0016](docs/adr/0016-operator-ui.md). Adds single-owner password login
+  with a signed HttpOnly cookie; bearer API access remains available.
+  Telepresence uses that cookie, and mode/DND/privacy-context mutations now
+  require authentication. The dashboard shows core/robot probes, Telegram
+  configuration, LLM calls/tokens/errors/latency, session controls, activity,
+  and queued notifications. Runtime provider settings are role-based,
+  partially editable, masked in responses, and persisted in Postgres;
+  only `local` / `local_only` is enabled in this phase. The generic reply
+  branch now calls a real compatible provider, keeps user/assistant context,
+  and records success/failure usage. Deterministic intent/consent handlers
+  remain authoritative. Private context retains its label on generated
+  follow-ups, and simultaneous turns in one session serialize.
+  Verified with **278 passing tests**, Ruff, real Docker image builds,
+  Postgres/Caddy, and Chromium at desktop and mobile widths: login/logout,
+  mode/DND edits, live provider changes, key masking/partial updates,
+  telepresence cookie access, and blocked `/core/settings/llm` bypass.
+  The actual local OVMS `OpenVINO/Qwen2.5-1.5B-Instruct-int4-ov` model
+  returned a completion through the hub; its first measured call recorded
+  60 input / 17 output tokens and about 1.5 seconds latency. Owner login,
+  configuration, usage, and session settings persist through service
+  recreation. Stopping core showed an unavailable component while hub and
+  robot health remained visible. The verification stack used a separate Compose project and
+  temporary credentials, leaving the existing OVMS container alone.
+
 See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
-phase-by-phase roadmap. Phases 0-18 are now done.
+phase-by-phase roadmap. Phases 0-19 are now done. Next: Phase 20, web chat channel.
 
 ## Layout
 
@@ -475,6 +506,7 @@ services/companion-core/     reasoning/tools/memory, privacy, calendar, tasks, R
 services/reachy-hub/         robot registry, sessions, routing, Telegram, voice/STT/TTS, WebRTC calls + telepresence, auth, audit, reminders (Phases 4-10, 15-16)
 services/reachy-embodiment/  semantic behaviour API + presence loop + VAD + camera/audio-play (Phases 2-3, 8, 16)
 clients/web-pwa/             "Call Reachy" + telepresence WebRTC PWA (Phases 15-16)
+clients/operator-ui/         owner dashboard, status, LLM usage/settings (Phase 19)
 shared/models/                Pydantic data contracts shared across services
 shared/protocols/             HTTP route constants shared across services
 deploy/homelab/                Docker Compose: companion-core, reachy-hub, postgres, caddy

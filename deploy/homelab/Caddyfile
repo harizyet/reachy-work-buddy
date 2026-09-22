@@ -15,6 +15,12 @@
 		reverse_proxy reachy-hub:8000
 	}
 
+    # Operator settings/usage are accessible only through authenticated hub routes.
+    @operator_internal path /core/settings/* /core/llm/*
+    handle @operator_internal {
+        respond "Not found" 404
+    }
+
 	handle_path /core/* {
 		reverse_proxy companion-core:8000
 	}

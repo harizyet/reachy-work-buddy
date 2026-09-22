@@ -25,3 +25,9 @@ bridge networking NATs the container's ICE host candidates. Untested with
 a real cross-machine browser in this environment; live verification used
 a real (non-browser) `aiortc` Python client instead — see
 `deploy/homelab/README.md`.
+
+Phase 19: telepresence uses the owner login at `/hub/ui/` and its HttpOnly
+session cookie. There is no pasted-token field; an old `remoteUiToken` is
+removed from localStorage on load. API clients may still use
+`REMOTE_UI_TOKEN` bearer authentication. The Call Reachy conversational
+channel keeps its existing access behavior.

@@ -1,18 +1,6 @@
-// Phase 16/ADR 0013: remote telepresence — camera view, live status,
-// manual behaviour triggers, and speak-through-robot, all directly against
-// reachy-hub with no companion-core involved. Every API call below carries
-// the remote UI token as `Authorization: Bearer <token>` (see app.py's
-// require_remote_auth) — entered once and kept in localStorage so it
-// survives a reload, never sent anywhere except this page's own fetch
-// calls to reachy-hub.
-//
-// Served by reachy-hub itself (see app.py's StaticFiles mount, same as
-// index.html/"Call Reachy") and reached through Caddy at /hub/app/ — the
-// API paths below are absolute from the page origin, matching app.js's
-// same reasoning.
-const HUB_BASE = "/hub";
+// Uses the owner session from the operator UI; bearer access remains an API option.
+const HUB_BASE = new URL('../', window.location.href).pathname.replace(/\/$/, '');
 
-const tokenInput = document.getElementById("token");
 const robotIdInput = document.getElementById("robotId");
 const connectButton = document.getElementById("connect");
 const statusEl = document.getElementById("status");
@@ -24,23 +12,17 @@ const speakButton = document.getElementById("speak");
 let pc = null;
 let statusPollHandle = null;
 
-const savedToken = localStorage.getItem("remoteUiToken");
-if (savedToken) tokenInput.value = savedToken;
-
 function setStatus(text) {
   statusEl.textContent = text;
-}
-
-function authHeaders() {
-  return { Authorization: `Bearer ${tokenInput.value}` };
 }
 
 async function apiFetch(path, options = {}) {
   const resp = await fetch(`${HUB_BASE}${path}`, {
     ...options,
-    headers: { ...authHeaders(), ...(options.headers || {}) },
+    headers: { "X-Reachy-CSRF": "1", ...(options.headers || {}) },
   });
   if (!resp.ok) {
+    if (resp.status === 401) window.location.href = `${HUB_BASE}/ui/`;
     throw new Error(`${path} -> ${resp.status}`);
   }
   return resp;
@@ -121,7 +103,7 @@ function waitForIceGatheringComplete(peerConnection) {
 
 async function connect() {
   const robotId = robotIdInput.value;
-  localStorage.setItem("remoteUiToken", tokenInput.value);
+
   connectButton.disabled = true;
   setStatus("connecting...");
 
@@ -170,3 +152,7 @@ window.addEventListener("beforeunload", () => {
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js").catch((err) => console.warn("service worker registration failed", err));
 }
+
+// Remove the obsolete persisted bearer secret when upgrading this browser.
+localStorage.removeItem("remoteUiToken");
+apiFetch("/auth/me").catch(err => setStatus(`Log in through the operator dashboard: ${err.message}`));
