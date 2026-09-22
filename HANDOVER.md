@@ -334,6 +334,19 @@ All three landed:
   as root (uid=0), which bypasses the `dialout`/`video`/`audio` group
   gating `reachy-embodiment` would actually need to run under. See the
   inventory report's corresponding section for full numbers.
+
+**Non-root device passthrough: also RESOLVED, no gap found.**
+`--group-add <gid>` by numeric GID (`dialout:20 video:44 audio:29`,
+`reachy` is already in all three on the host) gives correctly-permissioned
+non-root access to all three device classes — verified with a positive
+test (open-then-close succeeded on `/dev/video0`, `/dev/ttyACM0`,
+`/dev/snd/controlC0`) and a negative control (same setup minus
+`--group-add` correctly denied permission on video/audio; `/dev/ttyACM0`
+is world-writable regardless of group, worth knowing). **Containerizing
+`reachy-embodiment` on this board is now mechanically viable** —
+install works, device access works. The RAM headroom question (only
+~1.6GB available on this 3.9GB, non-headless board) is the only
+remaining open concern before calling this a settled deployment path.
 - **Install script + systemd unit: landed** at
   `deploy/reachy/install-reachy-venv.sh` and
   `deploy/reachy/reachy-mini-daemon.service` (see
@@ -355,12 +368,13 @@ All three landed:
   functionality. Not evaluated for accuracy/latency; flagged as an option.
 
 **Next work:** decide whether to load-test the full stack's memory
-footprint under the container on this specific board, test non-root
-device passthrough, evaluate the `/state/doa` VAD-alternative instead (or
-in addition — needs the owner physically present, since starting the
-daemon moves the robot via `--wake-up-on-start` by default), or some
-combination. `RobotBackend`'s real implementation has not been started —
-the daemon API investigation above is prep for that, not the
+footprint under the container on this specific board (the last open
+question), evaluate the `/state/doa` VAD-alternative instead or in
+addition (needs the owner physically present, since starting the daemon
+moves the robot via `--wake-up-on-start` by default), or proceed straight
+to `RobotBackend` implementation design given the container path is now
+mechanically proven. `RobotBackend`'s real implementation has not been
+started — the daemon API investigation above is prep for that, not the
 implementation itself.
 
 **Cross-session coordination note:** this Phase 22 work happened live

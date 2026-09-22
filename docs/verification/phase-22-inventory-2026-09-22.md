@@ -326,13 +326,47 @@ and reboot for it to take effect — done by the owner). Once unblocked:
   frame, writing to the serial port) were **not tested** — only file
   visibility/permission bits.
 
-**Assessment: "the wheel installs in a container" is proven. "Workable
-long-term deployment path" is a maybe, not a yes.** Two things need
-checking before committing to this over the deferred-VAD or `/state/doa`
-alternatives: (1) whether this specific board — desktop-carrying, 3.9GB
-RAM, ~1.6GB available — can sustain the full stack without swapping hard,
-and (2) non-root device access from inside a container. All test
-containers/images were removed after; no repo changes made on the Nano.
+**Assessment (updated below): "the wheel installs in a container" is
+proven, and non-root device access is now also proven — only the RAM
+headroom question remains open.**
+
+## Non-root device passthrough — RESOLVED, works correctly (2026-09-22)
+
+Follow-up to the root-only passthrough caveat above.
+
+- Host device gating: `dialout:20`, `video:44`, `audio:29` (matches the
+  udev rule / earlier inventory; `reachy` is already in all three).
+  `/dev/ttyACM0` is `crw-rw-rw-` — **world-accessible, not group-gated**,
+  the odd one out. `/dev/video0` is `crw-rw----` (video group) plus an
+  extra ACL entry (`getfacl`: `user:gdm:rw-`) for the desktop session's
+  own camera access — a second, unrelated access mechanism on that one
+  device, flagged for awareness.
+- A throwaway container run as `--user 1000:1000 --group-add 20
+  --group-add 44 --group-add 29` (dialout/video/audio by numeric GID, no
+  need for a matching named user inside the image) with the same
+  `--device=/dev/video0 --device=/dev/ttyACM0 --device=/dev/snd` flags as
+  before: `id` inside correctly showed
+  `uid=1000 gid=1000 groups=1000,20(dialout),29(audio),44(video)`, and
+  `stat`/`ls -la` showed correct ownership/permission bits.
+- Actual open-then-close (read-only, no writes, no motor interaction)
+  succeeded non-root on all three: `/dev/video0`, `/dev/ttyACM0`,
+  `/dev/snd/controlC0`.
+- **Negative control** (same non-root user/device flags, no
+  `--group-add`): `/dev/video0` and `/dev/snd/controlC0` correctly
+  produced `PermissionError: [Errno 13] Permission denied`; `/dev/ttyACM0`
+  opened anyway because it's world-writable regardless of group, per the
+  device-gating note above. Confirms `--group-add` is doing real
+  gating work for video/audio, not incidentally matching.
+
+**No gap found.** `--group-add <gid>` by numeric GID is sufficient for
+correctly-permissioned, non-root device access to all three device
+classes `reachy-embodiment` would need. Combined with the torch-in-
+container result, containerizing `reachy-embodiment` on this board is
+**mechanically viable**; the RAM headroom question (only ~1.6GB available
+on this 3.9GB, non-headless board) is now the only unresolved concern
+blocking a "yes, deploy this way" conclusion, not device access. All
+test containers/images were removed after; no repo changes made on the
+Nano.
 
 ## `reachy-mini-daemon` HTTP/WS API surface (2026-09-22, design prep, read-only)
 
@@ -425,12 +459,11 @@ inline in the script rather than guessed at.
 
 ## Open questions / next steps
 
-1. **Torch/VAD blocker (container route proven, viability unresolved):**
-   the container approach unblocks installation, but memory headroom on
-   this specific 3.9GB-RAM, non-headless board and non-root device
-   passthrough are both untested. Decide whether to load-test the full
-   stack's memory footprint under the container, evaluate the daemon's
-   own `/state/doa` `speech_detected` signal as a torch-free alternative
+1. **Torch/VAD blocker (container route: install proven, device access
+   proven, RAM headroom the last open question):** decide whether to
+   load-test the full stack's memory footprint under the container on
+   this specific 3.9GB, non-headless board, evaluate the daemon's own
+   `/state/doa` `speech_detected` signal as a torch-free alternative
    instead (needs the owner present — daemon start moves the robot by
    default), or both.
 2. **Install script validation:** not yet re-run end to end on a clean
