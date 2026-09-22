@@ -723,20 +723,29 @@ conditional, with an honest "NOT installed" message instead of silently
 omitting the section. Verified locally (exit 0, correct output on this
 homelab machine, which has `/dev/snd` so the section now appropriately
 shows with honest "missing"/"NOT installed" lines rather than staying
-hidden or lying) — not yet re-verified on the Nano.
+hidden or lying), **and confirmed live on the Nano**: exit 0, full
+report end to end, "NOT installed" line shows exactly as intended,
+devices/groups/`.env` all correctly reported (matching the Nano's own
+independent earlier checks). This closes out the launcher-script
+verification round.
 
 **Not yet verified:** the daemon actually being installed/started via
 these launchers (systemd unit was never installed on this Nano —
 running `--check` against a genuinely-installed-and-active daemon has
-not happened yet), or anything past `--check` on real hardware. Given
-four real issues found in this small a set of scripts across several
-review/fix rounds — a destructive action ordered before its guard flag,
-a systemd command whose exit code doesn't mean what it looks like, a
-"fix" that introduced a worse crash than the bug it fixed, and a
-structural gap masked by one of the other bugs — treat every further
-launcher change on this old-systemd Nano target as needing live
-verification before trusting it, not just `bash -n`/shellcheck (which
-caught none of the four).
+not happened yet, and installing it plus starting the daemon needs the
+owner physically present per this whole project's standing rule), or
+anything past `--check` on real hardware. Given four real issues found
+in this small a set of scripts across several review/fix rounds — a
+destructive action ordered before its guard flag, a systemd command
+whose exit code doesn't mean what it looks like, a "fix" that introduced
+a worse crash than the bug it fixed, and a structural gap masked by one
+of the other bugs — treat every further launcher change on this
+old-systemd Nano target as needing live verification before trusting
+it, not just `bash -n`/shellcheck (which caught none of the four). The
+Nano session was disciplined throughout this round: reviewed every diff
+itself before running it (including catching that a fix's own new
+variable reference was actually defined, under `set -u`) rather than
+taking fixes on trust, and reported the structural gap unprompted.
 
 **Cross-session coordination note:** this Phase 22 work happened live
 across two Claude Code sessions (homelab + Nano) via `SendMessage`/cross-session
