@@ -533,8 +533,9 @@ phase-by-phase roadmap. Phases 0-21 are implemented, including hosted-cloud
 verification. **Phases 22–24 are planned, not implemented:**
 
 - Phase 22: original Jetson Nano/Reachy bring-up, real hardware backend,
-  homelab and robot/companion-board Bash launchers with GUI access, and
-  measured physical acceptance tests.
+  [robot-initiated WSS connectivity](docs/adr/0019-robot-initiated-hub-connectivity.md)
+  with separate outbound media, homelab and robot/companion-board Bash
+  launchers with GUI access, and measured physical acceptance tests.
 - Phase 23: first add versioned database migrations and a shared SecretStore
   for LLM/Google/SMTP credentials, migrating existing plaintext LLM keys; then
   production Gmail/Calendar settings, OAuth and read-only workflow integration.

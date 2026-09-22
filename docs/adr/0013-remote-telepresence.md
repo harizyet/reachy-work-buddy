@@ -3,6 +3,15 @@
 - Status: Accepted
 - Date: 2026-09-22
 
+
+## Phase 22 connectivity amendment (planned)
+
+[ADR 0019](0019-robot-initiated-hub-connectivity.md) adopts robot-initiated
+WSS control and a separate outbound media path. Core-to-hub HTTP, semantic
+commands, hub-owned browser WebRTC and independent local fallback remain.
+The original HTTP implementation described below remains current until
+Phase 22 is implemented.
+
 ## Phase 19 amendment
 
 [ADR 0016](0016-operator-ui.md) extends the authentication decision below:

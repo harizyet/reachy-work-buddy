@@ -13,7 +13,8 @@ behaviour call currently proves no physical movement. Google connectors and
 OAuth account settings do not exist. Calendar data is local Postgres; email
 sending in the homelab Compose stack targets Mailpit.
 
-Preserve ADRs 0001, 0004, 0010, 0011, 0013 and 0016–0018. Target placement:
+Preserve ADRs 0001, 0004, 0010, 0011, 0013 and 0016–0018, with the
+Phase 22 transport amendment in [ADR 0019](adr/0019-robot-initiated-hub-connectivity.md). Target placement:
 
 | Machine | Responsibility |
 |---|---|
@@ -56,10 +57,12 @@ and [Reachy daemon/SDK deployment guidance](https://huggingface.co/docs/reachy_m
    status. Real mode must fail clearly rather than silently use simulation.
    Preload motion/model assets so offline startup needs no download.
 3. **Repeatable deployment.** Add the launchers below, robot-side service
-   supervision, registration/re-registration after hub restart, environment
+   supervision, authenticated outbound WSS registration/reconnect per ADR 0019, environment
    examples, device permissions, and a production homelab configuration that
    excludes simulated embodiment and test mail delivery. Preserve the existing
-   simulation workflow as an explicit development option.
+   simulation workflow as an explicit development option. Add the separate
+   outbound HTTPS media transfers needed to remove existing hub-to-robot
+   camera/audio HTTP dependencies; do not put media bytes on the control socket.
 4. **GUI access and network verification.** Serve the existing operator UI,
    chat, call and telepresence pages from hub; expose working navigation.
    Validate direct `/ui/` and proxied `/hub/ui/` mounts. Configure HTTPS for
@@ -78,8 +81,8 @@ These are **planned files and interfaces**, not commands available today:
 | File | Required behaviour |
 |---|---|
 | `scripts/start-homelab.sh` | Validate config, select production or explicit simulation Compose configuration, start services, wait for Postgres/core/hub and GUI readiness, report real robot availability, open the operator GUI |
-| `scripts/start-reachy.sh` | On the confirmed embodiment host, check daemon/device access, start supervised real embodiment, verify `sim=false`, register its reachable address with hub, open/print the hub GUI URL |
-| `scripts/start-jetson.sh` | On the original Nano, check the recorded compatibility baseline and network/robot reachability, start only its assigned companion services, open/print the same GUI; delegate to the Reachy launcher only if the topology decision explicitly assigns that role |
+| `scripts/start-reachy.sh` | On the confirmed embodiment host, check daemon/device access, start supervised real embodiment, verify `sim=false`, establish authenticated outbound WSS to hub and register identity/capabilities, open/print the hub GUI URL |
+| `scripts/start-jetson.sh` | On the original Nano, check the recorded compatibility baseline and network/robot reachability, start only its assigned companion services without advertising a changing LAN IP, open/print the same GUI; delegate to the Reachy launcher only if the topology decision explicitly assigns that role |
 | `scripts/check-platform.sh` | Non-destructive readiness checks and a redacted diagnostic report; physical motion/audio only with an explicit test flag |
 
 Shared interface: `--env-file PATH`, `--no-browser`, `--check`, `--help`;
@@ -102,7 +105,11 @@ reachable URL; do not fail an otherwise healthy startup for lack of a
 display. Never auto-login or put credentials in URLs. The Nano does not
 host a duplicate hub/core/database just to display the GUI. Local fallback
 starts even when hub is unavailable; registration retries with bounded
-backoff while the launcher reports the degraded state.
+backoff (1 s doubling to 30 s with jitter) while the launcher reports the
+degraded state. Configure a stable hub hostname and per-robot credential,
+not a robot address in the hub. The supervised service owns reconnection,
+not a foreground shell loop. Run one hub worker until connection routing
+across workers is explicitly implemented.
 
 ### Required equipment and configuration
 
@@ -130,6 +137,7 @@ before the final run if hardware evidence makes it inappropriate.
 | Startup/restart | Three successful startup cycles, including one cold boot of each physical host; second launcher invocation creates no duplicates; with installed assets, GUI/core/hub ready within 120 s of launcher invocation and robot registered within 60 s of network/daemon readiness |
 | Physical identity | GUI reports the actual robot and `sim=false`; observed movements, fresh camera scene changes and audible playback correspond to commands; synthetic frames cannot count |
 | Motion/fallback | Ten cycles of safe named behaviours; local idle persists through a 5-minute homelab outage; disconnected state appears within configured watchdog timeout + 2 s, recovery within two heartbeat intervals + 5 s; no unsafe or replayed motion |
+| Outbound connectivity | With inbound robot ports blocked, prove WSS command/state and separate media transfers through real Caddy/TLS; switch robot networks and restart hub, reconnect within 60 s of restored connectivity without address edits or replayed actions; reject wrong/revoked tokens and old connection generations; media load must not starve heartbeats |
 | Jetson/daemon failure | Shut down Nano independently: core and independent embodiment continue under ADR 0004; restart daemon separately and recover without duplicate hardware controllers; revised topology requires its documented alternative criteria |
 | Physical voice | 20 scripted quiet-room turns, at least 18 correctly transcribed and answered; report STT, inference and end-to-end p50/p95 separately; target local end-to-end p95 <=15 s after end of speech, with no stalled presence loop |
 | Privacy and consent | Office/private responses never speak sensitive fixture content into the room; DND queues proactive notices while direct chat replies work; voice cannot approve send/delete and bulk deletion remains blocked |

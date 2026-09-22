@@ -205,6 +205,17 @@ implemented during this planning session, and no hardware was tested.
 Existing uncommitted hosted-cloud verification notes in this file and
 `deploy/homelab/README.md` were preserved.
 
+**Phase 22 connectivity decision:** [ADR 0019](docs/adr/0019-robot-initiated-hub-connectivity.md)
+accepts robot-initiated authenticated WSS, logical identity/capabilities and
+active-connection routing; HTTP remains explicit dev/simulation compatibility.
+Separate outbound HTTPS frame/PTT/audio transfers remove inbound robot media
+dependencies while hub retains browser WebRTC. Launchers establish the robot
+connection rather than register an address. Include token provisioning,
+generation fencing, no command replay, bounded backoff and real network-change/
+blocked-inbound/media-load tests. One hub worker initially. The actual runtime
+is still HTTP; this session changed architecture/planning docs only. Existing
+ADRs have scoped amendments; Nano placement/fallback constraints still apply.
+
 **Phase 23 prerequisite planned:** add Alembic schema versioning with validated
 legacy adoption and a serialized pre-start migration job, then a shared
 core-owned SecretStore before Google tables/tokens. Migrate existing local/
