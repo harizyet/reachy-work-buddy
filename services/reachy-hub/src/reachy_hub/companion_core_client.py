@@ -37,3 +37,12 @@ class CompanionCoreClient:
         )
         resp.raise_for_status()
         return resp.json()
+
+    async def due_reminders(self, within_minutes: int = 15) -> list[dict[str, Any]]:
+        """Phase 10: events companion-core's calendar store considers due
+        for a reminder right now. See companion_core/calendar/reminders.py —
+        this is a pure query, not a subscription; reachy-hub calls it
+        on demand."""
+        resp = await self._client.get("/calendar/reminders/due", params={"within_minutes": within_minutes})
+        resp.raise_for_status()
+        return resp.json()

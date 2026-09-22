@@ -5,7 +5,7 @@ routing, authentication, robot registry.
 
 Must not own: reasoning policy internals, raw motor control (see [docs/adr/0001](../../docs/adr/0001-service-boundaries.md)).
 
-## Status (Phase 9)
+## Status (Phase 10)
 
 **Robot registry / proxy (Phase 4)**: `POST /robots`, `GET /robots`,
 `GET /robots/{robot_id}/state`, `GET /robots/{robot_id}/behaviours`,
@@ -161,6 +161,27 @@ Phase 6 otherwise always routes to Reachy.
   and the same sequence through the real deployed Caddy stack, with the
   audit entries surviving a `reachy-hub` restart via Postgres.
 
+**Calendar reminder routing (Phase 10, ADR 0010)**: `POST
+/calendar/check-reminders/{user_id}` pulls due reminders from
+companion-core (`companion_core_client.due_reminders`) and runs each
+through the *exact same* `resolve_delivery_channel` + `apply_privacy_override`
++ `audit_log` pipeline `POST /messages` uses — no new routing logic, no
+background scheduler. If the resolved channel is Telegram and a `chat_id`
+is already known, the reminder is actually delivered; otherwise the routing
+decision is still computed, audited, and returned (`delivered: false`,
+which is not an error — it means no live delivery path exists for that
+channel yet, e.g. Phone/Remote).
+
+- No proactive/background polling — this is a pure on-demand query. A
+  scheduler that calls it periodically is Phases 17-18's job, not this
+  one's; "meeting reminders route appropriately" is proven by the routing
+  decision being correct when invoked, not by it happening automatically.
+- **Verified live**: an event starting in 5 minutes, checked through the
+  real deployed Caddy stack, correctly routed away from Reachy (Desk mode's
+  default) because calendar content is `work-private` — with
+  `overridden: true` in the audit trail, same as any other privacy
+  override.
+
 WebRTC, web UI, and auth (reachy-hub's full ADR 0001 ownership) are later
 phases (15) — not implemented yet.
 
@@ -213,10 +234,12 @@ companion-core path a real Reachy would use;
 `test_response_policy.py` unit-tests both routing functions in isolation,
 including asserting `resolve_delivery_channel`'s parameter list still has
 no content field after Phase 9 added a *second* function alongside it.
-`PostgresRobotRegistry`, `PostgresSessionStore`, `PostgresAuditLog`, and
-the real Telegram Bot API itself are exercised live (real Postgres, a real
-bot, a real Telegram account — see deploy/homelab/README.md), not by the
-unit test suite.
+`test_check_reminders_routes_through_the_same_policy_as_messages` is Phase
+10's. `PostgresRobotRegistry`, `PostgresSessionStore`, `PostgresAuditLog`,
+`PostgresCalendarStore` (companion-core's, exercised through this chain),
+and the real Telegram Bot API itself are exercised live (real Postgres, a
+real bot, a real Telegram account — see deploy/homelab/README.md), not by
+the unit test suite.
 
 Tests touching real models/subprocesses are marked `@pytest.mark.slow` and
 skip cleanly if `espeak-ng` isn't on `PATH`:

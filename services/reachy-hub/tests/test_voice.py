@@ -14,7 +14,8 @@ import wave
 
 import httpx
 import pytest
-from companion_core.app import create_app as create_core_app
+from companion_core.app import create_app as _create_core_app
+from companion_core.calendar.store import InMemoryCalendarStore
 from fastapi.testclient import TestClient
 from reachy_embodiment.app import create_app as create_embodiment_app
 from reachy_embodiment.robot import SimulatedRobotBackend
@@ -28,6 +29,11 @@ from reachy_hub.stt import FasterWhisperSTT
 from reachy_hub.tts import EspeakTTS
 
 espeak_binary = shutil.which("espeak-ng")
+
+
+def create_core_app(**kwargs):
+    kwargs.setdefault("calendar_store", InMemoryCalendarStore())
+    return _create_core_app(**kwargs)
 
 
 def make_hub_client(**kwargs) -> TestClient:

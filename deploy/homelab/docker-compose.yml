@@ -69,8 +69,16 @@ services:
     restart: unless-stopped
     environment:
       REACHY_HUB_URL: http://reachy-hub:8000
+      # Phase 10: companion-core's own Postgres connection (calendar store)
+      # — previously entirely stateless. Shares the same Postgres instance
+      # as reachy-hub, different tables (a single-tenant homelab has no
+      # reason to run two database containers).
+      DATABASE_URL: postgresql://${POSTGRES_USER:-reachy}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-reachy_hub}
     depends_on:
-      - reachy-hub
+      postgres:
+        condition: service_healthy
+      reachy-hub:
+        condition: service_started
     expose:
       - "8000"
 

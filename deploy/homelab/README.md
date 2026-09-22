@@ -18,18 +18,21 @@ Redis yet.
 Verified with real `docker compose up --build` runs against this exact file
 (Docker Compose v2, Postgres 16, Caddy 2): all five containers start
 (`reachy-embodiment` now builds with `torch`/`silero-vad`, `reachy-hub`
-with `faster-whisper` and `espeak-ng`); the robot registry, `AgentSession`
-state, and audit log all survive a `reachy-hub` container restart
+with `faster-whisper` and `espeak-ng`, `companion-core` now connects to
+Postgres for the first time ever); the robot registry, `AgentSession`
+state, audit log, and calendar data all survive container restarts
 (Postgres persistence); requests routed through Caddy reach
 reachy-embodiment/companion-core and change their reported state — end to
 end, through the actual reverse proxy, not just localhost port-forwarding;
 a `POST /hub/voice/turn` request with a real synthesized WAV question,
 routed through Caddy, produced a real transcribed/routed/synthesized WAV
 reply (Phase 8); a sensitive-content payload sent through Caddy in Office
-mode correctly resolved to `phone`, never `reachy` (Phase 9); and,
-separately (not through this specific compose stack, but the same services
-run as plain processes), a real Telegram bot and a real Telegram account
-confirmed Phase 7's session continuity live.
+mode correctly resolved to `phone`, never `reachy` (Phase 9); a real
+calendar event added through Caddy produced a real "what's next" answer,
+and a reminder for an imminent meeting correctly routed away from Reachy
+(Phase 10); and, separately (not through this specific compose stack, but
+the same services run as plain processes), a real Telegram bot and a real
+Telegram account confirmed Phase 7's session continuity live.
 
 ## Run it
 
@@ -123,6 +126,27 @@ curl http://localhost:8080/hub/audit/hariz
 # -> the routing decision, with "overridden": true recorded
 ```
 
+Calendar (Phase 10) — a real "what's next" answer, and a meeting reminder
+routed appropriately, both through Caddy:
+
+```
+curl -X POST http://localhost:8080/core/calendar/events \
+  -H 'Content-Type: application/json' \
+  -d '{"title": "Team Standup", "start": "2099-01-05T10:00:00Z", "end": "2099-01-05T10:30:00Z", "location": "Room 4"}'
+
+curl -X POST http://localhost:8080/core/conversation \
+  -H 'Content-Type: application/json' \
+  -d '{"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "what'"'"'s next"}'
+# -> a real reply built from the event just added, privacy: "work-private"
+
+# A meeting starting soon, checked for reminders via reachy-hub:
+curl -X POST http://localhost:8080/hub/messages \
+  -H 'Content-Type: application/json' -d '{"user_id": "hariz", "channel": "telegram", "text": "hi"}'
+curl -X POST "http://localhost:8080/hub/calendar/check-reminders/hariz?within_minutes=15"
+# -> delivery_channel routed away from "reachy" (Desk mode's default) —
+#    calendar content is always work-private
+```
+
 No robot is auto-registered — `POST /hub/robots` above is a manual step.
 Automatic registration (e.g. reachy-embodiment announcing itself to
 reachy-hub on startup) isn't built yet; it's a natural fit for whichever
@@ -139,8 +163,9 @@ telepresence) territory.
 ## Known limitation
 
 The Postgres migrations in `reachy_hub/postgres_registry.py`,
-`postgres_session_store.py`, `postgres_telegram_chat_registry.py`, and
-`postgres_audit_log.py` are each a single `CREATE TABLE IF NOT EXISTS` run
-at connect time — fine for the tables that exist today, but not a real
-migration tool. Revisit (e.g. adopt Alembic) once a schema actually needs
-to change under existing data, not just grow by one more table.
+`postgres_session_store.py`, `postgres_telegram_chat_registry.py`,
+`postgres_audit_log.py`, and `companion_core/calendar/postgres_store.py`
+are each a single `CREATE TABLE IF NOT EXISTS` run at connect time — fine
+for the tables that exist today, but not a real migration tool. Revisit
+(e.g. adopt Alembic) once a schema actually needs to change under existing
+data, not just grow by one more table.

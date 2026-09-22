@@ -5,7 +5,7 @@ proactive workflows.
 
 Must not own: direct robot joints, UI transport (see [docs/adr/0001](../../docs/adr/0001-service-boundaries.md)).
 
-## Status (Phase 9)
+## Status (Phase 10)
 
 **Phase 4**: `/debug/robots/{robot_id}/state` and
 `/debug/robots/{robot_id}/behaviour/{name}` — a stand-in for what will
@@ -33,11 +33,39 @@ companion-core only *proposes* this; `reachy-hub`'s response router (ADR
 0006) has final, enforced authority over what actually happens with it —
 see `services/reachy-hub/README.md`.
 
+**Phase 10 (ADR 0010)**: real calendar. `calendar/` — `CalendarStore`
+Protocol, `PostgresCalendarStore` (production; no external calendar
+credential was available, so this is the working default, same
+graceful-degradation pattern as Telegram/TTS), `InMemoryCalendarStore`
+(tests). **This is companion-core's first database connection** — every
+earlier phase was entirely stateless beyond the in-memory conversation
+transcript.
+
+- `POST /calendar/events` — operator/setup API (there's no external sync,
+  so this is how events get in at all), not an agent tool.
+- `GET /calendar/next`, `GET /calendar/events`, `GET /calendar/free-busy`
+  (time blocks only, no event details — a narrower privacy surface than
+  `/calendar/events`), `GET /calendar/reminders/due` — the agent's
+  read-only surface, per docs/plan.md's Phase 10 row ("Read-only
+  next/list/free-busy first; later writes behind confirmation").
+- `POST /conversation` recognizes "what's next"-style queries
+  (`calendar_intent.py` — a keyword placeholder, same honesty-about-scope
+  as `privacy_classifier.py`) and answers with genuinely stored calendar
+  data instead of the generic echo placeholder. The reply's `privacy` is
+  set to `work-private` unconditionally when this fires — determined by
+  the source (calendar content), not inferred from the query text the way
+  the generic placeholder-reply path has to.
+- **Verified live**: a real `docker compose` run, through Caddy, added a
+  real event and got a real "what's next" answer back; companion-core's
+  calendar data survived a container restart via Postgres persistence
+  (first time this service has had anything to lose).
+
 ## Run it
 
 ```
 uv sync --all-packages
 REACHY_HUB_URL=http://localhost:8001 \
+DATABASE_URL=postgresql://reachy:pw@localhost:5432/reachy_hub \
   uv run uvicorn companion_core.main:app --app-dir services/companion-core/src --reload
 ```
 
@@ -51,4 +79,10 @@ uv run --group dev pytest services/companion-core/tests
 
 Tests chain companion-core through real (in-process) reachy-hub and
 reachy-embodiment apps via nested `httpx.ASGITransport` — no mocks, no real
-network.
+network. `test_whats_next_answers_from_real_calendar_data` is the direct
+proof of Phase 10's exit criterion. `test_calendar_store.py` and
+`test_calendar_intent.py` unit-test the store and matcher in isolation
+(wrapped in `asyncio.run` — no `pytest-asyncio`/anyio plugin is installed
+anywhere in this codebase, so a raw `async def test_...` would silently
+no-op rather than fail). `PostgresCalendarStore` itself is exercised live
+(see deploy/homelab/README.md), not by the unit test suite.

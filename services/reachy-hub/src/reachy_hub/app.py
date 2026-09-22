@@ -47,6 +47,17 @@ modification of resolve_delivery_channel, which stays exactly as narrow as
 Phase 6 made it (see response_policy.py). Every routing decision is
 recorded via audit_log.py; GET /audit/{user_id} exposes it.
 
+Phase 10: calendar reminder routing, per docs/plan.md's Phase 10 row
+("later reminders route appropriately"). POST /calendar/check-reminders/{user_id}
+pulls due reminders from companion-core (companion_core_client.due_reminders)
+and runs each through the exact same resolve_delivery_channel +
+apply_privacy_override + audit_log pipeline POST /messages uses — no new
+routing logic, no background scheduler (that's proactive-notification
+infrastructure explicitly scoped to Phases 17-18, not this one). If the
+routed channel is Telegram and a chat_id is already known, the reminder is
+actually delivered; otherwise the routing decision is still computed,
+audited, and returned so it's observable even without a live delivery path.
+
 WebRTC, web UI, and auth (reachy-hub's full ADR 0001 ownership) are later
 phases (15) — not implemented yet.
 
@@ -112,6 +123,13 @@ class MessageResponse(BaseModel):
 
 class SetModeRequest(BaseModel):
     interaction_mode: InteractionMode
+
+
+class ReminderRoutingResult(BaseModel):
+    event_id: str
+    text: str
+    delivery_channel: Channel
+    delivered: bool
 
 
 def create_app(
@@ -371,6 +389,52 @@ def create_app(
     @app.get("/audit/{user_id}")
     async def get_audit_log(user_id: str, limit: int = 50) -> list[AuditEntry]:
         return await app.state.audit_log.list_for_user(user_id, limit=limit)
+
+    @app.post("/calendar/check-reminders/{user_id}")
+    async def check_reminders(user_id: str, within_minutes: int = 15) -> list[ReminderRoutingResult]:
+        session = await app.state.session_store.get_by_user(user_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail=f"no session for user '{user_id}'")
+
+        try:
+            reminders = await companion_core_client.due_reminders(within_minutes=within_minutes)
+        except httpx.HTTPError as exc:
+            raise HTTPException(status_code=502, detail=f"companion-core unreachable: {exc}") from exc
+
+        results: list[ReminderRoutingResult] = []
+        for reminder in reminders:
+            privacy = Privacy(reminder["privacy"])
+            base_channel = resolve_delivery_channel(session.interaction_mode, session.active_channel)
+            delivery_channel = apply_privacy_override(base_channel, privacy, session.active_channel)
+
+            await app.state.audit_log.record(
+                user_id=user_id,
+                session_id=session.session_id,
+                channel=session.active_channel,
+                mode=session.interaction_mode,
+                privacy=privacy,
+                base_channel=base_channel,
+                delivery_channel=delivery_channel,
+            )
+
+            delivered = False
+            if delivery_channel == Channel.TELEGRAM and telegram_client is not None:
+                chat_id = await app.state.telegram_chat_registry.get_chat_id(user_id)
+                if chat_id is not None:
+                    with contextlib.suppress(httpx.HTTPError):
+                        await telegram_client.send_message(chat_id, reminder["text"])
+                        delivered = True
+
+            results.append(
+                ReminderRoutingResult(
+                    event_id=reminder["event_id"],
+                    text=reminder["text"],
+                    delivery_channel=delivery_channel,
+                    delivered=delivered,
+                )
+            )
+
+        return results
 
     async def handle_inbound_message(message: InboundMessage) -> MessageResponse:
         """Shared by POST /messages and the Telegram poll loop — the same

@@ -87,7 +87,7 @@ live restart tests verify).
 
 ## Status
 
-Phases 0-9 are done:
+Phases 0-10 are done:
 
 - Phase 0: architecture freeze (ADRs, shared schemas).
 - Phase 1: Jarvis reference baseline — [docs/jarvis-baseline.md](docs/jarvis-baseline.md).
@@ -152,15 +152,29 @@ Phases 0-9 are done:
   restart. An existing Phase 6 test broke when this landed (its example
   text happened to match a new privacy keyword) — fixed the test's text,
   not the new behavior, since the new behavior was correct.
+- Phase 10: read-only calendar (ADR 0010). companion-core gets its first
+  database connection ever (previously entirely stateless) for a real,
+  local `CalendarStore` — no external calendar credential was available,
+  same graceful-degradation pattern as Telegram/TTS. `POST /conversation`
+  now genuinely answers "what's next" from stored data, and `reachy-hub`'s
+  new `POST /calendar/check-reminders/{user_id}` routes due meeting
+  reminders through the *exact same* Phase 6/9 policy pipeline — no new
+  routing logic, no scheduler (that's Phases 17-18's job). Verified live
+  through the real deployed stack: a real event added, a real "what's
+  next" answer returned, and a reminder for an imminent meeting correctly
+  routed away from Reachy (Desk mode's default) because calendar content
+  is work-private. Two more existing tests broke and were fixed the same
+  way as Phase 9's — their example text collided with the new intent
+  matcher/classifier, and the new behavior was correct both times.
 
 See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
-phase-by-phase roadmap. Next up: Phase 10, read-only calendar integration.
+phase-by-phase roadmap. Next up: Phase 11, tasks/notes/reminders.
 
 ## Layout
 
 ```
-services/companion-core/     reasoning/tools/memory, privacy classification (Phases 5, 9)
-services/reachy-hub/         robot registry, sessions, routing, Telegram, voice/STT/TTS, audit (Phases 4-9)
+services/companion-core/     reasoning/tools/memory, privacy, calendar (Phases 5, 9-10)
+services/reachy-hub/         robot registry, sessions, routing, Telegram, voice/STT/TTS, audit, reminders (Phases 4-10)
 services/reachy-embodiment/  semantic behaviour API + presence loop + VAD (Phases 2-3, 8)
 clients/web-pwa/             web/PWA client (unimplemented)
 shared/models/                Pydantic data contracts shared across services

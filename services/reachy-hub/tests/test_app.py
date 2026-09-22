@@ -7,9 +7,11 @@ production reachy-hub images do not include reachy-embodiment's code.
 """
 
 import time
+from datetime import UTC, datetime, timedelta
 
 import httpx
-from companion_core.app import create_app as create_core_app
+from companion_core.app import create_app as _create_core_app
+from companion_core.calendar.store import InMemoryCalendarStore
 from fastapi.testclient import TestClient
 from reachy_embodiment.app import create_app as create_embodiment_app
 from reachy_embodiment.robot import SimulatedRobotBackend
@@ -19,6 +21,11 @@ from reachy_hub.companion_core_client import CompanionCoreClient
 from reachy_hub.embodiment_client import EmbodimentClient
 from reachy_hub.robot_registry import InMemoryRobotRegistry
 from reachy_hub.session_store import InMemorySessionStore
+
+
+def create_core_app(**kwargs):
+    kwargs.setdefault("calendar_store", InMemoryCalendarStore())
+    return _create_core_app(**kwargs)
 
 
 def make_embodiment_app(**kwargs):
@@ -178,8 +185,14 @@ def test_two_test_clients_share_one_conversation_state_across_channels() -> None
     client_a = TestClient(hub_app)
     client_b = TestClient(hub_app)
 
+    # Ordinary text — this test is about session sharing across channels
+    # (Phase 5), not calendar answering. "what's next"-style text is
+    # deliberately avoided: Phase 10's calendar-intent matcher would
+    # intercept it and reply with a real (if event-less) calendar answer
+    # instead of the generic placeholder-reasoning reply this test checks
+    # the turn-count format of.
     resp_a = client_a.post(
-        "/messages", json={"user_id": "hariz", "channel": "reachy", "text": "what's next on my calendar"}
+        "/messages", json={"user_id": "hariz", "channel": "reachy", "text": "what's the weather like"}
     )
     assert resp_a.status_code == 200
     body_a = resp_a.json()
@@ -327,3 +340,50 @@ def test_audit_log_is_scoped_per_user() -> None:
 
     assert len(client.get("/audit/hariz").json()) == 1
     assert len(client.get("/audit/someone-else").json()) == 1
+
+
+def test_check_reminders_404_for_unknown_user() -> None:
+    client = make_hub_with_core_app(make_embodiment_app(), create_core_app())
+    resp = client.post("/calendar/check-reminders/nobody")
+    assert resp.status_code == 404
+
+
+def test_check_reminders_routes_through_the_same_policy_as_messages() -> None:
+    """Phase 10 exit criterion: meeting reminders route appropriately — by
+    reusing Phase 6/9's routing exactly, not new logic."""
+    core_app = create_core_app()
+    client = make_hub_with_core_app(make_embodiment_app(), core_app)
+
+    # Establish a session (Desk mode by default) via an ordinary message.
+    client.post("/messages", json={"user_id": "hariz", "channel": "telegram", "text": "hi"})
+
+    # calendar_store is injected synchronously (outside lifespan) by the
+    # create_core_app wrapper above, so a bare (non-`with`) TestClient can
+    # reach it directly — same reason the hub's ASGITransport call into
+    # core_app for /conversation works without running core_app's lifespan.
+    core_client = TestClient(core_app)
+    soon = (datetime.now(UTC) + timedelta(minutes=5)).isoformat()
+    core_client.post("/calendar/events", json={"title": "Standup", "start": soon, "end": soon})
+
+    resp = client.post("/calendar/check-reminders/hariz", params={"within_minutes": 15})
+    assert resp.status_code == 200
+    results = resp.json()
+    assert len(results) == 1
+    assert "Standup" in results[0]["text"]
+    # Desk mode's base channel is Reachy, but the reminder is classified
+    # work-private (calendar content) — same override as any other message.
+    assert results[0]["delivery_channel"] != "reachy"
+
+    audit = client.get("/audit/hariz").json()
+    reminder_entry = audit[0]  # most recent
+    assert reminder_entry["privacy"] == "work-private"
+    assert reminder_entry["overridden"] is True
+
+
+def test_check_reminders_returns_empty_list_when_nothing_is_due() -> None:
+    client = make_hub_with_core_app(make_embodiment_app(), create_core_app())
+    client.post("/messages", json={"user_id": "hariz", "channel": "telegram", "text": "hi"})
+
+    resp = client.post("/calendar/check-reminders/hariz")
+    assert resp.status_code == 200
+    assert resp.json() == []
