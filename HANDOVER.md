@@ -882,6 +882,64 @@ itself before running it (including catching that a fix's own new
 variable reference was actually defined, under `set -u`) rather than
 taking fixes on trust, and reported the structural gap unprompted.
 
+**First real move-trigger test, done on the homelab machine via the real
+daemon's built-in simulator (2026-09-23), not yet repeated on the Nano.**
+The owner explicitly asked to resume animation testing "but use the
+simulator for now" rather than touch the Nano's real hardware. This
+homelab machine is x86_64 with modern glibc/GStreamer already installed
+via apt (none of the Nano's ABI wall applies here), so `pip install
+reachy-mini` into a `--system-site-packages` venv
+(`/tmp/reachy-sim-venv`, not committed — `/tmp` won't survive a session)
+worked cleanly and pulled in the real `reachy-mini-daemon` (v1.11.0)
+unmodified — this is the actual Pollen Robotics daemon, not this repo's
+`SimulatedRobotBackend` stub. Ran it with `--mockup-sim --headless
+--no-media` (no MuJoCo needed; `--no-media` sidesteps the missing
+`gst-plugin-webrtc`/webrtcsink element, which Ubuntu's apt doesn't
+package — irrelevant for motion-only testing) on port 8200 (8000 was
+taken by `ovms`). Then ran `reachy-embodiment` itself
+(`ROBOT_BACKEND=reachy_daemon REACHY_DAEMON_URL=http://127.0.0.1:8200`)
+and drove it over real HTTP:
+
+- `GET /api/move/recorded-move-datasets/list/pollen-robotics%2Freachy-mini-emotions-library`
+  against the real daemon confirmed **all 14 move names in
+  `robot.py`'s `_DEFAULT_BEHAVIOUR_MOVES`** (the mapping already fixed
+  and said to be "verified live on the Nano" in commit 8878fd8) resolve
+  to real, currently-existing entries in the real HuggingFace dataset —
+  independent reconfirmation, not just trusting the Nano session's own
+  report.
+- `POST /behaviour/waiting`, `/listening`, `/thinking`, `/greeting`,
+  `/sleep`, `/wake`, `/task_complete`, `/cannot_comply` each returned 200
+  from `reachy-embodiment` and produced a real
+  `POST /api/move/play/recorded-move-dataset/pollen-robotics/reachy-mini-emotions-library/<move>`
+  200 on the daemon side (visible in its own access log, not inferred).
+  `GET /api/move/running` showed real per-move UUIDs appear then drain
+  over the next few seconds as each mockup-sim move actually completed —
+  genuine move lifecycle, not a blind ack. One harmless recurring log
+  line: `reachy_mini.kinematics.analytical_kinematics - WARNING - Head
+  is not upright, recomputing FK` during several moves; daemon stayed
+  healthy (`/api/daemon/status.error` stayed `null`) throughout.
+- Unmapped behaviours (`idle_breathing`, `subtle_scan`, `antenna_twitch`)
+  correctly logged-and-no-op'd on `reachy-embodiment`'s side exactly as
+  designed, never reaching the daemon.
+
+**What this does and doesn't prove:** this is the real daemon's actual
+move-dispatch/dataset-loading/lifecycle logic exercised for real, a
+genuine step up from unit tests against `httpx.MockTransport` — but
+`--mockup-sim` has no MuJoCo physics and no visualizer, so nothing about
+*correct* motion (trajectory shape, timing, collision) was checked, only
+that the right move name in the right dataset gets accepted and
+completes without error. It also doesn't touch `--network host`,
+`--group-add` device passthrough, or any of the four real bugs already
+found/fixed on the Nano (`/api` prefix, port collision, loopback-only
+bind, dataset naming) — those were Nano-specific and this session ran
+entirely on the homelab machine instead. The owner's original plan (an
+actual `POST /behaviour/waiting` against real Nano hardware, robot
+physically present) is **still not done** — this closes the "has nobody
+ever actually triggered a named move end-to-end" gap, not the "verified
+on real hardware" one. Both the throwaway daemon and the
+`reachy-embodiment` uvicorn process were killed at the end of this
+session; nothing was left running on the homelab machine.
+
 **Cross-session coordination note:** this Phase 22 work happened live
 across two Claude Code sessions (homelab + Nano) via `SendMessage`/cross-session
 messaging, not a single session doing everything. If you're continuing
