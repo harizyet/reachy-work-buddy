@@ -19,13 +19,16 @@ perform real-account consent/read/refresh/revoke/reconnect and audience checks.
 No OAuth client file or deployed HTTPS hostname was supplied this session.
 Phase 23 is not yet production-accepted. Physical acceptance (22b) and the
 Google-enabled physical repeat remain deferred; Phases 24–26 are planning only.
-[Phase 26](docs/phase-26.md) defines virtual attendance, bounded secretary
-participation and physical delegation. Owner-directed questions must be forwarded
-privately via Telegram or another bound channel from 26a onward; the platform
-must never answer for the owner. See the plan for explicit owner-authored relay.
-Next planning gate: prove a provider
-join/capture path and accept the delegation ADR; physical owner-absent use
-requires an explicit Phase 24 gate amendment and supervised acceptance.
+[Phase 26](docs/phase-26.md) was refocused 2026-09-23 from a generic virtual
+meeting bot to an embodied secretary: owner-present meeting companion (26a),
+physical secretary attendance while the owner is absent (26b), then bounded
+delegation of pre-approved questions/statements or the owner's own verbatim
+reply (26c). Virtual/cloud bot joining is now deferred, not a prerequisite.
+Owner-directed questions must be forwarded privately via Telegram or another
+bound channel from 26a onward; the platform must never answer for the owner.
+Next planning gate: 26a needs no ADR amendment (owner present throughout);
+26b requires accepting a Phase 24 ADR amendment for meeting capture mode plus
+supervised hardware acceptance.
 
 No production deployment was upgraded. Current code requires revision
 `003_accounts`, a separate 0600 `SECRET_KEY_FILE`, and `ACCOUNTS_SERVICE_TOKEN`

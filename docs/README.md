@@ -25,7 +25,7 @@ claims that those features already work.
   migrations, SecretStore, and Google Accounts.
 - [Phase 24](phase-24.md): owner recognition and voice access control.
 - [Phase 25](phase-25.md): meeting transcription and minutes.
-- [Phase 26](phase-26.md): delegated virtual/physical meeting attendance and secretary.
+- [Phase 26](phase-26.md): embodied meeting secretary — owner-present companion, then physical secretary attendance, then bounded delegation; virtual/cloud attendance is deferred.
 - [Jarvis baseline](jarvis-baseline.md): upstream reuse/reference notes.
 
 ## Architecture decisions
