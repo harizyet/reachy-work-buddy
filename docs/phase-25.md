@@ -8,6 +8,9 @@ Builds on the existing local faster-whisper STT (`reachy_hub/stt.py`, Phase
 tasks store (Phase 11), and memory provenance/sensitivity (Phase 12). Does
 not depend on Phase 22b or Phase 24.
 
+[Phase 26](phase-26.md) extends this pipeline with delegated virtual and physical
+attendance; scheduled capture and bounded participation belong to that phase.
+
 ## Required behaviour
 
 The owner can turn a recording of a meeting or conversation into structured

@@ -18,7 +18,14 @@ Next: configure the installation's Google application and HTTPS callback, then
 perform real-account consent/read/refresh/revoke/reconnect and audience checks.
 No OAuth client file or deployed HTTPS hostname was supplied this session.
 Phase 23 is not yet production-accepted. Physical acceptance (22b) and the
-Google-enabled physical repeat remain deferred; Phases 24/25 are planning only.
+Google-enabled physical repeat remain deferred; Phases 24–26 are planning only.
+[Phase 26](docs/phase-26.md) defines virtual attendance, bounded secretary
+participation and physical delegation. Owner-directed questions must be forwarded
+privately via Telegram or another bound channel from 26a onward; the platform
+must never answer for the owner. See the plan for explicit owner-authored relay.
+Next planning gate: prove a provider
+join/capture path and accept the delegation ADR; physical owner-absent use
+requires an explicit Phase 24 gate amendment and supervised acceptance.
 
 No production deployment was upgraded. Current code requires revision
 `003_accounts`, a separate 0600 `SECRET_KEY_FILE`, and `ACCOUNTS_SERVICE_TOKEN`
