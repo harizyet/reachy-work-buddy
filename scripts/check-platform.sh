@@ -173,9 +173,12 @@ if [[ "$HAS_REACHY_DEVICES" -eq 1 || "$DAEMON_INSTALLED" -eq 1 || -f "$REACHY_EN
             # unreachable between the two (the same class of bug just
             # fixed above: don't assume a command that just succeeded
             # will succeed again unguarded).
-            STATUS_JSON="$(curl -fsS --max-time 5 http://127.0.0.1:8000/daemon/status 2>/dev/null || true)"
+            # /api prefix: every reachy-mini-daemon route lives under /api
+            # — confirmed live against the real daemon during Phase 22
+            # Nano hardware testing (same fix as ReachyDaemonBackend's).
+            STATUS_JSON="$(curl -fsS --max-time 5 http://127.0.0.1:8000/api/daemon/status 2>/dev/null || true)"
             if [[ -n "$STATUS_JSON" ]]; then
-                echo "daemon /daemon/status: reachable"
+                echo "daemon /api/daemon/status: reachable"
                 if command -v python3 >/dev/null 2>&1; then
                     printf '%s' "$STATUS_JSON" | python3 -c '
 import json, sys
@@ -187,7 +190,7 @@ print(f"  hardware_id: {d.get(\"hardware_id\")}")
 ' 2>/dev/null || echo "  (could not parse status JSON)"
                 fi
             else
-                echo "daemon /daemon/status: NOT reachable"
+                echo "daemon /api/daemon/status: NOT reachable"
             fi
         else
             echo "reachy-mini-daemon: not active"
@@ -215,7 +218,18 @@ print(f"  hardware_id: {d.get(\"hardware_id\")}")
     fi
     if docker ps --filter "name=^/reachy-embodiment\$" --filter status=running -q 2>/dev/null | grep -q .; then
         echo "reachy-embodiment container: running"
-        curl -fsS --max-time 5 http://127.0.0.1:8000/health >/dev/null 2>&1 && echo "  /health: ok" || echo "  /health: NOT reachable"
+        # reachy-mini-daemon already binds host 127.0.0.1:8000, so
+        # reachy-embodiment's own published port is never 8000 (see
+        # start-reachy.sh's HTTP_PORT resolution) — same
+        # REACHY_EMBODIMENT_PORT/8100 default, read here without a full
+        # `source` since that would leak into checks below this block.
+        EMBODIMENT_PORT="$(grep -E '^REACHY_EMBODIMENT_PORT=' "$REACHY_ENV" 2>/dev/null | head -1 | cut -d= -f2- || true)"
+        EMBODIMENT_PORT="${EMBODIMENT_PORT:-8100}"
+        if curl -fsS --max-time 5 "http://127.0.0.1:${EMBODIMENT_PORT}/health" >/dev/null 2>&1; then
+            echo "  /health (port ${EMBODIMENT_PORT}): ok"
+        else
+            echo "  /health (port ${EMBODIMENT_PORT}): NOT reachable"
+        fi
     else
         echo "reachy-embodiment container: not running"
     fi
@@ -234,7 +248,7 @@ if [[ "$TEST_HARDWARE" -eq 1 ]]; then
             [[ "$reply" =~ ^[Yy]$ ]] || { log_info "hardware test skipped (not confirmed)"; exit 0; }
         fi
         log_info "triggering a bounded wake_up move"
-        if curl -fsS -X POST --max-time 10 http://127.0.0.1:8000/move/play/wake_up >/dev/null 2>&1; then
+        if curl -fsS -X POST --max-time 10 http://127.0.0.1:8000/api/move/play/wake_up >/dev/null 2>&1; then
             log_info "wake_up move accepted by daemon — watch the robot to confirm real movement occurred"
         else
             log_error "wake_up move request failed"

@@ -98,7 +98,21 @@ chmod +x ~/.docker/cli-plugins/docker-buildx
 ```
 
 Once installed, plain `docker build`/`docker compose build` pick it up
-automatically — no `DOCKER_BUILDKIT=1` or other flag needed.
+automatically — no `DOCKER_BUILDKIT=1` or other flag needed, **on Docker
+Engine 23.0+** (BuildKit became the default builder there). On an older
+Engine — confirmed live on the Jetson Nano's Docker 20.10.7 during
+Phase 22 hardware bring-up — plain `docker build` still silently falls
+back to the legacy builder even with `buildx` installed, and fails
+outright on the first `--mount` the same way as a missing `buildx`
+entirely; check `docker version` and, if the Server Engine version is
+below 23, explicitly set `DOCKER_BUILDKIT=1` in the environment for
+every `docker build` invocation (`docker compose build` picks up
+`COMPOSE_DOCKER_CLI_BUILD=1` instead, if needed). Piping a build's
+output through something like `| tail` masks this exact failure mode —
+a failed legacy-builder build still exits the pipeline with `tail`'s
+exit code (0), not `docker build`'s — so verify with `docker images`
+afterward, not just the piped command's own reported exit status, if
+you ever redirect a build command's output this way.
 
 ## Testing conventions
 

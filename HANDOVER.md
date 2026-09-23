@@ -729,6 +729,77 @@ devices/groups/`.env` all correctly reported (matching the Nano's own
 independent earlier checks). This closes out the launcher-script
 verification round.
 
+**Real hardware milestone (2026-09-23): reachy-mini-daemon started for
+real on the Jetson Nano, robot woke and moved, sim=false confirmed
+live.** The owner ran `sudo systemctl start reachy-mini-daemon`
+themselves (this session's non-interactive sudo blocker — same as the
+docker-group issue earlier — meant it couldn't be started via
+`start-reachy.sh` alone); daemon logs show a real `Waking up Reachy
+Mini...` / `Daemon started successfully`, and `GET /api/daemon/status`
+confirmed `simulation_enabled: false, mockup_sim_enabled: false,
+hardware_id: "43c05f5047e8dcfe"`. Two harmless daemon-log warnings
+noted, not yet investigated: an audio recording-device open error
+(`reachymini_audio_src`) and a gstplaybin2 sink-activation error —
+daemon started fine despite them, may matter for the audio path later.
+
+**Two more real, load-bearing bugs found immediately once the daemon
+was actually live** — neither visible from source-reading, only from
+querying the running daemon's real `/openapi.json`:
+
+1. **Every reachy-mini-daemon route lives under `/api`** (e.g.
+   `/api/daemon/status`, `/api/move/play/recorded-move-dataset/...`),
+   not the bare paths the whole Phase 22 inventory and
+   `ReachyDaemonBackend` assumed from reading router source alone (each
+   `APIRouter`'s own sub-prefix like `/move` doesn't show the top-level
+   `/api` mount applied when the daemon assembles its FastAPI app).
+   Every HTTP call `ReachyDaemonBackend` makes would have 404'd — caught
+   and no-op'd by existing error handling, so nothing would crash, but
+   nothing would move the robot either. **Fixed** at the `httpx.Client`
+   base_url level (append `/api` once at construction, verified httpx
+   preserves it regardless of leading `/` on the request path) rather
+   than touching every call site; added a `transport` constructor param
+   so tests exercise the real base_url construction instead of bypassing
+   it. Also fixed the same bug independently present in
+   `start-reachy.sh` (`DAEMON_STATUS_URL`) and `check-platform.sh`
+   (daemon status display, the `--test-hardware` wake_up trigger) — none
+   of these were touched by the `robot.py` fix, since they're separate
+   files making the same bare-path assumption.
+2. **`start-reachy.sh`'s default port (8000) collides with the daemon's
+   own port.** `reachy-mini-daemon` already binds host `127.0.0.1:8000`
+   (confirmed via `ss -tlnp` on the Nano); `docker run -p 8000:8000`
+   for reachy-embodiment would publish `0.0.0.0:8000`, overlapping the
+   already-bound specific address. Predicted by the Nano session, not
+   yet confirmed with a real `docker run` (the script died at the
+   `/api` bug before reaching that step) — but the underlying host-port
+   fact is confirmed real. **Fixed:** new `REACHY_EMBODIMENT_PORT` env
+   var (`deploy/reachy/.env.example`), defaulting to 8100, resolved with
+   precedence `--port` flag > env var > 8100 default; `check-platform.sh`
+   reads the same var for its reachy-embodiment `/health` check instead
+   of assuming 8000.
+
+**Also found (unrelated to these fixes, but real):** `AGENTS.md`
+previously claimed "plain `docker build` picks up buildx automatically,
+no `DOCKER_BUILDKIT=1` needed" once `buildx` is installed — true only on
+Docker Engine 23.0+ (where BuildKit became default). On the Nano's
+Docker Engine 20.10.7, plain `docker build` still silently falls back to
+the legacy builder even with `buildx` installed, and fails on the first
+`--mount` exactly like a missing `buildx` would. **Fixed the doc** to
+note the version cutoff and the explicit `DOCKER_BUILDKIT=1` workaround.
+Also worth remembering generically (not fixed anywhere, just noted): the
+Nano session's own first build attempt appeared to "succeed" only
+because it had piped `docker build`'s output through `| tail -100`,
+which silently discards `docker build`'s real exit code in favor of
+`tail`'s (always 0) — caught only by checking `docker images` afterward
+and finding nothing there. Same bug class as several of this session's
+own script fixes, just in an ad hoc test command instead of committed
+code — verify a piped build with a following `docker images`/`docker
+inspect`, not the pipeline's own reported exit status.
+
+All fixes above pushed; **not yet re-verified live** — the Nano was
+about to rebuild with the `/api` fix and hadn't yet reached testing
+`/state`/a real behaviour trigger when this was written. That's the
+very next step once confirmed.
+
 **Not yet verified:** the daemon actually being installed/started via
 these launchers (systemd unit was never installed on this Nano —
 running `--check` against a genuinely-installed-and-active daemon has

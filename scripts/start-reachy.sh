@@ -30,10 +30,17 @@ REACHY_DIR="${SCRIPT_DIR}/../deploy/reachy"
 DEFAULT_ENV_FILE="${REACHY_DIR}/.env"
 IMAGE_NAME="reachy-embodiment:local"
 CONTAINER_NAME="reachy-embodiment"
-HTTP_PORT=8000
+# Left empty here deliberately — reachy-mini-daemon itself already binds
+# host 127.0.0.1:8000 (confirmed live: `ss -tlnp` on the Nano), so
+# reachy-embodiment's own published port can't default to 8000 too
+# without colliding (Docker's -p publish binds 0.0.0.0, which overlaps
+# an already-bound specific-address 127.0.0.1:8000). Resolved below,
+# after env-file loading, to --port > REACHY_EMBODIMENT_PORT (.env) > 8100.
+HTTP_PORT=""
 DO_BUILD=0
 DAEMON_SERVICE="reachy-mini-daemon"
 DAEMON_READY_TIMEOUT=60
+DEFAULT_HTTP_PORT=8100
 
 print_help() {
     cat <<EOF
@@ -47,7 +54,10 @@ passthrough and generation verified during Phase 22's Nano bring-up.
 Options:
   --build           Rebuild the reachy-embodiment image before starting.
   --image NAME      Image tag to run (default: ${IMAGE_NAME}).
-  --port PORT       Host port for reachy-embodiment's HTTP API (default: ${HTTP_PORT}).
+  --port PORT       Host port for reachy-embodiment's HTTP API (default:
+                     \$REACHY_EMBODIMENT_PORT from the env file, or
+                     ${DEFAULT_HTTP_PORT} — never 8000, which the daemon
+                     itself already binds on this host).
 EOF
     print_common_help
 }
@@ -84,6 +94,7 @@ for var in HUB_WS_URL ROBOT_ID ROBOT_TOKEN; do
 done
 : "${ROBOT_BACKEND:=reachy_daemon}"
 : "${REACHY_DAEMON_URL:=http://host.docker.internal:8000}"
+[[ -z "$HTTP_PORT" ]] && HTTP_PORT="${REACHY_EMBODIMENT_PORT:-$DEFAULT_HTTP_PORT}"
 
 # --- 1. confirm this is the embodiment host, daemon is up, not simulated ---
 # SAFETY: --check must never start the daemon. Starting reachy-mini-daemon
@@ -96,7 +107,10 @@ if ! systemd_unit_installed "$DAEMON_SERVICE"; then
     die "${DAEMON_SERVICE}.service is not installed. This is a first-time install step, not something this launcher does automatically — see deploy/reachy/install-reachy-venv.sh and reachy-mini-daemon.service, and deploy/reachy/README.md."
 fi
 
-DAEMON_STATUS_URL="http://127.0.0.1:8000/daemon/status"
+# /api prefix: every reachy-mini-daemon route lives under /api — confirmed
+# live against the real daemon's own /openapi.json during Phase 22 Nano
+# hardware testing (same fix already applied to ReachyDaemonBackend).
+DAEMON_STATUS_URL="http://127.0.0.1:8000/api/daemon/status"
 
 if [[ "$COMMON_CHECK_ONLY" -eq 1 ]]; then
     if systemctl is-active --quiet "$DAEMON_SERVICE"; then
