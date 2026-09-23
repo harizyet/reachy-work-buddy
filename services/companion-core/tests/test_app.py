@@ -18,6 +18,7 @@ from companion_core.email.models import EmailDraft
 from companion_core.email.store import InMemoryEmailStore
 from companion_core.llm.store import InMemoryLLMSettingsStore, InMemoryLLMUsageStore
 from companion_core.memory.store import InMemoryMemoryStore
+from companion_core.persona.store import InMemoryPersonaStore
 from companion_core.rag.store import InMemoryDocumentStore
 from companion_core.tasks.store import InMemoryTaskStore
 from fastapi import FastAPI
@@ -86,6 +87,7 @@ def make_chain(*, registered_robots: Sequence[Robot] = ()) -> TestClient:
         confirmation_store=InMemoryConfirmationStore(),
         llm_settings_store=InMemoryLLMSettingsStore(),
         llm_usage_store=InMemoryLLMUsageStore(),
+        persona_store=InMemoryPersonaStore(),
         # The real dispatch loop only ever sends what's actually due (10
         # minutes out by default) — disabled here so tests stay
         # deterministic; test_email_workflow.py covers the loop itself
@@ -180,6 +182,40 @@ def test_whats_next_with_no_events_still_answers() -> None:
             json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "what's next"},
         )
         assert resp.json()["reply"] == "You have nothing else on your calendar."
+
+
+def test_todays_appointments_answers_from_real_calendar_data() -> None:
+    with make_chain() as client:
+        today = datetime.now(UTC)
+        start = today.replace(hour=9, minute=0, second=0, microsecond=0).isoformat()
+        end = today.replace(hour=9, minute=30, second=0, microsecond=0).isoformat()
+        create_resp = client.post(
+            "/calendar/events",
+            json={"title": "Budget Review", "start": start, "end": end, "location": "Room 2"},
+        )
+        assert create_resp.status_code == 200
+
+        resp = client.post(
+            "/conversation",
+            json={
+                "session_id": "s1", "conversation_id": "c1", "channel": "reachy",
+                "text": "what appointments do I have today",
+            },
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert "Budget Review" in body["reply"]
+        assert "Room 2" in body["reply"]
+        assert body["privacy"] == "work-private"
+
+
+def test_todays_appointments_with_no_events_still_answers() -> None:
+    with make_chain() as client:
+        resp = client.post(
+            "/conversation",
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "today's schedule"},
+        )
+        assert resp.json()["reply"] == "You have nothing on your calendar today."
 
 
 def test_calendar_list_and_free_busy() -> None:
@@ -662,6 +698,7 @@ def _make_bare_core_app() -> FastAPI:
         confirmation_store=InMemoryConfirmationStore(),
         llm_settings_store=InMemoryLLMSettingsStore(),
         llm_usage_store=InMemoryLLMUsageStore(),
+        persona_store=InMemoryPersonaStore(),
         run_email_dispatch_task=False,
     )
 

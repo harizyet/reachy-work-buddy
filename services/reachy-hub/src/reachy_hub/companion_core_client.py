@@ -19,7 +19,7 @@ from typing import Any
 import httpx
 
 from shared.protocols.accounts import SERVICE_HEADER
-from shared.protocols.operator_api import LLM_SETTINGS, LLM_USAGE
+from shared.protocols.operator_api import LLM_SETTINGS, LLM_USAGE, PERSONA_SETTINGS
 
 
 class CompanionCoreClient:
@@ -104,6 +104,16 @@ class CompanionCoreClient:
 
     async def get_llm_usage(self, *, limit: int = 50, since_hours: int = 24) -> dict:
         response = await self._client.get(LLM_USAGE, params={"limit": limit, "since_hours": since_hours})
+        response.raise_for_status()
+        return response.json()
+
+    async def get_persona(self) -> dict:
+        response = await self._client.get(PERSONA_SETTINGS)
+        response.raise_for_status()
+        return response.json()
+
+    async def set_persona(self, patch: dict) -> dict:
+        response = await self._client.put(PERSONA_SETTINGS, json=patch)
         response.raise_for_status()
         return response.json()
 

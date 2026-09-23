@@ -1,0 +1,4 @@
+services:
+  companion-core:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

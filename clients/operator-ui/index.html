@@ -59,6 +59,13 @@
           <p id="session-state">Load a session to change its settings.</p>
           <form id="session-controls"><fieldset id="session-fields" disabled><label>Mode<select id="mode"><option value="desk">Desk</option><option value="office">Office</option><option value="silent">Silent</option><option value="remote">Remote</option></select></label><label class="check"><input type="checkbox" id="dnd"> Do not disturb</label><button>Save session</button></fieldset></form>
         </section>
+        <section class="card"><span class="eyebrow">IDENTITY</span><h2>Assistant persona</h2>
+          <p>Controls how the assistant introduces and describes itself in conversation. Applies to the next conversation turn.</p>
+          <form id="persona"><fieldset id="persona-fields" disabled><label>Name<input id="persona-name" required maxlength="64" placeholder="Reachy"></label>
+          <label>System prompt<textarea id="persona-prompt" rows="5" required maxlength="4000" placeholder="You are Reachy, an embodied work assistant..."></textarea></label>
+          <p class="muted">Sent to the model ahead of every conversation turn.</p>
+          <button>Save persona</button><button type="button" id="reset-persona" class="secondary">Reset to default</button></fieldset></form>
+        </section>
         <section class="card"><span class="eyebrow">INFERENCE</span><h2>Language model</h2>
           <p>Connect a local server or a hosted compatible endpoint. Changes apply to the next conversation turn.</p>
           <form id="llm"><fieldset id="llm-fields" disabled><label>Base URL<input id="base-url" type="url" placeholder="http://ovms-host:8000/v1"></label>

@@ -30,6 +30,7 @@ from companion_core.consent.store import InMemoryConfirmationStore
 from companion_core.email.store import InMemoryEmailStore
 from companion_core.llm.store import InMemoryLLMSettingsStore, InMemoryLLMUsageStore
 from companion_core.memory.store import InMemoryMemoryStore
+from companion_core.persona.store import InMemoryPersonaStore
 from companion_core.rag.store import InMemoryDocumentStore
 from companion_core.tasks.store import InMemoryTaskStore
 from reachy_embodiment.app import create_app as create_embodiment_app
@@ -57,6 +58,7 @@ def _create_core_test_app():
         confirmation_store=InMemoryConfirmationStore(),
         llm_settings_store=InMemoryLLMSettingsStore(),
         llm_usage_store=InMemoryLLMUsageStore(),
+        persona_store=InMemoryPersonaStore(),
         run_email_dispatch_task=False,
     )
 

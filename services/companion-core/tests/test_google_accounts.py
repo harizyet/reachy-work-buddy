@@ -17,6 +17,7 @@ from companion_core.consent.store import InMemoryConfirmationStore
 from companion_core.email.store import InMemoryEmailStore
 from companion_core.llm.store import InMemoryLLMSettingsStore, InMemoryLLMUsageStore
 from companion_core.memory.store import InMemoryMemoryStore
+from companion_core.persona.store import InMemoryPersonaStore
 from companion_core.rag.store import InMemoryDocumentStore
 from companion_core.secrets import Keyring
 from companion_core.tasks.store import InMemoryTaskStore
@@ -273,6 +274,7 @@ async def chain(svc, **hub_options):
         memory_store=InMemoryMemoryStore(), rag_store=InMemoryDocumentStore(),
         email_store=InMemoryEmailStore(), confirmation_store=InMemoryConfirmationStore(),
         llm_settings_store=InMemoryLLMSettingsStore(), llm_usage_store=InMemoryLLMUsageStore(),
+        persona_store=InMemoryPersonaStore(),
         run_email_dispatch_task=False,
     )
     users = InMemoryUserStore()

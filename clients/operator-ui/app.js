@@ -74,6 +74,13 @@ function renderSettings(config) {
   $('key-state').textContent = config.local?.api_key ? `Saved key: ${config.local.api_key}` : 'No saved key';
   $('api-key').value = ''; $('clear-key').checked = false; $('llm-fields').disabled = false;
 }
+const DEFAULT_PERSONA_NAME = 'Reachy';
+const DEFAULT_PERSONA_PROMPT = 'You are Reachy, an embodied work assistant. You help with tasks, calendar, email, reminders, and general questions. Keep replies concise and practical, and be clear when something is outside what you can do.';
+function renderPersona(config) {
+  $('persona-name').value = config.name || '';
+  $('persona-prompt').value = config.system_prompt || '';
+  $('persona-fields').disabled = false;
+}
 function component(name, value, warning = false) {
   const card = document.createElement('div'); card.className = 'component';
   const title = document.createElement('strong'); title.textContent = name;
@@ -157,8 +164,9 @@ async function loadSession() {
 }
 async function enter() {
   loggedIn = true; $('login-panel').hidden = true; $('dashboard').hidden = false; $('nav').hidden = false;
-  $('llm-fields').disabled = true; notice('');
+  $('llm-fields').disabled = true; $('persona-fields').disabled = true; notice('');
   try { renderSettings(await api('/settings/llm')); } catch (error) { notice(error.message); }
+  try { renderPersona(await api('/settings/persona')); } catch (error) { notice(error.message); }
   await refresh();
   if (new URLSearchParams(location.search).get('google') === 'return') {
     history.replaceState(null, '', location.pathname);
@@ -180,6 +188,16 @@ submit('session-controls', async () => {
   await api(`/sessions/${selectedUser}/mode`, {method: 'PATCH', body: JSON.stringify({interaction_mode: $('mode').value})});
   await api(`/sessions/${selectedUser}/dnd`, {method: 'PATCH', body: JSON.stringify({dnd: $('dnd').checked})});
   notice('Session settings saved.'); await loadSession(); await chat.refreshSession();
+});
+submit('persona', async () => {
+  const patch = {name: $('persona-name').value.trim(), system_prompt: $('persona-prompt').value.trim()};
+  renderPersona(await api('/settings/persona', {method: 'PUT', body: JSON.stringify(patch)}));
+  notice('Persona saved.');
+});
+$('reset-persona').addEventListener('click', () => {
+  $('persona-name').value = DEFAULT_PERSONA_NAME;
+  $('persona-prompt').value = DEFAULT_PERSONA_PROMPT;
+  notice('Default persona loaded — click Save persona to apply.');
 });
 $('llm-routing').addEventListener('change', () => { routingEdited = true; });
 for (const id of ['cloud-base-url', 'cloud-model']) $(id).addEventListener('input', () => {

@@ -2,6 +2,7 @@
 
 LLM_SETTINGS = "/settings/llm"
 LLM_USAGE = "/llm/usage"
+PERSONA_SETTINGS = "/settings/persona"
 STATUS = "/status"
 AUTH_LOGIN = "/auth/login"
 AUTH_LOGOUT = "/auth/logout"

@@ -30,15 +30,20 @@ browser/channel transport. Debug robot calls go through hub.
 | `POST /emails/drafts/{id}/approve`, `/send`, `/cancel-send` | Text approval/send, delayed dispatch, cancellation |
 | `GET /briefing` | Prioritized briefing items for hub's delivery engine |
 | `GET`, `PUT /settings/llm`; `GET /llm/usage` | Internal settings/usage; operator callers use authenticated hub proxies |
+| `GET`, `PUT /settings/persona` | Assistant name/system prompt (`persona_config` table); prepended as a system message on the generic LLM branch only |
 | `/debug/robots/...` | Debug integration plumbing, not a stable agent-tool API |
 
 The generic conversation branch uses the configured LLM after deterministic
-intent/consent handlers. It has no model tool executor. Same-session turns
-serialize; the latest 39 user/assistant messages provide bounded context,
-reset on restart. Work-memory recall queries persistent records, never dumps
-that transcript. Calendar/email replies are work-private; generated follow-ups
-retain the strongest prior context label. Generic privacy classification and
-intent matching remain keyword-based, not semantic understanding.
+intent/consent handlers. It has no model tool executor. The configured
+persona's system prompt is prepended ahead of that turn's history only on
+this branch — deterministic intent replies (tasks/calendar/email/memory)
+never pass through the LLM at all, so persona wording has no effect on them.
+Same-session turns serialize; the latest 39 user/assistant messages provide
+bounded context, reset on restart. Work-memory recall queries persistent
+records, never dumps that transcript. Calendar/email replies are
+work-private; generated follow-ups retain the strongest prior context label.
+Generic privacy classification and intent matching remain keyword-based, not
+semantic understanding.
 
 Memory records carry source, sensitivity, optional expiry, and soft-delete
 time. Expiry is enforced on reads without a cleanup worker. Recall combines
@@ -83,6 +88,7 @@ WebRTC, and static UI. It does not own reasoning policy or motor control.
 | `POST /auth/login`, `/auth/logout`; `GET /auth/me` | Owner-cookie lifecycle; login/logout require CSRF header |
 | `GET /status` | Authenticated component probes, model config/usage, Telegram polling health, default user ID |
 | `GET`, `PUT /settings/llm`; `GET /llm/usage` | Authenticated core proxies; usage defaults `limit=50`, `since_hours=24` |
+| `GET`, `PUT /settings/persona` | Authenticated core proxy for assistant name/system prompt |
 
 Cookie mutations require CSRF; bearer clients remain supported on existing
 work/robot APIs. Phase 23 binds work-data user IDs to OWNER_USER_ID and gates

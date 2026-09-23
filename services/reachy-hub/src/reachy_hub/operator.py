@@ -10,12 +10,14 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from shared.models.llm import LLMConfigPatch
+from shared.models.persona import PersonaPatch
 from shared.protocols.operator_api import (
     AUTH_LOGIN,
     AUTH_LOGOUT,
     AUTH_ME,
     LLM_SETTINGS,
     LLM_USAGE,
+    PERSONA_SETTINGS,
     STATUS,
 )
 
@@ -89,6 +91,14 @@ def install_operator_routes(
         return await proxy(
             core.set_llm_settings, patch.model_dump(mode="json", exclude_unset=True)
         )
+
+    @app.get(PERSONA_SETTINGS, dependencies=dependencies)
+    async def get_persona() -> dict:
+        return await proxy(core.get_persona)
+
+    @app.put(PERSONA_SETTINGS, dependencies=dependencies)
+    async def put_persona(patch: PersonaPatch) -> dict:
+        return await proxy(core.set_persona, patch.model_dump(mode="json", exclude_unset=True))
 
     @app.get(LLM_USAGE, dependencies=dependencies)
     async def usage(

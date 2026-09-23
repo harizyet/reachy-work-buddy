@@ -132,7 +132,13 @@ from companion_core.calendar.models import CalendarEvent
 from companion_core.calendar.postgres_store import PostgresCalendarStore
 from companion_core.calendar.reminders import due_reminders, reminder_urgency
 from companion_core.calendar.store import CalendarStore
-from companion_core.calendar_intent import format_next_event_reply, is_next_event_query
+from companion_core.calendar_intent import (
+    format_next_event_reply,
+    format_today_schedule_reply,
+    is_next_event_query,
+    is_today_schedule_query,
+    today_window,
+)
 from companion_core.consent.gate import (
     ConfirmationExpiredError,
     ConfirmationNotFoundError,
@@ -168,6 +174,8 @@ from companion_core.llm.router import route_completion
 from companion_core.llm.store import LLMSettingsStore, LLMUsageStore, masked_config
 from companion_core.memory.postgres_store import PostgresMemoryStore
 from companion_core.memory.store import MemoryStore
+from companion_core.persona.postgres_store import PostgresPersonaStore
+from companion_core.persona.store import PersonaStore
 from companion_core.privacy_classifier import classify_privacy
 from companion_core.rag.postgres_store import PostgresDocumentStore
 from companion_core.rag.store import DocumentStore
@@ -186,10 +194,11 @@ from companion_core.tasks.postgres_store import PostgresTaskStore
 from companion_core.tasks.store import TaskStore
 from shared.models.llm import LLMConfigPatch
 from shared.models.memory import MemoryRecord, MemoryType
+from shared.models.persona import PersonaConfig, PersonaPatch
 from shared.models.rag import DocumentChunk, RetrievedChunk
 from shared.models.response import Privacy, Urgency
 from shared.models.session import InputModality
-from shared.protocols.operator_api import LLM_SETTINGS, LLM_USAGE
+from shared.protocols.operator_api import LLM_SETTINGS, LLM_USAGE, PERSONA_SETTINGS
 
 
 class ConversationTurnRequest(BaseModel):
@@ -256,6 +265,7 @@ def create_app(
     accounts_service_token: str | None = None,
     llm_settings_store: LLMSettingsStore | None = None,
     llm_usage_store: LLMUsageStore | None = None,
+    persona_store: PersonaStore | None = None,
     llm_transport: httpx.AsyncBaseTransport | None = None,
     hub_base_url: str | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
@@ -301,6 +311,7 @@ def create_app(
     conversation_store = ConversationStore()
     owns_llm_settings = llm_settings_store is None
     owns_llm_usage = llm_usage_store is None
+    owns_persona_store = persona_store is None
     owns_calendar_store = calendar_store is None
     owns_task_store = task_store is None
     owns_memory_store = memory_store is None
@@ -323,6 +334,8 @@ def create_app(
             app.state.llm_settings_store = await PostgresLLMSettingsStore.connect(database_url or os.environ["DATABASE_URL"])
         if owns_llm_usage:
             app.state.llm_usage_store = await PostgresLLMUsageStore.connect(database_url or os.environ["DATABASE_URL"])
+        if owns_persona_store:
+            app.state.persona_store = await PostgresPersonaStore.connect(database_url or os.environ["DATABASE_URL"])
         if owns_calendar_store:
             dsn = database_url or os.environ["DATABASE_URL"]
             app.state.calendar_store = await PostgresCalendarStore.connect(dsn)
@@ -374,6 +387,8 @@ def create_app(
                 await app.state.llm_settings_store.close()
             if owns_llm_usage:
                 await app.state.llm_usage_store.close()
+            if owns_persona_store:
+                await app.state.persona_store.close()
             if owns_calendar_store:
                 await app.state.calendar_store.close()
             if owns_task_store:
@@ -423,6 +438,16 @@ def create_app(
         app.state.llm_settings_store = llm_settings_store
     if llm_usage_store is not None:
         app.state.llm_usage_store = llm_usage_store
+    if persona_store is not None:
+        app.state.persona_store = persona_store
+
+    @app.get(PERSONA_SETTINGS)
+    async def get_persona() -> PersonaConfig:
+        return await app.state.persona_store.get()
+
+    @app.put(PERSONA_SETTINGS)
+    async def set_persona(patch: PersonaPatch) -> PersonaConfig:
+        return await app.state.persona_store.set(patch)
 
     @app.get(LLM_SETTINGS)
     async def get_llm_settings() -> dict:
@@ -495,6 +520,11 @@ def create_app(
             # happens to contain a privacy keyword — we know for certain
             # this reply reveals schedule details, so this isn't inferred
             # from turn.text the way the generic placeholder reply is.
+            privacy = Privacy.WORK_PRIVATE
+        elif is_today_schedule_query(turn.text):
+            start, end = today_window(datetime.now(UTC))
+            events = await app.state.calendar_store.list_events(start, end)
+            reply = format_today_schedule_reply(events)
             privacy = Privacy.WORK_PRIVATE
         elif capture_text:
             task = await app.state.task_store.add_task(capture_text)
@@ -661,7 +691,12 @@ def create_app(
                 reply = f"(turn {len(history)} via {turn.channel}) heard: {turn.text}"
             else:
                 try:
-                    reply = await route_completion(config, conversation_store.messages(turn.session_id), app.state.llm_usage_store, force_frontier=turn.force_frontier, transport=llm_transport)
+                    persona = await app.state.persona_store.get()
+                    history_with_persona = [
+                        {"role": "system", "content": persona.system_prompt},
+                        *conversation_store.messages(turn.session_id),
+                    ]
+                    reply = await route_completion(config, history_with_persona, app.state.llm_usage_store, force_frontier=turn.force_frontier, transport=llm_transport)
                 except ProviderUnavailable:
                     reply = "The language model is unavailable right now. Please try again shortly."
             privacy = classify_privacy(turn.text)

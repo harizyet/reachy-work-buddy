@@ -11,6 +11,7 @@ from companion_core.email.store import InMemoryEmailStore
 from companion_core.llm.client import OpenAICompatibleChatProvider, ProviderUnavailable
 from companion_core.llm.store import InMemoryLLMSettingsStore, InMemoryLLMUsageStore
 from companion_core.memory.store import InMemoryMemoryStore
+from companion_core.persona.store import InMemoryPersonaStore
 from companion_core.rag.store import InMemoryDocumentStore
 from companion_core.tasks.store import InMemoryTaskStore
 from fastapi.testclient import TestClient
@@ -28,6 +29,7 @@ def core_app(**kwargs):
         confirmation_store=InMemoryConfirmationStore(),
         llm_settings_store=InMemoryLLMSettingsStore(),
         llm_usage_store=InMemoryLLMUsageStore(),
+        persona_store=InMemoryPersonaStore(),
         run_email_dispatch_task=False,
         **kwargs,
     )
@@ -335,7 +337,7 @@ def test_simultaneous_channels_keep_user_assistant_order():
 
             results = await asyncio.gather(send("web"), send("telegram"))
             assert all(r.status_code == 200 for r in results)
-            assert [m["role"] for m in seen[1]] == ["user", "assistant", "user"]
+            assert [m["role"] for m in seen[1]] == ["system", "user", "assistant", "user"]
 
     asyncio.run(run())
 
