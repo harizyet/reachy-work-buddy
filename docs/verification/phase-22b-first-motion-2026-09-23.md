@@ -52,9 +52,11 @@ drill, or revoked-token-after-valid rejection.
 
 `reachy-mini-daemon` 1.8.4, `--headless`, `sim=False`, `mockup_sim=False`,
 `kinematics_engine=AnalyticalKinematics`, `wake_up_on_start=True`. First run
-PID 12441 started cleanly (`Daemon started successfully`, 19:52:39 WIB) but
-the owner did not observe the wake-up motion (was not watching that exact
-moment). `/api/daemon/status`: `state=running`, `simulation_enabled=false`,
+PID 12441 started cleanly (`Daemon started successfully`, 19:52:39 WIB); the
+owner was not watching that exact moment but confirmed afterward, from a
+later restart, that the wake-up routine does perform a nod and the head
+then settles tilted rather than at neutral. `/api/daemon/status`:
+`state=running`, `simulation_enabled=false`,
 control loop ~49.3 Hz, `nb_error=0`. `backend_status.ready` stayed `false`
 and `last_alive` stayed `null` throughout both runs, cause not investigated.
 
@@ -101,6 +103,66 @@ a mechanical obstruction, a stalled/under-torque head motor, or a
 head-specific power/calibration fault. This reads as hardware, not the
 `ReachyDaemonBackend`/embodiment software path, which dispatched every
 command correctly and reported daemon responses accurately.
+
+**Follow-up diagnostic (owner-approved daemon restart, read-only otherwise):**
+`GET /api/state/full?with_head_joints=true&with_target_head_joints=true`
+returned present joint angles but a null target (the backend holds no
+target once wake-up completes), so the neutral target was computed offline
+with the daemon's own `AnalyticalKinematics` engine (pure computation, no
+robot I/O) against `INIT_HEAD_POSE`. Present vs. neutral-target per joint:
+
+| joint | present | target | diff |
+|---|---|---|---|
+| body_yaw | -0.09° | 0.00° | -0.09° |
+| stewart_1 | 40.17° | 35.90° | +4.27° |
+| stewart_2 | -34.89° | -35.90° | +1.01° |
+| stewart_3 | 32.52° | 35.90° | -3.38° |
+| stewart_4 | -36.47° | -35.90° | -0.58° |
+| **stewart_5** | **19.34°** | **35.90°** | **-16.56°** |
+| stewart_6 | -30.41° | -35.90° | +5.49° |
+
+Forward-kinematics check (same offline engine): setting only `stewart_5` to
+its present value while holding the other five at neutral reproduces
+roll 7.8°/pitch 6.6°/yaw -9.1° — most of the actually observed tilt. Any
+other single motor set the same way gives at most ~2.6° on any axis.
+**`stewart_5` (motor id 15) is the primary fault**; the other motors' 1-5°
+errors are consistent with being dragged off-target by the constrained
+Stewart platform rather than independent faults. Candidate causes (not
+confirmed): obstructed/binding/disconnected linkage, a weak or
+current-limited motor, or a wrong homing offset for id 15 (though the
+daemon's own config check reported homing offsets as correct). Owner
+physical check suggested: with the daemon stopped, inspect motor 5's arm
+and rod (5th of 6 around the base) for free movement and both ball-joint
+connections, comparing its resting angle by eye against `stewart_3`.
+
+**Owner manual adjustment and retest:** the owner manually adjusted the head
+toward upright (details of what was touched not yet captured), then the
+daemon was restarted (PID 15314) and settled near neutral (roll -1.2°,
+pitch 2.6°, yaw 1.7°) — visually much improved, and `stewart_5`'s error
+against the ±35.90° IK target dropped from -16.56° to -6.19°, but
+`stewart_2` worsened to +8.04° (was +1.01°), i.e. errors partly cancelling
+in the visible pose rather than a real fix. The Nano session correctly
+declined to save this position as a calibration/homing offset, since it
+isn't a true zero.
+
+A second owner-approved `goto` to all-zero (head pose 0, antennas 0, 3s,
+20:12:24 WIB) showed **`stewart_1`, `3`, `6` track normally; `stewart_2`,
+`4`, `5` do not respond to the position command at all** — `stewart_4`
+held exactly -33.05° through every sample, `stewart_2` drifted only 0.5°,
+and `stewart_5` moved 2.6° in the wrong direction (likely dragged by the
+three working motors). No IK/collision warning this time. This is broader
+than the single-motor (`stewart_5`) hypothesis from the first diagnostic —
+three motors sharing a fault points more toward a shared cause (a power or
+communication-bus segment, thermal/current protection possibly following
+the earlier motor-communication-error event during the uncontrolled power
+cycle, or a shared mechanical binding) than three independent motor
+failures. The daemon does not expose per-motor hardware error/LED state
+over its HTTP API as far as checked; `Failed to read hardware errors` was
+only logged during the power-cycle motor-communication error, which isn't
+informative about this state. **Recommendation: stop remote motion
+diagnostics here — this needs hands-on inspection of motors 2, 4, and 5's
+wiring/linkages and any accessible error/status indicators**, beyond what
+HTTP-level commands can resolve.
 
 Separately noted, not yet investigated: embodiment's `/behaviour/*` HTTP
 response reported `"sim":true,"connected":false` for this command even

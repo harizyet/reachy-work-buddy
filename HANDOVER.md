@@ -35,18 +35,26 @@ derived `ws(s)://` from the configured `http(s)://` `HUB_WS_URL` (commit
 the first time (real, non-simulated). The real daemon then started
 successfully (`sim=false`), but **the first-ever command to real motors
 found a head-motion hardware fault**: antennas track commanded poses
-correctly, the head (Stewart platform) does not — it moved only ~1-2° of a
-~14° commanded change and logged an IK collision warning on the initial
-attempt. Motion testing was stopped by owner decision; the daemon was
-stopped cleanly before ending the session so no further command could
-reach the motors during the owner's physical inspection. See
+correctly, the head (Stewart platform) does not. A per-joint diagnostic
+read (`/api/state/full`, offline IK cross-check) first isolated `stewart_5`
+as the dominant error; after the owner manually adjusted the head and
+retested, a second `goto`-to-zero showed **three motors (`stewart_2`,
+`stewart_4`, `stewart_5`) don't respond to position commands at all**,
+while `stewart_1`/`3`/`6` track normally — a shared cause (power/bus
+segment, thermal/current protection, or shared mechanical binding) looks
+more likely than three independent motor failures. Motion testing was
+stopped by owner decision; the daemon was stopped cleanly before ending
+the session so no further command could reach the motors during physical
+inspection. See
 [first-motion evidence](docs/verification/phase-22b-first-motion-2026-09-23.md)
-for exact figures/timestamps. **Do not resume motion testing until the head
-has been physically inspected** (linkage/cables/power) — this is a hardware
-finding, not an embodiment/software defect (the command chain itself
-dispatched and reported correctly throughout). Daemon audio is also broken
-independently (`playbin failed to activate sinks`), blocking the voice/audio
-acceptance rows regardless of the head issue.
+for exact figures/timestamps. **Do not resume motion testing until motors
+2, 4 and 5 have been physically inspected** (wiring/linkages/any visible
+error state) — this is a hardware finding, not an embodiment/software
+defect (the command chain itself dispatched and reported correctly
+throughout, and the current head position must not be saved as a
+calibration/homing offset since it isn't a true zero). Daemon audio is
+also broken independently (`playbin failed to activate sinks`), blocking
+the voice/audio acceptance rows regardless of the head issue.
 [Phase 26](docs/phase-26.md) was refocused 2026-09-23 from a generic virtual
 meeting bot to an embodied secretary: owner-present meeting companion (26a);
 a bounded temporary-absence catch-up mode for short owner step-outs within an
