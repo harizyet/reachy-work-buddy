@@ -136,6 +136,16 @@ card; its PyGObject/GStreamer caveats remain. Inspect those files before
 installation. The [inventory report](verification/phase-22-inventory-2026-09-22.md)
 records device groups, memory measurements, and dependency checks.
 
+`install-reachy-venv.sh` does not install the systemd unit itself — found
+live when a unit-file change (the `ExecStartPre=` above) silently had no
+effect because `/etc/systemd/system/reachy-mini-daemon.service` is a
+separate root-owned copy, not a symlink to the repo file. After any change
+to `deploy/reachy/reachy-mini-daemon.service`, reinstall it explicitly:
+`sudo cp deploy/reachy/reachy-mini-daemon.service /etc/systemd/system/ &&
+sudo systemctl daemon-reload`. Verify what's actually active with
+`systemctl show reachy-mini-daemon -p ExecStartPre` (no sudo needed) rather
+than assuming a repo change took effect.
+
 Starting the daemon wakes/moves the robot by default. Only start it or run
 motion tests while the owner is physically present and supervising.
 `--check` must remain read-only and never start the daemon. This applies to

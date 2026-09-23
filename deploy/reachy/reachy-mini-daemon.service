@@ -48,7 +48,16 @@ Environment=GST_PLUGIN_PATH=/opt/gst-plugins-rs/lib/aarch64-linux-gnu:/opt/gstre
 # audio-setup.sh already exits 0 on every internal failure, but this is a
 # second guarantee that a daemon start (which moves the robot) is never
 # blocked by an audio problem.
-ExecStartPre=-%h/reachy-work-buddy/deploy/reachy/audio-setup.sh
+#
+# Hardcoded path, not %h: since systemd 236, %h in a *system*-manager unit
+# (this one, not a --user unit) resolves to the service manager's own
+# user (root), not this unit's User=reachy — confirmed live on this
+# Nano's systemd 237, where it would have pointed at a nonexistent
+# /root/... path and, combined with the leading `-` above, failed
+# completely silently, exactly the failure mode this was meant to
+# prevent. Matches ExecStart below, which already hardcodes this path for
+# the same reason.
+ExecStartPre=-/home/reachy/reachy-work-buddy/deploy/reachy/audio-setup.sh
 ExecStart=/home/reachy/reachy-venv/bin/reachy-mini-daemon --headless --log-level INFO
 
 Restart=on-failure
