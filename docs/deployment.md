@@ -170,35 +170,25 @@ Enabling the daemon unit alone is not the whole unattended-boot story:
   It only goes stale if the Nano's registered address (its stable
   Tailscale IP) or port actually changes, or the hub's Postgres volume is
   reset — neither is a boot-time concern.
-- **Real gap, confirmed and not yet closed**: `start-reachy.sh`'s audio
-  re-detection/regeneration/mixer-reset step (above) only runs when that
-  script itself starts the daemon. When systemd starts
-  `reachy-mini-daemon` directly at boot, that step never runs — if the USB
-  audio card index shifts across the reboot, audio silently breaks again
-  exactly like the failure found and fixed in Phase 22b. `alsactl restore`
-  at boot only partly covers this (it keys by ALSA card *id*, not index,
-  per that same session's finding). Proposed fix, pending owner approval:
-  factor the audio detection/regeneration/mixer logic out of
-  `start-reachy.sh` into a shared script, and run it via an
-  `ExecStartPre=` on `reachy-mini-daemon.service` (runs as `User=reachy`
-  with the right `HOME` for `~/.asoundrc`; `amixer` needs no root) so both
-  the manual-launcher path and the systemd-boot path use the same logic.
-  Not built yet.
-
-USB audio enumeration order isn't stable across boots/replugs, so a stale
-`~/.asoundrc` card index can silently break daemon audio (no animation
-sound effects, no mic capture) with no error visible from the launcher —
-found live during [Phase 22b](phase-22-23.md#satisfactory-run-acceptance-matrix)
-and detailed in [that session's evidence](verification/phase-22b-first-motion-2026-09-23.md).
-`start-reachy.sh` now re-detects the card (validated against
-`/proc/asound/cards`, not just a non-error return — the detection helper's
-own "not found" fallback is a numeric card index, not `None`) and
-regenerates `~/.asoundrc` and resets PCM volume on every real daemon start,
-not just at install time; every step here is best-effort and non-fatal to
-daemon start. `install-reachy-venv.sh` sets `autospawn = no` in
-`~/.config/pulse/client.conf` for the `reachy` user at install time, so a
-desktop session's own PulseAudio doesn't auto-spawn and hold the robot's
-audio device; this is not re-applied on every start.
+- USB audio enumeration order isn't stable across boots/replugs, so a
+  stale `~/.asoundrc` card index can silently break daemon audio (no
+  animation sound effects, no mic capture) with no error visible anywhere
+  — found live during
+  [Phase 22b](phase-22-23.md#satisfactory-run-acceptance-matrix) and
+  detailed in [that session's evidence](verification/phase-22b-first-motion-2026-09-23.md).
+  `deploy/reachy/audio-setup.sh` re-detects the card (validated against
+  `/proc/asound/cards`, not just a non-error return — the detection
+  helper's own "not found" fallback is a numeric card index, not `None`)
+  and regenerates `~/.asoundrc` and resets PCM volume; every step is
+  best-effort/non-fatal, and it always exits 0 so it can never block a
+  daemon start. Both `start-reachy.sh` (the manual-launcher path) and
+  `reachy-mini-daemon.service`'s own `ExecStartPre=` (the systemd-boot
+  path, needed once the owner accepted unattended boot start above) call
+  this same script, so a card-index drift is caught however the daemon
+  gets started, not just through the manual launcher. `install-reachy-
+  venv.sh` sets `autospawn = no` in `~/.config/pulse/client.conf` for the
+  `reachy` user at install time, so a desktop session's own PulseAudio
+  doesn't auto-spawn and hold the robot's audio device.
 
 1. Prepare `deploy/reachy/.env` from its example, permission-restricted to
    the owner. Match `ROBOT_ID`/`ROBOT_TOKEN` with an entry in homelab

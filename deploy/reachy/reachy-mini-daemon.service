@@ -36,6 +36,19 @@ Environment=GST_PLUGIN_PATH=/opt/gst-plugins-rs/lib/aarch64-linux-gnu:/opt/gstre
 # Default --fastapi-host is 127.0.0.1 (0.0.0.0 only with --wireless-version)
 # — the daemon is localhost-only unless told otherwise, which is fine as
 # long as reachy-embodiment runs on this same Nano, per Phase 22's plan.
+#
+# ExecStartPre re-detects the USB audio card and regenerates ~/.asoundrc/
+# mixer levels if they drifted since the last start — the same logic
+# scripts/start-reachy.sh runs (factored out into audio-setup.sh so this
+# unit and that script share one implementation), needed here specifically
+# because systemd can start this unit directly at boot on a designated
+# production host (see docs/deployment.md's "Robot host and Jetson Nano"),
+# bypassing that script entirely. The leading `-` tells systemd not to
+# fail this unit's start if the script itself fails for any reason —
+# audio-setup.sh already exits 0 on every internal failure, but this is a
+# second guarantee that a daemon start (which moves the robot) is never
+# blocked by an audio problem.
+ExecStartPre=-%h/reachy-work-buddy/deploy/reachy/audio-setup.sh
 ExecStart=/home/reachy/reachy-venv/bin/reachy-mini-daemon --headless --log-level INFO
 
 Restart=on-failure
