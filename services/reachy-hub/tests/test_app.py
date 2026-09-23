@@ -159,6 +159,53 @@ def test_trigger_unknown_behaviour_proxies_404_from_embodiment() -> None:
     assert resp.status_code == 404
 
 
+def test_robots_standby_parks_every_registered_robot() -> None:
+    client = make_hub_client(make_embodiment_app())
+    client.post("/robots", json={"robot_id": "desk-1", "base_url": "http://desk-1.local"})
+
+    resp = client.post("/robots/standby")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body) == 1
+    assert body[0]["robot_id"] == "desk-1"
+    assert body[0]["ok"] is True
+    assert body[0]["embodiment_state"] == "sleep"
+    assert body[0]["connected"] is False
+    assert body[0]["daemon_status"] == {"state": "stopped", "simulation_enabled": True}
+
+    resp = client.get("/robots/desk-1/state")
+    assert resp.json()["embodiment_state"] == "sleep"
+    assert resp.json()["connected"] is False
+
+
+def test_robots_resume_brings_every_registered_robot_back() -> None:
+    client = make_hub_client(make_embodiment_app())
+    client.post("/robots", json={"robot_id": "desk-1", "base_url": "http://desk-1.local"})
+    client.post("/robots/standby")
+
+    resp = client.post("/robots/resume")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body[0]["ok"] is True
+    assert body[0]["embodiment_state"] == "idle"
+    assert body[0]["connected"] is True
+    assert body[0]["daemon_status"] == {"state": "running", "simulation_enabled": True}
+
+
+def test_robots_standby_is_empty_list_with_no_registered_robots() -> None:
+    client = make_hub_client(make_embodiment_app())
+    resp = client.post("/robots/standby")
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+def test_robots_standby_requires_remote_auth() -> None:
+    client = make_hub_client(make_embodiment_app())
+    client.headers.pop("Authorization")
+    resp = client.post("/robots/standby")
+    assert resp.status_code == 401
+
+
 def test_heartbeat_background_task_pings_registered_robots() -> None:
     embodiment_app = make_embodiment_app()
     registry = InMemoryRobotRegistry()

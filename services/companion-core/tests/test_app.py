@@ -134,6 +134,53 @@ def test_conversation_turn_replies_and_counts_turns() -> None:
         assert resp.json()["turn_count"] == 2
 
 
+def test_standby_command_parks_registered_robot_via_hub_and_embodiment() -> None:
+    with make_chain(registered_robots=[Robot(robot_id="desk-1", base_url="http://desk-1.local")]) as client:
+        resp = client.post(
+            "/conversation",
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "turn off reachy"},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert "standby" in body["reply"].lower()
+        assert body["privacy"] == "public"
+
+        # Proves this actually reached reachy-embodiment through the real
+        # hub chain, not just a canned reply — the robot's own state
+        # changed.
+        state_resp = client.get("/debug/robots/desk-1/state")
+        assert state_resp.json()["embodiment_state"] == "sleep"
+        assert state_resp.json()["connected"] is False
+
+
+def test_resume_command_wakes_registered_robot_via_hub_and_embodiment() -> None:
+    with make_chain(registered_robots=[Robot(robot_id="desk-1", base_url="http://desk-1.local")]) as client:
+        client.post(
+            "/conversation",
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "turn off reachy"},
+        )
+        resp = client.post(
+            "/conversation",
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "wake up reachy"},
+        )
+        assert resp.status_code == 200
+        assert "wak" in resp.json()["reply"].lower()
+
+        state_resp = client.get("/debug/robots/desk-1/state")
+        assert state_resp.json()["embodiment_state"] == "idle"
+        assert state_resp.json()["connected"] is True
+
+
+def test_standby_command_with_no_registered_robot_says_so() -> None:
+    with make_chain() as client:
+        resp = client.post(
+            "/conversation",
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "standby reachy"},
+        )
+        assert resp.status_code == 200
+        assert "nothing to turn off" in resp.json()["reply"].lower()
+
+
 def test_conversation_turn_history_is_isolated_per_session() -> None:
     with make_chain() as client:
         client.post(

@@ -63,6 +63,71 @@ def test_connected_false_when_daemon_unreachable() -> None:
     assert backend.connected is False
 
 
+def test_connected_false_when_daemon_stopped_even_without_error() -> None:
+    # A daemon put into standby (POST /daemon/stop) keeps answering
+    # /daemon/status with error=None — connected must not claim "yes"
+    # just because there's no error field set.
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"state": "stopped", "error": None})
+
+    backend = make_backend(handler)
+    assert backend.connected is False
+
+
+def test_daemon_standby_posts_stop_with_goto_sleep_and_returns_status() -> None:
+    calls: list[tuple[str, str, str]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append((request.method, request.url.path, request.url.query.decode()))
+        if request.url.path == "/api/daemon/stop":
+            return httpx.Response(200, json={"job_id": "abc123"})
+        return httpx.Response(200, json={"state": "stopping", "error": None})
+
+    backend = make_backend(handler)
+    status = backend.daemon_standby()
+
+    assert ("POST", "/api/daemon/stop", "goto_sleep=true") in calls
+    assert status == {"state": "stopping", "error": None}
+
+
+def test_daemon_standby_raises_on_busy_conflict() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(409, json={"detail": "Daemon is busy."})
+
+    backend = make_backend(handler)
+    with pytest.raises(RobotBackendError):
+        backend.daemon_standby()
+
+
+def test_daemon_resume_posts_start_with_wake_up_and_returns_status() -> None:
+    calls: list[tuple[str, str, str]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append((request.method, request.url.path, request.url.query.decode()))
+        if request.url.path == "/api/daemon/start":
+            return httpx.Response(200, json={"job_id": "def456"})
+        return httpx.Response(200, json={"state": "running", "error": None})
+
+    backend = make_backend(handler)
+    status = backend.daemon_resume(wake_up=True)
+
+    assert ("POST", "/api/daemon/start", "wake_up=true") in calls
+    assert status == {"state": "running", "error": None}
+
+
+def test_daemon_resume_can_skip_wake_up() -> None:
+    calls: list[tuple[str, str, str]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append((request.method, request.url.path, request.url.query.decode()))
+        return httpx.Response(200, json={"state": "running", "error": None})
+
+    backend = make_backend(handler)
+    backend.daemon_resume(wake_up=False)
+
+    assert ("POST", "/api/daemon/start", "wake_up=false") in calls
+
+
 def test_sim_reflects_daemon_simulation_flags() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"simulation_enabled": True, "mockup_sim_enabled": False, "error": None})

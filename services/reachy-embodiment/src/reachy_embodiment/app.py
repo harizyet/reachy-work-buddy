@@ -203,6 +203,38 @@ def create_app(
         state.embodiment_state = EmbodimentState.REMOTE if state.remote_active else EmbodimentState.IDLE
         return state
 
+    @app.post(routes.DAEMON_STANDBY)
+    def daemon_standby() -> dict[str, object]:
+        """Phase 22b: owner-requested remote "turn off/standby" command
+        (docs/verification/phase-22b-first-motion-2026-09-23.md). Parks
+        the real daemon at its rest pose and de-torques motors via
+        backend.daemon_standby(); the sim backend just flips its own
+        connected flag. Returns embodiment's own state plus the daemon's
+        raw status so a caller (hub → core → the user) can report real
+        resulting state, not just "command sent" — see that method's
+        docstring for why this may still show a transitional status.
+        """
+        presence_loop.heartbeat()
+        daemon_status = backend.daemon_standby()
+        state.embodiment_state = EmbodimentState.SLEEP
+        state.connected = backend.connected
+        return {**state.model_dump(), "daemon_status": daemon_status}
+
+    @app.post(routes.DAEMON_RESUME)
+    def daemon_resume(wake_up: bool = True) -> dict[str, object]:
+        """Resumes a backend previously put into standby by
+        POST /daemon/standby. See robot.py's daemon_resume for the
+        owner-present exception this requires when driving a real daemon
+        (AGENTS.md) — this endpoint itself doesn't gate that; the caller
+        (reachy-hub, ultimately a deterministic companion-core intent) is
+        responsible for only reaching this from an owner-authenticated
+        channel."""
+        presence_loop.heartbeat()
+        daemon_status = backend.daemon_resume(wake_up=wake_up)
+        state.connected = backend.connected
+        state.embodiment_state = EmbodimentState.REMOTE if state.remote_active else EmbodimentState.IDLE
+        return {**state.model_dump(), "daemon_status": daemon_status}
+
     return app
 
 

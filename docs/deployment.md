@@ -160,6 +160,21 @@ pre-recorded. Daemon start/restart and raw/diagnostic joint commands
 (`POST /api/move/goto`, or investigating a problem live) still need the
 owner present — see [AGENTS.md](../AGENTS.md) for the exact boundary.
 
+Remote standby/resume (`POST /robots/standby`/`resume` on reachy-hub,
+triggered by a deterministic phrase match in `companion_core.
+robot_power_intent`, e.g. "turn off reachy"/"wake up reachy" over
+Telegram or any other bound channel) is a further exception, also
+owner-approved 2026-09-23: standby parks the real daemon at its own rest
+pose and de-torques motors (`POST /api/daemon/stop?goto_sleep=true`,
+safe to physically handle afterwards); resume replays the daemon's normal
+wake-up motion (`POST /api/daemon/start?wake_up=true`) without the owner
+physically present, on this same designated production host — gated by
+`require_remote_auth`'s owner-bound credential, not by presence. See
+[first-motion evidence](verification/phase-22b-first-motion-2026-09-23.md)
+for where `/api/daemon/stop`/`start` were found (via the daemon's own
+`/openapi.json`) and their UNVERIFIED-against-real-hardware status as of
+this writing.
+
 ### Production: unattended boot start (owner-accepted risk, 2026-09-23)
 
 For a Nano the owner has explicitly designated production, `reachy-mini-

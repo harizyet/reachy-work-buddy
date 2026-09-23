@@ -79,6 +79,22 @@ confirmed working (owner's voice recognizable on a recorded/played-back
 sample) — this tests only the physical mic/ALSA path, not our own voice
 feature: there is still no code routing the robot's mic into the
 homelab's `/voice/turn` STT pipeline, unscoped future work.
+
+Added remote standby/resume (Phase 22b, owner-requested): a deterministic
+phrase match in `companion_core.robot_power_intent` (e.g. "turn off
+reachy"/"wake up reachy", any channel) calls a new authenticated
+`POST /robots/standby`/`resume` on reachy-hub, which wraps the real
+daemon's own `POST /api/daemon/stop?goto_sleep=true`/`start?wake_up=true`
+(found via its `/openapi.json` — parks at its canonical rest pose and
+de-torques motors, safe to physically handle; no systemd/sudo access
+needed anywhere). Bypasses the LLM entirely, same precedence as every
+other deterministic intent. Resume replays the daemon's wake-up motion
+unattended from an owner-authenticated channel — a further owner-approved
+exception alongside the boot-autostart one, recorded in AGENTS.md/
+deployment.md. Full companion-core → reachy-hub → reachy-embodiment chain
+covered by new tests (387 passed total, up from 371); **UNVERIFIED against
+real hardware** — the daemon's stop/start endpoints have not been called
+live yet, only confirmed present via its OpenAPI/source.
 [Phase 26](docs/phase-26.md) was refocused 2026-09-23 from a generic virtual
 meeting bot to an embodied secretary: owner-present meeting companion (26a);
 a bounded temporary-absence catch-up mode for short owner step-outs within an

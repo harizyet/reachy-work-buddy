@@ -654,6 +654,52 @@ def create_app(
         except httpx.HTTPError as exc:
             raise HTTPException(status_code=502, detail=f"robot '{robot_id}' unreachable: {exc}") from exc
 
+    @app.post("/robots/standby", dependencies=[Depends(require_remote_auth)])
+    async def robots_standby() -> list[dict]:
+        """Phase 22b: owner-requested remote "turn off/standby" command —
+        parks and de-torques every registered robot, safe to physically
+        handle afterwards. No {robot_id} in the path (unlike
+        /robots/{robot_id}/behaviour above): this deployment is
+        single-robot in practice, and looping the registry here — the
+        same pattern trigger_gesture already uses — avoids needing
+        callers (companion-core's deterministic intent) to track a robot
+        id just to ask "turn everything off". Per-robot results, not a
+        single pass/fail, since one robot's failure shouldn't hide
+        another's success."""
+        results = []
+        for robot in await app.state.registry.list():
+            try:
+                status = await get_client(robot).daemon_standby()
+                results.append({"robot_id": robot.robot_id, "ok": True, **status})
+            except httpx.HTTPStatusError as exc:
+                results.append(
+                    {"robot_id": robot.robot_id, "ok": False, "error": f"{exc.response.status_code}: {exc.response.text}"}
+                )
+            except httpx.HTTPError as exc:
+                results.append({"robot_id": robot.robot_id, "ok": False, "error": f"unreachable: {exc}"})
+        return results
+
+    @app.post("/robots/resume", dependencies=[Depends(require_remote_auth)])
+    async def robots_resume(wake_up: bool = True) -> list[dict]:
+        """Resumes every registered robot previously put into standby.
+        `wake_up=True` (default) replays the daemon's own wake-up motion —
+        see AGENTS.md/docs/deployment.md for the owner-present exception
+        this requires for a real daemon; this route itself doesn't gate
+        that, `require_remote_auth` (the same owner-bound credential every
+        channel already authenticates with) is the gate."""
+        results = []
+        for robot in await app.state.registry.list():
+            try:
+                status = await get_client(robot).daemon_resume(wake_up=wake_up)
+                results.append({"robot_id": robot.robot_id, "ok": True, **status})
+            except httpx.HTTPStatusError as exc:
+                results.append(
+                    {"robot_id": robot.robot_id, "ok": False, "error": f"{exc.response.status_code}: {exc.response.text}"}
+                )
+            except httpx.HTTPError as exc:
+                results.append({"robot_id": robot.robot_id, "ok": False, "error": f"unreachable: {exc}"})
+        return results
+
     @app.get("/sessions/{user_id}")
     async def get_session(user_id: str) -> AgentSession:
         session = await app.state.session_store.get_by_user(user_id)

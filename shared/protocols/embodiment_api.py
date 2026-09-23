@@ -23,3 +23,8 @@ REMOTE = "/remote"
 # reachy-hub pings this periodically so reachy-embodiment's presence loop can
 # detect a homelab outage and fall back to local idle behaviour. See ADR 0004.
 HEARTBEAT = "/heartbeat"
+# Phase 22b: owner-requested remote "turn off/standby" and resume, wrapping
+# the real daemon's own POST /api/daemon/stop and /api/daemon/start. See
+# docs/verification/phase-22b-first-motion-2026-09-23.md.
+DAEMON_STANDBY = "/daemon/standby"
+DAEMON_RESUME = "/daemon/resume"

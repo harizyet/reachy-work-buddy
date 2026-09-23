@@ -73,3 +73,19 @@ class EmbodimentClient:
         resp = await self._client.post(routes.AUDIO_PLAY, files={"audio": ("reply.wav", wav_bytes, "audio/wav")})
         resp.raise_for_status()
         return resp.json()
+
+    async def daemon_standby(self) -> dict[str, Any]:
+        """Phase 22b: owner-requested remote "turn off/standby" command."""
+        resp = await self._client.post(routes.DAEMON_STANDBY)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def daemon_resume(self, *, wake_up: bool = True) -> dict[str, Any]:
+        """Resumes a backend previously put into standby. See
+        AGENTS.md/docs/deployment.md for the owner-present exception this
+        requires when reaching a real daemon — callers into this method
+        are responsible for only doing so from an owner-authenticated
+        channel, this client doesn't gate it itself."""
+        resp = await self._client.post(routes.DAEMON_RESUME, params={"wake_up": wake_up})
+        resp.raise_for_status()
+        return resp.json()

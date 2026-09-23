@@ -52,6 +52,27 @@ def test_post_behaviour_triggers_it_and_updates_state() -> None:
     assert resp.json()["last_behaviour"] == Behaviour.LISTENING.value
 
 
+def test_daemon_standby_sets_sleep_state_and_returns_daemon_status() -> None:
+    client = make_client()
+    resp = client.post("/daemon/standby")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["embodiment_state"] == EmbodimentState.SLEEP.value
+    assert body["connected"] is False
+    assert body["daemon_status"] == {"state": "stopped", "simulation_enabled": True}
+
+
+def test_daemon_resume_returns_to_idle_and_reconnects() -> None:
+    client = make_client()
+    client.post("/daemon/standby")
+    resp = client.post("/daemon/resume")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["embodiment_state"] == EmbodimentState.IDLE.value
+    assert body["connected"] is True
+    assert body["daemon_status"] == {"state": "running", "simulation_enabled": True}
+
+
 def test_post_gesture_behaviour_does_not_change_standing_state() -> None:
     client = make_client()
     client.post("/behaviour/listening")

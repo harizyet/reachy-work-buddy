@@ -126,7 +126,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ValidationError
 
-from companion_core import email_intent, memory_intent, rag_intent
+from companion_core import email_intent, memory_intent, rag_intent, robot_power_intent
 from companion_core.briefing import BriefingItem, build_briefing
 from companion_core.calendar.models import CalendarEvent
 from companion_core.calendar.postgres_store import PostgresCalendarStore
@@ -511,8 +511,27 @@ def create_app(
         approve_query = email_intent.match_approve(turn.text)
         cancel_send_query = email_intent.match_cancel_send(turn.text)
         send_query = email_intent.match_send(turn.text)
+        standby_command = robot_power_intent.is_standby_command(turn.text)
+        resume_command = robot_power_intent.is_resume_command(turn.text)
 
-        if is_next_event_query(turn.text):
+        if standby_command:
+            try:
+                results = await app.state.hub_client.standby_robots()
+                reply = robot_power_intent.format_standby_reply(results)
+            except httpx.HTTPError as exc:
+                # Unlike /debug/robots/... below, this branch is inside the
+                # always-returns-a-reply conversation flow — an unreachable
+                # hub must produce a spoken reply, not an unhandled 500.
+                reply = f"Couldn't reach reachy-hub to put Reachy in standby: {exc}"
+            privacy = Privacy.PUBLIC
+        elif resume_command:
+            try:
+                results = await app.state.hub_client.resume_robots()
+                reply = robot_power_intent.format_resume_reply(results)
+            except httpx.HTTPError as exc:
+                reply = f"Couldn't reach reachy-hub to wake Reachy up: {exc}"
+            privacy = Privacy.PUBLIC
+        elif is_next_event_query(turn.text):
             event = await app.state.calendar_store.next_event(datetime.now(UTC))
             reply = format_next_event_reply(event)
             # Calendar content is inherently work-private (docs/plan.md §4's

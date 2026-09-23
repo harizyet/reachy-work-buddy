@@ -38,6 +38,13 @@ intent/consent handlers. It has no model tool executor. The configured
 persona's system prompt is prepended ahead of that turn's history only on
 this branch — deterministic intent replies (tasks/calendar/email/memory)
 never pass through the LLM at all, so persona wording has no effect on them.
+`robot_power_intent.py` (Phase 22b) is one such handler: a phrase match
+(e.g. "turn off reachy", "wake up reachy") on any channel calls hub's
+`POST /robots/standby`/`resume` through `hub_client.py` — the same
+direction every other robot-touching intent already reaches hub through
+(never reachy-embodiment directly, per ADR 0001) — entirely bypassing the
+model, matching every other deterministic-intent precedence guarantee
+here.
 Same-session turns serialize; the latest 39 user/assistant messages provide
 bounded context, reset on restart. Work-memory recall queries persistent
 records, never dumps that transcript. Calendar/email replies are
@@ -83,6 +90,7 @@ WebRTC, and static UI. It does not own reasoning policy or motor control.
 | `POST /calendar/check-reminders/{user_id}`, `/briefing/{user_id}` | On-demand proactive routing, not an automatic schedule |
 | `POST`, `GET /robots` | HTTP robot registry |
 | `GET /robots/{id}/state`, `/behaviours`; `POST /robots/{id}/behaviour/{name}`, `/speak` | Authenticated robot proxies and direct speak-through control |
+| `POST /robots/standby`, `/resume` | Phase 22b: authenticated remote power control — parks/de-torques (`standby`) or wakes (`resume`, `wake_up` query param) every registered robot; no `{id}` in the path, loops the registry like the existing gesture-trigger helper does |
 | `POST /webrtc/telepresence/offer` | Authenticated remote media/control |
 | `WS /robots/connect` | Robot-token-authenticated registration/heartbeat/reconnect; commands still HTTP |
 | `POST /auth/login`, `/auth/logout`; `GET /auth/me` | Owner-cookie lifecycle; login/logout require CSRF header |

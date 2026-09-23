@@ -91,6 +91,19 @@ non-behaviour move) used to investigate a problem; or any new/expanded
 behaviour not already in the mapped, tested set. Those still need the
 owner present per the rule above.
 
+Remote standby/resume (`POST /robots/standby`, `POST /robots/resume` on
+reachy-hub; `companion_core.robot_power_intent`'s deterministic phrase
+match, e.g. "turn off reachy"/"wake up reachy") is a further, narrower
+exception the owner explicitly approved, 2026-09-23, alongside the two
+above: resume replays the real daemon's wake-up motion (same class of
+motion the production-boot exception above already covers unattended),
+triggered from an owner-authenticated conversational channel instead of a
+boot event. It does not require the owner physically present, on the same
+designated production host as the boot-start exception. This is still not
+a general relaxation — it's gated by `require_remote_auth`'s
+owner-bound credential, exactly like every other remote-control route,
+and it only exists for this one narrow phrase-triggered path.
+
 ## Documentation maintenance
 
 Use the ownership table in [docs/README.md](docs/README.md#where-information-belongs).

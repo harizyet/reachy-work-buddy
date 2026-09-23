@@ -61,6 +61,19 @@ class RobotBackend(Protocol):
         the audio's duration in seconds. Phase 16/ADR 0013."""
         ...
 
+    def daemon_standby(self) -> dict[str, object]:
+        """Parks the robot at its rest pose and de-torques motors, safe to
+        physically handle afterwards. Phase 22b: owner-requested remote
+        "turn off/standby" command. Returns the resulting daemon status
+        (not just "command sent") so a caller can report real state."""
+        ...
+
+    def daemon_resume(self, *, wake_up: bool = True) -> dict[str, object]:
+        """Resumes a backend previously put into standby. `wake_up=True`
+        (default) replays the daemon's own wake-up motion, matching a
+        normal daemon start. Returns the resulting daemon status."""
+        ...
+
 
 class SimulatedRobotBackend:
     """Logs behaviour triggers instead of driving hardware."""
@@ -100,6 +113,16 @@ class SimulatedRobotBackend:
             duration = wf.getnframes() / wf.getframerate()
         log.info("sim: playing %.2fs of audio (no physical speaker in this environment)", duration)
         return duration
+
+    def daemon_standby(self) -> dict[str, object]:
+        log.info("sim: daemon standby (no physical daemon in this environment)")
+        self._connected = False
+        return {"state": "stopped", "simulation_enabled": True}
+
+    def daemon_resume(self, *, wake_up: bool = True) -> dict[str, object]:
+        log.info("sim: daemon resume wake_up=%s (no physical daemon in this environment)", wake_up)
+        self._connected = True
+        return {"state": "running", "simulation_enabled": True}
 
 
 class RobotBackendError(RuntimeError):
@@ -206,7 +229,18 @@ class ReachyDaemonBackend:
     @property
     def connected(self) -> bool:
         status = self._fetch_status()
-        return status is not None and not status.get("error")
+        if status is None or status.get("error"):
+            return False
+        # A daemon put into standby (POST /daemon/stop) keeps its HTTP
+        # server up and answers /daemon/status without an `error`, but its
+        # backend/motor control loop is stopped and motors are de-torqued
+        # — not "connected" in any sense a caller (presence loop,
+        # trigger_gesture) should act on. Phase 22b: found while adding
+        # daemon_standby/daemon_resume; UNVERIFIED exact state string
+        # against a live standby response, inferred from the daemon's own
+        # "Daemon stopped successfully." log line.
+        state = str(status.get("state", "")).lower()
+        return state not in ("stopped", "stopping")
 
     @property
     def sim(self) -> bool:
@@ -321,3 +355,44 @@ class ReachyDaemonBackend:
             raise RobotBackendError(f"play_sound({sound_path!r}) failed: {exc}") from exc
 
         return duration
+
+    def daemon_standby(self) -> dict[str, object]:
+        """POST /daemon/stop?goto_sleep=true — the daemon's own dedicated
+        rest routine (not the `sleep1` recorded emotion): interpolates the
+        head to its canonical sleep pose, then de-torques every motor
+        (`set_motor_control_mode(Disabled)`), stops the media server
+        (releasing camera/audio) and closes the motor controller. Safe to
+        physically handle the robot afterwards. Runs as a background job
+        on the daemon (returns a `job_id` immediately, not full
+        completion) and 409s if another start/stop/restart is already in
+        progress — surfaced as RobotBackendError, not silently retried.
+        UNVERIFIED against real hardware (found via /openapi.json + source
+        during Phase 22b, not yet exercised live).
+
+        Returns whatever `/daemon/status` reports immediately after the
+        request is accepted — the park/de-torque sequence keeps running in
+        the background, so this may still show a transitional state (e.g.
+        "stopping") rather than the final "stopped"; callers that need the
+        final state should poll `connected`/`sim` again after a moment,
+        not treat this return value as completion."""
+        try:
+            resp = self._client.post("/daemon/stop", params={"goto_sleep": "true"})
+            resp.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise RobotBackendError(f"daemon standby (stop?goto_sleep=true) failed: {exc}") from exc
+        return self._fetch_status() or {}
+
+    def daemon_resume(self, *, wake_up: bool = True) -> dict[str, object]:
+        """POST /daemon/start?wake_up=<bool> on the same daemon process
+        put into standby by `daemon_standby()` — resumes the backend
+        control loop and motor controller without a full systemd/process
+        restart. `wake_up=True` replays the daemon's own wake-up motion,
+        same as a normal daemon start. UNVERIFIED against real hardware
+        (see `daemon_standby`'s note). Same transitional-status caveat as
+        `daemon_standby` applies to the returned status."""
+        try:
+            resp = self._client.post("/daemon/start", params={"wake_up": "true" if wake_up else "false"})
+            resp.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise RobotBackendError(f"daemon resume (start?wake_up={wake_up}) failed: {exc}") from exc
+        return self._fetch_status() or {}
