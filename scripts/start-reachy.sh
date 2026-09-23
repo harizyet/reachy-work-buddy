@@ -93,7 +93,11 @@ for var in HUB_WS_URL ROBOT_ID ROBOT_TOKEN; do
     [[ -n "${!var:-}" ]] || die "$var must be set in $ENV_FILE (see deploy/reachy/.env.example)"
 done
 : "${ROBOT_BACKEND:=reachy_daemon}"
-: "${REACHY_DAEMON_URL:=http://host.docker.internal:8000}"
+# 127.0.0.1, not host.docker.internal: reachy-embodiment runs with
+# --network host below (see that section's comment for why), so the
+# container shares the host's network namespace and 127.0.0.1 genuinely
+# reaches the daemon directly, same as it would outside a container.
+: "${REACHY_DAEMON_URL:=http://127.0.0.1:8000}"
 [[ -z "$HTTP_PORT" ]] && HTTP_PORT="${REACHY_EMBODIMENT_PORT:-$DEFAULT_HTTP_PORT}"
 
 # --- 1. confirm this is the embodiment host, daemon is up, not simulated ---
@@ -194,16 +198,37 @@ else
         docker start "$CONTAINER_NAME" >/dev/null
     else
         log_info "starting $CONTAINER_NAME (port $HTTP_PORT, real backend, WSS to $HUB_WS_URL)"
+        # --network host, not bridge + -p/--add-host: reachy-mini-daemon
+        # binds host 127.0.0.1 only (its own default, confirmed live on
+        # the Nano) and refuses connections arriving via any other
+        # interface, including a bridge network's host.docker.internal
+        # gateway address — this isn't fixable from the container side at
+        # all without changing the daemon's own bind config (a separate,
+        # riskier change: its --wireless-version flag appears to widen the
+        # bind but its full semantics haven't been checked). Host
+        # networking puts reachy-embodiment in the same network namespace
+        # as the daemon, so 127.0.0.1:8000 inside the container genuinely
+        # is the daemon — matching this repo's own pre-existing assumption
+        # (see reachy-mini-daemon.service's comment: "fine as long as
+        # reachy-embodiment runs on this same Nano"). Trade-off: this
+        # container loses Docker's network namespace isolation; device
+        # passthrough (--device/--group-add) is unaffected, that's a
+        # separate mechanism. Because there's no more container-internal/
+        # external port mapping, the image's own baked-in `--port 8000`
+        # CMD must be overridden to the resolved $HTTP_PORT here, or it
+        # would try to claim host port 8000 too and collide with the
+        # daemon the same way the original bridge-mode default did.
         docker run -d --name "$CONTAINER_NAME" --restart unless-stopped \
-            --add-host host.docker.internal:host-gateway \
-            -p "${HTTP_PORT}:8000" \
+            --network host \
             -e "ROBOT_BACKEND=${ROBOT_BACKEND}" \
             -e "REACHY_DAEMON_URL=${REACHY_DAEMON_URL}" \
             -e "HUB_WS_URL=${HUB_WS_URL}" \
             -e "ROBOT_ID=${ROBOT_ID}" \
             -e "ROBOT_TOKEN=${ROBOT_TOKEN}" \
             "${DEVICE_ARGS[@]}" "${GROUP_ARGS[@]}" \
-            "$IMAGE_NAME" >/dev/null
+            "$IMAGE_NAME" \
+            /app/.venv/bin/uvicorn reachy_embodiment.app:app --app-dir services/reachy-embodiment/src \
+            --host 0.0.0.0 --port "$HTTP_PORT" >/dev/null
     fi
 fi
 

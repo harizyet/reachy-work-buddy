@@ -795,10 +795,48 @@ own script fixes, just in an ad hoc test command instead of committed
 code — verify a piped build with a following `docker images`/`docker
 inspect`, not the pipeline's own reported exit status.
 
-All fixes above pushed; **not yet re-verified live** — the Nano was
-about to rebuild with the `/api` fix and hadn't yet reached testing
-`/state`/a real behaviour trigger when this was written. That's the
-very next step once confirmed.
+**Fourth bug, found immediately after the previous three were verified
+working: the daemon's `127.0.0.1`-only bind makes it unreachable from
+any bridge-networked container, period** — independent of the `/api`
+path fix and the port-collision fix, both of which were real and
+necessary but didn't touch this. Confirmed directly on the Nano:
+`docker exec reachy-embodiment curl http://host.docker.internal:8000/api/daemon/status`
+→ connection refused, while the exact same call from the host itself
+(`curl 127.0.0.1:8000/...`) succeeds; `curl 172.17.0.1:8000/...` (the
+bridge gateway address `host.docker.internal` resolves to) also refused
+from the host directly, proving this isn't a container-specific
+routing problem — the daemon's listening socket itself only accepts
+loopback-origin connections. Matches the daemon's own documented
+default (`--fastapi-host 127.0.0.1`, `0.0.0.0` only with
+`--wireless-version`) and this repo's own pre-existing
+`reachy-mini-daemon.service` comment, which already assumed
+same-namespace access ("fine as long as reachy-embodiment runs on this
+same Nano") — that assumption just hadn't been checked against
+Docker's default bridge isolation until the container was actually run
+against the daemon for the first time.
+
+**Fixed, per the owner's decision:** `start-reachy.sh` now runs
+`reachy-embodiment` with `--network host` instead of bridge + `-p`/
+`--add-host`, putting it in the same network namespace as the daemon so
+`127.0.0.1:8000` inside the container genuinely is the daemon (new
+`REACHY_DAEMON_URL` default). Trade-off, accepted: this container loses
+Docker's network namespace isolation (device passthrough via
+`--device`/`--group-add` is a separate mechanism, unaffected). Because
+host networking removes the usual container-internal/external port
+mapping, the image's baked-in `uvicorn --port 8000` CMD is now
+explicitly overridden at `docker run` time to the resolved
+`$HTTP_PORT` (8100 default) — otherwise reachy-embodiment's own listen
+socket would try to claim host port 8000 too and collide with the
+daemon exactly like the original bridge-mode default did.
+`deploy/reachy/.env.example` updated to match (no more
+`host.docker.internal` guidance). **Not yet verified live** — this is
+untested against the real daemon/container; the Nano hadn't attempted
+it when this was written. Given this is the fourth real, load-bearing
+bug found in a row on this same "container reaches real daemon" path,
+treat this fix with the same "needs live confirmation before trusting
+it" posture as the systemd/`--check` bugs earlier.
+
+All fixes above pushed.
 
 **Not yet verified:** the daemon actually being installed/started via
 these launchers (systemd unit was never installed on this Nano —
