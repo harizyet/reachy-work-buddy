@@ -1,6 +1,13 @@
 # ADR 0019: Robot-initiated hub connectivity
 
-- Status: Accepted for Phase 22; not implemented
+- Status: Accepted for Phase 22a (Phase 22 is split into 22a — bring-up —
+  and 22b — physical acceptance, deferred; see docs/phase-22-23.md).
+  Connectivity substrate (auth, registration, generation fencing,
+  heartbeat, reconnect) implemented and live-verified between real Docker
+  containers on the homelab machine (2026-09-22) — semantic command
+  routing over this connection is deliberately deferred; `EmbodimentClient`'s
+  existing HTTP path still drives all real commands. Full physical
+  Nano/Reachy acceptance (Phase 22b) is not done.
 - Date: 2026-09-22
 
 ## Context
@@ -122,10 +129,11 @@ routing. ADR 0004's independent local fallback is preserved. The embodiment
 host, not necessarily the Nano, owns the connection; this does not resolve
 the separate physical-host question or make Nano mandatory for local motion.
 
-Amend Phase 22 launchers to establish outbound identity/capability registration
-instead of publishing a robot address. The GUI reports live transport and
+Amend Phase 22a launchers to establish outbound identity/capability registration
+instead of publishing a robot address (done). The GUI reports live transport and
 hardware health, last seen and sanitized disconnect reason. Existing runtime
-remains HTTP until Phase 22 is implemented; no migration occurred in this ADR.
+remains HTTP for semantic commands even with Phase 22a's connectivity substrate
+implemented; command-routing migration has not occurred in this ADR.
 
 ## Required verification
 

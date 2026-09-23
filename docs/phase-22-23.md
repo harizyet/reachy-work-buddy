@@ -1,20 +1,35 @@
 # Phases 22–23: physical deployment, acceptance testing, and Google accounts
 
-Status: planned, not implemented. Written 2026-09-22. Phase 22 comes first;
-Phase 23 reruns the relevant acceptance tests with production account access.
-The companion board is confirmed as an **original Jetson Nano**, not Orin.
-OS/JetPack, RAM, Reachy variant, and physical connection remain to be inventoried.
+Status: Phase 22 is split into **22a — bring-up** (deliverables 1–3 below:
+inventory, real robot backend, WSS connectivity, Bash launchers —
+implemented and partially live-verified) and **22b — physical acceptance
+testing** (deliverable 5, the acceptance matrix below — not started).
+This split was the owner's explicit decision (2026-09-23) so that Phase 23
+does not sit blocked on Nano hardware availability: Phase 23 now proceeds
+immediately after 22a, and 22b is deferred to a later session. Phase 23
+reruns the relevant acceptance tests (22b's matrix) with production account
+access once both 22b and Phase 23's own implementation are ready. Written
+2026-09-22, updated 2026-09-23 — see HANDOVER.md for the full evidence
+trail. The companion board is confirmed as an **original Jetson Nano**, not
+Orin, running JetPack 4.6.1 (EOL), with 3.9GB RAM; Reachy Mini's
+camera/audio/motor-controller are all USB-attached directly to it (no
+separate onboard computer exists).
 
 ## Starting point and architecture gate
 
-Phases 0–21 implement the application, but `robot.py` currently provides only
-`SimulatedRobotBackend`; `deploy/reachy/` is scaffolding. A successful HTTP
-behaviour call currently proves no physical movement. Google connectors and
-OAuth account settings do not exist. Calendar data is local Postgres; email
-sending in the homelab Compose stack targets Mailpit.
+Phases 0–21 implement the application. `robot.py` now also provides
+`ReachyDaemonBackend`, a real HTTP client to `reachy-mini-daemon`
+(`ROBOT_BACKEND=reachy_daemon`); `deploy/reachy/` has a working install
+script, systemd unit and Bash launchers. A `POST /behaviour/{name}` call has
+been dispatched end-to-end against the real daemon's own `--mockup-sim`
+mode and against the real daemon running on the Nano (connectivity only, not
+yet a triggered move) — it has not yet triggered a move on real Nano
+motors. Google connectors and OAuth account settings do not exist. Calendar
+data is local Postgres; email sending in the homelab Compose stack targets
+Mailpit.
 
 Preserve ADRs 0001, 0004, 0010, 0011, 0013 and 0016–0018, with the
-Phase 22 transport amendment in [ADR 0019](adr/0019-robot-initiated-hub-connectivity.md). Target placement:
+Phase 22a transport amendment in [ADR 0019](adr/0019-robot-initiated-hub-connectivity.md). Target placement:
 
 | Machine | Responsibility |
 |---|---|
@@ -42,7 +57,7 @@ container; a container does not upgrade host GPU drivers. Do not promise Nano
 LLM/STT acceleration as a Phase 22 requirement. See [NVIDIA support status](https://developer.nvidia.com/embedded/faq)
 and [Reachy daemon/SDK deployment guidance](https://huggingface.co/docs/reachy_mini/en/SDK/quickstart).
 
-## Phase 22 — bring-up and physical acceptance
+## Phase 22a — bring-up (implemented)
 
 ### Deliverables, in implementation order
 
@@ -73,13 +88,13 @@ and [Reachy daemon/SDK deployment guidance](https://huggingface.co/docs/reachy_m
    existing unauthenticated APIs. Validate actual WebRTC media connectivity;
    successful HTTP signaling alone is insufficient. Record any required ICE
    or TURN setup for the intended VPN/remote path.
-5. **Run acceptance and fix blockers.** Produce a dated evidence report,
-   restart/rollback runbook and remaining-issues list. Phase 22 uses seeded
-   local calendar/email data; real Google acceptance belongs to Phase 23.
+Deliverable 5, **run acceptance and fix blockers**, is Phase 22b — see
+below; it is deliberately not attempted yet.
 
 ### Bash launcher contract
 
-These are **planned files and interfaces**, not commands available today:
+These are implemented at `scripts/*.sh` and live-verified (see HANDOVER.md
+for the specific bugs found and fixed along the way):
 
 | File | Required behaviour |
 |---|---|
@@ -114,6 +129,14 @@ not a robot address in the hub. The supervised service owns reconnection,
 not a foreground shell loop. Run one hub worker until connection routing
 across workers is explicitly implemented.
 
+## Phase 22b — physical acceptance testing (deferred until after Phase 23)
+
+Deliberately not started (owner's call, 2026-09-23): Phase 23 proceeds
+first so it isn't blocked on Nano hardware availability. Resume this by
+running deliverable 5 above — the acceptance matrix below — on the real
+Nano/Reachy hardware, starting with the first move ever triggered on real
+motors (only the daemon's own simulator has been exercised so far).
+
 ### Required equipment and configuration
 
 - Powered Reachy and Nano, stable network, adequate cooling/storage, local
@@ -126,7 +149,7 @@ across workers is explicitly implemented.
   and Telegram credentials for those live checks, kept in ignored files.
   Do not share the production Telegram polling token with a concurrent test
   stack. Live sends target an explicitly chosen test chat.
-- No Google credentials required to pass Phase 22; Phase 23 adds them.
+- No Google credentials required to pass Phase 22b; Phase 23 adds them.
 
 ### Satisfactory-run acceptance matrix
 
@@ -348,16 +371,24 @@ verification or grant unrestricted distribution.
   deployment; verify recoverability without two active polling deployments.
   Missing/wrong keys fail safely. Confirm Google app publishing/audience
   requirements and record any unresolved external verification blocker.
-- Repeat Phase 22 startup, outages, privacy and 8-hour desk acceptance with
-  Google enabled. Record evidence in `docs/verification/phase-23-<date>.md`.
-  Production readiness requires all these checks and applicable Google setup
-  gates; a fixture server or consent-only demo does not qualify.
+- Once Phase 22b's own hardware acceptance has run, repeat its startup,
+  outages, privacy and 8-hour desk acceptance with Google enabled. Record
+  evidence in `docs/verification/phase-23-<date>.md`. Production readiness
+  requires all these checks and applicable Google setup gates; a fixture
+  server or consent-only demo does not qualify. Phase 23's own
+  implementation and functional (non-physical) tests can proceed before
+  Phase 22b, per the split below — only this final physical-repeat step
+  genuinely depends on 22b's baseline existing first.
 
 ## Execution boundaries
 
-Implement Phase 22 inventory/topology and launchers first, then real hardware
-acceptance and fixes. Begin Phase 23 with schema migrations and SecretStore
-after that baseline passes, then implement Google connectors. Credentials
+Phase 22 is split: implement Phase 22a (inventory/topology, real backend, WSS
+connectivity, launchers) first — done. Phase 22b (real hardware acceptance
+and fixes) is deliberately deferred; begin Phase 23 with schema migrations
+and SecretStore now, without waiting on it, then implement Google
+connectors. Phase 23's final physical-repeat acceptance (see above) still
+needs Phase 22b's baseline to exist first, so return to Phase 22b before
+declaring Phase 23 production-ready end to end. Credentials
 belong in ignored, permission-restricted local files, never chat. This plan
 does not reflash the board, launch a production stack, authorize Google access,
 or claim either phase complete.

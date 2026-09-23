@@ -61,7 +61,7 @@ integration, making this service boundary compatible with the platform.
 │  • interruption policy          • auth / robot registry    │
 └──────────────────────────┬──────────────────────────────┘
                            │ secure network / VPN
-                           ▲ robot-initiated WSS (Phase 22)
+                           ▲ robot-initiated WSS (Phase 22a)
                      REACHY MINI
               ┌────────────────────────┐
               │ reachy-embodiment      │
@@ -185,11 +185,18 @@ the daemon APIs. [3]
 
 ## 6. Implementation Roadmap
 
-Implementation status (2026-09-22): Phases 0–21 are implemented, including
-the hosted-cloud verification recorded in HANDOVER.md. Phases 22–24 are
-planned, not implemented; see the [deployment and accounts acceptance plan](phase-22-23.md).
-Phase 22 starts with the confirmed original Jetson Nano's compatibility and
-physical topology inventory. See
+Implementation status (2026-09-23): Phases 0–21 and Phase 22a are
+implemented, including the hosted-cloud verification recorded in
+HANDOVER.md. Phase 22 was split into **22a — bring-up** (inventory, the
+real robot backend, WSS connectivity and the Bash launchers, implemented
+and partially live-verified on the Nano; a named move has been dispatched
+end-to-end against the real `reachy-mini-daemon` running in its own
+simulator, not yet against real Nano motors) and **22b — physical
+acceptance testing** (the full acceptance matrix, deliberately deferred
+until after Phase 23 — the owner's call, so Phase 23 isn't blocked on
+Nano hardware availability). See HANDOVER.md for the evidence trail.
+Phase 23 is next; Phase 22b and Phase 24 remain planned, not implemented;
+see the [deployment and accounts acceptance plan](phase-22-23.md). See
 [README Status](../README.md#status) for verification evidence and
 [ADR 0016](adr/0016-operator-ui.md) for the implemented operator API.
 
@@ -217,8 +224,9 @@ physical topology inventory. See
 | Phase 19 — Operator UI | Login-gated web dashboard: live component health, LLM utilization, and controls for mode/DND/LLM provider settings (cloud API key, or a local base URL — primary local target is a self-hosted [OpenVINO Model Server](https://docs.openvino.ai/2026/model-server/ovms_what_is_openvino_model_server.html) instance, reachable over its OpenAI-compatible `/v1/chat/completions` endpoint). Adds a real pluggable LLM client to replace the previously unconfigured `/conversation` fallback when a provider is set — one `OpenAICompatibleChatProvider` implementation, since OVMS, OpenAI's own API, Ollama, LM Studio and vLLM all speak the same `POST {base_url}/chat/completions` shape, so "cloud key" vs "local OpenVINO URL" is only ever a `base_url`/`api_key` difference, never a code fork — so the utilization view reflects genuine calls. Also adds a real single-owner login (replacing the pasted-token flow `REMOTE_UI_TOKEN`/`clients/web-pwa/telepresence.js` use today) so the dashboard isn't gated by a shared secret typed into a text field. | An operator can log in, see every component's live status, and change mode/DND/LLM settings — including pointing the agent at a locally running OpenVINO Model Server by URL alone, no redeploy — without a shell. See [docs/adr/0016](adr/0016-operator-ui.md) (implemented and verified with real OVMS). |
 | Phase 20 — Web chat channel | A text chat view in the browser (served alongside the Phase 19 dashboard) that talks to the buddy through the exact same `Channel.WEB`/`POST /messages` path every other channel already uses — no new conversational logic, just a UI for a channel this codebase already models. Exists both as a first-class regular way to talk to the buddy and as the fallback when Telegram (or any other channel) is down; the Phase 19 status dashboard is extended to show Telegram's actual poll-loop health, not just "token configured", so an outage is visible before the user needs the fallback. | A full text conversation can be held entirely through the browser, with the same session/mode/privacy routing every other channel gets; if Telegram stops responding, the dashboard shows it and the web chat still works. See [docs/adr/0017](adr/0017-web-chat-channel.md) (implemented; verified with real OVMS and a real Telegram polling failure). |
 | Phase 21 — Hybrid local/cloud LLM routing | The "Optional hybrid local/cloud inference routing" item this doc's own §7 V0.3 list already named but never phased. Phase 19's LLM config is role-based from the start (`LLMRole.LOCAL`/`LLMRole.CLOUD`, each pointing at its own provider settings) precisely so this phase is additive: it populates the `CLOUD` role and adds a routing engine (`router.py`) that dispatches purely on role, never on which concrete provider backs it — local-only, cloud-only, or local-with-automatic-cloud-fallback (default once cloud is configured) — escalating to a configured frontier model (OpenAI, Anthropic, etc., still via the same OpenAI-compatible `ChatProvider` abstraction Phase 19 built) when the local call fails outright, plus a manual per-message override or standing routing policy for when the user judges the local model's answer insufficient, since a real automatic quality judgment would need another LLM call to arbitrate and is deliberately out of scope for v1 (same honesty-about-scope discipline as this codebase's other placeholder classifiers). | The agent keeps working on a local-only OpenVINO setup; when a cloud role is also configured, a failed local call can fall back automatically, while a valid but unsatisfying answer requires an explicit user override, and the Phase 19 utilization dashboard shows the `LOCAL`/`CLOUD` usage split. See [ADR 0018](adr/0018-hybrid-llm-routing.md) (implemented; OVMS dispatch and hosted Together AI verification recorded in HANDOVER.md). |
-| Phase 22 — Physical deployment and acceptance testing | Inventory original Jetson Nano and Reachy topology; prove runtime compatibility; implement real robot backend, [outbound WSS connectivity](adr/0019-robot-initiated-hub-connectivity.md), separate media transfers and homelab/Reachy/Nano Bash launchers with GUI access; run the [acceptance plan](phase-22-23.md). | Cold starts, physical motion/media, privacy, channels, outage recovery, backup restore, 8-hour desk run and 24-hour idle soak pass with hardware evidence. Planned, not implemented. |
-| Phase 23 — Production Google account settings | Begin with cross-cutting versioned database migrations and shared SecretStore, including existing LLM-key migration; then owner-authenticated Gmail/Calendar Accounts UI, OAuth and read-only adapters; see the [accounts plan](phase-22-23.md). | Real-account connect/read/refresh/restart/revoke/reconnect/disconnect and privacy/isolation checks pass; applicable Google production requirements verified; repeat hardware acceptance with accounts. Planned, not implemented. |
+| Phase 22a — Physical bring-up | Inventory original Jetson Nano and Reachy topology; prove runtime compatibility; implement real robot backend and [outbound WSS connectivity](adr/0019-robot-initiated-hub-connectivity.md) (substrate only — command routing still HTTP), and homelab/Reachy/Nano Bash launchers with GUI access. | **Implemented and live-verified.** Real inventory on the Nano; `ReachyDaemonBackend` dispatches named moves end-to-end against the real `reachy-mini-daemon` (confirmed in its own simulator mode; connectivity confirmed live on the Nano, real motor motion not yet triggered). WSS connectivity (auth/registration/generation-fencing/reconnect) and all four Bash launchers are live-verified on the Nano, including 4 real bugs found and fixed. Separate outbound HTTPS media transfers not yet built. See README Status and HANDOVER.md. |
+| Phase 22b — Physical acceptance testing | Run the full [acceptance plan](phase-22-23.md#satisfactory-run-acceptance-matrix) on real Nano/Reachy hardware: first real motor motion, physical voice, endurance (8-hour desk run, 24-hour idle soak), outage/reconnect, backup restore, privacy/consent, channels. | Cold starts, physical motion/media, privacy, channels, outage recovery, backup restore, 8-hour desk run and 24-hour idle soak pass with hardware evidence. **Deliberately deferred** until after Phase 23 (owner's call, 2026-09-23, so Phase 23 isn't blocked on Nano hardware availability) — planned, not started. |
+| Phase 23 — Production Google account settings | Begin with cross-cutting versioned database migrations and shared SecretStore, including existing LLM-key migration; then owner-authenticated Gmail/Calendar Accounts UI, OAuth and read-only adapters; see the [accounts plan](phase-22-23.md). | Real-account connect/read/refresh/restart/revoke/reconnect/disconnect and privacy/isolation checks pass; applicable Google production requirements verified; repeat hardware acceptance (Phase 22b's matrix) with accounts. Planned, not implemented; proceeds now, ahead of Phase 22b. |
 | Phase 24 — Owner recognition and voice access control | Web-portal owner enrollment, calibration and user-run accuracy testing; live face verification, speaker attribution, authenticated input and continuous room-audio gates; see the [recognition plan](phase-24.md). | Audible conversation requires fresh owner-in-view confidence strictly >60% plus privacy/liveness checks; unknown or ambiguous speakers cannot enter the conversation pipeline; spoof/outage/API-bypass tests pass on hardware; consequential actions retain authenticated text-only consent. Planned, not implemented. |
 
 ## 7. Release Targets
@@ -272,7 +280,7 @@ preserving physical embodiment.
 | LLM | Cloud initially | Abstract backend; later hybrid/local routing. |
 | Jetson | Optional office edge | Accelerator only; not required for system availability. |
 
-### Robot connectivity (Phase 22, planned)
+### Robot connectivity (Phase 22a, implemented)
 
 [ADR 0019](adr/0019-robot-initiated-hub-connectivity.md) replaces production
 robot-address registration with authenticated robot-initiated WSS. The hub
@@ -345,10 +353,10 @@ baseline reference. [1]
 
 ## 12. Immediate Next Actions
 
-1. Inventory the original Jetson Nano and Reachy model, OS/runtime, physical connection and device access; resolve service placement against ADR 0004.
-2. Implement Phase 22's real backend, supervised deployment and Bash launchers, including GUI access, per the [detailed plan](phase-22-23.md).
-3. Run the physical acceptance matrix, fix blockers, and record measured results before marking Phase 22 complete.
-4. Begin Phase 23 with versioned database migrations and shared SecretStore, migrating existing plaintext LLM keys; then implement the account-integration ADR, Google setup, Accounts UI and read-only adapters.
+1. ~~Inventory the original Jetson Nano and Reachy model, OS/runtime, physical connection and device access; resolve service placement against ADR 0004.~~ Done (Phase 22a).
+2. ~~Implement Phase 22's real backend, supervised deployment and Bash launchers, including GUI access, per the [detailed plan](phase-22-23.md).~~ Done (Phase 22a).
+3. Begin Phase 23 with versioned database migrations and shared SecretStore, migrating existing plaintext LLM keys; then implement the account-integration ADR, Google setup, Accounts UI and read-only adapters. Proceeds now, ahead of Phase 22b.
+4. Run the physical acceptance matrix (Phase 22b), fix blockers, and record measured results before marking Phase 22 complete — deferred until after Phase 23.
 5. Verify real Google access and repeat deployment/privacy/recovery tests before production rollout.
 6. Implement Phase 24 owner enrollment, calibrated recognition and speaker/output gates; pass the [hardware and adversarial acceptance matrix](phase-24.md#acceptance-and-release-gate) before enabling ambient owner-only voice.
 

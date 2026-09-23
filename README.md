@@ -158,7 +158,7 @@ live restart tests verify).
 
 ## Status
 
-Phases 0-20 are done:
+Phases 0-21 and 22a are done:
 
 - Phase 0: architecture freeze (ADRs, shared schemas).
 - Phase 1: Jarvis reference baseline — [docs/jarvis-baseline.md](docs/jarvis-baseline.md).
@@ -527,15 +527,42 @@ Phases 0-20 are done:
   Docker/Postgres/Caddy/OVMS checks. OVMS backed both roles in live routing
   tests; the subsequent Together AI hosted-provider check verified manual
   override and error fallback (see HANDOVER.md for evidence).
+- Phase 22a — bring-up (split from physical acceptance testing, now Phase
+  22b, so Phase 23 could proceed without waiting on hardware — see
+  [docs/phase-22-23.md](docs/phase-22-23.md)): original Jetson Nano/Reachy
+  bring-up. Inventory confirmed a genuine original Jetson Nano (JetPack
+  4.6.1, EOL) as the sole robot-attached machine, with a documented
+  container-based fix for this repo's glibc/torch dependency wall.
+  `ReachyDaemonBackend` (real HTTP client to `reachy-mini-daemon`) is
+  implemented, including the discovered `/api` route prefix and a
+  move/dataset mapping enumerated from the real HuggingFace emotions
+  dataset. [Robot-initiated outbound WSS
+  connectivity](docs/adr/0019-robot-initiated-hub-connectivity.md)
+  (auth/registration/generation-fencing/reconnect) and the homelab/Reachy/
+  Nano Bash launchers are implemented and live-verified — the launchers
+  found and fixed four real bugs along the way (a destructive action
+  ordered before its `--check` guard, a `systemctl` exit-code gotcha, a
+  daemon port collision, and the daemon's loopback-only bind). The daemon
+  has been started for real on the Nano (`sim=false`, real hardware ID),
+  and named moves have been triggered end-to-end against the real
+  `reachy-mini-daemon` running in its own `--mockup-sim` mode on the
+  homelab machine — confirming the move/dataset mapping and dispatch path
+  work, though not yet against real motors. Semantic command routing over
+  the new WSS connection is deliberately deferred (moves still go over
+  HTTP via `EmbodimentClient`). Full evidence trail in
+  [HANDOVER.md](HANDOVER.md).
 
 See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
-phase-by-phase roadmap. Phases 0-21 are implemented, including hosted-cloud
-verification. **Phases 22–24 are planned, not implemented:**
+phase-by-phase roadmap. Phases 0-21 and 22a are implemented, including
+hosted-cloud verification. **Phase 22b and Phases 23–24 remain planned:**
 
-- Phase 22: original Jetson Nano/Reachy bring-up, real hardware backend,
-  [robot-initiated WSS connectivity](docs/adr/0019-robot-initiated-hub-connectivity.md)
-  with separate outbound media, homelab and robot/companion-board Bash
-  launchers with GUI access, and measured physical acceptance tests.
+- Phase 22b: physical acceptance testing, deferred until after Phase 23 (the
+  owner's explicit call, so Phase 23 doesn't sit blocked on Nano hardware
+  availability). Covers the full
+  [physical acceptance matrix](docs/phase-22-23.md#satisfactory-run-acceptance-matrix)
+  — a move triggered on actual Nano motors (not yet attempted), 8-hour desk
+  run, 24-hour idle soak, outage/reconnect tests, and the rest — before
+  Phase 22 as a whole can be marked complete.
 - Phase 23: first add versioned database migrations and a shared SecretStore
   for LLM/Google/SMTP credentials, migrating existing plaintext LLM keys; then
   production Gmail/Calendar settings, OAuth and read-only workflow integration.

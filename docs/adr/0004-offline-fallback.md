@@ -38,13 +38,16 @@ This revises the guarantee, not the architecture:
   for this specific physical setup; do not build or promise features that
   assume a second robot-side host exists.
 
-## Phase 22 connectivity amendment (planned)
+## Phase 22a connectivity amendment (connectivity substrate implemented)
 
 [ADR 0019](0019-robot-initiated-hub-connectivity.md) adopts robot-initiated
 WSS control and a separate outbound media path. Core-to-hub HTTP, semantic
 commands, hub-owned browser WebRTC and independent local fallback remain.
-The original HTTP implementation described below remains current until
-Phase 22 is implemented.
+The connectivity substrate (auth/registration/heartbeat/reconnect) is
+implemented and live-verified (2026-09-22); semantic command routing still
+uses the original HTTP implementation described below, deliberately
+deferred. Physical acceptance of this on real Nano/Reachy hardware is
+Phase 22b, not yet started (see [docs/phase-22-23.md](../phase-22-23.md)).
 
 ## Context
 

@@ -22,9 +22,17 @@ conflict once you notice it.
 
 ## Where things stand
 
-**Phases 0-21 are implemented.** Last implementation: **Phase 21 — Hybrid
-local/cloud LLM routing**, now including a real hosted-provider live check.
-See [ADR 0018](docs/adr/0018-hybrid-llm-routing.md).
+**Phases 0-21 and 22a are implemented.** Phase 22 was split
+(2026-09-23, owner's decision) into **22a — bring-up** (done: inventory,
+real robot backend, WSS connectivity, Bash launchers) and **22b — physical
+acceptance testing** (deferred to a later session — see the "Phase 22
+split into 22a/22b" entry further down for the full rationale and status).
+**Phase 23 (schema migrations/SecretStore, then Google Gmail/Calendar
+Accounts) is the active next phase**, proceeding ahead of Phase 22b.
+
+Last fully-implemented numbered phase before this Phase 22 detour: **Phase
+21 — Hybrid local/cloud LLM routing**, including a real hosted-provider
+live check. See [ADR 0018](docs/adr/0018-hybrid-llm-routing.md).
 
 - Core `llm/router.py` dispatches local-only, cloud-only, or local then cloud
   on actual failure. No automatic quality judgment. `force_frontier` travels
@@ -939,6 +947,23 @@ ever actually triggered a named move end-to-end" gap, not the "verified
 on real hardware" one. Both the throwaway daemon and the
 `reachy-embodiment` uvicorn process were killed at the end of this
 session; nothing was left running on the homelab machine.
+
+**Phase 22 split into 22a/22b (owner's decision, 2026-09-23).** Everything
+above — inventory, `ReachyDaemonBackend`, WSS connectivity, the Bash
+launchers, and today's simulator move-trigger test — is now **Phase 22a,
+implemented**. The remaining physical acceptance work (a move triggered on
+real Nano motors, the full acceptance matrix in
+[docs/phase-22-23.md](docs/phase-22-23.md#satisfactory-run-acceptance-matrix):
+8-hour desk run, 24-hour idle soak, physical voice, outage/reconnect,
+backup restore, etc.) is now **Phase 22b, deliberately deferred** — the
+owner chose to proceed straight to Phase 23 rather than wait for Nano
+hardware availability. `README.md`, `docs/plan.md`, `docs/phase-22-23.md`,
+and ADRs 0004/0019 were all updated to reflect this split; a future
+session resuming Phase 22b should start at "trigger the first real move on
+the Nano" (daemon and reachy-embodiment container were left running there
+per the earlier note above, if still true) rather than re-deriving any of
+this. **Phase 23 (schema migrations/SecretStore, then Google
+Gmail/Calendar Accounts) is now the active next phase.**
 
 **Cross-session coordination note:** this Phase 22 work happened live
 across two Claude Code sessions (homelab + Nano) via `SendMessage`/cross-session
