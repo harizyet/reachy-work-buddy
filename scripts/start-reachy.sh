@@ -203,9 +203,9 @@ else
         # here (e.g. no 'PCM',0 control on this card) would otherwise abort
         # the whole daemon start.
         amixer -c "$DETECTED_CARD" sset 'PCM',0 100% unmute >/dev/null 2>&1 \
-            || log_warn "could not set PCM',0 volume on card ${DETECTED_CARD} — audio may be quiet or muted"
+            || log_warn "could not set 'PCM',0 volume on card ${DETECTED_CARD} — audio may be quiet or muted"
         amixer -c "$DETECTED_CARD" sset 'PCM',1 100% unmute >/dev/null 2>&1 \
-            || log_warn "could not set PCM',1 volume on card ${DETECTED_CARD} — audio may be quiet or muted"
+            || log_warn "could not set 'PCM',1 volume on card ${DETECTED_CARD} — audio may be quiet or muted"
     fi
 
     log_info "starting $DAEMON_SERVICE"
