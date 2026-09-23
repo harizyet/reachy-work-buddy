@@ -283,8 +283,36 @@ detected card number (not relying on `alsactl restore` alone), on every
 real daemon start — not just at install time — so this can't silently
 regress on the next boot or USB replug. See
 [deployment.md](../deployment.md#robot-host-and-jetson-nano) for the
-corresponding note; PulseAudio autospawn disabling remains a one-time
-manual per-user step, not scripted.
+corresponding note; PulseAudio autospawn disabling was subsequently added
+to `install-reachy-venv.sh` too, so a fresh install doesn't need the same
+manual fix again (still a one-time install step, not re-applied on every
+start).
+
+## Microphone capture — confirmed working (raw ALSA, not our STT pipeline)
+
+Speaker output was verified above, but the daemon only opening
+`reachymini_audio_src` without erroring isn't proof capture actually
+works. Tested separately, owner-supervised: `arecord -D
+reachymini_audio_src -f S16_LE -r 16000 -c 2 -d 5` while the owner spoke
+near the robot, played back via `aplay -D reachymini_audio_sink`. **Owner
+confirmed their voice was recognizable on playback.** The capture PCM is
+shareable (`reachymini_audio_src` is `dsnoop`, ipc_key 4242) — `fuser`
+showed only the daemon holding the underlying device, and `arecord`
+opened alongside it with no daemon stop/restart needed. Recording: 5.0s
+exactly (320,044 bytes), RMS -31.9dBFS overall, peak ~-8dBFS with no
+clipping, speech energy concentrated in the first ~2s then a ~-62dBFS
+room noise floor for the remainder — consistent with a real, working
+capture, not silence or noise. Both channels were sample-identical (mono
+duplicated to stereo) — relevant for any future capture-path code: take
+one channel. No capture-error/overrun daemon log lines during the test.
+The recorded file was not kept (deleted after the test, never contained
+anything beyond a 5s speech sample).
+
+This confirms the physical mic/ALSA hardware path. **It does not test our
+own voice feature** — there is still no code path in `reachy-embodiment`
+from the robot's mic into the homelab's `/voice/turn` STT pipeline (only
+`POST /audio/play` exists on the output side); building that remains
+separate, unscoped future work, not part of this session.
 
 ## `stewart_5` precision: accepted, not pursued further (owner decision)
 
@@ -314,5 +342,5 @@ full behaviour set verified.
 | Outbound connectivity | PARTIAL PASS: real WSS registration + incidental wrong-token rejection proven; TLS, network-change reconnect, revoked-token not exercised |
 | Physical identity | PARTIAL: `sim=false` confirmed via daemon and hub HTTP registry, audible playback now confirmed (see Daemon audio); camera/fresh-scene correspondence not exercised |
 | Motion/fallback | PASS (pragmatic bar, owner-accepted): all 14 mapped named behaviours accepted despite a known `stewart_5` offset; precise IK tracking still fails, but the owner explicitly decided not to pursue this further — animations conveying action/emotion is the actual bar, not exact joint tracking. Ten-cycle repetition and 5-minute-outage/reconnect rows not exercised |
-| Physical voice | Animation sound effects fixed and audible; mic capture/STT round-trip not exercised this session |
+| Physical voice | PARTIAL: speaker output and mic capture both confirmed working (owner heard sound effects; owner's own voice was recognizable on played-back recording). The acceptance row's actual target — 20 scripted STT/inference turns with p50/p95 latency — not exercised, and there is no code path yet routing the robot's mic into our `/voice/turn` STT pipeline (separate future work) |
 | All other rows | Not attempted this session |

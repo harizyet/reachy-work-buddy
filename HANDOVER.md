@@ -74,7 +74,11 @@ autospawned PulseAudio instance holding the device. Fixed by regenerating
 autospawn, and raising the mixer — owner confirmed audio audible.
 `scripts/start-reachy.sh` now re-runs that detection and resets the mixer
 on every real daemon start (not just install), so a future re-enumeration
-can't silently regress it again.
+can't silently regress it again. Microphone capture was separately
+confirmed working (owner's voice recognizable on a recorded/played-back
+sample) — this tests only the physical mic/ALSA path, not our own voice
+feature: there is still no code routing the robot's mic into the
+homelab's `/voice/turn` STT pipeline, unscoped future work.
 [Phase 26](docs/phase-26.md) was refocused 2026-09-23 from a generic virtual
 meeting bot to an embodied secretary: owner-present meeting companion (26a);
 a bounded temporary-absence catch-up mode for short owner step-outs within an
