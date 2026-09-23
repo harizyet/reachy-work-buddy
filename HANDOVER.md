@@ -829,14 +829,40 @@ explicitly overridden at `docker run` time to the resolved
 socket would try to claim host port 8000 too and collide with the
 daemon exactly like the original bridge-mode default did.
 `deploy/reachy/.env.example` updated to match (no more
-`host.docker.internal` guidance). **Not yet verified live** — this is
-untested against the real daemon/container; the Nano hadn't attempted
-it when this was written. Given this is the fourth real, load-bearing
-bug found in a row on this same "container reaches real daemon" path,
-treat this fix with the same "needs live confirmation before trusting
-it" posture as the systemd/`--check` bugs earlier.
+`host.docker.internal` guidance).
 
-All fixes above pushed.
+**Confirmed live on the Nano (2026-09-23):** `--network host` fix
+works. `GET /state` → `{"connected": true, "sim": false, ...}` — real
+daemon, real hardware, genuinely reachable from the container. One
+snag along the way, self-diagnosed and fixed by the Nano session rather
+than reported back as a new bug: its own `deploy/reachy/.env`, created
+earlier from the old `.env.example` template, still had the stale
+`REACHY_DAEMON_URL=http://host.docker.internal:8000` hardcoded — since
+`: "${VAR:=default}"` doesn't override an already-set variable, the
+new `127.0.0.1` default never took effect until that file was updated
+to match. A reminder that a stale personal `.env` copy can mask an
+otherwise-correct code fix — worth checking first if a future session
+sees unexpected old-behavior after pulling a fix that changes a
+default.
+
+**This closes out the "container reaches real daemon" bug chain**:
+default-dataset naming (wrong dataset guessed) → `/api` prefix (bare
+paths assumed) → port collision (8000 used twice) → bridge-vs-host
+networking (daemon's loopback-only bind) — four real, load-bearing
+bugs, each found only by actually running things against real
+hardware, none catchable by reading source or by `bash -n`/shellcheck.
+
+**Deliberately not yet done — the owner's explicit call, not a
+blocker hit:** the actual `POST /behaviour/waiting` (or any other) move
+trigger has **not been attempted**. Infrastructure connectivity is
+fully verified; the actual SDK/move-triggering layer above it is not.
+The owner chose to stop here for today and treat live animation/motion
+verification as its own dedicated future session rather than
+open-endedly live-debug whatever might surface at that layer today.
+**Daemon and the reachy-embodiment container are both left running on
+the Nano** (owner's choice) — a future session can pick up immediately
+at "trigger the first real move" without re-running any install/start
+steps, as long as nothing has changed the Nano's state in between.
 
 **Not yet verified:** the daemon actually being installed/started via
 these launchers (systemd unit was never installed on this Nano —
