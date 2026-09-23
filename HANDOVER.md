@@ -52,9 +52,25 @@ for exact figures/timestamps. **Do not resume motion testing until motors
 error state) — this is a hardware finding, not an embodiment/software
 defect (the command chain itself dispatched and reported correctly
 throughout, and the current head position must not be saved as a
-calibration/homing offset since it isn't a true zero). Daemon audio is
-also broken independently (`playbin failed to activate sinks`), blocking
-the voice/audio acceptance rows regardless of the head issue.
+calibration/homing offset since it isn't a true zero).
+
+The owner then set a pragmatic acceptance bar (not the robot's
+manufacturer; if shipped behaviours look acceptable despite the known
+offset, that's sufficient) and confirmed all 14 of `_DEFAULT_BEHAVIOUR_
+MOVES` acceptable by direct observation — cross-checked against the
+official Reachy Mini app, whose own opening animation showed the same
+kind of tilt. Motion/fallback is a partial pass on that basis; precise
+tracking is still broken and `stewart_5` physical inspection remains open.
+
+Daemon audio (`playbin failed to activate sinks`, no animation sound
+effects) was root-caused and fixed: a stale `~/.asoundrc` referenced a
+USB audio card index that no longer existed after re-enumeration, plus an
+autospawned PulseAudio instance holding the device. Fixed by regenerating
+`~/.asoundrc` via the package's own detection, disabling PulseAudio
+autospawn, and raising the mixer — owner confirmed audio audible.
+`scripts/start-reachy.sh` now re-runs that detection and resets the mixer
+on every real daemon start (not just install), so a future re-enumeration
+can't silently regress it again.
 [Phase 26](docs/phase-26.md) was refocused 2026-09-23 from a generic virtual
 meeting bot to an embodied secretary: owner-present meeting companion (26a);
 a bounded temporary-absence catch-up mode for short owner step-outs within an

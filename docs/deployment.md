@@ -140,6 +140,18 @@ Starting the daemon wakes/moves the robot by default. Only start it or run
 motion tests while the owner is physically present and supervising.
 `--check` must remain read-only and never start the daemon.
 
+USB audio enumeration order isn't stable across boots/replugs, so a stale
+`~/.asoundrc` card index can silently break daemon audio (no animation
+sound effects, no mic capture) with no error visible from the launcher —
+found live during [Phase 22b](phase-22-23.md#satisfactory-run-acceptance-matrix)
+and detailed in [that session's evidence](verification/phase-22b-first-motion-2026-09-23.md).
+`start-reachy.sh` now re-detects the card and regenerates `~/.asoundrc` (via
+`reachy_mini.media.audio_utils`) and resets PCM volume on every real daemon
+start, not just at install time. If a desktop session's own PulseAudio
+autospawns and holds the robot's audio device, set `autospawn = no` in
+`~/.config/pulse/client.conf` for the `reachy` user — this is a one-time
+manual step, not something the launcher automates.
+
 1. Prepare `deploy/reachy/.env` from its example, permission-restricted to
    the owner. Match `ROBOT_ID`/`ROBOT_TOKEN` with an entry in homelab
    `ROBOT_TOKENS` (JSON mapping robot IDs to tokens).

@@ -135,6 +135,59 @@ fi
 if systemctl is-active --quiet "$DAEMON_SERVICE"; then
     log_info "$DAEMON_SERVICE already active"
 else
+    # Re-check the audio device config just before starting, not only at
+    # install time. USB audio enumeration order isn't stable across
+    # boots/replugs (found live on the Nano — see
+    # docs/verification/phase-22b-first-motion-2026-09-23.md): a stale
+    # ~/.asoundrc pointing at a card that no longer exists silently breaks
+    # daemon audio (no animation sound effects, no mic capture) with no
+    # error visible from this script. install-reachy-venv.sh's own
+    # detection (reachy_mini.media.audio_utils) only writes if the file is
+    # absent, so re-run it here whenever the file doesn't match the
+    # currently detected card. Best-effort/non-fatal: motion still works
+    # without audio.
+    REACHY_VENV="${HOME}/reachy-venv"
+    ASOUNDRC="${HOME}/.asoundrc"
+    if [[ -x "${REACHY_VENV}/bin/python3" ]]; then
+        DETECTED_CARD="$("${REACHY_VENV}/bin/python3" -c 'from reachy_mini.media.audio_utils import get_respeaker_card_number; print(get_respeaker_card_number())' 2>/dev/null || true)"
+        if [[ -n "$DETECTED_CARD" && "$DETECTED_CARD" != "None" ]]; then
+            if [[ -f "$ASOUNDRC" ]] && ! grep -q "hw:${DETECTED_CARD},0" "$ASOUNDRC" 2>/dev/null; then
+                BACKUP="${ASOUNDRC}.stale-$(date +%Y%m%d%H%M%S)"
+                mv "$ASOUNDRC" "$BACKUP"
+                log_warn "~/.asoundrc didn't reference detected audio card ${DETECTED_CARD} — backed up to $(basename "$BACKUP")"
+            fi
+            if [[ ! -f "$ASOUNDRC" ]]; then
+                "${REACHY_VENV}/bin/python3" -c 'from reachy_mini.media.audio_utils import write_asoundrc_to_home; write_asoundrc_to_home()' \
+                    && log_info "regenerated ~/.asoundrc for detected audio card ${DETECTED_CARD}" \
+                    || log_warn "failed to regenerate ~/.asoundrc — audio may not work"
+            fi
+        else
+            log_warn "could not detect Reachy Mini audio card via reachy_mini.media.audio_utils — skipping ~/.asoundrc re-check"
+        fi
+    else
+        log_warn "reachy-venv not found at ${REACHY_VENV} — skipping audio device (~/.asoundrc) re-check"
+    fi
+    # Best-effort restore of any persisted ALSA mixer levels (e.g. a
+    # previously attenuated PCM volume saved with `alsactl store`); a
+    # missing state file or lack of permission is not fatal here.
+    sudo alsactl restore >/dev/null 2>&1 || log_warn "alsactl restore failed or found nothing saved — mixer levels may be at driver defaults"
+    # alsactl restore keys saved state by the ALSA card *id* string (e.g.
+    # "Audio"), not the numeric card index — found live on the Nano: the
+    # same physical card previously enumerated under a different id
+    # ("Audio_1") with an old, quieter saved volume, which a plain restore
+    # would silently bring back if the id ever drifts again. Set the PCM
+    # volume explicitly by the freshly detected numeric card instead of
+    # trusting restore alone. Unmuted/100% matches what the owner verified
+    # audible during Phase 22b; not fatal if amixer/the card is unavailable.
+    if [[ -n "${DETECTED_CARD:-}" && "$DETECTED_CARD" != "None" ]]; then
+        # Two distinct 'PCM' controls (,0 and ,1) were both found attenuated
+        # live on the Nano's card — set both, matching what the owner
+        # verified audible.
+        amixer -c "$DETECTED_CARD" sset 'PCM',0 100% unmute >/dev/null 2>&1
+        amixer -c "$DETECTED_CARD" sset 'PCM',1 100% unmute >/dev/null 2>&1 \
+            || log_warn "could not set PCM volume on card ${DETECTED_CARD} — audio may be quiet or muted"
+    fi
+
     log_info "starting $DAEMON_SERVICE"
     sudo systemctl start "$DAEMON_SERVICE" || die "failed to start $DAEMON_SERVICE — check: systemctl status $DAEMON_SERVICE"
 fi
