@@ -160,14 +160,30 @@ Enabling the daemon unit alone is not the whole unattended-boot story:
   `start-reachy.sh`/`start-jetson.sh`.
 - The ADR 0019 outbound WSS connection self-reconnects with backoff once
   embodiment is up — no manual step needed.
-- **Gap, not yet closed**: the old HTTP command-routing registration
-  (`POST /robots` with `ROBOT_HTTP_BASE_URL`, step 3 below) currently only
-  runs inside `start-reachy.sh` itself. Nothing re-runs it automatically
-  on an unattended boot, so the hub can't route real commands to the robot
-  after a reboot until the launcher is run again by hand. Closing this
-  (e.g. a boot-time oneshot systemd unit invoking the launcher, or moving
-  registration onto the self-reconnecting WSS path once command routing
-  moves there per ADR 0019) is unscoped follow-up work, not done yet.
+- The old HTTP command-routing registration (`POST /robots` with
+  `ROBOT_HTTP_BASE_URL`, step 3 below) only runs inside `start-reachy.sh`
+  itself, but this is **not** a gap in production: the hub's registry is
+  Postgres-backed with an upsert
+  (`reachy_hub.postgres_registry.PostgresRobotRegistry`, wired by default
+  whenever `DATABASE_URL` is set, as it is in `deploy/homelab`), so a prior
+  registration survives both a Nano reboot and a hub restart on its own.
+  It only goes stale if the Nano's registered address (its stable
+  Tailscale IP) or port actually changes, or the hub's Postgres volume is
+  reset — neither is a boot-time concern.
+- **Real gap, confirmed and not yet closed**: `start-reachy.sh`'s audio
+  re-detection/regeneration/mixer-reset step (above) only runs when that
+  script itself starts the daemon. When systemd starts
+  `reachy-mini-daemon` directly at boot, that step never runs — if the USB
+  audio card index shifts across the reboot, audio silently breaks again
+  exactly like the failure found and fixed in Phase 22b. `alsactl restore`
+  at boot only partly covers this (it keys by ALSA card *id*, not index,
+  per that same session's finding). Proposed fix, pending owner approval:
+  factor the audio detection/regeneration/mixer logic out of
+  `start-reachy.sh` into a shared script, and run it via an
+  `ExecStartPre=` on `reachy-mini-daemon.service` (runs as `User=reachy`
+  with the right `HOME` for `~/.asoundrc`; `amixer` needs no root) so both
+  the manual-launcher path and the systemd-boot path use the same logic.
+  Not built yet.
 
 USB audio enumeration order isn't stable across boots/replugs, so a stale
 `~/.asoundrc` card index can silently break daemon audio (no animation
