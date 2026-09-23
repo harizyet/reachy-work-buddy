@@ -281,7 +281,7 @@ preserving physical embodiment.
 | STT | Homelab initially | Local faster-whisper; raw office audio remains local network. |
 | TTS | Cloud initially | Keep provider interface pluggable; later local option. |
 | LLM | Cloud initially | Abstract backend; later hybrid/local routing. |
-| Jetson | Optional office edge | Accelerator only; not required for system availability. |
+| Jetson Nano | Reachy-side host | Required for the current USB-attached deployment; runs the real robot daemon and `reachy-embodiment` (see Phase 22a). Nano loss makes the robot inert; it is not an optional accelerator. |
 
 ### Robot connectivity (Phase 22a, implemented)
 
