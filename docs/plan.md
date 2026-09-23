@@ -37,7 +37,7 @@ integration, making this service boundary compatible with the platform.
 - Maintain one persistent conversation across Reachy, Telegram, web, and phone-call interfaces.
 - Decouple robot animation and presence from the LLM/orchestrator.
 - Allow remote access and limited telepresence while travelling.
-- Keep local motion and fallback personality available when the homelab agent or optional Jetson is offline.
+- Keep local motion and fallback personality available when the homelab agent is offline.
 - Support gradual migration between cloud and local STT/TTS/LLM providers.
 
 ### Non-goals for initial releases
@@ -352,7 +352,7 @@ baseline reference. [1]
 - Reachy conversation → continue in Telegram with same session.
 - Private WebRTC phone call → Reachy listening/thinking/speaking animation with no room audio.
 - Homelab outage → Reachy falls back to local idle personality.
-- Jetson outage → core assistant remains available; physical embodiment
+- Jetson outage → homelab assistant remains available; physical embodiment
   becomes unavailable and the outage is reported as a degraded state, not
   silently masked (the Nano is the sole embodiment host — see
   [deployment](deployment.md#robot-host-and-jetson-nano)).

@@ -157,8 +157,7 @@ were removed; the pre-existing OVMS container was left running.
 ## Machine-specific continuation notes
 
 - The Nano is the sole embodiment host; losing it makes the robot inert.
-  Its daemon and embodiment container were left running by owner choice on
-  2026-09-23. **Recheck current state** before assuming that still holds.
+  Recheck daemon/container state before assuming either is running.
   Starting the daemon wakes/moves the robot: owner presence and supervision
   are required. `--check` must never start hardware.
 - Nano uses host-networked embodiment on 8100 and the loopback daemon on

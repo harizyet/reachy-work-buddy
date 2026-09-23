@@ -291,7 +291,8 @@ explicitly disposable project. Leave unrelated services such as OVMS alone.
 
 ## Schema upgrades and credential keys
 
-Core and hub require revision `003_accounts`. The ordered Alembic history ships
+Core and hub require revision `004_persona`, which follows `003_accounts`
+and adds assistant persona configuration. The ordered Alembic history ships
 in core's image; SQL stores perform compatibility checks, not startup DDL.
 Compose runs `migrate` before hub/core, including through
 `scripts/start-homelab.sh`. Launcher `--check` remains read-only and does not
