@@ -59,8 +59,12 @@ manufacturer; if shipped behaviours look acceptable despite the known
 offset, that's sufficient) and confirmed all 14 of `_DEFAULT_BEHAVIOUR_
 MOVES` acceptable by direct observation — cross-checked against the
 official Reachy Mini app, whose own opening animation showed the same
-kind of tilt. Motion/fallback is a partial pass on that basis; precise
-tracking is still broken and `stewart_5` physical inspection remains open.
+kind of tilt. **The owner then explicitly decided not to pursue
+`stewart_5` physical inspection/repair further** — not the robot's
+manufacturer, and named behaviours only need to convey action/emotion, not
+reach exact commanded joint angles. Motion/fallback is accepted closed on
+that basis for Phase 22b; only re-open if it produces genuinely unsafe or
+unacceptable-looking motion in practice.
 
 Daemon audio (`playbin failed to activate sinks`, no animation sound
 effects) was root-caused and fixed: a stale `~/.asoundrc` referenced a

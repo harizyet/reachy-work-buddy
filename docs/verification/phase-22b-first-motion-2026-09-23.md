@@ -286,13 +286,25 @@ regress on the next boot or USB replug. See
 corresponding note; PulseAudio autospawn disabling remains a one-time
 manual per-user step, not scripted.
 
+## `stewart_5` precision: accepted, not pursued further (owner decision)
+
+The owner decided not to pursue physical inspection/repair of `stewart_5`'s
+positioning offset. Rationale, stated directly: this project is not the
+robot's manufacturer, and named-behaviour animations only need to convey
+robot actions and a sense of emotion, not reach exact commanded joint
+angles. All 14 mapped behaviours were already owner-accepted on that basis
+(see above). This closes the motor-precision thread for Phase 22b — the
+offset is a known, accepted characteristic of this specific robot unit,
+not a blocker. Re-open only if it starts producing genuinely unsafe or
+unacceptable-looking motion in practice, not for precision's own sake.
+
 ## Session outcome
 
 Motion testing (beyond the accepted named-behaviour set above) stopped by
-owner decision after the head-tracking fault diagnosis. Daemon was left
-running at the end of this session, with the fixed audio config and full
-behaviour set verified. Physical inspection of `stewart_5` remains open,
-not part of this record.
+owner decision after the head-tracking fault diagnosis, then explicitly
+closed as accepted rather than pursued further (see above). Daemon was
+left running at the end of this session, with the fixed audio config and
+full behaviour set verified.
 
 ## Status against the acceptance matrix
 
@@ -301,6 +313,6 @@ not part of this record.
 | Automated baseline | PASS (this session): 371 passed/14 skipped, Ruff clean, `bash -n` clean on launchers (ShellCheck unavailable on homelab box, not run) |
 | Outbound connectivity | PARTIAL PASS: real WSS registration + incidental wrong-token rejection proven; TLS, network-change reconnect, revoked-token not exercised |
 | Physical identity | PARTIAL: `sim=false` confirmed via daemon and hub HTTP registry, audible playback now confirmed (see Daemon audio); camera/fresh-scene correspondence not exercised |
-| Motion/fallback | PARTIAL PASS (pragmatic bar): all 14 mapped named behaviours owner-accepted despite a known `stewart_5` offset; precise IK tracking still fails and physical inspection of that motor remains open. Ten-cycle repetition and 5-minute-outage/reconnect rows not exercised |
+| Motion/fallback | PASS (pragmatic bar, owner-accepted): all 14 mapped named behaviours accepted despite a known `stewart_5` offset; precise IK tracking still fails, but the owner explicitly decided not to pursue this further — animations conveying action/emotion is the actual bar, not exact joint tracking. Ten-cycle repetition and 5-minute-outage/reconnect rows not exercised |
 | Physical voice | Animation sound effects fixed and audible; mic capture/STT round-trip not exercised this session |
 | All other rows | Not attempted this session |
