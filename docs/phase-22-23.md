@@ -3,16 +3,21 @@
 Status: Phase 22 is split into **22a — bring-up** (deliverables 1–3 below:
 inventory, real robot backend, WSS connectivity, Bash launchers —
 implemented and partially live-verified) and **22b — physical acceptance
-testing** (deliverable 5, the acceptance matrix below — not started).
-This split was the owner's explicit decision (2026-09-23) so that Phase 23
-does not sit blocked on Nano hardware availability: Phase 23 now proceeds
-immediately after 22a, and 22b is deferred to a later session. Phase 23
-reruns the relevant acceptance tests (22b's matrix) with production account
-access once both 22b and Phase 23's own implementation are ready. Written
-2026-09-22, updated 2026-09-23 — see the [bring-up record](verification/phase-22-bring-up.md) for evidence. The companion board is confirmed as an **original Jetson Nano**, not
-Orin, running JetPack 4.6.1 (EOL), with 3.9GB RAM; Reachy Mini's
-camera/audio/motor-controller are all USB-attached directly to it (no
-separate onboard computer exists).
+testing** (deliverable 5, the acceptance matrix below — **started
+2026-09-23, BLOCKED**). This split was the owner's explicit decision
+(2026-09-23) so that Phase 23 does not sit blocked on Nano hardware
+availability: Phase 23 proceeded first, and 22b resumed once the owner was
+physically available. Phase 23 reruns the relevant acceptance tests (22b's
+matrix) with production account access once both 22b and Phase 23's own
+implementation are ready. Written 2026-09-22, updated 2026-09-23 — see the
+[bring-up record](verification/phase-22-bring-up.md) and
+[first-motion session](verification/phase-22b-first-motion-2026-09-23.md)
+for evidence; the latter found a real head-motor hardware fault (antennas
+track commanded poses correctly, the head does not) that blocks further
+motion testing until physically inspected. The companion board is confirmed
+as an **original Jetson Nano**, not Orin, running JetPack 4.6.1 (EOL), with
+3.9GB RAM; Reachy Mini's camera/audio/motor-controller are all USB-attached
+directly to it (no separate onboard computer exists).
 
 ## Starting point and architecture gate
 
@@ -130,13 +135,20 @@ not a robot address in the hub. The supervised service owns reconnection,
 not a foreground shell loop. Run one hub worker until connection routing
 across workers is explicitly implemented.
 
-## Phase 22b — physical acceptance testing (deferred until after Phase 23)
+## Phase 22b — physical acceptance testing (started 2026-09-23, BLOCKED)
 
-Deliberately not started (owner's call, 2026-09-23): Phase 23 proceeds
-first so it isn't blocked on Nano hardware availability. Resume this by
-running deliverable 5 above — the acceptance matrix below — on the real
-Nano/Reachy hardware, starting with the first move ever triggered on real
-motors (only the daemon's own simulator has been exercised so far).
+Deferred until Phase 23 proceeded first (owner's call, 2026-09-22) so it
+wasn't blocked on Nano hardware availability, then started 2026-09-23 once
+the owner was physically present and supervising. Real outbound WSS
+registration was achieved for the first time (see
+[first-motion session](verification/phase-22b-first-motion-2026-09-23.md)),
+and the first-ever command was sent to real motors: antennas tracked
+correctly, but the head (Stewart platform) did not reach commanded poses
+and logged an IK collision warning. **Blocked on physical inspection of the
+head** (mechanical obstruction, stalled/under-torque motor, or a
+head-specific power/calibration fault) before any further motion testing.
+Resume by continuing deliverable 5 — the acceptance matrix below — once the
+head fault is resolved; most rows below remain unattempted.
 
 ### Required equipment and configuration
 

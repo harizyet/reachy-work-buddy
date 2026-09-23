@@ -63,6 +63,9 @@ These are dated evidence, not startup instructions or current health checks.
   launcher, WS, Nano, and simulator results, with unverified items explicit.
 - [Physical inventory](verification/phase-22-inventory-2026-09-22.md): original
   raw hardware/runtime findings and subsequent dependency/device/memory checks.
+- [Phase 22b first motion](verification/phase-22b-first-motion-2026-09-23.md):
+  first real WSS registration and first-ever real-motor command, which found
+  a head-motion hardware fault; session stopped for physical inspection.
 
 - [Phase 23 foundation](verification/phase-23-foundation-2026-09-23.md): migrations,
   SecretStore, isolated database recovery and built-image checks.
