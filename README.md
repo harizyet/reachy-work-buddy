@@ -18,7 +18,7 @@ robot presence and fallback independent of homelab availability.
 Phases 0–21 and 22a are implemented. Phase 23 (versioned migrations,
 SecretStore, and Gmail/Calendar Accounts) is implemented; real Google-account
 and production acceptance remain open. The owner deferred
-Phase 22b's physical acceptance until after Phase 23. Phases 24–25 remain
+Phase 22b's physical acceptance until after Phase 23. Phases 24–26 remain
 planned. The [roadmap](docs/plan.md#6-implementation-roadmap) owns phase scope;
 [verification records](docs/README.md#verification-records) distinguish tested
 behavior from outstanding acceptance.

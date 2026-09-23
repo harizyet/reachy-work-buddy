@@ -232,7 +232,7 @@ see the [deployment and accounts acceptance plan](phase-22-23.md). See
 | Phase 23 — Production Google account settings | Begin with cross-cutting versioned database migrations and shared SecretStore, including existing LLM-key migration; then owner-authenticated Gmail/Calendar Accounts UI, OAuth and read-only adapters; see the [accounts plan](phase-22-23.md). | Real-account connect/read/refresh/restart/revoke/reconnect/disconnect and privacy/isolation checks pass; applicable Google production requirements verified; repeat hardware acceptance (Phase 22b's matrix) with accounts. Implementation complete and verified with isolated database/provider/browser fixtures. Real-account, production-audience and deferred physical-repeat acceptance remain open; not yet production-accepted. |
 | Phase 24 — Owner recognition and voice access control | Web-portal owner enrollment, calibration and user-run accuracy testing; live face verification, speaker attribution, authenticated input and continuous room-audio gates; see the [recognition plan](phase-24.md). | Audible conversation requires fresh owner-in-view confidence strictly >60% plus privacy/liveness checks; unknown or ambiguous speakers cannot enter the conversation pipeline; spoof/outage/API-bypass tests pass on hardware; consequential actions retain authenticated text-only consent. Planned, not implemented. |
 | Phase 25 — Meeting transcription and minutes | Upload or live-record (via Call Reachy) a meeting/conversation, transcribe it with the existing local STT, and hand the transcript to the LLM stack for a structured summary, key points, and action items; see the [transcription plan](phase-25.md). | A real recording (uploaded or live) produces summary/key points/action items in the operator UI via an async job the UI polls, not a blocking request; action items become tasks only after explicit owner confirmation; minutes are never spoken through Reachy's speaker and cloud delivery of a transcript requires a separate off-by-default opt-in. Planned, not implemented; depends on Phase 23's migration framework. |
-| Phase 26 — Embodied meeting secretary | Reachy physically present for meetings: owner-present companion recording and minutes (26a), with a bounded continuity/catch-up mode for short owner step-outs within an already-running 26a session (26a.2), physical secretary attendance while the owner is absent for most/all of a meeting under an explicit ADR amendment (26b), and bounded delegation limited to pre-approved questions/statements or the owner's own verbatim reply (26c); see the [secretary plan](phase-26.md). Virtual/cloud bot attendance is deferred, not a prerequisite. | 26a/26a.2 need no ADR amendment since the owner is present or briefly stepping out of an already-authorized meeting; 26b/26c require the accepted Phase 24 amendment and supervised hardware acceptance; the platform never answers for the owner or makes commitments. Planned, not implemented; builds on Phase 25, requires Phase 22b hardware for every stage. |
+| Phase 26 — Embodied meeting secretary | Reachy physically present for meetings: owner-present companion recording and minutes (26a), a bounded temporary-absence catch-up mode for short owner step-outs within an already-running 26a session under a capped `TEMPORARY_MEETING_ABSENCE` lease (26a.2), physical secretary attendance while the owner is absent for most/all of a meeting under the full owner-absent ADR amendment (26b), and bounded delegation limited to pre-approved questions/statements or the owner's own verbatim reply (26c); see the [secretary plan](phase-26.md). Virtual/cloud bot attendance is deferred, not a prerequisite. | 26a needs no ADR amendment; 26a.2 needs a narrow Phase 24 ADR amendment for a capped, meeting-STT-only absence lease with no tool/general-speech authority; 26b/26c require the full owner-absent amendment and supervised hardware acceptance; the platform never answers for the owner or makes commitments. Planned, not implemented; builds on Phase 25, requires Phase 22b hardware for every stage. |
 
 ## 7. Release Targets
 
@@ -352,7 +352,10 @@ baseline reference. [1]
 - Reachy conversation → continue in Telegram with same session.
 - Private WebRTC phone call → Reachy listening/thinking/speaking animation with no room audio.
 - Homelab outage → Reachy falls back to local idle personality.
-- Jetson outage → no loss of core agent or embodiment availability.
+- Jetson outage → core assistant remains available; physical embodiment
+  becomes unavailable and the outage is reported as a degraded state, not
+  silently masked (the Nano is the sole embodiment host — see
+  [deployment](deployment.md#robot-host-and-jetson-nano)).
 - Calendar reminder during meeting → queued/silent, not spoken.
 - Email draft → preview → explicit approval → send.
 - Remote travel mode → authenticated basic robot control without Companion Core.
@@ -368,10 +371,14 @@ baseline reference. [1]
 6. Implement Phase 24 owner enrollment, calibrated recognition and speaker/output gates; pass the [hardware and adversarial acceptance matrix](phase-24.md#acceptance-and-release-gate) before enabling ambient owner-only voice.
 7. Implement Phase 25 meeting transcription and minutes: async job pipeline, chunked summarization, and confirm-before-create action items; see the [transcription plan](phase-25.md).
 8. Implement Phase 26 in separately accepted stages: owner-present meeting
-   companion (26a, no ADR amendment needed), physical secretary attendance
-   while the owner is absent (26b, requires a Phase 24 ADR amendment), then
-   bounded delegation of pre-approved questions/statements or the owner's own
-   verbatim reply (26c). See the [secretary plan](phase-26.md).
+   companion (26a, no ADR amendment needed); a bounded temporary-absence
+   catch-up mode for short owner step-outs within an already-running 26a
+   meeting (26a.2, requires a narrow Phase 24 ADR amendment for a capped,
+   meeting-pipeline-only `TEMPORARY_MEETING_ABSENCE` lease); physical
+   secretary attendance while the owner is absent for most/all of a meeting
+   (26b, requires the full Phase 24 ADR amendment for owner-absent capture);
+   then bounded delegation of pre-approved questions/statements or the
+   owner's own verbatim reply (26c). See the [secretary plan](phase-26.md).
 
 ## 13. Key Engineering Risks
 

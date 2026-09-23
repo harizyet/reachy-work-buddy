@@ -20,15 +20,25 @@ No OAuth client file or deployed HTTPS hostname was supplied this session.
 Phase 23 is not yet production-accepted. Physical acceptance (22b) and the
 Google-enabled physical repeat remain deferred; Phases 24–26 are planning only.
 [Phase 26](docs/phase-26.md) was refocused 2026-09-23 from a generic virtual
-meeting bot to an embodied secretary: owner-present meeting companion (26a),
-physical secretary attendance while the owner is absent (26b), then bounded
+meeting bot to an embodied secretary: owner-present meeting companion (26a);
+a bounded temporary-absence catch-up mode for short owner step-outs within an
+already-running 26a meeting (26a.2), which tracks decisions/questions/
+deadlines during the absence via an explicit `AbsenceWindow` and delivers a
+private, interval-bounded delta on return; physical secretary attendance
+while the owner is absent for most/all of a meeting (26b); then bounded
 delegation of pre-approved questions/statements or the owner's own verbatim
 reply (26c). Virtual/cloud bot joining is now deferred, not a prerequisite.
 Owner-directed questions must be forwarded privately via Telegram or another
 bound channel from 26a onward; the platform must never answer for the owner.
 Next planning gate: 26a needs no ADR amendment (owner present throughout);
-26b requires accepting a Phase 24 ADR amendment for meeting capture mode plus
-supervised hardware acceptance.
+26a.2 needs a *narrow* Phase 24 ADR amendment for a capped
+`TEMPORARY_MEETING_ABSENCE` lease (meeting-STT-only, no tool/general-speech
+authority, auto-expiry, no silent extension into unattended recording); 26b
+requires the *full* owner-absent meeting-capture-mode amendment plus
+supervised hardware acceptance. These are two separate amendments, not one —
+continuing to record while the owner briefly steps out is still technically
+owner-absent capture under Phase 24's presence-based rule, even though the
+recording began while they were present.
 
 No production deployment was upgraded. Current code requires revision
 `003_accounts`, a separate 0600 `SECRET_KEY_FILE`, and `ACCOUNTS_SERVICE_TOKEN`
