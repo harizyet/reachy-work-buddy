@@ -275,6 +275,7 @@ class TelepresenceOfferRequest(BaseModel):
 
 def create_app(
     *,
+    accounts_service_token: str | None = None,
     registry: RobotRegistry | None = None,
     session_store: SessionStore | None = None,
     database_url: str | None = None,
@@ -311,6 +312,9 @@ def create_app(
     # in this file (Telegram, cloud TTS), deliberately: those degrade a
     # convenience by being absent, this gates real robot control exposed on
     # a port the Caddyfile itself documents as public-reachable.
+    accounts_service_token = accounts_service_token or os.environ.get("ACCOUNTS_SERVICE_TOKEN")
+    owner_user_id = os.environ.get("OWNER_USER_ID", "default-user")
+    telegram_owner_chat = os.environ.get("TELEGRAM_OWNER_CHAT_ID", "")
     remote_ui_token = remote_ui_token or os.environ.get("REMOTE_UI_TOKEN") or None
     session_secret_key = session_secret_key or os.environ.get("SESSION_SECRET_KEY") or None
     admin_username = admin_username or os.environ.get("ADMIN_USERNAME") or None
@@ -337,7 +341,8 @@ def create_app(
     client_factory = client_factory or (lambda base_url: EmbodimentClient(base_url))
     clients: dict[str, EmbodimentClient] = {}
     companion_core_client = companion_core_client or CompanionCoreClient(
-        companion_core_base_url or os.environ.get("COMPANION_CORE_URL", "http://companion-core:8000")
+        companion_core_base_url or os.environ.get("COMPANION_CORE_URL", "http://companion-core:8000"),
+        service_token=accounts_service_token
     )
 
     # STT/TTS are constructed lazily, on first use — loading a Whisper
@@ -419,6 +424,11 @@ def create_app(
                     continue  # voice notes and other non-text updates: Phase 8
 
                 chat_id = message["chat"]["id"]
+                if accounts_service_token and (
+                    str(chat_id) != telegram_owner_chat or message["chat"].get("type") != "private"
+                    or default_user_id != owner_user_id
+                ):
+                    continue
                 await chat_registry.set_chat_id(default_user_id, chat_id)
 
                 response = await handle_inbound_message(
@@ -444,6 +454,8 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        if owns_session_store and not accounts_service_token:
+            raise RuntimeError("ACCOUNTS_SERVICE_TOKEN is required for production data access")
         # An injected registry/session_store/telegram_chat_registry (tests)
         # is already set as app.state.* below, outside lifespan, so it's
         # usable even without startup/shutdown events running (e.g. a bare
@@ -513,13 +525,56 @@ def create_app(
     app = FastAPI(title="reachy-hub", lifespan=lifespan)
     app.state.telegram_poll_health = TelegramPollHealth()
     app.state.user_store = user_store
+    from reachy_hub.accounts import install_accounts
+    from shared.protocols.accounts import ACCOUNTS_CALLBACK
+
+    install_accounts(app, companion_core_client, enabled=bool(accounts_service_token))
+
+    @app.middleware("http")
+    async def private_work_routes(request, call_next):
+        from fastapi.responses import JSONResponse
+        path = request.url.path
+        work_path = path.startswith(("/sessions/", "/audit/", "/notifications/",
+                                      "/calendar/", "/briefing/")) or path in {
+            "/messages", "/voice/turn", "/webrtc/offer",
+        }
+        if accounts_service_token and work_path:
+            try:
+                await require_remote_auth(request, request.headers.get("Authorization"))
+                if path.startswith(("/sessions/", "/audit/", "/notifications/", "/briefing/")):
+                    selected = path.split("/")[2]
+                elif path.startswith("/calendar/check-reminders/"):
+                    selected = path.split("/")[3]
+                elif request.method == "POST":
+                    await request.body()
+                    if path == "/voice/turn":
+                        selected = (await request.form()).get("user_id")
+                    else:
+                        selected = (await request.json()).get("user_id")
+                else:
+                    selected = owner_user_id
+                if selected != owner_user_id:
+                    raise HTTPException(403, "This account belongs to the signed-in owner")
+            except HTTPException as exc:
+                return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+            except (ValueError, KeyError):
+                return JSONResponse(status_code=422, content={"detail": "Invalid request"})
+        response = await call_next(request)
+        if work_path or path.startswith("/settings/accounts/"):
+            response.headers["Cache-Control"] = "no-store"
+            response.headers["Referrer-Policy"] = "no-referrer"
+        if path == ACCOUNTS_CALLBACK:
+            request.scope["query_string"] = b""
+        return response
+
     if session_secret_key:
         app.add_middleware(SessionMiddleware, secret_key=session_secret_key,
                            session_cookie="reachy_session", max_age=43200,
                            same_site="strict", https_only=session_cookie_secure)
     install_operator_routes(app, require_remote_auth, companion_core_client, get_client,
                             login_enabled=bool(session_secret_key), telegram_enabled=telegram_enabled,
-                            default_user_id=telegram_default_user_id)
+                            default_user_id=owner_user_id if accounts_service_token else telegram_default_user_id,
+                            owner_bound=bool(accounts_service_token))
 
     # ADR 0019 (Phase 22): robot-initiated WSS control connection.
     # robot_connection_manager is always process-local in-memory (never
@@ -656,6 +711,8 @@ def create_app(
         if telegram_client is None:
             return False
         chat_id = await app.state.telegram_chat_registry.get_chat_id(user_id)
+        if accounts_service_token and (str(chat_id) != telegram_owner_chat or user_id != owner_user_id):
+            return False
         if chat_id is None:
             return False
         delivered = False

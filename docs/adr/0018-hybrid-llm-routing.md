@@ -3,6 +3,14 @@
 - Status: Accepted
 - Date: 2026-09-22
 
+## Phase 23 Accounts amendment
+
+[ADR 0021](0021-google-accounts.md) adds owner-bound Google read access and
+tightens work-data routes. Core data requires a dedicated hub service credential;
+the core debug proxy is closed. Existing owner bearer access is retained for
+work/robot APIs, while OAuth uses owner sessions. This supersedes the earlier
+trusted-network-only descriptions for those data paths.
+
 ## Phase 23 foundation amendment
 
 [ADR 0020](0020-schema-and-secrets.md) replaces startup DDL with versioned

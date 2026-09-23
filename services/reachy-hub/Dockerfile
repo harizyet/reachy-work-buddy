@@ -42,4 +42,4 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 EXPOSE 8000
 # See reachy-embodiment/Dockerfile for why this calls the venv directly
 # instead of `uv run`.
-CMD ["/app/.venv/bin/uvicorn", "reachy_hub.main:app", "--app-dir", "services/reachy-hub/src", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["/app/.venv/bin/uvicorn", "reachy_hub.main:app", "--app-dir", "services/reachy-hub/src", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]

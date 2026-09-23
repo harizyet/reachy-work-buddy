@@ -18,15 +18,19 @@ const chat = createChat({
     $('session-select').querySelector('button').disabled = busy;
   },
 });
+const accounts = createAccounts({api, isLoggedIn: () => loggedIn});
 function showView(view) {
   const isChat = view === 'chat';
-  $('chat-pane').hidden = !isChat; $('overview-pane').hidden = isChat;
-  for (const name of ['chat', 'overview']) {
+  $('chat-pane').hidden = !isChat; $('overview-pane').hidden = view !== 'overview';
+  $('accounts-pane').hidden = view !== 'accounts';
+  for (const name of ['chat', 'overview', 'accounts']) {
     $(name + '-tab').setAttribute('aria-pressed', String(name === view));
     $(name + '-tab').classList.toggle('secondary', name !== view);
   }
   if (isChat) void chat.refreshSession();
+  if (view === "accounts") void accounts.load();
 }
+$('accounts-tab').addEventListener('click', () => showView('accounts'));
 $('chat-tab').addEventListener('click', () => showView('chat'));
 $('overview-tab').addEventListener('click', () => showView('overview'));
 function notice(text) { $('notice').textContent = text; }
@@ -34,7 +38,7 @@ function showLogin() {
   loggedIn = false; selectedUser = null;
   $('login-panel').hidden = false; $('dashboard').hidden = true; $('nav').hidden = true;
   $('api-key').value = ''; $('cloud-api-key').value = ''; $('password').value = '';
-  chat.reset(); showView('overview');
+  chat.reset(); accounts.reset(); showView('overview');
 }
 async function api(path, options = {}) {
   const response = await fetch(base + path, {
@@ -90,6 +94,11 @@ async function refresh() {
     component('Language model', status.llm.configured === null ? 'Unavailable' : status.llm.configured ? 'Configured' : 'Not configured', !status.llm.configured);
     component('Telegram', telegramLabel(status.telegram), !status.telegram.healthy);
     chat.initializeUser(status.default_user_id);
+    $('chat-user-form').hidden = Boolean(status.owner_bound);
+    $('session-select').hidden = Boolean(status.owner_bound);
+    if (status.owner_bound && !selectedUser) {
+      try { await loadSession(); } catch (error) { if (error.status !== 404) throw error; }
+    }
     chat.updateTelegram(status.telegram);
     await chat.refreshSession();
     if (!status.robots.length) component('Robots', 'None registered', true);
@@ -151,6 +160,10 @@ async function enter() {
   $('llm-fields').disabled = true; notice('');
   try { renderSettings(await api('/settings/llm')); } catch (error) { notice(error.message); }
   await refresh();
+  if (new URLSearchParams(location.search).get('google') === 'return') {
+    history.replaceState(null, '', location.pathname);
+    showView('accounts'); await accounts.complete();
+  }
 }
 submit('login', async () => {
   await api('/auth/login', {method: 'POST', body: JSON.stringify({username: $('username').value, password: $('password').value})});

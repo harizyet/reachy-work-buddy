@@ -15,6 +15,7 @@
     <div id="dashboard" hidden>
       <div class="view-switch" role="group" aria-label="Dashboard view">
         <button id="overview-tab" aria-pressed="true" aria-controls="overview-pane">Overview</button>
+        <button id="accounts-tab" class="secondary" aria-pressed="false" aria-controls="accounts-pane">Settings · Accounts</button>
         <button id="chat-tab" class="secondary" aria-pressed="false" aria-controls="chat-pane">Chat</button>
       </div>
       <section id="chat-pane" hidden aria-labelledby="chat-title" class="card chat-card">
@@ -25,6 +26,29 @@
         <p class="muted">Messages shown here stay in this tab and disappear on refresh. Your companion session continues across channels.</p>
         <div id="chat-transcript" class="chat-transcript" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions text"><p id="chat-empty">Send a message to start or continue your conversation.</p></div>
         <form id="chat-form"><label for="chat-text">Message<textarea id="chat-text" rows="3" placeholder="Ask Reachy something…" required disabled></textarea></label><label class="check"><input id="force-frontier" type="checkbox"> Use frontier model for this message (sends conversation context to cloud)</label><div class="chat-compose-footer"><span id="chat-status" role="status"></span><button id="chat-send" disabled>Send</button></div></form>
+      </section>
+      <section id="accounts-pane" hidden class="card">
+        <span class="eyebrow">SETTINGS</span><h2>Connected accounts</h2>
+        <p>Connect Google to let Reachy read your mail and calendar. You sign in and choose permissions on Google's website. Reachy never sees your Google password.</p>
+        <p class="muted">Read-only access: Reachy cannot send, delete or mark mail as read, or change your Google calendar. When cloud inference is enabled, earlier account replies may be included in conversation context sent to that provider.</p>
+        <p id="accounts-status" role="status"></p><p id="google-identity"></p>
+        <div class="grid" id="account-cards"></div>
+        <section id="calendar-selection" hidden><h3>Calendars Reachy may read</h3><form id="calendar-choice"><div id="calendar-options"></div><button>Save calendar choices</button></form><button id="calendar-preview" class="secondary">Show upcoming events</button><button id="calendar-busy" class="secondary">Show busy times</button><p class="muted">Events and busy times include only your selected calendars.</p></section>
+        <section id="mail-preview" hidden><h3>Read Gmail</h3><p>Shows up to 60 messages. Search to narrow the results. Attachments are not downloaded; long messages use a limited text preview.</p><form id="gmail-search"><label>Search your mail<input id="gmail-query" maxlength="512" placeholder="Leave blank for recent messages"></label><button>Show messages</button></form></section>
+        <div id="account-results" aria-live="polite"></div>
+        <details id="google-setup"><summary>One-time Google connection setup</summary>
+          <p id="google-setup-state"></p>
+          <p>This connects your own Google application to Reachy. Once it is set up, everyday use only needs the Connect buttons above.</p>
+          <ol><li>Open <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer">Google Cloud</a> and create a project. Enable the Gmail API and Google Calendar API.</li>
+          <li>In Google Auth Platform, set up the consent screen for your use. For a personal test, add your Google email as a test user.</li>
+          <li>Create a Web application client. Add the return address shown below as an authorized redirect URI, then download its JSON file.</li>
+          <li>Choose that file here and select Save connection setup. Then use Connect to sign in and approve read-only permissions.</li></ol>
+          <p>Testing-mode permissions may expire after seven days. Personal/internal use and public apps have different Google verification requirements; see the deployment guide before relying on this for ongoing use.</p>
+          <form id="google-client-setup"><label>Return address<input id="google-callback" readonly></label>
+          <label>Google connection file<input id="google-client-file" type="file" accept=".json,application/json" required></label>
+          <label class="check"><input id="google-replace" type="checkbox"> Disconnect my existing Google connection before replacing this setup</label>
+          <button>Save connection setup</button></form>
+        </details>
       </section>
       <div id="overview-pane">
       <div class="section-title"><h2>System overview</h2><span id="updated">Checking status…</span></div>
@@ -55,6 +79,6 @@
       </div>
       </div>
     </div>
-  </main><footer>Reachy Work Companion · Operator UI</footer><script src="chat.js" defer></script><script src="app.js" defer></script>
+  </main><footer>Reachy Work Companion · Operator UI</footer><script src="chat.js" defer></script><script src="accounts.js" defer></script><script src="app.js" defer></script>
 </body>
 </html>

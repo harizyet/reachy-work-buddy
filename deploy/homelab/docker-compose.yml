@@ -88,6 +88,8 @@ services:
       dockerfile: services/reachy-hub/Dockerfile
     restart: unless-stopped
     environment:
+      ACCOUNTS_SERVICE_TOKEN: ${ACCOUNTS_SERVICE_TOKEN:?set ACCOUNTS_SERVICE_TOKEN in .env}
+      OWNER_USER_ID: ${OWNER_USER_ID:-default-user}
       DATABASE_URL: postgresql://${POSTGRES_USER:-reachy}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-reachy_hub}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
@@ -99,6 +101,7 @@ services:
       # .env to enable; TELEGRAM_DEFAULT_USER_ID must match the user_id
       # used on other channels for cross-channel session continuity to work.
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_OWNER_CHAT_ID: ${TELEGRAM_OWNER_CHAT_ID:-}
       TELEGRAM_DEFAULT_USER_ID: ${TELEGRAM_DEFAULT_USER_ID:-default-user}
       # Phase 16/ADR 0013: unset means the whole remote-control surface
       # (/robots/*, /webrtc/telepresence/offer, /robots/*/speak) 503s —
@@ -134,6 +137,8 @@ services:
     secrets:
       - credential_keys
     environment:
+      ACCOUNTS_SERVICE_TOKEN: ${ACCOUNTS_SERVICE_TOKEN:?set ACCOUNTS_SERVICE_TOKEN in .env}
+      OWNER_USER_ID: ${OWNER_USER_ID:-default-user}
       SECRET_KEY_FILE: /run/secrets/credential_keys
       REACHY_HUB_URL: http://reachy-hub:8000
       # Phase 10: companion-core's own Postgres connection (calendar store,

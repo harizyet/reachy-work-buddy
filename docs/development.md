@@ -39,7 +39,9 @@ access in restricted sandboxes; socket restrictions have caused test hangs.
 Use a reachable Postgres with pgvector for core; hub also requires Postgres.
 Set `DATABASE_URL` to that database in the hub/core shells. Provision the
 [credential key and run migrations](deployment.md#schema-upgrades-and-credential-keys)
-before launching either service; core also needs `SECRET_KEY_FILE`. Unlike an earlier
+before launching either service; core also needs `SECRET_KEY_FILE`. Set the
+same `ACCOUNTS_SERVICE_TOKEN` in core and hub. Production work-data routes
+now require owner authentication; see the deployment guide. Unlike an earlier
 README example, core is not stateless and needs this connection too.
 Run these in separate terminals after workspace sync:
 
@@ -202,3 +204,19 @@ unknown drift, writer exclusion, rollback/retry, plaintext rejection, masked
 settings, serialized patches, owner login, context binding, tampering, wrong
 keys, resumable rotation, backup recovery and SMTP resolution without sending.
 The ordinary in-memory application tests require neither a key file nor a DB.
+
+
+Account fixtures live in `services/companion-core/tests/test_google_accounts.py`.
+They exercise actual hub/core ASGI validation and the real HTTP adapter against
+an injected Google transport; they do not access a Google account. The optional
+database suite additionally checks encrypted OAuth handoffs, grant persistence,
+refresh serialization across separate service instances, and account backup
+restore. Run both browser fixtures with:
+
+```bash
+node --test clients/operator-ui/tests/*.test.cjs
+node --check clients/operator-ui/accounts.js
+```
+
+Keep production Google origins fixed. Test transports are constructor-injected;
+do not add runtime endpoint overrides that could send credentials elsewhere.

@@ -33,12 +33,13 @@ def require_csrf(request: Request) -> None:
 
 
 def install_operator_routes(
-    app, require_auth, core, get_robot_client, *, login_enabled, telegram_enabled, default_user_id
+    app, require_auth, core, get_robot_client, *, login_enabled, telegram_enabled, default_user_id,
+    owner_bound=False
 ):
 
     @app.exception_handler(RequestValidationError)
     async def safe_validation_error(request, exc):
-        if request.url.path in (LLM_SETTINGS, AUTH_LOGIN):
+        if request.url.path in (LLM_SETTINGS, AUTH_LOGIN) or request.url.path.startswith("/settings/accounts/"):
             return JSONResponse(
                 status_code=422, content={"detail": "Invalid request fields"}
             )
@@ -128,4 +129,5 @@ def install_operator_routes(
             },
             "telegram": app.state.telegram_poll_health.snapshot(configured=telegram_enabled),
             "default_user_id": default_user_id,
+            "owner_bound": owner_bound,
         }

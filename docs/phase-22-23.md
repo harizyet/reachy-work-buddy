@@ -185,6 +185,14 @@ not a completed physical test. Clean up only disposable test resources.
 
 ## Phase 23 — production Google account settings
 
+Implementation is complete, with isolated Postgres, provider, API and browser
+checks. Production acceptance remains open: Google application registration
+and owner consent, real refresh/revoke/reconnect, audience requirements, and
+the deferred hardware repeat. See [ADR 0021](adr/0021-google-accounts.md) and
+[Accounts verification](verification/phase-23-accounts-2026-09-23.md).
+Ordinary users connect through Google's own username/password and permission
+screens; Reachy never collects a Google password.
+
 ### Cross-cutting prerequisite: schema migrations and SecretStore
 
 Complete this work before adding Google account tables or persisting OAuth
@@ -193,8 +201,9 @@ The foundation is implemented and verified on isolated Postgres and built
 images; see [ADR 0020](adr/0020-schema-and-secrets.md) and
 [evidence](verification/phase-23-foundation-2026-09-23.md). Existing deployments
 must follow the [explicit cutover](deployment.md#schema-upgrades-and-credential-keys);
-this work did not upgrade any production database. Google account integration
-remains the next part of Phase 23. The requirements below remain the contract.
+this work did not upgrade any production database. Google account integration is also implemented;
+[Accounts evidence](verification/phase-23-accounts-2026-09-23.md) distinguishes
+fixture verification from the outstanding real-account/production gates. The requirements below remain the contract.
 
 **Database schema versioning/migrations.** Introduce Alembic with explicit,
 reviewed revisions for the shared Postgres database. Keep a single ordered

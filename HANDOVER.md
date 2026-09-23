@@ -6,33 +6,36 @@ not repeated in this file.
 
 ## Current work
 
-Phases 0–21 and 22a are implemented. Phase 23 is in progress: its
-versioned-migration/SecretStore foundation is implemented and verified against
-isolated Postgres and built images. See [ADR 0020](docs/adr/0020-schema-and-secrets.md),
-[deployment cutover](docs/deployment.md#schema-upgrades-and-credential-keys) and
-[foundation evidence](docs/verification/phase-23-foundation-2026-09-23.md).
+Phases 0–21 and 22a are implemented. Phase 23 implementation is complete:
+versioned migrations, SecretStore, owner-bound Google OAuth, Accounts UI and
+read-only Gmail/Calendar integration. Ordinary users select Connect, then enter
+their username/password and approve permissions on Google's own screens.
+See [ADR 0021](docs/adr/0021-google-accounts.md),
+[deployment setup](docs/deployment.md) and
+[Accounts evidence](docs/verification/phase-23-accounts-2026-09-23.md).
 
-Next: write the account-integration ADR, then implement Google setup, owner-bound
-OAuth, Accounts UI and read-only Gmail/Calendar adapters per the
-[Phase 23 plan](docs/phase-22-23.md). Google integration and real-account
-acceptance are still unimplemented. Physical acceptance (22b) remains explicitly
-deferred; Phases 24/25 are planning only.
+Next: configure the installation's Google application and HTTPS callback, then
+perform real-account consent/read/refresh/revoke/reconnect and audience checks.
+No OAuth client file or deployed HTTPS hostname was supplied this session.
+Phase 23 is not yet production-accepted. Physical acceptance (22b) and the
+Google-enabled physical repeat remain deferred; Phases 24/25 are planning only.
 
-No production deployment was upgraded. Existing databases remain at their old
-state until explicit adoption; current code requires revision `002_secrets`
-and core/migration require a separate 0600 `SECRET_KEY_FILE`. Stop old writers
-and back up before cutover. Compose now gates hub/core on the migration job.
-The new database constraint rejects plaintext LLM-key writes by old binaries.
+No production deployment was upgraded. Current code requires revision
+`003_accounts`, a separate 0600 `SECRET_KEY_FILE`, and `ACCOUNTS_SERVICE_TOKEN`
+in both core and hub. Stop old writers and back up before cutover. See the
+canonical deployment guide for migration, authentication and Telegram binding
+requirements. The Caddy core data proxy is closed; Accounts requires owner
+cookies/CSRF, while work APIs retain authenticated owner bearer access.
 Both disposable verification stacks/volumes and their temporary key/env files
 were removed; the pre-existing OVMS container was left running.
 
 ## Verification and open acceptance
 
-- Phase 23 foundation: **349 passed, 2 espeak-dependent skips, 10 slow tests
-  deselected** in the final fast suite with real DB checks enabled; Ruff passed.
-  Isolated image/HTTP checks verified migrated-key inference with a local
-  fixture, owner login, sessions, usage and restart; backup/restore and
-  key rotation passed. This is not Google/hosted-model/physical acceptance.
+- Phase 23 final fast suite: **366 passed, 2 espeak-dependent skips, 10 slow
+  tests deselected**, with real Postgres checks enabled. Ruff and both Chromium
+  suites passed. Built images/HTTP and real browser checks used a local Google
+  fixture; encrypted restore, concurrent refresh, restart, private chat/briefing
+  and proxy-log redaction passed. These are not real Google/physical acceptance.
   The existing homelab launcher waits only for hub health; independently
   check core readiness before inference acceptance.
 - [Implementation history](docs/verification/history.md) records Phases 0–21,

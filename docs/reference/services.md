@@ -84,7 +84,10 @@ WebRTC, and static UI. It does not own reasoning policy or motor control.
 | `GET /status` | Authenticated component probes, model config/usage, Telegram polling health, default user ID |
 | `GET`, `PUT /settings/llm`; `GET /llm/usage` | Authenticated core proxies; usage defaults `limit=50`, `since_hours=24` |
 
-Cookie mutations require CSRF; bearer clients remain supported. Static assets
+Cookie mutations require CSRF; bearer clients remain supported on existing
+work/robot APIs. Phase 23 binds work-data user IDs to OWNER_USER_ID and gates
+conversation, session, audit, notification, reminder and briefing HTTP routes.
+Accounts/OAuth specifically require the owner session. Static assets
 and historical conversation APIs retain their existing access contract;
 see [deployment](../deployment.md#owner-login) and
 [ADR 0016](../adr/0016-operator-ui.md). `/auth/me` is cookie-only, not a way
@@ -152,3 +155,22 @@ are independent images even though development installs them together.
 `/app/`. Both mount under `/hub/` through Caddy. Browser API paths must stay
 relative so direct and proxied deployments work. User workflows are in the
 [operator guide](../operator-guide.md), not duplicated in client READMEs.
+
+
+## Google Accounts
+
+[ADR 0021](../adr/0021-google-accounts.md) owns account identity and security.
+Core `accounts/` owns transactions, encrypted credentials, OAuth and fixed-origin
+read adapters; hub `accounts.py` owns authenticated browser transport.
+`shared/protocols/accounts.py` and `shared/models/accounts.py` own the contract.
+
+Under `/settings/accounts/google`, hub exposes status, configure, connect,
+callback, complete, test, disconnect, calendar selection/list/events/free-busy,
+and Gmail messages/read. Core equivalents require the dedicated service header.
+There is no generic provider proxy, decrypt endpoint or Google write API.
+Calendar/email composition feeds the existing conversation, briefing and
+reminder logic while keeping local writes and delayed SMTP dispatch local.
+
+See [user workflows](../operator-guide.md#connect-gmail-and-google-calendar),
+[installation and limits](../deployment.md#google-application-setup), and
+[verification](../verification/phase-23-accounts-2026-09-23.md).

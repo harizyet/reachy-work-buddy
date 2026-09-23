@@ -322,3 +322,103 @@ def test_upgrade_requires_old_connections_stopped(database, keys):
         with pytest.raises(RuntimeError, match="Stop hub/core"):
             upgrade(database, keys, adopt_legacy=True)
     upgrade(database, keys, adopt_legacy=True)
+
+
+def test_google_encrypted_persistence_refresh_restart_and_disconnect(database, keys):
+    import json
+    from urllib.parse import parse_qs, urlsplit
+
+    from companion_core.accounts.service import GRANT, SCOPES, AccountService
+    from companion_core.accounts.store import PostgresAccountRepository
+
+    class Provider:
+        refresh_count = 0
+
+        async def token(self, data):
+            if data["grant_type"] == "refresh_token":
+                self.refresh_count += 1
+                await asyncio.sleep(0.02)
+            return {"access_token": "google-access-fixture", "refresh_token": "google-refresh-fixture",
+                    "scope": " ".join(SCOPES["gmail"]), "expires_in": 3600}
+
+        async def identity(self, token):
+            return {"subject": "fixture-google-subject", "email": "fixture@example.org"}
+
+        async def request(self, *args, **kwargs):
+            return {"emailAddress": "fixture@example.org"}
+
+        async def revoke(self, token):
+            assert token == "google-refresh-fixture"
+
+    upgrade(database, keys)
+
+    async def run():
+        provider = Provider()
+        repository = await PostgresAccountRepository.connect(database, keyring=keys)
+        svc = AccountService(repository, provider)
+        result = await svc.execute("configure", {
+            "client_id": "fixture-client", "client_secret": "google-client-fixture",
+            "redirect_uri": "https://example.org/hub/settings/accounts/google/callback",
+        })
+        assert result["configured"]
+        result = await svc.execute("connect", {"capability": "gmail", "binding": "fixture-browser-binding"})
+        state = parse_qs(urlsplit(result["authorization_url"]).query)["state"][0]
+        assert (await svc.execute("callback", {
+            "state": state, "binding": "fixture-browser-binding", "code": "fixture-private-code",
+        })) == {"ok": True}
+        async with repository.pool.connection() as conn:
+            data = (await (await conn.execute("SELECT data::text FROM google_accounts")).fetchone())[0]
+            flows = str(await (await conn.execute("SELECT * FROM google_oauth_states")).fetchall())
+            assert all(value not in data + flows for value in (
+                "google-client-fixture", "fixture-private-code", state, "fixture-browser-binding",
+            ))
+        await repository.close()
+        repository = await PostgresAccountRepository.connect(database, keyring=keys)
+        svc = AccountService(repository, provider)
+        result = await svc.execute("complete", {"binding": "fixture-browser-binding"})
+        assert result["capabilities"]["gmail"]["status"] == "connected"
+        async with repository.transaction() as tx:
+            grant = json.loads(await tx.resolve(GRANT, tx.data["grant_ref"]))
+            grant["expires_at"] = 0
+            await tx.put(GRANT, json.dumps(grant), tx.data["grant_ref"])
+        other_repository = await PostgresAccountRepository.connect(database, keyring=keys)
+        other = AccountService(other_repository, provider)
+        results = await asyncio.gather(
+            svc.execute("test", {"capability": "gmail"}), other.execute("test", {"capability": "gmail"}),
+        )
+        assert all("error" not in result for result in results)
+        assert provider.refresh_count == 1
+        container = os.environ.get("DATABASE_MIGRATION_TEST_CONTAINER")
+        backup = None
+        if container:
+            import subprocess
+            name = psycopg.conninfo.conninfo_to_dict(database)["dbname"]
+            backup = (await asyncio.to_thread(
+                subprocess.run, ["docker", "exec", container, "pg_dump", "-U", "fixture", "-Fc", name],
+                check=True, capture_output=True,
+            )).stdout
+        assert (await svc.disconnect())["revocation"] == "revoked"
+        result = await other.execute("status")
+        assert not result["identity"]
+        async with repository.pool.connection() as conn:
+            assert (await (await conn.execute("SELECT count(*) FROM google_oauth_states")).fetchone())[0] == 0
+            assert (await (await conn.execute("SELECT count(*) FROM secrets")).fetchone())[0] == 1
+        await repository.close()
+        await other_repository.close()
+        if backup:
+            await asyncio.to_thread(
+                subprocess.run, ["docker", "exec", "-i", container, "pg_restore", "-U", "fixture",
+                 "--clean", "--if-exists", "--no-owner", "-d", name],
+                input=backup, check=True, capture_output=True,
+            )
+            restored = await PostgresAccountRepository.connect(database, keyring=keys)
+            restored_service = AccountService(restored, provider)
+            assert (await restored_service.execute("test", {"capability": "gmail"}))["identity"]
+            await restored.close()
+            wrong = await PostgresAccountRepository.connect(
+                database, keyring=Keyring(keys.active, {keys.active: os.urandom(32)}),
+            )
+            assert (await AccountService(wrong, provider).execute("test", {
+                "capability": "gmail"}))["error"] == "credential_unavailable"
+            await wrong.close()
+    asyncio.run(run())

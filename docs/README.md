@@ -50,6 +50,7 @@ over the original decision where they explicitly change it.
 | [0018](adr/0018-hybrid-llm-routing.md) | Role-based local/cloud inference |
 | [0019](adr/0019-robot-initiated-hub-connectivity.md) | Robot-initiated connectivity |
 | [0020](adr/0020-schema-and-secrets.md) | Versioned schema and core-owned credentials |
+| [0021](adr/0021-google-accounts.md) | Owner-bound read-only Google accounts |
 
 ## Verification records
 
@@ -64,6 +65,9 @@ These are dated evidence, not startup instructions or current health checks.
 
 - [Phase 23 foundation](verification/phase-23-foundation-2026-09-23.md): migrations,
   SecretStore, isolated database recovery and built-image checks.
+
+- [Phase 23 Accounts](verification/phase-23-accounts-2026-09-23.md): OAuth, read-only
+  adapters, browser and database checks; external production gates remain open.
 
 ## Where information belongs
 

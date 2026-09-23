@@ -15,7 +15,8 @@ Run from the repository root:
 ```bash
 cp deploy/homelab/.env.example deploy/homelab/.env
 chmod 600 deploy/homelab/.env
-# Edit .env: set a real POSTGRES_PASSWORD and the owner-login variables below.
+# Edit .env: set POSTGRES_PASSWORD, owner login, ACCOUNTS_SERVICE_TOKEN,
+# and SECRET_KEY_FILE using the procedures below.
 scripts/start-homelab.sh --check
 scripts/start-homelab.sh --build
 ```
@@ -168,11 +169,25 @@ network-change, camera/audio, and physical soak acceptance remain in
 
 ## Network and access boundaries
 
-[Caddyfile](../deploy/homelab/Caddyfile) strips `/hub/` and `/core/` before
-proxying. Core settings/usage paths are explicitly blocked on the core debug
-proxy; use authenticated hub operator endpoints. Other historical APIs,
-including `/messages`, retain trusted homelab/VPN access rather than blanket
-owner authentication. Do not expose this stack directly to the Internet.
+[Caddyfile](../deploy/homelab/Caddyfile) strips `/hub/` for hub. Only
+`/core/health` remains exposed; the core debug proxy is closed. Core data APIs
+require `X-Reachy-Service-Token` with `ACCOUNTS_SERVICE_TOKEN`. Hub/core require
+that separate credential at production startup, even when Google is not yet
+connected: removing it cannot reopen routes containing previously read data.
+
+Hub work-data and conversational HTTP routes require owner login with CSRF for
+cookie mutations, or the existing owner `REMOTE_UI_TOKEN` bearer. Their user ID
+must match `OWNER_USER_ID` (default `default-user`). The ordinary UI selects
+that identity automatically. Accounts/OAuth endpoints specifically require the
+owner session; robot control retains its separate bearer/cookie contract.
+Robot registration and other legacy non-work-data surfaces still assume the
+trusted LAN/VPN. This is not an Internet-facing identity service.
+
+Telegram account reads require `TELEGRAM_OWNER_CHAT_ID` to name an explicitly
+trusted **private** owner chat, and `TELEGRAM_DEFAULT_USER_ID` must match
+`OWNER_USER_ID`. All other chats are ignored, before recording their chat ID
+or calling core. An old learned chat ID does not authorize notification
+delivery either. Leave the binding unset to deny Telegram work-data access.
 
 Caddy forwards WebRTC signaling, not UDP/RTP media. Cross-machine clients
 need reachable ICE candidates; Docker bridge addresses may be unusable from
@@ -193,7 +208,7 @@ explicitly disposable project. Leave unrelated services such as OVMS alone.
 
 ## Schema upgrades and credential keys
 
-Core and hub require revision `002_secrets`. The ordered Alembic history ships
+Core and hub require revision `003_accounts`. The ordered Alembic history ships
 in core's image; SQL stores perform compatibility checks, not startup DDL.
 Compose runs `migrate` before hub/core, including through
 `scripts/start-homelab.sh`. Launcher `--check` remains read-only and does not
@@ -273,7 +288,7 @@ uv run --package companion-core python -m companion_core.migrations upgrade
 Supply `DATABASE_URL` and `SECRET_KEY_FILE` through the protected environment.
 The job checks keys before connecting, takes an exclusive migration advisory
 lock, and bounds connection/lock/statement waits at 10/10/120 seconds.
-Both current revisions are transactional: failure rolls back schema,
+All current revisions are transactional: failure rolls back schema,
 backfill and revision markers together. A repeat upgrade is safe and verifies
 that all stored credentials decrypt with the supplied keyring.
 No automatic downgrade is provided. Prefer a reviewed forward fix or restore
@@ -319,3 +334,109 @@ fails closed, even when a bootstrap password exists. Authenticated delivery
 requires STARTTLS; implicit-TLS-only relays are not supported by this setting.
 Mailpit/unauthenticated relay behavior remains available when auth is unset.
 Google linking will not configure SMTP or enable sending.
+
+## Google application setup
+
+This is an installation task, separate from the user's **Connect → Google
+sign-in → permissions** flow. Reachy never collects a Google password.
+A deployer must register the Google application once; entering an email and
+password into Reachy cannot replace Google's OAuth client registration.
+
+1. Configure owner login, `SESSION_COOKIE_SECURE=true` for production HTTPS,
+   the SecretStore key file and a distinct random `ACCOUNTS_SERVICE_TOKEN`
+   shared by hub/core. Keep it in the protected ignored env file. For example,
+   this fills the blank template entry without printing or replacing a value:
+
+   ```bash
+   python3 - <<'PYTOKEN'
+   from pathlib import Path
+   import secrets
+   path = Path("deploy/homelab/.env")
+   text = path.read_text()
+   marker = "ACCOUNTS_SERVICE_TOKEN=\n"
+   if text.count(marker) != 1:
+       raise SystemExit("Expected one blank service-token entry; existing values were not changed")
+   path.chmod(0o600)
+   path.write_text(text.replace(marker, "ACCOUNTS_SERVICE_TOKEN=" + secrets.token_urlsafe(32) + "\n"))
+   PYTOKEN
+   ```
+
+2. Serve the existing `/hub/` mount through a stable, trusted HTTPS endpoint
+   on your LAN/VPN. The shipped Caddy listener remains HTTP `:8080`; terminate
+   HTTPS with your installation's existing trusted proxy/tunnel and preserve
+   the `/hub/` path. Do not expose internal ports for OAuth. The callback is
+   `https://YOUR-HOST/hub/settings/accounts/google/callback`; direct hub
+   mounting uses `/settings/accounts/google/callback`. Only HTTP loopback
+   addresses are accepted for local development.
+3. In a Google Cloud project enable Gmail API and Google Calendar API. Set the
+   consent audience and create a **Web application** OAuth client with that
+   exact authorized redirect URI. Download its JSON connection file and keep
+   it permission-restricted outside source control. In the owner GUI open
+   **Settings · Accounts → One-time Google connection setup**, select the file,
+   and save. The secret is encrypted in core immediately, never in browser
+   storage. The return address is derived from the GUI's actual mount.
+4. Choose the deployment audience deliberately. Gmail read-only is a restricted
+   scope. Google documents exceptions including qualifying personal/internal
+   use, but public distribution can require verification and security
+   assessment. “In production” by itself is not proof of approval. External
+   Testing grants for these scopes normally expire after seven days. Record
+   the applicable audience/exception/verification outcome before rollout.
+5. The owner selects Connect and approves Google permissions. No Google access
+   is granted by importing the client file. Calendar and Gmail cards enable
+   independently, with one Google identity shared by both.
+
+See Google's [web-server authorization guide](https://developers.google.com/identity/protocols/oauth2/web-server),
+[restricted-scope requirements and exceptions](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification),
+[token expiration rules](https://developers.google.com/identity/protocols/oauth2),
+[Gmail scopes](https://developers.google.com/workspace/gmail/api/auth/scopes) and
+[Calendar scopes](https://developers.google.com/workspace/calendar/api/auth).
+
+The application requests identity scopes plus `gmail.readonly` for Gmail,
+or `calendar.events.readonly` and `calendar.calendarlist.readonly` for Calendar.
+Free/busy is derived from readable non-transparent events; it is not a query
+for another person's inaccessible calendar. New enabled capabilities request
+the union of the owner's enabled read scopes. Unexpected partial consent does
+not enable the requested feature. Changing client identity/return address
+requires explicit disconnection of an existing grant.
+
+### Account operations and recovery
+
+Migration `003_accounts` adds core-owned `google_accounts`,
+`google_oauth_states` and `google_reminder_delivery`. Upgrading from
+`002_secrets` follows the same stop-writers, backup, migration-job procedure;
+`--adopt-legacy` is only needed for unversioned databases. Keep one core and one
+hub worker: their existing conversations, robot sockets and short-lived read
+caches are process-local. Refresh/credential updates themselves serialize
+through the database owner row.
+
+Reads are on demand: a 30-second bounded cache, at most five Calendar pages
+per selected calendar, 31-day query windows and 20 selected calendars.
+An incomplete Calendar range is reported as an error, not as complete
+free/busy. Gmail reads at most three pages of 20 messages; refine search for
+more. Transient 429/5xx responses get two bounded backoff retries. A stale
+connection check is labelled after five minutes.
+
+Google reminders use a durable claim keyed by provider event/start time,
+preventing repeated emissions across restart and concurrent polls. This is
+**at-most-once** emission to a hub request: a failed hub delivery after claiming
+can lose that notification. It is not a guaranteed-delivery queue. Rescheduled
+occurrences can produce new reminders. Local reminders retain their previous
+semantics.
+
+Disconnect commits local credential removal before attempting upstream
+revocation. It clears provider caches, pending OAuth handoffs, core conversation
+context and queued owner notifications; local drafts remain. Already delivered
+copies remain on their channels. Revocation failure is reported explicitly.
+Authorization state/codes/PKCE values expire after ten minutes and are
+encrypted or hashed; expired handoffs are removed on the next account request.
+
+The shipped Uvicorn commands disable access logs. Caddy's global log filter
+removes code/state/error/search query parameters and request/response headers,
+including from proxy error logs. Retain those controls in external proxies;
+do not add full callback URLs, tokens or content to debug logs.
+
+Restore the database and the matching SecretStore keyring into an isolated
+deployment before recovery. Do not run production and restored copies against
+the same live grant concurrently. Real Google refresh/revocation/reconnection
+and production audience approval remain acceptance requirements even when
+fixture tests pass; see [verification](verification/phase-23-accounts-2026-09-23.md).

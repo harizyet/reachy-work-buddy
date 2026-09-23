@@ -1,3 +1,21 @@
+{
+    log default {
+        format filter {
+            wrap json
+            fields {
+                request>uri query {
+                    delete code
+                    delete state
+                    delete error
+                    delete query
+                }
+                request>headers delete
+                resp_headers delete
+            }
+        }
+    }
+}
+
 # Reverse proxy in front of the homelab services, per docs/plan.md §6 Phase 4
 # ("reverse proxy via Docker Compose"). Path-based routing only — no TLS
 # termination here. Phase 16/ADR 0013 added authentication for reachy-hub's
@@ -15,15 +33,14 @@
 		reverse_proxy reachy-hub:8000
 	}
 
-    # Operator settings/usage are accessible only through authenticated hub routes.
-    @operator_internal path /core/settings/* /core/llm/*
-    handle @operator_internal {
+    # Core data is reachable only over authenticated hub-to-core requests.
+    handle /core/health {
+        rewrite * /health
+        reverse_proxy companion-core:8000
+    }
+    handle /core/* {
         respond "Not found" 404
     }
-
-	handle_path /core/* {
-		reverse_proxy companion-core:8000
-	}
 
 	handle /health {
 		respond "ok" 200

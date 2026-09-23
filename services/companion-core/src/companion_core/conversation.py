@@ -24,10 +24,19 @@ class Turn:
 class ConversationStore:
     def __init__(self) -> None:
         self._lock = threading.Lock()
+        self.generation = 0
         self._turns: dict[str, list[Turn]] = {}
         self._session_locks: dict[str, asyncio.Lock] = {}
         self._privacy: dict[str, Privacy] = {}
         self._messages: dict[str, list[dict[str, str]]] = {}
+
+    def clear(self) -> None:
+        """Remove provider-derived context when an account connection is removed."""
+        with self._lock:
+            self.generation += 1
+            self._turns.clear()
+            self._messages.clear()
+            self._privacy.clear()
 
     def append(self, session_id: str, channel: str, text: str) -> list[Turn]:
         with self._lock:

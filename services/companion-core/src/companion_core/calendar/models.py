@@ -18,3 +18,4 @@ class CalendarEvent(BaseModel):
     start: datetime
     end: datetime
     location: str | None = None
+    busy: bool = Field(default=True, exclude=True)

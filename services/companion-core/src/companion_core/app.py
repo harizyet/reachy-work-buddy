@@ -252,6 +252,8 @@ class CreateDraftRequest(BaseModel):
 
 def create_app(
     *,
+    account_service=None,
+    accounts_service_token: str | None = None,
     llm_settings_store: LLMSettingsStore | None = None,
     llm_usage_store: LLMUsageStore | None = None,
     llm_transport: httpx.AsyncBaseTransport | None = None,
@@ -283,6 +285,19 @@ def create_app(
         email_send_delay_seconds = int(os.environ.get("EMAIL_SEND_DELAY_SECONDS") or DEFAULT_SEND_DELAY_SECONDS)
     if email_dispatch_interval is None:
         email_dispatch_interval = float(os.environ.get("EMAIL_DISPATCH_INTERVAL_SECONDS") or 30.0)
+    from companion_core.accounts.composition import (
+        AccountCalendar,
+        AccountEmail,
+        checked,
+    )
+    from companion_core.accounts.provider import AccountError
+    from companion_core.accounts.routes import install_accounts
+    from companion_core.accounts.service import AccountService
+    from companion_core.accounts.store import PostgresAccountRepository
+    from shared.protocols.accounts import ACCOUNTS, SERVICE_HEADER
+
+    accounts_service_token = accounts_service_token or os.environ.get("ACCOUNTS_SERVICE_TOKEN")
+    owns_accounts = bool(accounts_service_token) and account_service is None
     conversation_store = ConversationStore()
     owns_llm_settings = llm_settings_store is None
     owns_llm_usage = llm_usage_store is None
@@ -301,6 +316,8 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        if owns_llm_settings and not accounts_service_token:
+            raise RuntimeError("ACCOUNTS_SERVICE_TOKEN is required for production data access")
         app.state.hub_client = HubClient(hub_base_url, transport=transport, bearer_token=hub_bearer_token)
         if owns_llm_settings:
             app.state.llm_settings_store = await PostgresLLMSettingsStore.connect(database_url or os.environ["DATABASE_URL"])
@@ -325,6 +342,13 @@ def create_app(
             dsn = database_url or os.environ["DATABASE_URL"]
             app.state.confirmation_store = await PostgresConfirmationStore.connect(dsn)
 
+        if owns_accounts:
+            app.state.accounts = AccountService(await PostgresAccountRepository.connect(
+                database_url or os.environ["DATABASE_URL"]))
+        if getattr(app.state, "accounts", None) and not isinstance(app.state.calendar_store, AccountCalendar):
+            app.state.calendar_store = AccountCalendar(app.state.calendar_store, app.state.accounts)
+            app.state.email_store = AccountEmail(app.state.email_store, app.state.accounts)
+
         # Only actually dispatches drafts whose dispatch_at has passed —
         # queueing a draft doesn't send it, this loop noticing it's due
         # does. Same real-background-task pattern as reachy-hub's
@@ -343,6 +367,8 @@ def create_app(
                 dispatch_task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await dispatch_task
+            if owns_accounts:
+                await app.state.accounts.repository.close()
             await app.state.hub_client.aclose()
             if owns_llm_settings:
                 await app.state.llm_settings_store.close()
@@ -363,6 +389,23 @@ def create_app(
 
     app = FastAPI(title="companion-core", lifespan=lifespan)
 
+    app.state.accounts = account_service
+    install_accounts(app, accounts_service_token)
+
+    @app.middleware("http")
+    async def protect_account_data(request, call_next):
+        import secrets
+        if (accounts_service_token and request.url.path != "/health"
+                and not secrets.compare_digest(request.headers.get(SERVICE_HEADER, ""), accounts_service_token)):
+            return JSONResponse(status_code=401, content={"detail": "Service authentication required"})
+        response = await call_next(request)
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    @app.exception_handler(AccountError)
+    async def account_error(request, exc):
+        return JSONResponse(status_code=503, content={"detail": exc.code})
+
     from companion_core.secrets import SecretUnavailable
 
     @app.exception_handler(SecretUnavailable)
@@ -371,7 +414,7 @@ def create_app(
 
     @app.exception_handler(RequestValidationError)
     async def safe_validation_error(request, exc):
-        if request.url.path in (LLM_SETTINGS,):
+        if request.url.path in (LLM_SETTINGS,) or request.url.path.startswith(ACCOUNTS):
             return JSONResponse(status_code=422, content={"detail": "Invalid request fields"})
         return await request_validation_exception_handler(request, exc)
 
@@ -413,6 +456,10 @@ def create_app(
     if not owns_confirmation_store:
         app.state.confirmation_store = confirmation_store
 
+    if account_service is not None and calendar_store is not None and email_store is not None:
+        app.state.calendar_store = AccountCalendar(calendar_store, account_service)
+        app.state.email_store = AccountEmail(email_store, account_service)
+
     @app.get("/health")
     async def health() -> dict[str, str]:
         return {"status": "ok"}
@@ -423,6 +470,7 @@ def create_app(
             return await process_conversation_turn(turn)
 
     async def process_conversation_turn(turn: ConversationTurnRequest) -> ConversationTurnResponse:
+        generation = conversation_store.generation
         history = conversation_store.append(turn.session_id, turn.channel, turn.text)
 
         capture_text = match_capture(turn.text)
@@ -592,6 +640,21 @@ def create_app(
             except VoiceConfirmationNotAllowedError:
                 reply = memory_intent.format_voice_confirmation_blocked_reply()
             privacy = Privacy.WORK_PRIVATE
+        elif getattr(app.state, "accounts", None) and (
+            turn.text.lower().strip() in {"check gmail", "list gmail", "read gmail", "check email", "list emails"}
+            or turn.text.lower().startswith(("search gmail ", "read gmail "))
+        ):
+            text = turn.text.strip()
+            if text.lower().startswith("read gmail "):
+                message = await checked(app.state.accounts, "message", {"id": text[11:].strip()})
+                reply = f"From: {message['sender']}\nSubject: {message['subject']}\n\n{message['body'] or message['snippet']}"
+            else:
+                query = text[13:].strip() if text.lower().startswith("search gmail ") else ""
+                result = await checked(app.state.accounts, "messages", {"query": query})
+                reply = "\n".join(
+                    f"{m['id']} — {m['sender']}: {m['subject']}" for m in result["messages"]
+                ) or "No matching Gmail messages."
+            privacy = Privacy.WORK_PRIVATE
         else:
             config = await app.state.llm_settings_store.get()
             if config.local is None and config.cloud is None and not turn.force_frontier:
@@ -605,6 +668,11 @@ def create_app(
             if config.local is not None or config.cloud is not None or turn.force_frontier:
                 privacy = conversation_store.reply_privacy(turn.session_id, classify_privacy(turn.text + "\n" + reply))
 
+        if generation != conversation_store.generation:
+            return ConversationTurnResponse(
+                reply="The account connection changed. Please ask again.",
+                turn_count=0, privacy=Privacy.WORK_PRIVATE,
+            )
         conversation_store.record_reply(turn.session_id, reply, privacy)
         return ConversationTurnResponse(reply=reply, turn_count=len(history), privacy=privacy)
 
@@ -628,12 +696,14 @@ def create_app(
         # Free/busy intentionally reveals only time blocks, not what's in
         # them — a different (narrower) privacy surface than /calendar/events.
         events = await app.state.calendar_store.list_events(start, end)
-        return [{"start": event.start, "end": event.end} for event in events]
+        return [{"start": event.start, "end": event.end} for event in events if event.busy]
 
     @app.get("/calendar/reminders/due")
     async def reminders_due(within_minutes: int = 15) -> list[ReminderPayload]:
         now = datetime.now(UTC)
         events = await due_reminders(app.state.calendar_store, now, within_minutes)
+        if getattr(app.state, "accounts", None):
+            events = await app.state.accounts.repository.claim_reminders(events)
         return [
             ReminderPayload(
                 event_id=event.id,

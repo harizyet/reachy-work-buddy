@@ -12,11 +12,13 @@ folded into it.
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timedelta
 from typing import Any
 
 import httpx
 
+from shared.protocols.accounts import SERVICE_HEADER
 from shared.protocols.operator_api import LLM_SETTINGS, LLM_USAGE
 
 
@@ -27,8 +29,11 @@ class CompanionCoreClient:
         *,
         transport: httpx.AsyncBaseTransport | None = None,
         timeout: float = 5.0,
+        service_token: str | None = None,
     ) -> None:
-        self._client = httpx.AsyncClient(base_url=base_url, transport=transport, timeout=timeout)
+        token = service_token or os.environ.get("ACCOUNTS_SERVICE_TOKEN")
+        self._client = httpx.AsyncClient(base_url=base_url, transport=transport, timeout=timeout,
+                                         headers={SERVICE_HEADER: token} if token else {})
 
     async def aclose(self) -> None:
         await self._client.aclose()
@@ -56,7 +61,7 @@ class CompanionCoreClient:
         for a reminder right now. See companion_core/calendar/reminders.py —
         this is a pure query, not a subscription; reachy-hub calls it
         on demand."""
-        resp = await self._client.get("/calendar/reminders/due", params={"within_minutes": within_minutes})
+        resp = await self._client.get("/calendar/reminders/due", params={"within_minutes": within_minutes}, timeout=45)
         resp.raise_for_status()
         return resp.json()
 
@@ -64,7 +69,7 @@ class CompanionCoreClient:
         """Phase 18 (docs/adr/0015): the prioritized calendar/tasks/email/
         reminders/project-events list companion-core's briefing.py builds.
         Same on-demand, no-subscription shape as due_reminders above."""
-        resp = await self._client.get("/briefing")
+        resp = await self._client.get("/briefing", timeout=90)
         resp.raise_for_status()
         return resp.json()
 
@@ -77,6 +82,7 @@ class CompanionCoreClient:
         resp = await self._client.get(
             "/calendar/events",
             params={"start": now.isoformat(), "end": (now + timedelta(seconds=1)).isoformat()},
+            timeout=45,
         )
         resp.raise_for_status()
         return resp.json()
@@ -98,5 +104,10 @@ class CompanionCoreClient:
 
     async def get_llm_usage(self, *, limit: int = 50, since_hours: int = 24) -> dict:
         response = await self._client.get(LLM_USAGE, params={"limit": limit, "since_hours": since_hours})
+        response.raise_for_status()
+        return response.json()
+
+    async def accounts_request(self, method, path, *, data=None, params=None):
+        response = await self._client.request(method, path, json=data, params=params, timeout=65)
         response.raise_for_status()
         return response.json()

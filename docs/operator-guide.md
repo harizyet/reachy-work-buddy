@@ -2,15 +2,15 @@
 
 Open `/hub/ui/` through Caddy (direct hub: `/ui/`) after following
 [deployment setup](deployment.md#owner-login). The dashboard provides
-Overview and Chat; the navigation links to telepresence. Both frontends
+Overview, Chat, and Settings · Accounts; the navigation links to telepresence. Both frontends
 are plain HTML/JS/CSS served by hub, with no build step or external assets.
 
 ## Overview and session controls
 
-Load the conversational user ID, normally `TELEGRAM_DEFAULT_USER_ID`
-(default `default-user`), to change mode/DND and inspect activity or queued
-notifications. Login username and conversation user ID are distinct. A
-session must exist to edit it; sending the first chat message creates one.
+Overview loads your session automatically so you can change mode/DND and
+inspect activity or queued notifications. A session must exist to edit it;
+sending the first chat message creates one. The installation binds your login
+to its configured owner identity.
 
 Health and usage refresh every ten seconds without overwriting edited model
 fields. Core/robot failures are shown separately; a failed component does
@@ -22,11 +22,8 @@ replies. The model indicator means configured, not proven reachable.
 
 ## Chat (Phase 20)
 
-Open Chat after login. The user ID defaults to the hub's configured
-`TELEGRAM_DEFAULT_USER_ID`; use the same ID to continue an existing
-Telegram/Reachy conversation. An owner login name is not automatically a
-conversation user ID. Select a different ID with “Use this user”; this
-also updates Overview's session selector and clears the visible messages.
+Open Chat after login. Chat uses your owner session automatically, sharing
+conversation context with your authorized Telegram/Reachy channels.
 A first send creates a session if needed. Chat shows mode, DND, and active
 channel, refreshed after replies and every 10 seconds.
 
@@ -43,9 +40,9 @@ work memory or reset the companion session. There is no chat-history API
 or localStorage archive. Telegram failures do not disable chat. Poll health
 is not a guarantee that outbound Telegram messages or inference work.
 
-The UI checks owner login before sending, but `POST /messages` still has
-its original trusted-network access contract. This page does not add API
-authentication to that endpoint. See [ADR 0017](adr/0017-web-chat-channel.md).
+Work-data and conversation APIs require owner authentication. Accounts
+settings specifically require the browser owner session. See
+[ADR 0021](adr/0021-google-accounts.md).
 
 ## Hybrid inference (Phase 21)
 
@@ -84,10 +81,57 @@ Telepresence at `/hub/app/telepresence.html` shares the owner cookie and
 provides remote camera/behaviour/speak controls. Speak-through-robot bypasses
 companion-core and is a separate remote-control operation. API clients can
 still use bearer authentication; browser credentials are not kept in
-localStorage. The conversational Call Reachy endpoint retains its existing
-trusted-network access contract.
+localStorage. Conversational calls require owner login (or the owner bearer for API
+clients) and use the configured owner identity.
 
 Cross-machine WebRTC needs reachable UDP/ICE media candidates: Caddy proxies
 signaling only. See [deployment limitations](deployment.md#network-and-access-boundaries)
 and [ADR 0012](adr/0012-call-reachy-webrtc.md) /
 [ADR 0013](adr/0013-remote-telepresence.md) for the transport decisions.
+
+## Connect Gmail and Google Calendar
+
+Open **Settings · Accounts** in the operator dashboard.
+
+1. Select **Connect** on Gmail or Google Calendar.
+2. Sign in on **Google's website** with your Google username/password, or
+   choose an account already signed in there. Reachy never asks for or stores
+   that Google password.
+3. Review Google's permission screen and approve the read-only permissions for
+   the feature you selected. Cancelling is safe; Connect can be tried again.
+4. After returning to Reachy, check the displayed Google email and connection
+   result. For Calendar, select the calendars you want Reachy to read and save
+   those choices. Use the same Google account for both cards.
+
+You can **Test connection**, **Reconnect**, or **Disconnect** from either card.
+Disconnect removes both capabilities because Google may share their grant.
+If Google cannot be reached to revoke the grant, the page explains how to
+remove access in your Google account too. Local drafts are kept. Pending owner
+notifications and core conversation context are cleared; already delivered
+messages and a browser's displayed conversation are not remotely erased.
+
+Use **Show messages** to browse up to 60 Gmail messages, search to narrow
+results, and select a message for a literal text preview. Attachments are not
+downloaded and message text is capped at 20,000 characters. Calendar previews
+cover the next seven days. You can also ask in Chat:
+
+- `check gmail`
+- `search gmail from:person@example.com`
+- `read gmail google:MESSAGE_ID` using an ID from the list
+- `what's next?`
+
+Gmail and selected Google calendars also feed the existing private briefing and
+reminder flows. Local calendar entries/drafts remain local. This connection
+cannot send, delete or mark Gmail messages as read, or change Google events.
+Provider text cannot authorize actions.
+
+Cloud inference, if enabled in Language model settings, can receive earlier
+account replies as conversation context. The Accounts page explains this;
+work-private delivery prevents room playback but does not prevent transfer to
+your configured cloud provider.
+
+If the page says Google sign-in is not ready, the person setting up this Reachy
+installation needs to finish the **one-time connection setup**. Ordinary users
+do not need client IDs, secret values, code, or command-line tools to connect.
+The optional setup panel accepts the connection file downloaded during
+[installation setup](deployment.md#google-application-setup).

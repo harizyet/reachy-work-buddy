@@ -26,7 +26,7 @@ test('web chat handles identities, replies, failures, login expiry, and fresh ta
     const json = (status, body) => { res.writeHead(status, {'Content-Type': 'application/json'}); res.end(JSON.stringify(body)); };
     if (url.pathname.startsWith('/hub/ui/')) {
       const name = url.pathname.substring('/hub/ui/'.length) || 'index.html';
-      if (!['index.html', 'app.js', 'chat.js', 'style.css'].includes(name)) return json(404, {});
+      if (!['index.html', 'app.js', 'chat.js', 'accounts.js', 'style.css'].includes(name)) return json(404, {});
       res.writeHead(200, {'Content-Type': name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : 'text/html'});
       return res.end(fs.readFileSync(path.join(__dirname, '..', name)));
     }
