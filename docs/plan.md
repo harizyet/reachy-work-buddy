@@ -228,6 +228,7 @@ see the [deployment and accounts acceptance plan](phase-22-23.md). See
 | Phase 22b — Physical acceptance testing | Run the full [acceptance plan](phase-22-23.md#satisfactory-run-acceptance-matrix) on real Nano/Reachy hardware: first real motor motion, physical voice, endurance (8-hour desk run, 24-hour idle soak), outage/reconnect, backup restore, privacy/consent, channels. | Cold starts, physical motion/media, privacy, channels, outage recovery, backup restore, 8-hour desk run and 24-hour idle soak pass with hardware evidence. **Deliberately deferred** until after Phase 23 (owner's call, 2026-09-23, so Phase 23 isn't blocked on Nano hardware availability) — planned, not started. |
 | Phase 23 — Production Google account settings | Begin with cross-cutting versioned database migrations and shared SecretStore, including existing LLM-key migration; then owner-authenticated Gmail/Calendar Accounts UI, OAuth and read-only adapters; see the [accounts plan](phase-22-23.md). | Real-account connect/read/refresh/restart/revoke/reconnect/disconnect and privacy/isolation checks pass; applicable Google production requirements verified; repeat hardware acceptance (Phase 22b's matrix) with accounts. Planned, not implemented; proceeds now, ahead of Phase 22b. |
 | Phase 24 — Owner recognition and voice access control | Web-portal owner enrollment, calibration and user-run accuracy testing; live face verification, speaker attribution, authenticated input and continuous room-audio gates; see the [recognition plan](phase-24.md). | Audible conversation requires fresh owner-in-view confidence strictly >60% plus privacy/liveness checks; unknown or ambiguous speakers cannot enter the conversation pipeline; spoof/outage/API-bypass tests pass on hardware; consequential actions retain authenticated text-only consent. Planned, not implemented. |
+| Phase 25 — Meeting transcription and minutes | Upload or live-record (via Call Reachy) a meeting/conversation, transcribe it with the existing local STT, and hand the transcript to the LLM stack for a structured summary, key points, and action items; see the [transcription plan](phase-25.md). | A real recording (uploaded or live) produces summary/key points/action items in the operator UI via an async job the UI polls, not a blocking request; action items become tasks only after explicit owner confirmation; minutes are never spoken through Reachy's speaker and cloud delivery of a transcript requires a separate off-by-default opt-in. Planned, not implemented; depends on Phase 23's migration framework. |
 
 ## 7. Release Targets
 
@@ -264,6 +265,8 @@ preserving physical embodiment.
 - Login-gated operator UI: component health/LLM utilization dashboard,
   mode/DND/LLM-provider controls (Phase 19).
 - Web chat as a first-class channel and Telegram-outage fallback (Phase 20).
+- Meeting transcription and minutes: summary, key points, and
+  confirm-before-create action items from a recorded meeting (Phase 25).
 
 ## 8. Deployment Plan
 
@@ -359,6 +362,7 @@ baseline reference. [1]
 4. Run the physical acceptance matrix (Phase 22b), fix blockers, and record measured results before marking Phase 22 complete — deferred until after Phase 23.
 5. Verify real Google access and repeat deployment/privacy/recovery tests before production rollout.
 6. Implement Phase 24 owner enrollment, calibrated recognition and speaker/output gates; pass the [hardware and adversarial acceptance matrix](phase-24.md#acceptance-and-release-gate) before enabling ambient owner-only voice.
+7. Implement Phase 25 meeting transcription and minutes: async job pipeline, chunked summarization, and confirm-before-create action items; see the [transcription plan](phase-25.md).
 
 ## 13. Key Engineering Risks
 

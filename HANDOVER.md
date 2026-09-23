@@ -95,6 +95,15 @@ hub API, not just curl-to-Together:
 - Local config was restored to the correct OVMS URL before teardown; the
   disposable stack and its volumes were removed, `ovms` left running.
 
+**Phase 25 planned (2026-09-23):** [docs/phase-25.md](docs/phase-25.md) adds
+meeting transcription and minutes — upload or live-record (via Call Reachy)
+a meeting, transcribe with the existing local `reachy_hub/stt.py`, and hand
+the transcript to the existing LLM stack for a chunked summary/key
+points/action items, delivered via a new async job pipeline the operator UI
+polls (nothing in this codebase runs work outside a request/response cycle
+today). Depends on Phase 23 shipping versioned migrations first. Planning
+only — no code, schema, or dependency changes were made.
+
 ### Phase 20 foundation (historical verification)
 
 See [ADR 0017](docs/adr/0017-web-chat-channel.md), the root README Status,

@@ -554,7 +554,7 @@ Phases 0-21 and 22a are done:
 
 See [docs/plan.md §6](docs/plan.md#6-implementation-roadmap) for the
 phase-by-phase roadmap. Phases 0-21 and 22a are implemented, including
-hosted-cloud verification. **Phase 22b and Phases 23–24 remain planned:**
+hosted-cloud verification. **Phase 22b and Phases 23–25 remain planned:**
 
 - Phase 22b: physical acceptance testing, deferred until after Phase 23 (the
   owner's explicit call, so Phase 23 doesn't sit blocked on Nano hardware
@@ -571,6 +571,13 @@ hosted-cloud verification. **Phase 22b and Phases 23–24 remain planned:**
   speaker attribution before voice input, and unchanged text-only action consent.
   Enrollment, calibration and user-run accuracy tests live in the web portal,
   with results reviewed before activating a profile.
+- Phase 25: [meeting transcription and minutes](docs/phase-25.md) — upload
+  or live-record a meeting, transcribe it with the existing local STT, and
+  produce a summary, key points, and action items via an async job the
+  operator UI polls. Action items become tasks only after explicit owner
+  confirmation; minutes are never spoken aloud, and cloud delivery of a
+  transcript needs a separate off-by-default opt-in. Depends on Phase 23's
+  migration framework.
 
 See the [detailed plan and pass criteria](docs/phase-22-23.md). The first gate
 is hardware/runtime inventory and service placement: current ADRs require
