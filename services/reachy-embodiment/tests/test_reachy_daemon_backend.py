@@ -33,14 +33,14 @@ def _wav_bytes(seconds: float = 0.5, framerate: int = 16000) -> bytes:
 
 
 def make_backend(handler) -> ReachyDaemonBackend:
-    backend = ReachyDaemonBackend("http://daemon.test")
-    backend._client = httpx.Client(base_url="http://daemon.test", transport=httpx.MockTransport(handler))
-    return backend
+    return ReachyDaemonBackend("http://daemon.test", transport=httpx.MockTransport(handler))
 
 
 def test_connected_true_when_status_has_no_error() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        assert request.url.path == "/daemon/status"
+        # Every reachy-mini-daemon route lives under /api — confirmed live
+        # against the real daemon during Phase 22 Nano hardware testing.
+        assert request.url.path == "/api/daemon/status"
         return httpx.Response(200, json={"state": "ready", "error": None})
 
     backend = make_backend(handler)
@@ -98,7 +98,7 @@ def test_play_behaviour_posts_to_mapped_move() -> None:
 
     backend = make_backend(handler)
     backend.play_behaviour(Behaviour.GREETING, {})
-    assert calls == ["/move/play/recorded-move-dataset/pollen-robotics/reachy-mini-emotions-library/welcoming1"]
+    assert calls == ["/api/move/play/recorded-move-dataset/pollen-robotics/reachy-mini-emotions-library/welcoming1"]
 
 
 def test_play_behaviour_logs_and_does_not_raise_on_daemon_error() -> None:
@@ -113,8 +113,7 @@ def test_play_behaviour_skips_unmapped_behaviour_without_raising() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         raise AssertionError("should not be called for an unmapped behaviour")
 
-    backend = ReachyDaemonBackend("http://daemon.test", behaviour_moves={})
-    backend._client = httpx.Client(base_url="http://daemon.test", transport=httpx.MockTransport(handler))
+    backend = ReachyDaemonBackend("http://daemon.test", behaviour_moves={}, transport=httpx.MockTransport(handler))
     backend.play_behaviour(Behaviour.GREETING, {})  # must not raise
 
 
@@ -133,7 +132,7 @@ def test_default_mapping_uses_real_verified_move_names() -> None:
     backend = make_backend(handler)
 
     backend.play_behaviour(Behaviour.WAITING, {})
-    assert calls == ["/move/play/recorded-move-dataset/pollen-robotics/reachy-mini-emotions-library/waiting"]
+    assert calls == ["/api/move/play/recorded-move-dataset/pollen-robotics/reachy-mini-emotions-library/waiting"]
 
     calls.clear()
     for behaviour in (Behaviour.IDLE_BREATHING, Behaviour.SUBTLE_SCAN, Behaviour.ANTENNA_TWITCH):
@@ -146,9 +145,9 @@ def test_play_audio_uploads_then_plays_and_returns_duration() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         calls.append(request.url.path)
-        if request.url.path == "/media/sounds/upload":
+        if request.url.path == "/api/media/sounds/upload":
             return httpx.Response(200, json={"path": "sounds/tmp123.wav"})
-        if request.url.path == "/media/play_sound":
+        if request.url.path == "/api/media/play_sound":
             assert request.content
             return httpx.Response(200, json={"status": "ok"})
         raise AssertionError(f"unexpected path {request.url.path}")
@@ -156,7 +155,7 @@ def test_play_audio_uploads_then_plays_and_returns_duration() -> None:
     backend = make_backend(handler)
     duration = backend.play_audio(_wav_bytes(seconds=0.5))
 
-    assert calls == ["/media/sounds/upload", "/media/play_sound"]
+    assert calls == ["/api/media/sounds/upload", "/api/media/play_sound"]
     assert duration == pytest.approx(0.5)
 
 
@@ -210,7 +209,7 @@ def test_capture_frame_releases_and_reacquires_daemon_media(monkeypatch: pytest.
 
     frame = backend.capture_frame()
 
-    assert calls == ["/media/release", "/media/acquire"]
+    assert calls == ["/api/media/release", "/api/media/acquire"]
     assert fake_capture.released is True
     assert isinstance(frame, bytes)
     assert len(frame) > 0  # a real JPEG encode of the fake frame
@@ -232,7 +231,7 @@ def test_capture_frame_reacquires_media_even_if_read_fails(monkeypatch: pytest.M
 
     # /media/acquire must still have been called despite the failure, so
     # the daemon isn't left permanently locked out of its own camera.
-    assert calls == ["/media/release", "/media/acquire"]
+    assert calls == ["/api/media/release", "/api/media/acquire"]
     assert fake_capture.released is True
 
 

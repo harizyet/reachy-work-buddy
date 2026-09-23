@@ -172,8 +172,25 @@ class ReachyDaemonBackend:
         command_timeout: float = 5.0,
         status_timeout: float = 1.5,
         behaviour_moves: dict[Behaviour, tuple[str, str]] | None = None,
+        transport: httpx.BaseTransport | None = None,
     ) -> None:
-        self._client = httpx.Client(base_url=base_url, timeout=command_timeout)
+        # Every reachy-mini-daemon route lives under /api (e.g. /api/daemon/status,
+        # /api/move/play/...) — confirmed live against the real daemon's own
+        # /openapi.json during Phase 22 Nano hardware testing; not visible
+        # from reading the router source alone (each APIRouter's own
+        # sub-prefix, like "/move", doesn't show the top-level /api mount
+        # applied when the daemon assembles its FastAPI app). Every path
+        # below this point is written as if /api/ already, verified to
+        # actually resolve correctly by httpx (it keeps this base path
+        # regardless of whether the request path starts with "/").
+        #
+        # `transport` is exposed purely so tests can inject an
+        # httpx.MockTransport while still going through this real
+        # base_url-with-/api construction, rather than swapping `_client`
+        # after the fact and silently losing prefix coverage.
+        self._client = httpx.Client(
+            base_url=f"{base_url.rstrip('/')}/api", timeout=command_timeout, transport=transport
+        )
         self._status_timeout = status_timeout
         self._behaviour_moves = behaviour_moves if behaviour_moves is not None else dict(_DEFAULT_BEHAVIOUR_MOVES)
 
