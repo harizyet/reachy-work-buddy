@@ -1,5 +1,12 @@
 # Phase 22 inventory and compatibility report — 2026-09-22
 
+Historical inventory and measurements. Later backend/launcher work and live
+Nano startup supersede this report's original “next steps”; see the
+[bring-up record](phase-22-bring-up.md) and current
+[deployment guide](../deployment.md#robot-host-and-jetson-nano). In particular,
+the live daemon mounts the initially inventoried routes under `/api`.
+
+
 Gathered by a Claude Code session running directly on the physical Jetson
 Nano (`reachy-mini`), coordinated by a session on the homelab machine.
 Device identity was independently verified before trusting this report —
@@ -43,8 +50,9 @@ Confirmed genuine Tegra hardware, not a VM/container impersonating one.
 - Network: `wlan0` up on SSID "Safelan", `10.180.1.140/24`; `eth0`
   down/unavailable (no cable attached); `docker0` bridge present.
 - Docker 20.10.7 installed. `docker compose` v2 plugin and `docker buildx`
-  are **not** installed — matches the exact gap AGENTS.md's Dev setup
-  section already documents install steps for; those should apply as-is.
+  were **not** installed at inventory time. Current setup guidance is in
+  [the Docker toolchain guide](../development.md#docker-toolchain), including
+  the subsequently confirmed old-engine BuildKit requirement.
 - Hostname: `reachy-mini`
 
 ## Reachy variant / physical attachment

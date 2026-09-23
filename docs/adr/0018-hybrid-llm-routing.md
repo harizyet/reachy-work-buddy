@@ -9,7 +9,7 @@ Together AI / `zai-org/GLM-5.3` was subsequently verified end-to-end as the
 cloud role on 2026-09-22 in the isolated `phase21togetherverify` stack.
 Owner-authenticated hub requests verified manual cloud override and actual
 local-failure fallback, with both attempts recorded and credentials masked.
-See [HANDOVER](../../HANDOVER.md) for the run details. This supplements the
+See [hosted-cloud run](../verification/history.md#hosted-cloud-follow-up--2026-09-22) for the run details. This supplements the
 original OVMS verification below; the design decision is unchanged.
 
 ## Decision
@@ -90,16 +90,7 @@ or quality measurements.
 
 ## Verification
 
-Python routing/integration tests cover policies, overrides through hub/core,
-partial settings and key preservation, provider failures, cancellation,
-deadline fallback, accounting, deterministic-intent precedence, and missing
-cloud configuration. Chromium regression checks override transmission/reset.
-
-The isolated `phase21verify` stack used real Docker images, Postgres, Caddy,
-and OVMS's discovered `OpenVINO/Qwen2.5-1.5B-Instruct-int4-ov` model. Local-only,
-unreachable-local fallback, and healthy-local manual override succeeded with
-the expected attempt records. **OVMS backed both roles in this live test**;
-no hosted cloud credentials were available at that time. The subsequent
-hosted-provider check is recorded in the amendment above.
-See [HANDOVER](../../HANDOVER.md) for final check counts,
-upgrade/restart evidence, and cleanup status.
+The [implementation history](../verification/history.md) records policy and
+accounting tests, Docker/Postgres/OVMS checks, and the subsequent real
+Together AI cloud-role verification. That later run completes the original
+hosted-provider check without changing this decision.

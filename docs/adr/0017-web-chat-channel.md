@@ -123,32 +123,14 @@ Telegram health; an outage produces an informational fallback message.
 
 ## Verification
 
-- 287 Python tests passed, including existing speech/WebRTC tests, real
-  in-process cross-channel session/routing tests, and deterministic polling
-  success/failure/recovery/staleness tests with controlled timestamps.
-- A committed Chromium regression (`clients/operator-ui/tests/chat.test.cjs`)
-  uses a local HTTP fixture to cover browser behavior: pending sends,
-  literal HTML text, drafts after errors, user changes, login expiry,
-  late replies after logout, empty transcript on refresh, responsive layout,
-  and both direct and Caddy-style URL prefixes.
-- A separate live run built the real Docker images and used isolated
-  `phase20verify` Postgres/Caddy containers and the existing OVMS Qwen model.
-  Chromium sent a web message, a subsequent `channel: telegram` HTTP call
-  recorded a favorite color, and the next browser reply recalled “Teal.”
-  Session/conversation IDs matched throughout. Office/DND state and a
-  private calendar reply were visible in chat.
-- An intentionally invalid test Telegram token produced a real Bot API
-  HTTP 401 and `healthy: false` while web chat continued working. The
-  cross-channel call used the hub API, not a real Telegram-account message;
-  successful-poll recovery was verified deterministically, not claimed as
-  a live Telegram-account recovery test.
-- The disposable stack was removed afterward; the existing `ovms`
-  container and user deployment settings were left unchanged.
+See the [Phase 20 record](../verification/history.md) for Python, Chromium,
+Docker/Postgres/OVMS, and Telegram failure evidence. Simulated channel calls
+are distinguished there from real Telegram-account messages.
 
 ## Consequences
 
 No new database schema, dependency lockfile change, or core runtime change.
 The view is a regular browser channel and an outage fallback, with explicit
 limits on history and authentication. Hybrid local/cloud routing remains
-Phase 21. See the [UI guide](../../clients/operator-ui/README.md) and
-[deployment instructions](../../deploy/homelab/README.md#web-chat-phase-20).
+Phase 21. See the [UI guide](../operator-guide.md) and
+[deployment instructions](../operator-guide.md#chat-phase-20).

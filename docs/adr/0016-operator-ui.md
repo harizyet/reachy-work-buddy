@@ -140,11 +140,11 @@ notifications use their existing per-user endpoints, not new copies in
 
 ## Implementation references
 
-- [Agent conventions](../../AGENTS.md#operator-ui-and-inference-conventions-phase-19)
-- [Dashboard workflow](../../clients/operator-ui/README.md)
-- [Hub API and owner authentication](../../services/reachy-hub/README.md#operator-ui-phase-19)
-- [Core inference and settings](../../services/companion-core/README.md)
-- [Deployment and OVMS networking](../../deploy/homelab/README.md#operator-dashboard-phase-19)
+- [Agent conventions](../../AGENTS.md)
+- [Dashboard workflow](../operator-guide.md)
+- [Hub API and owner authentication](../reference/services.md#reachy-hub)
+- [Core inference and settings](../reference/services.md#companion-core)
+- [Deployment and OVMS networking](../deployment.md#model-endpoints)
 - [Current verification snapshot and next phase](../../HANDOVER.md)
 
 This ADR extends [ADR 0013](0013-remote-telepresence.md)'s browser auth

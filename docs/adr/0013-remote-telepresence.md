@@ -48,7 +48,7 @@ limitation as every prior embodiment-touching phase — see ADR 0012).
 ## Decisions
 
 **Auth: a single shared bearer token (`REMOTE_UI_TOKEN`), fail-closed.**
-Single-user V0.1 scope (per AGENTS.md's repo-wide convention) doesn't
+Single-user V0.1 scope doesn't
 justify building real session/user auth infrastructure — a shared secret
 checked with `secrets.compare_digest` against the `Authorization: Bearer
 <token>` header is proportionate. It fails *closed*: if `REMOTE_UI_TOKEN`
@@ -73,7 +73,7 @@ against in this environment.
 `tts.py` (`EspeakTTS`, already used by `/voice/turn` and `/webrtc/offer`)
 directly, and POSTs the resulting WAV to reachy-embodiment's new
 `POST /audio/play` (ADR 0003 contract endpoint, deliberately unimplemented
-until now — see AGENTS.md's Style section). No `companion_core_client`
+until this phase). No `companion_core_client`
 call anywhere in this path, which is what actually satisfies "without
 Companion Core" rather than just asserting it.
 

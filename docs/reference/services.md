@@ -1,0 +1,151 @@
+# Services and API reference
+
+This is the implementation map. Binding ownership and behavior decisions
+live in [ADRs](../README.md#architecture-decisions); request/response schemas
+come from each running FastAPI application's `/docs` and `/openapi.json`
+and the checked-in [shared models](../../shared/models/) /
+[route contracts](../../shared/protocols/). API paths below are service-local;
+Caddy prefixes hub with `/hub` and core with `/core`, subject to the
+[access restrictions](../deployment.md#network-and-access-boundaries).
+For startup/tests use [development](../development.md), and for worked
+requests use [workflow examples](workflow-examples.md).
+
+## companion-core
+
+[Source](../../services/companion-core/src/companion_core/) owns reasoning,
+intent handlers, tools, calendar/tasks/email, durable work memory, RAG,
+consent, inference settings, and usage. It never drives raw joints or owns
+browser/channel transport. Debug robot calls go through hub.
+
+| Surface | Purpose |
+|---|---|
+| `POST /conversation` | Session/conversation IDs, opaque channel, text, input modality, optional `force_frontier`; returns reply, turn count, privacy |
+| `POST /calendar/events` | Operator seeding, not agent calendar writes or external sync |
+| `GET /calendar/events`, `/calendar/next`, `/calendar/free-busy`, `/calendar/reminders/due` | Read-only calendar; free/busy exposes blocks rather than event details |
+| `GET`, `POST /tasks`; `POST /tasks/{id}/complete`; `GET /tasks/search` | Capture, list, complete, search follow-ups |
+| `GET`, `POST /memories`; `GET /memories/recall` | Durable targeted work-memory retrieval, separate from transcript |
+| `POST /memories/{id}/request-forget`, `/forget/confirm`, `/restore` | Text-confirmed soft deletion and undo |
+| `GET`, `POST /documents`; `GET /documents/search` | Operator ingestion and document/section retrieval |
+| `GET`, `POST /emails/received`; `GET`, `POST /emails/drafts` | Seeded inbox and deterministic drafts, no production mailbox sync yet |
+| `POST /emails/drafts/{id}/approve`, `/send`, `/cancel-send` | Text approval/send, delayed dispatch, cancellation |
+| `GET /briefing` | Prioritized briefing items for hub's delivery engine |
+| `GET`, `PUT /settings/llm`; `GET /llm/usage` | Internal settings/usage; operator callers use authenticated hub proxies |
+| `/debug/robots/...` | Debug integration plumbing, not a stable agent-tool API |
+
+The generic conversation branch uses the configured LLM after deterministic
+intent/consent handlers. It has no model tool executor. Same-session turns
+serialize; the latest 39 user/assistant messages provide bounded context,
+reset on restart. Work-memory recall queries persistent records, never dumps
+that transcript. Calendar/email replies are work-private; generated follow-ups
+retain the strongest prior context label. Generic privacy classification and
+intent matching remain keyword-based, not semantic understanding.
+
+Memory records carry source, sensitivity, optional expiry, and soft-delete
+time. Expiry is enforced on reads without a cleanup worker. Recall combines
+the strongest returned sensitivity. RAG uses lazy local MiniLM embeddings
+(384 dimensions), pgvector in production, and injected embeddings in tests.
+Chunks preserve Markdown headings and approximately 800-character paragraph
+packs; no PDF parser means no fabricated page citations. Pool setup must
+commit extension creation, and vector parameters need the explicit SQL cast
+already in `rag/postgres_store.py`.
+
+`consent/` is the single action gate: bulk destructive actions are blocked,
+voice cannot confirm, and undo remains available. The due-dispatch loop is
+the only email sender call site. See [ADR 0011](../adr/0011-destructive-action-consent.md).
+Production stores use Postgres; tests inject in-memory implementations.
+
+LLM merge/default/failure semantics are defined once in
+[ADR 0018](../adr/0018-hybrid-llm-routing.md). Both roles use the same compatible
+HTTP client, with masked settings and sanitized attempt logging. Usage window
+and entry limits are independent; missing token counts remain null.
+
+## reachy-hub
+
+[Source](../../services/reachy-hub/src/reachy_hub/) owns sessions, channels,
+response routing, authentication, robot registry/connectivity, STT/TTS,
+WebRTC, and static UI. It does not own reasoning policy or motor control.
+
+| Surface | Purpose |
+|---|---|
+| `POST /messages`; `GET /sessions/{user_id}` | Shared session across text channels; one active session per user |
+| `POST /voice/turn` | Multipart WAV `audio` and `user_id`; STT → shared conversation → WAV TTS |
+| `POST /webrtc/offer` | Conversational push-to-talk call; voice modality cannot confirm actions |
+| `PATCH /sessions/{user_id}/mode`, `/dnd`, `/privacy-context` | Authenticated updates to existing sessions |
+| `GET /audit/{user_id}`, `/notifications/{user_id}`; `POST /notifications/{user_id}/flush` | Routing decisions, queued notifications, controlled flush |
+| `POST /calendar/check-reminders/{user_id}`, `/briefing/{user_id}` | On-demand proactive routing, not an automatic schedule |
+| `POST`, `GET /robots` | HTTP robot registry |
+| `GET /robots/{id}/state`, `/behaviours`; `POST /robots/{id}/behaviour/{name}`, `/speak` | Authenticated robot proxies and direct speak-through control |
+| `POST /webrtc/telepresence/offer` | Authenticated remote media/control |
+| `WS /robots/connect` | Robot-token-authenticated registration/heartbeat/reconnect; commands still HTTP |
+| `POST /auth/login`, `/auth/logout`; `GET /auth/me` | Owner-cookie lifecycle; login/logout require CSRF header |
+| `GET /status` | Authenticated component probes, model config/usage, Telegram polling health, default user ID |
+| `GET`, `PUT /settings/llm`; `GET /llm/usage` | Authenticated core proxies; usage defaults `limit=50`, `since_hours=24` |
+
+Cookie mutations require CSRF; bearer clients remain supported. Static assets
+and historical conversation APIs retain their existing access contract;
+see [deployment](../deployment.md#owner-login) and
+[ADR 0016](../adr/0016-operator-ui.md). `/auth/me` is cookie-only, not a way
+for bearer clients to create a browser login.
+
+Response policy first chooses by mode, then enforces privacy, then records
+an audit. Direct replies are returned on the inbound channel regardless of
+proactive `delivery_channel` metadata. Reminder and briefing delivery reuse
+the interruption policy and queue; Phone delivery is not a working push
+integration. See [ADR 0006](../adr/0006-response-routing.md),
+[ADR 0014](../adr/0014-interruption-intelligence.md), and
+[ADR 0015](../adr/0015-daily-briefing.md).
+
+Telegram stores learned chat IDs separately from channel-agnostic sessions.
+Poll health lives in memory and resets on restart. STT/TTS are lazy local
+faster-whisper/espeak providers. WebRTC orchestration is separate from SDP
+and audio tracks; playback resamples to 48kHz mono because aiortc's Opus
+encoder does not adapt when tracks with different formats are swapped.
+
+The HTTP heartbeat interval is 2 seconds against embodiment's 5-second
+watchdog. WS connections are process-local, generation-fenced, and require
+one hub worker. `ROBOT_TOKENS` provisions hashed robot credentials in memory;
+startup must provision them again. WS credentials differ from operator auth.
+
+## reachy-embodiment
+
+[Source](../../services/reachy-embodiment/src/reachy_embodiment/) owns semantic
+behaviours, independent presence, watchdog/fallback, and the robot backend.
+STT/TTS and work data stay in the homelab.
+
+| Surface | Purpose |
+|---|---|
+| `GET /health`, `/state`, `/behaviours` | Service/backend state and behavior vocabulary |
+| `POST /behaviour/{name}`, `/heartbeat` | Semantic behavior and proof of hub liveness |
+| `GET /camera/frame`; `POST /audio/play` | Frame capture and audio playback used by telepresence |
+
+`/gaze` and `/pose` remain reserved, unimplemented contracts. `/audio/play`
+was implemented in Phase 16; the old Phase 8 README's contrary claim was stale.
+`RobotBackend` selects simulation by default or `reachy_daemon` explicitly;
+unknown settings fail startup. An unreachable daemon reports disconnected
+and does not claim real hardware. Presence checks backend connectivity
+periodically without querying it on every animation tick.
+
+The independent presence thread schedules idle behaviours in idle/disconnected
+states, times out without hub heartbeats, and recovers on renewed liveness.
+The real backend logs/no-ops unmapped idle movements, so simulated scheduling
+does not prove physical idle animation. Silero VAD uses 512 samples at 16kHz;
+a live physical microphone/barge-in path has not passed acceptance.
+
+`ReachyDaemonBackend` calls daemon HTTP under `/api`. Recorded moves use the
+Pollen emotions dataset; camera capture releases daemon media, reads V4L2
+through OpenCV, then reacquires in cleanup. Audio is upload-then-play.
+Physical camera/audio acceptance is still outstanding. Read
+[bring-up evidence](../verification/phase-22-bring-up.md) before treating the
+simulator's successful move lifecycle as validated real motion.
+
+## Shared contracts and clients
+
+Runtime service packages never import one another. Contracts live in
+`shared/models`, route constants in `shared/protocols`. Workspace members
+are independent images even though development installs them together.
+
+[operator-ui](../../clients/operator-ui/) serves owner Overview/Chat at
+`/ui/`; [web-pwa](../../clients/web-pwa/) serves Call Reachy/telepresence at
+`/app/`. Both mount under `/hub/` through Caddy. Browser API paths must stay
+relative so direct and proxied deployments work. User workflows are in the
+[operator guide](../operator-guide.md), not duplicated in client READMEs.

@@ -9,8 +9,7 @@ does not sit blocked on Nano hardware availability: Phase 23 now proceeds
 immediately after 22a, and 22b is deferred to a later session. Phase 23
 reruns the relevant acceptance tests (22b's matrix) with production account
 access once both 22b and Phase 23's own implementation are ready. Written
-2026-09-22, updated 2026-09-23 — see HANDOVER.md for the full evidence
-trail. The companion board is confirmed as an **original Jetson Nano**, not
+2026-09-22, updated 2026-09-23 — see the [bring-up record](verification/phase-22-bring-up.md) for evidence. The companion board is confirmed as an **original Jetson Nano**, not
 Orin, running JetPack 4.6.1 (EOL), with 3.9GB RAM; Reachy Mini's
 camera/audio/motor-controller are all USB-attached directly to it (no
 separate onboard computer exists).
@@ -19,14 +18,14 @@ separate onboard computer exists).
 
 Phases 0–21 implement the application. `robot.py` now also provides
 `ReachyDaemonBackend`, a real HTTP client to `reachy-mini-daemon`
-(`ROBOT_BACKEND=reachy_daemon`); `deploy/reachy/` has a working install
-script, systemd unit and Bash launchers. A `POST /behaviour/{name}` call has
+(`ROBOT_BACKEND=reachy_daemon`); `deploy/reachy/` has a captured install
+recipe and systemd unit, with Bash launchers under `scripts/`. Clean-image
+installer validation remains outstanding. A `POST /behaviour/{name}` call has
 been dispatched end-to-end against the real daemon's own `--mockup-sim`
-mode and against the real daemon running on the Nano (connectivity only, not
-yet a triggered move) — it has not yet triggered a move on real Nano
-motors. Google connectors and OAuth account settings do not exist. Calendar
-data is local Postgres; email sending in the homelab Compose stack targets
-Mailpit.
+mode; the real Nano daemon has separately passed connectivity checks. A
+named behaviour command has not yet triggered a move on real Nano motors. Google connectors and OAuth account settings do not exist. Calendar
+data is local Postgres; the simulation Compose profile sends email to
+Mailpit, while production needs a configured SMTP relay.
 
 Preserve ADRs 0001, 0004, 0010, 0011, 0013 and 0016–0018, with the
 Phase 22a transport amendment in [ADR 0019](adr/0019-robot-initiated-hub-connectivity.md). Target placement:
@@ -93,8 +92,10 @@ below; it is deliberately not attempted yet.
 
 ### Bash launcher contract
 
-These are implemented at `scripts/*.sh` and live-verified (see HANDOVER.md
-for the specific bugs found and fixed along the way):
+These scripts exist at `scripts/*.sh`. The table is their target contract;
+[current deployment limits](deployment.md#robot-host-and-jetson-nano) and
+[recorded verification](verification/phase-22-bring-up.md) distinguish what
+is implemented/tested, including the remaining HTTP command registration:
 
 | File | Required behaviour |
 |---|---|

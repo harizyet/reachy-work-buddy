@@ -87,8 +87,8 @@ inspectable order is easier to reason about and test than a weighted score.
 - No new companion-core storage and no new reachy-hub storage — the
   briefing reuses `notification_queue`/`audit_log`/`AgentSession.dnd`/
   `last_interruption_at` exactly as ADR 0014 left them. No Postgres schema
-  change, so none of HANDOVER.md's "needs `docker compose down -v`"
-  caveat applies to this phase.
+  change. Existing data must be preserved; see the
+  [upgrade guidance](../deployment.md#upgrades-and-verification-cleanup).
 - `calendar/reminders.py` gained `reminder_urgency` (extracted from
   `app.py`'s `/calendar/reminders/due` handler) purely so `briefing.py`
   doesn't duplicate the 5-minute urgency constant. `/calendar/reminders/due`'s
