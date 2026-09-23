@@ -175,6 +175,18 @@ if not has_reachymini_asoundrc():
     print("Created ~/.asoundrc")
 PY
 
+# A desktop session's PulseAudio can auto-spawn under this user and hold
+# the Mini's capture PCM open, blocking the daemon's own ALSA access
+# regardless of ~/.asoundrc being correct — found live during Phase 22b
+# (see docs/verification/phase-22b-first-motion-2026-09-23.md). Disabling
+# autospawn is a one-time per-user config, not something start-reachy.sh
+# re-applies on every start.
+mkdir -p "${HOME}/.config/pulse"
+if [ ! -f "${HOME}/.config/pulse/client.conf" ] || ! grep -q '^autospawn *= *no' "${HOME}/.config/pulse/client.conf"; then
+    printf 'autospawn = no\n' >> "${HOME}/.config/pulse/client.conf"
+    echo "Set autospawn = no in ~/.config/pulse/client.conf"
+fi
+
 echo "== Done =="
 echo "Verify with:"
 echo "  source ${HOME}/.reachy-gstreamer-env && source ${VENV_DIR}/bin/activate"

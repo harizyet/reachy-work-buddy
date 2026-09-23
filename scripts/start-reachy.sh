@@ -148,24 +148,40 @@ else
     # without audio.
     REACHY_VENV="${HOME}/reachy-venv"
     ASOUNDRC="${HOME}/.asoundrc"
+    DETECTED_CARD=""
     if [[ -x "${REACHY_VENV}/bin/python3" ]]; then
-        DETECTED_CARD="$("${REACHY_VENV}/bin/python3" -c 'from reachy_mini.media.audio_utils import get_respeaker_card_number; print(get_respeaker_card_number())' 2>/dev/null || true)"
-        if [[ -n "$DETECTED_CARD" && "$DETECTED_CARD" != "None" ]]; then
-            if [[ -f "$ASOUNDRC" ]] && ! grep -q "hw:${DETECTED_CARD},0" "$ASOUNDRC" 2>/dev/null; then
-                BACKUP="${ASOUNDRC}.stale-$(date +%Y%m%d%H%M%S)"
-                mv "$ASOUNDRC" "$BACKUP"
-                log_warn "~/.asoundrc didn't reference detected audio card ${DETECTED_CARD} — backed up to $(basename "$BACKUP")"
-            fi
-            if [[ ! -f "$ASOUNDRC" ]]; then
-                "${REACHY_VENV}/bin/python3" -c 'from reachy_mini.media.audio_utils import write_asoundrc_to_home; write_asoundrc_to_home()' \
-                    && log_info "regenerated ~/.asoundrc for detected audio card ${DETECTED_CARD}" \
-                    || log_warn "failed to regenerate ~/.asoundrc — audio may not work"
-            fi
+        RAW_DETECTED_CARD="$("${REACHY_VENV}/bin/python3" -c 'from reachy_mini.media.audio_utils import get_respeaker_card_number; print(get_respeaker_card_number())' 2>/dev/null || true)"
+        # get_respeaker_card_number() returns 0 (not None) as a "no card
+        # found" default, and -1 on an arecord failure — found live on the
+        # Nano: a bare "!= None"/non-empty check doesn't catch either, and
+        # would happily regenerate ~/.asoundrc for HDMI (card 0) or a
+        # nonsense "hw:-1,0" if the robot's USB audio isn't enumerated yet
+        # (still powering up, or unplugged) when this script runs.
+        # Require /proc/asound/cards to actually name that index as the
+        # Reachy Mini's card before trusting it.
+        if [[ "$RAW_DETECTED_CARD" =~ ^[0-9]+$ ]] \
+            && grep -qiE "^ *${RAW_DETECTED_CARD} \[.*\]: .*(Reachy Mini Audio|ReSpeaker)" /proc/asound/cards 2>/dev/null; then
+            DETECTED_CARD="$RAW_DETECTED_CARD"
         else
-            log_warn "could not detect Reachy Mini audio card via reachy_mini.media.audio_utils — skipping ~/.asoundrc re-check"
+            log_warn "reachy_mini.media.audio_utils did not report a real Reachy Mini/ReSpeaker card (got '${RAW_DETECTED_CARD}') — skipping ~/.asoundrc re-check and mixer reset this start"
         fi
     else
         log_warn "reachy-venv not found at ${REACHY_VENV} — skipping audio device (~/.asoundrc) re-check"
+    fi
+    if [[ -n "$DETECTED_CARD" ]]; then
+        if [[ -f "$ASOUNDRC" ]] && ! grep -q "hw:${DETECTED_CARD},0" "$ASOUNDRC" 2>/dev/null; then
+            BACKUP="${ASOUNDRC}.stale-$(date +%Y%m%d%H%M%S)"
+            if mv "$ASOUNDRC" "$BACKUP" 2>/dev/null; then
+                log_warn "~/.asoundrc didn't reference detected audio card ${DETECTED_CARD} — backed up to $(basename "$BACKUP")"
+            else
+                log_warn "~/.asoundrc didn't reference detected audio card ${DETECTED_CARD}, but backing it up failed — leaving it in place, audio may not work"
+            fi
+        fi
+        if [[ ! -f "$ASOUNDRC" ]]; then
+            "${REACHY_VENV}/bin/python3" -c 'from reachy_mini.media.audio_utils import write_asoundrc_to_home; write_asoundrc_to_home()' \
+                && log_info "regenerated ~/.asoundrc for detected audio card ${DETECTED_CARD}" \
+                || log_warn "failed to regenerate ~/.asoundrc — audio may not work"
+        fi
     fi
     # Best-effort restore of any persisted ALSA mixer levels (e.g. a
     # previously attenuated PCM volume saved with `alsactl store`); a
@@ -179,13 +195,17 @@ else
     # volume explicitly by the freshly detected numeric card instead of
     # trusting restore alone. Unmuted/100% matches what the owner verified
     # audible during Phase 22b; not fatal if amixer/the card is unavailable.
-    if [[ -n "${DETECTED_CARD:-}" && "$DETECTED_CARD" != "None" ]]; then
+    if [[ -n "$DETECTED_CARD" ]]; then
         # Two distinct 'PCM' controls (,0 and ,1) were both found attenuated
         # live on the Nano's card — set both, matching what the owner
-        # verified audible.
-        amixer -c "$DETECTED_CARD" sset 'PCM',0 100% unmute >/dev/null 2>&1
+        # verified audible. Each call is independently non-fatal: this
+        # script runs under `set -euo pipefail`, so an unguarded failure
+        # here (e.g. no 'PCM',0 control on this card) would otherwise abort
+        # the whole daemon start.
+        amixer -c "$DETECTED_CARD" sset 'PCM',0 100% unmute >/dev/null 2>&1 \
+            || log_warn "could not set PCM',0 volume on card ${DETECTED_CARD} — audio may be quiet or muted"
         amixer -c "$DETECTED_CARD" sset 'PCM',1 100% unmute >/dev/null 2>&1 \
-            || log_warn "could not set PCM volume on card ${DETECTED_CARD} — audio may be quiet or muted"
+            || log_warn "could not set PCM',1 volume on card ${DETECTED_CARD} — audio may be quiet or muted"
     fi
 
     log_info "starting $DAEMON_SERVICE"

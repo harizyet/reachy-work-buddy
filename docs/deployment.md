@@ -145,12 +145,15 @@ USB audio enumeration order isn't stable across boots/replugs, so a stale
 sound effects, no mic capture) with no error visible from the launcher —
 found live during [Phase 22b](phase-22-23.md#satisfactory-run-acceptance-matrix)
 and detailed in [that session's evidence](verification/phase-22b-first-motion-2026-09-23.md).
-`start-reachy.sh` now re-detects the card and regenerates `~/.asoundrc` (via
-`reachy_mini.media.audio_utils`) and resets PCM volume on every real daemon
-start, not just at install time. If a desktop session's own PulseAudio
-autospawns and holds the robot's audio device, set `autospawn = no` in
-`~/.config/pulse/client.conf` for the `reachy` user — this is a one-time
-manual step, not something the launcher automates.
+`start-reachy.sh` now re-detects the card (validated against
+`/proc/asound/cards`, not just a non-error return — the detection helper's
+own "not found" fallback is a numeric card index, not `None`) and
+regenerates `~/.asoundrc` and resets PCM volume on every real daemon start,
+not just at install time; every step here is best-effort and non-fatal to
+daemon start. `install-reachy-venv.sh` sets `autospawn = no` in
+`~/.config/pulse/client.conf` for the `reachy` user at install time, so a
+desktop session's own PulseAudio doesn't auto-spawn and hold the robot's
+audio device; this is not re-applied on every start.
 
 1. Prepare `deploy/reachy/.env` from its example, permission-restricted to
    the owner. Match `ROBOT_ID`/`ROBOT_TOKEN` with an entry in homelab
