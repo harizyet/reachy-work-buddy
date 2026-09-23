@@ -27,12 +27,22 @@ This keeps Phases 24–26 easy to reason about as one line each:
 | Stage | Owner outcome | Release boundary |
 |---|---|---|
 | 26a — Meeting companion | Owner is physically present in the meeting with Reachy; the owner explicitly enables recording for that meeting; Reachy produces minutes, flags questions/action items, and routes anything private to the owner instead of speaking it aloud | Owner-present the whole time, so Phase 24's existing presence gate already covers it; no ADR amendment needed; recording is off by default and per-meeting explicit |
+| 26a.2 — Continuity during temporary absence | The owner explicitly marks a short step-out during an already-authorized 26a meeting; Reachy keeps capturing within that bounded window and, on return, privately delivers a categorized delta of what changed — not a transcript dump | Still owner-present at the meeting/authorization level; the absence window is short and explicit, opened and closed by the owner (or confirmed by them), never inferred and auto-started from presence sensing alone |
 | 26b — Physical secretary | The owner is temporarily or fully absent from a physical meeting; Reachy attends in the room under explicit preauthorization, with a visible recording indicator and bounded capture; questions directed at the owner are forwarded privately, never answered | Owner-absent capture requires an accepted ADR amendment to Phase 24's presence gate, a local host who accepts placement/stop responsibility, and supervised hardware acceptance |
 | 26c — Bounded delegation | Reachy can ask pre-approved questions, deliver exact pre-approved statements, or relay the owner's own explicitly authored reply verbatim, attributed to the owner | Deterministic content only: no LLM-generated commitments, no paraphrasing, no answering on the owner's behalf; each delivery is bound to exact approved text, meeting and expiry |
 
 Completion of 26a is not completion of Phase 26. Each stage has separate
-evidence and can remain disabled while earlier stages are usable. 26b and 26c
-build on 26a's capture/minutes pipeline; they do not replace it.
+evidence and can remain disabled while earlier stages are usable. 26a.2 is an
+extension of 26a's existing capture/minutes pipeline, not a separate grant;
+26b and 26c build on 26a; they do not replace it.
+
+The difference between 26a.2 and 26b is who the owner still is to the
+meeting: in 26a.2 the owner remains an attendee who expects to resume
+participation within minutes, so Reachy is bridging a short gap in an
+already-authorized session; in 26b the owner is absent for most or all of
+the meeting and Reachy is standing in for them under a separate grant. 26a.2
+therefore needs no new authorization beyond the 26a recording that is
+already running — it only needs an explicit absence boundary.
 
 ## 26a — Meeting companion (owner present)
 
@@ -57,6 +67,59 @@ build on 26a's capture/minutes pipeline; they do not replace it.
 5. Since the owner is present the entire time, this stage needs no change to
    Phase 24's presence gate: ordinary room-audio rules already apply, and
    recording is an explicit owner action layered on top of them.
+
+## 26a.2 — Continuity during temporary absence
+
+During an owner-authorized 26a meeting, the owner may explicitly mark
+themselves temporarily away. Reachy continues the already-running capture for
+that bounded absence window, records decisions, action candidates and
+owner-directed questions, and privately delivers an evidence-linked delta
+summary when the owner returns. Reachy does not answer on the owner's behalf
+or accept commitments during the absence — the same rule as every other
+stage.
+
+1. **Opening the window is an explicit owner action**, spoken ("Reachy, I'm
+   stepping out for five minutes, keep me updated") or through the operator
+   UI's meeting view (a "Step away" control). This creates an `AbsenceWindow`
+   bound to the running meeting; it does not create a new capture grant,
+   since 26a's recording is already authorized and running.
+2. While the window is open, capture continues unchanged. Incrementally
+   classify new segments into a fixed set of categories — `DECISION`,
+   `ACTION_ITEM`, `OWNER_QUESTION`, `DEADLINE`, `TOPIC_CHANGE`,
+   `INFORMATIONAL` — rather than asking the LLM to summarize the whole
+   meeting after the fact. The category set is deterministic; the LLM's job
+   is summarizing within a category, not inventing one.
+3. Owner-directed questions detected during the window use the same
+   detection and private-forwarding path as the rest of 26a/26b. If
+   unanswered by the time the owner returns, they are surfaced immediately
+   as part of the delta, not just left in the eventual full minutes.
+4. **Closing the window is also an explicit owner action** — returning and
+   saying so, or an "I'm back" control — which sets `returned_at` and the
+   ending transcript segment. Phase 24 presence sensing, once available, may
+   suggest that the owner appears to have returned or stepped away ("You
+   appear to have stepped away. Start catch-up mode?"), but it only ever
+   proposes; it never silently opens or closes the window itself.
+5. On close, generate the catch-up **only from the interval bounded by the
+   window's start and end segments** — never by asking an LLM to find the
+   right period inside the full transcript. Deliver it privately (matching
+   this phase's existing private-routing rule), prioritized owner question →
+   decision affecting the owner → new commitment/deadline → assigned action
+   → other decisions → other context, as a short list ("3 important updates
+   while you were away"), with an evidence link and source segment IDs per
+   item, and actions such as "view details," "show unanswered questions" and
+   "show decisions." Reachy does not automatically read the delta aloud in
+   the room; if room context makes a short spoken acknowledgment
+   appropriate, it is limited to a fixed line such as "I caught a few
+   updates while you were away — I've sent them privately," never the
+   content itself.
+
+`AbsenceWindow` is a record on the running meeting, not a new top-level
+entity: `meeting_id`, `owner_id`, `left_at`, `returned_at`,
+`transcript_start_segment`, `transcript_end_segment`, `status`
+(`open`/`closed`/`abandoned`). An absence window left open past the meeting's
+end (owner never explicitly returned) closes as `abandoned` when the meeting
+capture itself ends, and its catch-up is still generated from its bounded
+interval, not the remaining meeting.
 
 ## 26b — Physical secretary (owner absent)
 
@@ -117,6 +180,7 @@ or owner chat history.
 | Capability | Required authority |
 |---|---|
 | Enable recording (26a, owner present) | Explicit per-meeting owner action; off by default |
+| Open/close a temporary-absence window (26a.2) | Explicit owner action (spoken or UI); no new capture grant beyond the already-running 26a recording; presence sensing may only suggest, never decide |
 | Attend and capture while owner absent (26b) | Owner's exact attendance grant, the accepted Phase 24 ADR amendment, and a local host's placement/stop acknowledgment |
 | Fixed disclosure, status or refusal | Exact versioned content; hub enforces destination and expiry on dispatch |
 | Answer a question directed to the owner | Forbidden. Forward privately and leave unanswered pending the owner |
@@ -182,9 +246,14 @@ plan alone does not change runtime gates.
 
 Extend shared models/protocol constants and versioned migrations with a
 capture-grant record for 26b, delegation version, occurrence key, deadlines,
-capture consent state and linked Phase 25 artifact IDs. Timestamp transcript
-segments; display names from any diarization are unverified labels, never
-inferred from Phase 24 owner recognition.
+capture consent state and linked Phase 25 artifact IDs, plus an
+`AbsenceWindow` record for 26a.2 (meeting ID, owner ID, `left_at`,
+`returned_at`, start/end transcript segment, status) and the fixed
+`DECISION`/`ACTION_ITEM`/`OWNER_QUESTION`/`DEADLINE`/`TOPIC_CHANGE`/
+`INFORMATIONAL` category on classified segments used for both live-meeting
+minutes and absence delta generation. Timestamp transcript segments; display
+names from any diarization are unverified labels, never inferred from Phase
+24 owner recognition.
 
 Persist state transitions and idempotency keys for 26b grants. Reject
 replayed, out-of-order and wrongly bound callbacks. Loss of authorization
@@ -200,16 +269,22 @@ capture, and such notes must be marked incomplete.
 1. Ship 26a first: it needs no ADR amendment, since the owner is present the
    whole time. Wire explicit per-meeting recording enable, reuse Phase 25
    processing, and add private question-forwarding and the no-answer gate.
-2. Accept the Phase 24 ADR amendment for meeting capture mode; implement
+2. Add 26a.2 on top of 26a's running capture: the explicit absence-window
+   open/close action, the `AbsenceWindow` record, incremental deterministic
+   categorization, and the interval-bounded private delta on return. This
+   needs no ADR amendment either, since it extends an already-authorized
+   26a session rather than creating owner-absent authority.
+3. Accept the Phase 24 ADR amendment for meeting capture mode; implement
    26b's grants, local capture/indicator/stop enforcement and run supervised
    acceptance with the owner remote and a local host present.
-3. Add 26c's pre-approved question/statement delivery and the owner-reply
+4. Add 26c's pre-approved question/statement delivery and the owner-reply
    relay, enforced by exact content-ID/meeting/expiry checks before
    connecting any meeting audio output path.
 
 | Gate | Required evidence |
 |---|---|
 | Companion (26a) | Real in-room meeting with owner present: explicit recording enable, minutes delivered privately, questions detected and routed privately, no room-spoken private content |
+| Continuity during absence (26a.2) | Owner leaves for 5–10 minutes; discussion continues; at least one decision occurs and one question is directed at the owner; owner returns; private catch-up contains both, categorized and prioritized; timestamps/evidence point only to the absence interval, not the full meeting; Reachy makes no owner commitments during the window |
 | Physical secretary (26b) | Real room audio with owner absent and local host present: placement, indicator, stop, expiry, outage and feedback tested; capture mode never unlocks ordinary conversation/tool path or private room output |
 | Bounded delegation (26c) | Approved questions/statements delivered only within limits and expiry; owner-authored replies relayed verbatim only after explicit send action; forged, replayed, expired and post-meeting sends rejected |
 | Owner-directed questions | Real questions reach the bound private channel with context and evidence; explicit/ambiguous references, STT revisions, bursts, restart, channel outage and owner silence tested; zero platform-authored answers even when a brief contains one |
