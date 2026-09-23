@@ -3,6 +3,14 @@
 - Status: Accepted
 - Date: 2026-09-22
 
+## Phase 23 foundation amendment
+
+[ADR 0020](0020-schema-and-secrets.md) replaces startup DDL with versioned
+migrations and plaintext LLM settings with core-owned encrypted credentials.
+The original plaintext/startup descriptions below are historical.
+See [cutover procedures](../deployment.md#schema-upgrades-and-credential-keys)
+and [verification](../verification/phase-23-foundation-2026-09-23.md).
+
 ## Phase 21 amendment
 
 [ADR 0018](0018-hybrid-llm-routing.md) enables the cloud role and role-based

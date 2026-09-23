@@ -52,7 +52,10 @@ already in `rag/postgres_store.py`.
 `consent/` is the single action gate: bulk destructive actions are blocked,
 voice cannot confirm, and undo remains available. The due-dispatch loop is
 the only email sender call site. See [ADR 0011](../adr/0011-destructive-action-consent.md).
-Production stores use Postgres; tests inject in-memory implementations.
+Production stores use versioned Postgres; tests inject in-memory implementations.
+Core owns `secrets.py` (SecretStore and keyring) and the single Alembic
+`migrations/` history. Hub/core stores check schema compatibility at connect;
+see [upgrade procedures](../deployment.md#schema-upgrades-and-credential-keys).
 
 LLM merge/default/failure semantics are defined once in
 [ADR 0018](../adr/0018-hybrid-llm-routing.md). Both roles use the same compatible

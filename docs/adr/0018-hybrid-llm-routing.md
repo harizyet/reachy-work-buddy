@@ -3,6 +3,14 @@
 - Status: Accepted
 - Date: 2026-09-22
 
+## Phase 23 foundation amendment
+
+[ADR 0020](0020-schema-and-secrets.md) replaces startup DDL with versioned
+migrations and plaintext LLM settings with core-owned encrypted credentials.
+The original plaintext/startup descriptions below are historical.
+See [cutover procedures](../deployment.md#schema-upgrades-and-credential-keys)
+and [verification](../verification/phase-23-foundation-2026-09-23.md).
+
 ## Post-acceptance verification
 
 Together AI / `zai-org/GLM-5.3` was subsequently verified end-to-end as the

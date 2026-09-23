@@ -7,16 +7,7 @@ from datetime import UTC, datetime
 from psycopg_pool import AsyncConnectionPool
 
 from companion_core.tasks.models import Task, TaskStatus
-
-_CREATE_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS tasks (
-    id TEXT PRIMARY KEY,
-    text TEXT NOT NULL,
-    status TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL,
-    completed_at TIMESTAMPTZ
-)
-"""
+from shared.database import check_schema
 
 _COLUMNS = "id, text, status, created_at, completed_at"
 
@@ -35,7 +26,7 @@ class PostgresTaskStore:
         await pool.open()
         store = cls(pool)
         async with pool.connection() as conn:
-            await conn.execute(_CREATE_TABLE_SQL)
+            await check_schema(conn)
         return store
 
     async def close(self) -> None:

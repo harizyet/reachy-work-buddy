@@ -6,21 +6,35 @@ not repeated in this file.
 
 ## Current work
 
-Phases 0–21 and 22a are implemented. The owner explicitly deferred physical
-acceptance (22b) and chose Phase 23 next: versioned migrations and SecretStore
-before production read-only Gmail/Calendar Accounts. Follow the
-[Phase 23 plan](docs/phase-22-23.md); Phase 24 recognition and Phase 25 meeting
-minutes are planning only. No migration framework or secret encryption is
-implemented yet, and current LLM credentials are plaintext in Postgres.
+Phases 0–21 and 22a are implemented. Phase 23 is in progress: its
+versioned-migration/SecretStore foundation is implemented and verified against
+isolated Postgres and built images. See [ADR 0020](docs/adr/0020-schema-and-secrets.md),
+[deployment cutover](docs/deployment.md#schema-upgrades-and-credential-keys) and
+[foundation evidence](docs/verification/phase-23-foundation-2026-09-23.md).
 
-Documentation was consolidated this session: root/directory READMEs are entry
-points; deployment, development, operator use, and service reference each have
-one guide under `docs/`. Phase history moved to verification records, stale
-handover chronology was removed, and internal links were checked. No runtime
-code, deployment settings, containers, or hardware were changed for this cleanup.
+Next: write the account-integration ADR, then implement Google setup, owner-bound
+OAuth, Accounts UI and read-only Gmail/Calendar adapters per the
+[Phase 23 plan](docs/phase-22-23.md). Google integration and real-account
+acceptance are still unimplemented. Physical acceptance (22b) remains explicitly
+deferred; Phases 24/25 are planning only.
+
+No production deployment was upgraded. Existing databases remain at their old
+state until explicit adoption; current code requires revision `002_secrets`
+and core/migration require a separate 0600 `SECRET_KEY_FILE`. Stop old writers
+and back up before cutover. Compose now gates hub/core on the migration job.
+The new database constraint rejects plaintext LLM-key writes by old binaries.
+Both disposable verification stacks/volumes and their temporary key/env files
+were removed; the pre-existing OVMS container was left running.
 
 ## Verification and open acceptance
 
+- Phase 23 foundation: **349 passed, 2 espeak-dependent skips, 10 slow tests
+  deselected** in the final fast suite with real DB checks enabled; Ruff passed.
+  Isolated image/HTTP checks verified migrated-key inference with a local
+  fixture, owner login, sessions, usage and restart; backup/restore and
+  key rotation passed. This is not Google/hosted-model/physical acceptance.
+  The existing homelab launcher waits only for hub health; independently
+  check core readiness before inference acceptance.
 - [Implementation history](docs/verification/history.md) records Phases 0–21,
   including the successful real Together AI / `zai-org/GLM-5.3` cloud-role
   check. It was a disposable deployment, not a production configuration change.
@@ -35,9 +49,6 @@ code, deployment settings, containers, or hardware were changed for this cleanup
   still use the old inbound HTTP path. TLS/network-change/media acceptance,
   clean-image provisioning, physical voice/motion, and soak/restore checks
   remain open. Use the [acceptance matrix](docs/phase-22-23.md#satisfactory-run-acceptance-matrix).
-- The latest recorded full Python suite in the bring-up thread was 345 tests;
-  this documentation-only session did not rerun application tests. Historical
-  counts are not claims about a freshly verified current deployment.
 
 ## Machine-specific continuation notes
 

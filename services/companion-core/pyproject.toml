@@ -9,6 +9,8 @@ dependencies = [
     "httpx>=0.27",
     "psycopg[binary,pool]>=3.2",
     "pgvector>=0.3",
+    "alembic>=1.16",
+    "cryptography>=45",
     "aiosmtplib>=3.0",
     "reachy-work-companion",
     "sentence-transformers>=3.0",

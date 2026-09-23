@@ -27,3 +27,8 @@ build/
 vendor/
 docs/
 .claude/
+# Deployment credentials and the SecretStore keyring must never enter build context.
+.env
+.env.*
+**/.env
+**/.env.*

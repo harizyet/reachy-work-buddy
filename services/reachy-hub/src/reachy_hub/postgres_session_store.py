@@ -7,22 +7,8 @@ from datetime import UTC, datetime
 from psycopg_pool import AsyncConnectionPool
 
 from reachy_hub.session_store import _new_session
+from shared.database import check_schema
 from shared.models.session import AgentSession, Channel, InteractionMode, PrivacyContext
-
-_CREATE_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS sessions (
-    session_id TEXT PRIMARY KEY,
-    user_id TEXT UNIQUE NOT NULL,
-    conversation_id TEXT NOT NULL,
-    active_channel TEXT NOT NULL,
-    interaction_mode TEXT NOT NULL,
-    privacy_context TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL,
-    last_active_at TIMESTAMPTZ NOT NULL,
-    dnd BOOLEAN NOT NULL DEFAULT false,
-    last_interruption_at TIMESTAMPTZ
-)
-"""
 
 _COLUMNS = (
     "session_id, user_id, conversation_id, active_channel, "
@@ -61,7 +47,7 @@ class PostgresSessionStore:
         await pool.open()
         store = cls(pool)
         async with pool.connection() as conn:
-            await conn.execute(_CREATE_TABLE_SQL)
+            await check_schema(conn)
         return store
 
     async def close(self) -> None:

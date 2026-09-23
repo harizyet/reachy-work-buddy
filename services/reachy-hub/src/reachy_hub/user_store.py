@@ -7,6 +7,8 @@ from typing import Protocol
 
 from psycopg_pool import AsyncConnectionPool
 
+from shared.database import check_schema
+
 _ITERATIONS = 600_000
 
 
@@ -64,9 +66,7 @@ class PostgresUserStore:
         pool = AsyncConnectionPool(dsn, open=False)
         await pool.open()
         async with pool.connection() as conn:
-            await conn.execute("""CREATE TABLE IF NOT EXISTS users (
-                id TEXT PRIMARY KEY CHECK (id = 'owner'), username TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())""")
+            await check_schema(conn)
         return cls(pool)
 
     async def close(self):

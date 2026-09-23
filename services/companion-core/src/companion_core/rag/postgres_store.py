@@ -15,24 +15,10 @@ from pgvector.psycopg import register_vector_async
 from psycopg_pool import AsyncConnectionPool
 
 from companion_core.rag.chunking import split_into_chunks
-from companion_core.rag.embeddings import EMBEDDING_DIM, embed
+from companion_core.rag.embeddings import embed
 from companion_core.rag.store import EmbedFn
+from shared.database import check_schema
 from shared.models.rag import DocumentChunk, RetrievedChunk
-
-_CREATE_EXTENSION_SQL = "CREATE EXTENSION IF NOT EXISTS vector"
-_CREATE_TABLE_SQL = f"""
-CREATE TABLE IF NOT EXISTS document_chunks (
-    id TEXT PRIMARY KEY,
-    document_id TEXT NOT NULL,
-    document_title TEXT NOT NULL,
-    section TEXT,
-    content TEXT NOT NULL,
-    source TEXT NOT NULL,
-    chunk_index INTEGER NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL,
-    embedding VECTOR({EMBEDDING_DIM}) NOT NULL
-)
-"""
 
 _COLUMNS = "id, document_id, document_title, section, content, source, chunk_index, created_at"
 
@@ -57,21 +43,14 @@ class PostgresDocumentStore:
 
     @classmethod
     async def connect(cls, dsn: str, *, embed_fn: EmbedFn = embed) -> PostgresDocumentStore:
-        # CREATE EXTENSION once, on its own connection, before the pool
-        # opens — doing it inside the pool's per-connection `configure`
-        # callback (as first tried) raced under real concurrent connection
-        # startup: multiple connections ran "IF NOT EXISTS" at once and hit
-        # Postgres's pg_extension_name_index unique constraint anyway.
-        # Confirmed by a real `docker compose up`, not caught by unit tests
-        # since they never exercise this Postgres path.
-        async with await psycopg.AsyncConnection.connect(dsn, autocommit=True) as conn:
-            await conn.execute(_CREATE_EXTENSION_SQL)
-
+        # Check before vector registration so unversioned databases fail clearly.
+        async with await psycopg.AsyncConnection.connect(dsn, connect_timeout=10) as conn:
+            await check_schema(conn)
         pool = AsyncConnectionPool(dsn, open=False, configure=register_vector_async)
         await pool.open()
         store = cls(pool, embed_fn=embed_fn)
         async with pool.connection() as conn:
-            await conn.execute(_CREATE_TABLE_SQL)
+            await check_schema(conn)
         return store
 
     async def close(self) -> None:

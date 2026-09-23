@@ -37,7 +37,9 @@ access in restricted sandboxes; socket restrictions have caused test hangs.
 ## Running services separately
 
 Use a reachable Postgres with pgvector for core; hub also requires Postgres.
-Set `DATABASE_URL` to that database in the hub/core shells. Unlike an earlier
+Set `DATABASE_URL` to that database in the hub/core shells. Provision the
+[credential key and run migrations](deployment.md#schema-upgrades-and-credential-keys)
+before launching either service; core also needs `SECRET_KEY_FILE`. Unlike an earlier
 README example, core is not stateless and needs this connection too.
 Run these in separate terminals after workspace sync:
 
@@ -179,3 +181,24 @@ can abort a diagnostic script before its fallback. Preserve the launchers'
 read-only `--check` guard before any daemon start. Validate launcher changes
 on the target platform, with supervised permission for motion; syntax checks
 alone missed those historical failures.
+
+## Migration and SecretStore tests
+
+`test_database_migrations.py` is opt-in and creates/drops uniquely named
+databases on the supplied **disposable** Postgres server. Never point it at
+production. The image needs pgvector and the test role needs CREATE DATABASE.
+Set `DATABASE_MIGRATION_TEST_URL` to that server's fixture database. To include
+real pg_dump/pg_restore checks, set `DATABASE_MIGRATION_TEST_CONTAINER` to its
+disposable container (the fixture role is `fixture`, as used by this test).
+Without that second setting only the backup test skips.
+
+```bash
+uv run pytest services/companion-core/tests/test_database_migrations.py \
+  services/companion-core/tests/test_secrets.py -q
+```
+
+The database tests cover fresh/repeat installs, supported legacy repairs,
+unknown drift, writer exclusion, rollback/retry, plaintext rejection, masked
+settings, serialized patches, owner login, context binding, tampering, wrong
+keys, resumable rotation, backup recovery and SMTP resolution without sending.
+The ordinary in-memory application tests require neither a key file nor a DB.

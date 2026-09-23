@@ -189,8 +189,12 @@ not a completed physical test. Clean up only disposable test resources.
 
 Complete this work before adding Google account tables or persisting OAuth
 credentials. It is a prerequisite within Phase 23, not a new numbered phase.
-Both capabilities are planned; current deployments still use startup DDL
-and store LLM API keys plaintext as documented in ADRs 0016/0018.
+The foundation is implemented and verified on isolated Postgres and built
+images; see [ADR 0020](adr/0020-schema-and-secrets.md) and
+[evidence](verification/phase-23-foundation-2026-09-23.md). Existing deployments
+must follow the [explicit cutover](deployment.md#schema-upgrades-and-credential-keys);
+this work did not upgrade any production database. Google account integration
+remains the next part of Phase 23. The requirements below remain the contract.
 
 **Database schema versioning/migrations.** Introduce Alembic with explicit,
 reviewed revisions for the shared Postgres database. Keep a single ordered

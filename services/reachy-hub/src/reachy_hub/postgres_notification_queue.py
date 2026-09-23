@@ -9,23 +9,8 @@ from datetime import UTC, datetime
 from psycopg_pool import AsyncConnectionPool
 
 from reachy_hub.notification_queue import QueuedNotification
+from shared.database import check_schema
 from shared.models.response import Privacy, Urgency
-
-_CREATE_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS notification_queue (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    text TEXT NOT NULL,
-    privacy TEXT NOT NULL,
-    urgency TEXT NOT NULL,
-    source_event_id TEXT,
-    created_at TIMESTAMPTZ NOT NULL
-)
-"""
-
-_CREATE_INDEX_SQL = """
-CREATE INDEX IF NOT EXISTS notification_queue_user_id_idx ON notification_queue (user_id)
-"""
 
 _COLUMNS = "id, user_id, text, privacy, urgency, source_event_id, created_at"
 
@@ -52,8 +37,7 @@ class PostgresNotificationQueue:
         await pool.open()
         store = cls(pool)
         async with pool.connection() as conn:
-            await conn.execute(_CREATE_TABLE_SQL)
-            await conn.execute(_CREATE_INDEX_SQL)
+            await check_schema(conn)
         return store
 
     async def close(self) -> None:

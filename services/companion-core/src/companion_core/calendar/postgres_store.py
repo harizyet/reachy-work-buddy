@@ -14,18 +14,7 @@ from datetime import datetime
 from psycopg_pool import AsyncConnectionPool
 
 from companion_core.calendar.models import CalendarEvent
-
-_CREATE_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS calendar_events (
-    id TEXT PRIMARY KEY,
-    title TEXT NOT NULL,
-    start_at TIMESTAMPTZ NOT NULL,
-    end_at TIMESTAMPTZ NOT NULL,
-    location TEXT
-)
-"""
-
-_CREATE_INDEX_SQL = "CREATE INDEX IF NOT EXISTS calendar_events_start_at_idx ON calendar_events (start_at)"
+from shared.database import check_schema
 
 _COLUMNS = "id, title, start_at, end_at, location"
 
@@ -44,8 +33,7 @@ class PostgresCalendarStore:
         await pool.open()
         store = cls(pool)
         async with pool.connection() as conn:
-            await conn.execute(_CREATE_TABLE_SQL)
-            await conn.execute(_CREATE_INDEX_SQL)
+            await check_schema(conn)
         return store
 
     async def close(self) -> None:

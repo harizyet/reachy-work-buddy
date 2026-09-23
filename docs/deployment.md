@@ -92,8 +92,10 @@ services:
 ```
 
 Use `http://host.docker.internal:8000/v1` as the provider URL, or a reachable
-LAN URL for a remote server. Keys are masked in responses but currently
-plaintext in the database and backups; Phase 23's SecretStore is planned.
+LAN URL for a remote server. Keys are masked in responses and stored
+encrypted through core's SecretStore after the Phase 23 upgrade. Protect
+the separate key file and historical plaintext backups; see
+[upgrade and recovery](#schema-upgrades-and-credential-keys).
 
 For assisted live verification, put `CLOUD_LLM_BASE_URL`, `CLOUD_LLM_MODEL`,
 and `CLOUD_LLM_API_KEY` in gitignored `deploy/homelab/.env.local`, never chat.
@@ -180,15 +182,140 @@ and physical media validation are still outstanding.
 
 ## Upgrades and verification cleanup
 
-No versioned migration framework exists yet. `CREATE TABLE IF NOT EXISTS`
-does not retrofit columns: pre-Phase-17 volumes need explicit additions for
-session DND/interruption state and audit action. Phase 19 added tables;
-Phase 21 idempotently adds nullable `llm_usage_log.escalation_reason`,
-preserving old rows. Never delete production volumes to resolve schema errors.
-Phase 23 will introduce validated legacy adoption and encrypted secrets;
-see the [plan](phase-22-23.md).
+Schema upgrades now use the dedicated migration job; follow
+[the cutover and key procedure below](#schema-upgrades-and-credential-keys).
+Never delete production volumes to resolve schema errors.
 
 Use a separate Compose project and temporary credentials/volumes for live
 checks. Keep the same project name, env file, and override files through
 startup, restart, and cleanup. `down -v` is appropriate only for that
 explicitly disposable project. Leave unrelated services such as OVMS alone.
+
+## Schema upgrades and credential keys
+
+Core and hub require revision `002_secrets`. The ordered Alembic history ships
+in core's image; SQL stores perform compatibility checks, not startup DDL.
+Compose runs `migrate` before hub/core, including through
+`scripts/start-homelab.sh`. Launcher `--check` remains read-only and does not
+run migrations. Do not use `--no-deps` to bypass the migration gate.
+
+### Key provisioning
+
+Before first startup or upgrading, generate a separate encryption key file.
+From the repository root, the following creates a new ignored file with mode
+0600 and refuses to overwrite one. It does not print key material:
+
+```bash
+python3 - <<'PYKEY'
+import base64, json, os
+path = "deploy/homelab/.env.secret-keys.json"
+fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+with os.fdopen(fd, "w") as stream:
+    json.dump({"active": "key-1", "keys": {
+        "key-1": base64.b64encode(os.urandom(32)).decode()
+    }}, stream)
+PYKEY
+git check-ignore deploy/homelab/.env.secret-keys.json
+```
+
+Set `SECRET_KEY_FILE` in the private Compose env file to its **absolute host
+path**. Compose mounts it at `/run/secrets/credential_keys` for core and
+the migration job only. Native processes use `SECRET_KEY_FILE` directly.
+The reader refuses group/world-accessible files. Do not reuse
+`SESSION_SECRET_KEY`. Back up the key file separately under equivalent access
+restrictions; a database dump alone cannot recover credentials.
+
+### Existing database cutover
+
+Use your existing named project, private env file and Compose overrides for
+every command. Back up the database and record the previous application
+revision before changing it. For example, from `deploy/homelab`, replace the
+example project/env path with the actual deployment:
+
+```bash
+umask 077
+docker compose -p reachy-homelab --env-file .env exec -T postgres \
+  pg_dump -U reachy -d reachy_hub -Fc > /secure/backup/reachy-before-phase23.dump
+docker compose -p reachy-homelab --env-file .env stop companion-core reachy-hub
+docker compose -p reachy-homelab --env-file .env build migrate companion-core reachy-hub
+docker compose -p reachy-homelab --env-file .env run --rm migrate \
+  /app/.venv/bin/python -m companion_core.migrations upgrade --adopt-legacy
+docker compose -p reachy-homelab --env-file .env up -d
+```
+
+Adjust `pg_dump`'s role/database for custom Postgres settings. Stop all other
+clients of this database too, and prevent old instances restarting during
+cutover. The upgrade refuses existing client connections before changing a
+revision. A database constraint also blocks old code from reintroducing
+plaintext `api_key` fields. Do not roll back only the application binary.
+
+Legacy adoption validates columns, types, nullability, defaults, constraints
+and indexes. It creates tables absent in older releases and repairs only these
+known missing fields:
+
+| Table | Supported missing fields |
+|---|---|
+| sessions | dnd (false), last_interruption_at (null) |
+| audit_log | action (null) |
+| memories | forgotten_at (null) |
+| email_drafts | dispatch_at (null) |
+| llm_usage_log | escalation_reason (null) |
+
+Unknown drift is refused with table/column diagnostics, never silently stamped.
+Resolve it through a reviewed migration or restore a supported backup into an
+isolated project. Never reset the volume. Fresh databases need no adoption
+flag: the normal Compose job performs both revisions. Native development uses:
+
+```bash
+uv run --package companion-core python -m companion_core.migrations upgrade
+```
+
+Supply `DATABASE_URL` and `SECRET_KEY_FILE` through the protected environment.
+The job checks keys before connecting, takes an exclusive migration advisory
+lock, and bounds connection/lock/statement waits at 10/10/120 seconds.
+Both current revisions are transactional: failure rolls back schema,
+backfill and revision markers together. A repeat upgrade is safe and verifies
+that all stored credentials decrypt with the supplied keyring.
+No automatic downgrade is provided. Prefer a reviewed forward fix or restore
+the pre-upgrade dump with its matching application revision into an isolated
+project first; only replace a production deployment after testing that restore.
+
+### Key rotation and recovery
+
+Stop core while rotating so every writer switches to the same active key.
+Keep existing key IDs/values, append a new random 32-byte base64 key under a new
+ID, and set `active` to that ID in the protected JSON file. Never overwrite a
+key value under an existing ID. Back up the expanded keyring securely. Run:
+
+```bash
+docker compose -p reachy-homelab --env-file .env run --rm migrate \
+  /app/.venv/bin/python -m companion_core.migrations rotate
+docker compose -p reachy-homelab --env-file .env up -d --force-recreate companion-core
+```
+
+Rotation commits batches of at most 100 and serializes against migration or
+another rotation. Restart the command after interruption; committed batches
+are skipped. Core loads the keyring at startup, so recreate it after editing
+the file, particularly when the file was replaced atomically. Retain old keys
+until no active records **and no retained backups** require them. Restore
+testing must include the database, all referenced keys and a compatible app.
+Missing/wrong keys and tampered ciphertext deny credential use rather than
+falling back to plaintext.
+
+Migration removes active plaintext LLM fields, not historical backups, WAL or
+old row versions. Restrict/expire those artifacts and rotate upstream API keys
+as appropriate. Source env files remain plaintext and require their existing
+permissions and ignore rules.
+
+### SMTP credential sources
+
+`SMTP_SECRET_REF` optionally references a core SecretStore credential bound
+to owner `owner`, provider `smtp`, purpose `password`. Provision references
+through the internal SecretStore interface; there is no public credential
+creation/decryption endpoint or SMTP settings UI. `SMTP_USERNAME` accompanies
+the reference. Without a reference, `SMTP_PASSWORD` is an explicit
+environment-only bootstrap source. A configured but unavailable reference
+fails closed, even when a bootstrap password exists. Authenticated delivery
+requires STARTTLS; implicit-TLS-only relays are not supported by this setting.
+Mailpit/unauthenticated relay behavior remains available when auth is unset.
+Google linking will not configure SMTP or enable sending.

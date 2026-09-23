@@ -363,6 +363,12 @@ def create_app(
 
     app = FastAPI(title="companion-core", lifespan=lifespan)
 
+    from companion_core.secrets import SecretUnavailable
+
+    @app.exception_handler(SecretUnavailable)
+    async def secret_unavailable(request, exc):
+        return JSONResponse(status_code=503, content={"detail": "Credential unavailable"})
+
     @app.exception_handler(RequestValidationError)
     async def safe_validation_error(request, exc):
         if request.url.path in (LLM_SETTINGS,):

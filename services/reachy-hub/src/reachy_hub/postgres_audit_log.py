@@ -5,30 +5,10 @@ from __future__ import annotations
 from psycopg_pool import AsyncConnectionPool
 
 from reachy_hub.audit_log import AuditEntry, _new_entry
+from shared.database import check_schema
 from shared.models.interruption import InterruptionAction
 from shared.models.response import Privacy
 from shared.models.session import Channel, InteractionMode
-
-_CREATE_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS audit_log (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    session_id TEXT NOT NULL,
-    channel TEXT NOT NULL,
-    mode TEXT NOT NULL,
-    privacy TEXT NOT NULL,
-    base_channel TEXT NOT NULL,
-    delivery_channel TEXT NOT NULL,
-    overridden BOOLEAN NOT NULL,
-    action TEXT,
-    created_at TIMESTAMPTZ NOT NULL
-)
-"""
-
-_CREATE_INDEX_SQL = """
-CREATE INDEX IF NOT EXISTS audit_log_user_id_created_at_idx
-ON audit_log (user_id, created_at DESC)
-"""
 
 _COLUMNS = (
     "id, user_id, session_id, channel, mode, privacy, base_channel, "
@@ -64,8 +44,7 @@ class PostgresAuditLog:
         await pool.open()
         log = cls(pool)
         async with pool.connection() as conn:
-            await conn.execute(_CREATE_TABLE_SQL)
-            await conn.execute(_CREATE_INDEX_SQL)
+            await check_schema(conn)
         return log
 
     async def close(self) -> None:

@@ -8,24 +8,9 @@ from datetime import UTC, datetime
 
 from psycopg_pool import AsyncConnectionPool
 
+from shared.database import check_schema
 from shared.models.memory import MemoryRecord, MemoryType
 from shared.models.response import Privacy
-
-_CREATE_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS memories (
-    id TEXT PRIMARY KEY,
-    type TEXT NOT NULL,
-    content TEXT NOT NULL,
-    source TEXT NOT NULL,
-    project_scope TEXT,
-    confidence DOUBLE PRECISION NOT NULL,
-    sensitivity TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL,
-    last_accessed TIMESTAMPTZ,
-    expires_at TIMESTAMPTZ,
-    forgotten_at TIMESTAMPTZ
-)
-"""
 
 _COLUMNS = (
     "id, type, content, source, project_scope, confidence, "
@@ -61,7 +46,7 @@ class PostgresMemoryStore:
         await pool.open()
         store = cls(pool)
         async with pool.connection() as conn:
-            await conn.execute(_CREATE_TABLE_SQL)
+            await check_schema(conn)
         return store
 
     async def close(self) -> None:

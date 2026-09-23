@@ -11,20 +11,7 @@ from companion_core.consent.models import (
     ConfirmationRequest,
     ConfirmationStatus,
 )
-
-_CREATE_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS confirmation_requests (
-    id TEXT PRIMARY KEY,
-    action_type TEXT NOT NULL,
-    target_id TEXT NOT NULL,
-    description TEXT NOT NULL,
-    scope TEXT NOT NULL,
-    status TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL,
-    expires_at TIMESTAMPTZ NOT NULL,
-    confirmed_at TIMESTAMPTZ
-)
-"""
+from shared.database import check_schema
 
 _COLUMNS = "id, action_type, target_id, description, scope, status, created_at, expires_at, confirmed_at"
 
@@ -53,7 +40,7 @@ class PostgresConfirmationStore:
         await pool.open()
         store = cls(pool)
         async with pool.connection() as conn:
-            await conn.execute(_CREATE_TABLE_SQL)
+            await check_schema(conn)
         return store
 
     async def close(self) -> None:

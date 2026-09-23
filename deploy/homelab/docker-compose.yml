@@ -67,6 +67,21 @@ services:
     expose:
       - "8000"
 
+  migrate:
+    build:
+      context: ../..
+      dockerfile: services/companion-core/Dockerfile
+    restart: "no"
+    command: ["/app/.venv/bin/python", "-m", "companion_core.migrations", "upgrade"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-reachy}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-reachy_hub}
+      SECRET_KEY_FILE: /run/secrets/credential_keys
+    secrets:
+      - credential_keys
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   reachy-hub:
     build:
       context: ../..
@@ -99,6 +114,8 @@ services:
       # services/reachy-hub/src/reachy_hub/robot_credential_store.py.
       ROBOT_TOKENS: ${ROBOT_TOKENS:-}
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
     # No depends_on companion-core here: companion-core depends_on
@@ -114,7 +131,10 @@ services:
       context: ../..
       dockerfile: services/companion-core/Dockerfile
     restart: unless-stopped
+    secrets:
+      - credential_keys
     environment:
+      SECRET_KEY_FILE: /run/secrets/credential_keys
       REACHY_HUB_URL: http://reachy-hub:8000
       # Phase 10: companion-core's own Postgres connection (calendar store,
       # later joined by tasks/memory/rag) — previously entirely stateless.
@@ -122,15 +142,15 @@ services:
       # (a single-tenant homelab has no reason to run two database
       # containers).
       DATABASE_URL: postgresql://${POSTGRES_USER:-reachy}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-reachy_hub}
-      # Phase 14: defaults to the local Mailpit container above — not a
-      # real mailbox, only started with `--profile simulation`. Phase 22:
-      # a production deployment must override SMTP_HOST/PORT/FROM in
-      # .env to point at a real relay; sender.py has no SMTP auth support
-      # yet (Phase 23's SecretStore work), so this only works with an
-      # unauthenticated relay/smarthost for now — see .env.example.
+      # Mailpit is simulation-only; production selects a relay explicitly.
+      # Authenticated SMTP requires STARTTLS and resolves a core SecretStore
+      # reference or an explicit environment bootstrap password.
       SMTP_HOST: ${SMTP_HOST:-mailpit}
       SMTP_PORT: ${SMTP_PORT:-1025}
       SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_SECRET_REF: ${SMTP_SECRET_REF:-}
       # ADR 0011: real production default is 10 minutes (unset both). For
       # local/dev testing, override in .env — e.g.
       # EMAIL_SEND_DELAY_SECONDS=10 EMAIL_DISPATCH_INTERVAL_SECONDS=2 — to
@@ -144,6 +164,8 @@ services:
       # now-gated /robots/{id}/... routes from /debug/robots/....
       REMOTE_UI_TOKEN: ${REMOTE_UI_TOKEN:-}
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       reachy-hub:
@@ -173,3 +195,7 @@ services:
 volumes:
   postgres-data:
   caddy-data:
+
+secrets:
+  credential_keys:
+    file: ${SECRET_KEY_FILE:-./.env.secret-keys.json}

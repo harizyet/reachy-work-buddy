@@ -49,6 +49,7 @@ over the original decision where they explicitly change it.
 | [0017](adr/0017-web-chat-channel.md) | Web chat and Telegram polling health |
 | [0018](adr/0018-hybrid-llm-routing.md) | Role-based local/cloud inference |
 | [0019](adr/0019-robot-initiated-hub-connectivity.md) | Robot-initiated connectivity |
+| [0020](adr/0020-schema-and-secrets.md) | Versioned schema and core-owned credentials |
 
 ## Verification records
 
@@ -60,6 +61,9 @@ These are dated evidence, not startup instructions or current health checks.
   launcher, WS, Nano, and simulator results, with unverified items explicit.
 - [Physical inventory](verification/phase-22-inventory-2026-09-22.md): original
   raw hardware/runtime findings and subsequent dependency/device/memory checks.
+
+- [Phase 23 foundation](verification/phase-23-foundation-2026-09-23.md): migrations,
+  SecretStore, isolated database recovery and built-image checks.
 
 ## Where information belongs
 
