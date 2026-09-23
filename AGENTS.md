@@ -61,10 +61,22 @@ when upgrading schemas. Keep credentials in permission-restricted gitignored
 files, never chat/log output; confirm ignore rules. See the
 [deployment rules](docs/deployment.md#upgrades-and-verification-cleanup).
 
-Starting the real daemon can move the robot. Do not start it or trigger physical
-motion without the owner present and supervising. Keep launcher `--check`
-read-only. Host-specific launcher changes need target-platform verification;
-syntax checks alone missed real systemd, shell, and networking failures.
+Starting the real daemon can move the robot. In any dev/test context — a
+Claude Code session manually running the launchers, an unaccepted/in-progress
+deployment, or any host not explicitly designated production per the
+deployment guide — do not start it or trigger physical motion without the
+owner present and supervising. Keep launcher `--check` read-only.
+Host-specific launcher changes need target-platform verification; syntax
+checks alone missed real systemd, shell, and networking failures.
+
+For a designated production Nano (owner's explicit, accepted-risk decision,
+2026-09-23 — see [deployment](docs/deployment.md#robot-host-and-jetson-nano)),
+`reachy-mini-daemon` may be systemd-enabled for unattended boot start,
+including its own wake-up motion, without a human physically watching every
+boot. This is a deliberate exception to the rule above for that one
+designated host, not a relaxation of it generally — a session working on
+launcher/daemon-start code, or operating any other host, still follows the
+owner-present rule.
 
 ## Documentation maintenance
 

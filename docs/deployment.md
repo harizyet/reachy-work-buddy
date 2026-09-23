@@ -138,7 +138,36 @@ records device groups, memory measurements, and dependency checks.
 
 Starting the daemon wakes/moves the robot by default. Only start it or run
 motion tests while the owner is physically present and supervising.
-`--check` must remain read-only and never start the daemon.
+`--check` must remain read-only and never start the daemon. This applies to
+every dev/test host; a designated production Nano is a deliberate,
+owner-accepted exception (below), not a relaxation of the general rule.
+
+### Production: unattended boot start (owner-accepted risk, 2026-09-23)
+
+For a Nano the owner has explicitly designated production, `reachy-mini-
+daemon` may be systemd-enabled to start automatically at boot, including
+its own wake-up motion, without a human physically watching every boot —
+the owner accepted this risk after Phase 22b's live testing. This is
+per-host and explicit, not a default: `sudo systemctl enable
+reachy-mini-daemon` (it is `WantedBy=multi-user.target` already, just
+disabled by default). A dev/test host, or any host not explicitly
+designated this way, keeps the owner-present rule above.
+
+Enabling the daemon unit alone is not the whole unattended-boot story:
+- `reachy-embodiment`'s container already restarts automatically (`docker
+  run --restart unless-stopped`, confirmed live) as long as Docker's own
+  service starts at boot and the container was created at least once by
+  `start-reachy.sh`/`start-jetson.sh`.
+- The ADR 0019 outbound WSS connection self-reconnects with backoff once
+  embodiment is up — no manual step needed.
+- **Gap, not yet closed**: the old HTTP command-routing registration
+  (`POST /robots` with `ROBOT_HTTP_BASE_URL`, step 3 below) currently only
+  runs inside `start-reachy.sh` itself. Nothing re-runs it automatically
+  on an unattended boot, so the hub can't route real commands to the robot
+  after a reboot until the launcher is run again by hand. Closing this
+  (e.g. a boot-time oneshot systemd unit invoking the launcher, or moving
+  registration onto the self-reconnecting WSS path once command routing
+  moves there per ADR 0019) is unscoped follow-up work, not done yet.
 
 USB audio enumeration order isn't stable across boots/replugs, so a stale
 `~/.asoundrc` card index can silently break daemon audio (no animation
