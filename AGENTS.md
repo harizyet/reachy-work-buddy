@@ -64,10 +64,10 @@ files, never chat/log output; confirm ignore rules. See the
 Starting the real daemon can move the robot. In any dev/test context — a
 Claude Code session manually running the launchers, an unaccepted/in-progress
 deployment, or any host not explicitly designated production per the
-deployment guide — do not start it or trigger physical motion without the
-owner present and supervising. Keep launcher `--check` read-only.
-Host-specific launcher changes need target-platform verification; syntax
-checks alone missed real systemd, shell, and networking failures.
+deployment guide — do not start the daemon without the owner present and
+supervising. Keep launcher `--check` read-only. Host-specific launcher
+changes need target-platform verification; syntax checks alone missed real
+systemd, shell, and networking failures.
 
 For a designated production Nano (owner's explicit, accepted-risk decision,
 2026-09-23 — see [deployment](docs/deployment.md#robot-host-and-jetson-nano)),
@@ -76,7 +76,20 @@ including its own wake-up motion, without a human physically watching every
 boot. This is a deliberate exception to the rule above for that one
 designated host, not a relaxation of it generally — a session working on
 launcher/daemon-start code, or operating any other host, still follows the
-owner-present rule.
+owner-present rule for daemon start.
+
+Named-behaviour playback (`POST /behaviour/{name}`, the bounded, mapped,
+pre-recorded moves in `_DEFAULT_BEHAVIOUR_MOVES`) does not require the
+owner physically watching each call — owner's explicit decision,
+2026-09-23: the robot is small with no meaningful risk to bystanders, and
+this class of motion is bounded and pre-recorded, not arbitrary. This
+does **not** extend to: starting/restarting the daemon itself (still
+needs the owner present, above — its own wake-up/go-to-home routine is
+unbounded first motion after however long the robot was last positioned);
+raw/diagnostic joint commands (`POST /api/move/goto` or any other
+non-behaviour move) used to investigate a problem; or any new/expanded
+behaviour not already in the mapped, tested set. Those still need the
+owner present per the rule above.
 
 ## Documentation maintenance
 

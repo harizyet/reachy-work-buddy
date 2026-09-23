@@ -146,11 +146,19 @@ sudo systemctl daemon-reload`. Verify what's actually active with
 `systemctl show reachy-mini-daemon -p ExecStartPre` (no sudo needed) rather
 than assuming a repo change took effect.
 
-Starting the daemon wakes/moves the robot by default. Only start it or run
-motion tests while the owner is physically present and supervising.
-`--check` must remain read-only and never start the daemon. This applies to
-every dev/test host; a designated production Nano is a deliberate,
-owner-accepted exception (below), not a relaxation of the general rule.
+Starting the daemon wakes/moves the robot by default. Only start it while
+the owner is physically present and supervising. `--check` must remain
+read-only and never start the daemon. This applies to every dev/test host;
+a designated production Nano is a deliberate, owner-accepted exception
+(below), not a relaxation of the general rule.
+
+Named-behaviour playback (`POST /behaviour/{name}`, the mapped, bounded,
+pre-recorded moves) does not require the owner watching each call —
+owner's explicit decision, 2026-09-23: the robot is small with no
+meaningful bystander risk, and this class of motion is bounded and
+pre-recorded. Daemon start/restart and raw/diagnostic joint commands
+(`POST /api/move/goto`, or investigating a problem live) still need the
+owner present — see [AGENTS.md](../AGENTS.md) for the exact boundary.
 
 ### Production: unattended boot start (owner-accepted risk, 2026-09-23)
 
