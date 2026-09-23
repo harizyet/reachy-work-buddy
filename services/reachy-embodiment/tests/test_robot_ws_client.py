@@ -13,10 +13,21 @@ import json
 
 import pytest
 import websockets
-from reachy_embodiment.robot_ws_client import RobotWSClient, next_backoff
+from reachy_embodiment.robot_ws_client import RobotWSClient, _as_ws_url, next_backoff
 
 from shared.models.robot_ws import WSMessageType
 from shared.protocols.robot_ws import PROTOCOL_VERSION
+
+
+def test_as_ws_url_derives_scheme_from_http_https() -> None:
+    assert _as_ws_url("http://hub.example:8080/hub") == "ws://hub.example:8080/hub"
+    assert _as_ws_url("https://hub.example/hub") == "wss://hub.example/hub"
+    assert _as_ws_url("ws://hub.example/hub") == "ws://hub.example/hub"
+
+
+def test_client_derives_ws_url_from_configured_http_hub_url() -> None:
+    client = RobotWSClient("http://hub.example:8080/hub", "nano-1", "tok")
+    assert client._hub_ws_url.startswith("ws://hub.example:8080/hub")
 
 
 def test_next_backoff_doubles_and_caps_at_30() -> None:

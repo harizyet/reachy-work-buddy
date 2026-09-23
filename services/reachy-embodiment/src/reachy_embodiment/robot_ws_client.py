@@ -46,6 +46,19 @@ def next_backoff(current: float, *, min_backoff: float = MIN_BACKOFF, max_backof
     return min(current * 2, max_backoff)
 
 
+def _as_ws_url(url: str) -> str:
+    """Derives ws:// or wss:// from an http(s):// hub URL, per ADR 0019
+    ("the robot knows the hub's configured HTTPS/WSS destination") and
+    deploy/reachy/.env.example's documented HUB_WS_URL contract. A URL
+    already given as ws(s):// passes through unchanged.
+    """
+    if url.startswith("https://"):
+        return "wss://" + url[len("https://") :]
+    if url.startswith("http://"):
+        return "ws://" + url[len("http://") :]
+    return url
+
+
 class RobotWSClient:
     """Maintains one outbound WS connection to `hub_ws_url`, reconnecting
     forever until its `run()` task is cancelled. Intended usage:
@@ -63,7 +76,7 @@ class RobotWSClient:
         sim: bool = False,
         registration_timeout: float = 5.0,
     ) -> None:
-        self._hub_ws_url = hub_ws_url.rstrip("/") + ROBOTS_CONNECT
+        self._hub_ws_url = _as_ws_url(hub_ws_url.rstrip("/")) + ROBOTS_CONNECT
         self._robot_id = robot_id
         self._token = token
         self._capabilities = list(capabilities or [])
