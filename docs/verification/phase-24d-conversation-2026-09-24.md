@@ -105,6 +105,30 @@ below WARNING, because uvicorn configures only its own loggers. `1970e85`
 added stage durations to the hub's turn records and INFO timing lines to
 the robot loop, before the timed run.
 
+## TTS change before the timed run
+
+After the smoke turns, the owner said espeak-ng sounded robotic. Before any
+timed turn, and with the owner's agreement, the hub switched to Piper
+`en_US-lessac-medium` (`4037b4a`). The voice is baked into the hub image,
+pinned to piper-voices commit `c10ece1a` and sha256-checked. espeak-ng
+remains the fallback when `PIPER_VOICE_MODEL` is unset. In the built image
+with no network, the voice loaded in 1.2 s and synthesized a 2.7 s
+sentence in 0.1 s. A slow test round-trips Piper output through
+Whisper `tiny.en`. The matrix below therefore measures Piper, not espeak.
+
+Timing sources, agreed instead of a phone recording:
+- Utterance end is the robot's "utterance cut" log time minus the 0.7 s
+  end-of-speech window.
+- First audible is "voice playback started", when the daemon accepted
+  `play_sound`. This is a lower bound: the daemon's GStreamer/dmix start-up
+  latency is unmeasured.
+- Playback end is start plus WAV duration. The logged "done" line includes a
+  0.3 s margin, and the 0.4 s tail guard counts toward readiness for the
+  next utterance.
+- Stop tail runs from the robot's "voice stop received" to the daemon's
+  `stop_sound`, taken from `journalctl -o short-iso-precise`, with the
+  owner's ear as the check.
+
 ## Latency budget (agreed before any timed turn)
 
 Utterance end → first audible reply, over the live turns:
