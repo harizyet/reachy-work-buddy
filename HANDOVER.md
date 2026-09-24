@@ -11,8 +11,9 @@ between 24b and 25. First audit and complete the real Reachy microphone →
 conversation → speaker workflow, then separately pass supervised physical
 multi-turn acceptance. Robot mic ingestion is missing; WAV STT/TTS and
 standalone device checks do not prove conversation. Phase 25 is gated on
-both phases. This session changed planning documentation only; no new
-conversation implementation or live acceptance was performed.
+both phases. Planning review is complete, including the Phase 25 verification
+filename and Phase 8 future-tense corrections. This session changed documentation
+only; no new conversation implementation or live acceptance was performed.
 
 Phase 24a (search-assisted, freshness-aware assistant) is implemented
 (2026-09-24): `shared/models/websearch.py`, migration `006_search_config`

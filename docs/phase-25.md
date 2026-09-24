@@ -262,7 +262,7 @@ Use safe fixtures and instrumented provider adapters to verify destructive
 attempts; never test deletion or event spam on real production accounts.
 Record hardware/model/calibration versions, thresholds, trial counts,
 false accepts/rejects, p50/p95 timing, resource use and limitations in
-`docs/verification/phase-24-<date>.md`. Keep biometric datasets outside git.
+`docs/verification/phase-25-<date>.md`. Keep biometric datasets outside git.
 Small attack suites demonstrate only those attacks; do not claim immunity
 to deepfakes or statistically strong security from zero observed failures.
 
