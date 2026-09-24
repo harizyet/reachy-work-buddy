@@ -11,7 +11,9 @@ protocol and slots in later without any caller changing.
 
 from __future__ import annotations
 
+import io
 import subprocess
+import wave
 from typing import Protocol
 
 
@@ -22,9 +24,13 @@ class TextToSpeech(Protocol):
 
 
 class EspeakTTS:
-    """Wraps the espeak-ng CLI (not the shared library) for simplicity:
-    `espeak-ng --stdout` writes a complete WAV file to stdout, no manual
-    PCM/header handling needed.
+    """Wraps the espeak-ng CLI (not the shared library) for simplicity.
+
+    `espeak-ng --stdout` writes a *streaming* WAV: its header carries a
+    placeholder frame count (0x7fffffff), because it's written before the
+    audio length is known. Anything trusting that header sees a ~13-hour
+    clip — found in Phase 24c when the robot waited that long for "playback"
+    to finish. The PCM is re-wrapped here with a correct header.
     """
 
     def __init__(self, binary: str = "espeak-ng", voice: str = "en-us") -> None:
@@ -37,4 +43,18 @@ class EspeakTTS:
             capture_output=True,
             check=True,
         )
-        return result.stdout
+        return _rewrap_wav(result.stdout)
+
+
+def _rewrap_wav(streamed: bytes) -> bytes:
+    with wave.open(io.BytesIO(streamed), "rb") as source:
+        params = source.getparams()
+        # readframes stops at the real end of data despite the bogus count.
+        frames = source.readframes(source.getnframes())
+    out = io.BytesIO()
+    with wave.open(out, "wb") as target:
+        target.setnchannels(params.nchannels)
+        target.setsampwidth(params.sampwidth)
+        target.setframerate(params.framerate)
+        target.writeframes(frames)
+    return out.getvalue()

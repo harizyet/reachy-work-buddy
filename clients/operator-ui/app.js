@@ -19,6 +19,7 @@ const chat = createChat({
   },
 });
 const accounts = createAccounts({api, isLoggedIn: () => loggedIn});
+const voice = createVoice({api, isLoggedIn: () => loggedIn, chat});
 function showView(view) {
   const isChat = view === 'chat';
   $('chat-pane').hidden = !isChat; $('overview-pane').hidden = view !== 'overview';
@@ -38,7 +39,7 @@ function showLogin() {
   loggedIn = false; selectedUser = null;
   $('login-panel').hidden = false; $('dashboard').hidden = true; $('nav').hidden = true;
   $('api-key').value = ''; $('cloud-api-key').value = ''; $('websearch-api-key').value = ''; $('password').value = '';
-  chat.reset(); accounts.reset(); showView('overview');
+  chat.reset(); accounts.reset(); voice.reset(); showView('overview');
 }
 async function api(path, options = {}) {
   const response = await fetch(base + path, {
@@ -124,6 +125,7 @@ async function refresh() {
     }
     chat.updateTelegram(status.telegram);
     await chat.refreshSession();
+    await voice.refresh();
     if (!status.robots.length) component('Robots', 'None registered', true);
     for (const robot of status.robots) component(robot.robot_id, robot.data?.embodiment_state || robot.status, robot.status !== 'ok');
     if (usage) {

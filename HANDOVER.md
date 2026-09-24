@@ -6,14 +6,42 @@ not repeated in this file.
 
 ## Current work
 
-Next implementation priority: [Phases 24c–24d](docs/phase-24cd.md), inserted
-between 24b and 25. First audit and complete the real Reachy microphone →
-conversation → speaker workflow, then separately pass supervised physical
-multi-turn acceptance. Robot mic ingestion is missing; WAV STT/TTS and
-standalone device checks do not prove conversation. Phase 25 is gated on
-both phases. Planning review is complete, including the Phase 25 verification
-filename and Phase 8 future-tense corrections. This session changed documentation
-only; no new conversation implementation or live acceptance was performed.
+Next priority: **[Phase 24d](docs/phase-24cd.md#phase-24d--physical-end-to-end-acceptance)**,
+supervised physical acceptance of the robot conversation workflow. Follow the
+[24d hardware procedure](docs/phase-24cd.md#phase-24d-hardware-procedure).
+Its first steps check the parts that have never run on the Nano. Phase 25
+remains gated on 24d.
+
+Phase 24c (robot microphone → conversation → speaker) is implemented
+(2026-09-24). See [ADR 0023](docs/adr/0023-robot-voice-conversation.md), the
+[audit table](docs/phase-24cd.md#phase-24c-audit-result-2026-09-24) and the
+[verification record](docs/verification/phase-24c-conversation-2026-09-24.md).
+
+- **Design.** The owner starts or stops it from the operator UI (Chat → Robot
+  microphone), with a hub-owned lease. The hub sends `voice_start`/`voice_stop`
+  over the existing WSS socket. The robot uploads each VAD-bounded utterance
+  to `POST /robot-media/voice-turn` with its robot token. The hub runs STT →
+  the shared conversation (`reachy`, VOICE) → ADR 0006 routing plus a
+  DND/meeting veto, and synthesizes only permitted replies. Withheld replies
+  go to the owner panel and Telegram. It is half-duplex, and Stop calls
+  daemon `stop_sound`.
+- **Opt-in.** Robot-side `VOICE_CONVERSATION_ENABLED=true`, then
+  `docker rm -f reachy-embodiment` and restart via `start-reachy.sh`, which
+  adds `--ipc host`, the daemon UID and the daemon user's `~/.asoundrc`. See
+  [deployment](docs/deployment.md#robot-voice-conversation).
+- **Verified off the robot only**: pytest (502 passed), Chromium, and a
+  disposable Compose run with a simulated mic, real Whisper, real OVMS LLM
+  and espeak through Caddy/WSS. Multi-turn context and a web handoff worked.
+- **Bugs fixed on the way:**
+  - Hub STT/TTS construction blocked the event loop and disconnected the
+    robot.
+  - espeak's placeholder WAV header would have stalled the robot ~13 h per
+    reply.
+  - `/reachy` commands were parsed from voice transcripts.
+- **Unverified on the robot:** mic capture/dsnoop sharing from the container,
+  channel layout, daemon playback/stop tail, and acoustic echo.
+- **24d usability note:** core's sticky conversation privacy keeps later
+  replies off the speaker after any work-private reply.
 
 Phase 24a (search-assisted, freshness-aware assistant) is implemented
 (2026-09-24): `shared/models/websearch.py`, migration `006_search_config`
@@ -142,8 +170,8 @@ OAuth client file, deployed HTTPS hostname, or live helper run was supplied
 this session. Phase 23/23b are not yet production-accepted. The
 Google-enabled physical repeat remains deferred. Phase 24a is implemented
 and real-SearXNG-verified, and Phase 24b is implemented and isolated-
-fixture/browser-verified (see above for both); Phases 24c–24d and 25–27 remain
-planning only.
+fixture/browser-verified (see above for both); Phase 24c is implemented
+(above); Phases 24d and 25–27 remain open or planning only.
 
 Phase 22b (physical acceptance) started 2026-09-23 with the owner physically
 present, coordinated across a homelab-side and a Nano-side Claude Code
@@ -195,8 +223,9 @@ on every real daemon start (not just install), so a future re-enumeration
 can't silently regress it again. Microphone capture was separately
 confirmed working (owner's voice recognizable on a recorded/played-back
 sample) — this tests only the physical mic/ALSA path, not our own voice
-feature: there is still no code routing the robot's mic into the
-homelab's `/voice/turn` STT pipeline; now scoped in Phase 24c.
+feature. At the time there was no code routing the robot's mic into the
+homelab's STT pipeline; Phase 24c has since added it (unverified on hardware,
+see above).
 
 Added remote standby/resume (Phase 22b, owner-requested): a deterministic
 phrase match in `companion_core.robot_power_intent` (e.g. "turn off

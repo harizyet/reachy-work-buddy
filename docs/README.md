@@ -60,6 +60,7 @@ over the original decision where they explicitly change it.
 | [0020](adr/0020-schema-and-secrets.md) | Versioned schema and core-owned credentials |
 | [0021](adr/0021-google-accounts.md) | Owner-bound read-only Google accounts |
 | [0022](adr/0022-web-search-grounding.md) | Web-search grounding for the generic conversation branch |
+| [0023](adr/0023-robot-voice-conversation.md) | Robot microphone/speaker conversation transport |
 
 ## Verification records
 

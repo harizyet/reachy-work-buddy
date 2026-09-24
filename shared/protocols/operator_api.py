@@ -11,3 +11,8 @@ AUTH_ME = "/auth/me"
 ROBOTS = "/robots"
 ROBOTS_STANDBY = "/robots/standby"
 ROBOTS_RESUME = "/robots/resume"
+# Phase 24c (ADR 0023): owner controls for robot microphone conversation.
+ROBOT_VOICE = "/robot-voice"
+ROBOT_VOICE_START = "/robot-voice/start"
+ROBOT_VOICE_RENEW = "/robot-voice/renew"
+ROBOT_VOICE_STOP = "/robot-voice/stop"

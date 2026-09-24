@@ -146,3 +146,12 @@ Caddy/TLS and physical hardware. With inbound robot ports blocked, prove
 behaviours, state, camera, voice and speaker playback; saturate the separate
 media path and verify watchdog responsiveness. Record evidence in the Phase
 22 report. None of these checks has been performed for this planning change.
+
+## Addendum: Phase 24c conversation media (2026-09-24)
+
+[ADR 0023](0023-robot-voice-conversation.md) implements this ADR's
+robot-initiated media path for conversation only. `voice_start`, `voice_stop`
+and `voice_state` travel on the control socket. Utterances upload over
+robot-authenticated HTTPS, and reply audio returns in that response. The
+capability is advertised at registration, so the protocol version is
+unchanged. Other commands and media remain on the HTTP adapter.

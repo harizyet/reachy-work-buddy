@@ -204,6 +204,31 @@ else
     log_warn "$CAMERA_SOCKET not found — daemon may not be running/healthy yet; camera capture will fail until it exists"
 fi
 
+# Phase 24c (ADR 0023): robot microphone conversation, opt-in via
+# VOICE_CONVERSATION_ENABLED=true in the env file. The SDK's LOCAL audio
+# backend opens the same ALSA dsnoop/dmix devices (`reachymini_audio_src`/
+# `_sink` in the daemon user's ~/.asoundrc) the daemon itself uses. dsnoop
+# shares one hardware stream through SysV shared memory keyed by ipc_key
+# and owned by the daemon's user, so the container needs that file, the
+# host IPC namespace and the daemon's UID/GID; opening the hw device
+# directly instead would fight the daemon for it. UNVERIFIED on the Nano —
+# see docs/deployment.md#robot-voice-conversation.
+VOICE_ARGS=()
+if [[ "${VOICE_CONVERSATION_ENABLED:-false}" == "true" ]]; then
+    DAEMON_USER="$(systemctl show -p User --value "$DAEMON_SERVICE" 2>/dev/null || true)"
+    DAEMON_USER="${DAEMON_USER:-reachy}"
+    DAEMON_HOME="$(getent passwd "$DAEMON_USER" | cut -d: -f6 || true)"
+    if [[ -n "$DAEMON_HOME" && -f "${DAEMON_HOME}/.asoundrc" ]] && id -u "$DAEMON_USER" >/dev/null 2>&1; then
+        VOICE_ARGS+=(--ipc host --user "$(id -u "$DAEMON_USER"):$(id -g "$DAEMON_USER")"
+            -e HOME=/tmp/reachy-voice-home -e XDG_CACHE_HOME=/tmp/reachy-voice-cache
+            -v "${DAEMON_HOME}/.asoundrc:/tmp/reachy-voice-home/.asoundrc:ro"
+            -e VOICE_CONVERSATION_ENABLED=true)
+        log_info "voice conversation enabled: sharing ${DAEMON_USER}'s ALSA config and IPC namespace with the container"
+    else
+        log_warn "VOICE_CONVERSATION_ENABLED=true but ${DAEMON_HOME:-<no home for $DAEMON_USER>}/.asoundrc is not readable here — voice stays disabled for this container"
+    fi
+fi
+
 for grp in dialout video audio; do
     gid="$(getent group "$grp" 2>/dev/null | cut -d: -f3 || true)"
     if [[ -n "$gid" ]]; then
@@ -220,7 +245,9 @@ if docker ps --filter "name=^/${CONTAINER_NAME}\$" --filter status=running -q | 
     log_info "$CONTAINER_NAME is already running"
 else
     if docker ps -a --filter "name=^/${CONTAINER_NAME}\$" -q | grep -q .; then
-        log_info "restarting existing $CONTAINER_NAME container"
+        # An existing container keeps the options it was created with;
+        # changing VOICE_CONVERSATION_ENABLED needs `docker rm` first.
+        log_info "restarting existing $CONTAINER_NAME container (created options are kept; remove it to apply env-file changes)"
         docker start "$CONTAINER_NAME" >/dev/null
     else
         log_info "starting $CONTAINER_NAME (port $HTTP_PORT, real backend, WSS to $HUB_WS_URL)"
@@ -251,7 +278,7 @@ else
             -e "HUB_WS_URL=${HUB_WS_URL}" \
             -e "ROBOT_ID=${ROBOT_ID}" \
             -e "ROBOT_TOKEN=${ROBOT_TOKEN}" \
-            "${DEVICE_ARGS[@]}" "${GROUP_ARGS[@]}" "${VOLUME_ARGS[@]}" \
+            "${DEVICE_ARGS[@]}" "${GROUP_ARGS[@]}" "${VOLUME_ARGS[@]}" "${VOICE_ARGS[@]}" \
             "$IMAGE_NAME" \
             /app/.venv/bin/uvicorn reachy_embodiment.app:app --app-dir services/reachy-embodiment/src \
             --host 0.0.0.0 --port "$HTTP_PORT" >/dev/null

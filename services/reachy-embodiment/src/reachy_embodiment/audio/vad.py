@@ -12,13 +12,10 @@ microphone, a genuinely different problem from transcribing a complete
 utterance after the fact (which reachy-hub's stt.py does, using faster-
 whisper's own bundled VAD filter for that unrelated purpose).
 
-Not yet wired into a live audio stream or the presence loop's Signals
-surface: there is no physical Reachy microphone in this project's dev/test
-environment, and Phase 3's PresenceLoop doesn't have Jarvis's vad_energy
-input yet. This module is implemented and tested against real audio now
-so that wiring, whenever real hardware exists, is plumbing, not new
-detection logic — the same scoping already used for /gaze, /pose,
-/audio/play in app.py.
+Phase 24c wires this into the robot conversation loop (voice.py's
+UtteranceSegmenter) to delimit turns inside an owner-started session. It
+decides only where an utterance ends, never whether capture is allowed.
+The presence loop still has no vad_energy input.
 """
 
 from __future__ import annotations
@@ -31,7 +28,9 @@ CHUNK_SAMPLES = 512  # exactly 32ms at 16kHz — required by Silero
 
 
 class VoiceActivityDetector:
-    def __init__(self, threshold: float = 0.5, sample_rate: int = SAMPLE_RATE) -> None:
+    def __init__(
+        self, threshold: float = 0.5, sample_rate: int = SAMPLE_RATE, *, min_silence_duration_ms: int = 100
+    ) -> None:
         if sample_rate != SAMPLE_RATE:
             raise ValueError("Silero VAD requires 16kHz audio")
 
@@ -39,7 +38,12 @@ class VoiceActivityDetector:
 
         torch.set_num_threads(1)  # small model; threading overhead hurts
         self._model = load_silero_vad()
-        self._iterator = VADIterator(self._model, threshold=threshold, sampling_rate=sample_rate)
+        self._iterator = VADIterator(
+            self._model,
+            threshold=threshold,
+            sampling_rate=sample_rate,
+            min_silence_duration_ms=min_silence_duration_ms,
+        )
 
     def reset(self) -> None:
         self._iterator.reset_states()

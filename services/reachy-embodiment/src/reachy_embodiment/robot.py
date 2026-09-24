@@ -19,28 +19,28 @@ frames from the daemon's local media socket is the SDK's own documented
 same-host path, not a movement/control command, so it doesn't reopen the
 question of who owns motor/serial control.
 
-**`ReachyDaemonBackend` is a first draft, not yet verified against a live
-daemon** — reachy-mini-daemon has not been started during Phase 22
-verification so far (starting it moves the robot via `--wake-up-on-start`
-by default and needs the owner physically present/supervising). Its move
-dataset/name mapping, upload-response field name, and status field
-semantics are all best-effort reads of the daemon's source, not confirmed
-live responses. Treat every "unverified" note below as a real gap to close
-before trusting this in production, not hedging.
+**`ReachyDaemonBackend` is only partly verified against a live daemon.**
+Named moves were confirmed live in Phase 22b. Standby/resume, audio
+upload/play/stop and microphone capture are best-effort reads of the pinned
+daemon source, not confirmed live responses. Treat every "unverified" note
+below as a real gap to close before trusting this in production, not hedging.
 """
 
 from __future__ import annotations
 
 import io
 import logging
+import os
 import threading
 import time
 import wave
+from collections import deque
 from collections.abc import Callable
 from typing import Protocol
 from urllib.parse import urlsplit
 
 import httpx
+import numpy as np
 from PIL import Image, ImageDraw
 
 from shared.models.embodiment import Behaviour
@@ -48,6 +48,27 @@ from shared.models.embodiment import Behaviour
 log = logging.getLogger(__name__)
 
 _FRAME_SIZE = (320, 240)
+
+
+def wav_duration(wav_bytes: bytes) -> float:
+    """Seconds of audio actually present. Counts the PCM bytes rather than
+    trusting the header's frame count, which streaming writers (espeak-ng
+    --stdout) fill with a placeholder — see reachy_hub/tts.py."""
+    with io.BytesIO(wav_bytes) as buf, wave.open(buf, "rb") as wf:
+        frames = wf.readframes(wf.getnframes())
+        bytes_per_second = wf.getframerate() * wf.getnchannels() * wf.getsampwidth()
+    return len(frames) / bytes_per_second
+
+
+class MicSource(Protocol):
+    """See reachy_embodiment.voice.MicSource (duplicated structurally so
+    this module stays importable without the voice loop)."""
+
+    def start(self) -> None: ...
+
+    def read(self) -> np.ndarray | None: ...
+
+    def stop(self) -> None: ...
 
 
 class RobotBackend(Protocol):
@@ -66,6 +87,16 @@ class RobotBackend(Protocol):
     def play_audio(self, wav_bytes: bytes) -> float:
         """Plays 16-bit PCM WAV bytes through the robot's speaker, returns
         the audio's duration in seconds. Phase 16/ADR 0013."""
+        ...
+
+    def stop_audio(self) -> None:
+        """Stops whatever `play_audio` started. Phase 24c: conversation
+        cancellation must silence the speaker, not just drop HTTP work."""
+        ...
+
+    def open_microphone(self) -> MicSource:
+        """Returns this robot's microphone as mono float32 16 kHz samples.
+        Opening it does not start capture; `MicSource.start` does."""
         ...
 
     def daemon_standby(self) -> dict[str, object]:
@@ -122,10 +153,15 @@ class SimulatedRobotBackend:
         return buf.getvalue()
 
     def play_audio(self, wav_bytes: bytes) -> float:
-        with io.BytesIO(wav_bytes) as buf, wave.open(buf, "rb") as wf:
-            duration = wf.getnframes() / wf.getframerate()
+        duration = wav_duration(wav_bytes)
         log.info("sim: playing %.2fs of audio (no physical speaker in this environment)", duration)
         return duration
+
+    def stop_audio(self) -> None:
+        log.info("sim: stop audio")
+
+    def open_microphone(self) -> MicSource:
+        return SimulatedMicSource.from_env()
 
     def daemon_standby(self) -> dict[str, object]:
         log.info("sim: daemon standby (no physical daemon in this environment)")
@@ -139,6 +175,86 @@ class SimulatedRobotBackend:
 
     def close(self) -> None:
         pass
+
+
+class SimulatedMicSource:
+    """Phase 24c simulation fixture, not a microphone. Each `start()` (one
+    per listening phase) takes the next queued WAV and emits it in real
+    time after a short lead-in of silence, then silence until stopped, so
+    a simulated robot can hold a multi-turn conversation through the real
+    upload/STT/LLM/TTS path. `SIM_MIC_WAVS` lists 16 kHz mono 16-bit WAV
+    paths separated by os.pathsep; unset means silence only.
+    """
+
+    LEAD_IN_SECONDS = 0.3
+
+    def __init__(self, utterances: list[np.ndarray] | None = None, *, clock: Callable[[], float] = time.monotonic):
+        self._queue: deque[np.ndarray] = deque(utterances or [])
+        self._clock = clock
+        self._current: np.ndarray | None = None
+        self._started_at: float | None = None
+        self._emitted = 0
+
+    @classmethod
+    def from_env(cls) -> SimulatedMicSource:
+        paths = [p for p in os.environ.get("SIM_MIC_WAVS", "").split(os.pathsep) if p]
+        utterances = []
+        for path in paths:
+            with wave.open(path, "rb") as wf:
+                if wf.getframerate() != 16000 or wf.getnchannels() != 1 or wf.getsampwidth() != 2:
+                    raise ValueError(f"{path}: SIM_MIC_WAVS entries must be 16 kHz mono 16-bit WAV")
+                raw = wf.readframes(wf.getnframes())
+            utterances.append(np.frombuffer(raw, dtype="<i2").astype(np.float32) / 32768.0)
+        return cls(utterances)
+
+    def start(self) -> None:
+        lead_in = np.zeros(int(self.LEAD_IN_SECONDS * 16000), dtype=np.float32)
+        self._current = np.concatenate([lead_in, self._queue.popleft()]) if self._queue else lead_in
+        self._started_at = self._clock()
+        self._emitted = 0
+
+    def read(self) -> np.ndarray | None:
+        if self._started_at is None:
+            return None
+        due = int((self._clock() - self._started_at) * 16000)
+        if due <= self._emitted:
+            return None
+        out = np.zeros(due - self._emitted, dtype=np.float32)
+        assert self._current is not None
+        available = self._current[self._emitted : due]
+        out[: len(available)] = available
+        self._emitted = due
+        return out
+
+    def stop(self) -> None:
+        self._started_at = None
+        self._current = None
+
+
+class ReachyMiniMicSource:
+    """The robot microphone through the `reachy_mini` SDK's LOCAL audio
+    backend, which opens the ALSA `reachymini_audio_src` dsnoop device the
+    daemon also uses (see docs/deployment.md#robot-voice-conversation for
+    the container requirements). The SDK delivers stereo float32 at 16 kHz;
+    both channels are averaged to mono. UNVERIFIED on the Nano: channel
+    layout and dsnoop sharing from the container have not been exercised.
+    """
+
+    def __init__(self, media: object) -> None:
+        self._media = media
+
+    def start(self) -> None:
+        self._media.start_recording()  # type: ignore[attr-defined]
+
+    def read(self) -> np.ndarray | None:
+        # Blocks for at most ~20 ms (the SDK's appsink pull timeout).
+        sample = self._media.get_audio_sample()  # type: ignore[attr-defined]
+        if sample is None:
+            return None
+        return sample.mean(axis=1).astype(np.float32) if sample.ndim == 2 else sample.astype(np.float32)
+
+    def stop(self) -> None:
+        self._media.stop_recording()  # type: ignore[attr-defined]
 
 
 class RobotBackendError(RuntimeError):
@@ -365,6 +481,20 @@ class ReachyDaemonBackend:
         """
         import cv2  # local import: only needed by this one real-hardware path
 
+        try:
+            frame = self._media_client().media.get_frame()  # type: ignore[attr-defined]
+        except Exception as exc:
+            raise RobotBackendError(f"get_frame() failed: {exc}") from exc
+        if frame is None:
+            raise RobotBackendError("camera not initialized yet (get_frame() returned None)")
+        ok, encoded = cv2.imencode(".jpg", frame)
+        if not ok:
+            raise RobotBackendError("failed to JPEG-encode captured frame")
+        return bytes(encoded)
+
+    def _media_client(self) -> object:
+        """Lazily creates the one `ReachyMini` LOCAL media client shared by
+        camera capture and the microphone (see capture_frame)."""
         if self._mini is None:
             with self._mini_lock:
                 if self._mini is None:
@@ -372,7 +502,7 @@ class ReachyDaemonBackend:
                         if self._media_client_factory is not None:
                             self._mini = self._media_client_factory()
                         else:
-                            # local import: same reason as cv2 above
+                            # local import: only real-hardware paths need the SDK
                             from reachy_mini import ReachyMini
 
                             self._mini = ReachyMini(
@@ -383,31 +513,34 @@ class ReachyDaemonBackend:
                             )
                     except Exception as exc:
                         raise RobotBackendError(f"could not connect to daemon media backend: {exc}") from exc
+        return self._mini
 
+    def open_microphone(self) -> MicSource:
+        return ReachyMiniMicSource(self._media_client().media)  # type: ignore[attr-defined]
+
+    def stop_audio(self) -> None:
+        """POST /media/stop_sound — stops the daemon's current play_sound.
+        Source-checked against reachy_mini 1.8.4's daemon router
+        (daemon/app/routers/media.py); not yet exercised live."""
         try:
-            frame = self._mini.media.get_frame()  # type: ignore[attr-defined]
-        except Exception as exc:
-            raise RobotBackendError(f"get_frame() failed: {exc}") from exc
-        if frame is None:
-            raise RobotBackendError("camera not initialized yet (get_frame() returned None)")
-        ok, encoded = cv2.imencode(".jpg", frame)
-        if not ok:
-            raise RobotBackendError("failed to JPEG-encode captured frame")
-        return bytes(encoded)
+            self._client.post("/media/stop_sound").raise_for_status()
+        except httpx.HTTPError as exc:
+            raise RobotBackendError(f"stop_sound failed: {exc}") from exc
 
     def play_audio(self, wav_bytes: bytes) -> float:
         """Uploads WAV bytes and plays them through the robot's speaker.
 
         Two daemon calls, per its API (no single upload-and-play
-        endpoint): POST /media/sounds/upload (multipart) returns a server
-        path, then POST /media/play_sound {"file": ...} plays it. The
-        upload response's exact field name is UNVERIFIED (no live
-        response has been inspected); this tries the field names that
-        look plausible from the daemon's own upload-handling code and
-        raises clearly if none match, rather than guessing further.
+        endpoint): POST /media/sounds/upload (multipart) returns
+        `{"status": "ok", "path": <absolute path>}`, then POST
+        /media/play_sound {"file": ...} plays it. The response shape was
+        confirmed from reachy_mini 1.8.4's daemon source (the pinned
+        version matching the Nano), not from a live response; the other
+        field names remain as a tolerant fallback. play_sound returns as
+        soon as playback starts, so the WAV's own duration is returned for
+        callers that need to wait for it to finish.
         """
-        with io.BytesIO(wav_bytes) as buf, wave.open(buf, "rb") as wf:
-            duration = wf.getnframes() / wf.getframerate()
+        duration = wav_duration(wav_bytes)
 
         try:
             upload_resp = self._client.post(

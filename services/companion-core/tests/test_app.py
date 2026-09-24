@@ -188,6 +188,26 @@ def test_telegram_alias_parses_to_the_same_command_as_the_namespaced_form() -> N
         assert client.get("/debug/robots/desk-1/state").json()["embodiment_state"] == "sleep"
 
 
+@pytest.mark.parametrize(("text", "typed_first", "expected"), [
+    ("/reachy standby", None, ("idle", True)),
+    ("/standby", None, ("idle", True)),
+    ("/reachy wake", "/reachy standby", ("sleep", False)),
+])
+def test_spoken_command_text_never_actuates(text, typed_first, expected) -> None:
+    """Phase 24c: a robot-microphone transcript arrives as VOICE. Commands
+    are typed-only, so even the literal command syntax must not reach the
+    real standby/resume chain from speech."""
+    robot = Robot(robot_id="desk-1", base_url="http://desk-1.local")
+    turn = {"session_id": "s1", "conversation_id": "c1", "channel": "reachy"}
+    with make_chain(registered_robots=[robot]) as client:
+        if typed_first:
+            client.post("/conversation", json={**turn, "text": typed_first})
+        resp = client.post("/conversation", json={**turn, "text": text, "input_modality": "voice"})
+        assert resp.status_code == 200
+        state = client.get("/debug/robots/desk-1/state").json()
+        assert (state["embodiment_state"], state["connected"]) == expected
+
+
 def test_standby_command_with_no_registered_robot_says_so() -> None:
     with make_chain() as client:
         resp = client.post(

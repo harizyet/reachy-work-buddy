@@ -44,6 +44,39 @@ Work-data and conversation APIs require owner authentication. Accounts
 settings specifically require the browser owner session. See
 [ADR 0021](adr/0021-google-accounts.md).
 
+## Talk through Reachy's microphone (Phase 24c)
+
+The Chat view has a **Robot microphone** panel. It works only when the
+robot's deployment has enabled it
+([deployment](deployment.md#robot-voice-conversation)). Otherwise the robot is
+listed as "voice not enabled" or "offline". Physical acceptance is still
+pending ([Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance)).
+
+- Choose the robot and select **Start listening**. When the status shows
+  "Listening — speak now", say one thing and pause. Reachy then shows
+  "Thinking…", replies aloud ("Speaking"), and listens again.
+- Reachy does not listen while it thinks or speaks. Wait for "Listening"
+  before your next turn; interrupting it is not supported.
+- Your words and Reachy's reply appear in the chat transcript, marked as
+  spoken. The conversation is the same one as typed chat and Telegram. You can
+  switch to typing and back without losing context.
+- If a reply shouldn't be said aloud, Reachy doesn't say it. The reply appears
+  here instead, marked "not spoken" with the reason. Reasons include Office,
+  Remote or Silent mode, private calendar/work content, Do not disturb, or a
+  meeting. In Office or Remote mode, the reply is also sent to your bound
+  Telegram chat if one is set up.
+- After a private reply (for example, about your calendar), later replies in
+  the same conversation also stay off the speaker, because a reply might
+  repeat the earlier private details.
+- Spoken requests can't confirm actions or run `/reachy` commands. Type those.
+- **Stop** ends listening immediately, including a reply already playing.
+  Logging out, closing the page, going 2 minutes without speaking, or reaching
+  10 minutes also ends it. It never restarts by itself; select Start again.
+
+Reachy does not recognise who is speaking. While listening is on, anyone near
+the robot can talk to it and hear its public replies. Use it only in a private
+room until owner recognition ([Phase 25](phase-25.md)) exists.
+
 ## Hybrid inference (Phase 21)
 
 Overview → Language model configures separate local/cloud endpoints and

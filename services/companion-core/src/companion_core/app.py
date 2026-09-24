@@ -567,7 +567,11 @@ def create_app(
         # no longer can. See companion_core/commands/parser.py and
         # docs/phase-24b.md; robot_power_intent's substring matcher is
         # retired, not repurposed.
-        parsed_command = commands.parse(turn.text)
+        # Phase 24c: commands are typed-only. A spoken transcript is not an
+        # authenticated channel (anyone near the robot's microphone can
+        # speak), so it never reaches a command even if STT happens to
+        # produce "/reachy standby" literally.
+        parsed_command = commands.parse(turn.text) if turn.input_modality == InputModality.TEXT else None
         reachy_command = parsed_command.action if parsed_command and parsed_command.namespace == "reachy" else None
 
         if reachy_command == "standby":

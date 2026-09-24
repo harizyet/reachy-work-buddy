@@ -14,3 +14,8 @@ ROBOTS_CONNECT = "/robots/connect"
 # A robot and hub that disagree on this reject the connection at
 # registration time (ADR 0019: "negotiate protocol version").
 PROTOCOL_VERSION = 1
+
+# Phase 24c (ADR 0023): robot-initiated upload of one bounded utterance,
+# authenticated with the robot's own credential. Not under /robots/ so it
+# can't be mistaken for an owner remote-control route.
+ROBOT_VOICE_TURN = "/robot-media/voice-turn"

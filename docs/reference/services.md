@@ -112,7 +112,9 @@ WebRTC, and static UI. It does not own reasoning policy or motor control.
 | `GET /robots/{id}/state`, `/behaviours`; `POST /robots/{id}/behaviour/{name}`, `/speak` | Authenticated robot proxies and direct speak-through control |
 | `POST /robots/standby`, `/resume` | Phase 22b: authenticated remote power control — parks/de-torques (`standby`) or wakes (`resume`, `wake_up` query param) every registered robot; no `{id}` in the path, loops the registry like the existing gesture-trigger helper does |
 | `POST /webrtc/telepresence/offer` | Authenticated remote media/control |
-| `WS /robots/connect` | Robot-token-authenticated registration/heartbeat/reconnect; commands still HTTP |
+| `WS /robots/connect` | Robot-token-authenticated registration/heartbeat/reconnect; also `voice_start`/`voice_stop`/`voice_state` conversation control (Phase 24c); other commands still HTTP |
+| `GET /robot-voice`; `POST /robot-voice/start`, `/renew`, `/stop` | Phase 24c owner controls: robots with the voice capability, the current session, its lease and recent turns |
+| `POST /robot-media/voice-turn` | Phase 24c robot upload of one WAV utterance, authenticated with the robot's own credential, generation and session; returns reply WAV or 204 with `X-Voice-Turn-Outcome` |
 | `POST /auth/login`, `/auth/logout`; `GET /auth/me` | Owner-cookie lifecycle; login/logout require CSRF header |
 | `GET /status` | Authenticated component probes, model config/usage, Telegram polling health, default user ID |
 | `GET`, `PUT /settings/llm`; `GET /llm/usage` | Authenticated core proxies; usage defaults `limit=50`, `since_hours=24` |
@@ -142,6 +144,14 @@ faster-whisper/espeak providers. WebRTC orchestration is separate from SDP
 and audio tracks; playback resamples to 48kHz mono because aiortc's Opus
 encoder does not adapt when tracks with different formats are swapped.
 
+Robot voice sessions ([ADR 0023](../adr/0023-robot-voice-conversation.md),
+`robot_voice.py`) are process-local, one per robot. They are bound to the
+robot's connection generation and ended by logout, lease lapse, idle timeout,
+maximum length or disconnect. A turn is transcribed and sent to core as
+`channel=reachy`, `input_modality=voice`. It is synthesized only when
+`resolve_delivery_channel` → `apply_privacy_override` →
+`robot_speech_withheld_reason` (DND/meeting) all permit the robot speaker.
+
 The HTTP heartbeat interval is 2 seconds against embodiment's 5-second
 watchdog. WS connections are process-local, generation-fenced, and require
 one hub worker. `ROBOT_TOKENS` provisions hashed robot credentials in memory;
@@ -169,12 +179,19 @@ periodically without querying it on every animation tick.
 The independent presence thread schedules idle behaviours in idle/disconnected
 states, times out without hub heartbeats, and recovers on renewed liveness.
 The real backend logs/no-ops unmapped idle movements, so simulated scheduling
-does not prove physical idle animation. Silero VAD uses 512 samples at 16kHz;
-a live physical microphone/barge-in path has not passed acceptance.
+does not prove physical idle animation.
+
+`voice.py` (Phase 24c) runs the robot side of a hub-started conversation. It
+opens the microphone, lets Silero VAD (512 samples at 16 kHz) delimit one
+bounded utterance, closes the microphone, uploads the utterance to the hub,
+then plays any permitted reply. It is half-duplex, and cancelling stops daemon
+playback. It is enabled only by `VOICE_CONVERSATION_ENABLED=true`, and has not
+passed physical acceptance. Barge-in and wake words are not implemented.
 
 `ReachyDaemonBackend` calls daemon HTTP under `/api`. Recorded moves use the
-Pollen emotions dataset; camera capture releases daemon media, reads V4L2
-through OpenCV, then reacquires in cleanup. Audio is upload-then-play.
+Pollen emotions dataset. Camera frames and the microphone share one
+`reachy_mini` LOCAL media client. Audio playback is upload-then-play, and
+`stop_audio` calls `/api/media/stop_sound`.
 Physical camera/audio acceptance is still outstanding. Read
 [bring-up evidence](../verification/phase-22-bring-up.md) before treating the
 simulator's successful move lifecycle as validated real motion.

@@ -44,10 +44,10 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
     el('chat-form').requestSubmit();
   }
 
-  function appendMessage(speaker, text) {
+  function appendMessage(speaker, text, {fromUser = speaker === 'You', note = false} = {}) {
     el('chat-empty')?.remove();
     const item = document.createElement('article');
-    item.className = `chat-message ${speaker === 'You' ? 'from-user' : 'from-reachy'}`;
+    item.className = `chat-message ${fromUser ? 'from-user' : 'from-reachy'}${note ? ' voice-note' : ''}`;
     const label = document.createElement('strong'); label.textContent = speaker;
     const body = document.createElement('p'); body.textContent = text;
     item.append(label, body);
@@ -55,7 +55,7 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
     // by re-parsing the reply text as HTML — clicking it re-sends the
     // literal command text through the normal /messages path, the same
     // as typing it, which is itself the authorization event.
-    const match = speaker !== 'You' && SUGGESTED_COMMAND_PATTERN.exec(text);
+    const match = !fromUser && SUGGESTED_COMMAND_PATTERN.exec(text);
     if (match) {
       const button = document.createElement('button');
       button.type = 'button';
@@ -193,8 +193,20 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
     }
   });
 
+  // Phase 24c: robot microphone turns share this transcript so the owner
+  // sees one conversation across speech and typing. Text stays literal.
+  function appendVoiceTurn(turn) {
+    if (turn.transcript) appendMessage('You · spoken to Reachy', turn.transcript, {fromUser: true});
+    if (turn.outcome === 'spoken') appendMessage('Reachy · said aloud', turn.reply || '');
+    else if (turn.outcome === 'withheld') appendMessage(`Reachy · not spoken (${turn.reason || 'withheld'})`, turn.reply || '');
+    else if (turn.outcome === 'no_speech') appendMessage('Reachy', 'I heard a sound but no words. Try again.', {note: true});
+    else if (turn.outcome === 'failed') appendMessage('Reachy', `That turn failed: ${turn.reason || 'unknown error'}. Speak again when listening resumes.`, {note: true});
+    else if (turn.outcome === 'cancelled') appendMessage('Reachy', 'Stopped before replying.', {note: true});
+  }
+
   return {
-    setUser, refreshSession,
+    setUser, refreshSession, appendVoiceTurn,
+    currentUser() { return user; },
     initializeUser(defaultUser) { if (!user) setUser(defaultUser); },
     updateTelegram(telegram) {
       el('chat-telegram').textContent = !telegram ? 'Telegram status unavailable. You can still try web chat.'

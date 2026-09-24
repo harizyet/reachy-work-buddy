@@ -22,7 +22,7 @@ test('Accounts works at direct/proxied mounts, explains Google login, and render
     const json = (body, code = 200) => {res.writeHead(code, {'Content-Type': 'application/json'}); res.end(JSON.stringify(body));};
     if (route.startsWith('/ui/')) {
       const file = route.slice(4) || 'index.html';
-      if (!['index.html','app.js','chat.js','accounts.js','style.css'].includes(file)) return json({}, 404);
+      if (!['index.html','app.js','chat.js','voice.js','accounts.js','style.css'].includes(file)) return json({}, 404);
       res.writeHead(200, {'Content-Type': file.endsWith('.js') ? 'application/javascript' : file.endsWith('.css') ? 'text/css' : 'text/html'});
       return res.end(fs.readFileSync(path.join(__dirname, '..', file)));
     }
@@ -92,7 +92,7 @@ test('Desktop OAuth mode hides the return address and shows a helper command wit
     const json = (body, code = 200) => {res.writeHead(code, {'Content-Type': 'application/json'}); res.end(JSON.stringify(body));};
     if (route.startsWith('/ui/')) {
       const file = route.slice(4) || 'index.html';
-      if (!['index.html','app.js','chat.js','accounts.js','style.css'].includes(file)) return json({}, 404);
+      if (!['index.html','app.js','chat.js','voice.js','accounts.js','style.css'].includes(file)) return json({}, 404);
       res.writeHead(200, {'Content-Type': file.endsWith('.js') ? 'application/javascript' : file.endsWith('.css') ? 'text/css' : 'text/html'});
       return res.end(fs.readFileSync(path.join(__dirname, '..', file)));
     }

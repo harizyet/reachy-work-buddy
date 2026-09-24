@@ -1,9 +1,12 @@
 # Phases 24c–24d — complete and prove Reachy conversation
 
-Status: planned, not implemented or accepted. These phases follow Phase 24b
-and gate Phase 25. Phase 24c audits and completes the conversation workflow;
-Phase 24d separately accepts it on the deployed physical robot. Existing
-speech components and isolated tests do not establish that this workflow works.
+Status: **24c implemented 2026-09-24** (automated, browser and real-process
+checks with a simulated robot microphone; see the
+[audit result](#phase-24c-audit-result-2026-09-24) and
+[verification record](verification/phase-24c-conversation-2026-09-24.md)).
+**24d not started**: nothing here has run on the physical robot. These phases
+follow Phase 24b and gate Phase 25. Existing speech components and isolated
+tests do not establish that this workflow works on hardware.
 
 ## Required workflow
 
@@ -24,7 +27,8 @@ is not waived for the eventual recognized room-voice mode.
 
 ## Current evidence and gaps
 
-Baseline inspected 2026-09-24; re-audit before implementation. Classify each
+Pre-implementation baseline, inspected 2026-09-24. The
+[audit result](#phase-24c-audit-result-2026-09-24) below supersedes it. Classify each
 link as implemented and verified, implemented but unverified, or missing, with
 code/test/evidence references. Reuse working components and fix demonstrated
 gaps rather than replacing the speech stack wholesale.
@@ -91,6 +95,64 @@ an intended outcome, not evidence that the complete robot path was exercised.
 **24c exit:** every required link is implemented with automated coverage and
 real-process speech verification; a repeatable hardware acceptance procedure
 is ready. Fixtures and simulator checks are labelled. This does not close 24d.
+
+### Phase 24c audit result (2026-09-24)
+
+Transport and auth decision: [ADR 0023](adr/0023-robot-voice-conversation.md).
+Evidence: [verification record](verification/phase-24c-conversation-2026-09-24.md).
+Status meanings: **verified** means automated/real-process checks passed off
+the robot; **unverified on robot** means the code exists but the Nano path has
+not run.
+
+| Link | Before 24c | Now | Status |
+|---|---|---|---|
+| Owner start/stop control | Missing | Operator UI Chat → Robot microphone; `/robot-voice/start`, `/renew`, `/stop`; owner cookie+CSRF or bearer; lease, logout, idle, max length | Verified (hub tests, Chromium) |
+| Hub → robot capture control | Missing (WSS carried only heartbeats) | `voice_start`/`voice_stop` over the ADR 0019 socket, gated by the robot's `voice_conversation` capability; stopped on disconnect | Verified (in-process and real-socket tests) |
+| Physical capture | Missing; VAD not wired | `ReachyMiniMicSource` via the SDK LOCAL backend (`dsnoop`); container options in `start-reachy.sh` | **Unverified on robot** |
+| Turn boundaries | Silero VAD unwired | `UtteranceSegmenter`: VAD end-of-speech, pre-roll, minimum and maximum length | Verified (fixture VAD plus real Silero on synthesized speech) |
+| Robot → hub transport | Missing | `POST /robot-media/voice-turn` with robot bearer, generation, session and turn; 1 MiB and WAV-format bounds | Verified |
+| STT | `/voice/turn` only | Same lazy faster-whisper provider | Verified (real `tiny.en`) |
+| Session/core/LLM | Shared path existed | `handle_inbound_message(channel=reachy, VOICE)`, shared with web/Telegram | Verified (real core; real local LLM in Compose run) |
+| Routing and privacy before speech | Not enforced (WAV always returned) | ADR 0006 routing plus DND/meeting veto before synthesis; withheld text to the owner panel and Telegram | Verified |
+| Voice consent and commands | ADR 0011 enforced; `/reachy` commands parsed from any modality | Commands parsed only from typed text | Verified (fixed in core) |
+| TTS | espeak WAV had a placeholder length header | Header rewritten with the real frame count; robot measures PCM length | Verified (this bug would have stalled the robot ~13 h per reply) |
+| Robot playback | Upload shape "unverified" | Upload response `path` confirmed from the pinned daemon 1.8.4 source; `stop_sound` for cancellation | **Unverified on robot** |
+| Turn lifecycle / echo | Missing | Half-duplex: mic closed while thinking/speaking plus 400 ms guard; one turn in flight; late replies discarded | Verified off robot; acoustic echo **unverified** |
+| Failure and recovery | Missing | STT/core/TTS failure → visible error and listening resumes; hub restart/robot disconnect → stop, no auto-restart | Verified |
+| States shown | Missing | Starting/listening/thinking/speaking/off in UI; embodiment state set to match | Verified |
+
+Deliberately not included: barge-in, wake word, continuous ambient listening,
+speaker recognition (Phase 25), and gesture cues during turns. Recorded
+emotion moves play sound effects the microphone would pick up.
+
+### Phase 24d hardware procedure
+
+Run with the owner present. Starting or recreating the embodiment container
+doesn't start the daemon, but the procedure assumes the daemon is already
+running normally. Don't restart it for this test.
+
+1. **Preflight (read-only).** `scripts/start-reachy.sh --check`; confirm the
+   daemon is active and not simulated. Record `git rev-parse HEAD`, the image
+   ID, the daemon version, the hub STT model, the TTS engine and the LLM
+   settings/model.
+2. **Enable.** Set `VOICE_CONVERSATION_ENABLED=true`, run
+   `docker rm -f reachy-embodiment`, then `scripts/start-reachy.sh --build`.
+   Check the launcher logged "voice conversation enabled" and that the
+   operator UI lists the robot without "voice not enabled".
+3. **Device coexistence.** While the daemon plays a named behaviour sound and
+   `GET /camera/frame` works, start listening. If the status reports
+   "Microphone unavailable", check `docker logs reachy-embodiment` for ALSA
+   or shm errors. That is a 24c defect: fix it and rerun.
+4. **Agree the latency budget** with the owner before any timed turn, and
+   record it (the matrix requires this).
+5. Run the matrix rows above in order. For timing, use hub logs (turn
+   outcome timestamps) and a phone recording of the room for utterance end
+   and first audible reply. Measure the stop tail from the Stop click to
+   silence on that recording.
+6. Clean up: stop listening, set `VOICE_CONVERSATION_ENABLED=false` again
+   unless the owner keeps it, recreate the container, and delete no volumes.
+   Record everything in `docs/verification/phase-24d-conversation-<date>.md`
+   without raw audio or personal transcripts.
 
 ## Phase 24d — physical end-to-end acceptance
 

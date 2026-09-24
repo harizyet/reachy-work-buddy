@@ -32,6 +32,8 @@ class SendableConnection(Protocol):
 
     async def close(self, code: int = 1000) -> None: ...
 
+    async def send_json(self, data: object) -> None: ...
+
 
 @dataclass
 class RobotConnection:
@@ -42,6 +44,9 @@ class RobotConnection:
     sim: bool
     connected_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     last_heartbeat_ack_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    # Heartbeats (connection loop) and voice control (request handlers)
+    # send on the same socket from different tasks.
+    send_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
 
 class RobotConnectionManager:

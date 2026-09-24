@@ -11,7 +11,7 @@ for privacy/urgency-driven overrides; it does not replace this one.
 from __future__ import annotations
 
 from shared.models.response import Privacy
-from shared.models.session import Channel, InteractionMode
+from shared.models.session import Channel, InteractionMode, PrivacyContext
 
 
 def resolve_delivery_channel(mode: InteractionMode, active_channel: Channel) -> Channel:
@@ -51,3 +51,23 @@ def apply_privacy_override(base_channel: Channel, privacy: Privacy, active_chann
     if base_channel == Channel.REACHY and privacy in _NEVER_SPOKEN_ALOUD:
         return active_channel if active_channel != Channel.REACHY else Channel.WEB
     return base_channel
+
+
+def robot_speech_withheld_reason(
+    delivery_channel: Channel, *, dnd: bool, privacy_context: PrivacyContext
+) -> str | None:
+    """Phase 24c (ADR 0023): None when a reply may be spoken through the
+    robot's room-audible speaker, otherwise the owner-visible reason it was
+    withheld. Takes the already-resolved delivery channel (the two functions
+    above) and adds only further vetoes — it can never permit speech those
+    functions routed elsewhere. DND and meetings withhold speech even for a
+    reply to the owner's own spoken turn, because the speaker is heard by
+    everyone in the room, not only the person who asked.
+    """
+    if delivery_channel != Channel.REACHY:
+        return f"Routing sends this reply to {delivery_channel.value}, not the robot speaker"
+    if dnd:
+        return "Do not disturb is on"
+    if privacy_context == PrivacyContext.MEETING:
+        return "You are marked as in a meeting"
+    return None

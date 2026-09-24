@@ -114,6 +114,11 @@ one prioritized list. "Reachy greets" is an unconditional arrival gesture
 literal mechanism behind "detailed briefing is privately delivered". No new
 storage: it reuses `notification_queue`/`audit_log` exactly as they already
 exist.
+
+Phase 24c (ADR 0023): robot microphone conversation lives in robot_voice.py.
+This module only adapts its existing STT/TTS, handle_inbound_message and
+Telegram push into that module's pipeline, and wires the WSS hooks and the
+logout stop.
 """
 
 from __future__ import annotations
@@ -123,6 +128,7 @@ import contextlib
 import logging
 import os
 import secrets
+import threading
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -158,13 +164,24 @@ from reachy_hub.postgres_notification_queue import PostgresNotificationQueue
 from reachy_hub.postgres_registry import PostgresRobotRegistry
 from reachy_hub.postgres_session_store import PostgresSessionStore
 from reachy_hub.postgres_telegram_chat_registry import PostgresTelegramChatRegistry
-from reachy_hub.response_policy import apply_privacy_override, resolve_delivery_channel
+from reachy_hub.response_policy import (
+    apply_privacy_override,
+    resolve_delivery_channel,
+    robot_speech_withheld_reason,
+)
 from reachy_hub.robot_connection_manager import RobotConnectionManager
 from reachy_hub.robot_credential_store import RobotCredentialStore
 from reachy_hub.robot_credential_store import (
     load_from_env as load_robot_tokens_from_env,
 )
 from reachy_hub.robot_registry import Robot, RobotRegistry
+from reachy_hub.robot_voice import (
+    ConversationReply,
+    RobotVoiceManager,
+    VoiceTurnPipeline,
+    install_robot_voice_routes,
+    voice_watchdog_loop,
+)
 from reachy_hub.robot_ws import install_robot_ws_routes
 from reachy_hub.session_store import SessionStore
 from reachy_hub.stt import FasterWhisperSTT, SpeechToText
@@ -184,7 +201,12 @@ from shared.models.session import (
     InteractionMode,
     PrivacyContext,
 )
-from shared.protocols.operator_api import ROBOTS, ROBOTS_RESUME, ROBOTS_STANDBY
+from shared.protocols.operator_api import (
+    ROBOT_VOICE,
+    ROBOTS,
+    ROBOTS_RESUME,
+    ROBOTS_STANDBY,
+)
 
 log = logging.getLogger(__name__)
 
@@ -306,6 +328,8 @@ def create_app(
     robot_connection_manager: RobotConnectionManager | None = None,
     robot_ws_heartbeat_interval: float = 2.0,
     robot_ws_watchdog_timeout: float = 5.0,
+    robot_voice_manager: RobotVoiceManager | None = None,
+    run_voice_watchdog_task: bool = True,
 ) -> FastAPI:
     # Phase 16/ADR 0013: fail closed. Unset means the whole remote-control
     # surface below 503s rather than silently allowing unauthenticated
@@ -357,15 +381,31 @@ def create_app(
     if tts is not None:
         voice_providers["tts"] = tts
 
+    # Construction can take tens of seconds (first-use model download), so
+    # callers must reach these from a worker thread (transcribe/synthesize
+    # below), never on the event loop: blocking the loop that long stalls
+    # every other request and the robot WSS keepalive, which disconnected
+    # the robot mid-turn in the Phase 24c Compose run. The lock stops two
+    # first requests from loading two models.
+    voice_provider_lock = threading.Lock()
+
     def get_stt() -> SpeechToText:
-        if "stt" not in voice_providers:
-            voice_providers["stt"] = stt_factory()
-        return voice_providers["stt"]  # type: ignore[return-value]
+        with voice_provider_lock:
+            if "stt" not in voice_providers:
+                voice_providers["stt"] = stt_factory()
+            return voice_providers["stt"]  # type: ignore[return-value]
 
     def get_tts() -> TextToSpeech:
-        if "tts" not in voice_providers:
-            voice_providers["tts"] = tts_factory()
-        return voice_providers["tts"]  # type: ignore[return-value]
+        with voice_provider_lock:
+            if "tts" not in voice_providers:
+                voice_providers["tts"] = tts_factory()
+            return voice_providers["tts"]  # type: ignore[return-value]
+
+    def transcribe(wav_bytes: bytes) -> str:
+        return get_stt().transcribe(wav_bytes)
+
+    def synthesize(text: str) -> bytes:
+        return get_tts().synthesize(text)
 
     # Telegram is optional: no token (env or explicit) means no client, no
     # polling, and no Postgres connection for the chat registry either —
@@ -507,10 +547,14 @@ def create_app(
             if telegram_client is not None and run_telegram_poll_task
             else None
         )
+        voice_task = (
+            asyncio.create_task(voice_watchdog_loop(robot_voice_manager)) if run_voice_watchdog_task else None
+        )
         try:
             yield
         finally:
-            for task in (heartbeat_task, telegram_task):
+            await robot_voice_manager.stop_all("Hub is shutting down")
+            for task in (heartbeat_task, telegram_task, voice_task):
                 if task is not None:
                     task.cancel()
                     with contextlib.suppress(asyncio.CancelledError):
@@ -574,7 +618,7 @@ def create_app(
             except (ValueError, KeyError):
                 return JSONResponse(status_code=422, content={"detail": "Invalid request"})
         response = await call_next(request)
-        if work_path or path.startswith("/settings/accounts/"):
+        if work_path or path.startswith(("/settings/accounts/", ROBOT_VOICE)):
             response.headers["Cache-Control"] = "no-store"
             response.headers["Referrer-Policy"] = "no-referrer"
         if path == ACCOUNTS_CALLBACK:
@@ -585,11 +629,6 @@ def create_app(
         app.add_middleware(SessionMiddleware, secret_key=session_secret_key,
                            session_cookie="reachy_session", max_age=43200,
                            same_site="strict", https_only=session_cookie_secure)
-    install_operator_routes(app, require_remote_auth, companion_core_client, get_client,
-                            login_enabled=bool(session_secret_key), telegram_enabled=telegram_enabled,
-                            default_user_id=owner_user_id if accounts_service_token else telegram_default_user_id,
-                            owner_bound=bool(accounts_service_token))
-
     # ADR 0019 (Phase 22): robot-initiated WSS control connection.
     # robot_connection_manager is always process-local in-memory (never
     # restored across restarts, ADR 0019) — no env/Postgres wiring makes
@@ -599,14 +638,29 @@ def create_app(
     # same fail-closed default as REMOTE_UI_TOKEN above.
     robot_credential_store = robot_credential_store or load_robot_tokens_from_env()
     robot_connection_manager = robot_connection_manager or RobotConnectionManager()
+    # Phase 24c (ADR 0023): process-local like the connection manager.
+    robot_voice_manager = robot_voice_manager or RobotVoiceManager(robot_connection_manager)
     app.state.robot_credential_store = robot_credential_store
     app.state.robot_connection_manager = robot_connection_manager
+    app.state.robot_voice_manager = robot_voice_manager
+
+    async def stop_voice_on_logout() -> None:
+        await robot_voice_manager.stop_all("Owner logged out")
+
+    default_chat_user_id = owner_user_id if accounts_service_token else telegram_default_user_id
+    install_operator_routes(app, require_remote_auth, companion_core_client, get_client,
+                            login_enabled=bool(session_secret_key), telegram_enabled=telegram_enabled,
+                            default_user_id=default_chat_user_id,
+                            owner_bound=bool(accounts_service_token), on_logout=stop_voice_on_logout)
+
     install_robot_ws_routes(
         app,
         robot_credential_store,
         robot_connection_manager,
         heartbeat_interval=robot_ws_heartbeat_interval,
         watchdog_timeout=robot_ws_watchdog_timeout,
+        on_message=robot_voice_manager.on_robot_message,
+        on_disconnect=robot_voice_manager.on_robot_disconnect,
     )
     app.state.webrtc_connections = set()
     if not owns_registry:
@@ -1075,7 +1129,7 @@ def create_app(
         # faster-whisper and the espeak-ng subprocess are both blocking/
         # CPU-bound; running them inline would stall the event loop for
         # every other request while a transcription/synthesis is in flight.
-        transcript = await asyncio.to_thread(get_stt().transcribe, wav_bytes)
+        transcript = await asyncio.to_thread(transcribe, wav_bytes)
         if not transcript:
             raise HTTPException(status_code=422, detail="no speech detected in audio")
 
@@ -1084,7 +1138,7 @@ def create_app(
                 user_id=user_id, channel=Channel.REACHY, text=transcript, input_modality=InputModality.VOICE
             )
         )
-        reply_wav = await asyncio.to_thread(get_tts().synthesize, response.reply)
+        reply_wav = await asyncio.to_thread(synthesize, response.reply)
 
         # Headers are the debugging/observability path (no client UI exists
         # yet to consume these) — ASCII-encoded defensively since HTTP
@@ -1098,6 +1152,54 @@ def create_app(
                 "X-Reply-Text": response.reply.encode("ascii", errors="backslashreplace").decode("ascii"),
             },
         )
+
+    def resolve_voice_user(requested: str | None) -> str:
+        user_id = requested or default_chat_user_id
+        # Same owner binding private_work_routes applies to /messages.
+        if accounts_service_token and user_id != owner_user_id:
+            raise HTTPException(403, "This account belongs to the signed-in owner")
+        return user_id
+
+    async def voice_transcribe(wav_bytes: bytes) -> str:
+        return await asyncio.to_thread(transcribe, wav_bytes)
+
+    async def voice_synthesize(text: str) -> bytes:
+        return await asyncio.to_thread(synthesize, text)
+
+    async def voice_converse(user_id: str, transcript: str) -> ConversationReply:
+        response = await handle_inbound_message(
+            InboundMessage(user_id=user_id, channel=Channel.REACHY, text=transcript, input_modality=InputModality.VOICE)
+        )
+        return ConversationReply(reply=response.reply, delivery_channel=response.delivery_channel)
+
+    async def voice_session_flags(user_id: str) -> tuple[bool, PrivacyContext]:
+        session = await app.state.session_store.get_by_user(user_id)
+        if session is None:
+            return False, PrivacyContext.UNKNOWN
+        return session.dnd, session.privacy_context
+
+    async def voice_deliver_private(user_id: str, channel: Channel, text: str) -> bool:
+        return channel == Channel.TELEGRAM and await push_to_telegram(user_id, text)
+
+    async def registered_robot_ids() -> list[str]:
+        return [robot.robot_id for robot in await app.state.registry.list()]
+
+    install_robot_voice_routes(
+        app,
+        robot_voice_manager,
+        robot_credential_store,
+        require_remote_auth,
+        resolve_voice_user,
+        VoiceTurnPipeline(
+            transcribe=voice_transcribe,
+            converse=voice_converse,
+            session_flags=voice_session_flags,
+            synthesize=voice_synthesize,
+            deliver_private=voice_deliver_private,
+            speech_withheld_reason=robot_speech_withheld_reason,
+        ),
+        registered_robot_ids,
+    )
 
     @app.post("/webrtc/offer")
     async def webrtc_offer(request: WebRTCOfferRequest) -> WebRTCAnswerResponse:
@@ -1123,8 +1225,8 @@ def create_app(
             return response.reply
 
         turn_handler = CallTurnHandler(
-            transcribe=get_stt().transcribe,
-            synthesize=get_tts().synthesize,
+            transcribe=transcribe,
+            synthesize=synthesize,
             trigger_behaviour=trigger_behaviour,
             ask_agent=ask_agent,
         )
@@ -1151,7 +1253,7 @@ def create_app(
         Core," not just the auth gate above."""
         robot = await get_robot_or_404(robot_id)
         client = get_client(robot)
-        wav_bytes = await asyncio.to_thread(get_tts().synthesize, request.text)
+        wav_bytes = await asyncio.to_thread(synthesize, request.text)
         try:
             return await client.play_audio(wav_bytes)
         except httpx.HTTPError as exc:

@@ -295,10 +295,89 @@ build succeeds (see the Dockerfile's comment), not an actual live capture
 through this path.
 
 Current WS connectivity provides authentication, registration, heartbeat,
-generation fencing, and reconnect only. Commands still use HTTP; outbound
-media and WS command routing are unfinished. Run one hub worker. Real TLS,
-network-change, camera/audio, and physical soak acceptance remain in
+generation fencing, and reconnect. Behaviour, camera and speak commands still
+use HTTP. The only other traffic on the socket is conversation control from
+[robot voice conversation](#robot-voice-conversation). Run one hub worker. Real
+TLS, network-change, camera/audio, and physical soak acceptance remain in
 [Phase 22b](phase-22-23.md#satisfactory-run-acceptance-matrix).
+
+## Robot voice conversation
+
+Phase 24c lets the owner talk to Reachy through its own microphone and
+speaker. See [ADR 0023](adr/0023-robot-voice-conversation.md) for the design
+and the [operator guide](operator-guide.md#talk-through-reachys-microphone-phase-24c)
+for use. It is **off by default**. Physical acceptance is
+[Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance) and has
+not been done.
+
+To enable it on the robot host:
+
+1. Set `VOICE_CONVERSATION_ENABLED=true` in `deploy/reachy/.env`. The robot
+   then advertises the `voice_conversation` capability when it registers.
+   The hub needs no new setting; it already needs `ROBOT_TOKENS`, owner
+   login or `REMOTE_UI_TOKEN`, and working STT/TTS.
+2. Remove the existing container (`docker rm -f reachy-embodiment`), then
+   run `scripts/start-reachy.sh`. The launcher reuses an existing container
+   with its original options, so a change to this setting has no effect until
+   the container is recreated.
+3. The launcher adds `--ipc host`, runs the container as the daemon's user
+   (from the unit's `User=`, normally `reachy`), and mounts that user's
+   `~/.asoundrc` read-only. The SDK's LOCAL audio backend then opens the same
+   `reachymini_audio_src` `dsnoop` device the daemon uses. `dsnoop` shares the
+   hardware through SysV shared memory owned by that user; without those
+   options, the container would open the raw ALSA device and fight the daemon
+   for it. If the file is not readable, the launcher warns and leaves voice
+   disabled.
+
+**Not verified on the Nano:** dsnoop sharing from the container, the running
+UID's access to the camera socket and devices, the ReSpeaker channel layout
+(the loop averages both channels), and daemon `stop_sound`. The first 24d
+step checks them.
+
+Robot traffic uses the same `HUB_WS_URL` origin through Caddy. The WSS socket
+carries only `voice_start`/`voice_stop`/`voice_state`. Each utterance is a
+separate authenticated `POST /hub/robot-media/voice-turn` from the robot. The
+hub never connects inbound to the robot for voice, and no new robot port is
+opened.
+
+| Limit | Value | Enforced by |
+|---|---|---|
+| Owner lease (UI renews every 1.5 s) | 15 s | Hub |
+| Maximum session length | 10 min | Hub and robot |
+| No transcribed speech | 120 s | Hub |
+| Maximum utterance | 15 s | Robot cuts; hub rejects above 16 s |
+| End-of-speech silence / minimum utterance | 700 ms / 300 ms | Robot VAD |
+| Upload size | 1 MiB, 16 kHz mono 16-bit WAV | Hub |
+| Turns in flight | 1 per session | Hub (409) |
+| Tail guard after playback | 400 ms | Robot |
+
+Stopping, logging out, closing the tab (lease lapse), robot disconnect or hub
+restart all end the session. The robot never restarts capture on its own. A
+reply the hub doesn't permit on the speaker (Office/Remote/Silent, work-private
+or sensitive content, DND, or a meeting privacy context) is not synthesized.
+The owner's voice panel shows it with the reason. Replies routed to phone are
+also sent to the bound Telegram chat if one is available.
+
+Raw microphone audio exists only in memory: in the robot's capture buffer and
+the hub request being transcribed. Neither writes it to disk or logs it. At
+INFO level the hub logs turn numbers and outcomes only, never transcripts
+(the images' default level emits neither). Transcripts and replies
+enter core's conversation store like typed chat. The hub also keeps the last
+20 turns of the current or most recent session in memory for the owner's
+panel, and loses them on restart. Spoken reply audio is uploaded to the
+daemon as `/tmp/reachy_mini_sounds/reachy_embodiment_audio.wav`. Each reply
+overwrites it; reboot clears it.
+
+With an LLM configured, core keeps a conversation's strongest privacy label.
+After one work-private reply, such as calendar content, every later generated
+reply in that conversation is withheld from the speaker until core restarts.
+The hub downloads the Whisper model on first use, which can take about a
+minute, and the download is lost when the container is recreated.
+
+For disposable checks, the simulated embodiment reads `SIM_MIC_WAVS`: a
+path-separated list of 16 kHz mono WAV files. It plays one file per listening
+phase, then silence. This fixture exercises the real upload, STT, core, TTS
+and routing path; it is not microphone evidence.
 
 ## Network and access boundaries
 

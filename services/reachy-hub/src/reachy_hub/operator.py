@@ -38,7 +38,7 @@ def require_csrf(request: Request) -> None:
 
 def install_operator_routes(
     app, require_auth, core, get_robot_client, *, login_enabled, telegram_enabled, default_user_id,
-    owner_bound=False
+    owner_bound=False, on_logout=None
 ):
 
     @app.exception_handler(RequestValidationError)
@@ -65,6 +65,10 @@ def install_operator_routes(
     async def logout(request: Request) -> dict:
         if login_enabled:
             request.session.clear()
+        # Phase 24c: an owner-started robot microphone session must not
+        # outlive the login that started it.
+        if on_logout is not None:
+            await on_logout()
         return {"ok": True}
 
     @app.get(AUTH_ME)

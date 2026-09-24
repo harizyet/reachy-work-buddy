@@ -95,6 +95,7 @@ With Playwright and Chromium available externally:
 
 ```bash
 node --test clients/operator-ui/tests/chat.test.cjs
+node --test clients/operator-ui/tests/voice.test.cjs
 node --check clients/operator-ui/app.js
 node --check clients/operator-ui/chat.js
 ```

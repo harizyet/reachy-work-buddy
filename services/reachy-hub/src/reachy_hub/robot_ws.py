@@ -2,10 +2,9 @@
 
 Phase 22's first slice: authentication, protocol negotiation,
 registration, generation fencing, and heartbeat-driven liveness/watchdog.
-No semantic command routing over this connection yet — see
-shared/models/robot_ws.py's docstring for that scope boundary. The
-existing HTTP EmbodimentClient path is untouched and remains how
-reachy-hub actually talks to reachy-embodiment for real commands.
+Phase 24c adds only conversation control (`on_message`/`on_disconnect`
+feed robot_voice.py, ADR 0023). Behaviour/camera/audio commands still use
+the HTTP EmbodimentClient path.
 """
 
 from __future__ import annotations
@@ -13,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
@@ -42,6 +42,8 @@ async def connection_loop(
     *,
     heartbeat_interval: float,
     watchdog_timeout: float,
+    on_message: Callable[[RobotConnection, dict], Awaitable[None]] | None = None,
+    on_disconnect: Callable[[RobotConnection], Awaitable[None]] | None = None,
 ) -> None:
     """One live connection's message loop: sends periodic heartbeats,
     treats any received message as liveness proof, and closes the
@@ -64,7 +66,8 @@ async def connection_loop(
             try:
                 raw = await asyncio.wait_for(websocket.receive_json(), timeout=min(heartbeat_interval, remaining))
             except TimeoutError:
-                await websocket.send_json(HeartbeatMessage().model_dump())
+                async with connection.send_lock:
+                    await websocket.send_json(HeartbeatMessage().model_dump())
                 continue
 
             # Any well-formed message counts as liveness, not only an
@@ -74,12 +77,18 @@ async def connection_loop(
             manager.record_liveness(connection.robot_id, connection.generation)
 
             message_type = raw.get("type") if isinstance(raw, dict) else None
-            if message_type not in (WSMessageType.HEARTBEAT_ACK, WSMessageType.HEARTBEAT):
-                log.debug("robot %s: ignoring message type %r (no command routing yet)", connection.robot_id, message_type)
+            if message_type in (WSMessageType.HEARTBEAT_ACK, WSMessageType.HEARTBEAT):
+                continue
+            if on_message is not None and isinstance(raw, dict):
+                await on_message(connection, raw)
+            else:
+                log.debug("robot %s: ignoring message type %r", connection.robot_id, message_type)
     except WebSocketDisconnect:
         log.info("robot %s: WS disconnected (generation %s)", connection.robot_id, connection.generation)
     finally:
         await manager.unregister(connection.robot_id, connection.generation)
+        if on_disconnect is not None:
+            await on_disconnect(connection)
 
 
 def install_robot_ws_routes(
@@ -90,6 +99,8 @@ def install_robot_ws_routes(
     heartbeat_interval: float = 2.0,
     watchdog_timeout: float = 5.0,
     registration_timeout: float = 5.0,
+    on_message: Callable[[RobotConnection, dict], Awaitable[None]] | None = None,
+    on_disconnect: Callable[[RobotConnection], Awaitable[None]] | None = None,
 ) -> None:
     @app.websocket(ROBOTS_CONNECT)
     async def robots_connect(websocket: WebSocket) -> None:
@@ -152,4 +163,6 @@ def install_robot_ws_routes(
             connection,
             heartbeat_interval=heartbeat_interval,
             watchdog_timeout=watchdog_timeout,
+            on_message=on_message,
+            on_disconnect=on_disconnect,
         )

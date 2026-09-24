@@ -3,13 +3,11 @@
 Phase 22's first slice implements only the connectivity substrate:
 authentication (at the transport layer, before any of these messages are
 parsed — see robot_ws.py in reachy-hub), protocol negotiation,
-registration, generation fencing, and heartbeat/ack liveness. ADR 0019
-also calls for "semantic commands, accepted/completed results,
-cancellation" schemas; those are a deliberate follow-up once this
-connectivity layer has been verified against a live daemon/robot, not
-part of this set. Don't assume command routing works over this
-connection yet — see docs/verification/phase-22-inventory-2026-09-22.md
-and HANDOVER.md for the current status.
+registration, generation fencing, and heartbeat/ack liveness. Phase 24c
+adds conversation control only (voice_start/voice_stop/voice_state, ADR
+0023), gated by the robot's advertised capability rather than a protocol
+version bump. General semantic command/result/cancellation schemas are
+still a follow-up; behaviour, camera and speak commands use HTTP.
 """
 
 from __future__ import annotations
@@ -19,6 +17,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from shared.models.robot_voice import RobotVoiceState, VoiceLimits
+
 
 class WSMessageType(StrEnum):
     REGISTER = "register"
@@ -26,6 +26,10 @@ class WSMessageType(StrEnum):
     HEARTBEAT = "heartbeat"
     HEARTBEAT_ACK = "heartbeat_ack"
     ERROR = "error"
+    # Phase 24c (ADR 0023): conversation control only, never audio.
+    VOICE_START = "voice_start"
+    VOICE_STOP = "voice_stop"
+    VOICE_STATE = "voice_state"
 
 
 class RegisterMessage(BaseModel):
@@ -69,6 +73,33 @@ class ErrorMessage(BaseModel):
     type: Literal[WSMessageType.ERROR] = WSMessageType.ERROR
     code: str
     detail: str
+
+
+class VoiceStartMessage(BaseModel):
+    """Hub -> robot: begin listening for `voice_session_id`. Sent only after
+    an owner-authenticated start (ADR 0023); a robot never self-starts."""
+
+    type: Literal[WSMessageType.VOICE_START] = WSMessageType.VOICE_START
+    voice_session_id: str
+    limits: VoiceLimits = VoiceLimits()
+
+
+class VoiceStopMessage(BaseModel):
+    """Hub -> robot: stop capture, discard pending work and stop playback."""
+
+    type: Literal[WSMessageType.VOICE_STOP] = WSMessageType.VOICE_STOP
+    voice_session_id: str
+    reason: str
+
+
+class VoiceStateMessage(BaseModel):
+    """Robot -> hub: the robot's own half of the turn state. `detail` is a
+    sanitized error summary, never a transcript."""
+
+    type: Literal[WSMessageType.VOICE_STATE] = WSMessageType.VOICE_STATE
+    voice_session_id: str
+    state: RobotVoiceState
+    detail: str | None = None
 
 
 # WS close codes in the 4000-4999 application-defined range (RFC 6455 s7.4.2).

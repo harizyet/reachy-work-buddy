@@ -37,6 +37,7 @@ from reachy_embodiment.robot import (
 )
 from reachy_embodiment.robot_ws_client import RobotWSClient
 from reachy_embodiment.state import ServiceState
+from reachy_embodiment.voice import VoiceConversation, VoiceTurnClient
 from shared.models.embodiment import Behaviour, EmbodimentState
 from shared.protocols import embodiment_api as routes
 
@@ -61,19 +62,45 @@ def _default_backend() -> RobotBackend:
     raise ValueError(f"unknown ROBOT_BACKEND {kind!r}; expected 'simulated' or 'reachy_daemon'")
 
 
-def _default_robot_ws_client(backend: RobotBackend) -> RobotWSClient | None:
+def _default_robot_ws_client(backend: RobotBackend, state: ServiceState) -> RobotWSClient | None:
     """Builds the ADR 0019 WS client from `HUB_WS_URL`/`ROBOT_ID`/
     `ROBOT_TOKEN`. Returns None (no outbound connection attempted) unless
     all three are set — this is additive to the HTTP dev/simulation
     workflow, not a requirement for it; a dev instance with none of these
     set behaves exactly as every prior phase did.
+
+    Phase 24c: `VOICE_CONVERSATION_ENABLED=true` additionally advertises
+    the voice capability so the owner can start a microphone conversation
+    from the hub. Off by default — the robot never offers capture unless
+    this deployment opted in.
     """
     hub_ws_url = os.environ.get("HUB_WS_URL")
     robot_id = os.environ.get("ROBOT_ID")
     robot_token = os.environ.get("ROBOT_TOKEN")
     if not (hub_ws_url and robot_id and robot_token):
         return None
-    return RobotWSClient(hub_ws_url, robot_id, robot_token, sim=backend.sim)
+    voice = None
+    if os.environ.get("VOICE_CONVERSATION_ENABLED", "false").strip().lower() == "true":
+        voice = _default_voice_conversation(backend, state, hub_ws_url, robot_id, robot_token)
+    return RobotWSClient(hub_ws_url, robot_id, robot_token, sim=backend.sim, voice=voice)
+
+
+def _default_voice_conversation(
+    backend: RobotBackend, state: ServiceState, hub_url: str, robot_id: str, robot_token: str
+) -> VoiceConversation:
+    def vad_factory(limits):
+        # Local import: loads torch/Silero only once a session starts.
+        from reachy_embodiment.audio.vad import VoiceActivityDetector
+
+        return VoiceActivityDetector(min_silence_duration_ms=limits.end_of_speech_silence_ms)
+
+    return VoiceConversation(
+        backend.open_microphone,
+        vad_factory,
+        VoiceTurnClient(hub_url, robot_id, robot_token),
+        backend,
+        state,
+    )
 
 
 class BehaviourBody(BaseModel):
@@ -106,7 +133,7 @@ def create_app(
     state = ServiceState(connected=backend.connected, sim=backend.sim)
     presence_loop = PresenceLoop(backend, state)
     if robot_ws_client is None and run_robot_ws_client:
-        robot_ws_client = _default_robot_ws_client(backend)
+        robot_ws_client = _default_robot_ws_client(backend, state)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -128,6 +155,8 @@ def create_app(
                     pass
                 except Exception:
                     log.exception("robot WS client task raised during shutdown")
+            if robot_ws_client is not None and robot_ws_client.voice is not None:
+                await robot_ws_client.voice.aclose()
             backend.close()
 
     app = FastAPI(title="reachy-embodiment", lifespan=lifespan)

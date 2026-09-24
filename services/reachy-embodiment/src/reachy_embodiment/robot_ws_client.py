@@ -2,10 +2,11 @@
 
 First slice: connects, authenticates, registers, responds to hub
 heartbeats, and reconnects with exponential backoff on any failure or
-disconnect. Semantic command handling (receiving and executing
-behaviour/camera/audio commands over this connection) is a deliberate
-follow-up — see shared/models/robot_ws.py's docstring for the same scope
-boundary. HTTP remains the dev/simulation transport per ADR 0019; this
+disconnect. Phase 24c adds conversation control only (ADR 0023):
+`voice_start`/`voice_stop` drive an optional VoiceConversation, which
+reports `voice_state` back over this socket; any disconnect stops it and
+nothing restarts it on reconnect. Behaviour/camera/audio commands still
+arrive over HTTP. HTTP remains the dev/simulation transport per ADR 0019; this
 client is additive to reachy-embodiment's existing local HTTP server, not
 a replacement for it — the HTTP API keeps serving local/dev callers
 regardless of this connection's state.
@@ -17,21 +18,30 @@ HANDOVER.md's Phase 22 status.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import random
+from typing import TYPE_CHECKING
 
 import websockets
 from websockets.exceptions import WebSocketException
 
+from shared.models.robot_voice import VOICE_CAPABILITY
 from shared.models.robot_ws import (
     ErrorMessage,
     HeartbeatAckMessage,
     RegisteredMessage,
     RegisterMessage,
+    VoiceStartMessage,
+    VoiceStateMessage,
+    VoiceStopMessage,
     WSMessageType,
 )
 from shared.protocols.robot_ws import PROTOCOL_VERSION, ROBOTS_CONNECT
+
+if TYPE_CHECKING:
+    from reachy_embodiment.voice import VoiceConversation
 
 log = logging.getLogger(__name__)
 
@@ -75,11 +85,17 @@ class RobotWSClient:
         capabilities: list[str] | None = None,
         sim: bool = False,
         registration_timeout: float = 5.0,
+        voice: VoiceConversation | None = None,
     ) -> None:
         self._hub_ws_url = _as_ws_url(hub_ws_url.rstrip("/")) + ROBOTS_CONNECT
         self._robot_id = robot_id
         self._token = token
         self._capabilities = list(capabilities or [])
+        self._voice = voice
+        if voice is not None and VOICE_CAPABILITY not in self._capabilities:
+            self._capabilities.append(VOICE_CAPABILITY)
+        self._ws = None
+        self._send_lock = asyncio.Lock()
         self._sim = sim
         self._registration_timeout = registration_timeout
 
@@ -107,6 +123,11 @@ class RobotWSClient:
             finally:
                 self.connected = False
                 self.generation = None
+                self._ws = None
+                # ADR 0023: losing the hub ends capture/playback; only a
+                # fresh voice_start after reconnecting may begin again.
+                if self._voice is not None:
+                    await self._voice.stop()
 
             jitter = backoff * random.uniform(0.8, 1.2)
             await asyncio.sleep(jitter)
@@ -132,6 +153,7 @@ class RobotWSClient:
 
             registered = RegisteredMessage.model_validate(message)
             self.generation = registered.generation
+            self._ws = ws
             self.connected = True
             log.info("registered with hub as %s, generation %s", self._robot_id, self.generation)
 
@@ -139,10 +161,31 @@ class RobotWSClient:
                 message = json.loads(raw_message)
                 message_type = message.get("type")
                 if message_type == WSMessageType.HEARTBEAT:
-                    await ws.send(HeartbeatAckMessage().model_dump_json())
+                    await self.send(HeartbeatAckMessage().model_dump_json())
+                elif message_type == WSMessageType.VOICE_START and self._voice is not None:
+                    start = VoiceStartMessage.model_validate(message)
+                    await self._voice.start(start, registered.generation, self._send_voice_state)
+                elif message_type == WSMessageType.VOICE_STOP and self._voice is not None:
+                    stop = VoiceStopMessage.model_validate(message)
+                    await self._voice.stop(stop.voice_session_id)
                 elif message_type == WSMessageType.ERROR:
                     err = ErrorMessage.model_validate(message)
                     log.warning("hub reported error: %s: %s", err.code, err.detail)
                     return  # triggers a reconnect via run()'s loop
                 else:
-                    log.debug("ignoring message type %r (no command routing yet)", message_type)
+                    log.debug("ignoring message type %r", message_type)
+
+    @property
+    def voice(self) -> VoiceConversation | None:
+        return self._voice
+
+    async def send(self, text: str) -> None:
+        ws = self._ws
+        if ws is None:
+            raise ConnectionError("not connected to hub")
+        async with self._send_lock:
+            await ws.send(text)
+
+    async def _send_voice_state(self, message: VoiceStateMessage) -> None:
+        with contextlib.suppress(ConnectionError, WebSocketException):
+            await self.send(message.model_dump_json())
