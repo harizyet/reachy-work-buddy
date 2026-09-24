@@ -88,6 +88,23 @@ socket mounted. The robot re-registered over WSS.
   dmix with the daemon instead of taking the device. `pcm.!default` is raw
   `hw` on the same card, so anything that ignores the aliases would conflict.
 
+## First live turns (smoke, not the timed run)
+
+The owner started listening from the operator UI before the coexistence
+step, and spoke three turns (hub session `gnsw…`). All three were `spoken`
+and heard in the room. The owner stopped the session. The daemon journal
+showed one sound upload and `play_sound` per turn through
+`reachymini_audio_sink`, with no `stop_sound`, no ALSA/xrun warnings and no
+embodiment restart. `/proc/asound/card2` showed capture and playback
+held by the daemon's PID, so the container reached the hardware only
+through dsnoop/dmix. This was the first microphone → hub → speaker round
+trip on real hardware.
+
+Neither side produced per-turn timestamps. The embodiment logged nothing
+below WARNING, because uvicorn configures only its own loggers. `1970e85`
+added stage durations to the hub's turn records and INFO timing lines to
+the robot loop, before the timed run.
+
 ## Latency budget (agreed before any timed turn)
 
 Utterance end → first audible reply, over the live turns:
