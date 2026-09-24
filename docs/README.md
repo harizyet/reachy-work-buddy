@@ -25,8 +25,9 @@ claims that those features already work.
   migrations, SecretStore, and Google Accounts.
 - [Phase 24a](phase-24a.md): search-assisted, freshness-aware assistant.
 - [Phase 24b](phase-24b.md): structured command and intent authorization —
-  slash commands as the only path to consequential actions; natural-language
-  intent becomes a suggestion, never an authorization.
+  explicit structured commands or existing consent/confirmation paths
+  authorize consequential actions; natural-language intent only suggests
+  them, never authorizes.
 - [Phase 25](phase-25.md): owner recognition and voice access control.
 - [Phase 26](phase-26.md): meeting transcription and minutes.
 - [Phase 27](phase-27.md): embodied meeting secretary — owner-present companion, then physical secretary attendance, then bounded delegation; virtual/cloud attendance is deferred.

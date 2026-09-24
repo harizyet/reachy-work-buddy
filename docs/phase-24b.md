@@ -76,11 +76,11 @@ explicit command parser
         optional intent suggestion
 ```
 
-- **Explicit commands** use a namespaced slash-command syntax, parsed
-  deterministically before both the existing deterministic-intent chain and
-  the generic LLM conversation branch — same precedence position
+- **Explicit commands** use a namespaced slash-command syntax internally,
+  parsed deterministically before both the existing deterministic-intent
+  chain and the generic LLM conversation branch — same precedence position
   `robot_power_intent` already occupies today, just replacing substring
-  matching with an unambiguous parser. Recommended initial form:
+  matching with an unambiguous parser. Recommended internal/canonical form:
 
   ```text
   /reachy standby
@@ -89,10 +89,17 @@ explicit command parser
   /reachy gesture greeting
   ```
 
-  A flatter form (`/standby`, `/wake`) may also be accepted, but the
-  namespaced form is preferred as the primary/documented one — it scales to
-  future assistant commands (search, persona, settings) without a
-  collision, where a flat global command namespace eventually would.
+  This namespaced form is the one users type in web chat, where autocomplete
+  can present `/reachy <action>` directly. Telegram is a separate case (see
+  Channel handling): the Bot API's `BotCommand.command` field cannot contain
+  a space, so `/reachy standby` cannot itself be registered as one Telegram
+  menu entry — flat aliases (`/standby`, `/wake`, `/reachy_status`) are
+  registered there instead, and both forms parse to the identical structured
+  `Command`. The namespaced form remains preferred/documented as the
+  canonical one since it scales to future assistant commands (search,
+  persona, settings) without collision, where a flat global command
+  namespace eventually would; flat aliases exist only where a channel's own
+  command-registration API requires them.
 - A successfully parsed command becomes a structured internal value before
   anything downstream sees it — not a re-matched string:
 
@@ -106,10 +113,21 @@ explicit command parser
   corresponding physical/consequential action. No code path may construct
   one from free-form text matching alone.
 - **Natural-language intent recognition remains useful but is never
-  authoritative.** The existing local-LLM/deterministic-intent machinery
-  may still classify free-form text (e.g. "Could you put Reachy to sleep?"
-  → `{"intent": "robot_standby", "confidence": 0.97}`), but a recognized
-  intent triggers a *suggestion*, never the action itself:
+  authoritative.** A dedicated, separate suggestion classifier — not the
+  retired substring matcher (see Implementation implications) — classifies
+  free-form text into both an intent and a **speech act**, e.g. "Could you
+  put Reachy to sleep?" → `{"intent": "robot_standby", "confidence": 0.97,
+  "speech_act": "request"}` versus "How do I turn off Reachy?" →
+  `{"intent": "robot_standby", "confidence": 0.99, "speech_act":
+  "question"}`. A suggestion is offered only when `speech_act == "request"`
+  **and** confidence clears a fixed threshold; questions, negations,
+  hypotheticals and quoted/reported speech (`speech_act` values other than
+  `"request"`) produce no suggestion at all — the assistant just answers
+  normally, per the interaction-tiers table below. This is the one place a
+  local LLM call is warranted in this phase: classification assists UX, but
+  deterministic code still owns the suggest/don't-suggest decision and,
+  regardless of the classifier's output, never owns authorization — a
+  recognized intent triggers a *suggestion*, never the action itself:
 
   ```text
   It sounds like you want to put Reachy into standby.
@@ -184,9 +202,16 @@ Hub / Core / Embodiment action
 ```
 
 - **Telegram** already has a native slash-command UX (command menu,
-  autocomplete); `/reachy standby`, `/reachy wake`, `/reachy status` map
-  directly onto it and should be registered in Telegram's command menu via
-  its existing bot-command-list API.
+  autocomplete), but its Bot API's `BotCommand.command` field cannot
+  contain a space, so `/reachy standby` cannot be registered as a single
+  menu entry there. Telegram registers flat first-class aliases instead —
+  `/standby`, `/wake`, `/reachy_status` — via its existing bot-command-list
+  API; each alias parses to the same structured `Command` the namespaced
+  form would (`/standby` → `Command(namespace="reachy", action="standby")`).
+  Both `/reachy standby` and `/standby` are accepted as input text on every
+  channel; only Telegram's *registered menu* is restricted to the flat
+  aliases, since that restriction is Telegram's own API constraint, not a
+  property of the command model itself.
 - **Web chat** uses the same shared parser (not a second implementation)
   and may additionally render command autocomplete and action buttons for
   suggested intents.
@@ -216,15 +241,25 @@ Hub / Core / Embodiment action
 ## Implementation implications
 
 The existing substring-based `is_standby_command`/`is_resume_command` in
-`companion_core/robot_power_intent.py` is superseded, not patched: the
-fix here is not a better negation-aware regex (still fragile against
+`companion_core/robot_power_intent.py` is superseded, not patched: the fix
+here is not a better negation-aware regex (still fragile against
 quotation, sarcasm, and novel phrasing — the "increasingly complex
 keyword/regex matcher" trap this phase explicitly rejects), but removing
-this module's authority to actuate at all. Its phrase lists become the
-seed vocabulary for the natural-language *suggestion* classifier instead;
-only `/reachy standby` and `/reachy wake` (parsed by the new command
-parser) may call the actual `POST /robots/standby`/`resume` path going
-forward.
+this module's authority to actuate at all. **The module itself is retired,
+not repurposed** — reusing its substring matcher as the suggestion
+classifier would preserve the exact semantic false-positive it caused,
+just downgraded from actuation to a wrong suggestion (e.g. "How do I turn
+off Reachy?" would still produce "It sounds like you want to put Reachy
+into standby" instead of the plain answer the interaction-tiers table
+requires). The natural-language suggestion classifier is a separate,
+new implementation — capable of distinguishing requests from questions,
+negations, hypotheticals and quoted/reported speech via the
+`speech_act` field described above — not a demoted version of the retired
+matcher. Its phrase lists may inform that classifier's examples/prompt
+cues, but must not themselves determine suggestion intent. Only
+`/reachy standby`/`wake` (or their registered aliases — see Channel
+handling) parsed by the new command parser may call the actual
+`POST /robots/standby`/`resume` path going forward.
 
 ## Implementation sequence
 
@@ -233,19 +268,25 @@ forward.
    evaluated before both the existing `*_intent.py` chain and the generic
    LLM branch in `app.py`, mirroring the precedence
    `robot_power_intent` already occupies.
-2. Wire `/reachy standby`, `/reachy wake`, `/reachy status` through the
+2. Wire `/reachy standby`, `/reachy wake`, `/reachy status` (and their
+   Telegram aliases `/standby`, `/wake`, `/reachy_status`) through the
    parser to the existing `POST /robots/standby`/`resume` hub calls
    (unchanged endpoints/authorization — only the trigger path changes).
-3. Demote `robot_power_intent`'s phrase lists to a non-authoritative
-   suggestion classifier: on a match, format a suggested-command reply
-   (text) instead of calling the standby/resume path directly.
+3. Retire `robot_power_intent`'s substring matching entirely (no
+   authoritative or suggestion role); add the separate natural-language
+   suggestion classifier (intent + `speech_act` + confidence, per Required
+   behaviour) and wire it to format a suggested-command reply only when
+   `speech_act == "request"` and confidence clears threshold.
 4. Add the interactive-control (button) suggestion path for channels that
    support it (web chat first; Telegram inline keyboards as a fast-follow),
    dispatching the same structured `Command` on press.
-5. Register `/reachy standby`, `/reachy wake`, `/reachy status` in
-   Telegram's bot command menu via its existing API.
-6. Extend the web chat UI with command autocomplete for the registered
-   command set.
+5. Register the flat aliases `/standby`, `/wake`, `/reachy_status` in
+   Telegram's bot command menu via its existing bot-command-list API
+   (Telegram's `BotCommand.command` cannot contain a space, so the
+   namespaced `/reachy <action>` form cannot be registered there directly
+   — see Channel handling).
+6. Extend the web chat UI with command autocomplete for the namespaced
+   `/reachy <action>` form.
 7. Audit other existing natural-language-triggered consequential paths for
    the same class of false positive and bring any found under the same
    command-parser gate (scoped at implementation time — this plan does not
@@ -255,10 +296,11 @@ forward.
 
 | Check | Required result |
 |---|---|
-| Negative conversational examples never actuate | None of "How do I turn off Reachy?", "Don't turn off Reachy.", "I don't want to turn off Reachy.", "Can you explain how to turn off Reachy?", "What happens if I turn off Reachy?", "Is it safe to turn off Reachy?", "How do I wake up Reachy?", "Don't wake up Reachy." calls `POST /robots/standby`/`resume`, verified by call-count assertions |
-| Explicit commands still work | `/reachy standby` and `/reachy wake` call the existing standby/resume path exactly as `robot_power_intent`'s matched phrases do today, through the new parser |
-| Suggestion, not action | A high-confidence natural-language match ("Could you put Reachy to sleep?") produces a suggested-command reply or action-button render and does not itself call the standby/resume path |
+| Negative conversational examples never actuate or suggest | None of "How do I turn off Reachy?", "Don't turn off Reachy.", "I don't want to turn off Reachy.", "Can you explain how to turn off Reachy?", "What happens if I turn off Reachy?", "Is it safe to turn off Reachy?", "How do I wake up Reachy?", "Don't wake up Reachy." calls `POST /robots/standby`/`resume` **or** produces a suggested-command reply/button — the classifier must resolve each to a non-`request` `speech_act`, not merely fail to actuate |
+| Explicit commands still work | `/reachy standby` and `/reachy wake` (and their Telegram aliases) call the existing standby/resume path exactly as `robot_power_intent`'s matched phrases do today, through the new parser |
+| Suggestion, not action | A `speech_act == "request"` natural-language match ("Could you put Reachy to sleep?") produces a suggested-command reply or action-button render and does not itself call the standby/resume path |
 | Button dispatch | Pressing a rendered action button dispatches the same structured `Command` the slash form would, and is itself the authorization event, not the sentence that produced the button |
+| Alias equivalence | `/standby` (Telegram-registered alias) and `/reachy standby` (namespaced form) parse to the identical structured `Command` and produce identical authorization/action results |
 | Channel parity | The same command text produces identical parsing/authorization/action results whether it arrives via Telegram or web chat |
 | Scope preserved | Named-behaviour playback and ADR 0011's existing email/calendar consent flows are unaffected — neither gains nor loses their current authorization requirements |
 | Regression | Existing Python/Ruff/browser checks and Phase 22b's standby/resume tests still pass under the new trigger path |
