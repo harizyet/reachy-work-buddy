@@ -234,7 +234,7 @@ see the [deployment and accounts acceptance plan](phase-22-23.md). See
 | Phase 5 — Unified sessions | Implement AgentSession and channel abstraction. | Two test clients share one conversation state. |
 | Phase 6 — Operating modes | Implement Desk/Office/Silent/Remote as deterministic I/O policy. | Mode changes output routing without prompt changes. |
 | Phase 7 — Telegram | Outbound text → inbound text → voice notes → voice replies. | Start on Reachy and continue same session in Telegram. |
-| Phase 8 — Modular speech stack | Adapt Silero VAD, faster-whisper, streaming TTS behind provider interfaces. | Reachy conversation works without Jarvis monolithic loop. |
+| Phase 8 — Modular speech stack | Adapt Silero VAD, faster-whisper, streaming TTS behind provider interfaces. | Modular speech stack works independently of Jarvis. Physical Reachy microphone-to-speaker conversation was not proven here; it is implemented and accepted in [Phases 24c–24d](phase-24cd.md). |
 | Phase 9 — Privacy/response router | Implement response metadata, deterministic routing, audit events. | Private test payload cannot be spoken in Office mode. |
 | Phase 10 — Calendar | Read-only next/list/free-busy first; later writes behind confirmation. | "What's next?" works and meeting reminders route appropriately. |
 | Phase 11 — Tasks/notes/reminders | Capture, list, complete and search basic work items. | Agent can record and later retrieve explicit follow-ups. |
