@@ -16,7 +16,7 @@ action items, and Phase 23 for migrations, encrypted credentials and
 read-only calendar access. Every stage in this phase requires Phase 22b
 hardware acceptance; there is no virtual-only path that skips the robot.
 
-This keeps Phases 24–26 easy to reason about as one line each:
+This keeps Phases 25–27 easy to reason about as one line each:
 
 - **Phase 25** — who may interact with, or be heard by, Reachy.
 - **Phase 26** — how Reachy turns a captured meeting into a useful record.

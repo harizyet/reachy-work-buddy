@@ -37,7 +37,7 @@ recommended, or Web application with an HTTPS callback), then perform
 real-account consent/read/refresh/revoke/reconnect and audience checks. No
 OAuth client file, deployed HTTPS hostname, or live helper run was supplied
 this session. Phase 23/23b are not yet production-accepted. The
-Google-enabled physical repeat remains deferred; Phases 24–26 are planning
+Google-enabled physical repeat remains deferred; Phases 25–27 are planning
 only.
 
 Phase 22b (physical acceptance) started 2026-09-23 with the owner physically
