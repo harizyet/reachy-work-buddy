@@ -224,6 +224,7 @@ class VoiceConversation:
 
     async def start(self, message: VoiceStartMessage, generation: int, send_state: SendState) -> None:
         await self.stop()
+        log.info("voice start received (session %s…)", message.voice_session_id[:4])
         self._session_id = message.voice_session_id
         self._task = asyncio.create_task(self._run(message, generation, send_state))
 
@@ -232,9 +233,13 @@ class VoiceConversation:
             return
         task, self._task, self._session_id = self._task, None, None
         if task is not None and not task.done():
+            # Stop-tail anchors: the matrix times the audible tail from the
+            # stop reaching the robot.
+            log.info("voice stop received")
             task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await task
+            log.info("voice stop complete")
 
     async def aclose(self) -> None:
         await self.stop()
@@ -347,8 +352,10 @@ class VoiceConversation:
             # play_sound and leave the reply playing.
             with contextlib.suppress(Exception):
                 await play
+            log.info("voice playback cancelled, stopping daemon audio")
             with contextlib.suppress(Exception):
                 await asyncio.to_thread(self._player.stop_audio)
+            log.info("daemon audio stop returned")
             raise
         except Exception:
             log.exception("speaker playback failed")
