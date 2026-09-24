@@ -179,9 +179,17 @@ read adapters; hub `accounts.py` owns authenticated browser transport.
 `shared/protocols/accounts.py` and `shared/models/accounts.py` own the contract.
 
 Under `/settings/accounts/google`, hub exposes status, configure, connect,
-callback, complete, test, disconnect, calendar selection/list/events/free-busy,
-and Gmail messages/read. Core equivalents require the dedicated service header.
-There is no generic provider proxy, decrypt endpoint or Google write API.
+callback, complete, `desktop/start`, `desktop/complete`, test, disconnect,
+calendar selection/list/events/free-busy, and Gmail messages/read. Core
+equivalents require the dedicated service header. `configure` accepts a
+`client_type` of `web` (the original fixed-HTTPS-callback client) or
+`desktop` (loopback PKCE via `tools/google_auth_helper.py`, for installs
+without a stable public HTTPS hostname); see
+[ADR 0021's addendum](../adr/0021-google-accounts.md#addendum-phase-23b-2026-09-24-desktop-oauth-client-transport).
+`desktop/start` is owner-authenticated like `connect`; `desktop/complete` is
+unauthenticated at the hub layer like `callback`, authorized instead by the
+helper presenting the state/binding pair `desktop/start` returned. There is
+no generic provider proxy, decrypt endpoint or Google write API.
 Calendar/email composition feeds the existing conversation, briefing and
 reminder logic while keeping local writes and delayed SMTP dispatch local.
 

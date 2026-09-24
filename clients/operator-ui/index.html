@@ -41,13 +41,20 @@
           <p>This connects your own Google application to Reachy. Once it is set up, everyday use only needs the Connect buttons above.</p>
           <ol><li>Open <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer">Google Cloud</a> and create a project. Enable the Gmail API and Google Calendar API.</li>
           <li>In Google Auth Platform, set up the consent screen for your use. For a personal test, add your Google email as a test user.</li>
-          <li>Create a Web application client. Add the return address shown below as an authorized redirect URI, then download its JSON file.</li>
-          <li>Choose that file here and select Save connection setup. Then use Connect to sign in and approve read-only permissions.</li></ol>
+          <li>Create a <strong>Desktop app</strong> OAuth client and download its JSON file (recommended: works without a public domain or HTTPS certificate). If this Reachy already has a stable HTTPS hostname, you may instead create a <strong>Web application</strong> client with the return address shown below as its authorized redirect URI.</li>
+          <li>Choose that file here and select Save connection setup. Then use Connect to sign in and approve read-only permissions. For a Desktop client, Connect shows a command to run on the computer whose browser you're using.</li></ol>
           <p>Testing-mode permissions may expire after seven days. Personal/internal use and public apps have different Google verification requirements; see the deployment guide before relying on this for ongoing use.</p>
-          <form id="google-client-setup"><label>Return address<input id="google-callback" readonly></label>
+          <form id="google-client-setup"><label id="google-callback-label">Return address<input id="google-callback" readonly></label>
           <label>Google connection file<input id="google-client-file" type="file" accept=".json,application/json" required></label>
           <label class="check"><input id="google-replace" type="checkbox"> Disconnect my existing Google connection before replacing this setup</label>
           <button>Save connection setup</button></form>
+          <div id="google-desktop-connect" hidden aria-live="polite">
+            <h3>Run the sign-in helper</h3>
+            <p>Run this on the computer whose browser you use to reach Reachy. It opens Google sign-in, then hands the result back to Reachy. It never sees your Google client secret.</p>
+            <pre id="google-desktop-command"></pre>
+            <button type="button" id="google-desktop-copy" class="secondary">Copy command</button>
+            <p id="google-desktop-waiting" role="status"></p>
+          </div>
         </details>
       </section>
       <div id="overview-pane">

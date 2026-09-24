@@ -305,8 +305,10 @@ explicitly disposable project. Leave unrelated services such as OVMS alone.
 
 ## Schema upgrades and credential keys
 
-Core and hub require revision `004_persona`, which follows `003_accounts`
-and adds assistant persona configuration. The ordered Alembic history ships
+Core and hub require revision `005_desktop_oauth`, which follows
+`004_persona` (assistant persona configuration) and adds a `client_type`
+column to `google_oauth_states` for the desktop OAuth helper. The ordered
+Alembic history ships
 in core's image; SQL stores perform compatibility checks, not startup DDL.
 Compose runs `migrate` before hub/core, including through
 `scripts/start-homelab.sh`. Launcher `--check` remains read-only and does not
@@ -459,29 +461,51 @@ password into Reachy cannot replace Google's OAuth client registration.
    PYTOKEN
    ```
 
-2. Serve the existing `/hub/` mount through a stable, trusted HTTPS endpoint
-   on your LAN/VPN. The shipped Caddy listener remains HTTP `:8080`; terminate
-   HTTPS with your installation's existing trusted proxy/tunnel and preserve
-   the `/hub/` path. Do not expose internal ports for OAuth. The callback is
-   `https://YOUR-HOST/hub/settings/accounts/google/callback`; direct hub
-   mounting uses `/settings/accounts/google/callback`. Only HTTP loopback
-   addresses are accepted for local development.
-3. In a Google Cloud project enable Gmail API and Google Calendar API. Set the
-   consent audience and create a **Web application** OAuth client with that
-   exact authorized redirect URI. Download its JSON connection file and keep
-   it permission-restricted outside source control. In the owner GUI open
-   **Settings · Accounts → One-time Google connection setup**, select the file,
-   and save. The secret is encrypted in core immediately, never in browser
-   storage. The return address is derived from the GUI's actual mount.
-4. Choose the deployment audience deliberately. Gmail read-only is a restricted
+2. In a Google Cloud project enable Gmail API and Google Calendar API, and set
+   the consent audience. For a single-owner, self-hosted install with no
+   public domain or HTTPS endpoint (the common case for this project), create
+   a **Desktop app** OAuth client — Google accepts any loopback
+   (`http://127.0.0.1:<port>`) redirect for this client type without
+   pre-registration, so no HTTPS callback or DNS is required. Download its
+   JSON connection file and keep it permission-restricted outside source
+   control. In the owner GUI open **Settings · Accounts → One-time Google
+   connection setup**, select the file, and save. The secret is encrypted in
+   core immediately, never in browser storage.
+
+   If this Reachy already operates a stable, trusted HTTPS hostname (a
+   hosted or organizational deployment), you may instead create a **Web
+   application** client with an authorized redirect URI of
+   `https://YOUR-HOST/hub/settings/accounts/google/callback` (direct hub
+   mounting uses `/settings/accounts/google/callback`); see
+   [the Web application path](#web-application-oauth-hosted-installs) below.
+3. Choose the deployment audience deliberately. Gmail read-only is a restricted
    scope. Google documents exceptions including qualifying personal/internal
    use, but public distribution can require verification and security
    assessment. “In production” by itself is not proof of approval. External
    Testing grants for these scopes normally expire after seven days. Record
    the applicable audience/exception/verification outcome before rollout.
-5. The owner selects Connect and approves Google permissions. No Google access
-   is granted by importing the client file. Calendar and Gmail cards enable
-   independently, with one Google identity shared by both.
+4. The owner selects Connect. For a Desktop client, this shows a one-line
+   command; run it on the computer whose browser you use to reach Reachy —
+   [`tools/google_auth_helper.py`](../tools/google_auth_helper.py), a
+   stdlib-only Python 3 script with no install step beyond Python itself. It
+   opens Google sign-in in your browser, receives the single redirect on a
+   local loopback port, hands the result to Reachy, and exits; it never
+   holds your Google client secret or long-lived tokens. For a Web
+   application client, Connect redirects the browser directly, as before. No
+   Google access is granted by importing the client file. Calendar and Gmail
+   cards enable independently, with one Google identity shared by both.
+
+### Web application OAuth (hosted installs)
+
+Only needed if you chose a Web application client in step 2 above. Serve the
+existing `/hub/` mount through a stable, trusted HTTPS endpoint on your
+LAN/VPN. The shipped Caddy listener remains HTTP `:8080`; terminate HTTPS
+with your installation's existing trusted proxy/tunnel and preserve the
+`/hub/` path. Do not expose internal ports for OAuth. The callback is
+`https://YOUR-HOST/hub/settings/accounts/google/callback`; direct hub
+mounting uses `/settings/accounts/google/callback`. Only HTTP loopback
+addresses are accepted for local development. The return address shown in
+the connection setup form is derived from the GUI's actual mount.
 
 See Google's [web-server authorization guide](https://developers.google.com/identity/protocols/oauth2/web-server),
 [restricted-scope requirements and exceptions](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification),
@@ -500,12 +524,15 @@ requires explicit disconnection of an existing grant.
 ### Account operations and recovery
 
 Migration `003_accounts` adds core-owned `google_accounts`,
-`google_oauth_states` and `google_reminder_delivery`. Upgrading from
-`002_secrets` follows the same stop-writers, backup, migration-job procedure;
-`--adopt-legacy` is only needed for unversioned databases. Keep one core and one
-hub worker: their existing conversations, robot sockets and short-lived read
-caches are process-local. Refresh/credential updates themselves serialize
-through the database owner row.
+`google_oauth_states` and `google_reminder_delivery`. Migration
+`005_desktop_oauth` adds a `client_type` column to `google_oauth_states`
+(default `'web'`, backward compatible with existing rows) so a desktop
+helper's handoff can never complete against a web flow's state or vice
+versa. Upgrading follows the same stop-writers, backup, migration-job
+procedure; `--adopt-legacy` is only needed for unversioned databases. Keep
+one core and one hub worker: their existing conversations, robot sockets and
+short-lived read caches are process-local. Refresh/credential updates
+themselves serialize through the database owner row.
 
 Reads are on demand: a 30-second bounded cache, at most five Calendar pages
 per selected calendar, 31-day query windows and 20 selected calendars.

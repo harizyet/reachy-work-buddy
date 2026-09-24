@@ -48,3 +48,45 @@ Google replies as conversation context; the UI discloses that transfer.
 Production completion requires real Google consent/refresh/revoke/reconnect,
 publishing/audience review, encrypted restore and the deferred hardware repeat
 in the phase plan. Isolated fixture results do not satisfy those gates.
+
+## Addendum (Phase 23b, 2026-09-24): Desktop OAuth client transport
+
+A second client type, `desktop`, is supported alongside the original `web`
+client this ADR was written for. Ownership is unchanged: Core still owns
+configuration, code exchange, refresh and encrypted credentials; Hub still
+owns owner-session authentication and the authorization handoff. What changes
+is transport, for installations without a stable public HTTPS hostname.
+
+For a `web` client, Google's redirect lands on Hub's own HTTPS callback and
+travels through the existing state/PKCE/binding-cookie machinery described
+above. For a `desktop` client, Google's redirect instead lands on a loopback
+listener (`http://127.0.0.1:<ephemeral-port>`) bound by a small, temporary
+helper process (`tools/google_auth_helper.py`) running on the owner's own
+machine — because Hub itself typically runs on a separate homelab host the
+browser is not on, so it cannot be that loopback listener.
+
+The helper is bootstrap transport only, never a credential owner: it never
+receives the Google client secret or the PKCE verifier (both stay
+server-side, resolved through the existing SecretStore `PENDING`/`CLIENT`
+contexts), and it holds no state once it exits. Its only capabilities are
+opening a browser, receiving one redirect, and making one authenticated POST
+of `{state, binding, code, redirect_uri}` back to Hub's
+`/settings/accounts/google/desktop/complete`. That route requires no owner
+session cookie — the browser cannot forward one to a separate local process
+— and instead relies on the same state+binding secret-possession model the
+existing unauthenticated web `ACCOUNTS_CALLBACK` route already uses, except
+the binding secret is returned directly in the JSON response body to the
+owner-authenticated browser (from `/settings/accounts/google/desktop/start`)
+rather than set as an HttpOnly cookie, since the browser must hand it to the
+helper rather than present it itself. `google_oauth_states` rows carry a
+`client_type` column so a desktop handoff can never complete against a web
+flow's state or vice versa.
+
+A `desktop`-configured account has no stored `redirect_uri` — the loopback
+address varies by port each authorization attempt — so `_connect`/`_callback`
+/`_complete` (the `web` path) and `_desktop_start`/`_desktop_complete` (the
+`desktop` path) are mutually exclusive per account based on the configured
+`client_type`, sharing only the token-exchange/scope-validation/grant-storage
+logic (`_finish_grant`) once a code is in hand. Production completion
+requirements from the body of this ADR are unchanged and apply to both
+client types.

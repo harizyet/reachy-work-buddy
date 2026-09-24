@@ -153,6 +153,23 @@ async def authorize(svc, cap="gmail", *, code="fixture-code", binding="fixture-b
     return await svc.execute("complete", {"binding": binding})
 
 
+async def configure_desktop(svc):
+    result = await svc.execute("configure", {
+        "client_id": "fixture-client", "client_secret": "fixture-client-secret", "client_type": "desktop",
+    })
+    assert result["configured"]
+    assert result["client_type"] == "desktop"
+
+
+async def desktop_authorize(svc, cap="gmail", *, code="fixture-code",
+                             binding="fixture-binding-long-enough", redirect_uri="http://127.0.0.1:54321/"):
+    start = await svc.execute("desktop_start", {"capability": cap, "binding": binding})
+    assert "client_secret" not in json.dumps(start) and "verifier" not in json.dumps(start)
+    return await svc.execute("desktop_complete", {
+        "state": start["state"], "binding": binding, "code": code, "redirect_uri": redirect_uri,
+    })
+
+
 def test_oauth_scopes_masking_single_use_refresh_disconnect():
     async def run():
         svc, google, repo, clock = service()
@@ -181,6 +198,88 @@ def test_oauth_scopes_masking_single_use_refresh_disconnect():
         assert len(repo.records) == 1
         assert not svc.cache
         assert (await svc.execute("messages"))["error"] == "not_connected"
+    asyncio.run(run())
+
+
+def test_desktop_oauth_connects_without_exposing_secrets_and_behaves_like_web_after():
+    async def run():
+        svc, google, repo, clock = service()
+        await configure_desktop(svc)
+        result = await desktop_authorize(svc)
+        assert result["capabilities"]["gmail"]["status"] == "connected"
+        assert not repo.flows
+        # Post-connection behavior matches a web-originated grant: refresh, test, disconnect.
+        clock[0] += 4000
+        assert (await svc.execute("test", {"capability": "gmail"}))["capabilities"]["gmail"]["status"] == "connected"
+        assert google.refresh_count == 1
+        result = await svc.disconnect()
+        assert result["revocation"] == "revoked"
+        assert not result["status"]["identity"]
+        # Reconnect after disconnect works the same as a fresh desktop authorization.
+        result = await desktop_authorize(svc)
+        assert result["capabilities"]["gmail"]["status"] == "connected"
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize("case", [
+    "wrong_state", "wrong_binding", "expired", "replay", "cancel", "unconfigured",
+    "connect_on_desktop_account", "desktop_start_on_web_account",
+    "desktop_complete_against_web_flow", "web_complete_against_desktop_flow",
+])
+def test_desktop_oauth_failure_cases(case):
+    async def run():
+        svc, _google, _repo, clock = service()
+        binding = "fixture-binding-long-enough"
+        if case == "unconfigured":
+            result = await svc.execute("desktop_start", {"capability": "gmail", "binding": binding})
+            assert result["error"] == "setup_required"
+            return
+        if case == "connect_on_desktop_account":
+            await configure_desktop(svc)
+            result = await svc.execute("connect", {"capability": "gmail", "binding": binding})
+            assert result["error"] == "setup_required"
+            return
+        if case == "desktop_start_on_web_account":
+            await configure(svc)
+            result = await svc.execute("desktop_start", {"capability": "gmail", "binding": binding})
+            assert result["error"] == "setup_required"
+            return
+        if case == "desktop_complete_against_web_flow":
+            await configure(svc)
+            connect = await svc.execute("connect", {"capability": "gmail", "binding": binding})
+            state = parse_qs(urlsplit(connect["authorization_url"]).query)["state"][0]
+            result = await svc.execute("desktop_complete", {
+                "state": state, "binding": binding, "code": "fixture-code", "redirect_uri": "http://127.0.0.1:1/"})
+            assert result["error"] == "invalid_or_expired_authorization"
+            return
+        if case == "web_complete_against_desktop_flow":
+            await configure_desktop(svc)
+            await svc.execute("desktop_start", {"capability": "gmail", "binding": binding})
+            assert (await svc.execute("complete", {"binding": binding}))["error"] == "invalid_or_expired_authorization"
+            return
+        await configure_desktop(svc)
+        start = await svc.execute("desktop_start", {"capability": "gmail", "binding": binding})
+        body = {"state": start["state"], "binding": binding, "code": "fixture-code",
+                "redirect_uri": "http://127.0.0.1:54321/"}
+        if case == "wrong_state":
+            body["state"] = "different-state"
+        if case == "wrong_binding":
+            body["binding"] = "different-browser-binding"
+        if case == "expired":
+            clock[0] += 601
+        if case == "cancel":
+            body["code"], body["error"] = None, "access_denied"
+        result = await svc.execute("desktop_complete", body)
+        if case in {"wrong_state", "wrong_binding", "expired"}:
+            assert result["error"] == "invalid_or_expired_authorization"
+            return
+        if case == "cancel":
+            assert result["error"] == "authorization_cancelled"
+            return
+        if case == "replay":
+            assert "error" not in result
+            assert (await svc.execute("desktop_complete", body))["error"] == "invalid_or_expired_authorization"
+            return
     asyncio.run(run())
 
 

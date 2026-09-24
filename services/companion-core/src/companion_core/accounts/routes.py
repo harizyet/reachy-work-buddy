@@ -7,6 +7,7 @@ from shared.models.accounts import (
     AccountConfigPatch,
     CalendarSelection,
     ConnectAccount,
+    DesktopComplete,
     OAuthCallback,
     OAuthComplete,
     OAuthStart,
@@ -51,6 +52,14 @@ def install_accounts(app, service_token):
     @app.post(paths.COMPLETE, dependencies=dependencies)
     async def complete(body: OAuthComplete):
         return await call("complete", body.model_dump())
+
+    @app.post(paths.DESKTOP_START, dependencies=dependencies)
+    async def desktop_start(body: OAuthStart):
+        return await call("desktop_start", body.model_dump())
+
+    @app.post(paths.DESKTOP_COMPLETE, dependencies=dependencies)
+    async def desktop_complete(body: DesktopComplete):
+        return await call("desktop_complete", body.model_dump())
 
     @app.post(paths.TEST, dependencies=dependencies)
     async def test(body: ConnectAccount):

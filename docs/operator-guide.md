@@ -94,12 +94,21 @@ and [ADR 0012](adr/0012-call-reachy-webrtc.md) /
 Open **Settings · Accounts** in the operator dashboard.
 
 1. Select **Connect** on Gmail or Google Calendar.
-2. Sign in on **Google's website** with your Google username/password, or
+2. If this installation uses a Desktop OAuth client (the recommended setup
+   for a self-hosted install with no public domain), Reachy shows a one-line
+   command instead of redirecting your browser. Run it on the computer whose
+   browser you use to reach Reachy — see
+   [`tools/google_auth_helper.py`](../tools/google_auth_helper.py) and the
+   [deployment guide](deployment.md#google-application-setup). It opens
+   Google sign-in itself; the page keeps waiting and updates automatically
+   once it finishes. For a Web application client, Connect redirects your
+   browser directly instead — skip to step 3.
+3. Sign in on **Google's website** with your Google username/password, or
    choose an account already signed in there. Reachy never asks for or stores
    that Google password.
-3. Review Google's permission screen and approve the read-only permissions for
+4. Review Google's permission screen and approve the read-only permissions for
    the feature you selected. Cancelling is safe; Connect can be tried again.
-4. After returning to Reachy, check the displayed Google email and connection
+5. After returning to Reachy, check the displayed Google email and connection
    result. For Calendar, select the calendars you want Reachy to read and save
    those choices. Use the same Google account for both cards.
 

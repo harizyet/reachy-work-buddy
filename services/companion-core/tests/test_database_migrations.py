@@ -422,3 +422,51 @@ def test_google_encrypted_persistence_refresh_restart_and_disconnect(database, k
                 "capability": "gmail"}))["error"] == "credential_unavailable"
             await wrong.close()
     asyncio.run(run())
+
+
+def test_desktop_oauth_client_type_persists_and_isolates_flows(database, keys):
+    from companion_core.accounts.service import SCOPES, AccountService
+    from companion_core.accounts.store import PostgresAccountRepository
+
+    class Provider:
+        async def token(self, data):
+            return {"access_token": "google-access-fixture", "refresh_token": "google-refresh-fixture",
+                    "scope": " ".join(SCOPES["gmail"]), "expires_in": 3600}
+
+        async def identity(self, token):
+            return {"subject": "fixture-google-subject", "email": "fixture@example.org"}
+
+        async def request(self, *args, **kwargs):
+            return {"emailAddress": "fixture@example.org"}
+
+        async def revoke(self, token):
+            pass
+
+    upgrade(database, keys)
+
+    async def run():
+        repository = await PostgresAccountRepository.connect(database, keyring=keys)
+        svc = AccountService(repository, Provider())
+        result = await svc.execute("configure", {
+            "client_id": "fixture-desktop-client", "client_secret": "google-client-fixture",
+            "client_type": "desktop",
+        })
+        assert result["configured"] and result["client_type"] == "desktop"
+        start = await svc.execute("desktop_start", {"capability": "gmail", "binding": "fixture-browser-binding"})
+        assert "client_secret" not in start
+        async with repository.pool.connection() as conn:
+            row = await (await conn.execute(
+                "SELECT client_type FROM google_oauth_states WHERE state_hash != ''")).fetchone()
+            assert row == ("desktop",)
+        # A web-shaped complete against a desktop-typed flow must not match.
+        assert (await svc.execute("complete", {"binding": "fixture-browser-binding"}))["error"] == \
+            "invalid_or_expired_authorization"
+        result = await svc.execute("desktop_complete", {
+            "state": start["state"], "binding": "fixture-browser-binding",
+            "code": "fixture-private-code", "redirect_uri": "http://127.0.0.1:54321/",
+        })
+        assert result["capabilities"]["gmail"]["status"] == "connected"
+        async with repository.pool.connection() as conn:
+            assert (await (await conn.execute("SELECT count(*) FROM google_oauth_states")).fetchone())[0] == 0
+        await repository.close()
+    asyncio.run(run())

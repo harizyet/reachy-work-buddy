@@ -8,7 +8,12 @@ from fastapi import Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from reachy_hub.operator import require_csrf
-from shared.models.accounts import AccountConfigPatch, CalendarSelection, ConnectAccount
+from shared.models.accounts import (
+    AccountConfigPatch,
+    CalendarSelection,
+    ConnectAccount,
+    DesktopComplete,
+)
 from shared.protocols import accounts as paths
 
 
@@ -90,6 +95,24 @@ def install_accounts(app, core, *, enabled):
         response.delete_cookie(paths.BINDING_COOKIE,
                                path=urlsplit(result["redirect_uri"]).path.removesuffix("/callback"))
         return response
+
+    @app.post(paths.DESKTOP_START, dependencies=dependencies)
+    async def desktop_start(body: ConnectAccount):
+        # Binding travels in the response body, not a cookie: the browser must
+        # hand it to a separate local process, which holds no session cookies.
+        from fastapi.responses import JSONResponse
+        binding = secrets.token_urlsafe(32)
+        result = await proxy("POST", paths.DESKTOP_START, data={**body.model_dump(), "binding": binding})
+        result["binding"] = binding
+        return JSONResponse(result, headers={"Cache-Control": "no-store"})
+
+    @app.post(paths.DESKTOP_COMPLETE)
+    async def desktop_complete(body: DesktopComplete):
+        # Called by the local helper, not the browser: no owner cookie, same
+        # posture as the unauthenticated web ACCOUNTS_CALLBACK route above.
+        if not enabled:
+            raise HTTPException(503, "Account setup is not enabled on this installation")
+        return await proxy("POST", paths.DESKTOP_COMPLETE, data=body.model_dump())
 
     @app.post(paths.TEST, dependencies=dependencies)
     async def test(body: ConnectAccount):

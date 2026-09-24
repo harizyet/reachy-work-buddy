@@ -8,7 +8,7 @@ from companion_core.secrets import Keyring, PostgresSecretStore
 from shared.database import check_schema
 
 FLOW_COLUMNS = ("state_hash", "owner", "binding_hash", "capability", "generation",
-                "expires_at", "verifier_ref", "code_ref", "error", "returned")
+                "expires_at", "verifier_ref", "code_ref", "error", "returned", "client_type")
 
 
 class AccountTransaction:

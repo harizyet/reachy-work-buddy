@@ -14,6 +14,17 @@ See [ADR 0021](docs/adr/0021-google-accounts.md),
 [deployment setup](docs/deployment.md) and
 [Accounts evidence](docs/verification/phase-23-accounts-2026-09-23.md).
 
+Phase 23b (2026-09-24) added a Desktop OAuth client transport alongside the
+Web application client: a self-hosted install without a stable public HTTPS
+hostname can now authorize Gmail/Calendar via a loopback PKCE helper
+(`tools/google_auth_helper.py`) instead of provisioning a domain/DNS/
+certificate purely for OAuth. Core/Hub ownership is unchanged; see
+[ADR 0021's addendum](docs/adr/0021-google-accounts.md#addendum-phase-23b-2026-09-24-desktop-oauth-client-transport).
+Migration `005_desktop_oauth` adds a `client_type` column to
+`google_oauth_states`. Isolated-fixture tests cover the desktop flow and its
+failure cases; no live Desktop-client consent run was performed this session.
+See [verification](docs/verification/phase-23b-desktop-oauth-2026-09-24.md).
+
 Migration `004_persona` (2026-09-23) added a configurable assistant identity:
 `persona_config` (name + system prompt), owner-editable via the operator UI's
 "Assistant persona" card or `GET`/`PUT /settings/persona` (hub proxy to core).
@@ -21,11 +32,13 @@ The persona's system prompt is prepended only on the generic LLM conversation
 branch — see [docs/reference/services.md](docs/reference/services.md) for the
 exact boundary with deterministic intent replies, which never see it.
 
-Next: configure the installation's Google application and HTTPS callback, then
-perform real-account consent/read/refresh/revoke/reconnect and audience checks.
-No OAuth client file or deployed HTTPS hostname was supplied this session.
-Phase 23 is not yet production-accepted. The Google-enabled physical repeat
-remains deferred; Phases 24–26 are planning only.
+Next: configure the installation's Google application (Desktop app client
+recommended, or Web application with an HTTPS callback), then perform
+real-account consent/read/refresh/revoke/reconnect and audience checks. No
+OAuth client file, deployed HTTPS hostname, or live helper run was supplied
+this session. Phase 23/23b are not yet production-accepted. The
+Google-enabled physical repeat remains deferred; Phases 24–26 are planning
+only.
 
 Phase 22b (physical acceptance) started 2026-09-23 with the owner physically
 present, coordinated across a homelab-side and a Nano-side Claude Code
@@ -132,7 +145,7 @@ the homelab's own disposable dev/test stack (through `004_persona`) for
 interactive user testing — real owner login, OpenVINO local LLM routing with
 a Together AI cloud fallback, and a bound Telegram owner chat all live there,
 but it is not the production-accepted deployment Phase 23 still gates on.
-Current code requires revision `004_persona`, a separate 0600
+Current code requires revision `005_desktop_oauth`, a separate 0600
 `SECRET_KEY_FILE`, and `ACCOUNTS_SERVICE_TOKEN` in both core and hub. Stop old
 writers and back up before a real cutover. See the canonical deployment guide
 for migration, authentication and Telegram binding

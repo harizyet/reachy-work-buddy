@@ -77,6 +77,10 @@ These are dated evidence, not startup instructions or current health checks.
 - [Phase 23 Accounts](verification/phase-23-accounts-2026-09-23.md): OAuth, read-only
   adapters, browser and database checks; external production gates remain open.
 
+- [Phase 23b Desktop OAuth](verification/phase-23b-desktop-oauth-2026-09-24.md):
+  loopback helper transport, fixture and real-Postgres checks; no live
+  Google Desktop-client consent run performed.
+
 ## Where information belongs
 
 | Information | Canonical home | Elsewhere |

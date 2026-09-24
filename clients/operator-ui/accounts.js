@@ -4,6 +4,7 @@ function createAccounts({api, isLoggedIn}) {
   const root = '/settings/accounts/google';
   let generation = 0;
   let current = null;
+  let desktopPoll = null;
   const messages = {
     setup_required: 'Complete the one-time connection setup below first.',
     authorization_cancelled: 'Google sign-in was cancelled. You can try again whenever you are ready.',
@@ -40,8 +41,13 @@ function createAccounts({api, isLoggedIn}) {
     try { await action(); } catch (error) { if (isLoggedIn()) say(messages[error.message] || error.message); }
     finally { if (buttonNode) buttonNode.disabled = false; }
   }
+  function stopDesktopPoll() {
+    if (desktopPoll) { clearInterval(desktopPoll); desktopPoll = null; }
+    el('google-desktop-connect').hidden = true;
+  }
   function reset() {
     generation++; current = null;
+    stopDesktopPoll();
     el('account-cards').replaceChildren(); el('account-results').replaceChildren();
     el('calendar-options').replaceChildren(); el('google-identity').textContent = '';
     el('google-client-file').value = ''; el('gmail-query').value = '';
@@ -52,6 +58,7 @@ function createAccounts({api, isLoggedIn}) {
     current = status;
     el('google-identity').textContent = status.identity ? 'Signed in as ' + status.identity.email : 'No Google account connected.';
     el('google-callback').value = location.origin + new URL('../settings/accounts/google/callback', location.href).pathname;
+    el('google-callback-label').hidden = status.client_type === 'desktop';
     el('google-setup-state').textContent = status.configured ? 'Connection setup saved. Your client secret is stored securely.' : 'Google sign-in is not ready yet. The person setting up this Reachy installation needs to complete this one-time setup.';
     if (status.configured) el('google-setup').open = false;
     el('account-cards').replaceChildren();
@@ -65,6 +72,7 @@ function createAccounts({api, isLoggedIn}) {
       const success = document.createElement('p');
       success.textContent = state.last_success ? 'Last successful check: ' + new Date(state.last_success).toLocaleString() : 'No successful check yet.';
       const connect = button(state.enabled ? 'Reconnect' : 'Connect', async () => {
+        if (status.client_type === 'desktop') { await desktopConnect(cap); return; }
         const response = await api(root + '/connect', {method: 'POST', body: JSON.stringify({capability: cap})});
         const url = new URL(response.authorization_url);
         if (url.origin !== 'https://accounts.google.com') throw new Error('Unexpected sign-in address');
@@ -96,6 +104,34 @@ function createAccounts({api, isLoggedIn}) {
     el('account-cards').append(permissions);
     el('mail-preview').hidden = !status.capabilities.gmail.enabled;
     el('calendar-selection').hidden = !status.capabilities.calendar.enabled;
+  }
+  function shellQuote(value) { return "'" + String(value).replace(/'/g, "'\\''") + "'"; }
+  async function desktopConnect(cap) {
+    const response = await api(root + '/desktop/start', {method: 'POST', body: JSON.stringify({capability: cap})});
+    const hubBase = location.origin + new URL('..', location.href).pathname;
+    stopDesktopPoll();
+    el('google-desktop-command').textContent = [
+      'python3 google_auth_helper.py',
+      '--hub-url', shellQuote(hubBase), '--client-id', shellQuote(response.client_id),
+      '--scope', shellQuote(response.scope), '--state', shellQuote(response.state),
+      '--binding', shellQuote(response.binding), '--code-challenge', shellQuote(response.code_challenge),
+    ].join(' ');
+    el('google-desktop-connect').hidden = false;
+    el('google-desktop-waiting').textContent = 'Waiting for the helper to finish (this expires in 10 minutes)…';
+    const ticket = generation, deadline = Date.now() + 10 * 60 * 1000;
+    desktopPoll = setInterval(async () => {
+      if (ticket !== generation) { stopDesktopPoll(); return; }
+      if (Date.now() > deadline) { stopDesktopPoll(); say('invalid_or_expired_authorization'); return; }
+      try {
+        const latest = await api(root);
+        if (ticket !== generation) return;
+        if (latest.capabilities[cap].enabled) {
+          stopDesktopPoll();
+          render(latest); say('Google connected. Choose calendars below if you enabled Calendar.');
+          if (latest.capabilities.calendar.enabled) await calendarChoices(ticket);
+        }
+      } catch { /* transient; keep polling until the deadline */ }
+    }, 3000);
   }
   async function calendarChoices(ticket) {
     const response = await api(root + '/calendars');
@@ -132,15 +168,26 @@ function createAccounts({api, isLoggedIn}) {
     void run(async () => {
       const file = el('google-client-file').files[0];
       if (!file || file.size > 65536) throw new Error('Choose the Google connection JSON file (under 64 KB).');
-      let client;
-      try { client = JSON.parse(await file.text()).web; } catch { throw new Error('This is not a Google connection file.'); }
-      if (!client?.client_id || !client?.client_secret) throw new Error('Choose a Web application connection file downloaded from Google.');
+      let parsed;
+      try { parsed = JSON.parse(await file.text()); } catch { throw new Error('This is not a Google connection file.'); }
+      const clientType = parsed.installed ? 'desktop' : parsed.web ? 'web' : null;
+      const client = parsed.installed || parsed.web;
+      if (!clientType || !client?.client_id || !client?.client_secret) {
+        throw new Error('Choose a Web application or Desktop app connection file downloaded from Google.');
+      }
       const status = await api(root + '/configure', {method: 'PUT', body: JSON.stringify({
-        client_id: client.client_id, client_secret: client.client_secret,
-        redirect_uri: el('google-callback').value, disconnect_existing: el('google-replace').checked,
+        client_id: client.client_id, client_secret: client.client_secret, client_type: clientType,
+        redirect_uri: clientType === 'web' ? el('google-callback').value : undefined,
+        disconnect_existing: el('google-replace').checked,
       })});
-      el('google-client-file').value = ''; render(status); say('Setup saved. Select Connect to sign in with Google.');
+      el('google-client-file').value = ''; stopDesktopPoll(); render(status); say('Setup saved. Select Connect to sign in with Google.');
     }, event.submitter);
+  });
+  el('google-desktop-copy').addEventListener('click', () => {
+    void run(async () => {
+      await navigator.clipboard.writeText(el('google-desktop-command').textContent);
+      say('Command copied.');
+    });
   });
   el('calendar-choice').addEventListener('submit', event => {
     event.preventDefault(); void run(async () => {

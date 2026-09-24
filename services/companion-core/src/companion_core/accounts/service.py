@@ -79,9 +79,12 @@ class AccountService:
             if value == "connected" and last and self.clock() - datetime.fromisoformat(last).timestamp() > 300:
                 return "stale"
             return value
+        client_type = data.get("client_type", "web")
         return {
-            "configured": bool(data.get("client_id") and data.get("client_ref") and data.get("redirect_uri")),
+            "configured": bool(data.get("client_id") and data.get("client_ref")
+                               and (client_type == "desktop" or data.get("redirect_uri"))),
             "client_id": data.get("client_id", ""),
+            "client_type": client_type,
             "client_secret": "********" if data.get("client_ref") else None,
             "redirect_uri": data.get("redirect_uri", ""),
             "identity": data.get("identity"),
@@ -105,7 +108,11 @@ class AccountService:
 
     async def _configure(self, tx, patch):
         data = tx.data
-        changed = any(data.get(key) != patch[key] for key in ("client_id", "redirect_uri"))
+        client_type = patch.get("client_type", "web")
+        redirect_uri = patch.get("redirect_uri")
+        changed = (data.get("client_id") != patch["client_id"]
+                   or data.get("redirect_uri") != redirect_uri
+                   or data.get("client_type", "web") != client_type)
         if changed and data.get("grant_ref") and not patch.get("disconnect_existing"):
             raise AccountError("disconnect_required_for_client_change")
         removed = {}
@@ -121,7 +128,11 @@ class AccountService:
                     removed = await self._disconnect(tx, {})
         elif changed and data.get("client_id") != patch["client_id"]:
             await tx.delete(CLIENT, data.pop("client_ref", None))
-        data.update(client_id=patch["client_id"], redirect_uri=patch["redirect_uri"])
+        data.update(client_id=patch["client_id"], client_type=client_type)
+        if redirect_uri is not None:
+            data["redirect_uri"] = redirect_uri
+        else:
+            data.pop("redirect_uri", None)
         data["generation"] = secrets.token_hex(16)
         await self.remove_flows(tx)
         result = self.status(data)
@@ -131,7 +142,7 @@ class AccountService:
 
     async def _connect(self, tx, payload):
         data = tx.data
-        if not self.status(data)["configured"]:
+        if not self.status(data)["configured"] or data.get("client_type", "web") != "web":
             raise AccountError("setup_required")
         cap = payload["capability"]
         await self.remove_flows(tx)
@@ -144,6 +155,7 @@ class AccountService:
             "generation": data["generation"],
             "expires_at": datetime.fromtimestamp(self.clock(), UTC) + timedelta(minutes=10),
             "verifier_ref": ref, "code_ref": None, "error": None, "returned": False,
+            "client_type": "web",
         })
         scopes = set(IDENTITY_SCOPES)
         for enabled in set(data.get("enabled", [])) | {cap}:
@@ -162,7 +174,8 @@ class AccountService:
 
     async def _callback(self, tx, payload):
         flow = next((f for f in tx.flows if f["state_hash"] == digest(payload["state"])
-                     and f["binding_hash"] == digest(payload["binding"])), None)
+                     and f["binding_hash"] == digest(payload["binding"])
+                     and f.get("client_type", "web") == "web"), None)
         if not flow or flow["returned"] or flow["generation"] != tx.data.get("generation"):
             raise AccountError("invalid_or_expired_authorization")
         flow["returned"] = True
@@ -176,7 +189,7 @@ class AccountService:
 
     async def _complete(self, tx, payload):
         flow = next((f for f in tx.flows if f["binding_hash"] == digest(payload["binding"])
-                     and f["returned"]), None)
+                     and f["returned"] and f.get("client_type", "web") == "web"), None)
         if not flow or flow["generation"] != tx.data.get("generation"):
             raise AccountError("invalid_or_expired_authorization")
         pending = json.loads(await tx.resolve(PENDING, flow["verifier_ref"]))
@@ -184,11 +197,55 @@ class AccountService:
         tx.flows.remove(flow)
         if flow["error"]:
             raise AccountError(flow["error"])
+        return await self._finish_grant(tx, flow, pending["code"], pending["verifier"], tx.data["redirect_uri"])
+
+    async def _desktop_start(self, tx, payload):
+        data = tx.data
+        if data.get("client_type", "web") != "desktop" or not self.status(data)["configured"]:
+            raise AccountError("setup_required")
+        cap = payload["capability"]
+        await self.remove_flows(tx)
+        verifier = secrets.token_urlsafe(48)
+        state = secrets.token_urlsafe(32)
+        ref = await tx.put(PENDING, json.dumps({"verifier": verifier}))
+        tx.flows.append({
+            "state_hash": digest(state), "owner": "owner",
+            "binding_hash": digest(payload["binding"]), "capability": cap,
+            "generation": data["generation"],
+            "expires_at": datetime.fromtimestamp(self.clock(), UTC) + timedelta(minutes=10),
+            "verifier_ref": ref, "code_ref": None, "error": None, "returned": False,
+            "client_type": "desktop",
+        })
+        scopes = set(IDENTITY_SCOPES)
+        for enabled in set(data.get("enabled", [])) | {cap}:
+            scopes |= SCOPES[enabled]
+        return {
+            "state": state, "client_id": data["client_id"],
+            "scope": " ".join(sorted(scopes)),
+            "code_challenge": base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).decode().rstrip("="),
+            "code_challenge_method": "S256",
+        }
+
+    async def _desktop_complete(self, tx, payload):
+        flow = next((f for f in tx.flows if f["state_hash"] == digest(payload["state"])
+                     and f["binding_hash"] == digest(payload["binding"])
+                     and f.get("client_type", "web") == "desktop"), None)
+        if not flow or flow["returned"] or flow["generation"] != tx.data.get("generation"):
+            raise AccountError("invalid_or_expired_authorization")
+        flow["returned"] = True
+        tx.flows.remove(flow)
+        pending = json.loads(await tx.resolve(PENDING, flow["verifier_ref"]))
+        await tx.delete(PENDING, flow["verifier_ref"])
+        if payload.get("error") or not payload.get("code"):
+            raise AccountError("authorization_cancelled")
+        return await self._finish_grant(tx, flow, payload["code"], pending["verifier"], payload["redirect_uri"])
+
+    async def _finish_grant(self, tx, flow, code, verifier, redirect_uri):
         data = tx.data
         response = await self.provider.token({
             "client_id": data["client_id"], "client_secret": await tx.resolve(CLIENT, data["client_ref"]),
-            "code": pending["code"], "code_verifier": pending["verifier"],
-            "redirect_uri": data["redirect_uri"], "grant_type": "authorization_code",
+            "code": code, "code_verifier": verifier,
+            "redirect_uri": redirect_uri, "grant_type": "authorization_code",
         })
         scopes = set(response.get("scope", "").split())
         if not SCOPES[flow["capability"]] <= scopes:
