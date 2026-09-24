@@ -72,11 +72,18 @@ dependencies = [
     # GStreamer IPC socket instead of the release/acquire+V4L2 escape hatch
     # this replaced. Pulls in PyGObject on Linux (Requires-Dist in its own
     # metadata), which has no PyPI wheel and needs the Dockerfile's added
-    # build deps; see that file's comment. UNVERIFIED against real
-    # hardware — confirmed only that PyGObject/GStreamer/unixfdsrc install
-    # and import cleanly on this same base image, not yet built into an
-    # actual reachy-embodiment image and run against the Nano's daemon.
-    "reachy_mini>=1.8.4",
+    # build deps; see that file's comment. Pinned to exactly match the
+    # Nano's installed reachy-mini-daemon version (confirmed 1.8.4 live,
+    # 2026-09-24) rather than a floor — the SDK client and the daemon it
+    # talks to over the local IPC socket are the same project's two ends
+    # of one protocol, and an unpinned newer client (1.11.0 resolved
+    # unpinned during dev) risks a version-skewed wire format the daemon
+    # doesn't understand. Bump deliberately alongside the daemon, not
+    # independently. UNVERIFIED against real hardware end to end — PyGObject/
+    # GStreamer/unixfdsrc were confirmed to install and import cleanly on
+    # this same base image, but no live capture through this exact
+    # pinned version has been run yet.
+    "reachy_mini==1.8.4",
 ]
 
 [tool.uv.sources]

@@ -89,6 +89,33 @@ only takes effect on container recreation, not `docker start`).
   fine for this dev machine's x86_64 Linux; aarch64/Jetson wheel
   availability for the container's Python 3.13 has not been checked.
 
+## Fixes from Nano-side review before first live build
+
+The Nano-connected session caught two issues while pulling this change,
+before running anything, and reported them back rather than editing the
+repo itself:
+
+- **Version skew**: `uv.lock` had resolved an unpinned `reachy_mini>=1.8.4`
+  to 1.11.0, while the Nano's installed daemon is 1.8.4 — the SDK client
+  and daemon are two ends of one wire protocol over the local IPC socket,
+  so an unpinned newer client risked a format the daemon doesn't speak.
+  Pinned to `reachy_mini==1.8.4` to match; re-bump deliberately alongside
+  the daemon, not independently.
+- **Unhandled `None`**: 1.8.4's `get_frame()` returns `None` if the camera
+  isn't initialized yet — most likely on the very first request after
+  process start — and the code passed that straight to `cv2.imencode`,
+  which raises `cv2.error` (an unhandled 500) rather than this class's
+  usual `RobotBackendError` contract. Fixed to check for `None` and raise
+  `RobotBackendError` explicitly; covered by a new unit test.
+
+The same session also confirmed, from 1.8.4's own source, that
+`ReachyMini(...)`'s daemon-check only scans processes and never
+starts/stops the daemon — constructing it for media access alone causes
+no motion, independent of any code here.
+
 Camera remains **not production-accepted**: real capture succeeded once
 via the old code path; the new recommended-path code exists and is
-unit-tested but unverified against real hardware end to end.
+unit-tested but, as of this fix, still unverified against real hardware
+end to end (image rebuild/live capture through LOCAL was in progress on
+the Nano at the time of writing, gated on the owner confirming the
+running production container's temporary `docker rm -f`).

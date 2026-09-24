@@ -307,6 +307,15 @@ class ReachyDaemonBackend:
         Dockerfile/pyproject.toml and docs/deployment.md for the
         corresponding image/mount changes this requires before this path
         can actually run on the Nano.
+
+        `get_frame()` returns `None` if the camera isn't initialized yet
+        (the daemon's docs confirm this for 1.8.4, the version pinned
+        below to match the Nano's installed daemon) — most likely on the
+        very first call right after this backend's process starts.
+        Surfaced as `RobotBackendError`, the same clean-error contract
+        every other real-hardware failure in this class uses, rather than
+        letting a bare `None` reach `cv2.imencode` (which raises
+        `cv2.error`, an unhandled 500 from the route's perspective).
         """
         import cv2  # local import: only needed by this one real-hardware path
 
@@ -320,6 +329,8 @@ class ReachyDaemonBackend:
                 self._mini = ReachyMini(media_backend="local")
 
         frame = self._mini.media.get_frame()  # type: ignore[attr-defined]
+        if frame is None:
+            raise RobotBackendError("camera not initialized yet (get_frame() returned None)")
         ok, encoded = cv2.imencode(".jpg", frame)
         if not ok:
             raise RobotBackendError("failed to JPEG-encode captured frame")

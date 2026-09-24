@@ -243,10 +243,13 @@ def test_play_audio_raises_on_upload_failure() -> None:
 
 
 class _FakeMedia:
-    def __init__(self, frame: np.ndarray | None) -> None:
-        self._frame = frame if frame is not None else np.zeros((4, 4, 3), dtype=np.uint8)
+    def __init__(self, frame: np.ndarray | None, *, frame_is_none: bool = False) -> None:
+        if frame_is_none:
+            self._frame: np.ndarray | None = None
+        else:
+            self._frame = frame if frame is not None else np.zeros((4, 4, 3), dtype=np.uint8)
 
-    def get_frame(self) -> np.ndarray:
+    def get_frame(self) -> np.ndarray | None:
         return self._frame
 
 
@@ -260,9 +263,9 @@ class _FakeReachyMini:
 
     instances = 0
 
-    def __init__(self, frame: np.ndarray | None = None) -> None:
+    def __init__(self, frame: np.ndarray | None = None, *, frame_is_none: bool = False) -> None:
         _FakeReachyMini.instances += 1
-        self.media = _FakeMedia(frame)
+        self.media = _FakeMedia(frame, frame_is_none=frame_is_none)
 
 
 def test_capture_frame_reads_via_local_media_backend() -> None:
@@ -292,6 +295,19 @@ def test_capture_frame_reuses_one_media_client_across_calls() -> None:
 def test_capture_frame_raises_if_jpeg_encode_fails(monkeypatch: pytest.MonkeyPatch) -> None:
     backend = ReachyDaemonBackend("http://daemon.test", media_client_factory=_FakeReachyMini)
     monkeypatch.setattr(cv2, "imencode", lambda *_args: (False, None))
+
+    with pytest.raises(RobotBackendError):
+        backend.capture_frame()
+
+
+def test_capture_frame_raises_cleanly_if_get_frame_returns_none() -> None:
+    # 1.8.4's get_frame() returns None if the camera isn't initialized yet
+    # — most likely on the very first call right after process start. This
+    # must surface as RobotBackendError, not an unhandled cv2.error from
+    # passing None straight to cv2.imencode.
+    backend = ReachyDaemonBackend(
+        "http://daemon.test", media_client_factory=lambda: _FakeReachyMini(frame=None, frame_is_none=True)
+    )
 
     with pytest.raises(RobotBackendError):
         backend.capture_frame()
