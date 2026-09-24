@@ -84,7 +84,7 @@ fi
 if [[ ! -f "$ENV_FILE" ]]; then
     die "env file not found: $ENV_FILE (copy deploy/homelab/.env.example to .env and set a real POSTGRES_PASSWORD, or pass --env-file)"
 fi
-load_env_file "$ENV_FILE"
+read_env_file "$ENV_FILE"
 : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in $ENV_FILE}"
 
 # Phase 24 cleanup: SEARXNG_SECRET_KEY is an internal deployment secret for

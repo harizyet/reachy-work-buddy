@@ -98,6 +98,19 @@ load_env_file() {
     log_info "loaded environment from $path"
 }
 
+# Like load_env_file, but the values stay unexported shell variables. Use it
+# when a launcher only inspects the file and hands the same file to
+# `docker compose --env-file`: bash quote removal turns a dotenv JSON value
+# such as ROBOT_TOKENS={"nano-1":"..."} into {nano-1:...}, and an exported
+# variable would override Compose's own (correct) parse of the file.
+read_env_file() {
+    local path="$1"
+    [[ -f "$path" ]] || die "env file not found: $path"
+    # shellcheck disable=SC1090
+    source "$path"
+    log_info "read environment from $path"
+}
+
 # Redacts a value for display: shows whether a variable is set, never its
 # content. Used for diagnostic reports (check-platform.sh) — "Phase 22:
 # Do not print secrets... a redacted diagnostic report."
