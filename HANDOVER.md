@@ -108,25 +108,25 @@ deployment.md. Full companion-core → reachy-hub → reachy-embodiment chain
 covered by new tests (387 passed total, up from 371); **UNVERIFIED against
 real hardware** — the daemon's stop/start endpoints have not been called
 live yet, only confirmed present via its OpenAPI/source.
-[Phase 26](docs/phase-26.md) was refocused 2026-09-23 from a generic virtual
-meeting bot to an embodied secretary: owner-present meeting companion (26a);
+[Phase 27](docs/phase-27.md) was refocused 2026-09-23 from a generic virtual
+meeting bot to an embodied secretary: owner-present meeting companion (27a);
 a bounded temporary-absence catch-up mode for short owner step-outs within an
-already-running 26a meeting (26a.2), which tracks decisions/questions/
+already-running 27a meeting (27a.2), which tracks decisions/questions/
 deadlines during the absence via an explicit `AbsenceWindow` and delivers a
 private, interval-bounded delta on return; physical secretary attendance
-while the owner is absent for most/all of a meeting (26b); then bounded
+while the owner is absent for most/all of a meeting (27b); then bounded
 delegation of pre-approved questions/statements or the owner's own verbatim
-reply (26c). Virtual/cloud bot joining is now deferred, not a prerequisite.
+reply (27c). Virtual/cloud bot joining is now deferred, not a prerequisite.
 Owner-directed questions must be forwarded privately via Telegram or another
-bound channel from 26a onward; the platform must never answer for the owner.
-Next planning gate: 26a needs no ADR amendment (owner present throughout);
-26a.2 needs a *narrow* Phase 24 ADR amendment for a capped
+bound channel from 27a onward; the platform must never answer for the owner.
+Next planning gate: 27a needs no ADR amendment (owner present throughout);
+27a.2 needs a *narrow* Phase 25 ADR amendment for a capped
 `TEMPORARY_MEETING_ABSENCE` lease (meeting-STT-only, no tool/general-speech
-authority, auto-expiry, no silent extension into unattended recording); 26b
+authority, auto-expiry, no silent extension into unattended recording); 27b
 requires the *full* owner-absent meeting-capture-mode amendment plus
 supervised hardware acceptance. These are two separate amendments, not one —
 continuing to record while the owner briefly steps out is still technically
-owner-absent capture under Phase 24's presence-based rule, even though the
+owner-absent capture under Phase 25's presence-based rule, even though the
 recording began while they were present.
 
 Phase 22b continued 2026-09-24 (owner physically present, coordinated across

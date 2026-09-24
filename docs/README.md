@@ -23,9 +23,10 @@ claims that those features already work.
 
 - [Phase 22a/22b and Phase 23](phase-22-23.md): deployment, physical acceptance,
   migrations, SecretStore, and Google Accounts.
-- [Phase 24](phase-24.md): owner recognition and voice access control.
-- [Phase 25](phase-25.md): meeting transcription and minutes.
-- [Phase 26](phase-26.md): embodied meeting secretary — owner-present companion, then physical secretary attendance, then bounded delegation; virtual/cloud attendance is deferred.
+- [Phase 24](phase-24.md): web-search-grounded general LLM assistant.
+- [Phase 25](phase-25.md): owner recognition and voice access control.
+- [Phase 26](phase-26.md): meeting transcription and minutes.
+- [Phase 27](phase-27.md): embodied meeting secretary — owner-present companion, then physical secretary attendance, then bounded delegation; virtual/cloud attendance is deferred.
 - [Jarvis baseline](jarvis-baseline.md): upstream reuse/reference notes.
 
 ## Architecture decisions

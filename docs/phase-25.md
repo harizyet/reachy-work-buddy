@@ -1,4 +1,4 @@
-# Phase 24 — owner recognition and voice access control
+# Phase 25 — owner recognition and voice access control
 
 Status: planned, not implemented. Depends on Phase 22 physical deployment
 and Phase 23's read-only Google integration. This is a single-owner system:
@@ -193,7 +193,7 @@ The results page includes:
 
 The owner can retry calibration, discard a candidate, or activate one after
 review. Activation requires fresh owner reauthentication, CSRF protection and
-server-side validation of the applicable Phase 24 acceptance gates below.
+server-side validation of the applicable Phase 25 acceptance gates below.
 A quick successful selfie check is not sufficient. Incomplete/failed evidence
 keeps the candidate diagnostic-only; show exactly which tests remain.
 
@@ -258,7 +258,7 @@ false accepts/rejects, p50/p95 timing, resource use and limitations in
 Small attack suites demonstrate only those attacks; do not claim immunity
 to deepfakes or statistically strong security from zero observed failures.
 
-Phase 24 is complete only when every required gate passes on the deployed
+Phase 25 is complete only when every required gate passes on the deployed
 hardware with no unauthorized speech admission, audible disclosure or action
 in the acceptance suite. If attribution/liveness or hardware throughput is
 inadequate, ship private text/explicit authenticated interaction as a limited

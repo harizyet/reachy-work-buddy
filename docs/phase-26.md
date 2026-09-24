@@ -1,4 +1,4 @@
-# Phase 25 — meeting transcription and minutes
+# Phase 26 — meeting transcription and minutes
 
 Status: planned, not implemented. Depends on Phase 23 shipping versioned
 database migrations first (this phase adds new tables and cannot rely on
@@ -6,9 +6,9 @@ database migrations first (this phase adds new tables and cannot rely on
 Builds on the existing local faster-whisper STT (`reachy_hub/stt.py`, Phase
 8), the pluggable `ChatProvider`/role-routing LLM stack (Phases 19/21), the
 tasks store (Phase 11), and memory provenance/sensitivity (Phase 12). Does
-not depend on Phase 22b or Phase 24.
+not depend on Phase 22b or Phase 25.
 
-[Phase 26](phase-26.md) extends this pipeline with Reachy as an embodied
+[Phase 27](phase-27.md) extends this pipeline with Reachy as an embodied
 meeting secretary — owner-present companion capture, then physical secretary
 attendance, then bounded delegation; scheduled capture and bounded
 participation belong to that phase.
