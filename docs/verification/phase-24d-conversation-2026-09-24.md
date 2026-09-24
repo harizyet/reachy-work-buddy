@@ -182,6 +182,33 @@ The hub's WS watchdog was raised from 5 s to 15 s (ADR 0019 addendum).
 The Tailscale endpoint to the hub switches between three LAN addresses every
 few minutes. That is a network matter for the owner and was left unchanged.
 
+## Answer quality: web search and the local model
+
+The first attempt at the timed run (session `CnPL…`, 3 turns, stopped by the
+owner) gave out-of-date or invented answers: a former US president, a Prime
+Minister named as Singapore's President, and "created by Microsoft". Web
+search had not run. Migration `006` defaults the policy to `off`, so SearXNG
+received no requests. Answers came only from the local
+`Qwen2.5-1.5B-Instruct`.
+
+The owner set the policy to **Always** (bundled SearXNG) and kept the local
+model. SearXNG's default engine set took ~3 s per query, waiting on Wikidata
+timeouts and DuckDuckGo CAPTCHAs. The bundled config now keeps only Google,
+Bing and Brave, with Google and Bing enabled (the image disables them), and a
+1.5 s per-engine timeout. Six queries then took 0.56–0.86 s and returned
+16–20 results each.
+
+End to end through core, with a service-authenticated throwaway session:
+- The US question was answered correctly.
+- The Singapore question was answered correctly on one run and wrongly on
+  another, with results in context.
+- Core time was 2.1–4.8 s per turn.
+- "Who are you?" was labelled work-private, because the persona prompt's
+  "calendar/email" wording is echoed into the reply. It is withheld for that
+  reply only.
+
+With grounding, the 1.5B model's accuracy is still inconsistent.
+
 ## Latency budget (agreed before any timed turn)
 
 Utterance end → first audible reply, over the live turns:

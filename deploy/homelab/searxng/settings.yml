@@ -8,7 +8,16 @@
 # environment variable (searx/settings_defaults.py's environ_name) — set
 # via docker-compose.yml's SEARXNG_SECRET_KEY (see .env.example) — rather
 # than baking a real secret into this checked-in file.
-use_default_settings: true
+# Phase 24d: search runs inside a spoken turn, so the whole call must stay
+# near a second. The default engine set waited ~3 s on Wikidata timeouts
+# and DuckDuckGo CAPTCHAs; alone, Bing answered in ~0.3 s, Google in ~0.6–1.2 s
+# and Brave in ~0.5 s (Brave soon rate-limits, which the timeout absorbs).
+use_default_settings:
+  engines:
+    keep_only:
+      - google
+      - bing
+      - brave
 
 general:
   instance_name: "reachy-searxng"
@@ -29,3 +38,17 @@ search:
   formats:
     - html
     - json
+
+outgoing:
+  # Per-engine wait. Engines that miss it are skipped for that query, and
+  # the others' results are still returned.
+  request_timeout: 1.5
+  max_request_timeout: 2.0
+
+# keep_only keeps each engine's default flags, and the image ships Google
+# and Bing disabled.
+engines:
+  - name: google
+    disabled: false
+  - name: bing
+    disabled: false
