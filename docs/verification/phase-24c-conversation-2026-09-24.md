@@ -138,7 +138,9 @@ The suites above were rerun after this change.
   even "What is my favorite color?". This is correct under ADR 0006, since
   generated text may repeat earlier private content. For 24d it means the
   robot stays silent for the rest of that conversation until core restarts.
-  Run the privacy rows last, or expect this.
+  Run the privacy rows last, or expect this. *Changed during 24d:* only private
+  history carries the label now; see the
+  [24d record](phase-24d-conversation-2026-09-24.md#conversation-privacy-carry-over-fix).
 - A WSS-only simulated robot shows `embodiment_state=disconnected`: its
   presence watchdog still expects the legacy HTTP heartbeat. The Nano
   deployment also registers `ROBOT_HTTP_BASE_URL`, so this does not apply

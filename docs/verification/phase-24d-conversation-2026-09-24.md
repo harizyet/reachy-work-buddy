@@ -14,7 +14,7 @@ the homelab host and one running locally on nano-1. **In progress.**
 | Robot | nano-1 (`reachy-mini`, Jetson Nano, Tegra 4.9.253), WSS over the tailnet to `http://<homelab>.ts.net:8080/hub` |
 | Daemon | `reachy-mini-daemon` 1.8.4, systemd-enabled, running since 13:20:45 UTC, `simulation_enabled=false`; not restarted for this test |
 | STT | faster-whisper `base.en`, int8, CPU, in reachy-hub; model pre-loaded before the first timed turn (40 s cold load) |
-| TTS | espeak-ng `en-us` in reachy-hub |
+| TTS | Piper `en_US-lessac-medium` in reachy-hub from `4037b4a` (espeak-ng `en-us` for the smoke turns before it) |
 | LLM | OVMS `OpenVINO/Qwen2.5-1.5B-Instruct-int4-ov` (local), routing `local_with_cloud_fallback` to Together `zai-org/GLM-5.3` |
 
 ## Preflight (step 1, read-only)
@@ -128,6 +128,42 @@ Timing sources, agreed instead of a phone recording:
 - Stop tail runs from the robot's "voice stop received" to the daemon's
   `stop_sound`, taken from `journalctl -o short-iso-precise`, with the
   owner's ear as the check.
+
+## Step 3: device coexistence
+
+Voice session `UdLC…` was already listening when the Nano session triggered
+`POST /behaviour/acknowledgement` (recorded `yes1` nod, 3.95 s sound through
+dmix). About 1 s later, `GET /camera/frame` returned 200 (412 KB JPEG,
+0.084 s) during the move and sound. Capture continued throughout. There were
+no ALSA/shm/GStreamer errors, no daemon EBUSY/xrun and no `stop_sound`, and
+`RestartCount` stayed 0. The next turn's transcript was the owner's words,
+not the behaviour sound. Other observations:
+
+- The daemon's HTTP API stalled for about 2 s while the recorded move
+  started. The embodiment's status check timed out and briefly reported the
+  backend disconnected, and the behaviour POST took 2.56 s.
+- The daemon logged a single "IK error: Collision detected or head pose not
+  achievable" mid-nod. This is consistent with the known head offset from
+  Phase 22b.
+- A 1.15 s pre-behaviour segment transcribed to nothing (`no_speech`).
+
+**Result: PASS**, pending the owner's confirmation that the sound played
+fully.
+
+## Conversation privacy carry-over fix
+
+In the same session, a general question about 5G was withheld from the
+speaker and routed to web. Every later turn was withheld too. Core's
+placeholder keyword classifier matched "medical" in the model's reply,
+labelled it sensitive, and the conversation kept its strongest label for
+every later reply until core restarted. The owner chose to carry a label
+forward only for private data kept in the history:
+- deterministic calendar, email, memory and account results;
+- the owner's own words matching a sensitive keyword.
+
+A keyword only in the model's wording now labels that reply alone. See
+`test_conversation_privacy.py`: the 5G case fails on the old code. The
+calendar and own-statement carry-over cases pass on both.
 
 ## Latency budget (agreed before any timed turn)
 

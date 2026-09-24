@@ -574,6 +574,9 @@ def create_app(
         parsed_command = commands.parse(turn.text) if turn.input_modality == InputModality.TEXT else None
         reachy_command = parsed_command.action if parsed_command and parsed_command.namespace == "reachy" else None
 
+        # None: later replies inherit this reply's own label (private tool
+        # and memory results). Only the generated-reply branch narrows it.
+        carried: Privacy | None = None
         if reachy_command == "standby":
             try:
                 results = await app.state.hub_client.standby_robots()
@@ -818,7 +821,11 @@ def create_app(
                     except ProviderUnavailable:
                         reply = "The language model is unavailable right now. Please try again shortly."
             privacy = classify_privacy(turn.text)
+            carried = privacy
             if config.local is not None or config.cloud is not None or turn.force_frontier:
+                # Phase 24d: a keyword in the model's wording (a 5G answer
+                # mentioning "medical") labels this reply only. Carrying it
+                # silenced the robot for the rest of the conversation.
                 privacy = conversation_store.reply_privacy(turn.session_id, classify_privacy(turn.text + "\n" + reply))
 
         if generation != conversation_store.generation:
@@ -826,7 +833,7 @@ def create_app(
                 reply="The account connection changed. Please ask again.",
                 turn_count=0, privacy=Privacy.WORK_PRIVATE,
             )
-        conversation_store.record_reply(turn.session_id, reply, privacy)
+        conversation_store.record_reply(turn.session_id, reply, privacy, carried=carried)
         return ConversationTurnResponse(reply=reply, turn_count=len(history), privacy=privacy)
 
     @app.post("/calendar/events")

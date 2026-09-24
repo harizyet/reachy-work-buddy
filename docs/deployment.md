@@ -368,9 +368,17 @@ panel, and loses them on restart. Spoken reply audio is uploaded to the
 daemon as `/tmp/reachy_mini_sounds/reachy_embodiment_audio.wav`. Each reply
 overwrites it; reboot clears it.
 
-With an LLM configured, core keeps a conversation's strongest privacy label.
-After one work-private reply, such as calendar content, every later generated
-reply in that conversation is withheld from the speaker until core restarts.
+With an LLM configured, core carries a private label forward through a
+conversation only for private data that stays in its history. That covers
+calendar, email, memory and account results, and the owner's own words that
+match a sensitive keyword. After such a turn, every later generated reply is
+withheld from the speaker until core restarts. A keyword that appears only in
+the model's own wording, such as a general answer mentioning "medical",
+withholds that reply alone (Phase 24d).
+
+The hub speaks with Piper `en_US-lessac-medium`. The voice is baked into the
+image and selected by `PIPER_VOICE_MODEL`; without it, the hub falls back to
+espeak-ng.
 The hub downloads the Whisper model on first use, which can take about a
 minute, and the download is lost when the container is recreated.
 

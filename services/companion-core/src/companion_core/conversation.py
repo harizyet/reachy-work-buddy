@@ -45,10 +45,17 @@ class ConversationStore:
             self._messages.setdefault(session_id, []).append({"role": "user", "content": text})
             return list(turns)
 
-    def record_reply(self, session_id: str, text: str, privacy: Privacy = Privacy.PUBLIC) -> None:
+    def record_reply(
+        self, session_id: str, text: str, privacy: Privacy = Privacy.PUBLIC, *, carried: Privacy | None = None
+    ) -> None:
+        """`privacy` labels this reply; `carried` (default: the same) is what
+        later replies in the conversation inherit. They differ for generated
+        replies: a keyword in the model's own wording labels only that reply,
+        while private data (tool results, the owner's own sensitive
+        statements) stays in history and must keep later replies private."""
         with self._lock:
             self._messages.setdefault(session_id, []).append({"role": "assistant", "content": text})
-            self._privacy[session_id] = self.reply_privacy(session_id, privacy)
+            self._privacy[session_id] = self.reply_privacy(session_id, privacy if carried is None else carried)
 
     def messages(self, session_id: str) -> list[dict[str, str]]:
         with self._lock:
@@ -72,7 +79,8 @@ class ConversationStore:
 
     def reply_privacy(self, session_id: str, current: Privacy) -> Privacy:
         # Generated replies can repeat earlier calendar/email/memory content.
-        # Keep the strongest label for this in-memory conversation rather than
-        # silently treating a follow-up such as "tell me more" as public.
+        # Keep the strongest carried label for this in-memory conversation
+        # rather than silently treating a follow-up such as "tell me more"
+        # as public.
         rank = {Privacy.PUBLIC: 0, Privacy.WORK_PRIVATE: 1, Privacy.SENSITIVE: 2}
         return max(current, self._privacy.get(session_id, Privacy.PUBLIC), key=rank.__getitem__)
