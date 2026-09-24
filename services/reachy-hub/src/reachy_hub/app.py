@@ -184,6 +184,7 @@ from shared.models.session import (
     InteractionMode,
     PrivacyContext,
 )
+from shared.protocols.operator_api import ROBOTS, ROBOTS_RESUME, ROBOTS_STANDBY
 
 log = logging.getLogger(__name__)
 
@@ -486,6 +487,19 @@ def create_app(
             if run_heartbeat_task
             else None
         )
+        if telegram_client is not None and run_telegram_poll_task:
+            # Phase 24b: registers the flat command aliases (Telegram's
+            # BotCommand.command can't hold a space, so the namespaced
+            # `/reachy <action>` form isn't registered here — see
+            # companion_core/commands/parser.py's TELEGRAM_ALIASES).
+            # Best-effort: a registration failure shouldn't block hub
+            # startup, same as heartbeat_loop's tolerance below.
+            with contextlib.suppress(httpx.HTTPError):
+                await telegram_client.set_my_commands([
+                    {"command": "standby", "description": "Put Reachy into standby"},
+                    {"command": "wake", "description": "Wake Reachy up"},
+                    {"command": "reachy_status", "description": "Check Reachy's status"},
+                ])
         telegram_task = (
             asyncio.create_task(
                 telegram_poll_loop(telegram_client, app.state.telegram_chat_registry, telegram_default_user_id)
@@ -616,12 +630,12 @@ def create_app(
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    @app.post("/robots")
+    @app.post(ROBOTS)
     async def register_robot(robot: Robot) -> Robot:
         await app.state.registry.register(robot)
         return robot
 
-    @app.get("/robots")
+    @app.get(ROBOTS)
     async def list_robots() -> list[Robot]:
         return await app.state.registry.list()
 
@@ -654,7 +668,7 @@ def create_app(
         except httpx.HTTPError as exc:
             raise HTTPException(status_code=502, detail=f"robot '{robot_id}' unreachable: {exc}") from exc
 
-    @app.post("/robots/standby", dependencies=[Depends(require_remote_auth)])
+    @app.post(ROBOTS_STANDBY, dependencies=[Depends(require_remote_auth)])
     async def robots_standby() -> list[dict]:
         """Phase 22b: owner-requested remote "turn off/standby" command —
         parks and de-torques every registered robot, safe to physically
@@ -679,7 +693,7 @@ def create_app(
                 results.append({"robot_id": robot.robot_id, "ok": False, "error": f"unreachable: {exc}"})
         return results
 
-    @app.post("/robots/resume", dependencies=[Depends(require_remote_auth)])
+    @app.post(ROBOTS_RESUME, dependencies=[Depends(require_remote_auth)])
     async def robots_resume(wake_up: bool = True) -> list[dict]:
         """Resumes every registered robot previously put into standby.
         `wake_up=True` (default) replays the daemon's own wake-up motion —

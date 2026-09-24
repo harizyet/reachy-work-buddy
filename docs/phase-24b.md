@@ -1,6 +1,8 @@
 # Phase 24b — Structured command and intent authorization
 
-Status: planned, not implemented. One of two independent tracks under
+Status: implemented and isolated-fixture verified (2026-09-24) — see
+HANDOVER.md for what remains open (live Telegram bot run, real robot
+actuation). One of two independent tracks under
 **Phase 24 — QoL improvements**, alongside [Phase 24a](phase-24a.md)'s
 search-assisted assistant; the two share a phase number as general
 assistant usefulness/safety improvements sequenced before Phase 25's owner
@@ -355,5 +357,8 @@ handling) parsed by the new command parser may call the actual
 | Scope preserved | Named-behaviour playback and ADR 0011's existing email/calendar consent flows are unaffected — neither gains nor loses their current authorization requirements |
 | Regression | Existing Python/Ruff/browser checks and Phase 22b's standby/resume tests still pass under the new trigger path |
 
-No implementation, live robot actuation, or Telegram/web UI change is
-performed by this planning change.
+Implemented 2026-09-24 (companion-core: `commands/`, `command_suggestion.py`;
+reachy-hub: Telegram `setMyCommands` registration; operator UI: command
+autocomplete and suggested-command action buttons), verified with isolated
+fixtures per the exit-criteria table above. No live Telegram bot run or
+physical robot actuation was performed this session.

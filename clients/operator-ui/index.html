@@ -25,7 +25,7 @@
         <p id="chat-telegram" class="channel-notice" role="status">Checking Telegram…</p>
         <p class="muted">Messages shown here stay in this tab and disappear on refresh. Your companion session continues across channels.</p>
         <div id="chat-transcript" class="chat-transcript" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions text"><p id="chat-empty">Send a message to start or continue your conversation.</p></div>
-        <form id="chat-form"><label for="chat-text">Message<textarea id="chat-text" rows="3" placeholder="Ask Reachy something…" required disabled></textarea></label><label class="check"><input id="force-frontier" type="checkbox"> Use frontier model for this message (sends conversation context to cloud)</label><div class="chat-compose-footer"><span id="chat-status" role="status"></span><button id="chat-send" disabled>Send</button></div></form>
+        <form id="chat-form"><label for="chat-text">Message<textarea id="chat-text" rows="3" placeholder="Ask Reachy something… (try /reachy standby)" required disabled></textarea></label><div id="chat-command-hints" hidden></div><label class="check"><input id="force-frontier" type="checkbox"> Use frontier model for this message (sends conversation context to cloud)</label><div class="chat-compose-footer"><span id="chat-status" role="status"></span><button id="chat-send" disabled>Send</button></div></form>
       </section>
       <section id="accounts-pane" hidden class="card">
         <span class="eyebrow">SETTINGS</span><h2>Connected accounts</h2>

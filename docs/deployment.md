@@ -183,9 +183,11 @@ pre-recorded. Daemon start/restart and raw/diagnostic joint commands
 owner present — see [AGENTS.md](../AGENTS.md) for the exact boundary.
 
 Remote standby/resume (`POST /robots/standby`/`resume` on reachy-hub,
-triggered by a deterministic phrase match in `companion_core.
-robot_power_intent`, e.g. "turn off reachy"/"wake up reachy" over
-Telegram or any other bound channel) is a further exception, also
+triggered only by the explicit `/reachy standby`/`/reachy wake` command —
+or a registered channel alias — parsed by `companion_core.commands.
+parser`, over Telegram or any other bound channel; Phase 24b retired the
+prior free-form phrase match, see [phase-24b.md](phase-24b.md)) is a
+further exception, also
 owner-approved 2026-09-23: standby parks the real daemon at its own rest
 pose and de-torques motors (`POST /api/daemon/stop?goto_sleep=true`,
 safe to physically handle afterwards); resume replays the daemon's normal

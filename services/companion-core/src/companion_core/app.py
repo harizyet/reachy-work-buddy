@@ -140,7 +140,13 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ValidationError
 
-from companion_core import email_intent, memory_intent, rag_intent, robot_power_intent
+from companion_core import (
+    command_suggestion,
+    commands,
+    email_intent,
+    memory_intent,
+    rag_intent,
+)
 from companion_core.briefing import BriefingItem, build_briefing
 from companion_core.calendar.models import CalendarEvent
 from companion_core.calendar.postgres_store import PostgresCalendarStore
@@ -556,25 +562,44 @@ def create_app(
         approve_query = email_intent.match_approve(turn.text)
         cancel_send_query = email_intent.match_cancel_send(turn.text)
         send_query = email_intent.match_send(turn.text)
-        standby_command = robot_power_intent.is_standby_command(turn.text)
-        resume_command = robot_power_intent.is_resume_command(turn.text)
+        # Phase 24b: only an explicit, unambiguously-parsed command may
+        # reach these actions — free-form text (however phrase-matched)
+        # no longer can. See companion_core/commands/parser.py and
+        # docs/phase-24b.md; robot_power_intent's substring matcher is
+        # retired, not repurposed.
+        parsed_command = commands.parse(turn.text)
+        reachy_command = parsed_command.action if parsed_command and parsed_command.namespace == "reachy" else None
 
-        if standby_command:
+        if reachy_command == "standby":
             try:
                 results = await app.state.hub_client.standby_robots()
-                reply = robot_power_intent.format_standby_reply(results)
+                reply = commands.format_standby_reply(results)
             except httpx.HTTPError as exc:
                 # Unlike /debug/robots/... below, this branch is inside the
                 # always-returns-a-reply conversation flow — an unreachable
                 # hub must produce a spoken reply, not an unhandled 500.
                 reply = f"Couldn't reach reachy-hub to put Reachy in standby: {exc}"
             privacy = Privacy.PUBLIC
-        elif resume_command:
+        elif reachy_command == "wake":
             try:
                 results = await app.state.hub_client.resume_robots()
-                reply = robot_power_intent.format_resume_reply(results)
+                reply = commands.format_resume_reply(results)
             except httpx.HTTPError as exc:
                 reply = f"Couldn't reach reachy-hub to wake Reachy up: {exc}"
+            privacy = Privacy.PUBLIC
+        elif reachy_command == "status":
+            try:
+                robots = await app.state.hub_client.list_robots()
+                states: dict[str, str] = {}
+                for robot in robots:
+                    try:
+                        state = await app.state.hub_client.get_robot_state(robot["robot_id"])
+                        states[robot["robot_id"]] = str(state.get("embodiment_state", "unknown"))
+                    except httpx.HTTPError as exc:
+                        states[robot["robot_id"]] = f"unreachable: {exc}"
+                reply = commands.format_status_reply(robots, states)
+            except httpx.HTTPError as exc:
+                reply = f"Couldn't reach reachy-hub to check Reachy's status: {exc}"
             privacy = Privacy.PUBLIC
         elif is_next_event_query(turn.text):
             event = await app.state.calendar_store.next_event(datetime.now(UTC))
@@ -754,30 +779,40 @@ def create_app(
             if config.local is None and config.cloud is None and not turn.force_frontier:
                 reply = f"(turn {len(history)} via {turn.channel}) heard: {turn.text}"
             else:
-                try:
-                    persona = await app.state.persona_store.get()
-                    search_config = await app.state.search_settings_store.get()
-                    searched = should_search(turn.text, policy=search_config.policy)
-                    grounding_messages: list[dict[str, str]] = []
-                    if searched:
-                        query = build_query(turn.text, conversation_store.previous_user_message(turn.session_id))
-                        try:
-                            provider = create_provider(search_config, transport=websearch_transport)
-                            results = await provider.search(query, count=search_config.result_count)
-                            grounding_messages = build_grounding_messages(searched=True, failed=False, results=results)
-                        except SearchProviderError:
-                            # Never silently fall back to an ungrounded answer
-                            # when a search was actually warranted — the LLM
-                            # call still proceeds, but is told search failed.
-                            grounding_messages = build_grounding_messages(searched=True, failed=True, results=[])
-                    history_with_persona = [
-                        {"role": "system", "content": persona.system_prompt},
-                        *grounding_messages,
-                        *conversation_store.messages(turn.session_id),
-                    ]
-                    reply = await route_completion(config, history_with_persona, app.state.llm_usage_store, force_frontier=turn.force_frontier, transport=llm_transport)
-                except ProviderUnavailable:
-                    reply = "The language model is unavailable right now. Please try again shortly."
+                # Phase 24b: a non-authoritative suggestion check, layered
+                # on top of the ordinary conversation branch — its own
+                # failure (unavailable/timeout/malformed output) must
+                # never degrade or block this branch, and a suggestion is
+                # only ever offered in place of the model's answer, never
+                # alongside an executed action (docs/phase-24b.md).
+                suggestion = await command_suggestion.classify(turn.text, config, transport=llm_transport)
+                if suggestion is not None:
+                    reply = command_suggestion.format_suggestion_reply(suggestion.intent)
+                else:
+                    try:
+                        persona = await app.state.persona_store.get()
+                        search_config = await app.state.search_settings_store.get()
+                        searched = should_search(turn.text, policy=search_config.policy)
+                        grounding_messages: list[dict[str, str]] = []
+                        if searched:
+                            query = build_query(turn.text, conversation_store.previous_user_message(turn.session_id))
+                            try:
+                                provider = create_provider(search_config, transport=websearch_transport)
+                                results = await provider.search(query, count=search_config.result_count)
+                                grounding_messages = build_grounding_messages(searched=True, failed=False, results=results)
+                            except SearchProviderError:
+                                # Never silently fall back to an ungrounded answer
+                                # when a search was actually warranted — the LLM
+                                # call still proceeds, but is told search failed.
+                                grounding_messages = build_grounding_messages(searched=True, failed=True, results=[])
+                        history_with_persona = [
+                            {"role": "system", "content": persona.system_prompt},
+                            *grounding_messages,
+                            *conversation_store.messages(turn.session_id),
+                        ]
+                        reply = await route_completion(config, history_with_persona, app.state.llm_usage_store, force_frontier=turn.force_frontier, transport=llm_transport)
+                    except ProviderUnavailable:
+                        reply = "The language model is unavailable right now. Please try again shortly."
             privacy = classify_privacy(turn.text)
             if config.local is not None or config.cloud is not None or turn.force_frontier:
                 privacy = conversation_store.reply_privacy(turn.session_id, classify_privacy(turn.text + "\n" + reply))

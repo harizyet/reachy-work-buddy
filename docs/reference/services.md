@@ -53,13 +53,18 @@ with an explicit failure notice instead of silence. Provider API keys use
 the same core-owned `SecretStore` as LLM provider keys
 (`SecretContext("owner", f"websearch:{provider}", "api_key")`), never a
 plaintext column. See [docs/phase-24a.md](../phase-24a.md).
-`robot_power_intent.py` (Phase 22b) is one such handler: a phrase match
-(e.g. "turn off reachy", "wake up reachy") on any channel calls hub's
-`POST /robots/standby`/`resume` through `hub_client.py` — the same
+`commands/parser.py` (Phase 24b, superseding Phase 22b's retired
+`robot_power_intent.py` phrase matcher) is one such handler: only an
+explicit `/reachy standby`/`wake`/`status` command — or a registered
+channel alias — parsed into a structured `Command` on any channel calls
+hub's `POST /robots/standby`/`resume` through `hub_client.py` — the same
 direction every other robot-touching intent already reaches hub through
 (never reachy-embodiment directly, per ADR 0001) — entirely bypassing the
 model, matching every other deterministic-intent precedence guarantee
-here.
+here. Free-form text expressing the same intent (e.g. "turn off Reachy")
+is never itself authoritative; `command_suggestion.py`'s separate,
+schema-validated, fail-closed classifier may offer it only as a
+suggestion — see [docs/phase-24b.md](../phase-24b.md).
 Same-session turns serialize; the latest 39 user/assistant messages provide
 bounded context, reset on restart. Work-memory recall queries persistent
 records, never dumps that transcript. Calendar/email replies are

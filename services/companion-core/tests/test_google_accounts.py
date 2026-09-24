@@ -508,6 +508,9 @@ def test_telegram_requires_explicit_private_owner_chat(monkeypatch):
         async def send_message(self, chat_id, text):
             self.sent.append((chat_id, text))
 
+        async def set_my_commands(self, commands):
+            pass
+
     async def run():
         svc, _google, _repo, _clock = service()
         await configure(svc)

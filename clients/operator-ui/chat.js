@@ -6,6 +6,12 @@ function telegramLabel(telegram) {
   return telegram.last_poll_at ? 'Polling stalled' : 'Awaiting first successful poll';
 }
 
+// Phase 24b: the fixed set of explicit commands the parser accepts —
+// used only for client-side autocomplete/button rendering, never to
+// decide anything authoritative (that's companion_core/commands/parser.py).
+const REACHY_COMMANDS = ['/reachy standby', '/reachy wake', '/reachy status'];
+const SUGGESTED_COMMAND_PATTERN = /\/reachy (standby|wake|status)\b/;
+
 function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
   const el = id => document.getElementById(id);
   let user = null;
@@ -21,6 +27,7 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
     el('chat-use-user').disabled = pending;
     el('clear-chat').disabled = pending;
     onBusyChange(pending);
+    updateCommandHints();
   }
 
   function clearView() {
@@ -31,6 +38,12 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
     el('chat-transcript').append(empty);
   }
 
+  function dispatchCommand(command) {
+    if (pending) return;
+    el('chat-text').value = command;
+    el('chat-form').requestSubmit();
+  }
+
   function appendMessage(speaker, text) {
     el('chat-empty')?.remove();
     const item = document.createElement('article');
@@ -38,10 +51,44 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
     const label = document.createElement('strong'); label.textContent = speaker;
     const body = document.createElement('p'); body.textContent = text;
     item.append(label, body);
+    // Phase 24b: a suggested-command reply renders as a real button, not
+    // by re-parsing the reply text as HTML — clicking it re-sends the
+    // literal command text through the normal /messages path, the same
+    // as typing it, which is itself the authorization event.
+    const match = speaker !== 'You' && SUGGESTED_COMMAND_PATTERN.exec(text);
+    if (match) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'chat-command-suggestion';
+      button.textContent = `Run: ${match[0]}`;
+      button.addEventListener('click', () => dispatchCommand(match[0]));
+      item.append(button);
+    }
     el('chat-transcript').append(item);
     item.scrollIntoView({block: 'nearest'});
     return item;
   }
+
+  function updateCommandHints() {
+    const hints = el('chat-command-hints');
+    if (!hints) return;
+    const value = el('chat-text').value;
+    const matches = value.startsWith('/') ? REACHY_COMMANDS.filter(c => c.startsWith(value)) : [];
+    hints.replaceChildren();
+    hints.hidden = matches.length === 0 || matches[0] === value;
+    for (const command of matches) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = command;
+      button.addEventListener('click', () => {
+        el('chat-text').value = command;
+        hints.hidden = true;
+        el('chat-text').focus();
+      });
+      hints.append(button);
+    }
+  }
+  el('chat-text').addEventListener('input', updateCommandHints);
 
   async function refreshSession() {
     if (!user || !isLoggedIn()) return;

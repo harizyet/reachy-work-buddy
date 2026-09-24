@@ -51,3 +51,13 @@ class TelegramClient:
         resp = await self._client.post("/sendMessage", json={"chat_id": chat_id, "text": text})
         resp.raise_for_status()
         return resp.json()["result"]
+
+    async def set_my_commands(self, commands: list[dict[str, str]]) -> None:
+        """Registers the bot's command menu (Telegram's setMyCommands).
+        Phase 24b: `BotCommand.command` cannot contain a space, so this
+        registers the flat aliases (`standby`, `wake`, `reachy_status`),
+        not the namespaced `/reachy <action>` form — see
+        companion_core/commands/parser.py's TELEGRAM_ALIASES, which both
+        forms parse to identically."""
+        resp = await self._client.post("/setMyCommands", json={"commands": commands})
+        resp.raise_for_status()

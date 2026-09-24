@@ -9,6 +9,8 @@ from typing import Any
 
 import httpx
 
+from shared.protocols.operator_api import ROBOTS, ROBOTS_RESUME, ROBOTS_STANDBY
+
 
 class HubClient:
     def __init__(
@@ -45,20 +47,26 @@ class HubClient:
         resp.raise_for_status()
         return resp.json()
 
+    async def list_robots(self) -> list[dict[str, Any]]:
+        resp = await self._client.get(ROBOTS)
+        resp.raise_for_status()
+        return resp.json()
+
     async def standby_robots(self) -> list[dict[str, Any]]:
-        """Phase 22b: owner-requested remote "turn off/standby" command.
-        No robot_id — reachy-hub loops every registered robot itself (see
-        that route's docstring), so this stays consistent with a
-        single-robot deployment without core needing to track an id just
-        for this."""
-        resp = await self._client.post("/robots/standby")
+        """Phase 22b: owner-requested remote "turn off/standby" command,
+        now reached only via the explicit `/reachy standby` command
+        (Phase 24b, companion_core/commands/parser.py). No robot_id —
+        reachy-hub loops every registered robot itself (see that route's
+        docstring), so this stays consistent with a single-robot
+        deployment without core needing to track an id just for this."""
+        resp = await self._client.post(ROBOTS_STANDBY)
         resp.raise_for_status()
         return resp.json()
 
     async def resume_robots(self, *, wake_up: bool = True) -> list[dict[str, Any]]:
         """Resumes every registered robot previously put into standby.
-        See robot_power_intent.py for the owner-present exception this
-        requires when driving a real daemon's wake-up motion."""
-        resp = await self._client.post("/robots/resume", params={"wake_up": wake_up})
+        See AGENTS.md for the owner-present exception this requires when
+        driving a real daemon's wake-up motion."""
+        resp = await self._client.post(ROBOTS_RESUME, params={"wake_up": wake_up})
         resp.raise_for_status()
         return resp.json()

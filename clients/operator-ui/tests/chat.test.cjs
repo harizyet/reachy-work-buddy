@@ -147,3 +147,65 @@ test('web chat handles identities, replies, failures, login expiry, and fresh ta
     await new Promise(resolve => server.close(resolve));
   }
 });
+
+test('web chat renders command autocomplete and dispatches suggested-command buttons', async () => {
+  const messages = [];
+  const server = http.createServer(async (req, res) => {
+    const url = new URL(req.url, 'http://fixture');
+    if (!url.pathname.startsWith('/hub/')) url.pathname = '/hub' + url.pathname;
+    const json = (status, body) => { res.writeHead(status, {'Content-Type': 'application/json'}); res.end(JSON.stringify(body)); };
+    if (url.pathname.startsWith('/hub/ui/')) {
+      const name = url.pathname.substring('/hub/ui/'.length) || 'index.html';
+      if (!['index.html', 'app.js', 'chat.js', 'accounts.js', 'style.css'].includes(name)) return json(404, {});
+      res.writeHead(200, {'Content-Type': name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : 'text/html'});
+      return res.end(fs.readFileSync(path.join(__dirname, '..', name)));
+    }
+    if (url.pathname === '/hub/auth/me') return json(200, {username: 'owner'});
+    if (url.pathname === '/hub/status') return json(200, {
+      reachy_hub: {status: 'ok'}, companion_core: {status: 'ok'}, robots: [],
+      default_user_id: 'telegram-owner', llm: {configured: false, usage: {data: {summary: {calls: 0, errors: 0, prompt_tokens: 0, completion_tokens: 0, avg_latency_ms: 0}, entries: []}}},
+      telegram: {configured: false, healthy: false},
+    });
+    if (url.pathname === '/hub/settings/llm') return json(200, {local: null});
+    if (url.pathname.startsWith('/hub/sessions/')) return json(404, {detail: 'No session'});
+    if (url.pathname === '/hub/messages') {
+      const chunks = []; for await (const chunk of req) chunks.push(chunk);
+      const body = JSON.parse(Buffer.concat(chunks)); messages.push(body);
+      return json(200, {reply: body.text === '/reachy standby'
+        ? 'Reachy is now in standby — safe to move or put away.'
+        : 'It sounds like you want to put Reachy into standby. Use /reachy standby.', delivery_channel: 'phone'});
+    }
+    return json(200, []);
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const browser = await chromium.launch({headless: true});
+  try {
+    const page = await browser.newPage({viewport: {width: 390, height: 844}});
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await page.goto(`http://127.0.0.1:${server.address().port}/hub/ui/`);
+    await page.locator('#chat-tab').click();
+    await page.waitForFunction(() => !document.getElementById('chat-send').disabled);
+
+    await page.locator('#chat-text').fill('/reachy sta');
+    await page.waitForFunction(() => !document.getElementById('chat-command-hints').hidden);
+    assert.match(await page.locator('#chat-command-hints').textContent(), /\/reachy standby/);
+    await page.locator('#chat-command-hints button').first().click();
+    assert.equal(await page.locator('#chat-text').inputValue(), '/reachy standby');
+
+    await page.locator('#chat-send').click();
+    await page.waitForFunction(() => document.querySelectorAll('.from-reachy').length === 1);
+    assert.equal(messages.at(-1).text, '/reachy standby');
+    assert.equal(await page.locator('.chat-command-suggestion').count(), 0);
+
+    await page.locator('#chat-text').fill('Could you put Reachy to sleep?');
+    await page.locator('#chat-send').click();
+    await page.waitForFunction(() => document.querySelectorAll('.from-reachy').length === 2);
+    await page.locator('.chat-command-suggestion').click();
+    await page.waitForFunction(() => document.querySelectorAll('.from-reachy').length === 3);
+    assert.equal(messages.at(-1).text, '/reachy standby');
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser.close();
+    await new Promise(resolve => server.close(resolve));
+  }
+});

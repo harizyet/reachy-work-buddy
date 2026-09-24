@@ -30,9 +30,48 @@ include this service and a non-Off policy (self-hosted-deployment/
 production acceptance); the operator UI card was not exercised in a real
 browser. See [ADR 0022](docs/adr/0022-web-search-grounding.md) and
 [verification](docs/verification/phase-24a-search-assisted-2026-09-24.md).
-Phase 24b (structured command/intent authorization) remains planned only —
-see its own section below for the specific open false-positive issue it's
-meant to close.
+Phase 24b (structured command and intent authorization) is implemented
+(2026-09-24): `companion_core/commands/` (`parser.py`'s deterministic
+`/reachy standby`/`wake`/`status` parser plus Telegram flat aliases
+`/standby`/`/wake`/`/reachy_status`, all parsing to an identical structured
+`Command`; `replies.py`'s formatting, moved from the retired
+`robot_power_intent.py`) evaluated in `app.py` at the same precedence
+position the retired substring matcher occupied — only this parsed
+`Command` may call `HubClient.standby_robots`/`resume_robots`/
+`get_robot_state` now. `companion_core/command_suggestion.py` adds the
+separate, schema-validated (`shared/models/command_suggestion.py`),
+fail-closed natural-language suggestion classifier: gated by a cheap
+"mentions reachy" pre-filter (an over-inclusive cost/latency gate only —
+it never decides suggestion outcome, only whether the classifier is worth
+calling), it replaces the model's answer with a suggested-command reply
+only when it resolves `speech_act == "request"` above a confidence
+threshold; any failure/timeout/malformed output/non-request speech act
+falls back to the ordinary conversational reply, verified by call-count
+assertions in `test_command_suggestion.py` (fixture LLM transport, no
+mocks of companion-core's own code). reachy-hub now calls Telegram's
+`setMyCommands` at startup (best-effort) to register the three flat
+aliases in its bot menu. The operator UI's web chat renders `/reachy`
+command autocomplete while typing and a real clickable button under any
+reply containing a suggested `/reachy <action>` command — clicking it
+re-sends the literal command text through the normal `/messages` path
+(the click is the authorization event), never via HTML injection (Chromium
+Playwright test "web chat renders command autocomplete and dispatches
+suggested-command buttons" in `clients/operator-ui/tests/chat.test.cjs`).
+All
+of docs/phase-24b.md's negative conversational examples ("How do I turn
+off Reachy?", "Don't turn off Reachy.", etc.) are covered by parametrized
+tests proving no actuation and, separately, that the classifier itself
+resolves them to a non-`"request"` speech act rather than merely failing
+to match. Route strings `/robots`, `/robots/standby`, `/robots/resume` are
+now `shared/protocols/operator_api.py` constants, imported by both
+`hub_client.py` and `reachy_hub/app.py`'s route decorators, per AGENTS.md.
+**Verified only against isolated fixtures** (`pytest services shared`:
+463 passed; `ruff check services shared`: clean; both operator-ui
+Playwright suites pass) — no live Telegram bot run, no real robot
+actuation, and the `/reachy gesture <name>` syntax `docs/phase-24b.md`
+uses as an illustrative example is deliberately **not** parsed
+(`_KNOWN_ACTIONS` covers only the three actions actually wired to a hub
+call, per AGENTS.md's "no speculative endpoints" rule).
 
 Phases 0–21 and 22a are implemented. Phase 23 implementation is complete:
 versioned migrations, SecretStore, owner-bound Google OAuth, Accounts UI and
@@ -136,15 +175,16 @@ deployment.md. Full companion-core → reachy-hub → reachy-embodiment chain
 covered by new tests (387 passed total, up from 371); **UNVERIFIED against
 real hardware** — the daemon's stop/start endpoints have not been called
 live yet, only confirmed present via its OpenAPI/source.
-**Known open issue (2026-09-24, not yet fixed):** `robot_power_intent`'s
-substring match has no negation/question/hypothetical awareness, so
-conversational text like "How do I turn off Reachy?" or "Don't wake up
-Reachy" currently actuates the real standby/resume path on an
-owner-authenticated channel, the same as an actual command. Deliberately
-left unfixed in place pending [Phase 24b](docs/phase-24b.md)'s structured
-command/intent-authorization redesign rather than patched piecemeal now —
-owner's explicit call, 2026-09-24. Until 24b lands, treat any standby/wake
-phrase in ordinary conversation as capable of moving/parking the robot.
+**Known issue, closed 2026-09-24:** `robot_power_intent`'s substring match
+had no negation/question/hypothetical awareness, so conversational text
+like "How do I turn off Reachy?" or "Don't wake up Reachy" actuated the
+real standby/resume path on an owner-authenticated channel, the same as an
+actual command. Left unfixed in place at the time pending a structured
+redesign rather than patched piecemeal — owner's explicit call, 2026-09-24
+— and closed later the same day by [Phase 24b](docs/phase-24b.md) (see
+above): `robot_power_intent` is now retired entirely, and only the
+explicit `/reachy standby`/`wake` command (or its Telegram alias) reaches
+this path.
 [Phase 27](docs/phase-27.md) was refocused 2026-09-23 from a generic virtual
 meeting bot to an embodied secretary: owner-present meeting companion (27a);
 a bounded temporary-absence catch-up mode for short owner step-outs within an

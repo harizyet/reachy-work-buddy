@@ -11,6 +11,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 
 import httpx
+import pytest
 from companion_core.app import create_app
 from companion_core.calendar.store import InMemoryCalendarStore
 from companion_core.consent.store import InMemoryConfirmationStore
@@ -137,10 +138,13 @@ def test_conversation_turn_replies_and_counts_turns() -> None:
 
 
 def test_standby_command_parks_registered_robot_via_hub_and_embodiment() -> None:
+    """Phase 24b: only the explicit `/reachy standby` command reaches the
+    real standby path now — see the negative-example tests below for the
+    free-form phrasing this used to (wrongly) actuate on."""
     with make_chain(registered_robots=[Robot(robot_id="desk-1", base_url="http://desk-1.local")]) as client:
         resp = client.post(
             "/conversation",
-            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "turn off reachy"},
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "/reachy standby"},
         )
         assert resp.status_code == 200
         body = resp.json()
@@ -159,11 +163,11 @@ def test_resume_command_wakes_registered_robot_via_hub_and_embodiment() -> None:
     with make_chain(registered_robots=[Robot(robot_id="desk-1", base_url="http://desk-1.local")]) as client:
         client.post(
             "/conversation",
-            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "turn off reachy"},
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "/reachy standby"},
         )
         resp = client.post(
             "/conversation",
-            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "wake up reachy"},
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "/reachy wake"},
         )
         assert resp.status_code == 200
         assert "wak" in resp.json()["reply"].lower()
@@ -173,14 +177,56 @@ def test_resume_command_wakes_registered_robot_via_hub_and_embodiment() -> None:
         assert state_resp.json()["connected"] is True
 
 
+def test_telegram_alias_parses_to_the_same_command_as_the_namespaced_form() -> None:
+    with make_chain(registered_robots=[Robot(robot_id="desk-1", base_url="http://desk-1.local")]) as client:
+        resp = client.post(
+            "/conversation",
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "telegram", "text": "/standby"},
+        )
+        assert resp.status_code == 200
+        assert "standby" in resp.json()["reply"].lower()
+        assert client.get("/debug/robots/desk-1/state").json()["embodiment_state"] == "sleep"
+
+
 def test_standby_command_with_no_registered_robot_says_so() -> None:
     with make_chain() as client:
         resp = client.post(
             "/conversation",
-            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "standby reachy"},
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "/reachy standby"},
         )
         assert resp.status_code == 200
         assert "nothing to turn off" in resp.json()["reply"].lower()
+
+
+def test_status_command_reports_registered_robots() -> None:
+    with make_chain(registered_robots=[Robot(robot_id="desk-1", base_url="http://desk-1.local")]) as client:
+        resp = client.post(
+            "/conversation",
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "/reachy status"},
+        )
+        assert resp.status_code == 200
+        assert "desk-1" in resp.json()["reply"]
+
+
+@pytest.mark.parametrize("text", [
+    "How do I turn off Reachy?",
+    "Don't turn off Reachy.",
+    "I don't want to turn off Reachy.",
+    "Can you explain how to turn off Reachy?",
+    "What happens if I turn off Reachy?",
+    "Is it safe to turn off Reachy?",
+    "How do I wake up Reachy?",
+    "Don't wake up Reachy.",
+])
+def test_conversational_mentions_never_actuate_the_robot(text: str) -> None:
+    """Phase 24b exit criterion: none of these calls the real
+    standby/resume path — the retired substring matcher used to
+    false-positive on every one of them."""
+    with make_chain(registered_robots=[Robot(robot_id="desk-1", base_url="http://desk-1.local")]) as client:
+        resp = client.post("/conversation", json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": text})
+        assert resp.status_code == 200
+        state_resp = client.get("/debug/robots/desk-1/state")
+        assert state_resp.json()["embodiment_state"] != "sleep"
 
 
 def test_conversation_turn_history_is_isolated_per_session() -> None:

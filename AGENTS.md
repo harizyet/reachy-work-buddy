@@ -92,8 +92,10 @@ behaviour not already in the mapped, tested set. Those still need the
 owner present per the rule above.
 
 Remote standby/resume (`POST /robots/standby`, `POST /robots/resume` on
-reachy-hub; `companion_core.robot_power_intent`'s deterministic phrase
-match, e.g. "turn off reachy"/"wake up reachy") is a further, narrower
+reachy-hub; triggered only via the explicit `/reachy standby`/`/reachy wake`
+command — or a registered channel alias — parsed by
+`companion_core.commands.parser`, per Phase 24b; free-form phrase matching
+was retired, not repurposed, see docs/phase-24b.md) is a further, narrower
 exception the owner explicitly approved, 2026-09-23, alongside the two
 above: resume replays the real daemon's wake-up motion (same class of
 motion the production-boot exception above already covers unattended),

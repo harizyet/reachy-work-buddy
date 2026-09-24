@@ -55,6 +55,7 @@ class FakeTelegramBotAPI:
     def __init__(self) -> None:
         self.pending_updates: list[dict] = []
         self.sent_messages: list[tuple[int, str]] = []
+        self.registered_commands: list[dict] | None = None
         self._next_update_id = 1
 
     def enqueue_text_message(self, chat_id: int, text: str) -> None:
@@ -74,6 +75,9 @@ class FakeTelegramBotAPI:
             body = json.loads(request.content)
             self.sent_messages.append((body["chat_id"], body["text"]))
             return httpx.Response(200, json={"ok": True, "result": {}})
+        if request.url.path.endswith("/setMyCommands"):
+            self.registered_commands = json.loads(request.content)["commands"]
+            return httpx.Response(200, json={"ok": True, "result": True})
         raise AssertionError(f"unexpected Telegram API call: {request.url.path}")
 
 
@@ -113,6 +117,19 @@ def test_telegram_disabled_by_default_without_a_token() -> None:
         # No crash, no Postgres needed for the (unused) telegram chat registry.
         resp = client.get("/health")
         assert resp.status_code == 200
+
+
+def test_telegram_startup_registers_flat_command_aliases() -> None:
+    """Phase 24b: Telegram's BotCommand.command can't hold a space, so the
+    namespaced `/reachy standby` form isn't registered here — only the
+    flat aliases companion_core.commands.parser.TELEGRAM_ALIASES also
+    parses to the identical structured Command."""
+    fake_api = FakeTelegramBotAPI()
+    hub_app = make_hub_app(fake_api, run_telegram_poll_task=True)
+    with TestClient(hub_app):
+        pass
+    assert fake_api.registered_commands is not None
+    assert {c["command"] for c in fake_api.registered_commands} == {"standby", "wake", "reachy_status"}
 
 
 def test_inbound_telegram_message_reaches_companion_core_and_gets_a_reply() -> None:
