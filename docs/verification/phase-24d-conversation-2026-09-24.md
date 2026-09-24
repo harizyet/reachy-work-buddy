@@ -66,6 +66,22 @@ socket mounted. The robot re-registered over WSS.
   let `Gst.init()` succeed with all needed elements present. The Dockerfile
   now deletes it after installing the packages. The amd64 build could not
   have caught this.
+- **Verified on nano-1 at `101091e`** (image `6870ae7a…`): in a throwaway
+  container (UID 1000, no network), `Gst.init()` loaded all 256 plugins in
+  process and exited 0. After the container swap, two `GET /camera/frame`
+  calls returned 200 with valid 1920x1080 JPEGs (≈400 KB each): 11.4 s cold,
+  0.056 s warm. `RestartCount` stayed 0, the daemon PID was unchanged, and
+  the hub reported nano-1 `voice_capable: true`. This is also the first real
+  run of the Phase 22c LOCAL camera path on the Nano. It is not 22c's
+  scene-change acceptance.
+- **Known limitation, accepted for now:** GStreamer's external plugin scanner
+  cannot start in the container. Docker 20.10.7's default seccomp profile
+  returns EPERM (not ENOSYS) for `close_range`, so GLib 2.84's spawn aborts
+  instead of falling back. The A/B test against `seccomp=unconfined` confirmed
+  this. Plugins therefore load in process: the first media call after a
+  container start costs ≈11 s, and a crashing plugin kills the process
+  instead of being blacklisted. The fix options are a narrow seccomp
+  profile or a newer Docker on the Nano. Neither was done during 24d.
 - nano-1's `.asoundrc`: `reachymini_audio_sink` is `dmix` and
   `reachymini_audio_src` is `dsnoop`, both on the Pollen USB audio card, and
   the daemon uses the same aliases. So the SDK client's playback chain shares
