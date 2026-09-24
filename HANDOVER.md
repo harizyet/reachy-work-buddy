@@ -6,6 +6,14 @@ not repeated in this file.
 
 ## Current work
 
+Next implementation priority: [Phases 24c–24d](docs/phase-24cd.md), inserted
+between 24b and 25. First audit and complete the real Reachy microphone →
+conversation → speaker workflow, then separately pass supervised physical
+multi-turn acceptance. Robot mic ingestion is missing; WAV STT/TTS and
+standalone device checks do not prove conversation. Phase 25 is gated on
+both phases. This session changed planning documentation only; no new
+conversation implementation or live acceptance was performed.
+
 Phase 24a (search-assisted, freshness-aware assistant) is implemented
 (2026-09-24): `shared/models/websearch.py`, migration `006_search_config`
 (bumps `shared.database.SCHEMA_REVISION`), `companion_core/websearch/`
@@ -133,7 +141,7 @@ OAuth client file, deployed HTTPS hostname, or live helper run was supplied
 this session. Phase 23/23b are not yet production-accepted. The
 Google-enabled physical repeat remains deferred. Phase 24a is implemented
 and real-SearXNG-verified, and Phase 24b is implemented and isolated-
-fixture/browser-verified (see above for both); Phases 25–27 remain
+fixture/browser-verified (see above for both); Phases 24c–24d and 25–27 remain
 planning only.
 
 Phase 22b (physical acceptance) started 2026-09-23 with the owner physically
@@ -187,7 +195,7 @@ can't silently regress it again. Microphone capture was separately
 confirmed working (owner's voice recognizable on a recorded/played-back
 sample) — this tests only the physical mic/ALSA path, not our own voice
 feature: there is still no code routing the robot's mic into the
-homelab's `/voice/turn` STT pipeline, unscoped future work.
+homelab's `/voice/turn` STT pipeline; now scoped in Phase 24c.
 
 Added remote standby/resume (Phase 22b, owner-requested): a deterministic
 phrase match in `companion_core.robot_power_intent` (e.g. "turn off

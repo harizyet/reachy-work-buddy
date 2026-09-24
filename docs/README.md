@@ -28,6 +28,8 @@ claims that those features already work.
   explicit structured commands or existing consent/confirmation paths
   authorize consequential actions; natural-language intent only suggests
   them, never authorizes.
+- [Phases 24c–24d](phase-24cd.md): complete the robot conversation workflow,
+  then pass physical end-to-end acceptance before owner recognition.
 - [Phase 25](phase-25.md): owner recognition and voice access control.
 - [Phase 26](phase-26.md): meeting transcription and minutes.
 - [Phase 27](phase-27.md): embodied meeting secretary — owner-present companion, then physical secretary attendance, then bounded delegation; virtual/cloud attendance is deferred.
