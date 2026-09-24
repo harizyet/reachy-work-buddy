@@ -189,6 +189,21 @@ if [[ -d /dev/snd ]]; then
 else
     log_warn "/dev/snd not found — audio capability may be unavailable"
 fi
+
+# Phase 22b: reachy_mini's LOCAL media backend (ReachyDaemonBackend.
+# capture_frame) reads camera frames from this Unix socket, which the
+# daemon's own media_server creates once it's running (not present while
+# the daemon is in an error/stopped state — see docs/verification). --network
+# host does not share the filesystem namespace, so this still needs an
+# explicit bind mount even though both processes are on the same host.
+VOLUME_ARGS=()
+CAMERA_SOCKET=/tmp/reachymini_camera_socket
+if [[ -S "$CAMERA_SOCKET" ]]; then
+    VOLUME_ARGS+=(-v "${CAMERA_SOCKET}:${CAMERA_SOCKET}")
+else
+    log_warn "$CAMERA_SOCKET not found — daemon may not be running/healthy yet; camera capture will fail until it exists"
+fi
+
 for grp in dialout video audio; do
     gid="$(getent group "$grp" 2>/dev/null | cut -d: -f3 || true)"
     if [[ -n "$gid" ]]; then
@@ -236,7 +251,7 @@ else
             -e "HUB_WS_URL=${HUB_WS_URL}" \
             -e "ROBOT_ID=${ROBOT_ID}" \
             -e "ROBOT_TOKEN=${ROBOT_TOKEN}" \
-            "${DEVICE_ARGS[@]}" "${GROUP_ARGS[@]}" \
+            "${DEVICE_ARGS[@]}" "${GROUP_ARGS[@]}" "${VOLUME_ARGS[@]}" \
             "$IMAGE_NAME" \
             /app/.venv/bin/uvicorn reachy_embodiment.app:app --app-dir services/reachy-embodiment/src \
             --host 0.0.0.0 --port "$HTTP_PORT" >/dev/null

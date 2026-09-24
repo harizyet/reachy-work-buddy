@@ -13,6 +13,20 @@
 # used there.
 FROM python:3.13-slim
 
+# Phase 22b camera refactor: PyGObject (the `gi` bindings `reachy_mini`'s
+# LOCAL media backend needs) has no PyPI wheel and builds from source, so
+# its build deps (libgirepository/libcairo/pkg-config/gcc/python3-dev) are
+# needed even though only the resulting .so is used at runtime. The
+# gstreamer1.0-plugins-bad package is what actually ships `unixfdsrc`, the
+# element that reads the daemon's local IPC camera socket — confirmed
+# present at 1.26.2 on this same base image (Debian trixie), which is
+# above the >=1.24 floor the daemon's own media_server requires.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgirepository1.0-dev gobject-introspection libcairo2-dev pkg-config gcc python3-dev \
+    gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
+    libgstreamer1.0-0 gir1.2-gstreamer-1.0 gir1.2-glib-2.0 \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN pip install --no-cache-dir uv
 
 WORKDIR /app

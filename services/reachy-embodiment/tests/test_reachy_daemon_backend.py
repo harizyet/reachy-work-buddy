@@ -242,68 +242,56 @@ def test_play_audio_raises_on_upload_failure() -> None:
         backend.play_audio(_wav_bytes())
 
 
-class _FakeCapture:
-    def __init__(self, *, opens: bool = True, reads: bool = True) -> None:
-        self.opens = opens
-        self.reads = reads
-        self.released = False
+class _FakeMedia:
+    def __init__(self, frame: np.ndarray | None) -> None:
+        self._frame = frame if frame is not None else np.zeros((4, 4, 3), dtype=np.uint8)
 
-    def isOpened(self) -> bool:
-        return self.opens
-
-    def read(self) -> tuple[bool, np.ndarray | None]:
-        if not self.reads:
-            return False, None
-        return True, np.zeros((4, 4, 3), dtype=np.uint8)
-
-    def release(self) -> None:
-        self.released = True
+    def get_frame(self) -> np.ndarray:
+        return self._frame
 
 
-def test_capture_frame_releases_and_reacquires_daemon_media(monkeypatch: pytest.MonkeyPatch) -> None:
-    calls = []
+class _FakeReachyMini:
+    """Stand-in for `reachy_mini.ReachyMini(media_backend="local")`.
 
-    def handler(request: httpx.Request) -> httpx.Response:
-        calls.append(request.url.path)
-        return httpx.Response(200, json={"status": "ok"})
+    Records how many times it was constructed so tests can confirm the
+    backend keeps one instance alive across calls instead of rebuilding it
+    (and re-touching the daemon's media pipeline) per capture.
+    """
 
-    backend = make_backend(handler)
+    instances = 0
 
-    fake_capture = _FakeCapture()
-    monkeypatch.setattr(cv2, "VideoCapture", lambda _device: fake_capture)
+    def __init__(self, frame: np.ndarray | None = None) -> None:
+        _FakeReachyMini.instances += 1
+        self.media = _FakeMedia(frame)
+
+
+def test_capture_frame_reads_via_local_media_backend() -> None:
+    mini = _FakeReachyMini()
+    backend = ReachyDaemonBackend("http://daemon.test", media_client_factory=lambda: mini)
 
     frame = backend.capture_frame()
 
-    assert calls == ["/api/media/release", "/api/media/acquire"]
-    assert fake_capture.released is True
     assert isinstance(frame, bytes)
     assert len(frame) > 0  # a real JPEG encode of the fake frame
 
 
-def test_capture_frame_reacquires_media_even_if_read_fails(monkeypatch: pytest.MonkeyPatch) -> None:
-    calls = []
+def test_capture_frame_reuses_one_media_client_across_calls() -> None:
+    _FakeReachyMini.instances = 0
+    backend = ReachyDaemonBackend("http://daemon.test", media_client_factory=_FakeReachyMini)
 
-    def handler(request: httpx.Request) -> httpx.Response:
-        calls.append(request.url.path)
-        return httpx.Response(200, json={"status": "ok"})
+    backend.capture_frame()
+    backend.capture_frame()
 
-    backend = make_backend(handler)
-    fake_capture = _FakeCapture(reads=False)
-    monkeypatch.setattr(cv2, "VideoCapture", lambda _device: fake_capture)
-
-    with pytest.raises(RobotBackendError):
-        backend.capture_frame()
-
-    # /media/acquire must still have been called despite the failure, so
-    # the daemon isn't left permanently locked out of its own camera.
-    assert calls == ["/api/media/release", "/api/media/acquire"]
-    assert fake_capture.released is True
+    # Constructing ReachyMini per call would re-run its daemon handshake on
+    # every single capture; this is the exact overhead the LOCAL-backend
+    # switch was meant to avoid (the prior release/acquire approach paid
+    # it every time — see robot.py's capture_frame docstring).
+    assert _FakeReachyMini.instances == 1
 
 
-def test_capture_frame_raises_if_daemon_will_not_release_media() -> None:
-    def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(500, json={"detail": "already released"})
+def test_capture_frame_raises_if_jpeg_encode_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    backend = ReachyDaemonBackend("http://daemon.test", media_client_factory=_FakeReachyMini)
+    monkeypatch.setattr(cv2, "imencode", lambda *_args: (False, None))
 
-    backend = make_backend(handler)
     with pytest.raises(RobotBackendError):
         backend.capture_frame()

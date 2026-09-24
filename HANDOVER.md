@@ -116,6 +116,17 @@ continuing to record while the owner briefly steps out is still technically
 owner-absent capture under Phase 24's presence-based rule, even though the
 recording began while they were present.
 
+Phase 22b continued 2026-09-24 (owner physically present, coordinated across
+a homelab session and a Nano-connected session): found the daemon silently
+in an error state (motors undetected, likely power) despite systemd
+reporting it active; owner checked power and restarted it themselves,
+after which it came up healthy. A real camera capture then succeeded
+end to end, which surfaced that the existing capture_frame implementation
+(release/acquire+OpenCV) interrupts the daemon's whole media pipeline per
+call; `capture_frame` was refactored to reachy_mini's recommended LOCAL
+media backend (code+tests done, real-device build/run still open). See
+[camera evidence](docs/verification/phase-22b-camera-2026-09-24.md) above.
+
 No production deployment was upgraded. This session did bring up and upgrade
 the homelab's own disposable dev/test stack (through `004_persona`) for
 interactive user testing — real owner login, OpenVINO local LLM routing with
@@ -151,8 +162,21 @@ were removed; the pre-existing OVMS container was left running.
   the real daemon's **simulator**, not physical Nano motors.
 - WS registration/auth/heartbeat/reconnect is implemented; semantic commands
   still use the old inbound HTTP path. TLS/network-change/media acceptance,
-  clean-image provisioning, physical voice/motion, and soak/restore checks
-  remain open. Use the [acceptance matrix](docs/phase-22-23.md#satisfactory-run-acceptance-matrix).
+  clean-image provisioning, and soak/restore checks remain open. Use the
+  [acceptance matrix](docs/phase-22-23.md#satisfactory-run-acceptance-matrix).
+- Camera (2026-09-24): a real `GET /camera/frame` capture succeeded against
+  physical hardware (1920x1080, no simulator marker) via the then-current
+  release/acquire+OpenCV path, but without a deliberate scene change, so it
+  doesn't yet satisfy the acceptance matrix's "fresh scene corresponds to a
+  command" bar. That capture also showed the release/acquire approach tears
+  down the daemon's whole media pipeline (audio+WebRTC) for ~2.5-4s per
+  call, so `ReachyDaemonBackend.capture_frame` was refactored to reachy_mini
+  SDK's recommended LOCAL media backend instead — code and unit tests are
+  done (375 passed, up from 371), but the Docker image/container has not
+  been rebuilt or run against the real daemon socket on the Nano. See
+  [Phase 22b camera evidence](docs/verification/phase-22b-camera-2026-09-24.md)
+  for exact figures and what remains unverified. Physical voice/motion
+  acceptance also remains open per the matrix above.
 
 ## Machine-specific continuation notes
 

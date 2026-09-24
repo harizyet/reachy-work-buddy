@@ -31,6 +31,7 @@ import io
 import logging
 import time
 import wave
+from collections.abc import Callable
 from typing import Protocol
 
 import httpx
@@ -196,6 +197,7 @@ class ReachyDaemonBackend:
         status_timeout: float = 1.5,
         behaviour_moves: dict[Behaviour, tuple[str, str]] | None = None,
         transport: httpx.BaseTransport | None = None,
+        media_client_factory: Callable[[], object] | None = None,
     ) -> None:
         # Every reachy-mini-daemon route lives under /api (e.g. /api/daemon/status,
         # /api/move/play/...) — confirmed live against the real daemon's own
@@ -216,6 +218,13 @@ class ReachyDaemonBackend:
         )
         self._status_timeout = status_timeout
         self._behaviour_moves = behaviour_moves if behaviour_moves is not None else dict(_DEFAULT_BEHAVIOUR_MOVES)
+        # Phase 22b camera refactor: lazily created, then kept alive for the
+        # process lifetime (never used as a context manager, so its
+        # __exit__ never fires and never calls release_media/acquire_media
+        # on the daemon). `media_client_factory` lets tests substitute a
+        # fake without a real `reachy_mini` import.
+        self._media_client_factory = media_client_factory
+        self._mini: object | None = None
 
     def _fetch_status(self) -> dict | None:
         try:
@@ -269,51 +278,52 @@ class ReachyDaemonBackend:
             log.warning("play_behaviour(%s) -> %s/%s failed: %s", name.value, dataset, move_name, exc)
 
     def capture_frame(self) -> bytes:
-        """Grabs one JPEG frame directly from /dev/video0 via V4L2/OpenCV.
+        """Grabs one JPEG frame via the reachy_mini SDK's LOCAL media
+        backend, per Pollen's documented media architecture
+        (huggingface.co/docs/reachy_mini/SDK/media-architecture): the
+        daemon always owns the camera and tees raw frames into a local
+        GStreamer IPC endpoint (`unixfdsink`, /tmp/reachymini_camera_socket)
+        capped at 10fps; `ReachyMini(media_backend="local").media.
+        get_frame()` reads from that endpoint without touching the
+        daemon's own camera/audio/WebRTC ownership.
 
-        The daemon exposes no REST single-frame endpoint (camera access is
-        WebRTC-only) — see docs/verification/phase-22-inventory-
-        2026-09-22.md's daemon API section. This releases the daemon's own
-        media ownership first (POST /media/release), opens the device
-        directly, grabs one frame, and always re-acquires (POST
-        /media/acquire) afterwards, even on failure, so a failed capture
-        doesn't leave the daemon permanently locked out of its own camera.
-        UNVERIFIED against real hardware.
+        A prior version used the SDK's other documented path
+        (`media_backend="no_media"` + direct /dev/video0 access via
+        OpenCV, release_media()/acquire_media() around it) — the
+        documented escape hatch for callers with no daemon on the same
+        host, not the recommended same-host path. Verified live on the
+        Nano (2026-09-24): it worked, but paid ~2.5-4s per call and
+        briefly tore down the daemon's whole media pipeline (audio +
+        WebRTC signalling) on every single-frame capture, motivating this
+        switch to LOCAL, which shares the daemon's running pipeline
+        instead of interrupting it.
+
+        Keeps one `ReachyMini` instance alive for the process lifetime
+        (never used as a context manager, so `__exit__`'s release/
+        re-acquire never fires) rather than constructing one per call.
+        UNVERIFIED against real hardware — the reachy-embodiment container
+        does not yet bundle the `reachy_mini` SDK, PyGObject, or a
+        GStreamer build with the `unixfdsrc` element it needs; see
+        Dockerfile/pyproject.toml and docs/deployment.md for the
+        corresponding image/mount changes this requires before this path
+        can actually run on the Nano.
         """
         import cv2  # local import: only needed by this one real-hardware path
 
-        try:
-            resp = self._client.post("/media/release")
-            resp.raise_for_status()
-        except httpx.HTTPError as exc:
-            raise RobotBackendError(f"could not release camera from daemon: {exc}") from exc
+        if self._mini is None:
+            if self._media_client_factory is not None:
+                self._mini = self._media_client_factory()
+            else:
+                # local import: same reason as cv2 above
+                from reachy_mini import ReachyMini
 
-        try:
-            capture = cv2.VideoCapture("/dev/video0")
-            try:
-                if not capture.isOpened():
-                    raise RobotBackendError("/dev/video0 did not open")
-                ok, frame = capture.read()
-                if not ok:
-                    raise RobotBackendError("failed to read a frame from /dev/video0")
-                ok, encoded = cv2.imencode(".jpg", frame)
-                if not ok:
-                    raise RobotBackendError("failed to JPEG-encode captured frame")
-                return bytes(encoded)
-            finally:
-                capture.release()
-        finally:
-            try:
-                resp = self._client.post("/media/acquire")
-                resp.raise_for_status()
-            except httpx.HTTPError as exc:
-                # Logged, not raised: raising here would mask whatever
-                # capture-path exception is already propagating (or, on
-                # the success path, would turn a successful capture into a
-                # failure over an unrelated handoff problem). The daemon
-                # being left without media ownership is a real problem,
-                # just not one this call can fix by raising louder.
-                log.error("could not re-acquire camera for daemon after capture: %s", exc)
+                self._mini = ReachyMini(media_backend="local")
+
+        frame = self._mini.media.get_frame()  # type: ignore[attr-defined]
+        ok, encoded = cv2.imencode(".jpg", frame)
+        if not ok:
+            raise RobotBackendError("failed to JPEG-encode captured frame")
+        return bytes(encoded)
 
     def play_audio(self, wav_bytes: bytes) -> float:
         """Uploads WAV bytes and plays them through the robot's speaker.

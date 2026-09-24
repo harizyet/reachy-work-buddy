@@ -66,6 +66,10 @@ These are dated evidence, not startup instructions or current health checks.
 - [Phase 22b first motion](verification/phase-22b-first-motion-2026-09-23.md):
   first real WSS registration and first-ever real-motor command, which found
   a head-motion hardware fault; session stopped for physical inspection.
+- [Phase 22b camera](verification/phase-22b-camera-2026-09-24.md): a daemon
+  error-state finding and recovery, first real camera capture, and the
+  subsequent refactor to reachy_mini's recommended LOCAL media backend
+  (code/tests done, real-hardware build/run still unverified).
 
 - [Phase 23 foundation](verification/phase-23-foundation-2026-09-23.md): migrations,
   SecretStore, isolated database recovery and built-image checks.

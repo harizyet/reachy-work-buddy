@@ -244,6 +244,20 @@ appends that prefix. Embodiment listens on 8100 by default, not the daemon's
 Device access uses explicit devices and numeric groups independently of
 host networking. Check existing personal `.env` files after updating defaults.
 
+Phase 22b: camera capture (`ReachyDaemonBackend.capture_frame`) uses the
+`reachy_mini` SDK's LOCAL media backend, which reads frames from the
+daemon's `/tmp/reachymini_camera_socket` — bind-mounted into the container
+by `start-reachy.sh` (`-v` alongside the device args above) only if that
+socket already exists when the script runs, which requires the daemon to
+already be up and healthy (its media server creates the socket on
+successful start, not on install). Because `docker run`'s mounts are set
+at container creation, changing this requires removing and recreating an
+existing container (`docker rm -f reachy-embodiment` before the next
+`--build` run), not just `docker start`. UNVERIFIED against real
+hardware — confirmed only that the image's PyGObject/GStreamer/`unixfdsrc`
+build succeeds (see the Dockerfile's comment), not an actual live capture
+through this path.
+
 Current WS connectivity provides authentication, registration, heartbeat,
 generation fencing, and reconnect only. Commands still use HTTP; outbound
 media and WS command routing are unfinished. Run one hub worker. Real TLS,

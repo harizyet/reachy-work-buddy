@@ -59,18 +59,24 @@ dependencies = [
     # above): never rely on a package being present only because
     # something else happens to pull it in transitively.
     "websockets>=13.0",
-    # Phase 22: ReachyDaemonBackend.capture_frame() reads one frame directly
-    # from /dev/video0 via V4L2 while the daemon has released media control
-    # (POST /media/release) — the daemon itself exposes no REST single-frame
-    # endpoint, only WebRTC (see docs/verification/phase-22-inventory-
-    # 2026-09-22.md's daemon API section). -headless: no GUI/Qt bindings
-    # needed on a server process. Ships permissive manylinux2014 wheels, not
-    # the manylinux_2_28 floor that blocked torch/onnxruntime natively on
-    # the Nano's glibc 2.27 — expected to install fine either natively or in
-    # the newer-glibc container path proven during Phase 22 verification,
-    # but not yet confirmed against a live daemon/camera; treat as a first
-    # draft pending that verification.
+    # Phase 22b: ReachyDaemonBackend.capture_frame() only uses this for
+    # cv2.imencode() (numpy BGR array -> JPEG bytes); frame capture itself
+    # goes through reachy_mini's LOCAL media backend below, not V4L2
+    # directly. -headless: no GUI/Qt bindings needed on a server process.
+    # Ships permissive manylinux2014 wheels, not the manylinux_2_28 floor
+    # that blocked torch/onnxruntime natively on the Nano's glibc 2.27.
     "opencv-python-headless>=4.9",
+    # Phase 22b: the official same-host camera/audio path (huggingface.co/
+    # docs/reachy_mini/SDK/media-architecture) — `ReachyMini(media_backend=
+    # "local").media.get_frame()` reads frames from the daemon's local
+    # GStreamer IPC socket instead of the release/acquire+V4L2 escape hatch
+    # this replaced. Pulls in PyGObject on Linux (Requires-Dist in its own
+    # metadata), which has no PyPI wheel and needs the Dockerfile's added
+    # build deps; see that file's comment. UNVERIFIED against real
+    # hardware — confirmed only that PyGObject/GStreamer/unixfdsrc install
+    # and import cleanly on this same base image, not yet built into an
+    # actual reachy-embodiment image and run against the Nano's daemon.
+    "reachy_mini>=1.8.4",
 ]
 
 [tool.uv.sources]
