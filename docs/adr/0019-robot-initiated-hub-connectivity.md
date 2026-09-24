@@ -155,3 +155,14 @@ and `voice_state` travel on the control socket. Utterances upload over
 robot-authenticated HTTPS, and reply audio returns in that response. The
 capability is advertised at registration, so the protocol version is
 unchanged. Other commands and media remain on the HTTP adapter.
+
+## Addendum: watchdog cadence after real jitter (Phase 24d, 2026-09-24)
+
+The first real-jitter run on nano-1 closed a healthy connection. A Tailscale
+path re-validation to the hub host stalled the robot's acks for more than
+5 s, while the robot kept serving the hub's HTTP heartbeats every ~2 s. The
+hub's watchdog is now **15 s**. Heartbeats stay at 2 s, and a healthy link's
+command and stop latency is unchanged. A dead connection is detected in at
+most 15 s instead of 5 s. The robot stops capture when its own socket
+closes, independent of this value. See the
+[24d record](../verification/phase-24d-conversation-2026-09-24.md#ws-watchdog-false-positive).

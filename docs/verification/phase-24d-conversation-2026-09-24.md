@@ -165,6 +165,23 @@ A keyword only in the model's wording now labels that reply alone. See
 `test_conversation_privacy.py`: the 5G case fails on the old code. The
 calendar and own-statement carry-over cases pass on both.
 
+## WS watchdog false positive
+
+At 14:55:58.556 the hub logged "heartbeat watchdog expired" and closed nano-1's
+socket (close 4408). That ended voice session `UdLC…` as "Robot disconnected".
+The robot's stop ran in 21 ms, and it re-registered at 14:56:06.9. Capture
+did not resume on its own, which is correct. The robot's event loop was not
+blocked: it served every hub HTTP heartbeat through the window (largest
+gap 2.58 s), and its daemon polling was unbroken. The only correlate was a
+Tailscale disco path re-validation to the hub at 14:55:58.095. The robot →
+hub WS stream most likely sat in TCP retransmit for more than 5 s. That is
+inference: there are no packet captures. Host load was moderate (load ~2.3,
+781 MB swapped on 4 GB). dmesg showed no USB audio or link events.
+
+The hub's WS watchdog was raised from 5 s to 15 s (ADR 0019 addendum).
+The Tailscale endpoint to the hub switches between three LAN addresses every
+few minutes. That is a network matter for the owner and was left unchanged.
+
 ## Latency budget (agreed before any timed turn)
 
 Utterance end → first audible reply, over the live turns:

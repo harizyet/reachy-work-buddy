@@ -327,7 +327,8 @@ def create_app(
     robot_credential_store: RobotCredentialStore | None = None,
     robot_connection_manager: RobotConnectionManager | None = None,
     robot_ws_heartbeat_interval: float = 2.0,
-    robot_ws_watchdog_timeout: float = 5.0,
+    # 15 s, not ADR 0019's initial 5 s: see robot_ws.install_robot_ws_routes.
+    robot_ws_watchdog_timeout: float = 15.0,
     robot_voice_manager: RobotVoiceManager | None = None,
     run_voice_watchdog_task: bool = True,
 ) -> FastAPI:

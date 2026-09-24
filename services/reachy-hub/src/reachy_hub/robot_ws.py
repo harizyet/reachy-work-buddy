@@ -52,7 +52,7 @@ async def connection_loop(
     unit-testable against a fake socket without a real WS handshake —
     same rationale as presence.py's `tick()`.
 
-    ADR 0019's initial cadence: 2s heartbeat / 5s watchdog.
+    Cadence: 2 s heartbeat / 15 s watchdog (ADR 0019 addendum, Phase 24d).
     """
     last_seen = time.monotonic()
     try:
@@ -97,7 +97,11 @@ def install_robot_ws_routes(
     connection_manager: RobotConnectionManager,
     *,
     heartbeat_interval: float = 2.0,
-    watchdog_timeout: float = 5.0,
+    # ADR 0019 started at 5 s pending real-jitter validation. On nano-1's
+    # tailnet path (Phase 24d) a Tailscale path re-validation stalled the
+    # robot's acks past 5 s while the link otherwise stayed up, dropping a
+    # live voice session; 15 s rides out a few TCP retransmit backoffs.
+    watchdog_timeout: float = 15.0,
     registration_timeout: float = 5.0,
     on_message: Callable[[RobotConnection, dict], Awaitable[None]] | None = None,
     on_disconnect: Callable[[RobotConnection], Awaitable[None]] | None = None,
