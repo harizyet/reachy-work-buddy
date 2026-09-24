@@ -29,7 +29,7 @@ Phase 24c (robot microphone → conversation → speaker) is implemented
   `docker rm -f reachy-embodiment` and restart via `start-reachy.sh`, which
   adds `--ipc host`, the daemon UID and the daemon user's `~/.asoundrc`. See
   [deployment](docs/deployment.md#robot-voice-conversation).
-- **Verified off the robot only**: pytest (502 passed), Chromium, and a
+- **Verified off the robot only**: pytest (503 passed), Chromium, and a
   disposable Compose run with a simulated mic, real Whisper, real OVMS LLM
   and espeak through Caddy/WSS. Multi-turn context and a web handoff worked.
 - **Bugs fixed on the way:**

@@ -638,3 +638,26 @@ def test_first_use_model_loading_does_not_block_the_event_loop() -> None:
             return responsive_in
 
     assert asyncio.run(scenario()) < 0.8
+
+
+def test_legacy_voice_turn_requires_the_owner_before_any_transcription() -> None:
+    """/voice/turn has no route dependency of its own; the owner-bound
+    private_work_routes middleware gates it (a production hub cannot start
+    without ACCOUNTS_SERVICE_TOKEN). Proves anonymous, wrong-user and
+    cookie-without-CSRF calls are refused before STT ever runs."""
+    stt = ScriptedSTT("hello")
+    client, _, _ = make_hub(stt, RecordingTTS(), accounts_service_token="svc-token")
+    audio = {"audio": ("q.wav", wav_bytes(), "audio/wav")}
+    with client:
+        assert client.post("/voice/turn", data={"user_id": "default-user"}, files=audio).status_code == 401
+        robot_bearer = {"Authorization": f"Bearer {ROBOT_TOKEN}"}
+        assert client.post("/voice/turn", data={"user_id": "default-user"}, files=audio, headers=robot_bearer).status_code == 401
+        other_user = client.post("/voice/turn", data={"user_id": "someone-else"}, files=audio, headers=OWNER)
+        assert other_user.status_code == 403
+        client.post("/auth/login", json={"username": "owner", "password": "correct-password"}, headers=CSRF)
+        assert client.post("/voice/turn", data={"user_id": "default-user"}, files=audio).status_code == 403
+        assert stt.calls == 0
+
+        allowed = client.post("/voice/turn", data={"user_id": "default-user"}, files=audio, headers=OWNER)
+        assert allowed.status_code == 200
+        assert stt.calls == 1

@@ -11,7 +11,7 @@ Base commit `49771dc` plus the Phase 24c working-tree changes.
 
 | Check | Result |
 |---|---|
-| `pytest services shared` (including `slow`, espeak on PATH) | 502 passed, 16 skipped (Postgres-gated tests without `DATABASE_URL`) |
+| `pytest services shared` (including `slow`, espeak on PATH) | 503 passed, 16 skipped (Postgres-gated tests without `DATABASE_URL`) |
 | `ruff check services shared` | Clean |
 | `node --test clients/operator-ui/tests/*.cjs` (Chromium) | chat, accounts, websearch and new voice suites pass |
 
@@ -47,6 +47,11 @@ New or changed tests:
   real embodiment state. Confirmed failing with the core gate removed.
 - `services/reachy-hub/tests/test_tts.py`: espeak output carries a real frame
   count.
+- `test_robot_voice.py::test_legacy_voice_turn_requires_the_owner_before_any_transcription`
+  (added after review). The legacy `/voice/turn` refuses anonymous callers,
+  robot-token callers, a non-owner `user_id`, and cookie calls without CSRF,
+  all before STT runs. Confirmed failing when the route is removed from the
+  middleware's gated set.
 - `clients/operator-ui/tests/voice.test.cjs`: `/hub/` proxied mount, start,
   renew and stop with CSRF, literal rendering of spoken/withheld turns (HTML
   injection inert), disabled start for a non-capable robot, and polling that

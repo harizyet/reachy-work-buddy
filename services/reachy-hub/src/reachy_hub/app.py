@@ -1122,6 +1122,11 @@ def create_app(
     async def post_message(message: InboundMessage) -> MessageResponse:
         return await handle_inbound_message(message)
 
+    # Caller-upload diagnostic, not the robot workflow (robot_voice.py).
+    # Owner auth and the OWNER_USER_ID binding come from private_work_routes
+    # above, which runs before this handler (so before any STT); a hub with
+    # production stores cannot start without the ACCOUNTS_SERVICE_TOKEN that
+    # enables it. Only injected-store dev/test apps leave it open, like /messages.
     @app.post("/voice/turn")
     async def voice_turn(user_id: str = Form(...), audio: UploadFile = File(...)) -> Response:  # noqa: B008
         wav_bytes = await audio.read()

@@ -103,7 +103,7 @@ WebRTC, and static UI. It does not own reasoning policy or motor control.
 | Surface | Purpose |
 |---|---|
 | `POST /messages`; `GET /sessions/{user_id}` | Shared session across text channels; one active session per user |
-| `POST /voice/turn` | Multipart WAV `audio` and `user_id`; STT → shared conversation → WAV TTS |
+| `POST /voice/turn` | Caller-upload diagnostic: multipart WAV `audio` and owner `user_id`; STT → shared conversation → WAV TTS. Owner-gated by the work-route middleware before STT; not the robot workflow and no speaker-routing check |
 | `POST /webrtc/offer` | Conversational push-to-talk call; voice modality cannot confirm actions |
 | `PATCH /sessions/{user_id}/mode`, `/dnd`, `/privacy-context` | Authenticated updates to existing sessions |
 | `GET /audit/{user_id}`, `/notifications/{user_id}`; `POST /notifications/{user_id}/flush` | Routing decisions, queued notifications, controlled flush |
