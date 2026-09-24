@@ -67,3 +67,11 @@ def test_piper_voice_is_selected_and_intelligible_to_whisper() -> None:
     assert "quick brown fox" in transcript
     # An empty reply must still produce a WAV, not raise mid-turn.
     assert tts.synthesize("")[:4] == b"RIFF"
+
+
+def test_spoken_text_drops_citations_and_markdown_but_keeps_the_words() -> None:
+    from reachy_hub.tts import spoken_text
+
+    reply = "## Telcos\n- **Singtel** is the largest [S1].\n* `M1` and StarHub too [S2, S3].\n> Source list"
+    assert spoken_text(reply) == "Telcos\nSingtel is the largest.\nM1 and StarHub too.\nSource list"
+    assert spoken_text("Two plus two is 4 [S1].") == "Two plus two is 4."

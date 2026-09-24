@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 import httpx
@@ -395,3 +396,106 @@ def test_embedded_instruction_in_result_does_not_change_model_behaviour():
     resp = client.post("/conversation", json={**TURN, "text": "hello"})
     assert resp.status_code == 200
     assert resp.json()["reply"] == "Stub reply, unaffected."
+
+
+# --- Phase 24d: Brave Search API provider and spoken-reply instruction ---
+
+
+def test_brave_provider_sends_key_and_normalizes_results():
+    from companion_core.websearch.brave import BRAVE_SEARCH_URL, BraveSearchProvider
+
+    seen = []
+
+    def respond(request):
+        seen.append(request)
+        return httpx.Response(200, json={"web": {"results": [
+            {"title": "President of Singapore &amp; <strong>Tharman</strong>", "url": "https://www.istana.gov.sg/x",
+             "description": "Tharman Shanmugaratnam took office in <strong>2023</strong>."},
+            {"title": "no url"},
+            {"title": "Second", "url": "https://en.wikipedia.org/wiki/y", "description": None},
+        ]}})
+
+    provider = BraveSearchProvider("brave-secret", transport=httpx.MockTransport(respond))
+    results = asyncio.run(provider.search("president of singapore", count=5))
+
+    request = seen[0]
+    assert str(request.url).startswith(BRAVE_SEARCH_URL)
+    assert request.headers["X-Subscription-Token"] == "brave-secret"
+    assert request.url.params["q"] == "president of singapore"
+    assert request.url.params["count"] == "5"
+    assert request.url.params["text_decorations"] == "false"
+    assert [r.title for r in results] == ["President of Singapore & Tharman", "Second"]
+    assert results[0].snippet == "Tharman Shanmugaratnam took office in 2023."
+    assert results[0].source_domain == "www.istana.gov.sg"
+    assert results[1].snippet == ""
+
+
+@pytest.mark.parametrize("response", [
+    httpx.Response(401, text="invalid token brave-secret"),
+    httpx.Response(200, content=b"not json"),
+    httpx.Response(200, json={"web": "unexpected"}),
+])
+def test_brave_provider_failures_are_safe_errors(response):
+    from companion_core.websearch.brave import BraveSearchProvider
+
+    provider = BraveSearchProvider("brave-secret", transport=httpx.MockTransport(lambda r: response))
+    with pytest.raises(SearchProviderError) as exc:
+        asyncio.run(provider.search("anything", count=3))
+    assert "brave-secret" not in str(exc.value)
+
+
+def test_brave_needs_a_key_but_no_base_url():
+    from companion_core.websearch.brave import BraveSearchProvider
+    from companion_core.websearch.provider import create_provider
+
+    with pytest.raises(ValueError):
+        SearchConfig(policy=SearchPolicy.ALWAYS, provider=SearchProviderKind.BRAVE)
+    config = SearchConfig(policy=SearchPolicy.ALWAYS, provider=SearchProviderKind.BRAVE, api_key="k")
+    assert isinstance(create_provider(config), BraveSearchProvider)
+    # Off with no key stays valid, so switching provider then adding the key works.
+    SearchConfig(policy=SearchPolicy.OFF, provider=SearchProviderKind.BRAVE)
+
+
+def test_brave_grounds_a_conversation_through_core():
+    llm_requests = []
+
+    def llm_respond(request):
+        llm_requests.append(json.loads(request.content))
+        return httpx.Response(200, json={"choices": [{"message": {"content": "Tharman [S1]."}}]})
+
+    def brave_respond(request):
+        return httpx.Response(200, json={"web": {"results": [
+            {"title": "Istana", "url": "https://www.istana.gov.sg/", "description": "President Tharman"},
+        ]}})
+
+    client = TestClient(core_app(
+        llm_transport=httpx.MockTransport(llm_respond),
+        websearch_transport=httpx.MockTransport(brave_respond),
+    ))
+    client.put("/settings/llm", json={"local": {"base_url": "http://ovms/v1", "model": "qwen"}})
+    resp = client.put("/settings/websearch", json={"policy": "always", "provider": "brave", "api_key": "brave-secret"})
+    assert resp.status_code == 200 and resp.json()["api_key"] == "********cret"
+    assert client.put("/settings/websearch", json={"provider": "brave", "api_key": None}).status_code == 422
+
+    assert client.post("/conversation", json={**TURN, "text": "Who is Singapore's president?"}).status_code == 200
+    system = [m["content"] for m in llm_requests[-1]["messages"] if m["role"] == "system"]
+    assert any("President Tharman" in content for content in system)
+
+
+def test_voice_turns_ask_for_short_spoken_replies_and_typed_turns_do_not():
+    from companion_core.app import SPOKEN_REPLY_INSTRUCTION
+
+    llm_requests = []
+
+    def llm_respond(request):
+        llm_requests.append(json.loads(request.content))
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    client = TestClient(core_app(llm_transport=httpx.MockTransport(llm_respond)))
+    client.put("/settings/llm", json={"local": {"base_url": "http://ovms/v1", "model": "qwen"}})
+
+    client.post("/conversation", json={**TURN, "channel": "reachy", "input_modality": "voice", "text": "what is an llm"})
+    client.post("/conversation", json={**TURN, "text": "what is an llm"})
+    spoken, typed = ([m["content"] for m in r["messages"] if m["role"] == "system"] for r in llm_requests[-2:])
+    assert SPOKEN_REPLY_INSTRUCTION in spoken
+    assert SPOKEN_REPLY_INSTRUCTION not in typed

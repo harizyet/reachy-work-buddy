@@ -188,7 +188,7 @@ from reachy_hub.stt import FasterWhisperSTT, SpeechToText
 from reachy_hub.telegram_chat_registry import TelegramChatRegistry
 from reachy_hub.telegram_client import TelegramClient
 from reachy_hub.telegram_health import TelegramPollHealth, poll_updates
-from reachy_hub.tts import TextToSpeech, default_tts
+from reachy_hub.tts import TextToSpeech, default_tts, spoken_text
 from reachy_hub.user_store import PostgresUserStore, UserStore
 from reachy_hub.webrtc import CallTurnHandler, negotiate_call, negotiate_telepresence
 from shared.models.embodiment import Behaviour
@@ -406,7 +406,7 @@ def create_app(
         return get_stt().transcribe(wav_bytes)
 
     def synthesize(text: str) -> bytes:
-        return get_tts().synthesize(text)
+        return get_tts().synthesize(spoken_text(text))
 
     # Telegram is optional: no token (env or explicit) means no client, no
     # polling, and no Postgres connection for the chat registry either —

@@ -209,6 +209,44 @@ End to end through core, with a service-authenticated throwaway session:
 
 With grounding, the 1.5B model's accuracy is still inconsistent.
 
+## Search fails from the homelab address; Brave API and spoken form
+
+The owner's first timed attempt (session `Q_UR…`, 5 turns, all spoken)
+with policy Always still gave wrong answers: the former US president, and an
+invented President of Singapore. Probing SearXNG per engine explained it.
+Google and Brave were suspended after CAPTCHAs and rate limits, some of it
+probably triggered by this session's own test queries. Bing returned
+unrelated pages (dictionary entries for "current"; Netlify sign-up pages
+for a telecoms question). The model received junk as grounding and answered
+from memory or invented.
+
+Turn 5 generated a long markdown list: 16 s of LLM time, 7 s of synthesis
+and 232 s of audio, which the owner stopped after 12.4 s. On the robot, the
+stop took **32 ms** from "voice stop received" to the daemon's `stop_sound`.
+An earlier stop in session `CnPL…` took 36 ms.
+
+Owner decisions and changes:
+- A hosted **Brave Search API** provider (ADR 0022 addendum), with the key
+  entered by the owner in the UI.
+- VOICE turns now carry a short-plain-reply instruction.
+- The hub strips `[S…]` citations and markdown before synthesis.
+
+Verified with fixture transports (request shape, normalization, safe errors,
+key masking, core grounding, voice-only instruction), unit tests for
+`spoken_text` and the Chromium Web search card. Live Brave calls wait for
+the owner's key.
+
+**Motor and reboot incident.** From 15:02:34, `stewart_5` reported
+"Overheating Error" continuously while the head held a strained pose (roll
+≈25°, yaw ≈−26°). The owner rebooted the Nano, and the daemon reset the
+motor on start with no further errors. The reboot exposed a boot-order race:
+Docker's `unless-stopped` policy started `reachy-embodiment` before the
+daemon, creating `/tmp/reachymini_camera_socket` as a root-owned directory.
+The container failed ("not a directory") and the daemon could not start
+its media server (`EPERM`). Recovery needs the owner (sudo, then a
+supervised daemon restart). A durable launcher fix needs a real reboot to
+verify.
+
 ## Latency budget (agreed before any timed turn)
 
 Utterance end → first audible reply, over the live turns:

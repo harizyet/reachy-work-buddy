@@ -99,3 +99,19 @@ sharing. Citation is a prompting/formatting requirement on the model's
 output (the rules message instructs it to cite result ids), not a
 code-enforced guarantee; the exit criteria in docs/phase-24a.md test it as
 instructed behavior against a fixture provider, not as a hard invariant.
+
+## Addendum: hosted Brave provider and spoken replies (Phase 24d, 2026-09-24)
+
+Live robot conversation showed that the bundled SearXNG's scraped engines
+are not dependable from a single home address. Google and Brave suspended it
+after CAPTCHAs, and Bing returned unrelated pages, so grounded answers were
+wrong. `SearchProviderKind.BRAVE` adds the hosted provider this ADR already
+anticipated: a fixed Brave Search API endpoint, a required owner key in
+SecretStore (`websearch:brave`), and results normalized to the same
+untrusted `SearchResult` shape. The rest of the grounding pipeline is
+unchanged.
+
+Citation stays a prompting requirement in the reply text. For speech,
+reachy-hub removes `[S…]` markers and markdown symbols before synthesis
+(`reachy_hub.tts.spoken_text`). Core adds a short-plain-reply instruction to
+VOICE-modality generic turns only.

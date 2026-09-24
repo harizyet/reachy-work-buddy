@@ -138,6 +138,15 @@ credential entered there is stored via Companion Core's SecretStore
 secret; see [ADR 0022](adr/0022-web-search-grounding.md) and
 [docs/phase-24a.md](phase-24a.md).
 
+The bundled SearXNG keeps only Google, Bing and Brave, with a 1.5 s
+per-engine timeout (the image disables Google and Bing, so the config
+enables them). These are scraped engines. During Phase 24d, the homelab's
+address was CAPTCHA'd and suspended by Google and Brave, and Bing returned
+unrelated pages. For dependable results, choose **Brave Search API** in the
+same card and enter a Brave Search API subscription key. It uses Brave's
+fixed endpoint, so no Base URL is needed. The key is stored through
+SecretStore and shown only masked. Queries then go directly to Brave.
+
 ## Telegram and SMTP
 
 `TELEGRAM_BOT_TOKEN` enables text polling; unset means no bot. Set

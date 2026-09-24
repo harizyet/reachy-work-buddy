@@ -97,10 +97,12 @@
           <p>Lets the model check a live search when a question needs current or external information instead of guessing from training data. Off by default.</p>
           <p class="muted">Reachy sends queries only to the search instance configured below. A self-hosted SearXNG instance still forwards your query to whichever upstream search engines it's configured to use — this isn't full network confinement. A hosted provider (e.g. Brave) sends queries to that company directly.</p>
           <form id="websearch"><fieldset id="websearch-fields" disabled><label>Policy<select id="websearch-policy"><option value="off">Off — never search</option><option value="auto">Auto — only when a question looks like it needs current info</option><option value="always">Always — every message</option></select></label>
-          <label>Provider<select id="websearch-provider"><option value="builtin_searxng">Built-in SearXNG (no setup needed)</option><option value="searxng">External SearXNG</option></select></label>
-          <div id="websearch-external-fields">
+          <label>Provider<select id="websearch-provider"><option value="builtin_searxng">Built-in SearXNG (no setup needed)</option><option value="searxng">External SearXNG</option><option value="brave">Brave Search API</option></select></label>
+          <div id="websearch-base-url-field">
           <label>Base URL<input id="websearch-base-url" type="url" placeholder="http://searxng-host:8080"></label>
-          <label>API key <span class="muted">(optional)</span><input id="websearch-api-key" type="password" autocomplete="new-password" placeholder="Leave blank to keep the saved key"></label><small id="websearch-key-state">No saved key</small>
+          </div>
+          <div id="websearch-key-fields">
+          <label>API key <span class="muted" id="websearch-key-optional">(optional)</span><input id="websearch-api-key" type="password" autocomplete="new-password" placeholder="Leave blank to keep the saved key"></label><small id="websearch-key-state">No saved key</small>
           <label class="check"><input type="checkbox" id="websearch-clear-key"> Remove saved key</label>
           </div>
           <label>Results per search<input id="websearch-result-count" type="number" min="1" max="10"></label>

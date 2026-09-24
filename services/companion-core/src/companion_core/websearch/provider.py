@@ -62,4 +62,10 @@ def create_provider(config: SearchConfig, *, transport=None) -> SearchProvider:
             timeout_seconds=config.timeout_seconds,
             transport=transport,
         )
+    if config.provider == SearchProviderKind.BRAVE:
+        from companion_core.websearch.brave import BraveSearchProvider
+
+        if not config.api_key:
+            raise SearchProviderError("No Brave Search API key configured")
+        return BraveSearchProvider(config.api_key, timeout_seconds=config.timeout_seconds, transport=transport)
     raise SearchProviderError("Unsupported search provider")

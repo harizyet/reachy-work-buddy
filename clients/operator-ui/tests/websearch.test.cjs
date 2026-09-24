@@ -8,7 +8,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {chromium} = require('playwright');
 
-test('web search settings card configures built-in and external SearXNG with zero-config default', async () => {
+test('web search settings card configures built-in SearXNG, external SearXNG and Brave', async () => {
   let searchConfig = {policy: 'off', provider: 'builtin_searxng', base_url: null, api_key: null, result_count: 5};
   const puts = [];
   const server = http.createServer(async (req, res) => {
@@ -49,7 +49,8 @@ test('web search settings card configures built-in and external SearXNG with zer
 
     // Zero-config default: Built-in SearXNG, no base URL/API key fields shown.
     assert.equal(await page.locator('#websearch-provider').inputValue(), 'builtin_searxng');
-    assert.equal(await page.locator('#websearch-external-fields').isHidden(), true);
+    assert.equal(await page.locator('#websearch-base-url-field').isHidden(), true);
+    assert.equal(await page.locator('#websearch-key-fields').isHidden(), true);
 
     await page.locator('#websearch-policy').selectOption('auto');
     await Promise.all([
@@ -61,7 +62,8 @@ test('web search settings card configures built-in and external SearXNG with zer
 
     // Switching to External SearXNG reveals the base URL/API key fields.
     await page.locator('#websearch-provider').selectOption('searxng');
-    assert.equal(await page.locator('#websearch-external-fields').isHidden(), false);
+    assert.equal(await page.locator('#websearch-base-url-field').isHidden(), false);
+    assert.equal(await page.locator('#websearch-key-fields').isHidden(), false);
     await page.locator('#websearch-base-url').fill('http://searxng-host:8080');
     await Promise.all([
       page.waitForResponse(r => r.url().includes('/settings/websearch') && r.request().method() === 'PUT'),
@@ -69,6 +71,22 @@ test('web search settings card configures built-in and external SearXNG with zer
     ]);
     assert.equal(puts.at(-1).provider, 'searxng');
     assert.equal(puts.at(-1).base_url, 'http://searxng-host:8080');
+
+    // Brave (Phase 24d): fixed endpoint, so only the required key is shown,
+    // and the key travels in the PUT but is never rendered back in full.
+    await page.locator('#websearch-provider').selectOption('brave');
+    assert.equal(await page.locator('#websearch-base-url-field').isHidden(), true);
+    assert.equal(await page.locator('#websearch-key-fields').isHidden(), false);
+    assert.equal(await page.locator('#websearch-key-optional').isHidden(), true);
+    await page.locator('#websearch-api-key').fill('brave-test-key-1234');
+    await Promise.all([
+      page.waitForResponse(r => r.url().includes('/settings/websearch') && r.request().method() === 'PUT'),
+      page.locator('#websearch').locator('button', {hasText: 'Save web search'}).click(),
+    ]);
+    assert.equal(puts.at(-1).provider, 'brave');
+    assert.equal(puts.at(-1).base_url, null);
+    assert.equal(puts.at(-1).api_key, 'brave-test-key-1234');
+    assert.equal(await page.locator('#websearch-api-key').inputValue(), '');
     assert.deepEqual(errors, []);
   } finally {
     await browser.close();

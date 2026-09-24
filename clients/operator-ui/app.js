@@ -84,8 +84,12 @@ function renderPersona(config) {
 }
 function updateWebsearchProviderFields() {
   // Built-in SearXNG needs no base URL or API key at all — Companion Core
-  // already knows its internal address (Phase 24 cleanup).
-  $('websearch-external-fields').hidden = $('websearch-provider').value !== 'searxng';
+  // already knows its internal address (Phase 24 cleanup). Brave has a
+  // fixed endpoint and needs only its (required) subscription key.
+  const provider = $('websearch-provider').value;
+  $('websearch-base-url-field').hidden = provider !== 'searxng';
+  $('websearch-key-fields').hidden = provider === 'builtin_searxng';
+  $('websearch-key-optional').hidden = provider === 'brave';
 }
 function renderWebsearch(config) {
   $('websearch-policy').value = config.policy || 'off';
@@ -249,7 +253,7 @@ submit('websearch', async () => {
     base_url: provider === 'searxng' ? $('websearch-base-url').value.trim() : null,
     result_count: Number($('websearch-result-count').value) || 5,
   };
-  if (provider !== 'searxng') patch.api_key = null;
+  if (provider === 'builtin_searxng') patch.api_key = null;
   else if ($('websearch-clear-key').checked) patch.api_key = null;
   else if ($('websearch-api-key').value) patch.api_key = $('websearch-api-key').value;
   renderWebsearch(await api('/settings/websearch', {method: 'PUT', body: JSON.stringify(patch)}));

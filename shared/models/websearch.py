@@ -24,9 +24,12 @@ class SearchProviderKind(StrEnum):
     # its internal address itself, so this needs no base_url/api_key from
     # the operator at all (Phase 24 cleanup: zero-configuration default).
     BUILTIN_SEARXNG = "builtin_searxng"
-    # A separately-run/custom SearXNG instance, or any other future
-    # provider needing its own endpoint/credential — advanced users only.
+    # A separately-run/custom SearXNG instance — advanced users only.
     SEARXNG = "searxng"
+    # Brave's hosted Search API (Phase 24d): fixed endpoint, needs only the
+    # owner's subscription key. Added after scraping-based SearXNG engines
+    # were CAPTCHA'd/suspended from the homelab's address during live use.
+    BRAVE = "brave"
 
 
 def _validate_url(value: str | None) -> str | None:
@@ -52,8 +55,8 @@ class SearchConfig(BaseModel):
     policy: SearchPolicy = SearchPolicy.OFF
     provider: SearchProviderKind = SearchProviderKind.BUILTIN_SEARXNG
     # Required for SEARXNG (an operator-supplied external endpoint), unset
-    # and unused for BUILTIN_SEARXNG (companion_core/websearch/provider.py
-    # hardcodes the bundled container's internal address instead).
+    # and unused for BUILTIN_SEARXNG and BRAVE (companion_core/websearch/
+    # provider.py knows both of their addresses itself).
     base_url: str | None = Field(default=None, max_length=2048)
     # Resolved plaintext, populated only at call time from SecretStore; never
     # the persisted representation (see postgres_store.py's secret_ref column).
@@ -69,12 +72,12 @@ class SearchConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_policy(self):
-        if (
-            self.policy != SearchPolicy.OFF
-            and self.provider != SearchProviderKind.BUILTIN_SEARXNG
-            and not self.base_url
-        ):
+        if self.policy == SearchPolicy.OFF:
+            return self
+        if self.provider == SearchProviderKind.SEARXNG and not self.base_url:
             raise ValueError("A non-Off search policy requires a configured provider base URL")
+        if self.provider == SearchProviderKind.BRAVE and not self.api_key:
+            raise ValueError("A non-Off Brave search policy requires an API key")
         return self
 
 

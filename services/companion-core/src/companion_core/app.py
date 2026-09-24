@@ -290,6 +290,16 @@ class CreateDraftRequest(BaseModel):
     in_reply_to: str | None = None
 
 
+# Phase 24d: generated replies to spoken turns are read aloud by Reachy. A
+# long markdown answer took 16 s to generate and 7 s to synthesize, then ran
+# for minutes on the speaker. The owner can still ask for more detail.
+SPOKEN_REPLY_INSTRUCTION = (
+    "This reply will be spoken aloud by a robot. Answer in one to three short "
+    "sentences of plain conversational text, unless the user asks for more "
+    "detail. Do not use lists, headings, markdown or URLs."
+)
+
+
 def create_app(
     *,
     account_service=None,
@@ -498,7 +508,7 @@ def create_app(
         try:
             return masked_search_config(await app.state.search_settings_store.set(patch))
         except ValidationError:
-            raise HTTPException(422, "Invalid search settings; a non-Off policy needs a provider base URL") from None
+            raise HTTPException(422, "Invalid search settings; a non-Off policy needs the provider's base URL or API key") from None
 
     @app.get(LLM_SETTINGS)
     async def get_llm_settings() -> dict:
@@ -815,6 +825,8 @@ def create_app(
                         history_with_persona = [
                             {"role": "system", "content": persona.system_prompt},
                             *grounding_messages,
+                            *([{"role": "system", "content": SPOKEN_REPLY_INSTRUCTION}]
+                              if turn.input_modality == InputModality.VOICE else []),
                             *conversation_store.messages(turn.session_id),
                         ]
                         reply = await route_completion(config, history_with_persona, app.state.llm_usage_store, force_frontier=turn.force_frontier, transport=llm_transport)

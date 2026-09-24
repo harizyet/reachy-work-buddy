@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import io
 import os
+import re
 import subprocess
 import wave
 from typing import Protocol
@@ -20,6 +21,22 @@ class TextToSpeech(Protocol):
     def synthesize(self, text: str) -> bytes:
         """Returns WAV-encoded audio bytes."""
         ...
+
+
+_CITATION = re.compile(r"\s*\[S\d+(?:\s*,\s*S?\d+)*\]")
+_MARKDOWN_LINE_PREFIX = re.compile(r"^\s*(?:#{1,6}\s+|[-*+]\s+|>\s*)", re.MULTILINE)
+_MARKDOWN_EMPHASIS = re.compile(r"(\*\*|__|\*|`+)")
+
+
+def spoken_text(text: str) -> str:
+    """What a TTS engine should read aloud from a reply written for a
+    screen: without web-search citation markers ([S1], [S1, S2]) or
+    markdown symbols, which engines otherwise speak or stumble over. The
+    reply text itself, with its citations, is unchanged for the owner's
+    panel (Phase 24d)."""
+    text = _CITATION.sub("", text)
+    text = _MARKDOWN_LINE_PREFIX.sub("", text)
+    return _MARKDOWN_EMPHASIS.sub("", text).strip()
 
 
 class EspeakTTS:

@@ -43,7 +43,10 @@ Phase 24a's `websearch/` adds one more, optional step on the same branch,
 ahead of the persona's history: `websearch.policy.should_search` (a fixed
 keyword/pattern heuristic under policy `auto`, or an unconditional call
 under `always`) decides whether to call the configured `SearchProvider`
-(`websearch/searxng.py` first); the model itself never decides this.
+(`websearch/searxng.py`, or `websearch/brave.py` since Phase 24d); the model
+itself never decides this. VOICE-modality turns also get
+`SPOKEN_REPLY_INSTRUCTION` (short plain replies), and reachy-hub strips
+citation markers and markdown before synthesis (`tts.spoken_text`).
 Retrieved titles/snippets/URLs are injected as a separate, clearly
 delimited, lower-authority system message — `websearch.prompt.
 build_grounding_messages` — never merged into the persona/rules message, so
