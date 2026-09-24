@@ -15,11 +15,17 @@ robot presence and fallback independent of homelab availability.
 
 ## Status
 
-Phases 0–21 and 22a are implemented. Phase 23 (versioned migrations,
-SecretStore, and Gmail/Calendar Accounts) is implemented; real Google-account
-and production acceptance remain open. The owner deferred
-Phase 22b's physical acceptance until after Phase 23. Phases 24–26 remain
-planned. The [roadmap](docs/plan.md#6-implementation-roadmap) owns phase scope;
+Phases 0–21 and 22a are implemented. Phase 22b (physical acceptance on real
+Nano/Reachy hardware) is in progress, not merely deferred: real motor motion,
+audio and camera capture have all been exercised on hardware, with findings
+tracked in the [verification records](docs/README.md#verification-records);
+the endurance/outage/backup/privacy/channels matrix remains open. Phase 22c
+(camera LOCAL-backend hardware acceptance) was split out as a self-contained
+follow-up. Phase 23 (versioned migrations, SecretStore, and Gmail/Calendar
+Accounts) is implemented, and Phase 23b adds a Desktop OAuth client transport
+for self-hosted installs without a public HTTPS domain; real Google-account
+and production acceptance remain open for both. Phases 24–26 remain planned.
+The [roadmap](docs/plan.md#6-implementation-roadmap) owns phase scope;
 [verification records](docs/README.md#verification-records) distinguish tested
 behavior from outstanding acceptance.
 
