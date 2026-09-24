@@ -15,6 +15,13 @@ from typing import Protocol
 
 from shared.models.websearch import SearchConfig, SearchProviderKind
 
+# The bundled SearXNG container's address on the deployment's own compose
+# network (deploy/homelab/docker-compose.yml's "searxng" service, port
+# 8080, never published to the host) — Companion Core already knows this,
+# so BUILTIN_SEARXNG needs no base_url from the operator (Phase 24
+# cleanup). An external/custom SearXNG instance still supplies its own.
+BUILTIN_SEARXNG_BASE_URL = "http://searxng:8080"
+
 
 @dataclass(frozen=True)
 class SearchResult:
@@ -33,6 +40,17 @@ class SearchProviderError(Exception):
 
 
 def create_provider(config: SearchConfig, *, transport=None) -> SearchProvider:
+    if config.provider == SearchProviderKind.BUILTIN_SEARXNG:
+        from companion_core.websearch.searxng import SearXNGSearchProvider
+
+        # No credential either: internal-only, never published to the
+        # host — nothing outside the compose network can reach it.
+        return SearXNGSearchProvider(
+            BUILTIN_SEARXNG_BASE_URL,
+            api_key=None,
+            timeout_seconds=config.timeout_seconds,
+            transport=transport,
+        )
     if config.provider == SearchProviderKind.SEARXNG:
         from companion_core.websearch.searxng import SearXNGSearchProvider
 

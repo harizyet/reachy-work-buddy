@@ -48,9 +48,26 @@ appropriate only because the container is reachable solely from other
 compose services. It is not simulation-gated like mailpit or
 reachy-embodiment — unlike a fake mailbox, this is real self-hosted
 infrastructure meant for production use too — but it is inert until an
-operator both sets `SEARXNG_SECRET_KEY` and points Settings → Web search at
-it with a non-Off policy, so a deployment that never touches this feature
-runs it for nothing rather than being forced to install it separately.
+operator points Settings → Web search at it with a non-Off policy, so a
+deployment that never touches this feature runs it for nothing rather than
+being forced to install it separately.
+
+This container's own server secret (`SEARXNG_SECRET`, mapped from the
+`SEARXNG_SECRET_KEY` deployment variable in `docker-compose.yml`) is
+infrastructure the deployment owns, not a user credential: Phase 24
+cleanup made `scripts/start-homelab.sh` generate and persist it itself
+(`deploy/homelab/.env.searxng-secret`, `0600`) the first time the stack
+starts, rather than asking every operator to invent or paste in a random
+value. It deliberately does **not** go through `SecretStore` (below) —
+that store is for credentials Companion Core resolves at LLM-call time on
+behalf of a configured provider; this secret belongs entirely to the
+container's own bootstrap and Companion Core never reads or stores it.
+The bundled provider option ("Built-in SearXNG" in Settings → Web search)
+also needs no Base URL from the operator: `companion_core/websearch/
+provider.py` hardcodes the container's internal compose address
+(`http://searxng:8080`) for that provider kind. An **External SearXNG**
+(or other hosted) provider still supplies its own Base URL/API key, which
+follows the `SecretStore` path below exactly as before.
 
 Provider API keys are credentials, not configuration, and use the existing
 core-owned `SecretStore` (ADR 0020) exactly like LLM provider keys:

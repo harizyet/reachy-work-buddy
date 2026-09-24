@@ -87,6 +87,18 @@ These are dated evidence, not startup instructions or current health checks.
   loopback helper transport, fixture and real-Postgres checks; no live
   Google Desktop-client consent run performed.
 
+- [Phase 24a search-assisted assistant](verification/phase-24a-search-assisted-2026-09-24.md):
+  fixture/deterministic-stub-model checks plus a real self-hosted SearXNG
+  container live-verified against real internet results; hosted cloud
+  provider and running-homelab-stack production acceptance remain open.
+
+- [Phase 24b command authorization](verification/phase-24b-command-authorization-2026-09-24.md):
+  isolated-fixture checks for the retired substring matcher's replacement
+  (structured `/reachy` commands, the fail-closed suggestion classifier,
+  Telegram alias/menu registration, and operator-UI command autocomplete/
+  action buttons); no live Telegram bot run or real robot actuation
+  performed.
+
 ## Where information belongs
 
 | Information | Canonical home | Elsewhere |

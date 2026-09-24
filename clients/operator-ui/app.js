@@ -81,15 +81,22 @@ function renderPersona(config) {
   $('persona-prompt').value = config.system_prompt || '';
   $('persona-fields').disabled = false;
 }
+function updateWebsearchProviderFields() {
+  // Built-in SearXNG needs no base URL or API key at all — Companion Core
+  // already knows its internal address (Phase 24 cleanup).
+  $('websearch-external-fields').hidden = $('websearch-provider').value !== 'searxng';
+}
 function renderWebsearch(config) {
   $('websearch-policy').value = config.policy || 'off';
-  $('websearch-provider').value = config.provider || 'searxng';
+  $('websearch-provider').value = config.provider || 'builtin_searxng';
   $('websearch-base-url').value = config.base_url || '';
   $('websearch-key-state').textContent = config.api_key ? `Saved key: ${config.api_key}` : 'No saved key';
   $('websearch-api-key').value = ''; $('websearch-clear-key').checked = false;
   $('websearch-result-count').value = config.result_count ?? 5;
   $('websearch-fields').disabled = false;
+  updateWebsearchProviderFields();
 }
+$('websearch-provider').addEventListener('change', updateWebsearchProviderFields);
 function component(name, value, warning = false) {
   const card = document.createElement('div'); card.className = 'component';
   const title = document.createElement('strong'); title.textContent = name;
@@ -231,13 +238,17 @@ $('disable-llm').addEventListener('click', async () => {
   catch (error) { notice(error.message); }
 });
 submit('websearch', async () => {
+  const provider = $('websearch-provider').value;
   const patch = {
     policy: $('websearch-policy').value,
-    provider: $('websearch-provider').value,
-    base_url: $('websearch-base-url').value.trim(),
+    provider,
+    // Built-in SearXNG carries no base_url/api_key at all — Companion
+    // Core resolves its address itself (Phase 24 cleanup).
+    base_url: provider === 'searxng' ? $('websearch-base-url').value.trim() : null,
     result_count: Number($('websearch-result-count').value) || 5,
   };
-  if ($('websearch-clear-key').checked) patch.api_key = null;
+  if (provider !== 'searxng') patch.api_key = null;
+  else if ($('websearch-clear-key').checked) patch.api_key = null;
   else if ($('websearch-api-key').value) patch.api_key = $('websearch-api-key').value;
   renderWebsearch(await api('/settings/websearch', {method: 'PUT', body: JSON.stringify(patch)}));
   notice('Web search settings saved.');

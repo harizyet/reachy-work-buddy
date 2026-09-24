@@ -113,3 +113,41 @@ its public-instance rate limiter. This was verified live, not just written:
   is untested by design (docs/phase-24a.md's exit criteria test it as
   instructed behavior against a fixture, not model wording); no live model
   was used.
+
+## Addendum — zero-configuration cleanup (2026-09-24)
+
+A later same-day pass removed the two remaining manual-setup steps this
+verification's "Not verified" section flagged:
+
+- **`SEARXNG_SECRET_KEY` is no longer an operator setup step.**
+  `scripts/start-homelab.sh` now generates and persists this container-only
+  deployment secret itself (`deploy/homelab/.env.searxng-secret`, `0600`,
+  gitignored) the first time the stack starts, exporting it so Compose's
+  own `${SEARXNG_SECRET_KEY:?...}` interpolation still works unchanged for
+  anyone who runs `docker compose` directly instead. `--check` never writes
+  this file — it generates a throwaway in-memory value only to satisfy
+  `docker compose config --quiet`'s validation, staying read-only.
+- **A new `BUILTIN_SEARXNG` provider kind needs no Base URL or API key at
+  all.** `shared/models/websearch.py`'s `SearchConfig` now defaults to it,
+  and its `validate_policy` model-validator no longer requires `base_url`
+  for this provider; `companion_core/websearch/provider.py` hardcodes the
+  bundled container's internal compose address (`http://searxng:8080`) for
+  it. Choosing "External SearXNG" (the prior `SEARXNG` kind, unchanged
+  behaviour) still requires and uses an operator-supplied Base URL/API key
+  through the existing `SecretStore` path.
+- **The operator UI's "Web search" card got its first browser test.**
+  `clients/operator-ui/tests/websearch.test.cjs` (new, Chromium/Playwright,
+  fixture HTTP server, no mocks of the UI's own code) confirms: the
+  zero-config default renders with the Base URL/API key fields hidden;
+  saving with the built-in provider selected sends `base_url: null`;
+  selecting "External SearXNG" reveals those fields and a filled-in Base
+  URL round-trips through the PUT.
+- Automated checks after this addendum: `ruff check services shared`
+  clean; `pytest services shared` **466 passed, 16 skipped**, including
+  new/updated cases in `test_websearch.py` for the builtin-vs-external
+  validation split and the hardcoded internal address; all 5 operator-UI
+  Chromium/Playwright suites pass (`accounts`, `chat` ×2, `websearch`).
+- Still not verified: an actual hosted cloud provider, the running homelab
+  stack's own upgrade/acceptance, and a live browser run of `--check`'s
+  generated-vs-persisted secret behavior on a real host — these were
+  already open above and remain so.

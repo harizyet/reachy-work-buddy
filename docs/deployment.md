@@ -110,21 +110,28 @@ Phase 24a's search-assisted assistant is off by default (`search_config`'s
 policy starts `off`, no outbound calls). `docker-compose.yml` ships a
 self-hosted `searxng` container (internal-only — never published to the
 host, same as mailpit's SMTP port) so enabling it needs no separate
-install. Set `SEARXNG_SECRET_KEY` in `.env` (any random string, e.g.
-`openssl rand -hex 32` — the container refuses to serve requests while
-this is unset/left at the image's placeholder). Then in the operator UI's
-Settings → Web search card, set Base URL to `http://searxng:8080` (that
-internal compose DNS name, not `localhost`) and choose Auto or Always.
-`deploy/homelab/searxng/settings.yml` enables the JSON API and disables
-the public-instance rate limiter — both appropriate only because this
+install. Phase 24 cleanup: `scripts/start-homelab.sh` generates and
+persists this container's internal server secret itself
+(`deploy/homelab/.env.searxng-secret`, `0600`) — no `SEARXNG_SECRET_KEY`
+setup step in `.env` is needed for ordinary use (only set it yourself if
+you deliberately want a fixed value). In the operator UI's Settings →
+Web search card, choosing **Built-in SearXNG** and Auto or Always is then
+the entire setup — no Base URL or API key entry, since Companion Core
+already knows this container's internal address. `deploy/homelab/
+searxng/settings.yml` enables the JSON API and disables the
+public-instance rate limiter — both appropriate only because this
 instance is reachable solely from other containers on the compose network,
 never the public Internet. A self-hosted SearXNG instance keeps Reachy's
 own query confined to this container, but SearXNG itself still forwards
 each query to whichever upstream engines its own configuration uses — this
-isn't full network confinement, and the operator UI states that plainly. A
+isn't full network confinement, and the operator UI states that plainly.
+Choosing **External SearXNG** instead (a separately-run instance) or a
 hosted cloud provider (e.g. Brave) is a separate, explicit opt-in via the
-same card's provider field; see [ADR 0022](adr/0022-web-search-grounding.md)
-and [docs/phase-24a.md](phase-24a.md).
+same card's provider field, and does need its own Base URL/API key — a
+credential entered there is stored via Companion Core's SecretStore
+(`secret_ref`), never alongside the bundled container's own deployment
+secret; see [ADR 0022](adr/0022-web-search-grounding.md) and
+[docs/phase-24a.md](phase-24a.md).
 
 ## Telegram and SMTP
 

@@ -27,9 +27,28 @@ stub chat model, and real disposable Postgres (migration + SecretStore
 round-trip). **Not yet done:** a hosted cloud provider (e.g. Brave), and
 actually upgrading/reconfiguring the running homelab stack itself to
 include this service and a non-Off policy (self-hosted-deployment/
-production acceptance); the operator UI card was not exercised in a real
-browser. See [ADR 0022](docs/adr/0022-web-search-grounding.md) and
-[verification](docs/verification/phase-24a-search-assisted-2026-09-24.md).
+production acceptance). See [ADR 0022](docs/adr/0022-web-search-grounding.md)
+and [verification](docs/verification/phase-24a-search-assisted-2026-09-24.md).
+
+Phase 24 cleanup (2026-09-24, same session as 24b below): removed the two
+remaining manual-setup steps a review flagged. `SEARXNG_SECRET_KEY` (the
+bundled SearXNG container's own internal server secret, never a user
+credential) is no longer something an operator sets — `scripts/
+start-homelab.sh` generates and persists it itself
+(`deploy/homelab/.env.searxng-secret`, `0600`, gitignored via `.env.*`),
+exporting it so Compose's `${SEARXNG_SECRET_KEY:?...}` interpolation still
+works unchanged; `--check` stays read-only (a throwaway in-memory value
+only, nothing written). A new `SearchProviderKind.BUILTIN_SEARXNG` (now
+`SearchConfig`'s default) needs no Base URL or API key at all —
+`companion_core/websearch/provider.py` hardcodes the bundled container's
+internal address (`http://searxng:8080`); the prior `SEARXNG` kind is
+relabeled "External SearXNG" in the operator UI and is unchanged
+otherwise (still requires and stores its Base URL/API key via
+`SecretStore`). The operator UI's "Web search" card also got its first
+browser test (`clients/operator-ui/tests/websearch.test.cjs`, new) —
+closing the "not exercised in a real browser" gap the 24a verification
+record above had flagged. See that record's 2026-09-24 addendum for exact
+before/after detail and test names.
 Phase 24b (structured command and intent authorization) is implemented
 (2026-09-24): `companion_core/commands/` (`parser.py`'s deterministic
 `/reachy standby`/`wake`/`status` parser plus Telegram flat aliases
@@ -57,21 +76,23 @@ re-sends the literal command text through the normal `/messages` path
 (the click is the authorization event), never via HTML injection (Chromium
 Playwright test "web chat renders command autocomplete and dispatches
 suggested-command buttons" in `clients/operator-ui/tests/chat.test.cjs`).
-All
-of docs/phase-24b.md's negative conversational examples ("How do I turn
-off Reachy?", "Don't turn off Reachy.", etc.) are covered by parametrized
-tests proving no actuation and, separately, that the classifier itself
-resolves them to a non-`"request"` speech act rather than merely failing
-to match. Route strings `/robots`, `/robots/standby`, `/robots/resume` are
-now `shared/protocols/operator_api.py` constants, imported by both
-`hub_client.py` and `reachy_hub/app.py`'s route decorators, per AGENTS.md.
-**Verified only against isolated fixtures** (`pytest services shared`:
-463 passed; `ruff check services shared`: clean; both operator-ui
-Playwright suites pass) — no live Telegram bot run, no real robot
-actuation, and the `/reachy gesture <name>` syntax `docs/phase-24b.md`
-uses as an illustrative example is deliberately **not** parsed
-(`_KNOWN_ACTIONS` covers only the three actions actually wired to a hub
-call, per AGENTS.md's "no speculative endpoints" rule).
+All of docs/phase-24b.md's negative conversational examples ("How do I
+turn off Reachy?", "Don't turn off Reachy.", etc.) are covered by
+parametrized tests proving no actuation and, separately, that the
+classifier itself resolves them to a non-`"request"` speech act rather
+than merely failing to match. Route strings `/robots`, `/robots/standby`,
+`/robots/resume` are now `shared/protocols/operator_api.py` constants,
+imported by both `hub_client.py` and `reachy_hub/app.py`'s route
+decorators, per AGENTS.md. **Verified only against isolated fixtures**
+(`pytest services shared`: 466 passed; `ruff check services shared`:
+clean; all 5 operator-UI Playwright suites pass) — no live Telegram bot
+run, no real robot actuation, and the `/reachy gesture <name>` syntax
+`docs/phase-24b.md` uses as an illustrative example is deliberately
+**not** parsed (`_KNOWN_ACTIONS` covers only the three actions actually
+wired to a hub call, per AGENTS.md's "no speculative endpoints" rule).
+See [verification](docs/verification/phase-24b-command-authorization-2026-09-24.md)
+for the full negative-example/alias/timeout/button/Telegram-registration
+test inventory.
 
 Phases 0–21 and 22a are implemented. Phase 23 implementation is complete:
 versioned migrations, SecretStore, owner-bound Google OAuth, Accounts UI and

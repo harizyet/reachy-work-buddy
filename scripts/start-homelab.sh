@@ -87,6 +87,32 @@ fi
 load_env_file "$ENV_FILE"
 : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in $ENV_FILE}"
 
+# Phase 24 cleanup: SEARXNG_SECRET_KEY is an internal deployment secret for
+# the bundled SearXNG container, not a user credential — it should not be
+# something an ordinary operator has to invent or paste into .env. If .env
+# already sets one (e.g. a shared value across hosts), that wins; otherwise
+# generate and persist one, gitignored (matches `.env.*` in .gitignore) next
+# to the other per-deployment secret file (.env.secret-keys.json).
+# Exported shell env vars take precedence over --env-file for compose's own
+# ${VAR} interpolation, so this doesn't require writing into $ENV_FILE.
+if [[ -z "${SEARXNG_SECRET_KEY:-}" ]]; then
+    require_cmd openssl "Install openssl, or set SEARXNG_SECRET_KEY yourself in $ENV_FILE."
+    if [[ "$COMMON_CHECK_ONLY" -eq 1 ]]; then
+        # --check must stay read-only: never write the persisted secret
+        # file here. A throwaway in-memory value only satisfies compose's
+        # required-variable validation for this run.
+        SEARXNG_SECRET_KEY="$(openssl rand -hex 32)"
+    else
+        SEARXNG_SECRET_FILE="${COMPOSE_DIR}/.env.searxng-secret"
+        if [[ ! -f "$SEARXNG_SECRET_FILE" ]]; then
+            log_info "generating a new SearXNG server secret (deploy/homelab/.env.searxng-secret)"
+            ( umask 177 && openssl rand -hex 32 > "$SEARXNG_SECRET_FILE" )
+        fi
+        SEARXNG_SECRET_KEY="$(cat "$SEARXNG_SECRET_FILE")"
+    fi
+fi
+export SEARXNG_SECRET_KEY
+
 COMPOSE_ARGS=(-p "$PROJECT_NAME" --env-file "$ENV_FILE")
 if [[ "$SIMULATION" -eq 1 ]]; then
     COMPOSE_ARGS+=(--profile simulation)

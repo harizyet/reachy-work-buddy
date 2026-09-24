@@ -26,7 +26,12 @@ from companion_core.websearch.store import (
 )
 from fastapi.testclient import TestClient
 
-from shared.models.websearch import SearchConfig, SearchConfigPatch, SearchPolicy
+from shared.models.websearch import (
+    SearchConfig,
+    SearchConfigPatch,
+    SearchPolicy,
+    SearchProviderKind,
+)
 
 
 def core_app(**kwargs):
@@ -204,9 +209,16 @@ def test_merge_and_masked_config_round_trip():
     assert "secret-value" not in json.dumps(masked)
 
 
-def test_non_off_policy_requires_base_url():
+def test_non_off_policy_requires_base_url_for_an_external_provider():
     with pytest.raises(ValueError, match="base URL"):
-        SearchConfig(policy=SearchPolicy.AUTO)
+        SearchConfig(policy=SearchPolicy.AUTO, provider=SearchProviderKind.SEARXNG)
+
+
+def test_non_off_policy_needs_no_base_url_for_the_builtin_provider():
+    """Phase 24 cleanup: Built-in SearXNG is zero-configuration — no base
+    URL required, unlike an external/custom provider above."""
+    config = SearchConfig(policy=SearchPolicy.AUTO, provider=SearchProviderKind.BUILTIN_SEARXNG)
+    assert config.base_url is None
 
 
 # --- Wiring through /conversation and /settings/websearch ------------------
@@ -217,7 +229,7 @@ def test_websearch_settings_round_trip_and_masks_key():
     assert resp.status_code == 200 and resp.json()["policy"] == "off"
 
     resp = client.put("/settings/websearch", json={
-        "policy": "auto", "base_url": "http://searxng.local", "api_key": "super-secret-key",
+        "policy": "auto", "provider": "searxng", "base_url": "http://searxng.local", "api_key": "super-secret-key",
     })
     assert resp.status_code == 200
     assert resp.json()["policy"] == "auto"
@@ -225,10 +237,40 @@ def test_websearch_settings_round_trip_and_masks_key():
     assert "super-secret-key" not in json.dumps(resp.json())
 
 
-def test_websearch_settings_rejects_non_off_policy_without_base_url():
+def test_websearch_settings_rejects_non_off_policy_without_base_url_for_external_provider():
     client = TestClient(core_app())
-    resp = client.put("/settings/websearch", json={"policy": "auto"})
+    resp = client.put("/settings/websearch", json={"policy": "auto", "provider": "searxng"})
     assert resp.status_code == 422
+
+
+def test_websearch_settings_accept_non_off_policy_with_no_base_url_for_builtin_provider():
+    client = TestClient(core_app())
+    resp = client.put("/settings/websearch", json={"policy": "auto", "provider": "builtin_searxng"})
+    assert resp.status_code == 200
+
+
+def test_builtin_provider_needs_no_base_url_and_hits_the_internal_address():
+    """Phase 24 cleanup: choosing Built-in SearXNG (the default provider)
+    with no base_url/api_key at all still searches, against Companion
+    Core's own hardcoded internal address for the bundled container."""
+    search_requests = []
+
+    def respond(request):
+        search_requests.append(str(request.url))
+        return httpx.Response(200, json={"results": []})
+
+    client = TestClient(core_app(
+        llm_transport=httpx.MockTransport(lambda r: httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})),
+        websearch_transport=httpx.MockTransport(respond),
+    ))
+    client.put("/settings/llm", json={"local": {"base_url": "http://ovms/v1", "model": "qwen"}})
+    resp = client.put("/settings/websearch", json={"policy": "always"})
+    assert resp.status_code == 200 and resp.json()["provider"] == "builtin_searxng" and resp.json()["base_url"] is None
+
+    resp = client.post("/conversation", json={**TURN, "text": "anything"})
+    assert resp.status_code == 200
+    assert len(search_requests) == 1
+    assert search_requests[0].startswith("http://searxng:8080/")
 
 
 def test_auto_policy_triggers_search_and_grounds_cited_answer():
@@ -245,7 +287,7 @@ def test_auto_policy_triggers_search_and_grounds_cited_answer():
         websearch_transport=searxng_transport(canned_results(requests=search_requests)),
     ))
     client.put("/settings/llm", json={"local": {"base_url": "http://ovms/v1", "model": "qwen"}})
-    client.put("/settings/websearch", json={"policy": "auto", "base_url": "http://searxng.local"})
+    client.put("/settings/websearch", json={"policy": "auto", "provider": "searxng", "base_url": "http://searxng.local"})
 
     resp = client.post("/conversation", json={**TURN, "text": "What's the latest CUDA version?"})
     assert resp.status_code == 200
@@ -274,7 +316,7 @@ def test_always_policy_searches_regardless_of_content():
         websearch_transport=searxng_transport(canned_results(requests=search_requests)),
     ))
     client.put("/settings/llm", json={"local": {"base_url": "http://ovms/v1", "model": "qwen"}})
-    client.put("/settings/websearch", json={"policy": "always", "base_url": "http://searxng.local"})
+    client.put("/settings/websearch", json={"policy": "always", "provider": "searxng", "base_url": "http://searxng.local"})
     resp = client.post("/conversation", json={**TURN, "text": "explain recursion"})
     assert resp.status_code == 200
     assert len(search_requests) == 1
@@ -286,7 +328,7 @@ def test_force_frontier_turn_receives_same_grounding_treatment():
         llm_transport=httpx.MockTransport(lambda r: httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})),
         websearch_transport=searxng_transport(canned_results(requests=search_requests)),
     ))
-    client.put("/settings/websearch", json={"policy": "auto", "base_url": "http://searxng.local"})
+    client.put("/settings/websearch", json={"policy": "auto", "provider": "searxng", "base_url": "http://searxng.local"})
     resp = client.post("/conversation", json={**TURN, "text": "What's the latest release?", "force_frontier": True})
     assert resp.status_code == 200
     assert len(search_requests) == 1
@@ -298,7 +340,7 @@ def test_deterministic_intents_never_trigger_search_under_always_policy():
         llm_transport=httpx.MockTransport(lambda r: httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})),
         websearch_transport=searxng_transport(canned_results(requests=search_requests)),
     ))
-    client.put("/settings/websearch", json={"policy": "always", "base_url": "http://searxng.local"})
+    client.put("/settings/websearch", json={"policy": "always", "provider": "searxng", "base_url": "http://searxng.local"})
     resp = client.post("/conversation", json={**TURN, "text": "remind me to review the report"})
     assert resp.status_code == 200
     assert search_requests == []
@@ -316,7 +358,7 @@ def test_search_failure_on_warranted_turn_still_replies_with_failure_notice():
         websearch_transport=httpx.MockTransport(lambda r: httpx.Response(503)),
     ))
     client.put("/settings/llm", json={"local": {"base_url": "http://ovms/v1", "model": "qwen"}})
-    client.put("/settings/websearch", json={"policy": "always", "base_url": "http://searxng.local"})
+    client.put("/settings/websearch", json={"policy": "always", "provider": "searxng", "base_url": "http://searxng.local"})
     resp = client.post("/conversation", json={**TURN, "text": "anything"})
     assert resp.status_code == 200
     sent_messages = llm_requests[-1]["messages"]
@@ -349,7 +391,7 @@ def test_embedded_instruction_in_result_does_not_change_model_behaviour():
         websearch_transport=httpx.MockTransport(malicious_results),
     ))
     client.put("/settings/llm", json={"local": {"base_url": "http://ovms/v1", "model": "qwen"}})
-    client.put("/settings/websearch", json={"policy": "always", "base_url": "http://searxng.local"})
+    client.put("/settings/websearch", json={"policy": "always", "provider": "searxng", "base_url": "http://searxng.local"})
     resp = client.post("/conversation", json={**TURN, "text": "hello"})
     assert resp.status_code == 200
     assert resp.json()["reply"] == "Stub reply, unaffected."

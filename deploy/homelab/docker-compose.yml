@@ -68,15 +68,19 @@ services:
       # (SEARXNG_SECRET, not SEARXNG_SECRET_KEY) into server.secret_key —
       # confirmed against searx/settings_defaults.py; the image refuses to
       # serve requests while that value is still its "ultrasecretkey"
-      # placeholder.
-      SEARXNG_SECRET: ${SEARXNG_SECRET_KEY:?set SEARXNG_SECRET_KEY in .env}
+      # placeholder. Phase 24 cleanup: scripts/start-homelab.sh generates
+      # and exports SEARXNG_SECRET_KEY itself (deploy/homelab/
+      # .env.searxng-secret) — an operator running `docker compose` directly
+      # instead of through that launcher must set it themselves.
+      SEARXNG_SECRET: ${SEARXNG_SECRET_KEY:?set SEARXNG_SECRET_KEY, or start this stack via scripts/start-homelab.sh which generates it for you}
       SEARXNG_BASE_URL: http://searxng:8080/
     volumes:
       - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
       - searxng-data:/var/cache/searxng
     # Internal-only, same pattern as mailpit's SMTP port below: reachable
-    # from companion-core as "http://searxng:8080" (the value to enter in
-    # Settings -> Web search -> Base URL), never published to the host.
+    # from companion-core as "http://searxng:8080" — Settings -> Web search's
+    # "Built-in SearXNG" provider option already knows this address, no
+    # operator entry needed. Never published to the host.
     expose:
       - "8080"
 

@@ -24,8 +24,12 @@ the endurance/outage/backup/privacy/channels matrix remains open. Phase 22c
 follow-up. Phase 23 (versioned migrations, SecretStore, and Gmail/Calendar
 Accounts) is implemented, and Phase 23b adds a Desktop OAuth client transport
 for self-hosted installs without a public HTTPS domain; real Google-account
-and production acceptance remain open for both. Phases 24–27 remain planned.
-The [roadmap](docs/plan.md#6-implementation-roadmap) owns phase scope;
+and production acceptance remain open for both. Phase 24a (search-assisted,
+freshness-aware assistant) and Phase 24b (structured command and intent
+authorization) are implemented and verified against isolated fixtures — a
+live Telegram bot run and real robot actuation for 24b, and hosted-provider/
+production-deployment acceptance for 24a, remain open. Phases 25–27 remain
+planned. The [roadmap](docs/plan.md#6-implementation-roadmap) owns phase scope;
 [verification records](docs/README.md#verification-records) distinguish tested
 behavior from outstanding acceptance.
 
