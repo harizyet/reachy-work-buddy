@@ -217,9 +217,9 @@ Phase 23's open real-account acceptance item rather than closing it. Phase 22b
 is in progress (above); Phase 24a is implemented and real-SearXNG-verified,
 with running-deployment acceptance still open; Phase 24b is implemented and
 fixture/browser-verified. See their roadmap rows below for evidence and limits.
-[Phases 24c–24d](phase-24cd.md) now complete and physically prove the missing
-Reachy conversation workflow before Phase 25 (owner recognition). Phases
-24c–24d and 25–27 remain planned, not implemented;
+[Phases 24c–24d](phase-24cd.md) are planned to complete and physically prove
+the missing Reachy conversation workflow before Phase 25 (owner recognition).
+Phases 24c–24d and 25–27 remain planned, not implemented;
 see the [deployment and accounts acceptance plan](phase-22-23.md). See
 [implementation history](verification/history.md) for verification evidence and
 [ADR 0016](adr/0016-operator-ui.md) for the implemented operator API.

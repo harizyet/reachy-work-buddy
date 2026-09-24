@@ -1,9 +1,12 @@
 # Phase 25 — owner recognition and voice access control
 
-Status: planned, not implemented. Depends on Phase 22 physical deployment
-and Phase 23's read-only Google integration. Implementation starts only after
-[Phases 24c–24d](phase-24cd.md) complete and physically verify the baseline
-Reachy conversation workflow. Recognition gates an already-working capture,
+Status: planned, not implemented. Depends on
+[Phases 24c–24d](phase-24cd.md) implementing and physically accepting the
+baseline Reachy conversation workflow; implementation starts only after both
+pass. It also builds on the Phase 22 physical deployment substrate and the
+existing Phase 19 owner login and Phase 20 web-chat session infrastructure. Phase 23
+Google integration is not a prerequisite; its read-only adapters are only
+regression context for the write-gating tests below. Recognition gates an already-working capture,
 conversation and playback path; it must not assume isolated speech components
 prove that path. This is a single-owner system:
 verify the enrolled owner, leave everybody else unknown. Do not identify
