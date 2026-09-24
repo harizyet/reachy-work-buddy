@@ -152,6 +152,52 @@ explicit command parser
   an explicit structured command, an interactive-control press that
   dispatches one, or an existing confirmation/consent path (ADR 0011).
 
+### Suggestion classifier: constrained output and fail-closed behaviour
+
+The classifier's output is a fixed, validated structure, not free model
+prose to be pattern-matched after the fact:
+
+```json
+{
+  "intent": "robot_standby",
+  "speech_act": "request",
+  "confidence": 0.96
+}
+```
+
+`intent` and `speech_act` are drawn from fixed enums the code defines (not
+open strings the model invents), and `confidence` is a required numeric
+field. A response that doesn't parse against this schema is not
+"best-effort interpreted" — it is a classifier failure (see below).
+
+The classifier is a QoL enhancement layered on top of the ordinary
+conversational branch, so **its own failure must never degrade or block
+that branch, and must never itself become a path to a suggestion**:
+
+```text
+classifier unavailable / timeout
+invalid JSON / schema mismatch
+unknown or missing speech_act
+missing confidence
+        ↓
+   NO suggestion
+        ↓
+continue ordinary conversation, unchanged
+```
+
+Concretely: failure, timeout, malformed structured output, or an
+unrecognized/missing `speech_act` or `confidence` from the suggestion
+classifier is treated identically to `speech_act != "request"` — as "no
+actionable suggestion." The ordinary conversational branch proceeds exactly
+as it would if the classifier were never called; the failure is not
+surfaced to the user as an error, and it certainly never falls back to
+guessing an actionable intent from the raw classifier output or from the
+original text. This mirrors this codebase's existing "provider failure is
+not a crash" doctrine (Phase 21's LLM routing, Phase 24a's search failure
+handling) applied to a non-authoritative classification step instead of an
+answer-producing one — here the safe default on failure is simply silence,
+since there is no obligation to say anything at all.
+
 ### Scope of explicit-command-only actions
 
 Explicit command syntax is required wherever a false-positive actuation
@@ -274,8 +320,11 @@ handling) parsed by the new command parser may call the actual
    (unchanged endpoints/authorization — only the trigger path changes).
 3. Retire `robot_power_intent`'s substring matching entirely (no
    authoritative or suggestion role); add the separate natural-language
-   suggestion classifier (intent + `speech_act` + confidence, per Required
-   behaviour) and wire it to format a suggested-command reply only when
+   suggestion classifier with its fixed-schema output (`intent`,
+   `speech_act`, `confidence`, per Required behaviour), treating any
+   timeout, malformed/non-schema response, or missing/unrecognized
+   `speech_act`/`confidence` as "no suggestion" rather than a fallback
+   guess; wire it to format a suggested-command reply only when
    `speech_act == "request"` and confidence clears threshold.
 4. Add the interactive-control (button) suggestion path for channels that
    support it (web chat first; Telegram inline keyboards as a fast-follow),
@@ -301,6 +350,7 @@ handling) parsed by the new command parser may call the actual
 | Suggestion, not action | A `speech_act == "request"` natural-language match ("Could you put Reachy to sleep?") produces a suggested-command reply or action-button render and does not itself call the standby/resume path |
 | Button dispatch | Pressing a rendered action button dispatches the same structured `Command` the slash form would, and is itself the authorization event, not the sentence that produced the button |
 | Alias equivalence | `/standby` (Telegram-registered alias) and `/reachy standby` (namespaced form) parse to the identical structured `Command` and produce identical authorization/action results |
+| Classifier fail-closed | A forced classifier timeout, malformed/non-schema response, or a response missing/misvaluing `speech_act`/`confidence` produces no suggestion and no error surfaced to the user; the ordinary conversational reply is returned unchanged, verified by call-count/output assertions, not by inspecting classifier internals |
 | Channel parity | The same command text produces identical parsing/authorization/action results whether it arrives via Telegram or web chat |
 | Scope preserved | Named-behaviour playback and ADR 0011's existing email/calendar consent flows are unaffected — neither gains nor loses their current authorization requirements |
 | Regression | Existing Python/Ruff/browser checks and Phase 22b's standby/resume tests still pass under the new trigger path |
