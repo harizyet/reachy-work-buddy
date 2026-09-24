@@ -58,8 +58,13 @@ Rules:
 or shutting it down.
 - intent "robot_resume": the message is about waking Reachy up, turning it on, or resuming it.
 - intent "none": neither of the above.
-- speech_act "request" ONLY when the user is directly asking the assistant to perform that \
-action right now, e.g. "Could you put Reachy to sleep?" or "Turn Reachy off please."
+- speech_act "request" ONLY when the ENTIRE message is asking the assistant to perform that \
+action right now, with nothing else worth answering, e.g. "Could you put Reachy to sleep?" or \
+"Turn Reachy off please." If the message also asks a genuine question or wants an explanation \
+alongside the action (e.g. "Can you explain what standby does, and if appropriate put Reachy to \
+sleep?"), classify it as "statement" or "other" instead, NOT "request" — the reply to a "request" \
+replaces the assistant's answer entirely, so anything containing content worth answering must \
+never be classified "request".
 - speech_act "question" for questions about how/why/whether to do it, e.g. "How do I turn off \
 Reachy?" or "Is it safe to wake Reachy up?"
 - speech_act "negation" for messages that explicitly do not want the action, e.g. "Don't turn \

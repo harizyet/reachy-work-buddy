@@ -40,8 +40,6 @@ its public-instance rate limiter. This was verified live, not just written:
 
 ## Automated checks
 
-## Automated checks
-
 - `ruff check .` passed across the full repository after the change.
 - `pytest services shared` (in-memory, no database): **428 passed, 23
   skipped** (pre-existing, espeak-dependent), no failures.
@@ -114,19 +112,32 @@ its public-instance rate limiter. This was verified live, not just written:
   instructed behavior against a fixture, not model wording); no live model
   was used.
 
-## Addendum — zero-configuration cleanup (2026-09-24)
+## Addendum — zero-configuration cleanup via the supported launcher (2026-09-24)
 
 A later same-day pass removed the two remaining manual-setup steps this
-verification's "Not verified" section flagged:
+verification's "Not verified" section flagged, for the **supported
+launcher path** (`scripts/start-homelab.sh`) — not for raw `docker
+compose` invoked directly, which remains an advanced/manual path with its
+own setup step, precisely to avoid overstating "zero-configuration" as
+broader than it is:
 
-- **`SEARXNG_SECRET_KEY` is no longer an operator setup step.**
-  `scripts/start-homelab.sh` now generates and persists this container-only
-  deployment secret itself (`deploy/homelab/.env.searxng-secret`, `0600`,
-  gitignored) the first time the stack starts, exporting it so Compose's
-  own `${SEARXNG_SECRET_KEY:?...}` interpolation still works unchanged for
-  anyone who runs `docker compose` directly instead. `--check` never writes
-  this file — it generates a throwaway in-memory value only to satisfy
-  `docker compose config --quiet`'s validation, staying read-only.
+- **`SEARXNG_SECRET_KEY` is no longer an operator setup step, via the
+  launcher.** `scripts/start-homelab.sh` now generates and persists this
+  container-only deployment secret itself (`deploy/homelab/
+  .env.searxng-secret`, `0600`, gitignored) the first time the stack
+  starts, exporting it so Compose's own `${SEARXNG_SECRET_KEY:?...}`
+  interpolation resolves without the operator touching `.env`. `--check`
+  never writes this file — it generates a throwaway in-memory value only
+  to satisfy `docker compose config --quiet`'s validation, staying
+  read-only. An operator who runs `docker compose` directly instead of
+  through the launcher still must set `SEARXNG_SECRET_KEY` themselves
+  (the compose file's `:?` still requires it, and its error message says
+  so) — this is the documented boundary of "zero-configuration": it
+  describes the launcher path, not raw Compose. Making raw Compose itself
+  zero-config would need a different mechanism (a generated env file
+  wired through `env_file:`, real Docker secret provisioning, or an init
+  container/step) and wasn't judged worth the added complexity while the
+  launcher is the canonical deployment path.
 - **A new `BUILTIN_SEARXNG` provider kind needs no Base URL or API key at
   all.** `shared/models/websearch.py`'s `SearchConfig` now defaults to it,
   and its `validate_policy` model-validator no longer requires `base_url`

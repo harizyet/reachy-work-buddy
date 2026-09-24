@@ -31,14 +31,20 @@ production acceptance). See [ADR 0022](docs/adr/0022-web-search-grounding.md)
 and [verification](docs/verification/phase-24a-search-assisted-2026-09-24.md).
 
 Phase 24 cleanup (2026-09-24, same session as 24b below): removed the two
-remaining manual-setup steps a review flagged. `SEARXNG_SECRET_KEY` (the
-bundled SearXNG container's own internal server secret, never a user
-credential) is no longer something an operator sets — `scripts/
-start-homelab.sh` generates and persists it itself
+remaining manual-setup steps a review flagged, for the **supported
+launcher path**. `SEARXNG_SECRET_KEY` (the bundled SearXNG container's own
+internal server secret, never a user credential) is no longer something
+an operator sets when starting via `scripts/start-homelab.sh` — it
+generates and persists the secret itself
 (`deploy/homelab/.env.searxng-secret`, `0600`, gitignored via `.env.*`),
-exporting it so Compose's `${SEARXNG_SECRET_KEY:?...}` interpolation still
-works unchanged; `--check` stays read-only (a throwaway in-memory value
-only, nothing written). A new `SearchProviderKind.BUILTIN_SEARXNG` (now
+exporting it so Compose's `${SEARXNG_SECRET_KEY:?...}` interpolation
+resolves without touching `.env`; `--check` stays read-only (a throwaway
+in-memory value only, nothing written). This is specific to the
+launcher: an operator running `docker compose` directly still must set
+`SEARXNG_SECRET_KEY` themselves — "zero-configuration" describes the
+launcher path, not raw Compose, deliberately (see the phase-24a
+verification addendum for why a raw-Compose fix wasn't pursued). A new
+`SearchProviderKind.BUILTIN_SEARXNG` (now
 `SearchConfig`'s default) needs no Base URL or API key at all —
 `companion_core/websearch/provider.py` hardcodes the bundled container's
 internal address (`http://searxng:8080`); the prior `SEARXNG` kind is
@@ -126,7 +132,9 @@ real-account consent/read/refresh/revoke/reconnect and audience checks. No
 OAuth client file, deployed HTTPS hostname, or live helper run was supplied
 this session. Phase 23/23b are not yet production-accepted. The
 Google-enabled physical repeat remains deferred. Phase 24a is implemented
-against a fixture provider (see above); Phases 24b–27 remain planning only.
+and real-SearXNG-verified, and Phase 24b is implemented and isolated-
+fixture/browser-verified (see above for both); Phases 25–27 remain
+planning only.
 
 Phase 22b (physical acceptance) started 2026-09-23 with the owner physically
 present, coordinated across a homelab-side and a Nano-side Claude Code

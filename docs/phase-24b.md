@@ -200,6 +200,37 @@ handling) applied to a non-authoritative classification step instead of an
 answer-producing one — here the safe default on failure is simply silence,
 since there is no obligation to say anything at all.
 
+### Suggestion scope boundary: narrow requests only, never at the expense of the answer
+
+The suggestion replaces the model's own answer for that turn (Required
+behaviour above), not both a suggestion and an answer together. For a
+clearly action-only request ("Could you put Reachy to sleep?") that's the
+whole point — there's no separate question to answer. But a message that
+mixes a genuine question with an incidental action-ish clause ("Can you
+explain what standby does, and if appropriate put Reachy to sleep?")
+would be poorly served by a bare "Use /reachy standby." reply that
+discards the explanation the user actually asked for.
+
+This is a UX boundary, not a safety rule (unlike everything else in this
+document, getting it wrong produces an unhelpful reply, not an
+unauthorized action) — so it's deliberately narrower than a schema
+constraint: the classifier's prompt should treat `speech_act == "request"`
+as reserved for messages that are *only* asking for the action itself,
+with nothing else worth answering, and classify anything with additional
+substantive content (an embedded question, an explanation request, a
+conditional worth addressing on its own) as `"statement"` or `"other"` —
+i.e. no suggestion, ordinary answer — rather than as a request whose
+suggestion would silently drop that content. v1's scope (`robot_standby`/
+`robot_resume` from short, plainly imperative phrasings) doesn't exercise
+this edge — the exit-criteria examples are all either clean requests or
+clean non-requests — but it must not regress as more intents are added
+under this same classifier in later phases. Widening `"request"`'s scope
+to also produce a suggestion *alongside* an answer, rather than treating
+mixed messages as non-actionable, is a possible future direction, but not
+one this phase attempts; it would need its own reply-composition design
+(how the suggestion and the answer are both shown), not just a schema
+change.
+
 ### Scope of explicit-command-only actions
 
 Explicit command syntax is required wherever a false-positive actuation

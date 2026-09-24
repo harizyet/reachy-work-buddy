@@ -113,8 +113,13 @@ host, same as mailpit's SMTP port) so enabling it needs no separate
 install. Phase 24 cleanup: `scripts/start-homelab.sh` generates and
 persists this container's internal server secret itself
 (`deploy/homelab/.env.searxng-secret`, `0600`) — no `SEARXNG_SECRET_KEY`
-setup step in `.env` is needed for ordinary use (only set it yourself if
-you deliberately want a fixed value). In the operator UI's Settings →
+setup step in `.env` is needed when starting the stack through this
+launcher (only set it yourself if you deliberately want a fixed value).
+This zero-configuration behaviour is specific to the launcher path: an
+operator who invokes `docker compose` directly instead still must set
+`SEARXNG_SECRET_KEY` themselves, since Compose's own `${...:?...}`
+requirement in `docker-compose.yml` has no way to run the launcher's
+generation step. In the operator UI's Settings →
 Web search card, choosing **Built-in SearXNG** and Auto or Always is then
 the entire setup — no Base URL or API key entry, since Companion Core
 already knows this container's internal address. `deploy/homelab/
