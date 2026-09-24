@@ -113,9 +113,41 @@ The same session also confirmed, from 1.8.4's own source, that
 starts/stops the daemon — constructing it for media access alone causes
 no motion, independent of any code here.
 
+## Hardening pass (companion board offline, code-only)
+
+With the Nano unreachable, reviewed `capture_frame` further without any
+live access:
+
+- `ReachyMini()` defaults to `host="reachy-mini.local"` (mDNS) with
+  `connection_mode="auto"` — nothing in the prior version pinned this, so
+  it silently depended on mDNS resolution working inside the container.
+  Now passes `host`/`port` explicitly (parsed from this backend's own
+  `base_url`) and `connection_mode="localhost_only"`, matching the
+  same-host assumption the HTTP client already makes.
+- Added a `threading.Lock` around the lazy `_mini` construction —
+  `GET /camera/frame` is a sync FastAPI route (runs in Starlette's thread
+  pool), so two requests racing right after process start could otherwise
+  each construct their own `ReachyMini` against the same daemon socket.
+- Wrapped both `ReachyMini(...)` construction and `.media.get_frame()` in
+  try/except, raising `RobotBackendError` — previously either could let a
+  raw third-party exception escape as an unhandled 500, inconsistent with
+  every other real-hardware failure path in this class.
+- Added `RobotBackend.close()` (protocol + both implementations), called
+  once from `create_app`'s shutdown lifespan; `ReachyDaemonBackend.close()`
+  calls the held `ReachyMini`'s `__exit__` directly (it has no standalone
+  public close method) so the media manager/daemon client aren't left
+  open indefinitely across restarts.
+- 6 new unit tests (host/port/connection_mode passed correctly,
+  construction-failure and get_frame-failure wrapping, close() behaviour
+  including no-op-when-never-opened and idempotent-on-second-call).
+
+None of this is verified against real hardware — it's a code-review-driven
+hardening pass done while the Nano was unreachable, on top of the
+still-unverified LOCAL-backend switch above.
+
 Camera remains **not production-accepted**: real capture succeeded once
 via the old code path; the new recommended-path code exists and is
-unit-tested but, as of this fix, still unverified against real hardware
-end to end (image rebuild/live capture through LOCAL was in progress on
-the Nano at the time of writing, gated on the owner confirming the
-running production container's temporary `docker rm -f`).
+unit-tested but still unverified against real hardware end to end (image
+rebuild/live capture through LOCAL was in progress on the Nano, gated on
+the owner confirming the running production container's temporary
+`docker rm -f`, when the companion board went offline).

@@ -164,16 +164,25 @@ were removed; the pre-existing OVMS container was left running.
   still use the old inbound HTTP path. TLS/network-change/media acceptance,
   clean-image provisioning, and soak/restore checks remain open. Use the
   [acceptance matrix](docs/phase-22-23.md#satisfactory-run-acceptance-matrix).
-- Camera (2026-09-24): a real `GET /camera/frame` capture succeeded against
+- **Phase 22c — camera LOCAL-backend acceptance, split out separately
+  (2026-09-24)**: a real `GET /camera/frame` capture succeeded against
   physical hardware (1920x1080, no simulator marker) via the then-current
   release/acquire+OpenCV path, but without a deliberate scene change, so it
   doesn't yet satisfy the acceptance matrix's "fresh scene corresponds to a
   command" bar. That capture also showed the release/acquire approach tears
   down the daemon's whole media pipeline (audio+WebRTC) for ~2.5-4s per
   call, so `ReachyDaemonBackend.capture_frame` was refactored to reachy_mini
-  SDK's recommended LOCAL media backend instead — code and unit tests are
-  done (375 passed, up from 371), but the Docker image/container has not
-  been rebuilt or run against the real daemon socket on the Nano. See
+  SDK's recommended LOCAL media backend instead, then hardened further
+  (explicit host/port/`connection_mode="localhost_only"` instead of relying
+  on mDNS, thread-safe lazy client construction, construction/`get_frame()`
+  failures wrapped as `RobotBackendError`, a `close()` shutdown hook) —
+  code and unit tests are done (381 passed, up from 371), but the Docker
+  image/container has not been rebuilt or run against the real daemon
+  socket on the Nano: the companion board went offline mid-session before
+  that could happen. **Earmarked as its own roadmap phase (22c in
+  [docs/plan.md](docs/plan.md#6-implementation-roadmap)) for physical
+  testing once the board is back**, rather than folded into 22b's full
+  matrix. See
   [Phase 22b camera evidence](docs/verification/phase-22b-camera-2026-09-24.md)
   for exact figures and what remains unverified. Physical voice/motion
   acceptance also remains open per the matrix above.

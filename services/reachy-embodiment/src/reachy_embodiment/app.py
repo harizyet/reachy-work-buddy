@@ -128,6 +128,7 @@ def create_app(
                     pass
                 except Exception:
                     log.exception("robot WS client task raised during shutdown")
+            backend.close()
 
     app = FastAPI(title="reachy-embodiment", lifespan=lifespan)
     app.state.backend = backend

@@ -13,7 +13,11 @@ it's an HTTP client rather than an in-process `reachy_mini` SDK import: the
 SDK class itself is just a thin HTTP/WS client to the daemon, which is the
 process that actually owns the serial/camera/audio hardware). It plugs in
 behind the same RobotBackend protocol as SimulatedRobotBackend, so nothing
-above this module changes.
+above this module changes. Phase 22b's `capture_frame` (below) is the one
+deliberate exception to the "no in-process SDK" rule above: reading camera
+frames from the daemon's local media socket is the SDK's own documented
+same-host path, not a movement/control command, so it doesn't reopen the
+question of who owns motor/serial control.
 
 **`ReachyDaemonBackend` is a first draft, not yet verified against a live
 daemon** — reachy-mini-daemon has not been started during Phase 22
@@ -29,10 +33,12 @@ from __future__ import annotations
 
 import io
 import logging
+import threading
 import time
 import wave
 from collections.abc import Callable
 from typing import Protocol
+from urllib.parse import urlsplit
 
 import httpx
 from PIL import Image, ImageDraw
@@ -73,6 +79,12 @@ class RobotBackend(Protocol):
         """Resumes a backend previously put into standby. `wake_up=True`
         (default) replays the daemon's own wake-up motion, matching a
         normal daemon start. Returns the resulting daemon status."""
+        ...
+
+    def close(self) -> None:
+        """Releases any resources opened lazily (e.g. Phase 22b's camera
+        media client). Called once from the app's shutdown lifespan; safe
+        to call even if nothing was ever opened."""
         ...
 
 
@@ -124,6 +136,9 @@ class SimulatedRobotBackend:
         log.info("sim: daemon resume wake_up=%s (no physical daemon in this environment)", wake_up)
         self._connected = True
         return {"state": "running", "simulation_enabled": True}
+
+    def close(self) -> None:
+        pass
 
 
 class RobotBackendError(RuntimeError):
@@ -219,12 +234,29 @@ class ReachyDaemonBackend:
         self._status_timeout = status_timeout
         self._behaviour_moves = behaviour_moves if behaviour_moves is not None else dict(_DEFAULT_BEHAVIOUR_MOVES)
         # Phase 22b camera refactor: lazily created, then kept alive for the
-        # process lifetime (never used as a context manager, so its
-        # __exit__ never fires and never calls release_media/acquire_media
-        # on the daemon). `media_client_factory` lets tests substitute a
-        # fake without a real `reachy_mini` import.
+        # process lifetime (never used as a context manager during normal
+        # operation, so its __exit__ never fires and never calls
+        # release_media/acquire_media on the daemon — only `close()` calls
+        # it, once, at shutdown). `media_client_factory` lets tests
+        # substitute a fake without a real `reachy_mini` import. `_mini_lock`
+        # guards the lazy-init check-then-create below: FastAPI runs sync
+        # routes (like GET /camera/frame) in a thread pool, so two requests
+        # racing right after startup could otherwise both see `_mini is
+        # None` and construct two separate ReachyMini clients against the
+        # same daemon socket.
         self._media_client_factory = media_client_factory
         self._mini: object | None = None
+        self._mini_lock = threading.Lock()
+        # ReachyMini defaults to `host="reachy-mini.local"` (mDNS), which
+        # this container has no reason to be able to resolve. Derive the
+        # actual daemon host/port from the same base_url used for the HTTP
+        # client above, and pass connection_mode="localhost_only" so it
+        # never attempts network/mDNS discovery — reachy-embodiment and the
+        # daemon are documented to always run on the same host (see this
+        # class's docstring).
+        parsed = urlsplit(base_url)
+        self._daemon_host = parsed.hostname or "127.0.0.1"
+        self._daemon_port = parsed.port or 8000
 
     def _fetch_status(self) -> dict | None:
         try:
@@ -316,19 +348,46 @@ class ReachyDaemonBackend:
         every other real-hardware failure in this class uses, rather than
         letting a bare `None` reach `cv2.imencode` (which raises
         `cv2.error`, an unhandled 500 from the route's perspective).
+
+        Explicitly passes `host`/`port` (parsed from this backend's own
+        `base_url` in `__init__`) and `connection_mode="localhost_only"` —
+        `ReachyMini`'s own default host is `reachy-mini.local` (mDNS),
+        which this container has no particular reason to be able to
+        resolve; `localhost_only` also skips any network/mDNS discovery
+        attempt entirely, matching the same-host assumption this whole
+        class already makes for its HTTP client.
+
+        `self._mini_lock` guards construction: `GET /camera/frame` is a
+        sync FastAPI route, run in Starlette's thread pool, so two
+        requests arriving right after process start could otherwise race
+        past the `self._mini is None` check and each construct their own
+        `ReachyMini` against the same daemon socket.
         """
         import cv2  # local import: only needed by this one real-hardware path
 
         if self._mini is None:
-            if self._media_client_factory is not None:
-                self._mini = self._media_client_factory()
-            else:
-                # local import: same reason as cv2 above
-                from reachy_mini import ReachyMini
+            with self._mini_lock:
+                if self._mini is None:
+                    try:
+                        if self._media_client_factory is not None:
+                            self._mini = self._media_client_factory()
+                        else:
+                            # local import: same reason as cv2 above
+                            from reachy_mini import ReachyMini
 
-                self._mini = ReachyMini(media_backend="local")
+                            self._mini = ReachyMini(
+                                host=self._daemon_host,
+                                port=self._daemon_port,
+                                connection_mode="localhost_only",
+                                media_backend="local",
+                            )
+                    except Exception as exc:
+                        raise RobotBackendError(f"could not connect to daemon media backend: {exc}") from exc
 
-        frame = self._mini.media.get_frame()  # type: ignore[attr-defined]
+        try:
+            frame = self._mini.media.get_frame()  # type: ignore[attr-defined]
+        except Exception as exc:
+            raise RobotBackendError(f"get_frame() failed: {exc}") from exc
         if frame is None:
             raise RobotBackendError("camera not initialized yet (get_frame() returned None)")
         ok, encoded = cv2.imencode(".jpg", frame)
@@ -417,3 +476,21 @@ class ReachyDaemonBackend:
         except httpx.HTTPError as exc:
             raise RobotBackendError(f"daemon resume (start?wake_up={wake_up}) failed: {exc}") from exc
         return self._fetch_status() or {}
+
+    def close(self) -> None:
+        """Releases the camera media client, if one was ever created.
+
+        `ReachyMini` has no standalone public `close()`, only `__exit__`
+        (used here directly rather than via `with`, since this instance
+        was never entered as a context manager) — it closes the media
+        manager and disconnects its own daemon client. Best-effort: called
+        once from the app's shutdown lifespan, and a failure here shouldn't
+        block the rest of shutdown, so it's logged rather than raised.
+        """
+        if self._mini is not None:
+            try:
+                self._mini.__exit__(None, None, None)  # type: ignore[attr-defined]
+            except Exception:
+                log.exception("error closing camera media client during shutdown")
+            finally:
+                self._mini = None

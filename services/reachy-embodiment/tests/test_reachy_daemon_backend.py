@@ -10,6 +10,7 @@ ReachyDaemonBackend is a first draft pending live verification.
 
 from __future__ import annotations
 
+import sys
 import wave
 from io import BytesIO
 
@@ -311,3 +312,75 @@ def test_capture_frame_raises_cleanly_if_get_frame_returns_none() -> None:
 
     with pytest.raises(RobotBackendError):
         backend.capture_frame()
+
+
+def test_capture_frame_uses_explicit_localhost_only_connection(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured_kwargs: dict[str, object] = {}
+
+    class _FakeReachyMiniModule:
+        @staticmethod
+        def ReachyMini(**kwargs: object) -> _FakeReachyMini:
+            captured_kwargs.update(kwargs)
+            return _FakeReachyMini()
+
+    monkeypatch.setitem(sys.modules, "reachy_mini", _FakeReachyMiniModule())
+
+    # No media_client_factory here — exercises the real (module-level)
+    # `from reachy_mini import ReachyMini` branch against the fake module.
+    backend = ReachyDaemonBackend("http://192.0.2.10:9000")
+    backend.capture_frame()
+
+    # Must never rely on ReachyMini's own default host (mDNS
+    # "reachy-mini.local") or auto-detected connection mode — derived
+    # explicitly from this backend's own base_url instead.
+    assert captured_kwargs["host"] == "192.0.2.10"
+    assert captured_kwargs["port"] == 9000
+    assert captured_kwargs["connection_mode"] == "localhost_only"
+    assert captured_kwargs["media_backend"] == "local"
+
+
+def test_capture_frame_wraps_construction_failure() -> None:
+    def factory() -> _FakeReachyMini:
+        raise RuntimeError("daemon socket not found")
+
+    backend = ReachyDaemonBackend("http://daemon.test", media_client_factory=factory)
+
+    with pytest.raises(RobotBackendError):
+        backend.capture_frame()
+
+
+def test_capture_frame_wraps_get_frame_failure() -> None:
+    class _BrokenMedia:
+        def get_frame(self) -> np.ndarray:
+            raise RuntimeError("socket closed")
+
+    class _BrokenReachyMini:
+        def __init__(self) -> None:
+            self.media = _BrokenMedia()
+
+    backend = ReachyDaemonBackend("http://daemon.test", media_client_factory=_BrokenReachyMini)
+
+    with pytest.raises(RobotBackendError):
+        backend.capture_frame()
+
+
+def test_close_exits_media_client_and_clears_it() -> None:
+    exit_calls = []
+
+    class _ExitTrackingReachyMini(_FakeReachyMini):
+        def __exit__(self, *args: object) -> None:
+            exit_calls.append(args)
+
+    backend = ReachyDaemonBackend("http://daemon.test", media_client_factory=_ExitTrackingReachyMini)
+    backend.capture_frame()  # creates self._mini
+
+    backend.close()
+
+    assert exit_calls == [(None, None, None)]
+    # Idempotent: closing again (no media client left) must not raise.
+    backend.close()
+
+
+def test_close_without_ever_capturing_is_a_noop() -> None:
+    backend = ReachyDaemonBackend("http://daemon.test")
+    backend.close()  # no error even though self._mini was never created
