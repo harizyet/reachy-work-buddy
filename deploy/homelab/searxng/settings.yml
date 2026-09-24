@@ -1,0 +1,31 @@
+# Phase 24a: self-hosted SearXNG for companion-core's websearch grounding
+# (docs/phase-24a.md, ADR 0022). Merged onto the image's own default
+# settings/engines (use_default_settings), not a from-scratch config —
+# only the fields this deployment actually needs to change are listed.
+#
+# `secret_key` stays the image's own placeholder here; the application
+# itself overrides it at process start from the container's SEARXNG_SECRET
+# environment variable (searx/settings_defaults.py's environ_name) — set
+# via docker-compose.yml's SEARXNG_SECRET_KEY (see .env.example) — rather
+# than baking a real secret into this checked-in file.
+use_default_settings: true
+
+general:
+  instance_name: "reachy-searxng"
+
+server:
+  secret_key: "ultrasecretkey"
+  # This instance is reachable only from other containers on the compose
+  # network (docker-compose.yml exposes it internally, never publishes it
+  # to the host) — companion-core is the only real caller, so the public
+  # bot/rate limiter that a Internet-facing SearXNG needs would only get in
+  # the way here.
+  limiter: false
+
+search:
+  # The image disables the JSON API by default (it's meant for a public
+  # instance's own web UI); companion_core/websearch/searxng.py calls
+  # `?format=json`, so this internal-only instance needs it enabled.
+  formats:
+    - html
+    - json

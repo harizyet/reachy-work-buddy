@@ -85,6 +85,37 @@ def test_fresh_and_repeat(database, keys):
     asyncio.run(check())
 
 
+def test_search_config_defaults_secret_round_trip_and_provider_switch(database, keys):
+    """Phase 24a: search_config (migration 006) starts Off with no base URL,
+    and its api_key round-trips through the same SecretStore as LLM keys —
+    never a plaintext column."""
+    from companion_core.websearch.postgres_store import PostgresSearchSettingsStore
+
+    from shared.models.websearch import SearchConfigPatch
+
+    upgrade(database, keys)
+
+    async def check():
+        store = await PostgresSearchSettingsStore.connect(database, keyring=keys)
+        default = await store.get()
+        assert default.policy.value == "off" and default.base_url is None and default.api_key is None
+        config = await store.set(SearchConfigPatch(
+            policy="auto", base_url="http://searxng.local", api_key="searxng-secret",
+        ))
+        assert config.api_key == "searxng-secret"
+        await store.close()
+        store = await PostgresSearchSettingsStore.connect(database, keyring=keys)
+        assert (await store.get()).api_key == "searxng-secret"
+        await store.close()
+    asyncio.run(check())
+    with psycopg.connect(database) as conn:
+        row = conn.execute("SELECT secret_ref FROM search_config WHERE id='default'").fetchone()
+        assert row[0] is not None
+        assert conn.execute("SELECT count(*) FROM secrets WHERE provider='websearch:searxng'").fetchone() == (1,)
+        config_text = str(conn.execute("SELECT * FROM search_config").fetchall())
+        assert "searxng-secret" not in config_text
+
+
 def test_legacy_atomic_migration_and_llm_semantics(database, keys):
     seed_legacy(database)
     with pytest.raises(RuntimeError, match="adopt-legacy"):

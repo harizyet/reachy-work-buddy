@@ -55,6 +55,16 @@ class ConversationStore:
             # Bound inference context independently of the historical turn counter.
             return [dict(message) for message in self._messages.get(session_id, [])[-39:]]
 
+    def previous_user_message(self, session_id: str) -> str | None:
+        """The user turn immediately before the current one — used only by
+        Phase 24a's referential-inclusion heuristic (companion_core.websearch.
+        policy). `append` has already recorded the current turn as the last
+        "user" entry by the time the generic branch calls this, so the
+        second-to-last user entry is the prior turn, never the current one."""
+        with self._lock:
+            user_texts = [m["content"] for m in self._messages.get(session_id, []) if m["role"] == "user"]
+            return user_texts[-2] if len(user_texts) >= 2 else None
+
     def turn_lock(self, session_id: str) -> asyncio.Lock:
         # A model call yields for seconds; serialize same-session turns so two
         # channels cannot interleave user messages and attach replies out of order.

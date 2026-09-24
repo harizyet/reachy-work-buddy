@@ -11,6 +11,7 @@ from companion_core.memory.store import InMemoryMemoryStore
 from companion_core.persona.store import InMemoryPersonaStore
 from companion_core.rag.store import InMemoryDocumentStore
 from companion_core.tasks.store import InMemoryTaskStore
+from companion_core.websearch.store import InMemorySearchSettingsStore
 from fastapi.testclient import TestClient
 from reachy_embodiment.app import create_app as create_embodiment_app
 from reachy_embodiment.robot import SimulatedRobotBackend
@@ -37,6 +38,7 @@ def make_client(**kwargs):
         llm_settings_store=InMemoryLLMSettingsStore(),
         llm_usage_store=InMemoryLLMUsageStore(),
         persona_store=InMemoryPersonaStore(),
+        search_settings_store=InMemorySearchSettingsStore(),
         run_email_dispatch_task=False,
         llm_transport=kwargs.pop("llm_transport", None),
     )
@@ -178,6 +180,20 @@ def test_proxy_masked_settings_and_status_real_chain():
     assert client.get("/llm/usage").json()["summary"]["calls"] == 0
     assert client.get("/ui/").status_code == 200
     assert client.get("/ui/app.js").status_code == 200
+
+
+def test_websearch_settings_proxy_masks_key_and_redacts_validation_errors():
+    client = make_client()
+    login(client)
+    response = client.put(
+        "/settings/websearch",
+        json={"policy": "auto", "base_url": "http://searxng.local", "api_key": "secret-98765"},
+        headers=CSRF,
+    )
+    assert response.status_code == 200 and "secret-98765" not in response.text
+    assert client.get("/settings/websearch").json()["api_key"].endswith("8765")
+    bad = client.put("/settings/websearch", json={"api_key": ["do-not-echo"]}, headers=CSRF)
+    assert bad.status_code == 422 and "do-not-echo" not in bad.text
 
 
 def test_status_handles_down_core_without_hiding_hub():

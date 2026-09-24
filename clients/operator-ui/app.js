@@ -37,7 +37,7 @@ function notice(text) { $('notice').textContent = text; }
 function showLogin() {
   loggedIn = false; selectedUser = null;
   $('login-panel').hidden = false; $('dashboard').hidden = true; $('nav').hidden = true;
-  $('api-key').value = ''; $('cloud-api-key').value = ''; $('password').value = '';
+  $('api-key').value = ''; $('cloud-api-key').value = ''; $('websearch-api-key').value = ''; $('password').value = '';
   chat.reset(); accounts.reset(); showView('overview');
 }
 async function api(path, options = {}) {
@@ -80,6 +80,15 @@ function renderPersona(config) {
   $('persona-name').value = config.name || '';
   $('persona-prompt').value = config.system_prompt || '';
   $('persona-fields').disabled = false;
+}
+function renderWebsearch(config) {
+  $('websearch-policy').value = config.policy || 'off';
+  $('websearch-provider').value = config.provider || 'searxng';
+  $('websearch-base-url').value = config.base_url || '';
+  $('websearch-key-state').textContent = config.api_key ? `Saved key: ${config.api_key}` : 'No saved key';
+  $('websearch-api-key').value = ''; $('websearch-clear-key').checked = false;
+  $('websearch-result-count').value = config.result_count ?? 5;
+  $('websearch-fields').disabled = false;
 }
 function component(name, value, warning = false) {
   const card = document.createElement('div'); card.className = 'component';
@@ -164,9 +173,10 @@ async function loadSession() {
 }
 async function enter() {
   loggedIn = true; $('login-panel').hidden = true; $('dashboard').hidden = false; $('nav').hidden = false;
-  $('llm-fields').disabled = true; $('persona-fields').disabled = true; notice('');
+  $('llm-fields').disabled = true; $('persona-fields').disabled = true; $('websearch-fields').disabled = true; notice('');
   try { renderSettings(await api('/settings/llm')); } catch (error) { notice(error.message); }
   try { renderPersona(await api('/settings/persona')); } catch (error) { notice(error.message); }
+  try { renderWebsearch(await api('/settings/websearch')); } catch (error) { notice(error.message); }
   await refresh();
   if (new URLSearchParams(location.search).get('google') === 'return') {
     history.replaceState(null, '', location.pathname);
@@ -218,6 +228,22 @@ submit('llm', async () => {
 });
 $('disable-llm').addEventListener('click', async () => {
   try { renderSettings(await api('/settings/llm', {method: 'PUT', body: JSON.stringify({local: null, cloud: null, routing: {mode: 'local_only'}})})); notice('Model disabled.'); await refresh(); }
+  catch (error) { notice(error.message); }
+});
+submit('websearch', async () => {
+  const patch = {
+    policy: $('websearch-policy').value,
+    provider: $('websearch-provider').value,
+    base_url: $('websearch-base-url').value.trim(),
+    result_count: Number($('websearch-result-count').value) || 5,
+  };
+  if ($('websearch-clear-key').checked) patch.api_key = null;
+  else if ($('websearch-api-key').value) patch.api_key = $('websearch-api-key').value;
+  renderWebsearch(await api('/settings/websearch', {method: 'PUT', body: JSON.stringify(patch)}));
+  notice('Web search settings saved.');
+});
+$('disable-websearch').addEventListener('click', async () => {
+  try { renderWebsearch(await api('/settings/websearch', {method: 'PUT', body: JSON.stringify({policy: 'off'})})); notice('Web search turned off.'); }
   catch (error) { notice(error.message); }
 });
 api('/auth/me').then(enter).catch(error => { showLogin(); if (error.message !== 'Login required') notice(error.message); });

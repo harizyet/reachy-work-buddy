@@ -87,6 +87,17 @@
           <p class="muted">Cloud routing sends the conversation context to that provider. Blank URL and model remove a provider; blank keys retain saved credentials.</p>
           <button>Save model</button><button type="button" id="disable-llm" class="secondary">Disable all models</button></fieldset></form>
         </section>
+        <section class="card"><span class="eyebrow">GROUNDING</span><h2>Web search</h2>
+          <p>Lets the model check a live search when a question needs current or external information instead of guessing from training data. Off by default.</p>
+          <p class="muted">Reachy sends queries only to the search instance configured below. A self-hosted SearXNG instance still forwards your query to whichever upstream search engines it's configured to use — this isn't full network confinement. A hosted provider (e.g. Brave) sends queries to that company directly.</p>
+          <form id="websearch"><fieldset id="websearch-fields" disabled><label>Policy<select id="websearch-policy"><option value="off">Off — never search</option><option value="auto">Auto — only when a question looks like it needs current info</option><option value="always">Always — every message</option></select></label>
+          <label>Provider<select id="websearch-provider"><option value="searxng">SearXNG (self-hosted)</option></select></label>
+          <label>Base URL<input id="websearch-base-url" type="url" placeholder="http://searxng-host:8080"></label>
+          <label>API key <span class="muted">(optional)</span><input id="websearch-api-key" type="password" autocomplete="new-password" placeholder="Leave blank to keep the saved key"></label><small id="websearch-key-state">No saved key</small>
+          <label class="check"><input type="checkbox" id="websearch-clear-key"> Remove saved key</label>
+          <label>Results per search<input id="websearch-result-count" type="number" min="1" max="10"></label>
+          <button>Save web search</button><button type="button" id="disable-websearch" class="secondary">Turn off web search</button></fieldset></form>
+        </section>
         <section class="card wide"><span class="eyebrow">LAST 24 HOURS</span><h2>LLM utilization</h2><p id="usage-summary">Loading…</p><p id="role-usage"></p><p id="latest-escalation"></p><div class="table-wrap"><table><thead><tr><th>Time</th><th>Role / model</th><th>Result</th><th>Input / output tokens</th><th>Latency</th></tr></thead><tbody id="usage-rows"></tbody></table></div></section>
         <section class="card"><h2>Recent activity</h2><ul id="audit"><li>Load a session to view activity.</li></ul></section>
         <section class="card"><h2>Queued notifications</h2><ul id="notifications"><li>Load a session to view notifications.</li></ul></section>

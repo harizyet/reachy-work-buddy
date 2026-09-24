@@ -21,6 +21,7 @@ from companion_core.memory.store import InMemoryMemoryStore
 from companion_core.persona.store import InMemoryPersonaStore
 from companion_core.rag.store import InMemoryDocumentStore
 from companion_core.tasks.store import InMemoryTaskStore
+from companion_core.websearch.store import InMemorySearchSettingsStore
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from reachy_embodiment.app import create_app as create_embodiment_app
@@ -88,6 +89,7 @@ def make_chain(*, registered_robots: Sequence[Robot] = ()) -> TestClient:
         llm_settings_store=InMemoryLLMSettingsStore(),
         llm_usage_store=InMemoryLLMUsageStore(),
         persona_store=InMemoryPersonaStore(),
+        search_settings_store=InMemorySearchSettingsStore(),
         # The real dispatch loop only ever sends what's actually due (10
         # minutes out by default) — disabled here so tests stay
         # deterministic; test_email_workflow.py covers the loop itself
@@ -746,6 +748,7 @@ def _make_bare_core_app() -> FastAPI:
         llm_settings_store=InMemoryLLMSettingsStore(),
         llm_usage_store=InMemoryLLMUsageStore(),
         persona_store=InMemoryPersonaStore(),
+        search_settings_store=InMemorySearchSettingsStore(),
         run_email_dispatch_task=False,
     )
 

@@ -3,6 +3,7 @@
 LLM_SETTINGS = "/settings/llm"
 LLM_USAGE = "/llm/usage"
 PERSONA_SETTINGS = "/settings/persona"
+WEBSEARCH_SETTINGS = "/settings/websearch"
 STATUS = "/status"
 AUTH_LOGIN = "/auth/login"
 AUTH_LOGOUT = "/auth/logout"

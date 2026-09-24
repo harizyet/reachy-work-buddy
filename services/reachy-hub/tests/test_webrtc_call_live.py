@@ -33,6 +33,7 @@ from companion_core.memory.store import InMemoryMemoryStore
 from companion_core.persona.store import InMemoryPersonaStore
 from companion_core.rag.store import InMemoryDocumentStore
 from companion_core.tasks.store import InMemoryTaskStore
+from companion_core.websearch.store import InMemorySearchSettingsStore
 from reachy_embodiment.app import create_app as create_embodiment_app
 from reachy_embodiment.robot import SimulatedRobotBackend
 from reachy_hub.app import create_app
@@ -59,6 +60,7 @@ def _create_core_test_app():
         llm_settings_store=InMemoryLLMSettingsStore(),
         llm_usage_store=InMemoryLLMUsageStore(),
         persona_store=InMemoryPersonaStore(),
+        search_settings_store=InMemorySearchSettingsStore(),
         run_email_dispatch_task=False,
     )
 

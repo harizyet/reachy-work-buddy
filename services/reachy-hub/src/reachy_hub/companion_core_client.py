@@ -19,7 +19,12 @@ from typing import Any
 import httpx
 
 from shared.protocols.accounts import SERVICE_HEADER
-from shared.protocols.operator_api import LLM_SETTINGS, LLM_USAGE, PERSONA_SETTINGS
+from shared.protocols.operator_api import (
+    LLM_SETTINGS,
+    LLM_USAGE,
+    PERSONA_SETTINGS,
+    WEBSEARCH_SETTINGS,
+)
 
 
 class CompanionCoreClient:
@@ -114,6 +119,16 @@ class CompanionCoreClient:
 
     async def set_persona(self, patch: dict) -> dict:
         response = await self._client.put(PERSONA_SETTINGS, json=patch)
+        response.raise_for_status()
+        return response.json()
+
+    async def get_websearch_settings(self) -> dict:
+        response = await self._client.get(WEBSEARCH_SETTINGS)
+        response.raise_for_status()
+        return response.json()
+
+    async def set_websearch_settings(self, patch: dict) -> dict:
+        response = await self._client.put(WEBSEARCH_SETTINGS, json=patch)
         response.raise_for_status()
         return response.json()
 

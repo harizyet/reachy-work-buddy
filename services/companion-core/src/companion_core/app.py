@@ -108,6 +108,20 @@ longer dispatches immediately: it queues a real send ~10 minutes out
 "cancel send X" (any modality — undo is always allowed) reverts it; a
 background loop (`run_dispatch_loop`) is what actually calls the
 `EmailSender`, and only for what's due.
+
+Phase 24a: search-assisted, freshness-aware assistant, per docs/phase-24a.md
+— see websearch/. Only the generic conversation `else` branch below is
+touched; every deterministic-intent branch above it (calendar/tasks/email/
+memory/RAG-docs/Gmail) still returns before reaching it, so none of them can
+ever trigger a search call. `websearch.policy.should_search`/`build_query`
+are the same placeholder-matcher-honesty deterministic heuristics as the
+other `*_intent.py` modules — the model itself has no authority to request,
+skip, or suppress a search. A search result never enters the persona/rules
+system message; `websearch.prompt.build_grounding_messages` keeps retrieved
+titles/snippets/URLs in their own, clearly-delimited, lower-authority
+message, and a failed search on a search-warranted turn still discloses
+that failure to the model rather than silently answering from stale
+knowledge.
 """
 
 from __future__ import annotations
@@ -192,13 +206,24 @@ from companion_core.task_intent import (
 from companion_core.tasks.models import Task, TaskStatus
 from companion_core.tasks.postgres_store import PostgresTaskStore
 from companion_core.tasks.store import TaskStore
+from companion_core.websearch.policy import build_query, should_search
+from companion_core.websearch.postgres_store import PostgresSearchSettingsStore
+from companion_core.websearch.prompt import build_grounding_messages
+from companion_core.websearch.provider import SearchProviderError, create_provider
+from companion_core.websearch.store import SearchSettingsStore, masked_search_config
 from shared.models.llm import LLMConfigPatch
 from shared.models.memory import MemoryRecord, MemoryType
 from shared.models.persona import PersonaConfig, PersonaPatch
 from shared.models.rag import DocumentChunk, RetrievedChunk
 from shared.models.response import Privacy, Urgency
 from shared.models.session import InputModality
-from shared.protocols.operator_api import LLM_SETTINGS, LLM_USAGE, PERSONA_SETTINGS
+from shared.models.websearch import SearchConfigPatch
+from shared.protocols.operator_api import (
+    LLM_SETTINGS,
+    LLM_USAGE,
+    PERSONA_SETTINGS,
+    WEBSEARCH_SETTINGS,
+)
 
 
 class ConversationTurnRequest(BaseModel):
@@ -266,7 +291,9 @@ def create_app(
     llm_settings_store: LLMSettingsStore | None = None,
     llm_usage_store: LLMUsageStore | None = None,
     persona_store: PersonaStore | None = None,
+    search_settings_store: SearchSettingsStore | None = None,
     llm_transport: httpx.AsyncBaseTransport | None = None,
+    websearch_transport: httpx.AsyncBaseTransport | None = None,
     hub_base_url: str | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
     calendar_store: CalendarStore | None = None,
@@ -312,6 +339,7 @@ def create_app(
     owns_llm_settings = llm_settings_store is None
     owns_llm_usage = llm_usage_store is None
     owns_persona_store = persona_store is None
+    owns_search_settings = search_settings_store is None
     owns_calendar_store = calendar_store is None
     owns_task_store = task_store is None
     owns_memory_store = memory_store is None
@@ -336,6 +364,8 @@ def create_app(
             app.state.llm_usage_store = await PostgresLLMUsageStore.connect(database_url or os.environ["DATABASE_URL"])
         if owns_persona_store:
             app.state.persona_store = await PostgresPersonaStore.connect(database_url or os.environ["DATABASE_URL"])
+        if owns_search_settings:
+            app.state.search_settings_store = await PostgresSearchSettingsStore.connect(database_url or os.environ["DATABASE_URL"])
         if owns_calendar_store:
             dsn = database_url or os.environ["DATABASE_URL"]
             app.state.calendar_store = await PostgresCalendarStore.connect(dsn)
@@ -389,6 +419,8 @@ def create_app(
                 await app.state.llm_usage_store.close()
             if owns_persona_store:
                 await app.state.persona_store.close()
+            if owns_search_settings:
+                await app.state.search_settings_store.close()
             if owns_calendar_store:
                 await app.state.calendar_store.close()
             if owns_task_store:
@@ -429,7 +461,7 @@ def create_app(
 
     @app.exception_handler(RequestValidationError)
     async def safe_validation_error(request, exc):
-        if request.url.path in (LLM_SETTINGS,) or request.url.path.startswith(ACCOUNTS):
+        if request.url.path in (LLM_SETTINGS, WEBSEARCH_SETTINGS) or request.url.path.startswith(ACCOUNTS):
             return JSONResponse(status_code=422, content={"detail": "Invalid request fields"})
         return await request_validation_exception_handler(request, exc)
 
@@ -440,6 +472,8 @@ def create_app(
         app.state.llm_usage_store = llm_usage_store
     if persona_store is not None:
         app.state.persona_store = persona_store
+    if search_settings_store is not None:
+        app.state.search_settings_store = search_settings_store
 
     @app.get(PERSONA_SETTINGS)
     async def get_persona() -> PersonaConfig:
@@ -448,6 +482,17 @@ def create_app(
     @app.put(PERSONA_SETTINGS)
     async def set_persona(patch: PersonaPatch) -> PersonaConfig:
         return await app.state.persona_store.set(patch)
+
+    @app.get(WEBSEARCH_SETTINGS)
+    async def get_websearch_settings() -> dict:
+        return masked_search_config(await app.state.search_settings_store.get())
+
+    @app.put(WEBSEARCH_SETTINGS)
+    async def set_websearch_settings(patch: SearchConfigPatch) -> dict:
+        try:
+            return masked_search_config(await app.state.search_settings_store.set(patch))
+        except ValidationError:
+            raise HTTPException(422, "Invalid search settings; a non-Off policy needs a provider base URL") from None
 
     @app.get(LLM_SETTINGS)
     async def get_llm_settings() -> dict:
@@ -711,8 +756,23 @@ def create_app(
             else:
                 try:
                     persona = await app.state.persona_store.get()
+                    search_config = await app.state.search_settings_store.get()
+                    searched = should_search(turn.text, policy=search_config.policy)
+                    grounding_messages: list[dict[str, str]] = []
+                    if searched:
+                        query = build_query(turn.text, conversation_store.previous_user_message(turn.session_id))
+                        try:
+                            provider = create_provider(search_config, transport=websearch_transport)
+                            results = await provider.search(query, count=search_config.result_count)
+                            grounding_messages = build_grounding_messages(searched=True, failed=False, results=results)
+                        except SearchProviderError:
+                            # Never silently fall back to an ungrounded answer
+                            # when a search was actually warranted — the LLM
+                            # call still proceeds, but is told search failed.
+                            grounding_messages = build_grounding_messages(searched=True, failed=True, results=[])
                     history_with_persona = [
                         {"role": "system", "content": persona.system_prompt},
+                        *grounding_messages,
                         *conversation_store.messages(turn.session_id),
                     ]
                     reply = await route_completion(config, history_with_persona, app.state.llm_usage_store, force_frontier=turn.force_frontier, transport=llm_transport)

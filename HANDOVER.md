@@ -1,10 +1,38 @@
 # Handover
 
-Current session snapshot, updated 2026-09-23. Read [AGENTS.md](AGENTS.md)
+Current session snapshot, updated 2026-09-24. Read [AGENTS.md](AGENTS.md)
 before working. Durable instructions belong in the [documentation index](docs/README.md),
 not repeated in this file.
 
 ## Current work
+
+Phase 24a (search-assisted, freshness-aware assistant) is implemented
+(2026-09-24): `shared/models/websearch.py`, migration `006_search_config`
+(bumps `shared.database.SCHEMA_REVISION`), `companion_core/websearch/`
+(deterministic Off/Auto/Always policy and referential-query heuristics,
+`SearXNGSearchProvider`, untrusted-content-isolated prompt construction
+with citation/failure-notice messages, SecretStore-backed settings store),
+wiring in `app.py`'s generic conversation branch only (every deterministic
+intent above it in the `if`/`elif` chain is structurally unaffected), core
++ hub `GET`/`PUT /settings/websearch`, and the operator UI's "Web search"
+card. `deploy/homelab/docker-compose.yml` now ships a real self-hosted
+`searxng` service (internal-only, `deploy/homelab/searxng/settings.yml`)
+— live-verified this session: `SearXNGSearchProvider` run directly against
+a container built from the checked-in config returned real internet
+results, and the exact compose service was brought up under a separate
+disposable project, reached by its production DNS name from another
+container, and torn down, without touching the running homelab stack.
+Also verified against a fixture SearXNG-shaped provider, a deterministic
+stub chat model, and real disposable Postgres (migration + SecretStore
+round-trip). **Not yet done:** a hosted cloud provider (e.g. Brave), and
+actually upgrading/reconfiguring the running homelab stack itself to
+include this service and a non-Off policy (self-hosted-deployment/
+production acceptance); the operator UI card was not exercised in a real
+browser. See [ADR 0022](docs/adr/0022-web-search-grounding.md) and
+[verification](docs/verification/phase-24a-search-assisted-2026-09-24.md).
+Phase 24b (structured command/intent authorization) remains planned only —
+see its own section below for the specific open false-positive issue it's
+meant to close.
 
 Phases 0–21 and 22a are implemented. Phase 23 implementation is complete:
 versioned migrations, SecretStore, owner-bound Google OAuth, Accounts UI and
@@ -37,8 +65,8 @@ recommended, or Web application with an HTTPS callback), then perform
 real-account consent/read/refresh/revoke/reconnect and audience checks. No
 OAuth client file, deployed HTTPS hostname, or live helper run was supplied
 this session. Phase 23/23b are not yet production-accepted. The
-Google-enabled physical repeat remains deferred; Phases 24a–27 are planning
-only.
+Google-enabled physical repeat remains deferred. Phase 24a is implemented
+against a fixture provider (see above); Phases 24b–27 remain planning only.
 
 Phase 22b (physical acceptance) started 2026-09-23 with the owner physically
 present, coordinated across a homelab-side and a Nano-side Claude Code

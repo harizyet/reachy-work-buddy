@@ -31,6 +31,7 @@ browser/channel transport. Debug robot calls go through hub.
 | `GET /briefing` | Prioritized briefing items for hub's delivery engine |
 | `GET`, `PUT /settings/llm`; `GET /llm/usage` | Internal settings/usage; operator callers use authenticated hub proxies |
 | `GET`, `PUT /settings/persona` | Assistant name/system prompt (`persona_config` table); prepended as a system message on the generic LLM branch only |
+| `GET`, `PUT /settings/websearch` | Web-search grounding policy/provider (`search_config` table); Phase 24a, see below |
 | `/debug/robots/...` | Debug integration plumbing, not a stable agent-tool API |
 
 The generic conversation branch uses the configured LLM after deterministic
@@ -38,6 +39,20 @@ intent/consent handlers. It has no model tool executor. The configured
 persona's system prompt is prepended ahead of that turn's history only on
 this branch — deterministic intent replies (tasks/calendar/email/memory)
 never pass through the LLM at all, so persona wording has no effect on them.
+Phase 24a's `websearch/` adds one more, optional step on the same branch,
+ahead of the persona's history: `websearch.policy.should_search` (a fixed
+keyword/pattern heuristic under policy `auto`, or an unconditional call
+under `always`) decides whether to call the configured `SearchProvider`
+(`websearch/searxng.py` first); the model itself never decides this.
+Retrieved titles/snippets/URLs are injected as a separate, clearly
+delimited, lower-authority system message — `websearch.prompt.
+build_grounding_messages` — never merged into the persona/rules message, so
+adversarial text inside a result cannot be mistaken for an instruction. A
+search failure on a search-warranted turn still lets the LLM call proceed,
+with an explicit failure notice instead of silence. Provider API keys use
+the same core-owned `SecretStore` as LLM provider keys
+(`SecretContext("owner", f"websearch:{provider}", "api_key")`), never a
+plaintext column. See [docs/phase-24a.md](../phase-24a.md).
 `robot_power_intent.py` (Phase 22b) is one such handler: a phrase match
 (e.g. "turn off reachy", "wake up reachy") on any channel calls hub's
 `POST /robots/standby`/`resume` through `hub_client.py` — the same
@@ -97,6 +112,7 @@ WebRTC, and static UI. It does not own reasoning policy or motor control.
 | `GET /status` | Authenticated component probes, model config/usage, Telegram polling health, default user ID |
 | `GET`, `PUT /settings/llm`; `GET /llm/usage` | Authenticated core proxies; usage defaults `limit=50`, `since_hours=24` |
 | `GET`, `PUT /settings/persona` | Authenticated core proxy for assistant name/system prompt |
+| `GET`, `PUT /settings/websearch` | Authenticated core proxy for web-search grounding policy/provider (Phase 24a) |
 
 Cookie mutations require CSRF; bearer clients remain supported on existing
 work/robot APIs. Phase 23 binds work-data user IDs to OWNER_USER_ID and gates

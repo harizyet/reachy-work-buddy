@@ -53,6 +53,33 @@ services:
     expose:
       - "1025"
 
+  searxng:
+    # Phase 24a: self-hosted search backend for companion-core's websearch
+    # grounding (docs/phase-24a.md, ADR 0022) — same "self-hosted by
+    # default, opt-in cloud provider" shape as the LLM stack's OVMS
+    # default. Not simulation-gated: unlike mailpit (a fake mailbox), this
+    # is real self-hosted infrastructure meant for production use too.
+    # Harmless if unused — the websearch policy defaults to Off, so
+    # nothing calls this until an operator turns it on in Settings.
+    image: searxng/searxng:latest
+    restart: unless-stopped
+    environment:
+      # The image's own settings loader reads this specific variable name
+      # (SEARXNG_SECRET, not SEARXNG_SECRET_KEY) into server.secret_key —
+      # confirmed against searx/settings_defaults.py; the image refuses to
+      # serve requests while that value is still its "ultrasecretkey"
+      # placeholder.
+      SEARXNG_SECRET: ${SEARXNG_SECRET_KEY:?set SEARXNG_SECRET_KEY in .env}
+      SEARXNG_BASE_URL: http://searxng:8080/
+    volumes:
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+      - searxng-data:/var/cache/searxng
+    # Internal-only, same pattern as mailpit's SMTP port below: reachable
+    # from companion-core as "http://searxng:8080" (the value to enter in
+    # Settings -> Web search -> Base URL), never published to the host.
+    expose:
+      - "8080"
+
   reachy-embodiment:
     # Phase 22: gated behind the "simulation" profile, matching the
     # module docstring above this file — production reachy-embodiment
@@ -200,6 +227,7 @@ services:
 volumes:
   postgres-data:
   caddy-data:
+  searxng-data:
 
 secrets:
   credential_keys:

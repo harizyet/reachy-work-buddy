@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 from shared.models.llm import LLMConfigPatch
 from shared.models.persona import PersonaPatch
+from shared.models.websearch import SearchConfigPatch
 from shared.protocols.operator_api import (
     AUTH_LOGIN,
     AUTH_LOGOUT,
@@ -19,6 +20,7 @@ from shared.protocols.operator_api import (
     LLM_USAGE,
     PERSONA_SETTINGS,
     STATUS,
+    WEBSEARCH_SETTINGS,
 )
 
 
@@ -41,7 +43,7 @@ def install_operator_routes(
 
     @app.exception_handler(RequestValidationError)
     async def safe_validation_error(request, exc):
-        if request.url.path in (LLM_SETTINGS, AUTH_LOGIN) or request.url.path.startswith("/settings/accounts/"):
+        if request.url.path in (LLM_SETTINGS, WEBSEARCH_SETTINGS, AUTH_LOGIN) or request.url.path.startswith("/settings/accounts/"):
             return JSONResponse(
                 status_code=422, content={"detail": "Invalid request fields"}
             )
@@ -99,6 +101,16 @@ def install_operator_routes(
     @app.put(PERSONA_SETTINGS, dependencies=dependencies)
     async def put_persona(patch: PersonaPatch) -> dict:
         return await proxy(core.set_persona, patch.model_dump(mode="json", exclude_unset=True))
+
+    @app.get(WEBSEARCH_SETTINGS, dependencies=dependencies)
+    async def get_websearch_settings() -> dict:
+        return await proxy(core.get_websearch_settings)
+
+    @app.put(WEBSEARCH_SETTINGS, dependencies=dependencies)
+    async def put_websearch_settings(patch: SearchConfigPatch) -> dict:
+        return await proxy(
+            core.set_websearch_settings, patch.model_dump(mode="json", exclude_unset=True)
+        )
 
     @app.get(LLM_USAGE, dependencies=dependencies)
     async def usage(

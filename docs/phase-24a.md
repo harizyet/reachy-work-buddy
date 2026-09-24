@@ -1,6 +1,12 @@
 # Phase 24a — Search-assisted, freshness-aware assistant
 
-Status: planned, not implemented. One of two independent tracks under
+Status: implemented (2026-09-24), including a real self-hosted SearXNG
+instance shipped in `deploy/homelab/docker-compose.yml` and live-verified
+against real internet search results; a deterministic stub model was used
+for prompt/grounding tests, no hosted cloud provider (e.g. Brave) was
+exercised, and no self-hosted-deployment/production acceptance has been
+performed — see [verification](verification/phase-24a-search-assisted-2026-09-24.md)
+and [HANDOVER](../HANDOVER.md). One of two independent tracks under
 **Phase 24 — QoL improvements**, alongside
 [Phase 24b](phase-24b.md)'s structured command/intent-authorization
 redesign; the two share a phase number because both are general assistant
@@ -370,5 +376,29 @@ those budgets were already sized around).
 | Disclosure | The operator UI clearly shows which provider is configured, the active policy, and accurate wording that a self-hosted SearXNG instance still contacts upstream engines it is configured to use |
 | Regression | Existing Python/Ruff/browser checks and Phase 19–21 tests still pass |
 
-No implementation, live search-provider call, or provider account signup is
-performed by this planning change.
+## Implementation notes (2026-09-24)
+
+Implemented as specified above: `shared/models/websearch.py`
+(`SearchConfig`/`SearchConfigPatch`/`SearchPolicy`), migration
+`006_search_config`, `companion_core/websearch/` (`provider.py`'s
+`SearchResult`/`SearchProvider`/`create_provider`, `searxng.py`'s
+`SearXNGSearchProvider`, `policy.py`'s heuristics/query builder,
+`prompt.py`'s isolation/citation/failure-notice messages, `store.py`/
+`postgres_store.py` with the `SecretStore`-backed `api_key`), wiring in
+`app.py`'s generic `else` branch, `GET`/`PUT /settings/websearch` on core
+and the hub proxy, and the operator UI's "Web search" settings card. Every
+exit-criteria row above is covered by
+`services/companion-core/tests/test_websearch.py` and the hub operator
+proxy test, against a fixture provider and a deterministic stub model.
+
+A real self-hosted SearXNG instance is also shipped this phase:
+`deploy/homelab/docker-compose.yml`'s `searxng` service (internal-only,
+never published to the host) plus `deploy/homelab/searxng/settings.yml`
+enabling its JSON API. `SearXNGSearchProvider` was run directly against a
+live instance built from this exact checked-in config and returned real
+internet search results; the compose service definition itself was
+brought up under a separate disposable Compose project and reached by its
+production DNS name from another container, then torn down — see the
+linked verification record for exact commands/output and what remains
+open (a hosted cloud provider, and self-hosted-deployment/production
+acceptance of the running homelab stack itself).

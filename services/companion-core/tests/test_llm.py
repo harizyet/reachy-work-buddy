@@ -14,6 +14,7 @@ from companion_core.memory.store import InMemoryMemoryStore
 from companion_core.persona.store import InMemoryPersonaStore
 from companion_core.rag.store import InMemoryDocumentStore
 from companion_core.tasks.store import InMemoryTaskStore
+from companion_core.websearch.store import InMemorySearchSettingsStore
 from fastapi.testclient import TestClient
 
 from shared.models.llm import LLMConfigPatch, LLMUsageEntry, ProviderConfig
@@ -30,6 +31,7 @@ def core_app(**kwargs):
         llm_settings_store=InMemoryLLMSettingsStore(),
         llm_usage_store=InMemoryLLMUsageStore(),
         persona_store=InMemoryPersonaStore(),
+        search_settings_store=InMemorySearchSettingsStore(),
         run_email_dispatch_task=False,
         **kwargs,
     )
