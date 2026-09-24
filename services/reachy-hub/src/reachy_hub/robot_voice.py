@@ -27,6 +27,7 @@ import wave
 from collections import deque
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import Response
@@ -340,25 +341,34 @@ async def run_turn(
     turn. Every await is followed by an `is_current` check so a stop that
     lands mid-turn discards the result instead of playing it later."""
 
+    timings: dict[str, object] = {"received_at": datetime.now(UTC)}
+
     def finish(outcome: VoiceTurnOutcome, **fields) -> VoiceTurnOutcome:
-        manager.finish_turn(session, VoiceTurnRecord(turn=turn, outcome=outcome, **fields))
+        manager.finish_turn(session, VoiceTurnRecord(turn=turn, outcome=outcome, **timings, **fields))
         return outcome
 
+    def elapsed_ms(started: float) -> int:
+        return round((time.perf_counter() - started) * 1000)
+
+    started = time.perf_counter()
     try:
         transcript = (await pipeline.transcribe(body)).strip()
     except Exception:
         log.exception("robot voice turn: transcription failed")
         return finish(VoiceTurnOutcome.FAILED, reason="Speech recognition failed"), None
+    timings["transcription_ms"] = elapsed_ms(started)
     if not manager.is_current(session, turn):
         return finish(VoiceTurnOutcome.CANCELLED, transcript=transcript or None, reason="Stopped"), None
     if not transcript:
         return finish(VoiceTurnOutcome.NO_SPEECH), None
 
+    started = time.perf_counter()
     try:
         result = await pipeline.converse(session.user_id, transcript)
     except Exception:
         log.exception("robot voice turn: conversation failed")
         return finish(VoiceTurnOutcome.FAILED, transcript=transcript, reason="Companion core did not reply"), None
+    timings["conversation_ms"] = elapsed_ms(started)
     if not manager.is_current(session, turn):
         return finish(VoiceTurnOutcome.CANCELLED, transcript=transcript, reply=result.reply, reason="Stopped"), None
 
@@ -371,6 +381,7 @@ async def run_turn(
             reason += "; also sent to Telegram" if delivered else "; Telegram is not available"
         return finish(VoiceTurnOutcome.WITHHELD, transcript=transcript, reply=result.reply, reason=reason), None
 
+    started = time.perf_counter()
     try:
         audio = await pipeline.synthesize(result.reply)
     except Exception:
@@ -378,6 +389,7 @@ async def run_turn(
         return finish(
             VoiceTurnOutcome.FAILED, transcript=transcript, reply=result.reply, reason="Speech synthesis failed"
         ), None
+    timings["synthesis_ms"] = elapsed_ms(started)
     if not manager.is_current(session, turn):
         return finish(VoiceTurnOutcome.CANCELLED, transcript=transcript, reply=result.reply, reason="Stopped"), None
     return finish(VoiceTurnOutcome.SPOKEN, transcript=transcript, reply=result.reply), audio

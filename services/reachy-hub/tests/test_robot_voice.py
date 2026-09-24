@@ -393,7 +393,10 @@ def test_spoken_turns_share_the_conversation_with_web_chat() -> None:
             assert first.status_code == 200
             assert first.headers["x-voice-turn-outcome"] == "spoken"
             assert first.headers["content-type"] == "audio/wav"
-            assert wait_for_state(client, "speaking")["turns"][0]["transcript"] == "hello reachy"
+            spoken = wait_for_state(client, "speaking")["turns"][0]
+            assert spoken["transcript"] == "hello reachy"
+            assert spoken["received_at"]
+            assert all(spoken[stage] >= 0 for stage in ("transcription_ms", "conversation_ms", "synthesis_ms"))
             socket.send_json({"type": "voice_state", "voice_session_id": sid, "state": "listening"})
             wait_for_state(client, "listening")
 
@@ -446,6 +449,7 @@ def test_private_modes_withhold_speech_and_never_synthesize() -> None:
             assert turns[2]["reason"] == "Do not disturb is on"
             assert turns[3]["reason"] == "You are marked as in a meeting"
             assert all(t["reply"] for t in turns)  # visible to the owner instead
+            assert all(t["conversation_ms"] is not None and t["synthesis_ms"] is None for t in turns)
         finally:
             ws.__exit__(None, None, None)
 

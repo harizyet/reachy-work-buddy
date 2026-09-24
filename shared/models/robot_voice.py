@@ -7,6 +7,7 @@ sent to the robot in `voice_start`; the hub enforces its own copies.
 
 from __future__ import annotations
 
+from datetime import datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, Field
@@ -70,6 +71,12 @@ class VoiceTurnRecord(BaseModel):
     reply: str | None = None
     outcome: VoiceTurnOutcome
     reason: str | None = None
+    # Stage durations for latency measurement (Phase 24d). A stage that did
+    # not run, because the turn ended earlier, stays None.
+    received_at: datetime | None = None
+    transcription_ms: int | None = None
+    conversation_ms: int | None = None
+    synthesis_ms: int | None = None
 
 
 class VoiceSessionStatus(BaseModel):

@@ -274,6 +274,10 @@ class VoiceConversation:
                 if utterance is None:
                     await report(RobotVoiceState.STOPPED, "Maximum conversation length reached")
                     return
+                # Timing lines for latency measurement; the cut lands one
+                # end-of-speech silence window after the speaker stopped.
+                log.info("voice turn %s: utterance cut (%.2fs of audio)", turn, len(utterance) / SAMPLE_RATE)
+                cut_at = loop.time()
 
                 self._set_state(EmbodimentState.THINKING)
                 await report(RobotVoiceState.UPLOADING)
@@ -289,12 +293,14 @@ class VoiceConversation:
                 except httpx.HTTPError:
                     await report(RobotVoiceState.ERROR, "Could not reach the hub")
                     outcome, audio = VoiceTurnOutcome.FAILED, None
+                log.info("voice turn %s: hub replied %s after %.2fs", turn, outcome.value, loop.time() - cut_at)
                 turn += 1
 
                 if outcome == VoiceTurnOutcome.SPOKEN and audio:
                     self._set_state(EmbodimentState.SPEAKING)
                     await report(RobotVoiceState.SPEAKING)
                     await self._play(audio, report)
+                    log.info("voice turn %s: playback done %.2fs after the cut", turn - 1, loop.time() - cut_at)
                 await asyncio.sleep(limits.playback_tail_guard_ms / 1000)
         except asyncio.CancelledError:
             raise
@@ -333,6 +339,7 @@ class VoiceConversation:
         play = asyncio.ensure_future(asyncio.to_thread(self._player.play_audio, audio))
         try:
             duration = await asyncio.shield(play)
+            log.info("voice playback started (%.2fs of audio)", duration)
             await asyncio.sleep(duration + PLAYBACK_MARGIN_SECONDS)
         except asyncio.CancelledError:
             # The daemon upload/play call can't be interrupted inside its

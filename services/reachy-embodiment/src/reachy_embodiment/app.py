@@ -43,6 +43,16 @@ from shared.protocols import embodiment_api as routes
 
 log = logging.getLogger(__name__)
 
+# uvicorn configures only its own loggers, so without a handler here this
+# package's INFO lines (registration, per-turn voice timings) were dropped
+# by Python's WARNING-level last-resort handler.
+_package_log = logging.getLogger("reachy_embodiment")
+if not _package_log.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+    _package_log.addHandler(_handler)
+    _package_log.setLevel(logging.INFO)
+
 
 def _default_backend() -> RobotBackend:
     """Selects the backend from `ROBOT_BACKEND`/`REACHY_DAEMON_URL`.
