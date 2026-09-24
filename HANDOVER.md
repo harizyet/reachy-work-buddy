@@ -108,6 +108,15 @@ deployment.md. Full companion-core → reachy-hub → reachy-embodiment chain
 covered by new tests (387 passed total, up from 371); **UNVERIFIED against
 real hardware** — the daemon's stop/start endpoints have not been called
 live yet, only confirmed present via its OpenAPI/source.
+**Known open issue (2026-09-24, not yet fixed):** `robot_power_intent`'s
+substring match has no negation/question/hypothetical awareness, so
+conversational text like "How do I turn off Reachy?" or "Don't wake up
+Reachy" currently actuates the real standby/resume path on an
+owner-authenticated channel, the same as an actual command. Deliberately
+left unfixed in place pending [Phase 24b](docs/phase-24b.md)'s structured
+command/intent-authorization redesign rather than patched piecemeal now —
+owner's explicit call, 2026-09-24. Until 24b lands, treat any standby/wake
+phrase in ordinary conversation as capable of moving/parking the robot.
 [Phase 27](docs/phase-27.md) was refocused 2026-09-23 from a generic virtual
 meeting bot to an embodied secretary: owner-present meeting companion (27a);
 a bounded temporary-absence catch-up mode for short owner step-outs within an
