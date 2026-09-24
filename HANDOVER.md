@@ -7,10 +7,36 @@ not repeated in this file.
 ## Current work
 
 Next priority: **[Phase 24d](docs/phase-24cd.md#phase-24d--physical-end-to-end-acceptance)**,
-supervised physical acceptance of the robot conversation workflow. Follow the
-[24d hardware procedure](docs/phase-24cd.md#phase-24d-hardware-procedure).
-Its first steps check the parts that have never run on the Nano. Phase 25
+supervised physical acceptance of the robot conversation workflow, **in
+progress** (2026-09-24). Follow the
+[24d hardware procedure](docs/phase-24cd.md#phase-24d-hardware-procedure);
+all evidence so far is in the
+[24d record](docs/verification/phase-24d-conversation-2026-09-24.md). Phase 25
 remains gated on 24d.
+
+24d state at the end of 2026-09-24:
+
+- **Done on the real Nano.** Preflight, voice enable, and step 3 device
+  coexistence passed. A behaviour sound, a camera frame and live voice
+  capture ran together through dmix/dsnoop, with no ALSA/shm errors. The
+  owner held two short live sessions (Piper TTS). Robot-side per-turn
+  timings are in the record.
+- **Still open.** The record's results matrix is still blank, the ≥10-turn
+  timed run with 3 context follow-ups hasn't been completed, and the latency
+  budget (p50 ≤ 4 s, p95 ≤ 8 s) is unassessed. Live Brave search needs the
+  owner's API key. Some observed replies were very long (one was 232 s of
+  audio; one hub turn took 45 s).
+- **Deployed robot image.** `reachy-embodiment:local` is built from
+  `1a66f01` (voice enabled, INFO timing logs). Image fixes found on the
+  hardware: the GstApp/GstPbutils typelibs and ALSA plugin, and removing
+  `libgstonnx.so`, which SIGILLs on the ARMv8.0 Cortex-A57.
+- **Hardware watch.** `stewart_5` logged "Overheating Error" for 20+ min
+  while the head held a strained pose. It cleared after a reboot and motor
+  reset, but the cause is unknown. Check the daemon journal for recurrence.
+- **Unfixed boot race.** A Nano reboot leaves camera/audio broken until the
+  manual recovery under
+  [machine notes](#machine-specific-continuation-notes). The homelab session
+  is proposing a launcher fix, which needs a real-reboot verification.
 
 Phase 24c (robot microphone → conversation → speaker) is implemented
 (2026-09-24). See [ADR 0023](docs/adr/0023-robot-voice-conversation.md), the
@@ -38,10 +64,13 @@ Phase 24c (robot microphone → conversation → speaker) is implemented
   - espeak's placeholder WAV header would have stalled the robot ~13 h per
     reply.
   - `/reachy` commands were parsed from voice transcripts.
-- **Unverified on the robot:** mic capture/dsnoop sharing from the container,
-  channel layout, daemon playback/stop tail, and acoustic echo.
-- **24d usability note:** core's sticky conversation privacy keeps later
-  replies off the speaker after any work-private reply.
+- **Since verified on the robot (24d):** mic capture and dsnoop sharing from
+  the container, daemon playback, and the stop tail (about 32 ms from
+  `voice_stop` to daemon `stop_sound`). Acoustic echo is still unassessed.
+- **Fixed during 24d:** core's sticky conversation privacy used to keep
+  later replies off the speaker after any keyword-private reply (`c65c9cd`).
+  The hub's WS watchdog was raised from 5 s to 15 s after a tailnet stall
+  (`3c6e49f`).
 
 Phase 24a (search-assisted, freshness-aware assistant) is implemented
 (2026-09-24): `shared/models/websearch.py`, migration `006_search_config`
@@ -61,10 +90,10 @@ disposable project, reached by its production DNS name from another
 container, and torn down, without touching the running homelab stack.
 Also verified against a fixture SearXNG-shaped provider, a deterministic
 stub chat model, and real disposable Postgres (migration + SecretStore
-round-trip). **Not yet done:** a hosted cloud provider (e.g. Brave), and
-actually upgrading/reconfiguring the running homelab stack itself to
-include this service and a non-Off policy (self-hosted-deployment/
-production acceptance). See [ADR 0022](docs/adr/0022-web-search-grounding.md)
+round-trip). A Brave Search API provider was added during 24d (`af27338`)
+and is fixture-verified only; live calls wait for the owner's key.
+**Not yet done:** production acceptance of the running homelab stack with
+this service and a non-Off policy. See [ADR 0022](docs/adr/0022-web-search-grounding.md)
 and [verification](docs/verification/phase-24a-search-assisted-2026-09-24.md).
 
 Phase 24 cleanup (2026-09-24, same session as 24b below): removed the two
@@ -333,13 +362,15 @@ were removed; the pre-existing OVMS container was left running.
   (explicit host/port/`connection_mode="localhost_only"` instead of relying
   on mDNS, thread-safe lazy client construction, construction/`get_frame()`
   failures wrapped as `RobotBackendError`, a `close()` shutdown hook) —
-  code and unit tests are done (381 passed, up from 371), but the Docker
-  image/container has not been rebuilt or run against the real daemon
-  socket on the Nano: the companion board went offline mid-session before
-  that could happen. **Earmarked as its own roadmap phase (22c in
-  [docs/plan.md](docs/plan.md#6-implementation-roadmap)) for physical
-  testing once the board is back**, rather than folded into 22b's full
-  matrix. See
+  code and unit tests are done (381 passed, up from 371). **Update
+  2026-09-24 (24d):** the rebuilt image now captures through the LOCAL
+  backend against the real daemon socket on the Nano: repeated 200 JPEG
+  1920x1080 frames, running as the daemon UID. The first frame after each
+  container start takes ~9–12 s because GStreamer loads plugins in-process.
+  The external plugin scanner can't spawn under Docker 20.10.7's seccomp
+  (`close_range` gets EPERM), a known limitation that was deliberately left
+  as is. The "fresh scene corresponds to a command" bar of
+  [22c](docs/plan.md#6-implementation-roadmap) is still open. See
   [Phase 22b camera evidence](docs/verification/phase-22b-camera-2026-09-24.md)
   for exact figures and what remains unverified. Physical voice/motion
   acceptance also remains open per the matrix above.
@@ -353,6 +384,27 @@ were removed; the pre-existing OVMS container was left running.
 - Nano uses host-networked embodiment on 8100 and the loopback daemon on
   8000. Existing `.env` copies can retain obsolete bridge URLs after code
   defaults change. See [deployment](docs/deployment.md#robot-host-and-jetson-nano).
+- **Nano reboot recovery (until the boot-race fix lands).** After a reboot,
+  Docker's `unless-stopped` policy starts `reachy-embodiment` before the
+  daemon. That creates `/tmp/reachymini_camera_socket` as a root-owned
+  directory, the container exits 127, and the daemon logs "Failed to
+  initialize media server" (EPERM). Recover in this order:
+  1. The owner runs `sudo rm -rf /tmp/reachymini_camera_socket`.
+  2. The owner runs `sudo systemctl restart reachy-mini-daemon`, present and
+     watching the wake-up motion. Sessions on the Nano have no
+     passwordless sudo.
+  3. Wait for the daemon to recreate the socket (`srw… reachy`), then run
+     `docker rm -f reachy-embodiment && scripts/start-reachy.sh`.
+  4. Warm the camera with one `GET /camera/frame`.
+  Leave the daemon unit unchanged until the fix has had a real-reboot
+  verification.
+- Nano image builds need BuildKit. `start-reachy.sh --build` sets
+  `DOCKER_BUILDKIT=1`. For a manual `docker build`, set it yourself.
+- The Nano's Tailscale path to the homelab host switches every few minutes
+  between 10.180.1.23, .54 and .254. One stall caused a WS watchdog
+  disconnect at the old 5 s timeout. Network cleanup is the owner's call.
+- `/tmp` is cleared on reboot. Keep captured logs under a home directory
+  (24d uses `~/24d-logs/`).
 - The homelab's existing `ovms` container previously served
   `OpenVINO/Qwen2.5-1.5B-Instruct-int4-ov` at `localhost:8000`; re-query
   `/v1/models` to confirm. Leave unrelated running services alone during tests.
