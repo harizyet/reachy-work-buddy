@@ -166,7 +166,9 @@ fi
 # --- 2. build/run reachy-embodiment against the daemon ---------------------
 if [[ "$DO_BUILD" -eq 1 ]]; then
     log_info "building $IMAGE_NAME"
-    (cd "$REPO_ROOT" && docker build -f services/reachy-embodiment/Dockerfile -t "$IMAGE_NAME" .)
+    # The Dockerfile uses RUN --mount, which the legacy builder rejects;
+    # older Docker releases (the Nano's included) still default to it.
+    (cd "$REPO_ROOT" && DOCKER_BUILDKIT=1 docker build -f services/reachy-embodiment/Dockerfile -t "$IMAGE_NAME" .)
 elif ! docker image inspect "$IMAGE_NAME" >/dev/null 2>&1; then
     die "$IMAGE_NAME not found locally — run with --build first (first-time install; routine restarts don't need it)"
 fi

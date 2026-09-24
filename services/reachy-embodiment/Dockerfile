@@ -21,10 +21,16 @@ FROM python:3.13-slim
 # element that reads the daemon's local IPC camera socket — confirmed
 # present at 1.26.2 on this same base image (Debian trixie), which is
 # above the >=1.24 floor the daemon's own media_server requires.
+# The SDK also calls gi.require_version for GstApp and GstPbutils, which
+# only gir1.2-gst-plugins-base-1.0 ships; without it every LOCAL client
+# fails with "Namespace GstApp not available" (found live on nano-1, 24d).
+# Debian packages alsasrc/alsasink, used for the .asoundrc voice devices,
+# separately in gstreamer1.0-alsa.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgirepository1.0-dev gobject-introspection libcairo2-dev pkg-config gcc python3-dev \
     gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
-    libgstreamer1.0-0 gir1.2-gstreamer-1.0 gir1.2-glib-2.0 \
+    gstreamer1.0-alsa \
+    libgstreamer1.0-0 gir1.2-gstreamer-1.0 gir1.2-gst-plugins-base-1.0 gir1.2-glib-2.0 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir uv
