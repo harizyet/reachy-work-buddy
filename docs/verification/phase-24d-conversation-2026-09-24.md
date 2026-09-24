@@ -56,6 +56,16 @@ socket mounted. The robot re-registered over WSS.
   reachy-mini 1.8.4, GStreamer 1.26.2, all three namespaces load, and every
   element the LOCAL camera/audio clients create is present. The Nano rebuild
   is the live check.
+- **Second defect (arm64 only):** with the typelibs present, the first
+  `GET /camera/frame` on nano-1 (image `48868a20…`) killed the embodiment
+  process with SIGILL during `Gst.init()`. The external plugin scanner
+  failed, so GStreamer loaded plugins in process.
+  `GST_DEBUG=GST_PLUGIN_LOADING:6` showed the last plugin was
+  plugins-bad's `libgstonnx.so`. The Nano's Cortex-A57 is ARMv8.0 (no LSE
+  atomics or dot product). Removing that plugin in a throwaway container
+  let `Gst.init()` succeed with all needed elements present. The Dockerfile
+  now deletes it after installing the packages. The amd64 build could not
+  have caught this.
 - nano-1's `.asoundrc`: `reachymini_audio_sink` is `dmix` and
   `reachymini_audio_src` is `dsnoop`, both on the Pollen USB audio card, and
   the daemon uses the same aliases. So the SDK client's playback chain shares

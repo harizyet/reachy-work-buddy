@@ -31,7 +31,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
     gstreamer1.0-alsa \
     libgstreamer1.0-0 gir1.2-gstreamer-1.0 gir1.2-gst-plugins-base-1.0 gir1.2-glib-2.0 \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    # plugins-bad's ONNX plugin dies with SIGILL while the registry is
+    # scanned on the Nano's ARMv8.0 Cortex-A57, killing the whole process at
+    # Gst.init(). No element we use comes from it.
+    && rm -f /usr/lib/*/gstreamer-1.0/libgstonnx.so
 
 RUN pip install --no-cache-dir uv
 
