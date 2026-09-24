@@ -188,7 +188,7 @@ from reachy_hub.stt import FasterWhisperSTT, SpeechToText
 from reachy_hub.telegram_chat_registry import TelegramChatRegistry
 from reachy_hub.telegram_client import TelegramClient
 from reachy_hub.telegram_health import TelegramPollHealth, poll_updates
-from reachy_hub.tts import EspeakTTS, TextToSpeech
+from reachy_hub.tts import TextToSpeech, default_tts
 from reachy_hub.user_store import PostgresUserStore, UserStore
 from reachy_hub.webrtc import CallTurnHandler, negotiate_call, negotiate_telepresence
 from shared.models.embodiment import Behaviour
@@ -374,7 +374,7 @@ def create_app(
     # model is real work (seconds, plus a one-time download) that every
     # test/instance shouldn't pay for just to import this module.
     stt_factory = stt_factory or FasterWhisperSTT
-    tts_factory = tts_factory or EspeakTTS
+    tts_factory = tts_factory or default_tts
     voice_providers: dict[str, object] = {}
     if stt is not None:
         voice_providers["stt"] = stt

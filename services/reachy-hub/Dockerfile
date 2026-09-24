@@ -21,6 +21,18 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 RUN pip install --no-cache-dir uv
 
+# Piper voice (tts.py's deployed default since Phase 24d; espeak-ng above
+# stays as the fallback when PIPER_VOICE_MODEL is unset). Pinned to a
+# piper-voices commit and checksummed, so a rebuild can't change the voice.
+ARG PIPER_VOICES_REV=c10ece1aade47bb51c153c893d14e5bf8e5b7117
+ADD --checksum=sha256:5efe09e69902187827af646e1a6e9d269dee769f9877d17b16b1b46eeaaf019f \
+    https://huggingface.co/rhasspy/piper-voices/resolve/${PIPER_VOICES_REV}/en/en_US/lessac/medium/en_US-lessac-medium.onnx \
+    /opt/piper/en_US-lessac-medium.onnx
+ADD --checksum=sha256:efe19c417bed055f2d69908248c6ba650fa135bc868b0e6abb3da181dab690a0 \
+    https://huggingface.co/rhasspy/piper-voices/resolve/${PIPER_VOICES_REV}/en/en_US/lessac/medium/en_US-lessac-medium.onnx.json \
+    /opt/piper/en_US-lessac-medium.onnx.json
+ENV PIPER_VOICE_MODEL=/opt/piper/en_US-lessac-medium.onnx
+
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
 COPY shared/ shared/
