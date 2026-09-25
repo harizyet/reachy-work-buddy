@@ -277,8 +277,16 @@ consistent with the proportional-only tracking lag. The start was about
 | Body yaw | REST omitted value keeps the current yaw; the SDK default returns to 0. Explicit values match |
 | Duration / interpolation | REST always min-jerk; the SDK honours linear. Both lag their ideal by about 0.4 s at mid-travel |
 | Cancellation | Stop by UUID works; the pose holds within 0.002 rad |
-| Recorded moves | Not run: they are full animations and need the owner (`--owner-present`) |
+| Recorded moves | Run with the owner watching (13:14Z, "it played normally"). `attentive1` took 6.28 s and **ends at its own final pose** (pitch −0.28 rad, left antenna 0.81), not back at the start. `thoughtful1` stopped by UUID at 1.5 s: stop 200, no running move; one settle step of about 0.04 rad in the first 0.28 s, then held within 0.003 rad for 1.3 s. IDLE_HOME afterwards reached as usual |
 | Failure | 422 bad interpolation, 404 unknown move, 500 stop of an unknown UUID; no motion |
+
+Consequence for item 3: after a recorded gesture the head stays wherever
+the gesture ended. In 1.8.4 the next recorded move starts from its own
+first frame with no blend (`initial_goto_duration=0`, source trace). So
+conversational gestures need a bounded return toward IDLE_HOME between
+them, or the next one may start with a jump. The motion controller
+currently returns home only at a normal session end. This must be
+settled before `CONVERSATION_MOTION_ENABLED` is tried.
 
 The command paths conform. The one open physical question is the
 direction-dependent 2–5° shortfall. It appears on every path, including

@@ -20,11 +20,13 @@ unit is open. Unattended development testing is allowed (owner,
 daemon wake-up. `motion-conformance.py --camera` measures moves from
 head-camera frames (CLAHE, frame draining and validity gates; see the
 record). The Lite camera is dark by default, and raising its exposure is
-the owner's call. Every bounded case has now run unattended (runs 2–3). Only `recorded`
-and `preempt` remain, and they need the owner (`--owner-present`).
+the owner's call. Every item 1 case has now run: the bounded ones unattended, and
+`recorded`/`preempt` with the owner watching. A recorded gesture ends at
+its own final pose, and 1.8.4 starts the next without a blend. So
+conversational gestures need a return home between them before
+`CONVERSATION_MOTION_ENABLED` is tried (see the record).
 Raw logs and frames are in the Nano's `~/24f-logs`. Item 1's outcome table
-is in the record: the paths conform, and only `recorded`/`preempt` (owner
-present) remain.
+is in the record: the paths conform.
 
 The motion owner (`reachy_embodiment/motion.py`, `4f43817`) is implemented,
 with its [ADR 0003 amendment](docs/adr/0003-embodiment-command-api.md#phase-24f-motion-ownership-amendment-2026-09-25):
