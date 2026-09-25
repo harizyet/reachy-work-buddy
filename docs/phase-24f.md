@@ -10,8 +10,10 @@ The LLM does not select trajectories or authorize motion.
 Place 24f after [24e](phase-24e.md) and before [25](phase-25.md) in the roadmap.
 Source inspection and isolated tests can proceed while 24e acceptance remains
 open. Accept the 24e conversation baseline before measuring animation regressions.
-Physical motion work also requires the owner to clear the current motor concern
-and supervise the run; see [project state](project-state.md#known-hardware-and-software-limitations).
+Physical motion work requires owner supervision under the existing deployment
+rules. A persistent hardware fault is not established; use the updated
+[Testbench counter-evidence](project-state.md#known-hardware-and-software-limitations)
+when planning the comparison.
 
 The existing [24e prerequisites](phase-24e.md#prerequisites-for-phase-25) remain
 Phase 25's start gate. This draft does not silently add all of 24f to it.
@@ -36,10 +38,22 @@ Repository inspection confirms:
   suppresses idle dispatch in active states, but state checks alone do not
   cancel a previously dispatched daemon move.
 
-The proposal reports daemon 1.8.4, successful Testbench zeroing, HTTP stalls
-during recorded motion, and IK warnings for `yes1`. Treat these as inputs to
-reproduce, not fresh verification. Re-query deployed versions and pin source
-revisions before relying on their exact semantics.
+The proposal reports daemon 1.8.4, HTTP stalls during recorded motion, and
+IK warnings for `yes1`. The owner subsequently reported successful official
+Testbench zeroing and rotation tests with no observed issue; see
+[current evidence](project-state.md#known-hardware-and-software-limitations).
+These are reported observations, not checks performed in this documentation
+session. Re-query deployed versions and pin source revisions before relying
+on their exact semantics.
+
+The [1.8.4 source trace](verification/phase-24f-source-2026-09-25.md) (source
+plus mockup-sim, no robot) found that overlapping REST moves both run and
+both report completion. The hub's call path can overlap `attentive1`,
+`thoughtful1` and `waiting`. `POST /api/move/stop` by UUID cancels for real,
+and `/goto` ignores `interpolation`. The daemon reports `running` only after
+wake-up, which already ends at identity head, antennas ±0.1745 rad and body
+yaw 0. Overlap is a candidate cause of the 24d tracking anomalies, not an
+established one.
 
 Pollen's [SDK motion documentation](https://github.com/pollen-robotics/reachy_mini/blob/main/docs/source/SDK/python-sdk.md)
 describes head, antennas, body yaw, duration and interpolation. Current

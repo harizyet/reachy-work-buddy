@@ -10,9 +10,13 @@ acceptance. This file holds only session continuation details.
 [Phase 24f](docs/phase-24f.md) now has a draft plan for motion conformance,
 startup home and conversational animation, linked from the roadmap. No motion
 code, deployment or physical checks were performed in this planning session.
-Next for 24f: pin daemon/SDK/Testbench versions and resolve home targets and
-real cancellation support. Proposed timing budgets and unattended-home policy
-need settling before physical rollout; 24e work below remains outstanding.
+24f item 1 has started. The [1.8.4 source trace](docs/verification/phase-24f-source-2026-09-25.md)
+(source plus mockup-sim, no robot) settled the home targets, the wake-up
+completion signal and UUID cancellation. It also found that overlapping
+REST moves both run. Next: confirm the Nano's deployed daemon version and
+the Testbench revision. Timing budgets and the unattended-home policy still
+need settling before physical rollout. The 24e work below remains
+outstanding.
 
 Branch `main`. [Phase 24e](docs/phase-24e.md) item 1 (adaptive end of turn)
 is committed in `6f292be`. This session added item 2's deterministic part:
@@ -72,7 +76,10 @@ this documentation pass. Recheck state before relying on them.
 
 ## Immediate cautions and continuation
 
-The owner is checking `stewart_5` manually after overheating/lag/drift.
+The owner reports successful official Testbench zeroing and rotations after
+24d's tracking anomalies; a persistent hardware fault is not established.
+Phase 24f will compare the motion paths; current evidence is recorded below
+in project state.
 The unexplained power loss, RTC problem and daemon recovery verification
 limit are in [project state](docs/project-state.md#known-hardware-and-software-limitations).
 The automatic error restart remains fake-tested only.

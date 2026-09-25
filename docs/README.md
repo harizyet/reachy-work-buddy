@@ -125,6 +125,10 @@ These are dated evidence, not startup instructions or current health checks.
   passed the owner's pre-agreed threshold, with grounded-number and
   statement-length failures recorded.
 
+- [Phase 24f motion source trace](verification/phase-24f-source-2026-09-25.md):
+  pinned 1.8.4 daemon source plus a mockup-sim probe; overlapping REST moves
+  both run, real UUID stop exists, `running` follows wake-up; no robot.
+
 - [Phase 24b command authorization](verification/phase-24b-command-authorization-2026-09-24.md):
   isolated-fixture checks for the retired substring matcher's replacement
   (structured `/reachy` commands, the fail-closed suggestion classifier,

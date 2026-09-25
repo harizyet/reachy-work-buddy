@@ -61,9 +61,13 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
 
 ## Known hardware and software limitations
 
-- `stewart_5` overheated, lagged and drifted during 24d. The owner will check
-  the motors manually; repair is outside 24e. Earlier acceptance of named
-  behaviours does not resolve this later finding.
+- Earlier companion/daemon runs during 24d showed `stewart_5` overheating
+  and anomalous tracking (lag and drift). The owner subsequently reported
+  successful zeroing and rotation tests using the official Pollen Reachy Mini
+  Testbench, with no observed issue. A persistent hardware fault is therefore
+  not established. [Phase 24f](phase-24f.md#1-motion-conformance) will compare
+  the deployed motion path against the pinned official reference before
+  drawing further conclusions.
 - An unplanned Nano power loss at 02:38:20Z reported `TEGRA_POWER_ON_RESET`,
   with no undervoltage logged. A supply dropout is suspected, not proven.
   Its RTC loses time across power-offs; pre-NTP journal timestamps are stale.
