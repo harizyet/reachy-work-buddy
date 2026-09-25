@@ -84,9 +84,11 @@ remains blocked on the
 These are previous session observations, not health checks performed during
 this documentation pass. Recheck state before relying on them.
 
-- **Nano:** checkout `7d9dc67` (conformance script only; later pushes are
-  docs), and the embodiment image is still from `1a66f01` (2026-09-24),
-  voice enabled. It was left at IDLE_HOME with embodiment active after run 3
+- **Nano:** checkout `d940e27`, and embodiment image `7ecc81f5` (2.17 GB),
+  built on the Nano 2026-09-25 13:30Z: no MediaPipe (palm stop is hub-side),
+  motion switches unset (off), voice enabled, hub reports it online and
+  voice-capable. The previous image (`1a66f01`) predated palm stop, so
+  MediaPipe never ran on the Nano. It was left at IDLE_HOME with embodiment active after run 3
   (2026-09-25 ~13:10Z). The 24f tool dependency `opencv-python-headless`
   4.11.0.86 is in `~/24f-tools` only (use `PYTHONPATH`), not in
   `reachy-venv`. Logs and frames are in `~/24f-logs`. `reachy-embodiment.service` and
