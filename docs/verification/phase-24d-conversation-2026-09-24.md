@@ -296,8 +296,38 @@ camera socket counts now. Checked against disposable containers on the homelab
 no`. A second `start-reachy.sh` run printed "already running" and left the
 container ID, `StartedAt` and daemon PID unchanged, with no sudo.
 
-**Still to verify:** a real cold reboot and `systemctl restart
-reachy-mini-daemon` (see Results → Recovery).
+**Cold reboot (owner present): race fixed, but the daemon's wake-up failed.**
+Boot at 08:50:00 WIB. After the reboot `timedatectl` showed the RTC and NTP
+in agreement (Asia/Jakarta, synchronized; timesyncd synced 08:50:33). The
+journal is volatile, so the earlier 23:09 journal-clock skew can't be
+examined again.
+
+- Socket `srwxr-xr-x reachy reachy`. The daemon unit started at 08:50:15. The
+  embodiment unit waited in `wait-media-socket.sh` and started at 08:50:25.
+  The container was reused, not recreated, and started at 08:50:27:
+  RestartPolicy `no`, `--mount` socket, `nano-1` generation 2. There was no
+  `EPERM` and no manual sudo step.
+- Camera: first frame 0.87 s, second 0.052 s. Voice worked with no manual
+  step. Turn 11: the hub replied 3.18 s after the cut and playback ended at
+  6.01 s. A later `voice_stop` cancelled cleanly. No overheating errors this
+  boot.
+- **Failure.** `08:50:25 Waking up Reachy Mini...`, then `08:50:27 ERROR -
+  Error while waking up Reachy Mini: time value is out of range [0,1]`. The
+  daemon status then showed `state: error` and `backend_status.ready: false`.
+  In reachy_mini 1.8.4, `time_trajectory` raises this, and the goto loop reads
+  the wall clock twice
+  (`while time.time()-t0 < duration: t = time.time()-t0`). A preemption
+  between the reads can push `t/duration` past 1. The error came about 2 s
+  into a wake-up whose first goto is sized at about 2 s, while the embodiment
+  container was starting. **Hypothesis, not proven:** an upstream daemon
+  timing race made likelier by boot load. The manual restart at 08:46 woke
+  normally. On error, `daemon.py` returns before it sets `RUNNING`.
+- Minor: `audio-setup.sh` (ExecStartPre, `User=reachy`) falls back to
+  `sudo -n alsactl restore` by design, which leaves a "password is required"
+  line in the auth log. Voice was unaffected.
+
+**Still to verify:** `systemctl restart reachy-mini-daemon` recovers the
+daemon to `running`, and restarts the container with the camera working.
 
 ## Latency budget (agreed before any timed turn)
 
@@ -345,6 +375,6 @@ and a Nano cold-reboot recovery check after the boot-race fix.
 | Privacy | OPEN | Live withholding observed (routing to web). Carry-over fix `c65c9cd`. Modes, DND and private call not yet exercised on the robot |
 | Consent and auth | OPEN | Covered off the robot in 24c tests; not yet on the robot |
 | Stop and expiry | PARTIAL | Stop during playback: 32 ms and 36 ms from stop receipt to daemon `stop_sound` (the robot-side stop marker came from `1a66f01`). Capture and inference cancellation, logout and expiry not yet run |
-| Recovery | PARTIAL | An unplanned WS drop (tailnet stall) ended the session cleanly, with no auto-reactivation and re-registration in 8 s. Hub restarts were recovered by reconnect. The Nano reboot exposed the camera-socket boot race: fix installed on the Nano 2026-09-25 and a live recovery passed ([details](#boot-race-fix-on-the-nano-2026-09-25)); real cold reboot and daemon-restart check pending |
+| Recovery | PARTIAL | An unplanned WS drop (tailnet stall) ended the session cleanly, with no auto-reactivation and re-registration in 8 s. Hub restarts were recovered by reconnect. The Nano reboot exposed the camera-socket boot race: fix installed on the Nano 2026-09-25 and a live recovery passed ([details](#boot-race-fix-on-the-nano-2026-09-25)); cold reboot passed for the race (socket, ordering, camera, voice, no sudo), but the daemon's boot wake-up hit `time value is out of range [0,1]` → `state: error`; daemon-restart check pending |
 | Coexistence and sustained use | PARTIAL | Step 3 coexistence PASS. The 30-minute session is not yet run |
 | Timing and quality | OPEN | Budgets agreed: non-search p50 ≤ 4 s, p95 ≤ 8 s; each search-assisted turn ≤ 20 s. Preliminary timings above; the formal run is pending |
