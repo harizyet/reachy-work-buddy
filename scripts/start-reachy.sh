@@ -119,6 +119,21 @@ DAEMON_STATUS_URL="http://127.0.0.1:8000/api/daemon/status"
 CAMERA_SOCKET=/tmp/reachymini_camera_socket
 EMBODIMENT_SERVICE="reachy-embodiment"
 
+# Prints "yes" if the container was created before the reboot-race fix:
+# a Docker restart policy, or the camera socket as a `-v` bind. Other `-v`
+# binds (the voice .asoundrc file) cannot create the socket directory and
+# must not count, or every run would recreate a correct container.
+container_has_reboot_race() {
+    local policy binds
+    policy="$(docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' "$CONTAINER_NAME")"
+    binds="$(docker inspect -f '{{range .HostConfig.Binds}}{{println .}}{{end}}' "$CONTAINER_NAME")"
+    if [[ "$policy" != "no" ]] || grep -q "^${CAMERA_SOCKET}:" <<<"$binds"; then
+        echo yes
+    else
+        echo no
+    fi
+}
+
 # Read-only: the facts behind the Nano reboot race (see
 # deploy/reachy/wait-media-socket.sh).
 report_media_boot_state() {
@@ -130,7 +145,7 @@ report_media_boot_state() {
         log_info "$CAMERA_SOCKET does not exist yet"
     fi
     if docker ps -a --filter "name=^/${CONTAINER_NAME}\$" -q 2>/dev/null | grep -q .; then
-        log_info "$CONTAINER_NAME restart policy: $(docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' "$CONTAINER_NAME"), legacy -v binds: $(docker inspect -f '{{len .HostConfig.Binds}}' "$CONTAINER_NAME")"
+        log_info "$CONTAINER_NAME restart policy: $(docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' "$CONTAINER_NAME"), pre-fix (reboot race) container: $(container_has_reboot_race)"
     fi
     if systemd_unit_installed "$EMBODIMENT_SERVICE"; then
         log_info "${EMBODIMENT_SERVICE}.service installed, enabled: $(systemctl is-enabled "$EMBODIMENT_SERVICE" 2>/dev/null || true)"
@@ -268,8 +283,8 @@ done
 # `-v` bind) would recreate the root-owned directory at the next boot, so
 # it is replaced rather than reused. Recreating it moves nothing.
 if docker ps -a --filter "name=^/${CONTAINER_NAME}\$" -q | grep -q .; then
-    if [[ "$(docker inspect -f '{{.HostConfig.RestartPolicy.Name}} {{len .HostConfig.Binds}}' "$CONTAINER_NAME")" != "no 0" ]]; then
-        log_info "replacing $CONTAINER_NAME: it was created with a Docker restart policy or -v bind (reboot race)"
+    if [[ "$(container_has_reboot_race)" == "yes" ]]; then
+        log_info "replacing $CONTAINER_NAME: it was created with a Docker restart policy or a -v camera-socket bind (reboot race)"
         docker rm -f "$CONTAINER_NAME" >/dev/null
     fi
 fi
