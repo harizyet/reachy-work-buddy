@@ -507,6 +507,57 @@ conversation without correctness yes it works fine. but correctness can be
 addressed after we close this phase." **Usability accepted; answer
 correctness deferred to after 24d** (24a scope).
 
+## Formal run, attempt 3 (2026-09-25): Session A passes
+
+**Session `pf97…`** (02:48:47–02:54:26Z, started and stopped from the UI,
+motors left as the boot wake-up set them, no behaviours). 16 spoken turns:
+- the scripted 12, plus one misheard extra turn ("What was my quote with?");
+- the long utterance split into four turns at mid-thought pauses.
+
+No errors, dropped turns, `no_speech` or reboot. **All three deterministic
+context checks were answered correctly** (code word; 3 red + 2 blue;
+project name, transcribed "Zefir" both times).
+
+Web-search log: turns 12, 13, 14 and 16 ran searches. These were three of
+the long-utterance fragments, merged by follow-up search, and "Goodbye for
+now." The other 12 turns are non-search. Latency = hub reply after the cut
++ 0.7 s VAD tail (utterance end → first audio):
+
+| Turn | Search | Cut (s) | Utterance end → first audio (s) | Reply audio (s) | STT / LLM / TTS (ms) |
+|---|---|---|---|---|---|
+| 1 | – | 2.40 | 2.56 | 3.61 | 390 / 1102 / 129 |
+| 2 | – | 2.75 | 2.45 | 2.47 | 349 / 972 / 105 |
+| 3 | – | 4.29 | 2.73 | 6.83 | 417 / 926 / 232 |
+| 4 | – | 3.71 | 2.45 | 5.89 | 412 / 799 / 206 |
+| 5 | – | 4.80 | 4.25 | 17.39 | 426 / 1515 / 551 |
+| 6 | – | 2.24 | 3.48 | 6.10 | 381 / 1836 / 193 |
+| 7 | – | 2.62 | 1.82 | 1.73 | 378 / 335 / 63 |
+| 8 | – | 3.49 | 2.25 | 5.40 | 428 / 688 / 160 |
+| 9 | – | 2.62 | 1.73 | 2.38 | 340 / 387 / 83 |
+| 10 | – | 3.52 | 4.74 | 14.51 | 431 / 2633 / 443 |
+| 11 | – | 1.73 | 2.15 | 5.43 | 388 / 631 / 180 |
+| 12 | yes | 4.35 | 6.92 | 4.54 | 425 / 5310 / 157 |
+| 13 | yes | 12.26 | 12.66 | 14.26 | 493 / 9979 / 460 |
+| 14 | yes | 3.90 | 19.25 | 9.90 | 411 / 17327 / 312 |
+| 15 | – | 6.69 | 6.90 | 22.58 | 455 / 4065 / 730 |
+| 16 | yes | 1.86 | 6.80 | 2.32 | 408 / 5306 / 88 |
+
+**Non-search (12 turns): p50 2.5 s, p95 6.9 s (nearest rank). PASS**
+against p50 ≤ 4 s, p95 ≤ 8 s. **Search (4 turns): worst 19.25 s. PASS**
+against ≤ 20 s each, but with a narrow margin: turn 14's LLM call took
+17.3 s on a long merged query and its results. Session B (attempt 2)
+passed at 6.9–13.1 s.
+
+**Follow-ups found (not 24d gates):**
+- **Long utterances split at the 700 ms end-of-speech silence**
+  (`RobotVoiceLimits.end_of_speech_silence_ms`). The owner wants a longer
+  pause to end a turn. Raising it adds the same delay to every turn.
+  `max_utterance_seconds` (15 s) nearly cut a 12.3 s fragment.
+- **Follow-up search.** It merged unrelated consecutive fragments into one
+  query, and "Goodbye for now." triggered a search (24a).
+- **STT mishearings** (e.g. "Ricci", "quote with"); none broke a context
+  check.
+
 ## Latency budget (agreed before any timed turn)
 
 Utterance end → first audible reply, over the live turns:
@@ -541,18 +592,28 @@ against the budget.
 
 ## Results
 
-Status on 2026-09-25. The formal run still needs ≥10 robot turns with
-three deterministic context follow-ups, plus separate search-assisted turns,
-and a Nano cold-reboot recovery check after the boot-race fix.
+Final status, 2026-09-25. **24d closed on the conversation workflow by
+owner re-scope.** The owner accepted end-to-end usability ("in terms of
+the end to end conversation without correctness yes it works fine") and
+deferred answer correctness to after 24d. Rows marked DEFERRED were
+explicitly re-scoped out of 24d by the owner on 2026-09-25. They are **not
+passed**: they stay as follow-up acceptance (see
+[phase 24d](../phase-24cd.md#phase-24d--physical-end-to-end-acceptance)).
 
 | Scenario | Result | Evidence |
 |---|---|---|
-| Normal conversation | OPEN | Attempt 1: 11 consecutive spoken turns, UI start and stop, no manual steps, all intelligible; two of three context checks run and correct. Must be repeated after the reply cap and the `stewart_5` fix ([attempt 1](#formal-run-attempt-1-2026-09-25-budget-failed-stewart_5-overheat)) |
-| Turn handling | OPEN | Short and long utterances and a `no_speech` segment were handled; no self-hearing seen. Silence, noise and echo not yet exercised deliberately |
-| Session continuity | OPEN | Not yet exercised on the robot (the web handoff was only in the 24c simulated run) |
-| Privacy | OPEN | Live withholding observed (routing to web). Carry-over fix `c65c9cd`. Modes, DND and private call not yet exercised on the robot |
-| Consent and auth | OPEN | Covered off the robot in 24c tests; not yet on the robot |
-| Stop and expiry | PARTIAL | Stop during playback: 32 ms and 36 ms from stop receipt to daemon `stop_sound` (the robot-side stop marker came from `1a66f01`). Capture and inference cancellation, logout and expiry not yet run |
-| Recovery | PARTIAL | An unplanned WS drop (tailnet stall) ended the session cleanly, with no auto-reactivation and re-registration in 8 s. Hub restarts were recovered by reconnect. The Nano reboot exposed the camera-socket boot race: fix installed on the Nano 2026-09-25 and a live recovery passed ([details](#boot-race-fix-on-the-nano-2026-09-25)); cold reboot and daemon restart pass for the race and container lifecycle, but the head does not reach home, `stewart_5` lags and a mapped nod produced IK errors ([details](#boot-race-fix-on-the-nano-2026-09-25)). The owner found the robot physically fine: finding closed, `stewart_5` on watch. Once-per-boot auto-restart on `state: error` approved, installed on the Nano (restart path fake-tested only) |
-| Coexistence and sustained use | PARTIAL | Step 3 coexistence PASS. The 30-minute session is not yet run |
-| Timing and quality | FAIL (attempt 1) | Budgets agreed: non-search p50 ≤ 4 s, p95 ≤ 8 s; each search-assisted turn ≤ 20 s. Attempt 1 failed (p50 5.2 s, p95 ≈ 11 s from the cut) on uncapped replies; fixed in `4035e50`/`f353b90`. Attempt 2: the search turns pass (6.9–13.1 s, budget 20 s); the non-search rerun is pending. Preliminary timings above; the formal run is pending |
+| Normal conversation | PASS | Attempt 3 (`pf97…`): 16 consecutive spoken turns, UI start/stop, no manual per-turn steps, all intelligible; all three deterministic context checks correct. Search-assisted turns completed search → reply → playback (attempt 2 and attempt 3). Answer accuracy is 24a scope, deferred by owner ([attempt 3](#formal-run-attempt-3-2026-09-25-session-a-passes)) |
+| Turn handling | DEFERRED | Short and long utterances and `no_speech` handled; no duplicated or lost turns in attempt 3; no self-hearing observed. A long utterance split at 700 ms pauses (follow-up). Silence, noise and echo not exercised deliberately |
+| Session continuity | DEFERRED | Not exercised on the robot (web handoff only in the 24c simulated run) |
+| Privacy | DEFERRED | Live keyword-private withholding reachy → web observed twice (attempt 2 `GF2V…` turn 1). Carry-over fix `c65c9cd`. Modes, DND and private call not exercised on the robot |
+| Consent and auth | DEFERRED | Covered off the robot in 24c tests; not on the robot |
+| Stop and expiry | DEFERRED | Stop during playback: 32 ms and 36 ms from stop receipt to daemon `stop_sound`; UI Stop ended every formal session. Capture and inference cancellation, logout and expiry not run |
+| Recovery | DEFERRED (cold-reboot part PASS) | Cold reboot, an unplanned power loss and a daemon restart all came back with the daemon owning its socket, the container after it, camera and voice working, no sudo ([details](#boot-race-fix-on-the-nano-2026-09-25)). A WS drop and hub restarts recovered by reconnect. Once-per-boot auto-restart installed (restart path fake-tested only). Mic/speaker failure and network interruption drills not run |
+| Coexistence and sustained use | DEFERRED | Step 3 coexistence PASS. The 30-minute session was not run (sessions cap at 10 min by default) |
+| Timing and quality | PASS | Budgets agreed in advance: non-search p50 ≤ 4 s, p95 ≤ 8 s; search ≤ 20 s each. Attempt 1 failed on uncapped replies (fixed `4035e50`/`f353b90`). Attempt 3: non-search p50 2.5 s, p95 6.9 s; search worst 19.25 s; attempt 2 search 6.9–13.1 s. Owner accepts intelligibility and usability |
+
+**Open hardware follow-ups (owner deferred):**
+- `stewart_5`: overheating error, lag and drift during these runs.
+- The unplanned power loss at 02:38:20Z.
+- The Nano's RTC loses time across power-offs.
+The owner checks the motors manually after the test.

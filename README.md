@@ -33,7 +33,8 @@ hosted-provider acceptance remains open. Phase 24b (structured command and inten
 authorization) is implemented and isolated-fixture/browser verified; live
 Telegram and physical robot acceptance remain open. Phase 24c (Reachy
 microphone → STT → LLM → TTS → speaker conversation) is implemented; its
-physical acceptance, Phase 24d, is in progress. Phase 25 is gated on 24d.
+physical acceptance, Phase 24d, closed on 2026-09-25 on the conversation
+workflow, with the remaining matrix rows deferred by the owner.
 Phases 25–27 remain planned. The [roadmap](docs/plan.md#6-implementation-roadmap) owns phase scope;
 [verification records](docs/README.md#verification-records) distinguish tested
 behavior from outstanding acceptance.

@@ -201,3 +201,12 @@ may satisfy corresponding Phase 22b voice/channel rows, but does not close
 its separate endurance/restore gates, Phase 22c camera acceptance or Phase
 23's real-Google acceptance. Google access is not needed for the baseline
 conversation; account-connected follow-ups retain their separate gates.
+
+**24d closed, re-scoped by the owner (2026-09-25).** Passed on the real
+robot: Normal conversation, and Timing and quality (both latency budgets),
+with owner-accepted usability. The owner explicitly deferred the other
+rows: turn handling, session continuity, privacy, consent/auth,
+stop/expiry, recovery drills beyond the cold reboot, and the 30-minute
+session. They were **not passed**. They remain follow-up acceptance, as
+does answer correctness (24a). See the
+[results](verification/phase-24d-conversation-2026-09-24.md#results).

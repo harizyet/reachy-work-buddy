@@ -6,81 +6,50 @@ not repeated in this file.
 
 ## Current work
 
-Next priority: **[Phase 24d](docs/phase-24cd.md#phase-24d--physical-end-to-end-acceptance)**,
-supervised physical acceptance of the robot conversation workflow, **in
-progress** since 2026-09-24. Follow the
-[24d hardware procedure](docs/phase-24cd.md#phase-24d-hardware-procedure);
-evidence is in the
-[24d record](docs/verification/phase-24d-conversation-2026-09-24.md). Phase 25
-remains gated on 24d. **24d proves the physical workflow, not answer
-quality** (owner, 2026-09-25): the formal ≥10-turn run uses deterministic
-context turns (code word, block count, project name) plus one or two
-separate search-assisted turns whose factual accuracy is 24a scope.
+**Phase 24d closed 2026-09-25, re-scoped by the owner**
+([results](docs/verification/phase-24d-conversation-2026-09-24.md#results)).
+Passed on the real robot:
+- Normal conversation: 16 spoken turns, all three context checks correct.
+- Both latency budgets: non-search p50 2.5 s, p95 6.9 s; search ≤ 19.3 s.
+- Owner-accepted usability.
+- Cold-reboot recovery.
 
-To close 24d, in order:
+The other matrix rows (turn handling, continuity, privacy, consent/auth,
+stop/expiry, recovery drills, the 30-minute session) are **deferred, not
+passed**. Answer correctness is deferred to 24a work after 24d. Per the
+[roadmap](docs/plan.md#6-implementation-roadmap), Phase 25 is next once the
+owner picks it up.
 
-1. **Boot race (the real blocker).** Installed on the Nano 2026-09-25
-   (unit enabled, container recreated with `--mount` and no restart policy,
-   live recovery passed, launcher idempotency bug fixed in `02f9538`). See
-   the [record](docs/verification/phase-24d-conversation-2026-09-24.md#boot-race-fix-on-the-nano-2026-09-25).
-   Cold reboot and daemon restart 2026-09-25: the race fix and container
-   lifecycle pass. The boot wake-up once failed (`time value is out of
-   range`), leaving the daemon in `state: error`. The owner approved an
-   automatic restart **once per boot**: `reachy-daemon-recovery.service`,
-   installed on the Nano at `00a5e68`; the restart path is fake-tested only.
-   Odd head-pose/IK readings (`stewart_5` lagging) came up. The owner found
-   the robot physically fine, so the finding was closed, then reopened when `stewart_5` overheated
-   during the formal run (item 3). See the
-   [record](docs/verification/phase-24d-conversation-2026-09-24.md#boot-race-fix-on-the-nano-2026-09-25).
-2. ~~Agree the search-turn latency budget~~ Done 2026-09-25: each
-   search-assisted turn ≤ 20 s (non-search stays p50 ≤ 4 s, p95 ≤ 8 s).
-3. **Formal run.** Attempt 1 (2026-09-25) failed the non-search budget on
-   uncapped model replies. Voice replies are now capped (`4035e50`,
-   `f353b90`, deployed on the homelab). Two of three context checks passed;
-   Attempt 2: Session B (search) passes, 6.9–13.1 s against the 20 s budget; the Nano
-   rebooted mid-session (cause open); the Session A rerun (with Zephyr) is still owed. `stewart_5`
-   reported Overheating Error during the run and the head drifted with no
-   move command. Motors were disabled at 02:26Z. **Owner decision
-   (2026-09-25): set motors aside for 24d.** The rerun proceeds with motors
-   disabled, and the owner checks the motors manually after the test.
-   See the [record](docs/verification/phase-24d-conversation-2026-09-24.md#formal-run-attempt-1-2026-09-25-budget-failed-stewart_5-overheat).
+Open follow-ups:
 
-24d state so far:
+- **Hardware (owner will check the motors manually).** `stewart_5`
+  overheating, lag and drift during the runs. An unplanned Nano power loss
+  at 02:38:20Z (`TEGRA_POWER_ON_RESET`, no undervoltage logged). The
+  Nano's RTC loses time across power-offs, so pre-NTP journal lines are
+  stale.
+- **Turn segmentation.** 700 ms end-of-speech silence splits long
+  utterances. The owner wants a longer pause to end a turn (it adds the
+  same delay to every turn); `max_utterance_seconds` is 15 s.
+- **24a.** Follow-up search merges unrelated fragments and searched
+  "Goodbye"; the local model misuses results; search-turn LLM time reached
+  17 s.
+- **Daemon (reachy_mini 1.8.4).** The boot wake-up can fail with `time value
+  is out of range [0,1]`. `reachy-daemon-recovery.service` (owner decision)
+  restarts it once per boot, but the restart path is fake-tested only.
 
-- **Done on the real Nano.** Preflight, voice enable, and step 3 device
-  coexistence passed. A behaviour sound, a camera frame and live voice
-  capture ran together through dmix/dsnoop, with no ALSA/shm errors. The
-  owner held two short live sessions (Piper TTS). Robot-side per-turn
-  timings are in the record.
-- **Deployed robot image.** `reachy-embodiment:local` is built from
-  `1a66f01` (voice enabled, INFO timing logs). Image fixes found on the
-  hardware: the GstApp/GstPbutils typelibs and ALSA plugin, and removing
-  `libgstonnx.so`, which SIGILLs on the ARMv8.0 Cortex-A57.
-- **Hardware watch.** `stewart_5` logged "Overheating Error" for 20+ min
-  while the head held a strained pose. It cleared after a reboot and motor
-  reset, but the cause is unknown. Check the daemon journal for recurrence.
+State:
+
+- **Nano** at `00a5e68`+: `reachy-embodiment.service` and
+  `reachy-daemon-recovery.service` are enabled. The container uses
+  `--mount` and has no restart policy. The image is built from `1a66f01`,
+  with voice enabled.
 - **Homelab stack (dev/test, not production-accepted).** Start it only
-  through `scripts/start-homelab.sh`. Schema `008_assistant_context`;
-  hub/core run `0144209` plus uncommitted work (UI no-cache headers, search
-  debug log, follow-up search, owner context). Dumps before each upgrade
-  are in `~/reachy-backups/` (0600): `…phase24d-20260924T213146`,
-  `…007-search-providers-20260925T003652`,
-  `…008-assistant-context-20260925T011257`. The hub speaks with Piper
-  `en_US-lessac-medium`; each `GET /robot-voice` turn record carries
-  transcription/conversation/synthesis ms.
-- **Reply length.** `af27338` asks the model for 1–3 plain sentences on
-  voice turns and strips `[S…]`/markdown before TTS. Utterance-end → first
-  audio was 2.5–3.6 s without search in preliminary runs.
-- **Search quality is 24a follow-up work, not a 24d gate.** The bundled
-  SearXNG was CAPTCHA'd/suspended from this address, so search now rotates
-  hosted Brave, Exa and Tavily within their free tiers (SearXNG last),
-  with follow-up search and owner date/time/location context (persona set
-  to Singapore), results = 5 and policy `auto`. All live-verified; see the
-  [ADR 0022 addenda](docs/adr/0022-web-search-grounding.md#addendum-hosted-provider-rotation-within-free-tiers-24a-follow-up-2026-09-25)
-  and the [24a record](docs/verification/phase-24a-search-assisted-2026-09-24.md#addendum--hosted-provider-rotation-and-multi-turn-check-2026-09-25).
-  Search picks the right query every turn, but the local `Qwen2.5-1.5B`
-  still misuses results and search turns ran 7–16.5 s. The owner kept the
-  local model; GLM-5.3 (cloud) is the option if 24a quality needs it.
+  through `scripts/start-homelab.sh`. It runs `f353b90` (voice replies
+  capped at `max_tokens=100` and trimmed to whole sentences). Schema
+  `008_assistant_context`. Dumps are in `~/reachy-backups/` (0600). Piper
+  `en_US-lessac-medium`. Search rotates Brave/Exa/Tavily, then SearXNG, with
+  policy `auto`; see the
+  [ADR 0022 addenda](docs/adr/0022-web-search-grounding.md#addendum-hosted-provider-rotation-within-free-tiers-24a-follow-up-2026-09-25).
 
 Phase 24c (robot microphone → conversation → speaker) is implemented
 (2026-09-24). See [ADR 0023](docs/adr/0023-robot-voice-conversation.md), the
