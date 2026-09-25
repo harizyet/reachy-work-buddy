@@ -489,6 +489,24 @@ playback completed each time. **The search-turn workflow and budget pass.**
 Turn 4's reply misused its results; that is 24a scope. The Session A
 rerun (12 deterministic turns) is still owed.
 
+**The reboot was unplanned**: the owner did not cut or cycle power. The
+evidence:
+- `tegra-pmc` reports `TEGRA_POWER_ON_RESET`, and `last -x` has no shutdown
+  record for the 08:50 boot.
+- dmesg shows no undervoltage, overcurrent or throttle lines, and this
+  board has no thermal-trip reset (`i2c-thermtrip node not found`).
+- Temperatures afterwards were normal (CPU 53 °C).
+
+It happened with motors disabled and a voice turn in progress. A supply
+dropout is suspected but unconfirmed. **Open hardware follow-up, owner
+deferred.**
+
+**Owner assessment (2026-09-25).** Apart from the cut-off session, every
+turn worked end to end. In the owner's words: "in terms of the end to end
+conversation without correctness yes it works fine. but correctness can be
+addressed after we close this phase." **Usability accepted; answer
+correctness deferred to after 24d** (24a scope).
+
 ## Latency budget (agreed before any timed turn)
 
 Utterance end → first audible reply, over the live turns:
