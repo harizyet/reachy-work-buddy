@@ -240,6 +240,12 @@ pre-recorded. Daemon start/restart and raw/diagnostic joint commands
 (`POST /api/move/goto`, or investigating a problem live) still need the
 owner present — see [AGENTS.md](../AGENTS.md) for the exact boundary.
 
+Development testing (owner's decision, 2026-09-25) may run bounded
+diagnostic motion unattended, including test runs on the production
+Nano. Full animations (recorded emotion or dance moves, and the daemon's
+wake-up) still need the owner present. Production operation keeps the
+rules above. [AGENTS.md](../AGENTS.md) has the exact boundary.
+
 Remote standby/resume (`POST /robots/standby`/`resume` on reachy-hub,
 triggered only by the explicit `/reachy standby`/`/reachy wake` command —
 or a registered channel alias — parsed by `companion_core.commands.

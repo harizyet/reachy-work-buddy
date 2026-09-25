@@ -117,6 +117,32 @@ boot**. If it errors again in the same boot, the recovery stops, logs a
 not a general relaxation: any other trigger, a higher restart count, or
 any corrective move still needs the owner present, per the rules above.
 
+Unattended development testing is allowed. The owner decided this
+explicitly on 2026-09-25, during 24f: "waive the safety rules to allow for
+development testing unattended unless full animations is to be played.
+The rules should apply only for production." In practice:
+
+- **Allowed without the owner present:** a development or test session
+  (a Claude Code session, or a test or diagnostic script it runs) may send
+  bounded motion commands on any dev/test host, and to the robot on the
+  production Nano when it is being used for a test run. This covers
+  REST/SDK `goto`/`set_target` diagnostics, the conformance cases in
+  `deploy/reachy/motion-conformance.py`, move stops, standby parking, and
+  enabling the 24f motion switches for a test. Such runs must stop at the
+  first daemon error or state change. They must also return the robot and
+  its services to how the run found them, for example restarting
+  `reachy-embodiment` after stopping it for a test.
+- **Still needs the owner present in a development session:** playing
+  full animations, meaning recorded emotion or dance moves (including the
+  mapped `/behaviour` moves when a test plays them), and the daemon's
+  wake-up. Starting, restarting or resuming the daemon plays that wake-up
+  emote and sound.
+- **Production operation is unchanged:** the deployed services running
+  the robot in normal use keep every rule and narrow exception above.
+- **Always:** launcher `--check` stays read-only, credentials rules are
+  unchanged, and host-specific launcher changes still need target-platform
+  verification.
+
 ## Documentation maintenance
 
 Use the ownership table in [docs/README.md](docs/README.md#where-information-belongs).

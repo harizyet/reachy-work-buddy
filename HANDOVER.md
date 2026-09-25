@@ -23,10 +23,17 @@ tolerates 5–15°, which explains its earlier pass. Pollen's conversation
 app streams `set_target` rather than using goto, but the path is the same
 from 1.8.4 to 1.11.0. So normal versus fault is open.
 
-Next, with the owner present:
-- Run the official Testbench rotation test, which measures the rotation
-  from camera images, alongside `motion-conformance.py --log 60`.
-- Run `--run stream-sdk`, the conversation app's streaming method.
+Unattended development testing is now allowed (owner's decision,
+2026-09-25, in [AGENTS.md](AGENTS.md)). Full animations and the daemon's
+wake-up still need the owner. `motion-conformance.py --camera DIR`
+measures each move from head-camera frames, so nobody has to watch.
+
+Next (the daemon start needs the owner, since it plays the wake-up; the
+cases below don't):
+- Run `motion-conformance.py --camera ~/24f-logs/frames --run zero-rest
+  visible-rest axes-rest axes-sdk stream-sdk`, comparing camera-measured
+  rotation with the encoders.
+- Optionally run the official Testbench rotation test alongside `--log 60`.
 - Only if the camera measurement disagrees with the encoders, inspect the
   mechanism and supply.
 

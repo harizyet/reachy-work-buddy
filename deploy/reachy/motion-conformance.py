@@ -1,11 +1,13 @@
-"""Phase 24f item 1: supervised REST vs SDK motion comparison.
+"""Phase 24f item 1: REST vs SDK motion comparison.
 
 Runs on the robot host with the daemon's own venv (reachy-venv/bin/python),
 so the SDK path is the same one the official Testbench uses. Without
-`--run` it only prints the plan: no connection, no motion. Each `--run CASE`
-moves the robot, and needs the owner present and an OK for that case
-(AGENTS.md). Targets and tolerances are fixed here, before measurement;
-see docs/verification/phase-24f-conformance-*.md for results.
+`--run` it only prints the plan: no connection, no motion. `--run` moves
+the robot. Development test runs may be unattended (AGENTS.md, owner's
+decision 2026-09-25), except `recorded` and `preempt`: they play full
+recorded animations, so they refuse to run without `--owner-present`.
+Targets and tolerances are fixed here, before measurement; see
+docs/verification/phase-24f-conformance-*.md for results.
 
 Only one controller may drive the daemon during a case. Stop
 reachy-embodiment first, and do not run two cases at once.
@@ -82,6 +84,10 @@ CASES = {
     "stream-sdk": "Pollen conversation-app method: 60 Hz SDK set_target stream, min-jerk ramp to yaw ±0.15 over 1 s, held while streaming",
     "home": "REST goto IDLE_HOME (identity, antennas [-0.1745, 0.1745], body yaw 0), 1.5 s",
 }
+
+
+# Cases that play full recorded animations (AGENTS.md: owner present).
+ANIMATION_CASES = frozenset({"recorded", "preempt"})
 
 
 def http(
@@ -778,6 +784,11 @@ def main() -> int:
         help="also measure each move from head-camera frames, saved to DIR",
     )
     parser.add_argument(
+        "--owner-present",
+        action="store_true",
+        help="required for cases that play full recorded animations",
+    )
+    parser.add_argument(
         "--port",
         type=int,
         default=8000,
@@ -812,6 +823,15 @@ def main() -> int:
         os.makedirs(args.camera, exist_ok=True)
         CAMERA_DIR = args.camera
 
+    animations = [c for c in args.run if c in ANIMATION_CASES]
+    if animations and not args.owner_present:
+        # AGENTS.md: full animations still need the owner present.
+        print(
+            json.dumps(
+                {"refused": "full animations need --owner-present", "cases": animations}
+            )
+        )
+        return 2
     daemon_state, errors_before = daemon_errors()
     if daemon_state != "running" or running():
         print(
