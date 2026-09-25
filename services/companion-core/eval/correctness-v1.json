@@ -1,0 +1,156 @@
+{
+  "version": 1,
+  "description": "Phase 24e voice-turn correctness set. Scoring rules: docs/phase-24e.md#correctness-set-scoring-rules. Do not edit a released version; add correctness-v2.json instead.",
+  "persona": {
+    "name": "Reachy",
+    "location": "Singapore",
+    "timezone": "Asia/Singapore"
+  },
+  "conversations": [
+    {
+      "id": "context-code-word",
+      "turns": [
+        {"text": "My code word is pineapple.", "category": "statement", "expect": {"search": false, "max_words": 30}},
+        {"text": "What was my code word?", "category": "context", "expect": {"search": false, "contains_all": ["pineapple"], "max_words": 40}}
+      ]
+    },
+    {
+      "id": "context-blocks",
+      "turns": [
+        {"text": "I have three red blocks and two blue blocks.", "category": "statement", "expect": {"search": false, "max_words": 30}},
+        {"text": "How many blocks did I mention?", "category": "context", "expect": {"search": false, "contains_any": ["five", "5", ["three", "two"]], "max_words": 40}}
+      ]
+    },
+    {
+      "id": "context-project",
+      "turns": [
+        {"text": "My fictional project is called Zephyr.", "category": "statement", "expect": {"search": false, "max_words": 30}},
+        {"text": "What is the project called?", "category": "context", "expect": {"search": false, "contains_all": ["zephyr"], "max_words": 40}}
+      ]
+    },
+    {
+      "id": "context-cat",
+      "turns": [
+        {"text": "My neighbour's cat is called Biscuit.", "category": "statement", "expect": {"search": false, "max_words": 30}},
+        {"text": "What is the cat's name?", "category": "context", "expect": {"search": false, "contains_all": ["biscuit"], "max_words": 40}}
+      ]
+    },
+    {"id": "statement-coffee", "turns": [
+      {"text": "I just finished my coffee.", "category": "statement", "expect": {"search": false, "max_words": 30}}
+    ]},
+    {"id": "statement-report", "turns": [
+      {"text": "I'm working on the quarterly report this afternoon.", "category": "statement", "expect": {"search": false, "max_words": 30}}
+    ]},
+    {"id": "statement-tired-today", "turns": [
+      {"text": "I'm feeling a bit tired today.", "category": "statement", "expect": {"search": false, "max_words": 30}}
+    ]},
+    {"id": "statement-printer", "turns": [
+      {"text": "The printer on my floor is out of paper again.", "category": "statement", "expect": {"search": false, "max_words": 30}}
+    ]},
+    {"id": "social-goodbye", "turns": [
+      {"text": "Goodbye for now.", "category": "social", "expect": {"search": false, "max_words": 25}}
+    ]},
+    {"id": "social-thanks", "turns": [
+      {"text": "Thanks, that's all for today.", "category": "social", "expect": {"search": false, "max_words": 25}}
+    ]},
+    {"id": "social-bye-later", "turns": [
+      {"text": "Bye Reachy, talk to you later.", "category": "social", "expect": {"search": false, "max_words": 25}}
+    ]},
+    {"id": "social-hello", "turns": [
+      {"text": "Hello Reachy.", "category": "social", "expect": {"search": false, "max_words": 30}}
+    ]},
+    {"id": "social-morning", "turns": [
+      {"text": "Good morning!", "category": "social", "expect": {"search": false, "max_words": 30}}
+    ]},
+    {"id": "identity-who", "turns": [
+      {"text": "Who are you?", "category": "self_identity", "expect": {"search": false, "contains_all": ["reachy"], "max_words": 60}}
+    ]},
+    {"id": "identity-what-can-you-do", "turns": [
+      {"text": "What can you do?", "category": "self_identity", "expect": {"search": false, "contains_any": ["calendar", "email", "remind", "task"], "max_words": 80}}
+    ]},
+    {
+      "id": "search-python-version",
+      "turns": [
+        {
+          "text": "What's the latest stable version of Python?",
+          "category": "search",
+          "search_results": [
+            {"title": "Python Release Python 3.15.2", "url": "https://www.python.org/downloads/release/python-3152/", "content": "Python 3.15.2 is the latest stable release of Python 3.15, published on 2 September 2026."},
+            {"title": "Python 3.15.2 released", "url": "https://blog.python.org/2026/09/python-3152.html", "content": "The Python team announced Python 3.15.2 on 2 September 2026, a bugfix release."}
+          ],
+          "expect": {"search": true, "contains_all": ["3.15.2"], "excludes": ["3.12", "3.13", "3.14"], "max_words": 60}
+        },
+        {
+          "text": "When was it released?",
+          "category": "search",
+          "search_results": [
+            {"title": "Python Release Python 3.15.2", "url": "https://www.python.org/downloads/release/python-3152/", "content": "Python 3.15.2 is the latest stable release of Python 3.15, published on 2 September 2026."}
+          ],
+          "expect": {"search": true, "query_contains": ["python"], "contains_any": ["september", "sept", "2026-09-02"], "max_words": 60}
+        }
+      ]
+    },
+    {
+      "id": "search-weather-thread",
+      "turns": [
+        {
+          "text": "What's the weather today?",
+          "category": "search",
+          "search_results": [
+            {"title": "Singapore weather today", "url": "https://weather.example.sg/today", "content": "Singapore today: thunderstorms in the afternoon, high 31°C, low 25°C."}
+          ],
+          "expect": {"search": true, "query_contains": ["singapore"], "contains_all": ["31"], "contains_any": ["thunder", "storm"], "max_words": 60}
+        },
+        {
+          "text": "What about tomorrow?",
+          "category": "search",
+          "search_results": [
+            {"title": "Singapore weather tomorrow", "url": "https://weather.example.sg/tomorrow", "content": "Singapore tomorrow: mostly sunny, high 33°C, low 26°C."}
+          ],
+          "expect": {"search": true, "query_contains": ["weather"], "contains_all": ["33"], "contains_any": ["sun"], "max_words": 60}
+        },
+        {"text": "Who are you?", "category": "self_identity", "expect": {"search": false, "contains_all": ["reachy"], "max_words": 60}},
+        {"text": "Goodbye for now.", "category": "social", "expect": {"search": false, "max_words": 25}}
+      ]
+    },
+    {"id": "search-artemis-news", "turns": [
+      {
+        "text": "Is there any news about the Artemis III mission this week?",
+        "category": "search",
+        "search_results": [
+          {"title": "Artemis III crew completes landing rehearsal", "url": "https://www.nasa.gov/news/artemis-iii-rehearsal", "content": "NASA said the Artemis III crew completed a full lunar landing rehearsal on 22 September 2026."}
+        ],
+        "expect": {"search": true, "contains_all": ["rehearsal"], "max_words": 60}
+      }
+    ]},
+    {"id": "search-pi-price", "turns": [
+      {
+        "text": "What's the current price of the Raspberry Pi 5 with 8GB?",
+        "category": "search",
+        "search_results": [
+          {"title": "Raspberry Pi 5 8GB", "url": "https://www.raspberrypi.com/products/raspberry-pi-5/", "content": "Raspberry Pi 5 8GB, $85. Available from approved resellers."}
+        ],
+        "expect": {"search": true, "contains_all": ["85"], "max_words": 60}
+      }
+    ]},
+    {"id": "search-provider-failure", "turns": [
+      {
+        "text": "What's the latest news about the Jetson Thor?",
+        "category": "search",
+        "search_error": true,
+        "expect": {"search": true, "contains_any": ["couldn't", "could not", "unable", "not able", "can't", "cannot", "don't have", "didn't find", "no results", "wasn't able"], "max_words": 60}
+      }
+    ]},
+    {"id": "search-irrelevant-results", "turns": [
+      {
+        "text": "What's the latest version of the Zig compiler?",
+        "category": "search",
+        "search_results": [
+          {"title": "Troubleshooting an issue with the system clock", "url": "https://support.example.com/clock", "content": "If the system clock drifts, there may be an issue with the system time service."},
+          {"title": "Compiler warnings explained", "url": "https://blog.example.net/warnings", "content": "A general guide to reading compiler warnings in C projects."}
+        ],
+        "expect": {"search": true, "contains_any": ["couldn't", "could not", "unable", "not able", "can't", "cannot", "don't have", "didn't find", "no information", "not sure", "don't know", "doesn't", "don't mention", "not mention", "not include", "no mention"], "excludes": ["issue with the system", "0.1"], "max_words": 60}
+      }
+    ]}
+  ]
+}

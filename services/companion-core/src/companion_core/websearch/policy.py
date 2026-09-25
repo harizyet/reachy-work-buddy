@@ -63,6 +63,14 @@ _QUESTION_STARTS = frozenset({
     "is", "are", "was", "were", "do", "does", "did", "can", "could", "will",
     "would", "should", "has", "have", "any",
 })
+# Requests for information, for turns that are not phrased as questions.
+_LEADING_FILLER = frozenset({"hey", "hi", "hello", "ok", "okay", "so", "and", "well", "reachy", "please", "um", "uh"})
+_QUESTION_WORDS = frozenset({"what", "what's", "when", "where", "which", "who", "whose", "why", "how", "how's"})
+_REQUEST_PHRASE_RE = re.compile(
+    r"\b(?:tell me|show me|give me|let me know|i want to know|i'd like to know|i wonder"
+    r"|find out|check|any news|remind me what)\b"
+)
+_TERSE_QUERY_WORDS = 3
 _QUERY_CHAR_LIMIT = 300
 _WEATHER_RE = re.compile(r"\b(weather|forecast|temperature|rain|raining|humid|humidity)\b")
 
@@ -75,9 +83,30 @@ def matches_auto_heuristic(text: str) -> bool:
     lowered = text.lower()
     if any(phrase in lowered for phrase in _SEARCH_PHRASES):
         return True
-    if _FRESHNESS_WORD_RE.search(lowered) or _FRESHNESS_PHRASE_RE.search(_normalize(text)):
-        return True
-    return bool(_YEAR_RE.search(text))
+    fresh = (
+        _FRESHNESS_WORD_RE.search(lowered) or _FRESHNESS_PHRASE_RE.search(_normalize(text))
+        or _YEAR_RE.search(text)
+    )
+    return bool(fresh) and _is_request(text)
+
+
+def _is_request(text: str) -> bool:
+    """A question, a request phrase or a terse query ("Weather today."). A
+    plain statement ("I'm feeling tired today.") is not, whatever its
+    freshness words (Phase 24e). STT often drops the question mark, so a
+    question word anywhere counts too."""
+    words = _normalize(text).split()
+    while words and words[0] in _LEADING_FILLER:
+        words = words[1:]
+    if not words:
+        return False
+    return (
+        text.strip().endswith("?")
+        or words[0] in _QUESTION_STARTS
+        or not _QUESTION_WORDS.isdisjoint(words)
+        or _REQUEST_PHRASE_RE.search(" ".join(words)) is not None
+        or len(words) <= _TERSE_QUERY_WORDS
+    )
 
 
 def is_social(text: str) -> bool:

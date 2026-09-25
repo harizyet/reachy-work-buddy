@@ -23,10 +23,16 @@ Verification: ruff passed. Core 360 passed, 18 skipped; hub 197 passed,
 `/tmp/espeak-extract`) 11 passed, 1 skipped (no Piper model). In-process
 only, not physical acceptance.
 
-Next: 24e item 3 of the sequence, the correctness set. Write its scoring
-rules, then get the owner's pass threshold **before** any measurement.
-Deploy items 1–2 to the hub and Nano when the owner schedules the physical
-run. Phase 25 remains blocked on the
+The correctness set (`services/companion-core/eval/`), its
+[scoring rules](docs/phase-24e.md#correctness-set-scoring-rules) and the
+owner's threshold (≥90% overall, every category ≥80%) were committed before
+any measurement; plain statements with a freshness word no longer search.
+Next: measure on the homelab's local model (OVMS Qwen2.5-1.5B on
+localhost:8000, the same one homelab core uses), then record the result in
+a dated 24e verification record. Only if it fails, run the cloud model and
+re-check the voice latency budget; switching is the owner's call.
+Deploy items 1–2 when the owner schedules the physical run. Phase 25
+remains blocked on the
 [hardware prerequisites](docs/phase-24e.md#prerequisites-for-phase-25).
 
 ## Last-reported machine state

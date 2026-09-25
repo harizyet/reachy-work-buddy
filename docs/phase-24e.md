@@ -6,8 +6,9 @@ not what already works. Item 1 (adaptive end of turn) is implemented per the
 with in-process and simulated-audio tests only; it is not deployed or
 physically accepted. Item 2's search-rule fixes and STT vocabulary bias are
 implemented and tested in process (see the
-[note below](#implementation-notes-item-2)); the correctness set is not
-started. It follows [Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance),
+[note below](#implementation-notes-item-2)). The correctness set and its
+[scoring rules](#correctness-set-scoring-rules) and the owner's threshold
+are recorded; nothing has been measured yet. It follows [Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance),
 which the owner closed on the conversation workflow on 2026-09-25, and it
 addresses what 24d found or deferred. Evidence for each issue is in the
 [24d record](verification/phase-24d-conversation-2026-09-24.md). Scope was
@@ -184,6 +185,11 @@ target-platform verification.
 - A turn is social only if nothing but closing/greeting/thanks phrases and
   filler remains, so "Thanks, what's the weather tomorrow?" still searches.
   Always still searches every turn.
+- A freshness word or year searches only in a request: a question (with or
+  without its question mark), a request phrase ("tell me", "I want to
+  know") or a terse query of up to three words ("Weather today."). A plain
+  statement ("I'm feeling tired today.") does not. Owner decision,
+  2026-09-25, before measurement.
 - A follow-up needs a reference phrase ("what about", "tell me more"), a
   question that opens with "and" or uses a pronoun, or a short question
   with no freshness subject of its own. A bare "Any news?" therefore starts
@@ -193,6 +199,47 @@ target-platform verification.
   `base.en`, hotwords dropped final punctuation on 2 of 5 clips, while the
   prompt kept it and recognised "Reachy" about as often. This is a synthetic
   comparison, not evidence on real speech; the physical run checks it.
+
+### Correctness set scoring rules
+
+Written 2026-09-25, before any measurement. The set is
+[`correctness-v1.json`](../services/companion-core/eval/correctness-v1.json)
+and [`run_correctness.py`](../services/companion-core/eval/run_correctness.py)
+is the only implementation of these rules. A released case file is never
+edited; changes go in a new version, measured again.
+
+- **What runs.** companion-core in process, with in-memory stores, a fixed
+  persona (Reachy, Singapore, Asia/Singapore), search policy Auto and the
+  built-in SearXNG adapter fed fixture results. The model is real, reached
+  over its OpenAI-compatible API. Every turn uses the voice modality on the
+  Reachy channel. No robot, hub, database or real search provider is used.
+- **Set.** 20 conversations with 29 scored turns in 5 categories:
+  deterministic context (4), statements to acknowledge (8), closings and
+  greetings (6), self-identity (3), and search-grounded answers (8,
+  including a provider failure and irrelevant results). Each conversation
+  runs 3 times in a fresh session, giving 87 scored turn runs.
+- **A turn passes only if every check passes.**
+  - The reply has no code block.
+  - `search`: whether core ran a search on that turn, from its search log.
+  - `query_contains`: each term appears in the query sent (case-insensitive).
+  - `contains_all` / `contains_any`: all or any of the terms appear in the
+    reply. A nested list means all of those terms together.
+  - `excludes`: none of the terms appear.
+  - `max_words`: a word limit (25–80). For statements and closings this
+    stands in for "a short acknowledgement".
+  - Terms match case-insensitively, with a word boundary on the left only,
+    so "sun" matches "sunny" and "5" does not match "25".
+- **Reported.** Pass rate overall and per category, and per-turn core time
+  (p50/p95/max). The transcript is kept for the owner to read, but scores
+  are not changed by hand after a run.
+- **Threshold.** Agreed by the owner on 2026-09-25, before any run: at
+  least 90% of all scored turn runs pass (79 of 87), **and** every category
+  passes at least 80% of its runs.
+
+Run it with `uv run python services/companion-core/eval/run_correctness.py
+--base-url <url> --model <model> --out <dir>`. Pass `--role cloud
+--api-key-env <VAR>` for the cloud model; the key is read from that
+environment variable, never from the command line.
 
 ## Non-goals
 

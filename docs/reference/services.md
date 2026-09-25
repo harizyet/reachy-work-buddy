@@ -51,8 +51,9 @@ searches in memory for the owner's debug view (`GET /websearch/log`). Every gene
 turn also gets `persona/context.py`'s owner-local date, time and location
 message, and follow-ups reuse the session's search topic
 (`ConversationStore.search_topic`) only when they refer back to it. Under
-Auto, closings, greetings, thanks and self-identity questions never search
-(Phase 24e). VOICE-modality turns also get
+Auto, closings, greetings, thanks, self-identity questions and plain
+statements never search (Phase 24e). The voice correctness set and its
+runner are in `eval/`. VOICE-modality turns also get
 `SPOKEN_REPLY_INSTRUCTION` (short plain replies), and reachy-hub strips
 citation markers and markdown before synthesis (`tts.spoken_text`).
 Retrieved titles/snippets/URLs are injected as a separate, clearly

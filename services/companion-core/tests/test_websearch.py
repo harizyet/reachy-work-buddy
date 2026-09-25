@@ -810,3 +810,17 @@ def test_a_bare_short_freshness_question_stands_alone():
 ])
 def test_a_statement_with_a_pronoun_does_not_pull_in_the_previous_turn(text):
     assert build_query(text, "Tell me about Bob.") == text
+
+
+@pytest.mark.parametrize(("text", "searches"), [
+    ("I'm feeling a bit tired today.", False),
+    ("The weather is lovely today.", False),
+    ("My passport expires in 2029.", False),
+    ("hey reachy what's the weather today", True),
+    ("I want to know the weather today.", True),
+    ("Tell me the latest news.", True),
+    ("Weather today.", True),
+    ("Is the new release out yet", True),
+])
+def test_freshness_words_search_only_in_a_request(text, searches):
+    assert should_search(text, policy=SearchPolicy.AUTO) is searches
