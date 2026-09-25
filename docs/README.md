@@ -125,6 +125,10 @@ These are dated evidence, not startup instructions or current health checks.
   passed the owner's pre-agreed threshold, with grounded-number and
   statement-length failures recorded.
 
+- [Phase 24e open-palm stop](verification/phase-24e-palm-stop-2026-09-25.md):
+  in-process tests, the real MediaPipe model on still photos and an amd64
+  image build; the Nano build and physical rows are open.
+
 - [Phase 24f motion source trace](verification/phase-24f-source-2026-09-25.md):
   pinned 1.8.4 daemon source plus a mockup-sim probe; overlapping REST moves
   both run, real UUID stop exists, `running` follows wake-up; no robot.

@@ -349,6 +349,15 @@ class ReachyDaemonBackend:
         )
         self._status_timeout = status_timeout
         self._behaviour_moves = behaviour_moves if behaviour_moves is not None else dict(_DEFAULT_BEHAVIOUR_MOVES)
+        # Daemon UUID of the last move this backend started. reachy-mini
+        # 1.8.4's single-move guard is a re-entrant lock on one event-loop
+        # thread, so overlapping REST moves both run and fight at 100 Hz
+        # (docs/verification/phase-24f-source-2026-09-25.md). We stop our
+        # own previous move before starting another. `_move_lock` makes
+        # stop-then-start atomic across the presence thread and FastAPI's
+        # threadpool.
+        self._active_move_uuid: str | None = None
+        self._move_lock = threading.Lock()
         # Phase 22b camera refactor: lazily created, then kept alive for the
         # process lifetime (never used as a context manager during normal
         # operation, so its __exit__ never fires and never calls
@@ -414,16 +423,40 @@ class ReachyDaemonBackend:
             log.warning("no move mapping for behaviour %s, skipping", name.value)
             return
         dataset, move_name = mapping
+        with self._move_lock:
+            self._stop_active_move_locked()
+            try:
+                resp = self._client.post(f"/move/play/recorded-move-dataset/{dataset}/{move_name}")
+                resp.raise_for_status()
+            except httpx.HTTPError as exc:
+                # Deliberately not raised: a missing/misnamed move shouldn't
+                # take down the whole /behaviour/{name} request, the same way
+                # an unmapped behaviour above just logs and no-ops. Real
+                # command failures worth surfacing loudly (daemon unreachable
+                # entirely) are still visible via `connected` going False.
+                log.warning("play_behaviour(%s) -> %s/%s failed: %s", name.value, dataset, move_name, exc)
+                return
+            try:
+                self._active_move_uuid = str(resp.json()["uuid"])
+            except (ValueError, KeyError, TypeError):
+                log.warning("play_behaviour(%s): daemon response had no move uuid; cannot stop it later", name.value)
+
+    def _stop_active_move_locked(self) -> None:
+        """Stops the move this backend last started, if any. Caller holds
+        `_move_lock`. In 1.8.4, stopping a move that already finished
+        returns 500 (unhandled KeyError), so an HTTP status error here
+        usually just means the move had ended. The move is forgotten either
+        way. A transport error means we can't know, and is logged."""
+        uuid = self._active_move_uuid
+        if uuid is None:
+            return
+        self._active_move_uuid = None
         try:
-            resp = self._client.post(f"/move/play/recorded-move-dataset/{dataset}/{move_name}")
-            resp.raise_for_status()
+            self._client.post("/move/stop", json={"uuid": uuid}).raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            log.debug("stop of move %s not applied (likely already finished): %s", uuid, exc)
         except httpx.HTTPError as exc:
-            # Deliberately not raised: a missing/misnamed move shouldn't
-            # take down the whole /behaviour/{name} request, the same way
-            # an unmapped behaviour above just logs and no-ops. Real
-            # command failures worth surfacing loudly (daemon unreachable
-            # entirely) are still visible via `connected` going False.
-            log.warning("play_behaviour(%s) -> %s/%s failed: %s", name.value, dataset, move_name, exc)
+            log.warning("stop of move %s failed; it may still be running: %s", uuid, exc)
 
     def capture_frame(self) -> bytes:
         """Grabs one JPEG frame via the reachy_mini SDK's LOCAL media
@@ -588,6 +621,10 @@ class ReachyDaemonBackend:
         "stopping") rather than the final "stopped"; callers that need the
         final state should poll `connected`/`sim` again after a moment,
         not treat this return value as completion."""
+        # Our recorded move must not keep writing targets over the daemon's
+        # own goto_sleep, so stop it first.
+        with self._move_lock:
+            self._stop_active_move_locked()
         try:
             resp = self._client.post("/daemon/stop", params={"goto_sleep": "true"})
             resp.raise_for_status()
@@ -620,6 +657,8 @@ class ReachyDaemonBackend:
         once from the app's shutdown lifespan, and a failure here shouldn't
         block the rest of shutdown, so it's logged rather than raised.
         """
+        with self._move_lock:
+            self._stop_active_move_locked()
         if self._mini is not None:
             try:
                 self._mini.__exit__(None, None, None)  # type: ignore[attr-defined]

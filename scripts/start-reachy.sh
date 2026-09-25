@@ -268,6 +268,12 @@ if [[ "${VOICE_CONVERSATION_ENABLED:-false}" == "true" ]]; then
             -v "${DAEMON_HOME}/.asoundrc:/tmp/reachy-voice-home/.asoundrc:ro"
             -e VOICE_CONVERSATION_ENABLED=true)
         log_info "voice conversation enabled: sharing ${DAEMON_USER}'s ALSA config and IPC namespace with the container"
+        # Phase 24e item 5: open-palm stop during spoken replies. Only
+        # meaningful with voice on; it uses the camera socket mounted below.
+        if [[ "${PALM_STOP_ENABLED:-false}" == "true" ]]; then
+            VOICE_ARGS+=(-e PALM_STOP_ENABLED=true)
+            log_info "open-palm stop enabled"
+        fi
     else
         log_warn "VOICE_CONVERSATION_ENABLED=true but ${DAEMON_HOME:-<no home for $DAEMON_USER>}/.asoundrc is not readable here — voice stays disabled for this container"
     fi

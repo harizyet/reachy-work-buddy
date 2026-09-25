@@ -205,7 +205,10 @@ opens the microphone, lets Silero VAD (512 samples at 16 kHz) delimit one
 bounded utterance, closes the microphone, uploads the utterance to the hub,
 then plays any permitted reply. It is half-duplex, and cancelling stops daemon
 playback. It is enabled only by `VOICE_CONVERSATION_ENABLED=true`, and has not
-passed physical acceptance. Barge-in and wake words are not implemented.
+passed physical acceptance. Audio barge-in and wake words are not implemented.
+With `PALM_STOP_ENABLED=true`, `gesture.py`'s `PalmStopWatcher` checks
+camera frames during playback. A held open palm (MediaPipe gesture model)
+stops playback and the loop returns to listening in the same session.
 
 `ReachyDaemonBackend` calls daemon HTTP under `/api`. Recorded moves use the
 Pollen emotions dataset. Camera frames and the microphone share one

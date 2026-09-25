@@ -433,6 +433,15 @@ To enable it on the robot host:
    for it. If the file is not readable, the launcher warns and leaves voice
    disabled.
 
+Open-palm stop ([ADR 0023 addendum](adr/0023-robot-voice-conversation.md#addendum-open-palm-stop-2026-09-25-phase-24e))
+is a further opt-in on top of voice: set `PALM_STOP_ENABLED=true` too, then
+recreate the container as in step 2. The launcher passes it through only
+when voice is enabled. At the first conversation start, the container
+checks that MediaPipe loads on this CPU, in a child process; the log shows
+`palm stop ready` or `palm stop unavailable, continuing without it`. The
+model is baked into the image. It has not been built or run on the Nano
+yet ([Phase 24e item 5](phase-24e.md#5-open-palm-stop)).
+
 Checked on nano-1 during 24d:
 - dsnoop capture from the container, alongside the daemon's own playback
   (dmix);

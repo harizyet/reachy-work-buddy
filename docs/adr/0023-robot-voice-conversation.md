@@ -191,3 +191,46 @@ turn depend on whether the speaker sounds finished.
 
 Complete-looking turns keep their previous latency. Only turns that sound
 unfinished wait for the window.
+
+## Addendum: open-palm stop (2026-09-25, Phase 24e)
+
+Spoken replies are bounded (above), but a reply the owner doesn't want can
+still run for up to about 30 s, and stopping it meant opening the operator
+UI, which ends the whole session. [Phase 24e item 5](../phase-24e.md#5-open-palm-stop)
+adds a hands-free way to cut a reply short and keep talking.
+
+**Decision.**
+
+- **Where.** Entirely inside reachy-embodiment
+  (`reachy_embodiment/gesture.py`). Only while a reply is playing, the robot
+  reads camera frames through the existing LOCAL media client, a few per
+  second. MediaPipe's pretrained gesture recognizer checks each one for an
+  open palm. The model is pinned by version and SHA-256 in the image. An
+  open palm seen in two consecutive frames with a score of at least 0.6
+  counts as stop.
+- **Effect.** The robot stops daemon playback (`stop_audio`), as a voice
+  stop does, and the loop goes straight on: tail guard, then the next
+  listening turn in the **same** session. The hub is not told
+  specifically. It sees `speaking` followed by `listening`, and its turn
+  record stays `spoken`. The model's history therefore holds the whole
+  reply even though the listener heard only part of it.
+- **Not audio barge-in.** The microphone stays closed while the robot
+  speaks, so half-duplex is unchanged. The camera is the only sensor added,
+  and only for the reply's playback time.
+- **Anyone can do it.** Any hand in view counts; nothing identifies the
+  person. It only shortens speech, which a voice stop already does, so it
+  needs no authentication. It cannot start capture, send a turn or
+  approve anything, and consent stays text-only
+  ([ADR 0011](0011-destructive-action-consent.md)). Withheld replies are
+  never played, so they are never watched.
+- **Privacy.** Frames are decoded and classified in memory, then dropped.
+  Nothing is stored, logged or sent off the robot.
+- **Failure.** Palm stop is optional. The detector loads once per process,
+  at the first session start, off the event loop. It is first tried in a
+  child process, because a native crash (SIGILL on the Nano's Cortex-A57
+  has happened with another ML library) would otherwise kill the service.
+  A failed load, a failed probe or camera errors leave replies playing to
+  the end, and the conversation carries on.
+- **Enablement.** `PALM_STOP_ENABLED=true`, off by default, and only with
+  voice conversation enabled. It stays off in production until physical
+  acceptance.

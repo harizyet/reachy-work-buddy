@@ -10,6 +10,7 @@ ReachyDaemonBackend is a first draft pending live verification.
 
 from __future__ import annotations
 
+import json
 import sys
 import wave
 from io import BytesIO
@@ -181,6 +182,101 @@ def test_play_behaviour_skips_unmapped_behaviour_without_raising() -> None:
 
     backend = ReachyDaemonBackend("http://daemon.test", behaviour_moves={}, transport=httpx.MockTransport(handler))
     backend.play_behaviour(Behaviour.GREETING, {})  # must not raise
+
+
+_MOVE_PREFIX = "/api/move/play/recorded-move-dataset/pollen-robotics/reachy-mini-emotions-library/"
+
+
+def _move_daemon(calls: list[tuple[str, object]], *, stop_status: int = 200):
+    """Fake daemon handing out sequential move UUIDs and recording stops."""
+    counter = iter(range(1, 100))
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/move/stop":
+            calls.append(("stop", json.loads(request.content)["uuid"]))
+            return httpx.Response(stop_status, json={})
+        if request.url.path.startswith(_MOVE_PREFIX):
+            calls.append(("play", request.url.path.removeprefix(_MOVE_PREFIX)))
+            return httpx.Response(200, json={"uuid": f"move-{next(counter)}"})
+        calls.append(("other", request.url.path))
+        return httpx.Response(200, json={"state": "running"})
+
+    return handler
+
+
+def test_play_behaviour_stops_previous_move_before_starting_next() -> None:
+    """reachy-mini 1.8.4 runs overlapping REST moves concurrently, so the
+    backend must stop its own previous move before starting another."""
+    calls: list[tuple[str, object]] = []
+    backend = make_backend(_move_daemon(calls))
+
+    backend.play_behaviour(Behaviour.LISTENING, {})
+    backend.play_behaviour(Behaviour.THINKING, {})
+
+    assert calls == [("play", "attentive1"), ("stop", "move-1"), ("play", "thoughtful1")]
+
+
+def test_play_behaviour_proceeds_when_previous_move_already_finished() -> None:
+    """1.8.4 answers 500 when stopping a move that already ended."""
+    calls: list[tuple[str, object]] = []
+    backend = make_backend(_move_daemon(calls, stop_status=500))
+
+    backend.play_behaviour(Behaviour.LISTENING, {})
+    backend.play_behaviour(Behaviour.THINKING, {})
+    backend.play_behaviour(Behaviour.WAITING, {})
+
+    assert calls == [
+        ("play", "attentive1"),
+        ("stop", "move-1"),
+        ("play", "thoughtful1"),
+        ("stop", "move-2"),
+        ("play", "waiting"),
+    ]
+
+
+def test_failed_play_leaves_nothing_to_stop() -> None:
+    calls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request.url.path)
+        return httpx.Response(404, json={"detail": "no such move"})
+
+    backend = make_backend(handler)
+    backend.play_behaviour(Behaviour.LISTENING, {})
+    backend.play_behaviour(Behaviour.THINKING, {})
+
+    assert "/api/move/stop" not in calls
+
+
+def test_unmapped_behaviour_does_not_stop_active_move() -> None:
+    calls: list[tuple[str, object]] = []
+    backend = make_backend(_move_daemon(calls))
+
+    backend.play_behaviour(Behaviour.LISTENING, {})
+    backend.play_behaviour(Behaviour.IDLE_BREATHING, {})
+
+    assert calls == [("play", "attentive1")]
+
+
+def test_standby_stops_active_move_before_goto_sleep() -> None:
+    calls: list[tuple[str, object]] = []
+    backend = make_backend(_move_daemon(calls))
+
+    backend.play_behaviour(Behaviour.LISTENING, {})
+    backend.daemon_standby()
+
+    assert calls[:3] == [("play", "attentive1"), ("stop", "move-1"), ("other", "/api/daemon/stop")]
+
+
+def test_close_stops_active_move_once() -> None:
+    calls: list[tuple[str, object]] = []
+    backend = make_backend(_move_daemon(calls))
+
+    backend.play_behaviour(Behaviour.LISTENING, {})
+    backend.close()
+    backend.close()
+
+    assert calls == [("play", "attentive1"), ("stop", "move-1")]
 
 
 def test_default_mapping_uses_real_verified_move_names() -> None:

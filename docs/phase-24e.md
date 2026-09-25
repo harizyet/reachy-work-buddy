@@ -10,7 +10,11 @@ implemented and tested in process (see the
 [scoring rules](#correctness-set-scoring-rules) and the owner's threshold
 were recorded first. The local model then passed: 82 of 87 (94.3%), every
 category ≥ 87.5%
-([record](verification/phase-24e-correctness-2026-09-25.md)). It follows [Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance),
+([record](verification/phase-24e-correctness-2026-09-25.md)). Item 5
+(open-palm stop) was added by the owner on 2026-09-25 and is implemented
+behind `PALM_STOP_ENABLED`, off by default. It is tested in process and in
+an x86 image build only; the Nano build and physical run are open
+([record](verification/phase-24e-palm-stop-2026-09-25.md)). It follows [Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance),
 which the owner closed on the conversation workflow on 2026-09-25, and it
 addresses what 24d found or deferred. Evidence for each issue is in the
 [24d record](verification/phase-24d-conversation-2026-09-24.md). Scope was
@@ -182,6 +186,38 @@ target-platform verification.
 - Document the diagnosis procedure (what to collect after an unexpected
   reboot) in the deployment guide.
 
+### 5. Open-palm stop
+
+Added by the owner on 2026-09-25. Holding an open palm to the camera while
+Reachy is speaking stops the reply, and Reachy goes back to listening in
+the same conversation. This is for replies the listener doesn't want to
+hear out. Design: [ADR 0023 addendum](adr/0023-robot-voice-conversation.md#addendum-open-palm-stop-2026-09-25-phase-24e).
+
+- Camera frames are checked only during reply playback, on the robot, and
+  never stored or sent anywhere.
+- It shortens speech only. The microphone stays closed while speaking, so
+  this is not audio barge-in, and it grants nothing a voice stop doesn't.
+- It is optional and fails safe: if the model cannot load on the Nano, or
+  the camera errors, replies play to the end.
+- `PALM_STOP_ENABLED=true` turns it on (with voice enabled), off by default.
+
+Physical acceptance, recorded in the dated 24e record:
+
+- **Nano build:** the aarch64 image builds, and the child-process probe
+  passes on the Cortex-A57. If it fails, record the failure and leave the
+  feature off; the rest of 24e is unaffected.
+- **Stop:** a palm held up during a long reply stops audio within 1 s of
+  being shown, and the next turn is heard and answered in the same
+  session. Try at the owner's normal distance and lighting, both hands.
+- **No false stops:** talking with hands moving, waving, a thumbs-up and
+  an empty or busy scene do not stop a reply, over the 30-minute session.
+- **Coexistence:** reply audio does not stutter while frames are checked,
+  and the microphone reopens normally afterwards. Record the Nano's
+  detection time per frame.
+- **Off:** with the setting false, the camera is not read during replies.
+
+This is not a [Phase 25 prerequisite](#prerequisites-for-phase-25).
+
 ### Implementation notes (item 2)
 
 - A turn is social only if nothing but closing/greeting/thanks phrases and
@@ -252,8 +288,9 @@ environment variable, never from the command line.
 - **`stewart_5` inspection and repair.** The owner checks the motors by
   hand, outside this phase. 24e must not send behaviours or raw moves to
   investigate them.
-- A general model upgrade, streaming TTS, full-duplex barge-in, and owner
-  recognition (Phase 25).
+- A general model upgrade, streaming TTS, full-duplex (audio) barge-in, and
+  owner recognition (Phase 25). Item 5's open-palm stop is a camera
+  gesture during playback, not audio barge-in, and does not identify anyone.
 - Upgrading reachy_mini. The boot wake-up race is also present in the 1.11
   source; the once-per-boot restart stays the mitigation.
 
@@ -273,8 +310,10 @@ can be implemented and accepted while independent work remains open.
    model.
 4. Nano diagnostics, verified on the Nano with the owner's approval for
    any system change.
-5. Physical run: repeat the Normal conversation and Timing rows, then the
-   deferred rows, and the 30-minute session last.
+5. Open-palm stop (item 5), behind its switch, with in-process tests;
+   then the Nano image build and probe.
+6. Physical run: repeat the Normal conversation and Timing rows, then the
+   deferred rows and the item 5 rows, and the 30-minute session last.
 
 ## Exit criteria
 
@@ -292,4 +331,6 @@ can be implemented and accepted while independent work remains open.
 - On the Nano, a reboot leaves the previous boot's journal readable,
   pre-NTP timestamps are sane or the hardware cause is documented, and
   power readings are captured.
+- Open-palm stop passes its item 5 rows on the Nano, or is recorded as
+  BLOCKED with the reason and left disabled.
 - The owner accepts usability again after the changes.

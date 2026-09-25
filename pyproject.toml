@@ -14,6 +14,14 @@ dev = [
     "ruff>=0.7",
 ]
 
+[tool.uv]
+# mediapipe (reachy-embodiment) requires opencv-contrib-python, which
+# installs the same `cv2` module as the opencv-python-headless build that
+# reachy-embodiment already uses; two distributions writing one module
+# clobber each other. The never-true marker drops it; the headless `cv2`
+# serves MediaPipe's gesture recognizer (checked 2026-09-25).
+override-dependencies = ["opencv-contrib-python; sys_platform == 'never'"]
+
 [tool.uv.workspace]
 members = ["services/reachy-embodiment", "services/reachy-hub", "services/companion-core"]
 

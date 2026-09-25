@@ -44,6 +44,20 @@ lag and drift that the Testbench, which runs one move at a time, did not
 reproduce. It is untested on hardware, and whether 24d's sessions used the
 WebRTC path is not recorded here.
 
+## Preemption fix check
+
+`ReachyDaemonBackend` now stops its previous move before starting the next
+([ADR 0003 amendment](../adr/0003-embodiment-command-api.md#phase-24f-move-preemption-amendment-2026-09-25)).
+Checked against the same 1.8.4 mockup-sim daemon, with `HF_HUB_OFFLINE=1`
+and the cached emotions dataset. LISTENING was played, then THINKING 1 s
+later, through the real backend class:
+`attentive1` `move_started` 0.22 s, `move_cancelled` 1.22 s;
+`thoughtful1` `move_started` 1.31 s; `/move/running` stayed at 1; `close()`
+then cancelled `thoughtful1`. Mock-transport unit tests cover the stop
+ordering, stop-after-finish (500), failed plays, standby and close. This is
+not a physical check: whether the fix removes the 24d tracking anomalies is
+untested.
+
 ## Probe
 
 `.venv/bin/reachy-mini-daemon --mockup-sim --no-media --no-wake-up-on-start

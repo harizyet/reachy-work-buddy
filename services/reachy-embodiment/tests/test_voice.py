@@ -256,7 +256,7 @@ class ScriptedSTT:
     def __init__(self, *texts: str) -> None:
         self.texts = list(texts)
 
-    def transcribe(self, wav: bytes) -> str:
+    def transcribe(self, wav: bytes, *, vocabulary: tuple[str, ...] = ()) -> str:
         return self.texts.pop(0) if self.texts else ""
 
 
@@ -316,7 +316,9 @@ class Robot:
     """The robot's VoiceConversation, with the ADR 0019 control socket
     replaced by an in-process bridge into the hub's connection manager."""
 
-    def __init__(self, hub_app, mic, player, *, hub_transport=None, capabilities=(VOICE_CAPABILITY,)):
+    def __init__(
+        self, hub_app, mic, player, *, hub_transport=None, capabilities=(VOICE_CAPABILITY,), stop_gesture=None
+    ):
         self.hub_app = hub_app
         self.capabilities = list(capabilities)
         self.mic = mic
@@ -328,6 +330,7 @@ class Robot:
             VoiceTurnClient("http://hub", ROBOT_ID, ROBOT_TOKEN, transport=hub_transport or httpx.ASGITransport(app=hub_app)),
             player,
             self.state,
+            stop_gesture=stop_gesture,
         )
         self.reports: list[str] = []
         self.connection = None
@@ -416,6 +419,115 @@ def test_stop_during_playback_silences_the_speaker() -> None:
     asyncio.run(scenario())
 
 
+class FakePalm:
+    """Stands in for PalmStopWatcher: `show()` makes a waiting `wait()`
+    return, as a held open palm would."""
+
+    def __init__(self, *, ready: bool = True, fail: bool = False) -> None:
+        self.ready = ready
+        self.fail = fail
+        self.prepared = 0
+        self.waits = 0
+        self.cancelled = 0
+        self.closed = 0
+        self._shown = asyncio.Event()
+
+    def show(self) -> None:
+        self._shown.set()
+
+    async def prepare(self) -> bool:
+        self.prepared += 1
+        return self.ready
+
+    async def wait(self) -> None:
+        self.waits += 1
+        if self.fail:
+            raise RuntimeError("camera gone")
+        try:
+            await self._shown.wait()
+        except asyncio.CancelledError:
+            self.cancelled += 1
+            raise
+        self._shown.clear()
+
+    def close(self) -> None:
+        self.closed += 1
+
+
+def test_open_palm_stops_a_long_reply_and_listening_resumes() -> None:
+    async def scenario():
+        tts = FixedTTS(seconds=30)
+        hub = make_hub(ScriptedSTT("tell me a long story", "thanks"), tts)
+        mic = CountingMic([utterance_fixture(), utterance_fixture()])
+        player = RecordingPlayer()
+        palm = FakePalm()
+        robot = Robot(hub, mic, player, stop_gesture=palm)
+        await robot.connect()
+        start = (await owner(hub, "POST", "/robot-voice/start", json={"robot_id": ROBOT_ID})).json()
+        await wait_until(lambda: player.played)
+        assert robot.state.embodiment_state == EmbodimentState.SPEAKING
+        assert palm.prepared == 1 and palm.waits == 1
+
+        shown_at = time.monotonic()
+        palm.show()
+        await wait_until(lambda: player.stopped == 1)
+        assert time.monotonic() - shown_at < 1.0
+        # Same session carries on: the robot listens and answers the next turn.
+        await wait_until(lambda: len(player.played) == 2)
+        session = (await owner(hub, "GET", "/robot-voice")).json()["session"]
+        assert session["voice_session_id"] == start["voice_session_id"]
+        assert [t["transcript"] for t in session["turns"]] == ["tell me a long story", "thanks"]
+        assert robot.reports[:5] == ["listening", "uploading", "speaking", "listening", "uploading"]
+        assert palm.prepared == 1  # the detector is set up once per session, not per reply
+
+        await owner(hub, "POST", "/robot-voice/stop", json={"voice_session_id": start["voice_session_id"]})
+        assert player.stopped == 2  # the second reply was still playing
+        assert palm.cancelled == 1  # its watcher ended with the playback
+        await robot.voice.aclose()
+        assert palm.closed == 1
+
+    asyncio.run(scenario())
+
+
+def test_reply_that_ends_normally_cancels_the_palm_watcher() -> None:
+    async def scenario():
+        hub = make_hub(ScriptedSTT("hello"), FixedTTS(seconds=0.1))
+        player = RecordingPlayer()
+        palm = FakePalm()
+        robot = Robot(hub, CountingMic([utterance_fixture()]), player, stop_gesture=palm)
+        await robot.connect()
+        await owner(hub, "POST", "/robot-voice/start", json={"robot_id": ROBOT_ID})
+        await wait_until(lambda: palm.cancelled == 1)
+        assert player.stopped == 0
+        await wait_until(lambda: robot.state.embodiment_state == EmbodimentState.LISTENING)
+        await robot.voice.aclose()
+
+    asyncio.run(scenario())
+
+
+def test_palm_stop_unavailable_or_failing_leaves_replies_playing() -> None:
+    async def scenario(palm: FakePalm):
+        hub = make_hub(ScriptedSTT("hello"), FixedTTS(seconds=0.5))
+        player = RecordingPlayer()
+        robot = Robot(hub, CountingMic([utterance_fixture()]), player, stop_gesture=palm)
+        await robot.connect()
+        await owner(hub, "POST", "/robot-voice/start", json={"robot_id": ROBOT_ID})
+        await wait_until(lambda: player.played)
+        started = time.monotonic()
+        await wait_until(lambda: robot.state.embodiment_state == EmbodimentState.LISTENING)
+        assert time.monotonic() - started >= 0.5  # played to its end
+        assert player.stopped == 0
+        await robot.voice.aclose()
+
+    unavailable = FakePalm(ready=False)
+    asyncio.run(scenario(unavailable))
+    assert unavailable.waits == 0
+
+    failing = FakePalm(fail=True)
+    asyncio.run(scenario(failing))
+    assert failing.waits == 1
+
+
 def test_withheld_reply_is_not_played_and_listening_resumes() -> None:
     async def scenario():
         hub = make_hub(ScriptedSTT("what is on my calendar", "hello"), FixedTTS())
@@ -433,7 +545,7 @@ def test_withheld_reply_is_not_played_and_listening_resumes() -> None:
 
 def test_hub_failure_is_reported_and_the_next_turn_still_works() -> None:
     class FlakySTT(ScriptedSTT):
-        def transcribe(self, wav):
+        def transcribe(self, wav, *, vocabulary=()):
             if not hasattr(self, "failed"):
                 self.failed = True
                 raise RuntimeError("model crashed")

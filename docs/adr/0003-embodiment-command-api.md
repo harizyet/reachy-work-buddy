@@ -12,6 +12,18 @@ commands, hub-owned browser WebRTC and independent local fallback remain.
 The original HTTP implementation described below remains current until
 Phase 22 is implemented.
 
+## Phase 24f move-preemption amendment (2026-09-25)
+
+`reachy-mini` 1.8.4 runs overlapping REST moves concurrently (see the
+[source trace](../verification/phase-24f-source-2026-09-25.md)).
+`reachy-embodiment`'s daemon backend therefore keeps the UUID of the move
+it last started and stops that move before starting another, so the newest
+move wins at this level. It also stops the move before daemon standby and
+at shutdown. It stops only its own moves, never other daemon clients'. A
+stopped move holds its pose and is not followed by a return home.
+`interruptible` and `priority` are still not enforced. Conversation-level
+ownership and rejection are Phase 24f item 3 and need their own amendment.
+
 ## Context
 
 `companion-core` needs to make Reachy express behaviours (listening,

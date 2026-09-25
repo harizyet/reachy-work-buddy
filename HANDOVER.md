@@ -13,10 +13,25 @@ code, deployment or physical checks were performed in this planning session.
 24f item 1 has started. The [1.8.4 source trace](docs/verification/phase-24f-source-2026-09-25.md)
 (source plus mockup-sim, no robot) settled the home targets, the wake-up
 completion signal and UUID cancellation. It also found that overlapping
-REST moves both run. Next: confirm the Nano's deployed daemon version and
-the Testbench revision. Timing budgets and the unattended-home policy still
+REST moves both run. `ReachyDaemonBackend` now stops its previous move
+before starting another, and before standby and at shutdown
+([ADR 0003 amendment](docs/adr/0003-embodiment-command-api.md#phase-24f-move-preemption-amendment-2026-09-25)).
+This is checked against a mockup-sim daemon and is not deployed; the
+embodiment image on the Nano is unchanged. Embodiment tests: 84 passed, 5
+skipped, after fixing two test STT fakes missing 24e's `vocabulary`
+keyword. Next: confirm the Nano's deployed daemon version and the
+Testbench revision. Timing budgets and the unattended-home policy still
 need settling before physical rollout. The 24e work below remains
 outstanding.
+
+The owner added [24e item 5](docs/phase-24e.md#5-open-palm-stop): a held
+open palm stops a spoken reply and Reachy listens again. It is implemented
+in `reachy_embodiment/gesture.py` with MediaPipe, behind `PALM_STOP_ENABLED`
+(off). The launcher, `.env.example`, Dockerfile (`libgles2`, pinned model)
+and uv lock are updated. It was checked in process and in an amd64 image
+build only ([record](docs/verification/phase-24e-palm-stop-2026-09-25.md)).
+Next for it: build the image on the Nano and check the startup log for
+`palm stop ready`. That needs no motion.
 
 Branch `main`. [Phase 24e](docs/phase-24e.md) item 1 (adaptive end of turn)
 is committed in `6f292be`. This session added item 2's deterministic part:

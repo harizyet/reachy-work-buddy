@@ -26,10 +26,13 @@ FROM python:3.13-slim
 # fails with "Namespace GstApp not available" (found live on nano-1, 24d).
 # Debian packages alsasrc/alsasink, used for the .asoundrc voice devices,
 # separately in gstreamer1.0-alsa.
+# libgles2: MediaPipe's native library links libGLESv2.so.2 even for CPU
+# inference (open-palm stop, Phase 24e item 5); found by building this
+# image, where it failed to load without it.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgirepository1.0-dev gobject-introspection libcairo2-dev pkg-config gcc python3-dev \
     gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
-    gstreamer1.0-alsa \
+    gstreamer1.0-alsa libgles2 \
     libgstreamer1.0-0 gir1.2-gstreamer-1.0 gir1.2-gst-plugins-base-1.0 gir1.2-glib-2.0 \
     && rm -rf /var/lib/apt/lists/* \
     # plugins-bad's ONNX plugin dies with SIGILL while the registry is
@@ -38,6 +41,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -f /usr/lib/*/gstreamer-1.0/libgstonnx.so
 
 RUN pip install --no-cache-dir uv
+
+# Phase 24e item 5: MediaPipe gesture model for open-palm stop, used only
+# with PALM_STOP_ENABLED=true. Versioned URL plus SHA-256 pin, so a changed
+# upstream file fails the build instead of silently changing detection.
+RUN python - <<'EOF'
+import hashlib, pathlib, urllib.request
+url = "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task"
+expected = "97952348cf6a6a4915c2ea1496b4b37ebabc50cbbf80571435643c455f2b0482"
+data = urllib.request.urlopen(url, timeout=60).read()
+actual = hashlib.sha256(data).hexdigest()
+if actual != expected:
+    raise SystemExit(f"gesture model checksum mismatch: {actual}")
+path = pathlib.Path("/opt/models/gesture_recognizer.task")
+path.parent.mkdir(parents=True, exist_ok=True)
+path.write_bytes(data)
+EOF
 
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
