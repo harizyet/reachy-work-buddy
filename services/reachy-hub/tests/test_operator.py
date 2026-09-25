@@ -180,6 +180,9 @@ def test_proxy_masked_settings_and_status_real_chain():
     assert client.get("/llm/usage").json()["summary"]["calls"] == 0
     assert client.get("/ui/").status_code == 200
     assert client.get("/ui/app.js").status_code == 200
+    # A UI deploy must not leave browsers running a stale app.js.
+    assert client.get("/ui/app.js").headers["cache-control"] == "no-cache"
+    assert client.get("/ui/").headers["cache-control"] == "no-cache"
 
 
 def test_websearch_settings_proxy_masks_key_and_redacts_validation_errors():

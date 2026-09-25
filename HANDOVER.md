@@ -36,7 +36,8 @@ remains gated on 24d.
 - **Homelab stack (dev/test, not production-accepted).** Upgraded
   `004_persona` → `006_search_config` on 2026-09-24. The pre-upgrade dump is
   `~/reachy-backups/reachy-before-phase24d-20260924T213146.dump` (0600).
-  Hub/core run `af27338`, with SearXNG added. Start it only through
+  Hub/core ran `af27338` with SearXNG (now `0144209` at `007`, see
+  below). Start it only through
   `scripts/start-homelab.sh`: it used to mangle `ROBOT_TOKENS`' JSON (fixed,
   `read_env_file`). The hub now speaks with Piper `en_US-lessac-medium`
   (espeak was judged too robotic). Each turn record in `GET /robot-voice`
@@ -53,11 +54,12 @@ remains gated on 24d.
   [ADR 0022 addendum](docs/adr/0022-web-search-grounding.md#addendum-hosted-provider-rotation-within-free-tiers-phase-24d-2026-09-25)
   and [deployment](docs/deployment.md#web-search). It is verified with
   fixtures, real disposable Postgres and a Chromium UI test. No live
-  provider call has been made yet. **The homelab is still at `006` and
-  runs `af27338`.** Deploying needs a `pg_dump` first, the `007` upgrade
-  and rebuilt hub/core images. Then the owner enters the keys (Settings →
-  Web search). The current setting is policy `always` with
-  `builtin_searxng`, which becomes the fallback. Even with good results,
+  provider call has been made yet. **Deployed to the homelab 2026-09-25**:
+  hub/core run `0144209` and the schema is at `007`. The pre-upgrade dump is
+  `~/reachy-backups/reachy-before-007-search-providers-20260925T003652.dump`
+  (0600). The Brave key saved earlier migrated to an enabled Brave entry.
+  Exa and Tavily keys still need entering (Settings → Web search). Policy
+  is `auto` with `builtin_searxng` as the fallback. Even with good results,
   the local `Qwen2.5-1.5B` used them inconsistently. The owner chose to
   keep it; the configured cloud GLM-5.3 is the fallback option if hosted
   search doesn't fix accuracy.

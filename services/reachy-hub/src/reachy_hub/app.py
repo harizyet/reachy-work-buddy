@@ -296,6 +296,17 @@ class TelepresenceOfferRequest(BaseModel):
     robot_id: str
 
 
+class RevalidatedStaticFiles(StaticFiles):
+    """Without Cache-Control, browsers heuristically cached app.js across a
+    deploy and ran it against the new index.html, breaking login. no-cache
+    still lets an unchanged file revalidate to a 304 via its ETag."""
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 def create_app(
     *,
     accounts_service_token: str | None = None,
@@ -1297,7 +1308,7 @@ def create_app(
     # forwarding). html=True serves index.html for the directory root.
     web_pwa_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "clients", "web-pwa")
     if os.path.isdir(web_pwa_dir):
-        app.mount("/app", StaticFiles(directory=web_pwa_dir, html=True), name="web-pwa")
+        app.mount("/app", RevalidatedStaticFiles(directory=web_pwa_dir, html=True), name="web-pwa")
 
     @app.get("/ui", include_in_schema=False)
     async def operator_ui_redirect():
@@ -1306,6 +1317,6 @@ def create_app(
 
     operator_ui_dir = os.path.join(os.path.dirname(web_pwa_dir), "operator-ui")
     if os.path.isdir(operator_ui_dir):
-        app.mount("/ui", StaticFiles(directory=operator_ui_dir, html=True), name="operator-ui")
+        app.mount("/ui", RevalidatedStaticFiles(directory=operator_ui_dir, html=True), name="operator-ui")
 
     return app
