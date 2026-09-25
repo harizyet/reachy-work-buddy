@@ -108,6 +108,7 @@ showed no IK, overheat or warning lines. Its only traceback is the expected
 | axes-sdk | **FAIL**, same as REST | Same targets over the SDK: roll +0.075 / −0.053, pitch +0.093 / −0.039, yaw +0.080 / −0.060 |
 | axes-rest (second run) | **FAIL** | Within about 0.005 rad of axes-sdk at every row. Returns to ZERO barely moved: yaw stayed 0.078 after +0.15 and −0.059 after −0.15, pitch 0.061 after +0.1. Late reads 2 s later were identical |
 | visible-rest | **FAIL** | Yaw −0.063 → +0.223 for a +0.3 target, then +0.114 after returning to 0. Owner watched from the front: "It looked like it didn't move but I hear the motors move" |
+| Raw logs | Kept on the Nano | `~/24f-logs/*.jsonl` (both rounds); the values above are copied from them |
 | visible-sdk, antennas, body yaw, interp, cancel, recorded, preempt | Not run | Stopped after visible-rest |
 
 The owner saw no head motion in any case. Earlier they said "the movements
@@ -128,13 +129,28 @@ are so small it's not really visually noticable".
   engine) gives yaw −0.0565, as reported. So the pose readback reflects
   the encoders: several motors stop about 3° short of their goals, from
   either direction, and do not creep closer over 2 s.
+- **The shortfall depends on direction, on every motor.** The second
+  round logged encoder joints next to the daemon's IK targets. In every
+  checked move, a joint whose angle had to grow in magnitude stopped short.
+  The mean shortfall per move was 0.035–0.069 rad. A joint whose angle had
+  to shrink landed within 0.008 rad. Examples: in the yaw +0.3 move,
+  stewart 1/3/5 had to grow and fell 0.043 / 0.029 / 0.062 short, while
+  2/4/6 landed within 0.003. On the way back to zero the roles swapped:
+  2/4/6 fell 0.064 / 0.062 / 0.080 short and 1/3/5 landed within 0.010.
+  Roll and pitch show the same split. All six motors behave the same way,
+  so this is a one-directional limit (load, friction, torque or supply),
+  not one failed motor. Which physical direction "growing" is has not been
+  checked.
 - **The head is not following the motors.** The encoders report a 16°
   yaw that the owner did not see, with motor noise. The joints stop short
   without settling, and the result depends on the direction of approach.
   Together this points to a mechanical fault between the motors and the
   head, such as horn slip, loose screws, a slack rod or ball joint, or a
   detached head shell, or to binding. It has not been inspected. It would
-  also be consistent with 24d's `stewart_5` heat and drift.
+  also be consistent with 24d's `stewart_5` heat and drift. A supply that
+  can't deliver enough current would also fit the direction-dependent
+  limit and the unexplained 02:38Z power loss, but it has not been
+  measured.
 - **Testbench discrepancy.** This contradicts the owner's earlier report of
   successful Testbench rotations, since the Testbench uses the same SDK
   path. When and on which boot that run happened is not recorded.
