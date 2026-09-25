@@ -37,9 +37,11 @@ To close 24d, in order:
 3. **Formal run.** Attempt 1 (2026-09-25) failed the non-search budget on
    uncapped model replies. Voice replies are now capped (`4035e50`,
    `f353b90`, deployed on the homelab). Two of three context checks passed;
-   Zephyr and Session B (search) are still owed. **Blocked on `stewart_5`**:
-   it reported Overheating Error during the run and the head drifted with no
-   move command. Motors were disabled at 02:26Z; the owner is inspecting.
+   Zephyr and Session B (search) are still owed. `stewart_5`
+   reported Overheating Error during the run and the head drifted with no
+   move command. Motors were disabled at 02:26Z. **Owner decision
+   (2026-09-25): set motors aside for 24d.** The rerun proceeds with motors
+   disabled, and the owner checks the motors manually after the test.
    See the [record](docs/verification/phase-24d-conversation-2026-09-24.md#formal-run-attempt-1-2026-09-25-budget-failed-stewart_5-overheat).
 
 24d state so far:
