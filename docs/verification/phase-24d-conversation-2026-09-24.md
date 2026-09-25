@@ -3,13 +3,45 @@
 Supervised physical acceptance of [Phase 24d](../phase-24cd.md#phase-24d--physical-end-to-end-acceptance),
 following the [24d hardware procedure](../phase-24cd.md#phase-24d-hardware-procedure).
 The owner was physically present. Two Claude Code sessions coordinated: one on
-the homelab host and one running locally on nano-1. **In progress.**
+the homelab host and one running locally on nano-1. **Closed 2026-09-25 on
+the conversation workflow, re-scoped by the owner.**
+
+## Outcome
+
+- **Passed on the real robot.** 16 consecutive spoken turns in one UI
+  session, with all three deterministic context checks correct. Non-search
+  latency p50 2.5 s, p95 6.9 s (budget 4 s / 8 s). Search turns 6.9–19.3 s
+  (budget 20 s each). The owner accepted usability. Cold-reboot recovery
+  passed: the daemon owns its socket, the container starts after it, and
+  camera and voice work with no sudo step
+  ([attempt 3](#formal-run-attempt-3-2026-09-25-session-a-passes),
+  [boot race](#boot-race-fix-on-the-nano-2026-09-25)).
+- **Fixed during 24d:**
+  - The image typelibs/ALSA plugin, and the SIGILLing `libgstonnx.so`.
+  - Sticky conversation privacy (`c65c9cd`) and the WS watchdog
+    (`3c6e49f`).
+  - The camera-socket boot race (`reachy-embodiment.service`, `--mount`,
+    no restart policy) and the launcher recreating containers (`02f9538`).
+  - Unbounded spoken replies (`4035e50`, `f353b90`, `6a646de`, `9251efc`;
+    [ADR 0023 addendum](../adr/0023-robot-voice-conversation.md#addendum-bounded-spoken-replies-2026-09-25)).
+  - A daemon left in `state: error` by a failed wake-up: a once-per-boot
+    automatic restart, by owner decision.
+- **Deferred to [Phase 24e](../phase-24e.md), not passed:**
+  - the remaining matrix rows ([results](#results));
+  - answer correctness;
+  - `stewart_5` overheating and drift;
+  - an unplanned power loss;
+  - the Nano's RTC;
+  - long utterances split at 700 ms pauses;
+  - follow-up search merging unrelated turns.
+
+The sections below are the chronological evidence.
 
 ## Topology and versions
 
 | Item | Value |
 |---|---|
-| Hub/core host | Homelab, Compose project `reachy-homelab`, Caddy on `:8080`. Initial run: commit `40ae760` plus the launcher fix below; later `af27338`, then `0144209` plus uncommitted 24a search follow-ups (2026-09-25) |
+| Hub/core host | Homelab, Compose project `reachy-homelab`, Caddy on `:8080`. Initial run: commit `40ae760` plus the launcher fix below; later `af27338`, then `0144209` plus uncommitted 24a search follow-ups (2026-09-25); formal attempts 2–3 on `f353b90`; closed on `9251efc` |
 | Schema | Initial run: `006_search_config`, upgraded from `004_persona` after a `pg_dump` backup. 2026-09-25: `007_search_providers`, then `008_assistant_context`, each after a `pg_dump` |
 | Robot | nano-1 (`reachy-mini`, Jetson Nano, Tegra 4.9.253), WSS over the tailnet to `http://<homelab>.ts.net:8080/hub` |
 | Daemon | `reachy-mini-daemon` 1.8.4, systemd-enabled, running since 13:20:45 UTC, `simulation_enabled=false`; not restarted for this test |
@@ -431,7 +463,11 @@ long request fell from 9.94 s / 311 words to 2.33 s / 80 words
 live core, the deterministic script included, took 0.31–2.49 s. The
 longest reply was 61 words, all three context answers were correct, and
 every reply ended on a whole sentence. This was a core-only check: robot
-playback of the capped replies is not yet measured.
+playback of the capped replies is not yet measured. Later correction
+(`6a646de`, `9251efc`): only the local model gets the token cap. GLM-5.3
+returns empty content under a small cap, which would have broken a cloud
+fallback. Every voice reply is now trimmed to whole sentences within 75
+words, closing quotes kept, and checked live again on the homelab.
 
 **`stewart_5` overheat.** The daemon logged `Motor 'stewart_5' hardware
 errors: ['Overheating Error']` about once a second from 02:20:08Z, the

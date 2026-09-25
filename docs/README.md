@@ -30,6 +30,9 @@ claims that those features already work.
   them, never authorizes.
 - [Phases 24c–24d](phase-24cd.md): complete the robot conversation workflow,
   then pass physical end-to-end acceptance before owner recognition.
+- [Phase 24e](phase-24e.md): conversation hardening (adaptive end of turn,
+  search-trigger fixes, a correctness set) and the 24d rows the owner
+  deferred, plus Nano diagnostics.
 - [Phase 25](phase-25.md): owner recognition and voice access control.
 - [Phase 26](phase-26.md): meeting transcription and minutes.
 - [Phase 27](phase-27.md): embodied meeting secretary — owner-present companion, then physical secretary attendance, then bounded delegation; virtual/cloud attendance is deferred.
@@ -94,6 +97,15 @@ These are dated evidence, not startup instructions or current health checks.
   fixture/deterministic-stub-model checks plus a real self-hosted SearXNG
   container live-verified against real internet results; hosted cloud
   provider and running-homelab-stack production acceptance remain open.
+
+- [Phase 24c robot voice conversation](verification/phase-24c-conversation-2026-09-24.md):
+  automated, browser and real-process checks with a simulated robot
+  microphone, real Whisper, OVMS and TTS; no physical robot.
+
+- [Phase 24d physical conversation acceptance](verification/phase-24d-conversation-2026-09-24.md):
+  the real Nano/Reachy conversation run passed (context, latency, owner
+  usability, cold-reboot recovery); closed by owner re-scope, with the
+  remaining matrix rows and hardware findings deferred to Phase 24e.
 
 - [Phase 24b command authorization](verification/phase-24b-command-authorization-2026-09-24.md):
   isolated-fixture checks for the retired substring matcher's replacement

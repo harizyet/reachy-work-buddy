@@ -4,10 +4,12 @@ Status: **24c implemented 2026-09-24** (automated, browser and real-process
 checks with a simulated robot microphone; see the
 [audit result](#phase-24c-audit-result-2026-09-24) and
 [verification record](verification/phase-24c-conversation-2026-09-24.md)).
-**24d physical acceptance in progress since 2026-09-24**: real microphone →
-STT → LLM → TTS → speaker conversation has been demonstrated on the robot;
-the formal acceptance matrix remains open (see the
-[24d record](verification/phase-24d-conversation-2026-09-24.md)). These
+**24d closed 2026-09-25, re-scoped by the owner**. The normal conversation
+and both latency budgets passed on the robot, with owner-accepted
+usability. The other matrix rows are deferred to
+[Phase 24e](phase-24e.md), not passed (see the
+[24d exit note](#phase-24d--physical-end-to-end-acceptance) and the
+[record](verification/phase-24d-conversation-2026-09-24.md#results)). These
 phases follow Phase 24b and gate Phase 25.
 
 24d proves the physical conversation workflow: capture, turn handling,
@@ -207,6 +209,6 @@ robot: Normal conversation, and Timing and quality (both latency budgets),
 with owner-accepted usability. The owner explicitly deferred the other
 rows: turn handling, session continuity, privacy, consent/auth,
 stop/expiry, recovery drills beyond the cold reboot, and the 30-minute
-session. They were **not passed**. They remain follow-up acceptance, as
-does answer correctness (24a). See the
+session. They were **not passed**. They move to [Phase 24e](phase-24e.md), along
+with the issues 24d found. See the
 [results](verification/phase-24d-conversation-2026-09-24.md#results).

@@ -383,9 +383,11 @@ TLS, network-change, camera/audio, and physical soak acceptance remain in
 Phase 24c lets the owner talk to Reachy through its own microphone and
 speaker. See [ADR 0023](adr/0023-robot-voice-conversation.md) for the design
 and the [operator guide](operator-guide.md#talk-through-reachys-microphone-phase-24c)
-for use. It is **off by default**. Physical acceptance is
-[Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance). It is
-in progress; see the [24d record](verification/phase-24d-conversation-2026-09-24.md).
+for use. It is **off by default**. Its physical acceptance,
+[Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance), closed
+on 2026-09-25 on the conversation workflow; the remaining rows are deferred
+to [Phase 24e](phase-24e.md). See the
+[24d record](verification/phase-24d-conversation-2026-09-24.md).
 
 To enable it on the robot host:
 

@@ -6,6 +6,12 @@ not repeated in this file.
 
 ## Current work
 
+Next priority: **[Phase 24e](docs/phase-24e.md)** (planned 2026-09-25,
+scope agreed with the owner): adaptive end of turn, search-trigger fixes and
+a correctness set, the 24d rows the owner deferred, and Nano diagnostics.
+Follow its [implementation sequence](docs/phase-24e.md#implementation-sequence);
+the ADR 0023 amendment comes first.
+
 **Phase 24d closed 2026-09-25, re-scoped by the owner**
 ([results](docs/verification/phase-24d-conversation-2026-09-24.md#results)).
 Passed on the real robot:
@@ -14,25 +20,17 @@ Passed on the real robot:
 - Owner-accepted usability.
 - Cold-reboot recovery.
 
-The other matrix rows (turn handling, continuity, privacy, consent/auth,
-stop/expiry, recovery drills, the 30-minute session) are **deferred, not
-passed**. Answer correctness is deferred to 24a work after 24d. Per the
-[roadmap](docs/plan.md#6-implementation-roadmap), Phase 25 is next once the
-owner picks it up.
+The other rows are deferred to 24e, not passed.
 
 Open follow-ups:
 
-- **Hardware (owner will check the motors manually).** `stewart_5`
+- **Hardware (owner checks the motors manually; not 24e scope).** `stewart_5`
   overheating, lag and drift during the runs. An unplanned Nano power loss
   at 02:38:20Z (`TEGRA_POWER_ON_RESET`, no undervoltage logged). The
   Nano's RTC loses time across power-offs, so pre-NTP journal lines are
   stale.
-- **Turn segmentation.** 700 ms end-of-speech silence splits long
-  utterances. The owner wants a longer pause to end a turn (it adds the
-  same delay to every turn); `max_utterance_seconds` is 15 s.
-- **24a.** Follow-up search merges unrelated fragments and searched
-  "Goodbye"; the local model misuses results; search-turn LLM time reached
-  17 s.
+- **In 24e:** turn splitting at 700 ms pauses, search-trigger misfires
+  and answer correctness, the RTC and power-loss diagnosis.
 - **Daemon (reachy_mini 1.8.4).** The boot wake-up can fail with `time value
   is out of range [0,1]`. `reachy-daemon-recovery.service` (owner decision)
   restarts it once per boot, but the restart path is fake-tested only.
@@ -44,8 +42,8 @@ State:
   `--mount` and has no restart policy. The image is built from `1a66f01`,
   with voice enabled.
 - **Homelab stack (dev/test, not production-accepted).** Start it only
-  through `scripts/start-homelab.sh`. It runs `f353b90` (voice replies
-  capped at `max_tokens=100` and trimmed to whole sentences). Schema
+  through `scripts/start-homelab.sh`. It runs `9251efc` (voice replies
+  bounded: `max_tokens=100` for the local model only, whole sentences within 75 words). Schema
   `008_assistant_context`. Dumps are in `~/reachy-backups/` (0600). Piper
   `en_US-lessac-medium`. Search rotates Brave/Exa/Tavily, then SearXNG, with
   policy `auto`; see the
@@ -213,7 +211,7 @@ this session. Phase 23/23b are not yet production-accepted. The
 Google-enabled physical repeat remains deferred. Phase 24a is implemented
 and real-SearXNG-verified, and Phase 24b is implemented and isolated-
 fixture/browser-verified (see above for both); Phase 24c is implemented
-(above); Phases 24d and 25–27 remain open or planning only.
+(above); Phase 24d closed (re-scoped) 2026-09-25; Phases 24e and 25–27 remain open or planning only.
 
 Phase 22b (physical acceptance) started 2026-09-23 with the owner physically
 present, coordinated across a homelab-side and a Nano-side Claude Code

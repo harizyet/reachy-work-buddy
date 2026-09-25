@@ -49,8 +49,11 @@ settings specifically require the browser owner session. See
 The Chat view has a **Robot microphone** panel. It works only when the
 robot's deployment has enabled it
 ([deployment](deployment.md#robot-voice-conversation)). Otherwise the robot is
-listed as "voice not enabled" or "offline". Physical acceptance is in
-progress ([Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance)).
+listed as "voice not enabled" or "offline". The conversation workflow passed
+physical acceptance
+([Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance)).
+Spoken replies are kept short, a few sentences at most. Ask in the web
+chat for a longer answer.
 Search and weather usage appear on the Web search and Search API usage
 cards; set your location and time zone on the Assistant persona card.
 

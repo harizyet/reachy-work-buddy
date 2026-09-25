@@ -102,3 +102,26 @@ still open; see the
 decision above is unchanged. Piper replaced espeak-ng as the hub's TTS
 during 24d because espeak was judged unpleasant to listen to on the robot,
 a usability defect of this workflow rather than a cosmetic change.
+
+## Addendum: bounded spoken replies (2026-09-25)
+
+Phase 24d closed on the conversation workflow
+([results](../verification/phase-24d-conversation-2026-09-24.md#results)).
+Its first formal run failed the latency budget because the local 1.5B model
+ignored the one-to-three-sentence spoken instruction. It gave 121–162-word
+markdown replies, up to a minute of speech. Those replies also stayed in
+the history and slowed later turns.
+
+**Decision.** Core bounds every voice-modality reply deterministically,
+instead of trusting the instruction:
+- The local model gets `max_tokens=100`, which bounds generation time.
+- Whichever provider answered, the reply is cut to whole sentences within
+  75 words before it is recorded. So speech, synthesis and history are
+  bounded, and the robot never stops mid-sentence.
+- The cloud model gets no token cap. GLM-5.3 spends its completion budget
+  on reasoning and returns empty content under a small cap (see the
+  [hosted-cloud follow-up](../verification/history.md#hosted-cloud-follow-up--2026-09-22)),
+  which would turn a fallback into a failure.
+
+Typed turns are unchanged. The hub still strips citations and markdown
+before TTS. The owner can ask for more detail in the web chat.
