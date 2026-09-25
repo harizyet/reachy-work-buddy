@@ -81,7 +81,9 @@ def main() -> int:
     search = {int(t) for t in args.search_turns.split(",") if t.strip()}
     since = None
     if args.since:
-        since = datetime.strptime(args.since, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)  # noqa: UP017
+        # Accepts "2026-09-25 13:30:00" or ISO "2026-09-25T13:30:00Z".
+        text = args.since.strip().rstrip("Z").replace("T", " ")
+        since = datetime.strptime(text, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)  # noqa: UP017
 
     # Lines before any "voice start received" (e.g. cut off by --since)
     # count as one session.
