@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import io
 import shutil
+import time
 import wave
 
 import httpx
@@ -144,3 +145,31 @@ def test_voice_turn_rejects_silence() -> None:
         files={"audio": ("silence.wav", silence.getvalue(), "audio/wav")},
     )
     assert resp.status_code == 422
+
+
+def test_production_hub_warms_voice_providers_at_startup() -> None:
+    """The first voice turn after a hub restart must not pay the model
+    load (26.5 s in the 24e physical run)."""
+    loads: list[str] = []
+
+    class Provider:
+        def __init__(self, name: str) -> None:
+            loads.append(name)
+
+        def transcribe(self, wav_bytes, *, vocabulary=()):
+            return ""
+
+    client = make_hub_client(
+        stt_factory=lambda: Provider("stt"), tts_factory=lambda: Provider("tts"), warm_voice_providers=True
+    )
+    with client:
+        deadline = time.monotonic() + 5
+        while len(loads) < 2 and time.monotonic() < deadline:
+            time.sleep(0.01)
+    assert loads == ["stt", "tts"]
+
+    cold: list[str] = []
+    client = make_hub_client(stt_factory=lambda: cold.append("stt"), tts_factory=lambda: cold.append("tts"))
+    with client:
+        time.sleep(0.1)
+    assert cold == []  # tests and other callers keep lazy loading

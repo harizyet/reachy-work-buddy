@@ -129,6 +129,7 @@ import logging
 import os
 import secrets
 import threading
+import time
 from collections.abc import AsyncIterator, Callable, Sequence
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -312,6 +313,17 @@ class RevalidatedStaticFiles(StaticFiles):
         return response
 
 
+async def _warm_voice_providers(*loaders: Callable[[], object]) -> None:
+    for load in loaders:
+        started = time.perf_counter()
+        try:
+            await asyncio.to_thread(load)
+        except Exception:  # a later turn retries the load and reports its own failure
+            log.exception("voice provider warm-up failed")
+        else:
+            log.info("voice provider ready in %.1fs", time.perf_counter() - started)
+
+
 def _default_palm_stop() -> PalmStop | None:
     """Phase 24e item 5: `PALM_STOP_ENABLED=true` lets a held open palm
     stop a robot's spoken reply. Off by default until physically accepted.
@@ -342,6 +354,7 @@ def create_app(
     stt: SpeechToText | None = None,
     tts: TextToSpeech | None = None,
     stt_factory: Callable[[], SpeechToText] | None = None,
+    warm_voice_providers: bool = False,
     tts_factory: Callable[[], TextToSpeech] | None = None,
     audit_log: AuditLog | None = None,
     notification_queue: NotificationQueue | None = None,
@@ -559,6 +572,12 @@ def create_app(
             dsn = database_url or os.environ["DATABASE_URL"]
             app.state.notification_queue = await PostgresNotificationQueue.connect(dsn)
 
+        # Production only (main.py): load STT/TTS in the background at
+        # startup. Otherwise the first voice turn after a hub restart paid
+        # the Whisper download and load, 26.5 s in the 24e physical run.
+        warm_task = (
+            asyncio.create_task(_warm_voice_providers(get_stt, get_tts)) if warm_voice_providers else None
+        )
         heartbeat_task = (
             asyncio.create_task(heartbeat_loop(app.state.registry, heartbeat_interval))
             if run_heartbeat_task
@@ -593,7 +612,7 @@ def create_app(
             await robot_voice_manager.stop_all("Hub is shutting down")
             if robot_voice_manager.palm_stop is not None:
                 robot_voice_manager.palm_stop.close()
-            for task in (heartbeat_task, telegram_task, voice_task):
+            for task in (warm_task, heartbeat_task, telegram_task, voice_task):
                 if task is not None:
                     task.cancel()
                     with contextlib.suppress(asyncio.CancelledError):
