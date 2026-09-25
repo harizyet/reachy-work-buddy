@@ -256,6 +256,49 @@ The 24d formal run uses deterministic context turns plus one or two separate
 search-assisted turns, and does not gate on answer accuracy
 ([rule](../phase-24cd.md#phase-24d--physical-end-to-end-acceptance)).
 
+## Boot-race fix on the Nano (2026-09-25)
+
+Run on the Nano by the Jetson session. The owner ran the sudo, recovery and
+daemon steps in person. The Nano's launcher went from `2c332f2` to `6ec05d5`,
+then `02f9538`.
+
+**Before (read-only).** The last boot had hit the race again:
+`/tmp/reachymini_camera_socket` was an empty `drwxr-xr-x root:root`
+directory, and the daemon logged `Failed to initialize media server: [Errno 1]
+Operation not permitted`. The container had exited 127 on "not a directory".
+It still had the `unless-stopped` policy and a `-v` camera-socket bind.
+`start-reachy.sh --check` reported all three and started nothing. The daemon
+journal (one volatile boot) had no `stewart_5` overheating error.
+
+**Recovery and install.** In order: `rmdir` the directory, install and enable
+`reachy-embodiment.service`, `docker rm -f reachy-embodiment`, then restart
+the daemon and run `start-reachy.sh`. Results:
+
+- Socket `srwxr-xr-x reachy reachy`. The daemon started its media server with
+  no `EPERM`.
+- Container: RestartPolicy `no`. The camera socket is a `--mount` bind
+  (`HostConfig.Mounts`); only the voice `.asoundrc` remains in
+  `HostConfig.Binds`.
+- Both units enabled and active. Daemon active 08:46:12, embodiment 08:46:31
+  (WIB). While the container was absent, the unit started twice and failed
+  with `No such container`, as expected. It stayed up once `start-reachy.sh`
+  had created the container. Embodiment registered with the hub as `nano-1`.
+- `GET /camera/frame`: first frame 11.85 s (a 1920×1080 JPEG), after a single
+  GStreamer "External plugin loader failed" warning. The next three took
+  0.048–0.051 s, so the delay is first-frame warm-up.
+
+**Launcher bug found and fixed (`02f9538`).** With voice enabled, the
+`.asoundrc` `-v` bind made `len .HostConfig.Binds` 1. The launcher then took
+every container for a pre-fix leftover and recreated it on every run, which
+would cut off a live voice session. Only a restart policy or a `-v` bind of the
+camera socket counts now. Checked against disposable containers on the homelab
+(four cases). On the Nano, `--check` prints `pre-fix (reboot race) container:
+no`. A second `start-reachy.sh` run printed "already running" and left the
+container ID, `StartedAt` and daemon PID unchanged, with no sudo.
+
+**Still to verify:** a real cold reboot and `systemctl restart
+reachy-mini-daemon` (see Results → Recovery).
+
 ## Latency budget (agreed before any timed turn)
 
 Utterance end → first audible reply, over the live turns:
@@ -302,6 +345,6 @@ and a Nano cold-reboot recovery check after the boot-race fix.
 | Privacy | OPEN | Live withholding observed (routing to web). Carry-over fix `c65c9cd`. Modes, DND and private call not yet exercised on the robot |
 | Consent and auth | OPEN | Covered off the robot in 24c tests; not yet on the robot |
 | Stop and expiry | PARTIAL | Stop during playback: 32 ms and 36 ms from stop receipt to daemon `stop_sound` (the robot-side stop marker came from `1a66f01`). Capture and inference cancellation, logout and expiry not yet run |
-| Recovery | PARTIAL | An unplanned WS drop (tailnet stall) ended the session cleanly, with no auto-reactivation and re-registration in 8 s. Hub restarts were recovered by reconnect. The Nano reboot exposed the camera-socket boot race: fix implemented 2026-09-25 (`reachy-embodiment.service`, `--mount`, no Docker restart policy), awaiting Nano install and a real-reboot check |
+| Recovery | PARTIAL | An unplanned WS drop (tailnet stall) ended the session cleanly, with no auto-reactivation and re-registration in 8 s. Hub restarts were recovered by reconnect. The Nano reboot exposed the camera-socket boot race: fix installed on the Nano 2026-09-25 and a live recovery passed ([details](#boot-race-fix-on-the-nano-2026-09-25)); real cold reboot and daemon-restart check pending |
 | Coexistence and sustained use | PARTIAL | Step 3 coexistence PASS. The 30-minute session is not yet run |
 | Timing and quality | OPEN | Budgets agreed: non-search p50 ≤ 4 s, p95 ≤ 8 s; each search-assisted turn ≤ 20 s. Preliminary timings above; the formal run is pending |

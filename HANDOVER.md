@@ -19,19 +19,14 @@ separate search-assisted turns whose factual accuracy is 24a scope.
 
 To close 24d, in order:
 
-1. **Boot race (the real blocker).** Fix implemented 2026-09-25, not yet on
-   the Nano: `deploy/reachy/reachy-embodiment.service` +
-   `wait-media-socket.sh`, and `start-reachy.sh` now creates the container
-   with `--mount` and no Docker restart policy (see
-   [deployment](docs/deployment.md#production-unattended-boot-start-owner-accepted-risk-2026-09-23)).
-   Docker's `-v`-creates-a-root-directory and `--mount`-refuses behaviour
-   was reproduced on the homelab's Docker, not the Nano's. On the Nano, with
-   the owner present: `git pull`, install and enable the unit, run
-   `scripts/start-reachy.sh --check` then `scripts/start-reachy.sh`, then
-   do a **real cold reboot** and confirm the socket is `srw… reachy`, the
-   container started after the daemon, and camera and voice work with no
-   sudo step. Also confirm `sudo systemctl restart reachy-mini-daemon`
-   restarts the container and the camera still works.
+1. **Boot race (the real blocker).** Installed on the Nano 2026-09-25
+   (unit enabled, container recreated with `--mount` and no restart policy,
+   live recovery passed, launcher idempotency bug fixed in `02f9538`). See
+   the [record](docs/verification/phase-24d-conversation-2026-09-24.md#boot-race-fix-on-the-nano-2026-09-25).
+   **Still to do, with the owner present:** a real cold reboot (socket
+   `srw… reachy`, container starts after the daemon, camera and voice work
+   with no sudo step), then `sudo systemctl restart reachy-mini-daemon`
+   (the container restarts and the camera still works).
 2. ~~Agree the search-turn latency budget~~ Done 2026-09-25: each
    search-assisted turn ≤ 20 s (non-search stays p50 ≤ 4 s, p95 ≤ 8 s).
 3. **Formal run** of the matrix rows. The results table is still mostly
