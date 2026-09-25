@@ -214,6 +214,35 @@ The owner may want the Lite camera's exposure raised; Pollen's
 troubleshooting suggests auto-exposure priority. That is a host camera
 setting and has not been changed.
 
+### Camera-measured run 2 (unattended, 12:57Z)
+
+At `955d01c`, all bounded cases except the two recorded-animation ones.
+The daemon stayed `running` with `nb_error` 0, the journal was clean, and
+the run ended at IDLE_HOME.
+
+| Case | Result |
+|---|---|
+| zero-rest | PASS; camera PASS |
+| axes-sdk, stream-sdk | Encoders FAIL with the usual shortfall. Camera PASS: every valid row within 0.02 rad of the encoders |
+| axes-rest | Encoders FAIL, the same poses as axes-sdk. Camera FAIL: every disagreeing move/return pair has opposite-sign differences that cancel, the stale-frame signature. The 0.6 s drain was not always enough; see below |
+| visible-rest | +0.3 → 0.221, return → 0.102. The +0.3 camera row was invalid (30/79 inliers) |
+| antennas-rest, antennas-sdk | PASS, the same on both paths: `[0.3, 0]` → `[0.299, 0.0]`, `[0, 0.3]` → `[±0.005, 0.299]`. The first element is the one that moved for `[0.3, 0]`; the SDK documents it as the right antenna. That physical side has not been checked |
+| bodyyaw-rest, bodyyaw-sdk | Confirms the source trace physically. Explicit 0.2 → 0.199 on both paths. A REST head goto with body yaw omitted then **kept** 0.199, while an SDK goto with its default returned it to 0.006 |
+| cancel-rest | PASS: stop 200, no running move, and the pose held within 0.002 rad for 1.6 s. The shortfall meant little progress had been made by the 1 s stop, so this shows the hold, not partial travel |
+| interp | Inconclusive: each variant started where the last ended, and the 25 %/50 % samples fell inside the shortfall |
+
+The LOCAL reader keeps only the newest frame (`appsink` `max-buffers` 1,
+`drop`), so a stale frame means the camera pipeline itself runs behind on
+the Nano. `grab_frame` now waits until the image stops changing (two
+consecutive 0.3 s steps with a mean difference under 2/255 on a blurred
+1/8-size frame, up to 6 s), and marks the move invalid if it never does.
+In a synthetic check with three lagging reads, including one mid-motion
+frame, it measured 0.1505 for a 0.15 move. `interp` now starts every
+variant at yaw −0.2, moves to +0.2 over 2 s, and reports the fraction of
+travel at 25/50/75 %. On mockup-sim: SDK linear 0.23/0.48/0.74, min-jerk
+0.09/0.47/0.89, REST "linear" 0.09/0.47/0.88 (min-jerk, as the source
+says).
+
 ### SDK media side effect
 
 In 1.8.4, `ReachyMini(media_backend="no_media")` calls `release_media()` on

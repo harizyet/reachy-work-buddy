@@ -85,7 +85,7 @@ CASES = {
     "antennas-sdk": "SDK: same targets as antennas-rest",
     "bodyyaw-rest": "REST: body yaw 0.2 explicit, then a head goto with body yaw omitted, then ZERO",
     "bodyyaw-sdk": "SDK: body yaw 0.2, then a head goto with the default body yaw, then ZERO",
-    "interp": "yaw 0.15 over 2 s: SDK linear, SDK minjerk, REST 'linear'; head yaw sampled at 25 % and 50 %",
+    "interp": "yaw -0.2 to +0.2 over 2 s: SDK linear, SDK minjerk, REST 'linear'; travel fraction at 25/50/75 %",
     "cancel-rest": "REST yaw 0.15 over 3 s, stopped by UUID at 1 s; pose sampled for 1.5 s",
     "recorded": "REST attentive1 to completion; final pose compared with start. Then IDLE_HOME",
     "preempt": "REST thoughtful1 stopped by UUID at 1.5 s; pose sampled for 1.5 s. Then IDLE_HOME",
@@ -232,28 +232,52 @@ _last_obs: dict | None = None
 T_HEAD_CAM = ((0, 0, 1), (-1, 0, 0), (0, -1, 0))
 
 
-FRAME_DRAIN_S = 0.6
+# The head is still when a frame is grabbed, so the image stops changing
+# once the camera pipeline has caught up. Consecutive frames 0.3 s apart
+# must differ by less than this mean absolute difference (0-255, on a
+# blurred 1/8-size grayscale) twice in a row.
+FRAME_STABLE_DIFF = 2.0
+FRAME_STABLE_TIMEOUT_S = 6.0
+
+
+def _thumb(frame):
+    import cv2
+
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    small = cv2.resize(
+        gray, (gray.shape[1] // 8, gray.shape[0] // 8), interpolation=cv2.INTER_AREA
+    )
+    return cv2.GaussianBlur(small, (5, 5), 0).astype("float32")
 
 
 def grab_frame():
-    """A frame taken after the head settled. Reading twice was not enough:
-    on the Nano the "after" frame was sometimes the previous position and
-    the motion appeared one observation late. So keep reading for
-    FRAME_DRAIN_S (several frames at the LOCAL reader's 10 fps cap) and
-    use the last one."""
+    """A frame taken after the camera caught up with the still head. The
+    LOCAL reader keeps only the newest frame, yet on the Nano the frame
+    read after a move sometimes still showed the previous position: the
+    camera pipeline itself runs behind. A fixed wait was not always long
+    enough, so wait for the image to stop changing. After the timeout the
+    last frame is used and marked stale."""
     mini = sdk()
-    deadline = time.monotonic() + 5.0
-    frame = None
+    deadline = time.monotonic() + FRAME_STABLE_TIMEOUT_S
+    frame, previous, stable = None, None, 0
     while time.monotonic() < deadline:
-        drain_end = time.monotonic() + FRAME_DRAIN_S
-        while time.monotonic() < drain_end:
-            latest = mini.media.get_frame()
-            if latest is not None:
-                frame = latest
-            time.sleep(0.05)
-        if frame is not None:
-            return frame
-    raise RuntimeError("no camera frame within 5 s")
+        latest = mini.media.get_frame()
+        if latest is not None:
+            frame = latest
+            thumb = _thumb(latest)
+            if previous is not None:
+                diff = float(abs(thumb - previous).mean())
+                stable = stable + 1 if diff < FRAME_STABLE_DIFF else 0
+                if stable >= 2:
+                    return frame
+            previous = thumb
+        time.sleep(0.3)
+    if frame is None:
+        raise RuntimeError(f"no camera frame within {FRAME_STABLE_TIMEOUT_S} s")
+    CAMERA_INVALID.append(
+        "camera image still changing when read (stale frame possible)"
+    )
+    return frame
 
 
 def head_rotation_from_frames(before, after, K, D):
@@ -666,46 +690,63 @@ def sample_during(duration: float, fractions: list[float], start: float) -> list
 
 
 def run_interp() -> None:
+    """Interpolation shape, from travel fractions rather than absolute
+    yaw: each variant starts at yaw -0.2 and moves to +0.2 over 2 s, so the
+    one-directional shortfall only scales the travel. Ideal fraction of
+    travel at 25/50/75 %: linear 0.25/0.5/0.75, min-jerk 0.104/0.5/0.896."""
     import threading
 
     from reachy_mini.utils.interpolation import InterpolationTechnique
 
-    duration, target = 2.0, 0.15
-    fractions = [0.25, 0.5]
+    duration, low, high = 2.0, -0.2, 0.2
+    fractions = [0.25, 0.5, 0.75]
+
+    def report(label: str, start: dict, samples: list[dict], end: dict) -> None:
+        travel = end["yaw"] - start["yaw"]
+        shape = [
+            round((s["yaw"] - start["yaw"]) / travel, 3) if abs(travel) > 0.05 else None
+            for s in samples
+        ]
+        record(
+            label,
+            {"yaw": [low, high], "duration": duration},
+            {"start": start, "end": end, "travel_fraction": shape},
+        )
 
     def sdk_case(mini, method):
-        sdk_goto(mini, antennas=[0.0, 0.0], body_yaw=0.0)
+        sdk_goto(mini, yaw=low, duration=1.5, antennas=[0.0, 0.0], body_yaw=0.0)
+        start_pose = state()
         start = time.monotonic()
         t = threading.Thread(
             target=sdk_goto,
-            args=(mini, 0.0, 0.0, target),
+            args=(mini, 0.0, 0.0, high),
             kwargs={"duration": duration, "method": method},
         )
         t.start()
         samples = sample_during(duration, fractions, start)
         t.join()
-        record(f"sdk {method.value}", {"yaw": target, "duration": duration}, samples)
+        report(f"sdk {method.value}", start_pose, samples, state())
 
     def body(mini):
         sdk_case(mini, InterpolationTechnique.LINEAR)
         sdk_case(mini, InterpolationTechnique.MIN_JERK)
-        sdk_goto(mini, antennas=[0.0, 0.0], body_yaw=0.0)
 
     with_sdk(body)
-    rest_zero()
+    rest_goto(1.5, head_pose=rpy_pose(yaw=low), antennas=[0.0, 0.0], body_yaw=0.0)
+    start_pose = state()
     start = time.monotonic()
     rest_goto(
-        duration, wait=False, head_pose=rpy_pose(yaw=target), interpolation="linear"
+        duration, wait=False, head_pose=rpy_pose(yaw=high), interpolation="linear"
     )
     samples = sample_during(duration, fractions, start)
-    record("rest 'linear'", {"yaw": target, "duration": duration}, samples)
-    time.sleep(duration + SETTLE_S - (time.monotonic() - start))
+    time.sleep(max(0.0, duration + SETTLE_S - (time.monotonic() - start)))
+    report("rest 'linear'", start_pose, samples, state())
     rest_zero()
     print(
         json.dumps(
             {
                 "summary": "RECORDED",
-                "note": "ideal yaw at 25%/50%: linear 0.0375/0.075, minjerk 0.0156/0.075",
+                "note": "ideal travel fraction at 25/50/75%: linear 0.25/0.5/0.75, minjerk 0.104/0.5/0.896",
             }
         )
     )
