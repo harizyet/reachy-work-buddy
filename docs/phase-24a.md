@@ -1,21 +1,14 @@
 # Phase 24a — Search-assisted, freshness-aware assistant
 
-Status: implemented (2026-09-24), including a real self-hosted SearXNG
-instance shipped in `deploy/homelab/docker-compose.yml` and live-verified
-against real internet search results; a deterministic stub model was used
-for prompt/grounding tests, no hosted cloud provider (e.g. Brave) was
-exercised, and no self-hosted-deployment/production acceptance has been
-performed — see [verification](verification/phase-24a-search-assisted-2026-09-24.md)
-and [HANDOVER](../HANDOVER.md). One of two independent tracks under
-**Phase 24 — QoL improvements**, alongside
-[Phase 24b](phase-24b.md)'s structured command/intent-authorization
-redesign; the two share a phase number because both are general assistant
-usefulness/safety improvements sequenced before Phase 25's owner
-recognition, not because either depends on the other. This track only
-touches the existing generic conversation branch, the pluggable
-`ChatProvider`/role-routing LLM stack (Phases 19/21), and Phase 23's
-migration framework for its own config table. Does not depend on Phase 22b
-hardware, Phase 24b, or Phase 25's recognition gate.
+Status: **Implemented; historical design and implementation record**
+(2026-09-24 baseline). This records the intended search design and delivered
+implementation; it is not current operating guidance. Later provider work
+and its live checks are in the dated
+[verification record and addenda](verification/phase-24a-search-assisted-2026-09-24.md).
+For current phase status see the [ledger](plan.md#6-implementation-roadmap),
+for open acceptance see [project state](project-state.md), and for setup see
+[deployment](deployment.md#web-search). Binding decisions remain in
+[ADR 0022](adr/0022-web-search-grounding.md).
 
 ## Motivation
 

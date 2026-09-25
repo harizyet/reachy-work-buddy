@@ -199,7 +199,11 @@ disposable test only, `EMAIL_SEND_DELAY_SECONDS=10` and
 
 The confirmed deployment is a USB-attached Reachy Mini with an original
 Jetson Nano as its sole embodiment host. The homelab is separate. Nano loss
-makes the robot inert; homelab loss must still permit local fallback. See
+makes the robot inert; homelab loss must still permit local fallback.
+Keep diagnostic captures under a persistent home-directory path: `/tmp` is
+cleared on reboot. Before interpreting boot logs, check NTP synchronization;
+the Nano RTC has lost time across power-offs, making pre-NTP timestamps stale.
+Recheck daemon and container state before relying on a previous session report. See
 [ADR 0004](adr/0004-offline-fallback.md#phase-22-topology-amendment-2026-09-22).
 
 The Nano's Ubuntu 18.04/glibc 2.27 cannot install the repo's native ML wheel

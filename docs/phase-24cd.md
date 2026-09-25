@@ -1,24 +1,17 @@
 # Phases 24c–24d — complete and prove Reachy conversation
 
-Status: **24c implemented 2026-09-24** (automated, browser and real-process
-checks with a simulated robot microphone; see the
-[audit result](#phase-24c-audit-result-2026-09-24) and
-[verification record](verification/phase-24c-conversation-2026-09-24.md)).
-**24d closed 2026-09-25, re-scoped by the owner**. The normal conversation
-and both latency budgets passed on the robot, with owner-accepted
-usability. The other matrix rows are deferred to
-[Phase 24e](phase-24e.md), not passed (see the
-[24d exit note](#phase-24d--physical-end-to-end-acceptance) and the
-[record](verification/phase-24d-conversation-2026-09-24.md#results)). These
-phases follow Phase 24b. Phase 25 also requires the
-[24e conversation-path prerequisites](phase-24e.md#prerequisites-for-phase-25).
+Status: **Historical design and implementation record.** 24c was implemented
+2026-09-24; 24d closed 2026-09-25 by owner re-scope. Normal conversation,
+context, latency and owner usability passed on hardware; the other matrix
+rows were deferred, not passed. The original intended workflow below is
+preserved for reference, not a claim that every row passed.
 
-24d proves the physical conversation workflow: capture, turn handling,
-context, intelligible replies, handoff, privacy, cancellation, recovery and
-latency. It does not accept the factual quality of the model's answers.
-Search retrieval and small-model answer quality are
-[Phase 24a](phase-24a.md) follow-up work, so a wrong current-affairs answer
-from the local model does not fail a 24d row.
+Empirical evidence lives in the [24c record](verification/phase-24c-conversation-2026-09-24.md)
+and [24d results](verification/phase-24d-conversation-2026-09-24.md#results).
+Use the [ledger](plan.md#6-implementation-roadmap) for current status,
+[deployment](deployment.md#robot-voice-conversation) for operations and
+[ADR 0023](adr/0023-robot-voice-conversation.md) for binding design decisions.
+Ongoing work and dependency gates belong to [24e](phase-24e.md).
 
 ## Required workflow
 

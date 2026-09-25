@@ -1,16 +1,12 @@
 # Phase 24b — Structured command and intent authorization
 
-Status: implemented and isolated-fixture verified (2026-09-24) — see
-HANDOVER.md for what remains open (live Telegram bot run, real robot
-actuation). One of two independent tracks under
-**Phase 24 — QoL improvements**, alongside [Phase 24a](phase-24a.md)'s
-search-assisted assistant; the two share a phase number as general
-assistant usefulness/safety improvements sequenced before Phase 25's owner
-recognition, not because either depends on the other. Builds on the
-existing deterministic-intent-before-LLM precedence (AGENTS.md: "Preserve
-deterministic intent/consent precedence... The LLM has no authority to
-bypass an action gate") and the persona/routing plumbing already used by
-Phases 19–22b; does not depend on Phase 22b hardware or Phase 24a.
+Status: **Implemented; historical design and implementation record**
+(2026-09-24). Structured commands replaced free-form substring actuation;
+natural-language suggestions do not authorize actions. Isolated-fixture and
+browser results are in the [verification record](verification/phase-24b-command-authorization-2026-09-24.md).
+Use the [ledger](plan.md#6-implementation-roadmap) for current status,
+[project state](project-state.md) for outstanding acceptance and
+[deployment](deployment.md) for operating instructions.
 
 ## Motivation
 

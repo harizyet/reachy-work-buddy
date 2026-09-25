@@ -15,35 +15,10 @@ robot presence and fallback independent of homelab availability.
 
 ## Status
 
-Phases 0–21 and 22a are implemented. Phase 22b (physical acceptance on real
-Nano/Reachy hardware) is in progress, not merely deferred: real motor motion,
-audio and camera capture have all been exercised on hardware, with findings
-tracked in the [verification records](docs/README.md#verification-records);
-the endurance/outage/backup/privacy/channels matrix remains open. Phase 22c
-(camera LOCAL-backend hardware acceptance) was split out as a self-contained
-follow-up. Phase 23 (versioned migrations, SecretStore, and Gmail/Calendar
-Accounts) is implemented, and Phase 23b adds a Desktop OAuth client transport
-for self-hosted installs without a public HTTPS domain; real Google-account
-and production acceptance remain open for both. Phase 24a (search-assisted,
-freshness-aware assistant) is implemented and functionally verified,
-including a real self-hosted SearXNG integration (live-queried, not just a
-fixture) and zero-configuration setup via the supported launcher (raw
-`docker compose` remains a manual path); full deployed-homelab/
-hosted-provider acceptance remains open. Phase 24b (structured command and intent
-authorization) is implemented and isolated-fixture/browser verified; live
-Telegram and physical robot acceptance remain open. Phase 24c (Reachy
-microphone → STT → LLM → TTS → speaker conversation) is implemented; its
-physical acceptance, Phase 24d, closed on 2026-09-25 on the conversation
-workflow. [Phase 24e](docs/phase-24e.md) (planned) hardens it and runs the
-rows the owner deferred.
-Phases 25–27 remain planned. The [roadmap](docs/plan.md#6-implementation-roadmap) owns phase scope;
-[verification records](docs/README.md#verification-records) distinguish tested
-behavior from outstanding acceptance.
-
-The current robot host is an original Jetson Nano with USB-attached Reachy
-hardware. WS connectivity is implemented, but commands still travel by HTTP.
-See the [deployment limits](docs/deployment.md#robot-host-and-jetson-nano)
-before operating real hardware.
+See [project state](docs/project-state.md) for deployment limits, hardware
+findings and outstanding acceptance, and the
+[phase ledger](docs/plan.md#6-implementation-roadmap) for delivery status and
+next gates. Operational instructions are in [deployment](docs/deployment.md).
 
 ## Repository
 

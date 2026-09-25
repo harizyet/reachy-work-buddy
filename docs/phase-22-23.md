@@ -1,25 +1,18 @@
 # Phases 22–23: physical deployment, acceptance testing, and Google accounts
 
-Status: Phase 22 is split into **22a — bring-up** (deliverables 1–3 below:
-inventory, real robot backend, WSS connectivity, Bash launchers —
-implemented and partially live-verified) and **22b — physical acceptance
-testing** (deliverable 5, the acceptance matrix below — **started
-2026-09-23, IN PROGRESS**). This split was the owner's explicit decision
-(2026-09-23) so that Phase 23 does not sit blocked on Nano hardware
-availability: Phase 23 proceeded first, and 22b resumed once the owner was
-physically available. Phase 23 reruns the relevant acceptance tests (22b's
-matrix) with production account access once both 22b and Phase 23's own
-implementation are ready. Written 2026-09-22, updated 2026-09-23 — see the
-[bring-up record](verification/phase-22-bring-up.md) and
-[first-motion session](verification/phase-22b-first-motion-2026-09-23.md)
-for evidence; the latter found a real head-motor tracking imprecision
-(`stewart_5`, antennas unaffected) that the owner explicitly decided not
-to pursue further — named behaviours only need to convey action/emotion,
-not exact joint tracking, and all 14 were owner-accepted on that basis.
-The companion board is confirmed
-as an **original Jetson Nano**, not Orin, running JetPack 4.6.1 (EOL), with
-3.9GB RAM; Reachy Mini's camera/audio/motor-controller are all USB-attached
-directly to it (no separate onboard computer exists).
+Status: **Mixed historical implementation record and open acceptance plan.**
+22a and 23 are implemented; 22b and the Google production release gates
+remain open. Preserve the matrices below as acceptance requirements. Earlier
+implementation sequences describe the design at the time, not work that
+must be repeated or current installation instructions.
+
+See the [phase ledger](plan.md#6-implementation-roadmap) for current status,
+[project state](project-state.md) for hardware findings and outstanding
+acceptance, and [deployment](deployment.md) for current procedures.
+Evidence is retained in [bring-up](verification/phase-22-bring-up.md),
+[first motion](verification/phase-22b-first-motion-2026-09-23.md),
+[camera](verification/phase-22b-camera-2026-09-24.md) and
+[Accounts](verification/phase-23-accounts-2026-09-23.md) records.
 
 ## Starting point and architecture gate
 

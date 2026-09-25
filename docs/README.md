@@ -12,6 +12,7 @@ point into this index rather than maintaining parallel instructions.
 | Set up development, run tests, or debug dependencies/builds | [Development](development.md) |
 | Find service ownership, APIs, and implementation files | [Service reference](reference/services.md) |
 | Exercise conversation/work-data APIs on a test stack | [Workflow examples](reference/workflow-examples.md) |
+| Check current deployment limits and open acceptance | [Project state](project-state.md) |
 | Understand scope, releases, and what comes next | [Technical plan and roadmap](plan.md) |
 | Resume an agent session | [Handover](../HANDOVER.md), then [agent instructions](../AGENTS.md) |
 
@@ -19,7 +20,12 @@ point into this index rather than maintaining parallel instructions.
 
 The [roadmap](plan.md#6-implementation-roadmap) owns phase order and status.
 Detailed future requirements remain in their dedicated plans; they are not
-claims that those features already work.
+claims that those features already work. Paths stay stable: completed phase
+records are historical design/implementation references, while 24e and 25–27
+remain future plans. The mixed 22–23 document retains open acceptance matrices.
+Use the ledger for current status, deployment for procedures, and dated
+verification records for empirical results. Historical records change only to
+correct facts or links, not to track each new phase dependency.
 
 - [Phase 22a/22b and Phase 23](phase-22-23.md): deployment, physical acceptance,
   migrations, SecretStore, and Google Accounts.
@@ -84,7 +90,8 @@ These are dated evidence, not startup instructions or current health checks.
 - [Phase 22b camera](verification/phase-22b-camera-2026-09-24.md): a daemon
   error-state finding and recovery, first real camera capture, and the
   subsequent refactor to reachy_mini's recommended LOCAL media backend
-  (code/tests done, real-hardware build/run still unverified).
+  (LOCAL-backend captures since exercised on the Nano; deliberate fresh-scene
+  acceptance still open).
 
 - [Phase 23 foundation](verification/phase-23-foundation-2026-09-23.md): migrations,
   SecretStore, isolated database recovery and built-image checks.
@@ -108,7 +115,8 @@ These are dated evidence, not startup instructions or current health checks.
 - [Phase 24d physical conversation acceptance](verification/phase-24d-conversation-2026-09-24.md):
   the real Nano/Reachy conversation run passed (context, latency, owner
   usability, cold-reboot recovery); closed by owner re-scope, with the
-  remaining matrix rows and hardware findings deferred to Phase 24e.
+  remaining matrix rows and Nano diagnostics deferred to Phase 24e; motor
+  inspection remains the owner's separate follow-up.
 
 - [Phase 24b command authorization](verification/phase-24b-command-authorization-2026-09-24.md):
   isolated-fixture checks for the retired substring matcher's replacement
@@ -122,7 +130,10 @@ These are dated evidence, not startup instructions or current health checks.
 | Information | Canonical home | Elsewhere |
 |---|---|---|
 | Project introduction and navigation | Root README | Short link |
-| Phase status, scope, exit criteria | Roadmap and linked phase plans | One-line status/link |
+| Phase status and delivery ledger | Roadmap | One-line status/link |
+| Future scope and exit criteria | Active phase plans linked from the roadmap | Link |
+| Completed design/implementation narrative | Historical phase records | Link; do not use as operating instructions |
+| Current deployment limits, hardware issues, cross-phase acceptance | Project state | Brief link; dated proof stays in verification |
 | How to install, configure, upgrade, operate | Deployment guide | Link; env templates keep variable defaults |
 | How a person uses the application | Operator guide | Link |
 | How to develop, test, or troubleshoot tooling | Development guide | Link |
@@ -130,7 +141,7 @@ These are dated evidence, not startup instructions or current health checks.
 | Why a boundary or policy exists | ADR | Link rather than copied decision text |
 | What was actually verified | Dated verification record | Brief result/link |
 | Agent conduct and required reading | AGENTS.md | Link |
-| Current task, open work, transient environment | HANDOVER.md | Do not turn it into a changelog |
+| Current task, next session steps, transient host state | HANDOVER.md | Do not turn it into a changelog or duplicate project state |
 
 Update the canonical home first. Keep source/config files authoritative for
 exact defaults and schemas, and label future plans versus implemented behavior.
