@@ -129,6 +129,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import os
+import re
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -312,6 +313,22 @@ SPOKEN_REPLY_INSTRUCTION = (
     "sentences of plain conversational text, unless the user asks for more "
     "detail. Do not use lists, headings, markdown or URLs."
 )
+# The local model ignored the instruction on some 24d turns (120-160 words,
+# up to a minute of speech), and the long replies then slowed every later
+# turn through the history. The cap bounds generation, speech and history;
+# about 75 words is roughly 30 s of speech.
+SPOKEN_REPLY_MAX_TOKENS = 100
+_SENTENCE_END = re.compile(r"[.!?](?=[\"')\]]*(?:\s|$))")
+
+
+def complete_sentences(text: str) -> str:
+    """Drop a trailing partial sentence left by the token cap, so the robot
+    does not stop mid-word. Text without any sentence end is kept whole."""
+    text = text.rstrip()
+    ends = list(_SENTENCE_END.finditer(text))
+    if not ends or ends[-1].end() >= len(text.rstrip("\"')]")):
+        return text
+    return text[: ends[-1].end()]
 
 
 def create_app(
@@ -887,7 +904,14 @@ def create_app(
                               if turn.input_modality == InputModality.VOICE else []),
                             *conversation_store.messages(turn.session_id),
                         ]
-                        reply = await route_completion(config, history_with_persona, app.state.llm_usage_store, force_frontier=turn.force_frontier, transport=llm_transport)
+                        spoken = turn.input_modality == InputModality.VOICE
+                        reply = await route_completion(
+                            config, history_with_persona, app.state.llm_usage_store,
+                            force_frontier=turn.force_frontier, transport=llm_transport,
+                            max_tokens=SPOKEN_REPLY_MAX_TOKENS if spoken else None,
+                        )
+                        if spoken:
+                            reply = complete_sentences(reply)
                     except ProviderUnavailable:
                         reply = "The language model is unavailable right now. Please try again shortly."
             privacy = classify_privacy(turn.text)

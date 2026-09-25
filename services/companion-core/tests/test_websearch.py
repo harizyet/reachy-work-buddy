@@ -507,6 +507,40 @@ def test_voice_turns_ask_for_short_spoken_replies_and_typed_turns_do_not():
     assert SPOKEN_REPLY_INSTRUCTION not in typed
 
 
+def test_voice_replies_are_token_capped_and_end_on_a_whole_sentence():
+    from companion_core.app import SPOKEN_REPLY_MAX_TOKENS
+
+    llm_requests = []
+
+    def llm_respond(request):
+        llm_requests.append(json.loads(request.content))
+        # What a token cap leaves: whole sentences, then a cut-off one.
+        return httpx.Response(200, json={"choices": [{"message": {"content": "First point. Second point. Third poi"}}]})
+
+    client = TestClient(core_app(llm_transport=httpx.MockTransport(llm_respond)))
+    client.put("/settings/llm", json={"local": {"base_url": "http://ovms/v1", "model": "qwen"}})
+
+    voice = client.post("/conversation", json={**TURN, "channel": "reachy", "input_modality": "voice", "text": "explain llms"})
+    typed = client.post("/conversation", json={**TURN, "text": "explain llms"})
+    assert llm_requests[-2]["max_tokens"] == SPOKEN_REPLY_MAX_TOKENS
+    assert "max_tokens" not in llm_requests[-1]
+    assert voice.json()["reply"] == "First point. Second point."
+    assert typed.json()["reply"] == "First point. Second point. Third poi"
+
+
+@pytest.mark.parametrize(("text", "expected"), [
+    ("Your code word is \"pineapple\".", "Your code word is \"pineapple\"."),
+    ("He said \"hi.\"", "He said \"hi.\""),
+    ("You have 3.5 blocks. And then", "You have 3.5 blocks."),
+    ("No sentence end at all", "No sentence end at all"),
+    ("Done!  ", "Done!"),
+])
+def test_complete_sentences(text, expected):
+    from companion_core.app import complete_sentences
+
+    assert complete_sentences(text) == expected
+
+
 def test_search_debug_log_records_query_attempts_and_results_in_memory():
     from companion_core.websearch.debug_log import SearchDebugLog, SearchLogEntry
 

@@ -22,6 +22,7 @@ async def route_completion(
     *,
     force_frontier: bool = False,
     transport=None,
+    max_tokens: int | None = None,
 ) -> str:
     providers = {LLMRole.LOCAL: config.local, LLMRole.CLOUD: config.cloud}
     for index, role in enumerate(role_order(config, force_frontier=force_frontier)):
@@ -37,7 +38,7 @@ async def route_completion(
             transport=transport,
         )
         try:
-            return await provider.complete(history)
+            return await provider.complete(history, max_tokens=max_tokens)
         except ProviderUnavailable:
             # Cancellation and persistence errors must not dispatch another call.
             continue

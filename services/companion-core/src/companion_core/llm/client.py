@@ -12,7 +12,7 @@ PROVIDER_TIMEOUT_SECONDS = 60
 
 
 class ChatProvider(Protocol):
-    async def complete(self, history: list[dict[str, str]]) -> str: ...
+    async def complete(self, history: list[dict[str, str]], *, max_tokens: int | None = None) -> str: ...
 
 
 class ProviderUnavailable(Exception):
@@ -53,7 +53,7 @@ class OpenAICompatibleChatProvider:
         self.usage = usage
         self.transport = transport
 
-    async def complete(self, history: list[dict[str, str]]) -> str:
+    async def complete(self, history: list[dict[str, str]], *, max_tokens: int | None = None) -> str:
         entry = LLMUsageEntry(
             model=self.config.model,
             role=self.role,
@@ -82,6 +82,7 @@ class OpenAICompatibleChatProvider:
                         "model": self.config.model,
                         "messages": history,
                         "stream": False,
+                        **({"max_tokens": max_tokens} if max_tokens is not None else {}),
                     },
                 )
                 response.raise_for_status()
