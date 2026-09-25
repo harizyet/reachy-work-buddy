@@ -18,3 +18,5 @@ ROBOT_VOICE = "/robot-voice"
 ROBOT_VOICE_START = "/robot-voice/start"
 ROBOT_VOICE_RENEW = "/robot-voice/renew"
 ROBOT_VOICE_STOP = "/robot-voice/stop"
+
+ROBOT_MOTION_SETTINGS = "/robots/{robot_id}/settings/motion"

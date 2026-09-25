@@ -11,6 +11,7 @@ from typing import Any
 
 import httpx
 
+from shared.models.motion import MotionSettings
 from shared.protocols import embodiment_api as routes
 
 
@@ -34,6 +35,16 @@ class EmbodimentClient:
 
     async def get_state(self) -> dict[str, Any]:
         resp = await self._client.get(routes.STATE)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get_motion_settings(self) -> dict[str, Any]:
+        resp = await self._client.get(routes.MOTION_SETTINGS)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def set_motion_settings(self, settings: MotionSettings) -> dict[str, Any]:
+        resp = await self._client.put(routes.MOTION_SETTINGS, json=settings.model_dump())
         resp.raise_for_status()
         return resp.json()
 

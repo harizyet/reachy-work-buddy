@@ -199,6 +199,7 @@ from reachy_hub.user_store import PostgresUserStore, UserStore
 from reachy_hub.webrtc import CallTurnHandler, negotiate_call, negotiate_telepresence
 from shared.models.embodiment import Behaviour
 from shared.models.interruption import InterruptionAction
+from shared.models.motion import MotionSettings, MotionSettingsStatus
 from shared.models.response import Privacy, Urgency
 from shared.models.session import (
     AgentSession,
@@ -209,6 +210,7 @@ from shared.models.session import (
 )
 from shared.models.websearch import TurnWebSearch
 from shared.protocols.operator_api import (
+    ROBOT_MOTION_SETTINGS,
     ROBOT_VOICE,
     ROBOTS,
     ROBOTS_RESUME,
@@ -762,6 +764,30 @@ def create_app(
             return await get_client(robot).get_state()
         except httpx.HTTPError as exc:
             raise HTTPException(status_code=502, detail=f"robot '{robot_id}' unreachable: {exc}") from exc
+
+    async def motion_settings_proxy(robot_id: str, settings: MotionSettings | None = None) -> dict:
+        robot = await get_robot_or_404(robot_id)
+        client = get_client(robot)
+        try:
+            if settings is None:
+                return await client.get_motion_settings()
+            return await client.set_motion_settings(settings)
+        except httpx.HTTPStatusError as exc:
+            status = exc.response.status_code
+            detail = ("Stop the robot conversation before changing animations" if status == 409
+                      else "This robot does not support animation settings" if status == 404
+                      else "Robot animation settings are unavailable")
+            raise HTTPException(status if status in {404, 409} else 502, detail) from exc
+        except httpx.HTTPError as exc:
+            raise HTTPException(502, "Robot animation settings are unreachable") from exc
+
+    @app.get(ROBOT_MOTION_SETTINGS, dependencies=[Depends(require_remote_auth)])
+    async def get_robot_motion_settings(robot_id: str) -> MotionSettingsStatus:
+        return MotionSettingsStatus.model_validate(await motion_settings_proxy(robot_id))
+
+    @app.put(ROBOT_MOTION_SETTINGS, dependencies=[Depends(require_remote_auth)])
+    async def set_robot_motion_settings(robot_id: str, settings: MotionSettings) -> MotionSettingsStatus:
+        return MotionSettingsStatus.model_validate(await motion_settings_proxy(robot_id, settings))
 
     @app.get("/robots/{robot_id}/behaviours", dependencies=[Depends(require_remote_auth)])
     async def robot_behaviours(robot_id: str) -> dict:

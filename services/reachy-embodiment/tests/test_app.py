@@ -176,3 +176,20 @@ def test_standby_stops_motion_before_the_daemon_parks() -> None:
     assert backend.calls[:2] == ["stop", "standby"]
     motion.run_pending()  # the pending listening gesture was invalidated
     assert "play:listening" not in backend.calls
+
+
+def test_motion_settings_reject_active_conversation_and_invalid_values():
+    from shared.protocols.embodiment_api import MOTION_SETTINGS
+
+    client = make_client()
+    motion = client.app.state.motion
+    initial = client.get(MOTION_SETTINGS).json()
+    settings = {"conversation_motion": True, "speech_wobble": False}
+    token = motion.begin_conversation()
+    assert client.get(MOTION_SETTINGS).json()["conversation_active"]
+    assert client.put(MOTION_SETTINGS, json=settings).status_code == 409
+    motion.end_conversation(token, completed=False)
+    for invalid in [{}, {**settings, "speech_wobble": "false"}, {**settings, "extra": True}]:
+        assert client.put(MOTION_SETTINGS, json=invalid).status_code == 422
+    assert client.get(MOTION_SETTINGS).json() == initial
+    assert client.put(MOTION_SETTINGS, json=settings).json() == {**settings, "conversation_active": False}

@@ -20,6 +20,25 @@ outbound delivery or inference health: successful polls clear errors, and
 also make polling stale. DND suppresses proactive interruptions, not direct
 replies. The model indicator means configured, not proven reachable.
 
+## Conversational animations
+
+Open **Settings · Accounts → Conversational animations**, select the robot,
+and use the two independent toggles:
+
+- **Listening and thinking gestures** plays the mapped recorded gestures
+  during microphone conversations, returning home between gestures.
+- **Head movement while speaking** enables speech-reactive head motion.
+
+Stop listening before changing settings, then use **Apply animation
+settings**. Applying sends no motion command; the next conversation uses
+the new values. **Refresh animation settings** reads the robot's current
+values. Offline or older robots show an error with the controls disabled.
+These are runtime settings: restarting embodiment restores its startup
+defaults (both off unless configured otherwise). They do not control idle
+presence or manually requested behaviours. Animation playback still needs
+its physical acceptance; development playback requires owner supervision
+under the [deployment rules](deployment.md#robot-host-and-jetson-nano).
+
 ## Chat (Phase 20)
 
 Open Chat after login. Chat uses your owner session automatically, sharing

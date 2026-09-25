@@ -34,7 +34,22 @@
         <form id="chat-form"><label for="chat-text">Message<textarea id="chat-text" rows="3" placeholder="Ask Reachy something… (try /reachy standby)" required disabled></textarea></label><div id="chat-command-hints" hidden></div><label class="check"><input id="force-frontier" type="checkbox"> Use frontier model for this message (sends conversation context to cloud)</label><div class="chat-compose-footer"><span id="chat-status" role="status"></span><button id="chat-send" disabled>Send</button></div></form>
       </section>
       <section id="accounts-pane" hidden class="card">
-        <span class="eyebrow">SETTINGS</span><h2>Connected accounts</h2>
+        <section aria-labelledby="motion-title">
+          <span class="eyebrow">SETTINGS</span><h2 id="motion-title">Conversational animations</h2>
+          <p>Choose how Reachy moves during robot microphone conversations. Stop listening before changing these settings.</p>
+          <label>Robot<select id="motion-robot" disabled></select></label>
+          <button type="button" id="motion-refresh" class="secondary">Refresh animation settings</button>
+          <form id="motion-form"><fieldset id="motion-fields" disabled>
+            <label class="check"><input type="checkbox" id="motion-gestures"> Listening and thinking gestures</label>
+            <p class="muted">Recorded gestures while listening and thinking, with returns to the home pose between gestures.</p>
+            <label class="check"><input type="checkbox" id="motion-wobble"> Head movement while speaking</label>
+            <p class="muted">Small head movements that follow Reachy's speech.</p>
+            <button>Apply animation settings</button>
+          </fieldset></form>
+          <p id="motion-status" role="status"></p>
+          <p class="muted">Applies to the next conversation. Restarting the robot's embodiment service restores its startup defaults.</p>
+        </section>
+        <h2>Connected accounts</h2>
         <p>Connect Google to let Reachy read your mail and calendar. You sign in and choose permissions on Google's website. Reachy never sees your Google password.</p>
         <p class="muted">Read-only access: Reachy cannot send, delete or mark mail as read, or change your Google calendar. When cloud inference is enabled, earlier account replies may be included in conversation context sent to that provider.</p>
         <p id="accounts-status" role="status"></p><p id="google-identity"></p>

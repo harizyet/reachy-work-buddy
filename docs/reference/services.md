@@ -122,6 +122,7 @@ WebRTC, and static UI. It does not own reasoning policy or motor control.
 | `POST /calendar/check-reminders/{user_id}`, `/briefing/{user_id}` | On-demand proactive routing, not an automatic schedule |
 | `POST`, `GET /robots` | HTTP robot registry |
 | `GET /robots/{id}/state`, `/behaviours`; `POST /robots/{id}/behaviour/{name}`, `/speak` | Authenticated robot proxies and direct speak-through control |
+| `GET`, `PUT /robots/{robot_id}/settings/motion` | Owner-authenticated proxy for robot-local conversational animation switches; changes only between conversations |
 | `POST /robots/standby`, `/resume` | Phase 22b: authenticated remote power control — parks/de-torques (`standby`) or wakes (`resume`, `wake_up` query param) every registered robot; no `{id}` in the path, loops the registry like the existing gesture-trigger helper does |
 | `POST /webrtc/telepresence/offer` | Authenticated remote media/control |
 | `WS /robots/connect` | Robot-token-authenticated registration/heartbeat/reconnect; also `voice_start`/`voice_stop`/`voice_state` conversation control (Phase 24c); other commands still HTTP |
@@ -190,6 +191,7 @@ STT/TTS and work data stay in the homelab.
 |---|---|
 | `GET /health`, `/state`, `/behaviours` | Service/backend state and behavior vocabulary |
 | `POST /behaviour/{name}`, `/heartbeat` | Semantic behavior and proof of hub liveness |
+| `GET`, `PUT /settings/motion` | Runtime conversational gesture/speech-wobble switches; local motion owner rejects active conversations |
 | `GET /camera/frame`; `POST /audio/play` | Frame capture and audio playback used by telepresence |
 
 `/gaze` and `/pose` remain reserved, unimplemented contracts. `/audio/play`

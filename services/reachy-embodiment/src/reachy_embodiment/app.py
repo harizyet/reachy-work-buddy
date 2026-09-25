@@ -41,6 +41,7 @@ from reachy_embodiment.robot_ws_client import RobotWSClient
 from reachy_embodiment.state import ServiceState
 from reachy_embodiment.voice import VoiceConversation, VoiceTurnClient
 from shared.models.embodiment import Behaviour, EmbodimentState
+from shared.models.motion import MotionSettings, MotionSettingsStatus
 from shared.models.robot_voice import PALM_FRAME_MAX_WIDTH
 from shared.protocols import embodiment_api as routes
 
@@ -220,6 +221,17 @@ def create_app(
     @app.get(routes.STATE)
     def get_state() -> ServiceState:
         return state
+
+    @app.get(routes.MOTION_SETTINGS)
+    def get_motion_settings() -> MotionSettingsStatus:
+        return motion.settings()
+
+    @app.put(routes.MOTION_SETTINGS)
+    def set_motion_settings(settings: MotionSettings) -> MotionSettingsStatus:
+        try:
+            return motion.configure(settings)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
 
     @app.get(routes.BEHAVIOURS)
     def list_behaviours() -> dict[str, str]:

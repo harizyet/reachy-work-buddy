@@ -28,3 +28,5 @@ HEARTBEAT = "/heartbeat"
 # docs/verification/phase-22b-first-motion-2026-09-23.md.
 DAEMON_STANDBY = "/daemon/standby"
 DAEMON_RESUME = "/daemon/resume"
+
+MOTION_SETTINGS = "/settings/motion"

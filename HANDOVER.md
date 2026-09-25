@@ -7,14 +7,17 @@ acceptance. This file holds only session continuation details.
 
 ## Current work
 
-Chat portal search indicators are implemented locally: a clickable Reachy
-search icon expands each searched turn's query, source links and snippets,
-including robot voice turns. Core supplies optional `web_search` evidence
-through existing hub responses; ordinary turns carry none. See the
-[Chat guide](docs/operator-guide.md#chat-phase-20). Verification: core/hub/shared
-non-slow suite 583 passed, 21 skipped; three Chromium chat/voice fixture tests
-passed, mobile UI inspected, and ruff passed. Search/model responses were
-fixtures; no live provider, deployment or robot activity was performed.
+The homelab portal was redeployed 2026-09-25 at 14:32 UTC with chat search
+indicators and per-robot runtime animation controls. Live Chromium verified
+five real search results, expansion, no indicator on a subsequent ordinary
+turn, and disabled animation controls while Reachy is offline. Auth/CSRF
+checks and three fixture browser regressions passed. See the
+[deployment/test record](docs/verification/portal-controls-2026-09-25.md).
+The owner kept Reachy powered off and limited this run to the web UI.
+**Next:** rebuild the Nano embodiment image before live animation settings
+can work; physical animation testing is still open. Runtime settings restore
+environment defaults on restart; see the
+[operator guide](docs/operator-guide.md#conversational-animations).
 
 [Phase 24f](docs/phase-24f.md) is in progress. Item 1 is measured on the
 Nano ([record](docs/verification/phase-24f-conformance-2026-09-25.md)).
@@ -105,8 +108,9 @@ this documentation pass. Recheck state before relying on them.
   restart policy. Embodiment is host-networked on 8100, daemon loopback on
   8000. Apply the [deployment boundaries](docs/deployment.md#robot-host-and-jetson-nano)
   before daemon starts or motion; `--check` stays read-only.
-- **Homelab:** dev/test stack at `1e04061` (rebuilt 2026-09-25 13:20Z after
-  backup `~/reachy-backups/reachy-before-24f-deploy-20260925T131937.dump`),
+- **Homelab:** rebuilt 2026-09-25 14:32Z from `9b84d93` plus the
+  working-tree animation-controls change; hub/core healthy. Image IDs and
+  backup are in the [portal record](docs/verification/portal-controls-2026-09-25.md),
   schema `008_assistant_context`, hub `PALM_STOP_ENABLED` false.
   Start only through `scripts/start-homelab.sh`. Piper `en_US-lessac-medium`;
   search policy Auto, Brave/Exa/Tavily rotation then SearXNG. Backups in

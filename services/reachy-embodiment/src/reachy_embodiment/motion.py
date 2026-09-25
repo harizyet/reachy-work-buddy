@@ -34,6 +34,7 @@ from typing import Protocol
 
 from reachy_embodiment.state import ServiceState
 from shared.models.embodiment import Behaviour, EmbodimentState
+from shared.models.motion import MotionSettings, MotionSettingsStatus
 
 log = logging.getLogger(__name__)
 
@@ -96,6 +97,26 @@ class MotionController:
         self._away_from_home = False
         # Generation of the transition the worker is running.
         self._running_generation = 0
+
+    def settings(self) -> MotionSettingsStatus:
+        with self._lock:
+            return MotionSettingsStatus(
+                conversation_motion=self._conversation_motion,
+                speech_wobble=self._speech_wobble,
+                conversation_active=self._conversation is not None,
+            )
+
+    def configure(self, settings: MotionSettings) -> MotionSettingsStatus:
+        # Match the worker's lock ordering. No settings change can race a
+        # running transition or the beginning of a voice conversation.
+        with self._dispatch_lock, self._lock:
+            if self._conversation is not None or self._pending is not None or self._closed:
+                raise ValueError("Stop the robot conversation before changing animations")
+            if self._wobbling:
+                raise ValueError("Speech motion is still active; stop the robot conversation first")
+            self._conversation_motion = settings.conversation_motion
+            self._speech_wobble = settings.speech_wobble
+            return self.settings()
 
     @property
     def enabled(self) -> bool:

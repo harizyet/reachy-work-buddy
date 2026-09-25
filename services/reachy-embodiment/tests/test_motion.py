@@ -311,3 +311,33 @@ def test_closed_controller_rejects_new_work() -> None:
     token = ctl.begin_conversation()
     ctl.conversation_state(token, 1, LISTENING)
     assert backend.calls == []
+
+
+def test_runtime_settings_change_no_motion_and_wait_for_conversation_end():
+    import pytest
+
+    from shared.models.motion import MotionSettings
+
+    ctl, backend, _ = make()
+    enabled = MotionSettings(conversation_motion=True, speech_wobble=True)
+    token = ctl.begin_conversation()  # Also protected when both flags are off.
+    with pytest.raises(ValueError, match="Stop"):
+        ctl.configure(enabled)
+    ctl.end_conversation(token, completed=False)
+    assert ctl.configure(enabled).conversation_motion
+    assert backend.calls == []  # Saving is configuration, never a preview.
+    token = ctl.begin_conversation()
+    ctl.conversation_state(token, 1, SPEAKING)
+    assert ("wobble", True) in step(ctl, backend)
+    with pytest.raises(ValueError, match="Stop"):
+        ctl.configure(MotionSettings(conversation_motion=False, speech_wobble=False))
+    ctl.end_conversation(token, completed=False)
+    with pytest.raises(ValueError, match="Stop"):
+        ctl.configure(enabled)  # Stop is pending, so do not change flags yet.
+    assert ("wobble", False) in step(ctl, backend)
+    backend.calls.clear()
+    ctl.configure(MotionSettings(conversation_motion=False, speech_wobble=False))
+    token = ctl.begin_conversation()
+    ctl.conversation_state(token, 2, LISTENING)
+    ctl.run_pending()
+    assert backend.calls == []

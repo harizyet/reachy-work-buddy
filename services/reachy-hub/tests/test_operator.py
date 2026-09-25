@@ -335,3 +335,25 @@ def test_web_frontier_override_reaches_core_and_cloud_usage():
     assert usage["by_role"]["cloud"]["calls"] == 1
     assert usage["latest_escalation"]["reason"] == "manual"
     assert client.get("/status").json()["llm"]["configured"]
+
+
+def test_motion_settings_proxy_requires_owner_and_csrf_and_updates_robot():
+    from shared.protocols.operator_api import ROBOT_MOTION_SETTINGS
+
+    client = make_client()
+    path = ROBOT_MOTION_SETTINGS.format(robot_id="desk")
+    settings = {"conversation_motion": True, "speech_wobble": False}
+    assert client.get(path).status_code == 401
+    assert client.put(path, json=settings).status_code == 401
+    login(client)
+    client.post("/robots", json={"robot_id": "desk", "base_url": "http://robot"})
+    assert client.put(path, json=settings).status_code == 403
+    assert client.get(path).json()["conversation_motion"] is False
+    response = client.put(path, json=settings, headers=CSRF)
+    assert response.status_code == 200
+    assert response.json() == {**settings, "conversation_active": False}
+    assert client.get(path).json() == response.json()
+    assert client.put(path, json={**settings, "speech_wobble": "false"}, headers=CSRF).status_code == 422
+    assert client.get(ROBOT_MOTION_SETTINGS.format(robot_id="missing")).status_code == 404
+    client.post("/auth/logout", headers=CSRF)
+    assert client.get(path, headers={"Authorization": "Bearer test-token"}).status_code == 200

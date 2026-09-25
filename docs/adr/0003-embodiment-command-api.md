@@ -78,6 +78,24 @@ Speaking uses daemon wobble, not a recorded move. It is a daemon-wide
 setting, so it is enabled only during playback and disabled on every other
 transition and on stop.
 
+## Portal animation settings amendment (2026-09-25)
+
+The owner may change the two conversational motion switches from Settings
+in the operator portal. Embodiment owns runtime values via
+`GET/PUT /settings/motion`; hub proxies them through owner-authenticated
+`GET/PUT /robots/{robot_id}/settings/motion`, with the existing cookie/CSRF
+and bearer rules. The shared contract contains only `conversation_motion`
+and `speech_wobble` booleans; GET/PUT responses also report whether a
+conversation is active. No model selects or changes these values.
+
+Changes are accepted only between conversations, after pending motion has
+finished. The local motion owner's dispatch/state locks serialize updates
+against transitions and conversation starts. Saving settings sends no
+motion command. Values live in embodiment memory; a service restart reads
+`CONVERSATION_MOTION_ENABLED` and `SPEECH_WOBBLE_ENABLED` again, both off by
+default. This adds no persistent store or daemon restart path. The existing
+physical acceptance and supervision requirements still apply to playback.
+
 ## Context
 
 `companion-core` needs to make Reachy express behaviours (listening,

@@ -144,6 +144,10 @@ These are dated evidence, not startup instructions or current health checks.
   action buttons); no live Telegram bot run or real robot actuation
   performed.
 
+- [Portal search and animation controls](verification/portal-controls-2026-09-25.md):
+  homelab redeploy, live search/browser checks and powered-off robot UI;
+  Nano deployment and physical animation remain open.
+
 ## Where information belongs
 
 | Information | Canonical home | Elsewhere |

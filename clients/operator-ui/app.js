@@ -19,6 +19,7 @@ const chat = createChat({
   },
 });
 const accounts = createAccounts({api, isLoggedIn: () => loggedIn});
+const motionSettings = createMotionSettings();
 const voice = createVoice({api, isLoggedIn: () => loggedIn, chat});
 function showView(view) {
   const isChat = view === 'chat';
@@ -29,7 +30,7 @@ function showView(view) {
     $(name + '-tab').classList.toggle('secondary', name !== view);
   }
   if (isChat) void chat.refreshSession();
-  if (view === "accounts") void accounts.load();
+  if (view === "accounts") { void accounts.load(); void motionSettings.load(); }
 }
 $('accounts-tab').addEventListener('click', () => showView('accounts'));
 $('chat-tab').addEventListener('click', () => showView('chat'));
@@ -40,7 +41,7 @@ function showLogin() {
   $('login-panel').hidden = false; $('dashboard').hidden = true; $('nav').hidden = true;
   $('api-key').value = ''; $('cloud-api-key').value = ''; $('websearch-api-key').value = ''; for (const name of HOSTED_SEARCH) $(`websearch-${name}-api-key`).value = ''; $('password').value = '';
   $('search-log-dialog').close(); $('search-log-entries').replaceChildren();
-  chat.reset(); accounts.reset(); voice.reset(); showView('overview');
+  chat.reset(); accounts.reset(); voice.reset(); motionSettings.reset(); showView('overview');
 }
 async function api(path, options = {}) {
   const response = await fetch(base + path, {
@@ -343,3 +344,90 @@ $('disable-websearch').addEventListener('click', async () => {
 });
 api('/auth/me').then(enter).catch(error => { showLogin(); if (error.message !== 'Login required') notice(error.message); });
 setInterval(refresh, 10000);
+
+
+function createMotionSettings() {
+  let generation = 0;
+  let busy = false;
+  const path = () => `/robots/${encodeURIComponent($('motion-robot').value)}/settings/motion`;
+  function render(settings) {
+    if (typeof settings.conversation_motion !== 'boolean' || typeof settings.speech_wobble !== 'boolean' || typeof settings.conversation_active !== 'boolean') {
+      throw new Error('This robot does not support animation settings.');
+    }
+    $('motion-gestures').checked = settings.conversation_motion;
+    $('motion-wobble').checked = settings.speech_wobble;
+    $('motion-fields').disabled = settings.conversation_active;
+    $('motion-status').textContent = settings.conversation_active
+      ? 'Stop listening, then refresh to change animations.' : 'Current animation settings loaded.';
+  }
+  async function selected() {
+    const version = ++generation;
+    $('motion-fields').disabled = true;
+    $('motion-gestures').checked = false; $('motion-wobble').checked = false;
+    if (!loggedIn || !$('motion-robot').value) return;
+    $('motion-status').textContent = 'Loading animation settings…';
+    try {
+      const settings = await api(path());
+      if (version === generation && loggedIn) render(settings);
+    } catch (error) {
+      if (version === generation && loggedIn) $('motion-status').textContent = error.message;
+    }
+  }
+  async function load() {
+    if (!loggedIn || busy) return;
+    const version = ++generation;
+    $('motion-fields').disabled = true; $('motion-robot').disabled = true;
+    $('motion-status').textContent = 'Loading robots…';
+    try {
+      const robots = await api('/robots');
+      if (version !== generation || !loggedIn) return;
+      const previous = $('motion-robot').value;
+      $('motion-robot').replaceChildren();
+      for (const robot of robots) {
+        const option = document.createElement('option');
+        option.value = robot.robot_id; option.textContent = robot.robot_id;
+        $('motion-robot').append(option);
+      }
+      if (robots.some(robot => robot.robot_id === previous)) $('motion-robot').value = previous;
+      $('motion-robot').disabled = !robots.length;
+      if (robots.length) await selected();
+      else $('motion-status').textContent = 'No robots registered.';
+    } catch (error) {
+      if (version === generation && loggedIn) $('motion-status').textContent = error.message;
+    }
+  }
+  $('motion-robot').addEventListener('change', selected);
+  $('motion-refresh').addEventListener('click', load);
+  $('motion-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    if (busy || !loggedIn || $('motion-fields').disabled) return;
+    const version = ++generation;
+    const body = JSON.stringify({conversation_motion: $('motion-gestures').checked, speech_wobble: $('motion-wobble').checked});
+    busy = true;
+    $('motion-fields').disabled = true; $('motion-robot').disabled = true; $('motion-refresh').disabled = true;
+    $('motion-status').textContent = 'Applying animation settings…';
+    try {
+      const settings = await api(path(), {method: 'PUT', body});
+      if (version !== generation || !loggedIn) return;
+      render(settings);
+      $('motion-status').textContent = 'Animation settings applied for the next conversation.';
+    } catch (error) {
+      if (version !== generation || !loggedIn) return;
+      // An ambiguous failure may already have changed the robot. Require
+      // a fresh read rather than showing the unsaved draft as applied.
+      $('motion-gestures').checked = false; $('motion-wobble').checked = false;
+      $('motion-status').textContent = `${error.message}. Refresh to check the robot's current settings.`;
+    } finally {
+      if (version === generation && loggedIn) {
+        busy = false; $('motion-robot').disabled = false; $('motion-refresh').disabled = false;
+      }
+    }
+  });
+  return {load, reset() {
+    generation += 1; busy = false;
+    $('motion-robot').replaceChildren(); $('motion-robot').disabled = true;
+    $('motion-fields').disabled = true; $('motion-refresh').disabled = false;
+    $('motion-gestures').checked = false; $('motion-wobble').checked = false;
+    $('motion-status').textContent = '';
+  }};
+}
