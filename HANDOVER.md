@@ -7,6 +7,13 @@ acceptance. This file holds only session continuation details.
 
 ## Current work
 
+[Phase 24f](docs/phase-24f.md) now has a draft plan for motion conformance,
+startup home and conversational animation, linked from the roadmap. No motion
+code, deployment or physical checks were performed in this planning session.
+Next for 24f: pin daemon/SDK/Testbench versions and resolve home targets and
+real cancellation support. Proposed timing budgets and unattended-home policy
+need settling before physical rollout; 24e work below remains outstanding.
+
 Branch `main`. [Phase 24e](docs/phase-24e.md) item 1 (adaptive end of turn)
 is committed in `6f292be`. This session added item 2's deterministic part:
 search-rule fixes in `companion_core/websearch/policy.py` (closings,

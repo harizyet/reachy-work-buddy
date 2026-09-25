@@ -9,7 +9,10 @@ when the [24e conversation-path prerequisites](phase-24e.md#prerequisites-for-ph
 pass, including adaptive end of turn and physical privacy/auth/cancellation,
 expiry, recovery and sustained-use acceptance, with Normal conversation and
 Timing rerun after the changes. BLOCKED or deferred prerequisites do not
-satisfy this gate. Answer quality, search/STT tuning and Nano diagnostics are
+satisfy this gate. If Phase 24f motion is enabled on the recognition stack, its
+[conformance and coexistence dependency](phase-24f.md#order-and-dependencies)
+also applies; expressive animation is not itself a Phase 25 start prerequisite.
+Answer quality, search/STT tuning and Nano diagnostics are
 not prerequisites. It also builds on the Phase 22 physical deployment substrate and the
 existing Phase 19 owner login and Phase 20 web-chat session infrastructure. Phase 23
 Google integration is not a prerequisite; its read-only adapters are only
