@@ -246,7 +246,14 @@ def with_sdk(fn) -> None:
     try:
         fn(mini)
     finally:
-        mini.client.disconnect()
+        # In 1.8.4 a no_media client releases the daemon's camera and audio
+        # on connect and does not give them back on disconnect. Reacquire,
+        # or the camera socket stays gone and reachy-embodiment cannot start.
+        try:
+            mini.acquire_media()
+        finally:
+            mini.client.disconnect()
+        print(json.dumps({"media_status_after_sdk": http("GET", "/media/status")[1]}))
 
 
 def run_axes(path: str) -> None:
@@ -621,7 +628,15 @@ def main() -> int:
     elif name == "home":
         rest_home()
         record("home", {"antennas": HOME_ANTENNAS, "body_yaw": 0.0}, state())
-    print(json.dumps({"case_done": name, "daemon": daemon_errors()}))
+    print(
+        json.dumps(
+            {
+                "case_done": name,
+                "daemon": daemon_errors(),
+                "media": http("GET", "/media/status")[1],
+            }
+        )
+    )
     return 0
 
 
