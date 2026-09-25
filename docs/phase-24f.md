@@ -1,8 +1,9 @@
 # Phase 24f — Motion conformance and conversational embodiment
 
-Status: **in progress; physical rows blocked on a suspected mechanical
-fault** (2026-09-25). Item 1 is measured: REST and SDK agree, but the robot
-misses commanded poses on both paths
+Status: **in progress; physical rows waiting on a camera-measured
+Testbench check** (2026-09-25). Item 1 is measured: REST and SDK agree.
+The robot stops 2–5° short of commanded poses on both paths, and whether that is normal for the stock
+proportional-only gains or a fault is open
 ([conformance record](verification/phase-24f-conformance-2026-09-25.md)).
 Item 3's motion owner is implemented behind two off-by-default switches
 ([ADR 0003 amendment](adr/0003-embodiment-command-api.md#phase-24f-motion-ownership-amendment-2026-09-25)).

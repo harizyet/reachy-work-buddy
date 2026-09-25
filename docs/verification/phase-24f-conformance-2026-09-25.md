@@ -141,25 +141,53 @@ are so small it's not really visually noticable".
   so this is a one-directional limit (load, friction, torque or supply),
   not one failed motor. Which physical direction "growing" is has not been
   checked.
-- **The head is not following the motors.** The encoders report a 16°
-  yaw that the owner did not see, with motor noise. The joints stop short
-  without settling, and the result depends on the direction of approach.
-  Together this points to a mechanical fault between the motors and the
-  head, such as horn slip, loose screws, a slack rod or ball joint, or a
-  detached head shell, or to binding. It has not been inspected. It would
-  also be consistent with 24d's `stewart_5` heat and drift. A supply that
-  can't deliver enough current would also fit the direction-dependent
-  limit and the unexplained 02:38Z power loss, but it has not been
-  measured.
-- **Testbench discrepancy.** This contradicts the owner's earlier report of
-  successful Testbench rotations, since the Testbench uses the same SDK
-  path. When and on which boot that run happened is not recorded.
+- **The stock controller predicts a shortfall like this.** 1.8.4's
+  `hardware_config.yaml` runs every stewart motor in position mode with
+  PID `300, 0, 0`: proportional only, no integral term. Under a steady
+  load such as the head's weight, a proportional-only loop settles where
+  the load balances P × error, so it stops short in the direction that
+  lifts the load. It doesn't creep, and the approach direction matters.
+  That matches the direction-dependent shortfall above. How large the
+  error is on a healthy Reachy Mini has not been measured here.
+- **The Testbench would not have caught this.** The pinned Testbench
+  (`480b0cc`) warns on motor positions only beyond 5° and errors beyond
+  15°. Its rotation test rolls the head by a large angle (90° requested;
+  the SDK clamps roll to ±40°), measures the real rotation from camera
+  images before and after, and passes if the error is under 15°. The
+  largest joint shortfall here, 0.08 rad (4.6°), passes both checks. So
+  the owner's earlier successful Testbench run, on an earlier day, fits
+  these numbers.
+- **Still unexplained.** The owner saw no head motion for an
+  encoder-reported 16° yaw, while hearing the motors. A mechanical fault
+  (horn slip, a slack rod or ball joint, a loose head shell) or an
+  insufficient supply are still possible, and 24d's `stewart_5` heat is
+  still unexplained. Neither has been inspected or measured. The
+  Testbench's camera-based rotation test measures actual head motion,
+  independently of the encoders, so it can separate these possibilities.
+- **The command method matches Pollen's.** No raw motor values were sent:
+  both paths sent Cartesian head poses to the daemon's IK, as the
+  Testbench does (`goto_target`). Pollen's conversation app
+  (`reachy_mini_conversation_app` `b9f58a3`, which requires
+  `reachy-mini>=1.10`) streams `set_target` at 60–100 Hz from one loop and
+  uses `goto_target` only to reset to neutral. Between 1.8.4 and 1.11.0,
+  nothing changed in the motor control, kinematics, gains or
+  motor-controller dependency, so upgrading would not change this path.
+  The `stream-sdk` case reproduces the app's method.
 
-Result: the item 1 conformance rows are **BLOCKED on hardware**. The
-command paths conform. The robot does not reach commanded poses within
-tolerance on either path, and the owner could not see the motion. Motion
-work that depends on accurate poses stays disabled until the mechanism is
-inspected. Repair is outside Phase 24f.
+Result: item 1's command-path question is answered. REST, the SDK and
+the Testbench send the same targets. Whether the physical shortfall is
+normal for this robot or a fault is **open**. The predeclared 0.05 rad
+tolerance was stricter than anything Pollen checks, and was not based
+on a measured healthy robot. Next, with the owner present:
+
+1. Run the official Testbench rotation test (camera-measured), with
+   `motion-conformance.py --log 60` recording encoders alongside.
+2. Run `stream-sdk`, which uses the conversation app's streaming method,
+   for comparison with `axes-*`.
+3. Inspect the mechanism and supply if the camera measurement disagrees
+   with the encoders.
+
+The motion switches stay off until then. Repair is outside Phase 24f.
 
 ### SDK media side effect
 

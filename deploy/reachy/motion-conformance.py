@@ -65,6 +65,7 @@ CASES = {
     "failure-rest": "No motion expected: goto with interpolation 'bogus', unknown recorded move, stop of unknown UUID",
     "visible-rest": "Calibration: REST yaw +0.3 rad over 2 s and back to ZERO over 2 s, with late reads",
     "visible-sdk": "Calibration: SDK, same as visible-rest",
+    "stream-sdk": "Pollen conversation-app method: 60 Hz SDK set_target stream, min-jerk ramp to yaw ±0.15 over 1 s, held while streaming",
     "home": "REST goto IDLE_HOME (identity, antennas [-0.1745, 0.1745], body yaw 0), 1.5 s",
 }
 
@@ -342,6 +343,69 @@ def run_visible(path: str) -> None:
     summarize(rows, fails)
 
 
+def run_stream() -> None:
+    """How Pollen's conversation app drives the head: one loop calling
+    set_target every tick, never goto, with the target held by continued
+    streaming. Same yaw targets as the axes cases, for comparison."""
+    import numpy as np
+    from scipy.spatial.transform import Rotation as R
+
+    rows, fails = [], []
+    period = 1.0 / 60.0
+
+    def head(yaw: float):
+        m = np.eye(4)
+        m[:3, :3] = R.from_euler("xyz", [0.0, 0.0, yaw]).as_matrix()
+        return m
+
+    def stream(
+        mini, start: float, end: float, ramp_s: float = MOVE_S, hold_s: float = SETTLE_S
+    ) -> None:
+        t0 = time.monotonic()
+        while True:
+            t = time.monotonic() - t0
+            if t >= ramp_s + hold_s:
+                return
+            s = min(t / ramp_s, 1.0)
+            s = s * s * s * (10 - 15 * s + 6 * s * s)  # min-jerk
+            mini.set_target(
+                head=head(start + (end - start) * s), antennas=[0.0, 0.0], body_yaw=0.0
+            )
+            time.sleep(max(0.0, period - ((time.monotonic() - t0) - t)))
+
+    def body(mini):
+        sdk_goto(mini, antennas=[0.0, 0.0], body_yaw=0.0)
+        base = state()
+        rows.append(record("zero", {**ZERO, "ik_joints": ik_joints()}, base))
+        current = 0.0
+        for yaw in (0.15, 0.0, -0.15, 0.0):
+            stream(mini, current, yaw)
+            current = yaw
+            requested = {
+                "roll": 0.0,
+                "pitch": 0.0,
+                "yaw": yaw,
+                "ik_joints": ik_joints(yaw=yaw),
+            }
+            measured = state()  # read while the target is still being held
+            rows.append(record(f"stream yaw {yaw:+}", requested, measured))
+            fails.extend(
+                f"stream yaw {yaw:+}: {f}" for f in check_abs(requested, measured)
+            )
+
+    with_sdk(body)
+    summarize(rows, fails)
+
+
+def run_log(seconds: float) -> None:
+    """Read-only: samples pose and encoder joints at 5 Hz. Sends nothing, so
+    it can run beside the official Testbench to log a known-working method."""
+    end = time.monotonic() + seconds
+    while time.monotonic() < end:
+        print(json.dumps({"log": state()}))
+        time.sleep(0.2)
+
+
 def run_antennas(path: str) -> None:
     rows, fails = [], []
 
@@ -571,9 +635,18 @@ def main() -> int:
         default=8000,
         help="daemon port (another port for a mockup-sim check)",
     )
+    parser.add_argument(
+        "--log",
+        type=float,
+        metavar="SECONDS",
+        help="read-only: log pose and joints at 5 Hz for SECONDS (no motion)",
+    )
     args = parser.parse_args()
     global PORT, BASE
     PORT, BASE = args.port, f"http://127.0.0.1:{args.port}/api"
+    if args.log is not None:
+        run_log(args.log)
+        return 0
     if args.run is None:
         print("Plan only; nothing was sent. Cases:")
         for name, desc in CASES.items():
@@ -611,6 +684,8 @@ def main() -> int:
         run_axes(name.split("-")[1])
     elif name.startswith("visible-"):
         run_visible(name.split("-")[1])
+    elif name == "stream-sdk":
+        run_stream()
     elif name.startswith("antennas-"):
         run_antennas(name.split("-")[1])
     elif name.startswith("bodyyaw-"):

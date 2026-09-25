@@ -7,20 +7,34 @@ acceptance. This file holds only session continuation details.
 
 ## Current work
 
-[Phase 24f](docs/phase-24f.md) is in progress and blocked on hardware.
+[Phase 24f](docs/phase-24f.md) is in progress. Its physical rows are
+waiting on a camera-measured Testbench check.
 This session worked with the Nano-side session, with the owner at the
 robot. The [conformance record](docs/verification/phase-24f-conformance-2026-09-25.md)
 has the versions: daemon and SDK 1.8.4, hardware id `43c05f5047e8dcfe`.
 REST and the SDK (Testbench) path command the same poses (≤0.005 rad),
-but the robot misses them on both. Several motors stop about 3° short
-without settling. For an encoder-reported 16° yaw, the owner saw no head
-motion and heard the motors. A mechanical fault between the motors and the
-head is suspected but not inspected. Repair is outside 24f. Stopped
-advice: park with the owner-approved standby before any hands-on check.
-Don't run further motion cases until the owner has inspected it. The
-remaining conformance cases (antennas, body yaw, interp, cancel, recorded,
-preempt, visible-sdk) were not run. The Nano session was still sending the
-second round's full jsonl.
+but the robot stops 2–5° short on both. Joints fall short only when
+their angle has to grow in magnitude, and don't settle further. For an
+encoder-reported 16° yaw, the owner saw no head motion and heard the
+motors. After the owner questioned the method, Pollen's sources were
+checked. The stock stewart gains are proportional-only (PID 300/0/0),
+which predicts this one-directional shortfall. The pinned Testbench
+tolerates 5–15°, which explains its earlier pass. Pollen's conversation
+app streams `set_target` rather than using goto, but the path is the same
+from 1.8.4 to 1.11.0. So normal versus fault is open.
+
+Next, with the owner present:
+- Run the official Testbench rotation test, which measures the rotation
+  from camera images, alongside `motion-conformance.py --log 60`.
+- Run `--run stream-sdk`, the conversation app's streaming method.
+- Only if the camera measurement disagrees with the encoders, inspect the
+  mechanism and supply.
+
+The Nano was parked in standby by the owner at 09:55:39Z, and
+`reachy-embodiment` is stopped. To resume: `POST /api/daemon/start`
+(wake-up motion, owner present), then start the unit. Not yet run:
+antennas, body yaw, interp, cancel, recorded, preempt and visible-sdk.
+Raw logs are in the Nano's `~/24f-logs`.
 
 The motion owner (`reachy_embodiment/motion.py`, `4f43817`) is implemented,
 with its [ADR 0003 amendment](docs/adr/0003-embodiment-command-api.md#phase-24f-motion-ownership-amendment-2026-09-25):

@@ -135,7 +135,7 @@ These are dated evidence, not startup instructions or current health checks.
 
 - [Phase 24f motion conformance](verification/phase-24f-conformance-2026-09-25.md):
   Nano versions, predeclared tolerances, supervised REST vs SDK run; paths
-  agree, robot misses commanded poses on both; blocked on hardware.
+  agree; robot stops 2–5° short on both, normal vs fault still open.
 
 - [Phase 24b command authorization](verification/phase-24b-command-authorization-2026-09-24.md):
   isolated-fixture checks for the retired substring matcher's replacement
