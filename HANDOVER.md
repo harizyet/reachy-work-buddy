@@ -37,7 +37,8 @@ To close 24d, in order:
 3. **Formal run.** Attempt 1 (2026-09-25) failed the non-search budget on
    uncapped model replies. Voice replies are now capped (`4035e50`,
    `f353b90`, deployed on the homelab). Two of three context checks passed;
-   Zephyr and Session B (search) are still owed. `stewart_5`
+   Attempt 2: Session B (search) passes, 6.9–13.1 s against the 20 s budget; the Nano
+   rebooted mid-session (cause open); the Session A rerun (with Zephyr) is still owed. `stewart_5`
    reported Overheating Error during the run and the head drifted with no
    move command. Motors were disabled at 02:26Z. **Owner decision
    (2026-09-25): set motors aside for 24d.** The rerun proceeds with motors

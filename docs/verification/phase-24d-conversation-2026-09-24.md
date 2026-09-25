@@ -450,6 +450,45 @@ Clearing it needs a motor reboot or power cycle, which is the owner's call. This
 work is paused until the owner has inspected `stewart_5`**, and the formal
 run must be repeated: all three context checks, plus Session B.
 
+## Formal run, attempt 2 (2026-09-25): Session B passes; Nano rebooted
+
+The owner set the motor issue aside for 24d and will check the motors after
+the test. Motors were left disabled, and later re-enabled by the boot
+wake-up.
+
+**Session `GF2V…` (02:37:13Z).** Turn 1 was classified `work-private` and
+routed reachy → web (audit `overridden: true`). The speaker correctly
+withheld it; the reply came 18.33 s after the cut. Turn 2 (a weather
+search) completed on the hub at 02:38:04Z but never played: **the Nano
+rebooted at 02:38:20Z**, cause not yet known. After the reboot:
+- The boot wake-up succeeded. The recovery unit was active with no entries.
+- The unit order and the socket were correct.
+- `nano-1` re-registered with the hub.
+- Servo error lines stopped (power cycle).
+
+Journal lines from before NTP sync carry stale times (a boot shown as
+"Sat Jan 1"), so **the Nano's RTC does not keep time across boots**. That
+explains the earlier journal-clock skew.
+
+**Session `DUxu…` = Session B (02:39:57–02:42:07Z).** All four turns ran a
+web search (Exa/Brave/Tavily, 0.7–2.1 s). The first turn searched only
+because follow-up search merged the previous question into its query (24a
+scope). Replies were 38/50/26/27 words, so the cap applied. At Piper's pace
+of about 2.4 words/s, that is 9–21 s of audio.
+
+| Turn | Cut (s) | Hub replied after cut (s) | Reply audio (s) | STT / LLM / TTS (ms) |
+|---|---|---|---|---|
+| 1 | 1.82 | 8.87 | 12.62 | 379 / 7480 / 408 |
+| 2 | 2.56 | 6.20 | 20.71 | 411 / 4395 / 651 |
+| 3 | 2.88 | 11.26 | 10.14 | 390 / 10055 / 333 |
+| 4 | 3.68 | 12.34 | 8.71 | 408 / 11169 / 319 |
+
+Every search turn reached first audio within 13.1 s of the utterance end
+(hub reply + 0.7 s VAD tail), under the 20 s budget, and search, reply and
+playback completed each time. **The search-turn workflow and budget pass.**
+Turn 4's reply misused its results; that is 24a scope. The Session A
+rerun (12 deterministic turns) is still owed.
+
 ## Latency budget (agreed before any timed turn)
 
 Utterance end → first audible reply, over the live turns:
@@ -498,4 +537,4 @@ and a Nano cold-reboot recovery check after the boot-race fix.
 | Stop and expiry | PARTIAL | Stop during playback: 32 ms and 36 ms from stop receipt to daemon `stop_sound` (the robot-side stop marker came from `1a66f01`). Capture and inference cancellation, logout and expiry not yet run |
 | Recovery | PARTIAL | An unplanned WS drop (tailnet stall) ended the session cleanly, with no auto-reactivation and re-registration in 8 s. Hub restarts were recovered by reconnect. The Nano reboot exposed the camera-socket boot race: fix installed on the Nano 2026-09-25 and a live recovery passed ([details](#boot-race-fix-on-the-nano-2026-09-25)); cold reboot and daemon restart pass for the race and container lifecycle, but the head does not reach home, `stewart_5` lags and a mapped nod produced IK errors ([details](#boot-race-fix-on-the-nano-2026-09-25)). The owner found the robot physically fine: finding closed, `stewart_5` on watch. Once-per-boot auto-restart on `state: error` approved, installed on the Nano (restart path fake-tested only) |
 | Coexistence and sustained use | PARTIAL | Step 3 coexistence PASS. The 30-minute session is not yet run |
-| Timing and quality | FAIL (attempt 1) | Budgets agreed: non-search p50 ≤ 4 s, p95 ≤ 8 s; each search-assisted turn ≤ 20 s. Attempt 1 failed (p50 5.2 s, p95 ≈ 11 s from the cut) on uncapped replies; fixed in `4035e50`/`f353b90`, rerun pending. Preliminary timings above; the formal run is pending |
+| Timing and quality | FAIL (attempt 1) | Budgets agreed: non-search p50 ≤ 4 s, p95 ≤ 8 s; each search-assisted turn ≤ 20 s. Attempt 1 failed (p50 5.2 s, p95 ≈ 11 s from the cut) on uncapped replies; fixed in `4035e50`/`f353b90`. Attempt 2: the search turns pass (6.9–13.1 s, budget 20 s); the non-search rerun is pending. Preliminary timings above; the formal run is pending |
