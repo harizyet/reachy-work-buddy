@@ -36,6 +36,7 @@ def make(**kwargs) -> tuple[MotionController, FakeBackend, ServiceState]:
     backend = FakeBackend()
     state = ServiceState()
     kwargs.setdefault("threaded", False)
+    kwargs.setdefault("home_settle_seconds", 0.0)
     return MotionController(backend, state, **kwargs), backend, state
 
 
@@ -71,18 +72,61 @@ def test_gestures_once_per_turn_and_state() -> None:
 
     ctl.conversation_state(token, 1, LISTENING)
     assert step(ctl, backend) == [("play", Behaviour.LISTENING)]
+    # A gesture leaves the head at its own end pose, so the next one
+    # starts from home rather than jumping to its first frame.
     ctl.conversation_state(token, 1, THINKING)
-    assert step(ctl, backend) == [("play", Behaviour.THINKING)]
-    # Held segment: back to listening in the same turn stops thinking
+    assert step(ctl, backend) == [("home",), ("play", Behaviour.THINKING)]
+    # Held segment: back to listening in the same turn returns home
     # without replaying the listening gesture.
     ctl.conversation_state(token, 1, LISTENING)
-    assert step(ctl, backend) == [("stop",)]
+    assert step(ctl, backend) == [("home",)]
     ctl.conversation_state(token, 1, THINKING)
-    assert step(ctl, backend) == [("stop",)]
+    assert step(ctl, backend) == [("stop",)]  # already home
     ctl.conversation_state(token, 1, SPEAKING)
     assert step(ctl, backend) == [("stop",)]
     ctl.conversation_state(token, 2, LISTENING)
     assert step(ctl, backend) == [("play", Behaviour.LISTENING)]
+
+
+def test_speaking_after_a_gesture_returns_home_before_wobble() -> None:
+    ctl, backend, _ = make(conversation_motion=True, speech_wobble=True)
+    token = ctl.begin_conversation()
+    ctl.run_pending()
+    ctl.conversation_state(token, 1, THINKING)
+    ctl.run_pending()
+    ctl.conversation_state(token, 1, SPEAKING)
+    assert step(ctl, backend) == [("home",), ("wobble", True)]
+
+
+def test_conversation_start_after_an_explicit_behaviour_returns_home() -> None:
+    ctl, backend, _ = make(conversation_motion=True)
+    ctl.request_behaviour(Behaviour.GREETING, {})
+    ctl.begin_conversation()
+    assert step(ctl, backend) == [("home",)]
+
+
+def test_stop_during_the_return_home_cancels_the_next_gesture() -> None:
+    backend = FakeBackend()
+    ctl = MotionController(
+        backend, ServiceState(), conversation_motion=True, threaded=True, home_settle_seconds=5.0
+    )
+    try:
+        token = ctl.begin_conversation()
+        ctl.conversation_state(token, 1, LISTENING)
+        deadline = threading.Event()
+        while ("play", Behaviour.LISTENING) not in backend.calls and not deadline.wait(0.01):
+            pass
+        ctl.conversation_state(token, 1, THINKING)  # worker goes home, then waits
+        while backend.calls.count(("home",)) < 1 and not deadline.wait(0.01):
+            pass
+        stopper = threading.Thread(target=ctl.stop)
+        stopper.start()
+        stopper.join(2.0)
+        assert not stopper.is_alive()  # the wait ended at once, not after 5 s
+        assert ("play", Behaviour.THINKING) not in backend.calls
+        assert backend.calls[-1] == ("stop",)
+    finally:
+        ctl.close()
 
 
 def test_repeated_state_report_does_not_restart() -> None:
@@ -122,14 +166,16 @@ def test_normal_end_returns_home_once_and_stop_end_holds() -> None:
     ctl.conversation_state(token, 1, THINKING)
     ctl.run_pending()
     ctl.end_conversation(token, completed=True)
-    assert step(ctl, backend) == [("stop",), ("home",)]
+    assert step(ctl, backend) == [("home",)]
     ctl.end_conversation(token, completed=True)
     assert step(ctl, backend) == []
 
     token = ctl.begin_conversation()
     ctl.run_pending()
+    ctl.conversation_state(token, 1, THINKING)
+    ctl.run_pending()
     ctl.end_conversation(token, completed=False)
-    assert step(ctl, backend) == [("stop",)]
+    assert step(ctl, backend) == [("stop",)]  # a stopped conversation holds its pose
 
 
 def test_new_conversation_drops_a_pending_return_home() -> None:
@@ -145,7 +191,7 @@ def test_idle_yields_to_pending_return_home() -> None:
     token = ctl.begin_conversation()
     ctl.end_conversation(token, completed=True)
     assert ctl.request_behaviour(Behaviour.IDLE_BREATHING, {}, idle=True) is False
-    assert step(ctl, backend) == [("stop",), ("home",)]
+    assert step(ctl, backend) == [("home",)]
 
 
 def test_explicit_behaviour_cancels_a_pending_return_home() -> None:

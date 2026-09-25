@@ -13,6 +13,14 @@ turns collapse into one command. Each transition fully describes the
 motion wanted (gesture or none, speech wobble on or off), which is what
 makes dropping the superseded ones safe.
 
+A recorded gesture ends at its own final pose, and reachy-mini 1.8.4
+starts the next one from its first frame with no blend (24f conformance
+record). So while the head is away from home after a gesture, a
+conversation transition first returns it home: before the next gesture,
+or instead of a plain stop when no gesture follows (speech wobble then
+moves around home). Stop, standby, errors and a stopped conversation
+still only stop and hold, with no return home.
+
 Both switches are off by default. With both off, ownership is not taken
 and every path behaves as before 24f.
 """
@@ -36,6 +44,10 @@ _CONVERSATION_GESTURES: dict[EmbodimentState, Behaviour] = {
     EmbodimentState.THINKING: Behaviour.THINKING,
 }
 
+# How long a return home is given before the next gesture starts: the
+# backend's home goto takes 1.0 s.
+HOME_SETTLE_SECONDS = 1.2
+
 
 class MotionBackend(Protocol):
     def play_behaviour(self, name: Behaviour, parameters: dict[str, str]) -> None: ...
@@ -56,6 +68,7 @@ class MotionController:
         conversation_motion: bool = False,
         speech_wobble: bool = False,
         threaded: bool = True,
+        home_settle_seconds: float = HOME_SETTLE_SECONDS,
     ) -> None:
         """`threaded=False` runs no worker; the caller drives it with
         `run_pending()` (deterministic tests)."""
@@ -77,6 +90,12 @@ class MotionController:
         self._closed = False
         self._threaded = threaded
         self._worker: threading.Thread | None = None
+        self._home_settle_seconds = home_settle_seconds
+        # True after a recorded move left the head at its own end pose;
+        # cleared by a return home. Only touched with `_dispatch_lock` held.
+        self._away_from_home = False
+        # Generation of the transition the worker is running.
+        self._running_generation = 0
 
     @property
     def enabled(self) -> bool:
@@ -97,7 +116,7 @@ class MotionController:
             self._gestured.clear()
         if self.enabled:
             # A move started before the conversation must not keep playing.
-            self._submit(token, lambda: self._apply(None, wobble=False))
+            self._submit(token, lambda: self._transition(None, wobble=False))
         return token
 
     def conversation_state(self, token: int, turn: int, state: EmbodimentState) -> None:
@@ -116,7 +135,7 @@ class MotionController:
                 self._gestured.add((turn, state))
                 gesture = _CONVERSATION_GESTURES[state]
             wobble = self._speech_wobble and state == EmbodimentState.SPEAKING
-            self._submit_locked(lambda: self._apply(gesture, wobble=wobble))
+            self._submit_locked(lambda: self._transition(gesture, wobble=wobble))
 
     def end_conversation(self, token: int, *, completed: bool) -> None:
         """`completed` is a normal end (session limit reached). A stop,
@@ -129,7 +148,7 @@ class MotionController:
             if not self.enabled:
                 return
             home = completed and self._conversation_motion and not self._state.remote_active
-            self._submit_locked(lambda: self._apply(None, wobble=False, home=home))
+            self._submit_locked(lambda: self._end(home=home))
 
     def request_behaviour(self, behaviour: Behaviour, parameters: dict[str, str], *, idle: bool = False) -> bool:
         """Explicit or idle motion. Returns False when rejected because a
@@ -143,8 +162,10 @@ class MotionController:
             if not idle:
                 self._generation += 1
                 self._pending = None
+                self._lock.notify_all()
         with self._dispatch_lock:
             self._backend.play_behaviour(behaviour, parameters)
+            self._away_from_home = True
         return True
 
     def stop(self) -> None:
@@ -155,6 +176,7 @@ class MotionController:
             self._pending = None
             self._conversation = None
             self._last_state = None
+            self._lock.notify_all()  # ends a worker's wait for a return home
         with self._dispatch_lock:
             self._backend.stop_motion()
             self._set_wobble(False, force=True)
@@ -203,24 +225,52 @@ class MotionController:
             with self._lock:
                 if generation != self._generation:
                     return True  # superseded or stopped while waiting
+                self._running_generation = generation
             try:
                 action()
             except Exception:
                 log.exception("conversation motion failed")
         return True
 
-    def _apply(self, gesture: Behaviour | None, *, wobble: bool, home: bool = False) -> None:
-        """Runs on the worker with `_dispatch_lock` held."""
+    def _transition(self, gesture: Behaviour | None, *, wobble: bool) -> None:
+        """A conversation state change. Runs on the worker with
+        `_dispatch_lock` held."""
         if not wobble:
             self._set_wobble(False)
         if gesture is not None:
+            if self._away_from_home:
+                self._go_home()
+                if self._superseded_within(self._home_settle_seconds):
+                    return  # a newer transition or a stop took over
             self._backend.play_behaviour(gesture, {})  # preempts our previous move
+            self._away_from_home = True
+        elif self._away_from_home and self._conversation_motion:
+            self._go_home()
         else:
             self._backend.stop_motion()
         if wobble:
             self._set_wobble(True)
+
+    def _end(self, *, home: bool) -> None:
+        """The conversation ended: one return home after a normal end,
+        otherwise stop and hold."""
+        self._set_wobble(False)
         if home:
-            self._backend.goto_home()
+            self._go_home()
+        else:
+            self._backend.stop_motion()
+
+    def _go_home(self) -> None:
+        self._backend.goto_home()  # stops our previous move first
+        self._away_from_home = False
+
+    def _superseded_within(self, seconds: float) -> bool:
+        """Waits up to `seconds`; True as soon as a newer transition, a
+        stop or close makes the running one stale."""
+        with self._lock:
+            return self._lock.wait_for(
+                lambda: self._generation != self._running_generation or self._closed, timeout=seconds
+            )
 
     def _set_wobble(self, enabled: bool, *, force: bool = False) -> None:
         # With the switch off we never enable it, so there is nothing to undo.

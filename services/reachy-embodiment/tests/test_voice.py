@@ -342,7 +342,9 @@ class Robot:
         self.state = ServiceState(connected=True, sim=True)
         self.motion = None
         if motion_backend is not None:
-            self.motion = MotionController(motion_backend, self.state, conversation_motion=True, speech_wobble=True)
+            self.motion = MotionController(
+                motion_backend, self.state, conversation_motion=True, speech_wobble=True, home_settle_seconds=0.0
+            )
         self.voice = VoiceConversation(
             lambda: mic,
             lambda limits: EnergyVAD(),
@@ -1081,11 +1083,14 @@ def test_conversation_drives_motion_and_a_stop_holds_without_going_home() -> Non
         # The conversation owns motion: an explicit behaviour is refused.
         assert robot.motion.request_behaviour(Behaviour.GREETING, {}) is False
 
+        # Thinking started from home, since listening left the head away.
+        assert motion.calls.index(("home",)) < motion.calls.index(("play", Behaviour.THINKING))
+        homes = motion.calls.count(("home",))
         await owner(hub, "POST", "/robot-voice/stop", json={"voice_session_id": start["voice_session_id"]})
         assert player.stopped == 1
         await wait_until(lambda: motion.calls[-2:] == [("wobble", False), ("stop",)])
         await asyncio.sleep(0.2)
-        assert ("home",) not in motion.calls
+        assert motion.calls.count(("home",)) == homes  # a stop holds; no return home
         assert not robot.motion.conversation_owns_motion
         await robot.voice.aclose()
         robot.motion.close()

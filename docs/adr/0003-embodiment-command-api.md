@@ -66,6 +66,14 @@ keep their roles. No transcript or LLM output selects a gesture.
   move, and has no other safe lifecycle boundary to key one to. This means
   no motion is added beyond the existing unattended-start exception.
 
+- **Between gestures** (added after the 24f conformance run): a recorded
+  gesture ends at its own final pose, and 1.8.4 starts the next recorded
+  move from its first frame without a blend. So while a gesture has left
+  the head away from home, the next transition first returns home. Before
+  a new gesture, it allows 1.2 s for that; a newer transition or a stop
+  during the wait cancels the gesture. When no gesture follows, the
+  return home replaces the plain stop. Stops still hold.
+
 Speaking uses daemon wobble, not a recorded move. It is a daemon-wide
 setting, so it is enabled only during playback and disabled on every other
 transition and on stop.
