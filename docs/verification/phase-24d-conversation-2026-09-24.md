@@ -388,6 +388,64 @@ installed, enabled and active. The restart and second-error paths remain
 fake-tested only: `state: error` cannot be forced, so the first real proof
 will be a boot where the wake-up fails.
 
+## Formal run, attempt 1 (2026-09-25): budget failed, `stewart_5` overheat
+
+**Session A** (`4PQh…`, 02:20:08–02:25:02Z, started and stopped from the
+UI). 11 spoken turns and no manual per-turn steps. The embodiment logged no
+errors, dropped turns or `no_speech`. The web-search log shows no searches,
+so every turn counts as non-search. The script was not fully followed: the
+hub records show the Zephyr statement and question were never spoken. Two
+deterministic context checks were answered correctly (code word; blocks,
+"total of 5"), so **the third check is still owed**. The owner reported
+every reply intelligible. They also described off-topic content ("Python
+code" for the code word, a blocks tangent); answer quality is out of 24d
+scope.
+
+| Turn | Cut (s) | Hub replied after cut (s) | Reply audio (s) | STT / LLM / TTS (ms) |
+|---|---|---|---|---|
+| 1 | 2.27 | 3.51 | 2.44 | 382 / 2854 / 90 |
+| 2 | 1.22 | 1.07 | 1.92 | 369 / 374 / 77 |
+| 3 | 2.66 | 1.38 | 3.89 | 379 / 593 / 142 |
+| 4 | 2.75 | 10.47 | 59.34 | 389 / 6069 / 1923 |
+| 5 | 4.10 | 10.91 | 39.01 | 419 / 8035 / 1143 |
+| 6 | 2.43 | 4.81 | 1.56 | 383 / 4152 / 52 |
+| 7 | 2.75 | 5.22 | 5.12 | 387 / 4333 / 173 |
+| 8 | 3.74 | 5.31 | 7.07 | 411 / 4367 / 224 |
+| 9 | 4.29 | 5.16 | 6.20 | 419 / 4146 / 183 |
+| 10 | 1.70 | 4.53 | 3.67 | 381 / 3786 / 130 |
+| 11 | 3.62 | 11.16 | 47.60 (stopped) | 396 / 7816 / 1516 |
+
+The "hub replied" column is measured from the cut. It has p50 5.16 s and
+p95 ≈ 11 s, before adding the 0.7 s VAD tail, so the **non-search budget
+fails**. Cause: on turns 4, 5 and 11 the local model ignored the spoken
+1–3-sentence instruction (121–162 words, markdown). Those long replies then
+stayed in the history and slowed the later short turns (LLM about 4 s,
+against 0.4–0.6 s for turns 2–3).
+
+**Fix (`4035e50`, `f353b90`).** Voice turns send `max_tokens=100`, and core
+drops a trailing partial sentence (not counting a numbered-list marker)
+before the reply is recorded, so generation, speech and history are all
+bounded. Typed turns are unchanged. Checked directly against live OVMS: a
+long request fell from 9.94 s / 311 words to 2.33 s / 80 words
+(`finish_reason: length`). After a redeploy, eight voice turns through the
+live core, the deterministic script included, took 0.31–2.49 s. The
+longest reply was 61 words, all three context answers were correct, and
+every reply ended on a whole sentence. This was a core-only check: robot
+playback of the capped replies is not yet measured.
+
+**`stewart_5` overheat.** The daemon logged `Motor 'stewart_5' hardware
+errors: ['Overheating Error']` about once a second from 02:20:08Z, the
+moment Session A started. Between 02:07 and 02:26 the head drifted (yaw
+−0.229 → −0.414, pitch 0.12 → 0.22) with no move command found in the
+embodiment or daemon access logs. `stewart_5` was again the outlier joint.
+At 02:26:29Z the owner chose torque off
+(`/api/motors/set_mode/disabled`). The head stayed where it was, within
+0.06 rad per joint, which points to friction or binding rather than sag.
+The flag was still reported 3 min later; it may be the servo's latched
+error status. This reverses the earlier "physically fine" reading. **Robot
+work is paused until the owner has inspected `stewart_5`**, and the formal
+run must be repeated: all three context checks, plus Session B.
+
 ## Latency budget (agreed before any timed turn)
 
 Utterance end → first audible reply, over the live turns:
@@ -428,7 +486,7 @@ and a Nano cold-reboot recovery check after the boot-race fix.
 
 | Scenario | Result | Evidence |
 |---|---|---|
-| Normal conversation | OPEN | Live spoken turns work end to end. No ≥10-turn deterministic run yet. Search answer accuracy is tracked in 24a, not here |
+| Normal conversation | OPEN | Attempt 1: 11 consecutive spoken turns, UI start and stop, no manual steps, all intelligible; two of three context checks run and correct. Must be repeated after the reply cap and the `stewart_5` fix ([attempt 1](#formal-run-attempt-1-2026-09-25-budget-failed-stewart_5-overheat)) |
 | Turn handling | OPEN | Short and long utterances and a `no_speech` segment were handled; no self-hearing seen. Silence, noise and echo not yet exercised deliberately |
 | Session continuity | OPEN | Not yet exercised on the robot (the web handoff was only in the 24c simulated run) |
 | Privacy | OPEN | Live withholding observed (routing to web). Carry-over fix `c65c9cd`. Modes, DND and private call not yet exercised on the robot |
@@ -436,4 +494,4 @@ and a Nano cold-reboot recovery check after the boot-race fix.
 | Stop and expiry | PARTIAL | Stop during playback: 32 ms and 36 ms from stop receipt to daemon `stop_sound` (the robot-side stop marker came from `1a66f01`). Capture and inference cancellation, logout and expiry not yet run |
 | Recovery | PARTIAL | An unplanned WS drop (tailnet stall) ended the session cleanly, with no auto-reactivation and re-registration in 8 s. Hub restarts were recovered by reconnect. The Nano reboot exposed the camera-socket boot race: fix installed on the Nano 2026-09-25 and a live recovery passed ([details](#boot-race-fix-on-the-nano-2026-09-25)); cold reboot and daemon restart pass for the race and container lifecycle, but the head does not reach home, `stewart_5` lags and a mapped nod produced IK errors ([details](#boot-race-fix-on-the-nano-2026-09-25)). The owner found the robot physically fine: finding closed, `stewart_5` on watch. Once-per-boot auto-restart on `state: error` approved, installed on the Nano (restart path fake-tested only) |
 | Coexistence and sustained use | PARTIAL | Step 3 coexistence PASS. The 30-minute session is not yet run |
-| Timing and quality | OPEN | Budgets agreed: non-search p50 ≤ 4 s, p95 ≤ 8 s; each search-assisted turn ≤ 20 s. Preliminary timings above; the formal run is pending |
+| Timing and quality | FAIL (attempt 1) | Budgets agreed: non-search p50 ≤ 4 s, p95 ≤ 8 s; each search-assisted turn ≤ 20 s. Attempt 1 failed (p50 5.2 s, p95 ≈ 11 s from the cut) on uncapped replies; fixed in `4035e50`/`f353b90`, rerun pending. Preliminary timings above; the formal run is pending |

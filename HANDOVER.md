@@ -29,13 +29,18 @@ To close 24d, in order:
    automatic restart **once per boot**: `reachy-daemon-recovery.service`,
    installed on the Nano at `00a5e68`; the restart path is fake-tested only.
    Odd head-pose/IK readings (`stewart_5` lagging) came up. The owner found
-   the robot physically fine, so the finding is closed; keep `stewart_5`
-   on watch. See the
+   the robot physically fine, so the finding was closed, then reopened when `stewart_5` overheated
+   during the formal run (item 3). See the
    [record](docs/verification/phase-24d-conversation-2026-09-24.md#boot-race-fix-on-the-nano-2026-09-25).
 2. ~~Agree the search-turn latency budget~~ Done 2026-09-25: each
    search-assisted turn ≤ 20 s (non-search stays p50 ≤ 4 s, p95 ≤ 8 s).
-3. **Formal run** of the matrix rows. The results table is still mostly
-   OPEN/PARTIAL.
+3. **Formal run.** Attempt 1 (2026-09-25) failed the non-search budget on
+   uncapped model replies. Voice replies are now capped (`4035e50`,
+   `f353b90`, deployed on the homelab). Two of three context checks passed;
+   Zephyr and Session B (search) are still owed. **Blocked on `stewart_5`**:
+   it reported Overheating Error during the run and the head drifted with no
+   move command. Motors were disabled at 02:26Z; the owner is inspecting.
+   See the [record](docs/verification/phase-24d-conversation-2026-09-24.md#formal-run-attempt-1-2026-09-25-budget-failed-stewart_5-overheat).
 
 24d state so far:
 
