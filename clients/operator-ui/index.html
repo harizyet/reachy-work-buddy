@@ -95,14 +95,32 @@
         </section>
         <section class="card"><span class="eyebrow">GROUNDING</span><h2>Web search</h2>
           <p>Lets the model check a live search when a question needs current or external information instead of guessing from training data. Off by default.</p>
-          <p class="muted">Reachy sends queries only to the search instance configured below. A self-hosted SearXNG instance still forwards your query to whichever upstream search engines it's configured to use — this isn't full network confinement. A hosted provider (e.g. Brave) sends queries to that company directly.</p>
+          <p class="muted">Hosted providers (Brave, Exa, Tavily) receive each query directly. Each search goes to whichever enabled one has used the smallest share of its monthly limit. Reachy stops calling a provider when it reaches its limit, so keep limits below each free tier (Brave bills the card on file after its monthly credit). SearXNG runs only after every hosted provider failed or hit its limit. A self-hosted SearXNG instance still forwards your query to whichever upstream search engines it's configured to use, so this isn't full network confinement.</p>
           <form id="websearch"><fieldset id="websearch-fields" disabled><label>Policy<select id="websearch-policy"><option value="off">Off — never search</option><option value="auto">Auto — only when a question looks like it needs current info</option><option value="always">Always — every message</option></select></label>
-          <label>Provider<select id="websearch-provider"><option value="builtin_searxng">Built-in SearXNG (no setup needed)</option><option value="searxng">External SearXNG</option><option value="brave">Brave Search API</option></select></label>
+          <fieldset class="websearch-hosted"><legend>Brave Search API</legend>
+          <label class="check"><input type="checkbox" id="websearch-brave-enabled"> Use in rotation</label>
+          <label>API key<input id="websearch-brave-api-key" type="password" autocomplete="new-password" placeholder="Leave blank to keep the saved key"></label><small id="websearch-brave-key-state">No saved key</small>
+          <label class="check"><input type="checkbox" id="websearch-brave-clear-key"> Remove saved key</label>
+          <label>Monthly search limit<input id="websearch-brave-limit" type="number" min="1" max="1000000"></label><small id="websearch-brave-usage"></small>
+          </fieldset>
+          <fieldset class="websearch-hosted"><legend>Exa</legend>
+          <label class="check"><input type="checkbox" id="websearch-exa-enabled"> Use in rotation</label>
+          <label>API key<input id="websearch-exa-api-key" type="password" autocomplete="new-password" placeholder="Leave blank to keep the saved key"></label><small id="websearch-exa-key-state">No saved key</small>
+          <label class="check"><input type="checkbox" id="websearch-exa-clear-key"> Remove saved key</label>
+          <label>Monthly search limit<input id="websearch-exa-limit" type="number" min="1" max="1000000"></label><small id="websearch-exa-usage"></small>
+          </fieldset>
+          <fieldset class="websearch-hosted"><legend>Tavily</legend>
+          <label class="check"><input type="checkbox" id="websearch-tavily-enabled"> Use in rotation</label>
+          <label>API key<input id="websearch-tavily-api-key" type="password" autocomplete="new-password" placeholder="Leave blank to keep the saved key"></label><small id="websearch-tavily-key-state">No saved key</small>
+          <label class="check"><input type="checkbox" id="websearch-tavily-clear-key"> Remove saved key</label>
+          <label>Monthly search limit<input id="websearch-tavily-limit" type="number" min="1" max="1000000"></label><small id="websearch-tavily-usage"></small>
+          </fieldset>
+          <label>Last-resort fallback<select id="websearch-fallback"><option value="builtin_searxng">Built-in SearXNG (no setup needed)</option><option value="searxng">External SearXNG</option><option value="none">None</option></select></label>
           <div id="websearch-base-url-field">
           <label>Base URL<input id="websearch-base-url" type="url" placeholder="http://searxng-host:8080"></label>
           </div>
           <div id="websearch-key-fields">
-          <label>API key <span class="muted" id="websearch-key-optional">(optional)</span><input id="websearch-api-key" type="password" autocomplete="new-password" placeholder="Leave blank to keep the saved key"></label><small id="websearch-key-state">No saved key</small>
+          <label>API key <span class="muted">(optional)</span><input id="websearch-api-key" type="password" autocomplete="new-password" placeholder="Leave blank to keep the saved key"></label><small id="websearch-key-state">No saved key</small>
           <label class="check"><input type="checkbox" id="websearch-clear-key"> Remove saved key</label>
           </div>
           <label>Results per search<input id="websearch-result-count" type="number" min="1" max="10"></label>

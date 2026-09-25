@@ -115,3 +115,32 @@ Citation stays a prompting requirement in the reply text. For speech,
 reachy-hub removes `[S…]` markers and markdown symbols before synthesis
 (`reachy_hub.tts.spoken_text`). Core adds a short-plain-reply instruction to
 VOICE-modality generic turns only.
+
+## Addendum: hosted provider rotation within free tiers (Phase 24d, 2026-09-25)
+
+A single hosted provider on its free tier would run out of monthly quota,
+and falling back to scraped SearXNG from one home address brings back the
+blocking problem above. The owner therefore chose to use Brave, Exa and
+Tavily together, with SearXNG demoted to a last-resort fallback.
+`search_config.provider` became `fallback` (`builtin_searxng`, `searxng`
+or `none`). Migration `007_search_providers` adds `search_provider`
+(enabled flag, `secret_ref` and monthly limit per hosted provider) and
+`search_usage` (count per provider per UTC calendar month).
+
+Each search-warranted turn still performs one search. The order is fixed
+code, like the search decision itself (`websearch/rotation.py`): enabled
+hosted providers sorted by the share of their monthly limit already used,
+ties in declaration order. This spreads load in proportion to each free
+allowance instead of draining one provider first. A call is reserved with a
+single conditional upsert before it is sent. A provider at its limit is
+never called, and a failed call still counts, because it may still be
+billed. Errors fail over to the next tier. A plan-limit response marks
+that provider used up for the month. A 429 is treated as a transient rate
+limit. The whole chain is bounded by twice the per-provider timeout, so
+failovers can't hold a voice turn for tiers × timeout. The failure notice
+above still applies when every tier fails.
+
+Limits are Reachy's own counts, not the provider's billing state. Brave
+bills the card on file beyond its monthly credit, so its limit is the only
+safeguard. That is why the defaults (900) sit below each allowance and are
+owner-editable.

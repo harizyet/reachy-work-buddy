@@ -373,3 +373,11 @@ textarea:focus {
   .chat-message { max-width: 100%; }
   .chat-compose-footer { align-items: end; }
 }
+.websearch-hosted {
+  border-top:1px solid #2a3d45;
+  padding-top:12px;
+  margin:12px 0
+}
+.websearch-hosted legend {
+  font-weight:600
+}

@@ -215,15 +215,20 @@ from companion_core.tasks.store import TaskStore
 from companion_core.websearch.policy import build_query, should_search
 from companion_core.websearch.postgres_store import PostgresSearchSettingsStore
 from companion_core.websearch.prompt import build_grounding_messages
-from companion_core.websearch.provider import SearchProviderError, create_provider
-from companion_core.websearch.store import SearchSettingsStore, masked_search_config
+from companion_core.websearch.provider import SearchProviderError
+from companion_core.websearch.rotation import search_with_rotation
+from companion_core.websearch.store import (
+    SearchSettingsStore,
+    masked_search_config,
+    usage_period,
+)
 from shared.models.llm import LLMConfigPatch
 from shared.models.memory import MemoryRecord, MemoryType
 from shared.models.persona import PersonaConfig, PersonaPatch
 from shared.models.rag import DocumentChunk, RetrievedChunk
 from shared.models.response import Privacy, Urgency
 from shared.models.session import InputModality
-from shared.models.websearch import SearchConfigPatch
+from shared.models.websearch import SearchConfig, SearchConfigPatch
 from shared.protocols.operator_api import (
     LLM_SETTINGS,
     LLM_USAGE,
@@ -499,16 +504,25 @@ def create_app(
     async def set_persona(patch: PersonaPatch) -> PersonaConfig:
         return await app.state.persona_store.set(patch)
 
+    async def websearch_settings_view(config: SearchConfig) -> dict:
+        period = usage_period(datetime.now(UTC))
+        used = await app.state.search_settings_store.usage(period)
+        return {
+            **masked_search_config(config),
+            "usage": {"period": period, "used": {kind.value: count for kind, count in used.items()}},
+        }
+
     @app.get(WEBSEARCH_SETTINGS)
     async def get_websearch_settings() -> dict:
-        return masked_search_config(await app.state.search_settings_store.get())
+        return await websearch_settings_view(await app.state.search_settings_store.get())
 
     @app.put(WEBSEARCH_SETTINGS)
     async def set_websearch_settings(patch: SearchConfigPatch) -> dict:
         try:
-            return masked_search_config(await app.state.search_settings_store.set(patch))
+            config = await app.state.search_settings_store.set(patch)
         except ValidationError:
-            raise HTTPException(422, "Invalid search settings; a non-Off policy needs the provider's base URL or API key") from None
+            raise HTTPException(422, "Invalid search settings; a non-Off policy needs an API key for each enabled provider, and a base URL for External SearXNG") from None
+        return await websearch_settings_view(config)
 
     @app.get(LLM_SETTINGS)
     async def get_llm_settings() -> dict:
@@ -814,8 +828,10 @@ def create_app(
                         if searched:
                             query = build_query(turn.text, conversation_store.previous_user_message(turn.session_id))
                             try:
-                                provider = create_provider(search_config, transport=websearch_transport)
-                                results = await provider.search(query, count=search_config.result_count)
+                                results = await search_with_rotation(
+                                    search_config, app.state.search_settings_store, query,
+                                    now=datetime.now(UTC), transport=websearch_transport,
+                                )
                                 grounding_messages = build_grounding_messages(searched=True, failed=False, results=results)
                             except SearchProviderError:
                                 # Never silently fall back to an ungrounded answer

@@ -38,7 +38,7 @@ function notice(text) { $('notice').textContent = text; }
 function showLogin() {
   loggedIn = false; selectedUser = null;
   $('login-panel').hidden = false; $('dashboard').hidden = true; $('nav').hidden = true;
-  $('api-key').value = ''; $('cloud-api-key').value = ''; $('websearch-api-key').value = ''; $('password').value = '';
+  $('api-key').value = ''; $('cloud-api-key').value = ''; $('websearch-api-key').value = ''; for (const name of HOSTED_SEARCH) $(`websearch-${name}-api-key`).value = ''; $('password').value = '';
   chat.reset(); accounts.reset(); voice.reset(); showView('overview');
 }
 async function api(path, options = {}) {
@@ -82,26 +82,34 @@ function renderPersona(config) {
   $('persona-prompt').value = config.system_prompt || '';
   $('persona-fields').disabled = false;
 }
-function updateWebsearchProviderFields() {
+const HOSTED_SEARCH = ['brave', 'exa', 'tavily'];
+function updateWebsearchFallbackFields() {
   // Built-in SearXNG needs no base URL or API key at all — Companion Core
-  // already knows its internal address (Phase 24 cleanup). Brave has a
-  // fixed endpoint and needs only its (required) subscription key.
-  const provider = $('websearch-provider').value;
-  $('websearch-base-url-field').hidden = provider !== 'searxng';
-  $('websearch-key-fields').hidden = provider === 'builtin_searxng';
-  $('websearch-key-optional').hidden = provider === 'brave';
+  // already knows its internal address (Phase 24 cleanup).
+  const fallback = $('websearch-fallback').value;
+  $('websearch-base-url-field').hidden = fallback !== 'searxng';
+  $('websearch-key-fields').hidden = fallback !== 'searxng';
 }
 function renderWebsearch(config) {
   $('websearch-policy').value = config.policy || 'off';
-  $('websearch-provider').value = config.provider || 'builtin_searxng';
+  for (const name of HOSTED_SEARCH) {
+    const hosted = (config.hosted || {})[name] || {};
+    $(`websearch-${name}-enabled`).checked = !!hosted.enabled;
+    $(`websearch-${name}-key-state`).textContent = hosted.api_key ? `Saved key: ${hosted.api_key}` : 'No saved key';
+    $(`websearch-${name}-api-key`).value = ''; $(`websearch-${name}-clear-key`).checked = false;
+    $(`websearch-${name}-limit`).value = hosted.monthly_limit ?? '';
+    const used = config.usage?.used?.[name];
+    $(`websearch-${name}-usage`).textContent = used === undefined ? '' : `Used ${used} of ${hosted.monthly_limit} in ${config.usage.period} (UTC)`;
+  }
+  $('websearch-fallback').value = config.fallback || 'builtin_searxng';
   $('websearch-base-url').value = config.base_url || '';
   $('websearch-key-state').textContent = config.api_key ? `Saved key: ${config.api_key}` : 'No saved key';
   $('websearch-api-key').value = ''; $('websearch-clear-key').checked = false;
   $('websearch-result-count').value = config.result_count ?? 5;
   $('websearch-fields').disabled = false;
-  updateWebsearchProviderFields();
+  updateWebsearchFallbackFields();
 }
-$('websearch-provider').addEventListener('change', updateWebsearchProviderFields);
+$('websearch-fallback').addEventListener('change', updateWebsearchFallbackFields);
 function component(name, value, warning = false) {
   const card = document.createElement('div'); card.className = 'component';
   const title = document.createElement('strong'); title.textContent = name;
@@ -244,17 +252,25 @@ $('disable-llm').addEventListener('click', async () => {
   catch (error) { notice(error.message); }
 });
 submit('websearch', async () => {
-  const provider = $('websearch-provider').value;
+  const fallback = $('websearch-fallback').value;
+  const hosted = {};
+  for (const name of HOSTED_SEARCH) {
+    hosted[name] = {enabled: $(`websearch-${name}-enabled`).checked};
+    const limit = Number($(`websearch-${name}-limit`).value);
+    if (limit) hosted[name].monthly_limit = limit;
+    if ($(`websearch-${name}-clear-key`).checked) hosted[name].api_key = null;
+    else if ($(`websearch-${name}-api-key`).value) hosted[name].api_key = $(`websearch-${name}-api-key`).value;
+  }
   const patch = {
     policy: $('websearch-policy').value,
-    provider,
-    // Built-in SearXNG carries no base_url/api_key at all — Companion
-    // Core resolves its address itself (Phase 24 cleanup).
-    base_url: provider === 'searxng' ? $('websearch-base-url').value.trim() : null,
+    hosted,
+    fallback,
+    // Only External SearXNG carries a base_url/api_key; Companion Core
+    // resolves the built-in container's address itself (Phase 24 cleanup).
+    base_url: fallback === 'searxng' ? $('websearch-base-url').value.trim() : null,
     result_count: Number($('websearch-result-count').value) || 5,
   };
-  if (provider === 'builtin_searxng') patch.api_key = null;
-  else if ($('websearch-clear-key').checked) patch.api_key = null;
+  if (fallback !== 'searxng' || $('websearch-clear-key').checked) patch.api_key = null;
   else if ($('websearch-api-key').value) patch.api_key = $('websearch-api-key').value;
   renderWebsearch(await api('/settings/websearch', {method: 'PUT', body: JSON.stringify(patch)}));
   notice('Web search settings saved.');

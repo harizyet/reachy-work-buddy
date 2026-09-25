@@ -1,12 +1,9 @@
-"""Brave Search API adapter (Phase 24d). Queries go directly to Brave, so
-the privacy note in the operator UI applies: a hosted provider receives
-the query itself, unlike the bundled SearXNG's intermediary hop."""
+"""Exa Search API adapter (Phase 24d). Like Brave, a hosted provider
+receives the query itself."""
 
 from __future__ import annotations
 
 import asyncio
-import html
-import re
 from urllib.parse import urlsplit
 
 import httpx
@@ -17,16 +14,11 @@ from companion_core.websearch.provider import (
     raise_for_status,
 )
 
-BRAVE_SEARCH_URL = "https://api.search.brave.com/res/v1/web/search"
+EXA_SEARCH_URL = "https://api.exa.ai/search"
 _TIMEOUT_MARGIN_SECONDS = 1
-_TAG = re.compile(r"<[^>]+>")
 
 
-def _plain(text: object) -> str:
-    return html.unescape(_TAG.sub("", str(text or "")))
-
-
-class BraveSearchProvider:
+class ExaSearchProvider:
     def __init__(
         self,
         api_key: str,
@@ -48,14 +40,15 @@ class BraveSearchProvider:
                     follow_redirects=False,
                 ) as client,
             ):
-                response = await client.get(
-                    BRAVE_SEARCH_URL,
-                    params={"q": query, "count": count, "text_decorations": "false"},
-                    headers={"Accept": "application/json", "X-Subscription-Token": self.api_key},
+                # Highlights are billed as contents on top of the search; full
+                # text would cost more and overflow the local model's context.
+                response = await client.post(
+                    EXA_SEARCH_URL,
+                    json={"query": query, "numResults": count, "type": "fast", "contents": {"highlights": True}},
+                    headers={"Accept": "application/json", "x-api-key": self.api_key},
                 )
                 raise_for_status(response)
-                data = response.json()
-            items = (data.get("web") or {}).get("results") or []
+                items = response.json().get("results") or []
         except (asyncio.CancelledError, SearchProviderError):
             raise
         except (httpx.HTTPError, TimeoutError, ValueError, TypeError, AttributeError):
@@ -64,15 +57,17 @@ class BraveSearchProvider:
                 "search provider request failed or returned an invalid response"
             ) from None
         results = []
-        for item in items[:count]:
+        for item in items[:count] if isinstance(items, list) else []:
             if not isinstance(item, dict) or not item.get("url") or not item.get("title"):
                 continue
             url = str(item["url"])
+            highlights = item.get("highlights")
+            snippet = " … ".join(map(str, highlights)) if isinstance(highlights, list) else ""
             results.append(
                 SearchResult(
-                    title=_plain(item["title"]),
+                    title=str(item["title"]),
                     url=url,
-                    snippet=_plain(item.get("description")),
+                    snippet=snippet or str(item.get("summary") or item.get("text") or ""),
                     source_domain=urlsplit(url).hostname or "",
                 )
             )

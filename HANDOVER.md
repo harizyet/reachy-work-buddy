@@ -23,8 +23,8 @@ remains gated on 24d.
   timings are in the record.
 - **Still open.** The record's results matrix is still blank, the ≥10-turn
   timed run with 3 context follow-ups hasn't been completed, and the latency
-  budget (p50 ≤ 4 s, p95 ≤ 8 s) is unassessed. Live Brave search needs the
-  owner's API key. Some observed replies were very long (one was 232 s of
+  budget (p50 ≤ 4 s, p95 ≤ 8 s) is unassessed. Live hosted search (Brave,
+  Exa, Tavily) needs the owner's API keys. Some observed replies were very long (one was 232 s of
   audio; one hub turn took 45 s).
 - **Deployed robot image.** `reachy-embodiment:local` is built from
   `1a66f01` (voice enabled, INFO timing logs). Image fixes found on the
@@ -45,14 +45,22 @@ remains gated on 24d.
 - **Answer quality is the blocker.** Replies were out of date or invented,
   first with search off (the `006` default) and then with Always. Google
   and Brave had CAPTCHA'd or suspended the bundled SearXNG from this
-  address, and Bing returned unrelated pages. `af27338` adds a hosted
-  **Brave Search API** provider. It is deployed and fixture-tested, but no
-  live call has been made yet. The owner has a key but hasn't entered it
-  yet (Settings → Web search → Brave Search API). The current setting is
-  policy `always` with `builtin_searxng`. Even with good results, the local
-  `Qwen2.5-1.5B` used them inconsistently. The owner chose to keep it; the
-  configured cloud GLM-5.3 is the fallback option if Brave doesn't fix
-  accuracy.
+  address, and Bing returned unrelated pages. `af27338` added a hosted
+  **Brave Search API** provider. The owner then decided (2026-09-25) to
+  rotate Brave, Exa and Tavily within their free tiers, with SearXNG only
+  as the last-resort fallback. That change is implemented, with migration
+  `007_search_providers`, per-provider monthly limits and failover. See the
+  [ADR 0022 addendum](docs/adr/0022-web-search-grounding.md#addendum-hosted-provider-rotation-within-free-tiers-phase-24d-2026-09-25)
+  and [deployment](docs/deployment.md#web-search). It is verified with
+  fixtures, real disposable Postgres and a Chromium UI test. No live
+  provider call has been made yet. **The homelab is still at `006` and
+  runs `af27338`.** Deploying needs a `pg_dump` first, the `007` upgrade
+  and rebuilt hub/core images. Then the owner enters the keys (Settings →
+  Web search). The current setting is policy `always` with
+  `builtin_searxng`, which becomes the fallback. Even with good results,
+  the local `Qwen2.5-1.5B` used them inconsistently. The owner chose to
+  keep it; the configured cloud GLM-5.3 is the fallback option if hosted
+  search doesn't fix accuracy.
 - **Reply length.** `af27338` also asks the model for 1–3 plain sentences
   on voice turns, and strips `[S…]`/markdown before TTS. Utterance-end →
   first audio was 2.5–3.6 s without search. It was 5.9–11 s with the broken

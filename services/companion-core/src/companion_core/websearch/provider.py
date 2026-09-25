@@ -1,7 +1,7 @@
 """Provider-independent web-search abstraction (Phase 24a, docs/phase-24a.md).
 
 One concrete adapter per provider normalizes to this shared SearchResult —
-SearXNG's and a hosted provider's (e.g. Brave) JSON responses are not shaped
+SearXNG's and each hosted provider's (Brave, Exa, Tavily) JSON responses are not shaped
 alike, so a single generic HTTP adapter would have to guess at a schema
 instead of each adapter owning its own. Everything above this layer
 (policy, query building, prompt construction) is provider-independent and
@@ -13,7 +13,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from shared.models.websearch import SearchConfig, SearchProviderKind
+from shared.models.websearch import (
+    HostedSearchProvider,
+    SearchConfig,
+    SearchFallbackKind,
+)
 
 # The bundled SearXNG container's address on the deployment's own compose
 # network (deploy/homelab/docker-compose.yml's "searxng" service, port
@@ -39,10 +43,40 @@ class SearchProviderError(Exception):
     """Safe public error; never includes a URL, credential, or raw provider response."""
 
 
-def create_provider(config: SearchConfig, *, transport=None) -> SearchProvider:
-    if config.provider == SearchProviderKind.BUILTIN_SEARXNG:
-        from companion_core.websearch.searxng import SearXNGSearchProvider
+class SearchQuotaExhausted(SearchProviderError):
+    """The provider reported its plan/credit limit reached (not a transient
+    rate limit), so rotation stops sending it calls for the period."""
 
+
+# 402 Payment Required, plus Tavily's plan (432) and pay-as-you-go (433)
+# limits. A 429 is only a per-second rate limit and fails over normally.
+QUOTA_STATUS_CODES = frozenset({402, 432, 433})
+
+
+def raise_for_status(response) -> None:
+    if response.status_code in QUOTA_STATUS_CODES:
+        raise SearchQuotaExhausted("search provider reported its usage limit reached")
+    response.raise_for_status()
+
+
+def create_hosted_provider(
+    kind: HostedSearchProvider, api_key: str, *, timeout_seconds: float, transport=None
+) -> SearchProvider:
+    if kind == HostedSearchProvider.BRAVE:
+        from companion_core.websearch.brave import BraveSearchProvider as adapter
+    elif kind == HostedSearchProvider.EXA:
+        from companion_core.websearch.exa import ExaSearchProvider as adapter
+    elif kind == HostedSearchProvider.TAVILY:
+        from companion_core.websearch.tavily import TavilySearchProvider as adapter
+    else:
+        raise SearchProviderError("Unsupported search provider")
+    return adapter(api_key, timeout_seconds=timeout_seconds, transport=transport)
+
+
+def create_fallback_provider(config: SearchConfig, *, transport=None) -> SearchProvider | None:
+    from companion_core.websearch.searxng import SearXNGSearchProvider
+
+    if config.fallback == SearchFallbackKind.BUILTIN_SEARXNG:
         # No credential either: internal-only, never published to the
         # host — nothing outside the compose network can reach it.
         return SearXNGSearchProvider(
@@ -51,9 +85,7 @@ def create_provider(config: SearchConfig, *, transport=None) -> SearchProvider:
             timeout_seconds=config.timeout_seconds,
             transport=transport,
         )
-    if config.provider == SearchProviderKind.SEARXNG:
-        from companion_core.websearch.searxng import SearXNGSearchProvider
-
+    if config.fallback == SearchFallbackKind.SEARXNG:
         if not config.base_url:
             raise SearchProviderError("No search provider base URL configured")
         return SearXNGSearchProvider(
@@ -62,10 +94,4 @@ def create_provider(config: SearchConfig, *, transport=None) -> SearchProvider:
             timeout_seconds=config.timeout_seconds,
             transport=transport,
         )
-    if config.provider == SearchProviderKind.BRAVE:
-        from companion_core.websearch.brave import BraveSearchProvider
-
-        if not config.api_key:
-            raise SearchProviderError("No Brave Search API key configured")
-        return BraveSearchProvider(config.api_key, timeout_seconds=config.timeout_seconds, transport=transport)
-    raise SearchProviderError("Unsupported search provider")
+    return None

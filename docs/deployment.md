@@ -130,22 +130,43 @@ never the public Internet. A self-hosted SearXNG instance keeps Reachy's
 own query confined to this container, but SearXNG itself still forwards
 each query to whichever upstream engines its own configuration uses — this
 isn't full network confinement, and the operator UI states that plainly.
-Choosing **External SearXNG** instead (a separately-run instance) or a
-hosted cloud provider (e.g. Brave) is a separate, explicit opt-in via the
-same card's provider field, and does need its own Base URL/API key — a
-credential entered there is stored via Companion Core's SecretStore
-(`secret_ref`), never alongside the bundled container's own deployment
-secret; see [ADR 0022](adr/0022-web-search-grounding.md) and
+Choosing **External SearXNG** as the fallback instead (a separately-run
+instance) is a separate, explicit opt-in via the same card, and does need
+its own Base URL (API key optional). A credential entered there is stored
+via Companion Core's SecretStore (`secret_ref`), never alongside the
+bundled container's own deployment secret; see
+[ADR 0022](adr/0022-web-search-grounding.md) and
 [docs/phase-24a.md](phase-24a.md).
 
 The bundled SearXNG keeps only Google, Bing and Brave, with a 1.5 s
 per-engine timeout (the image disables Google and Bing, so the config
 enables them). These are scraped engines. During Phase 24d, the homelab's
 address was CAPTCHA'd and suspended by Google and Brave, and Bing returned
-unrelated pages. For dependable results, choose **Brave Search API** in the
-same card and enter a Brave Search API subscription key. It uses Brave's
-fixed endpoint, so no Base URL is needed. The key is stored through
-SecretStore and shown only masked. Queries then go directly to Brave.
+unrelated pages, so SearXNG is now only the **last-resort fallback**.
+
+For dependable results, enable one or more hosted providers in the same
+card (**Brave Search API**, **Exa**, **Tavily**) and enter each one's API
+key. Their endpoints are fixed, so no Base URL is needed. Keys are stored
+through SecretStore (`websearch:brave`, `websearch:exa`,
+`websearch:tavily`) and shown only masked, and queries go directly to
+that company. Each turn still makes one search. It goes to the enabled
+provider that has used the smallest share of its **monthly search limit**
+(calendar month, UTC), and moves to the next provider on an error. SearXNG
+runs only after every hosted provider failed or reached its limit. Calls are
+counted in `search_usage` before they are sent, so restarts and concurrent
+turns can't exceed a limit. A provider that answers with a plan-limit status
+(402, or Tavily's 432/433) is skipped for the rest of the month. The card
+shows this month's count for each provider.
+
+The default limit is 900 per provider, below each free allowance as of
+2026-09. Brave gives $5 of monthly credit (about 1,000 queries) and **bills
+the card on file after that**. Exa's free balance is $10 a month, about
+1,250 searches with highlights. Tavily gives 1,000 basic-search credits a
+month. Reachy counts only its own calls, so lower a limit if the same key is
+used elsewhere, or if the provider's billing month doesn't start on the
+1st. Check the providers' current terms before raising a limit.
+Migration `007_search_providers` turns an existing Brave selection into an
+enabled Brave entry, keeping its key.
 
 ## Telegram and SMTP
 

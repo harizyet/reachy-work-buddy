@@ -99,8 +99,9 @@ def test_search_config_defaults_secret_round_trip_and_provider_switch(database, 
         store = await PostgresSearchSettingsStore.connect(database, keyring=keys)
         default = await store.get()
         assert default.policy.value == "off" and default.base_url is None and default.api_key is None
+        assert default.fallback.value == "builtin_searxng"
         config = await store.set(SearchConfigPatch(
-            policy="auto", base_url="http://searxng.local", api_key="searxng-secret",
+            policy="auto", fallback="searxng", base_url="http://searxng.local", api_key="searxng-secret",
         ))
         assert config.api_key == "searxng-secret"
         await store.close()
@@ -114,6 +115,61 @@ def test_search_config_defaults_secret_round_trip_and_provider_switch(database, 
         assert conn.execute("SELECT count(*) FROM secrets WHERE provider='websearch:searxng'").fetchone() == (1,)
         config_text = str(conn.execute("SELECT * FROM search_config").fetchall())
         assert "searxng-secret" not in config_text
+
+
+def test_search_providers_migration_moves_brave_and_caps_usage(database, keys, monkeypatch):
+    """Phase 24d: 007 turns a 006 Brave selection into the enabled Brave
+    rotation entry with the same secret, and usage reservations never pass
+    the cap, even when concurrent."""
+    import companion_core.migrations.__main__ as runner
+    from companion_core.websearch.postgres_store import PostgresSearchSettingsStore
+
+    from shared.models.websearch import HostedSearchProvider, SearchConfigPatch
+
+    real_upgrade = runner.command.upgrade
+    monkeypatch.setattr(runner.command, "upgrade", lambda config, _: real_upgrade(config, "006_search_config"))
+    upgrade(database, keys)
+    monkeypatch.setattr(runner.command, "upgrade", real_upgrade)
+
+    async def seed():
+        async with await psycopg.AsyncConnection.connect(database) as conn:
+            ref = await PostgresSecretStore(keys).put(
+                conn, SecretContext("owner", "websearch:brave", "api_key"), "brave-secret")
+            await conn.execute(
+                "UPDATE search_config SET policy='always', provider='brave', secret_ref=%s", (ref,))
+    asyncio.run(seed())
+    upgrade(database, keys)
+
+    async def check():
+        store = await PostgresSearchSettingsStore.connect(database, keyring=keys)
+        config = await store.get()
+        brave = config.hosted[HostedSearchProvider.BRAVE]
+        assert brave.enabled and brave.api_key == "brave-secret" and brave.monthly_limit == 900
+        assert config.fallback.value == "builtin_searxng" and config.api_key is None
+        config = await store.set(SearchConfigPatch.model_validate({
+            "hosted": {"tavily": {"enabled": True, "api_key": "tvly-secret", "monthly_limit": 5}},
+        }))
+        assert config.hosted[HostedSearchProvider.TAVILY].api_key == "tvly-secret"
+        await store.close()
+        store = await PostgresSearchSettingsStore.connect(database, keyring=keys)
+        assert (await store.get()).hosted[HostedSearchProvider.TAVILY].api_key == "tvly-secret"
+        granted = await asyncio.gather(*[
+            store.reserve(HostedSearchProvider.TAVILY, "2026-09", 5) for _ in range(12)
+        ])
+        assert granted.count(True) == 5
+        await store.exhaust(HostedSearchProvider.BRAVE, "2026-09", 900)
+        assert await store.usage("2026-09") == {
+            HostedSearchProvider.BRAVE: 900, HostedSearchProvider.EXA: 0, HostedSearchProvider.TAVILY: 5,
+        }
+        assert await store.usage("2026-10") == {kind: 0 for kind in HostedSearchProvider}
+        await store.close()
+    asyncio.run(check())
+    with psycopg.connect(database) as conn:
+        rows = str(conn.execute("SELECT * FROM search_provider").fetchall())
+        assert "brave-secret" not in rows and "tvly-secret" not in rows
+        assert conn.execute(
+            "SELECT count(*) FROM secrets WHERE provider IN ('websearch:brave', 'websearch:tavily')"
+        ).fetchone() == (2,)
 
 
 def test_legacy_atomic_migration_and_llm_semantics(database, keys):
