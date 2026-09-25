@@ -557,6 +557,13 @@ def test_voice_turns_do_not_token_cap_the_cloud_model_but_still_bound_its_reply(
     assert reply.startswith("Sentence number 0")
 
 
+def test_spoken_reply_keeps_closing_quotes():
+    from companion_core.app import spoken_reply
+
+    assert spoken_reply('Your code word is "pineapple." Anything else?') == 'Your code word is "pineapple." Anything else?'
+    assert spoken_reply('It is "pineapple." And th') == 'It is "pineapple."'
+
+
 def test_spoken_reply_keeps_a_long_first_sentence_whole():
     from companion_core.app import SPOKEN_REPLY_MAX_WORDS, spoken_reply
 

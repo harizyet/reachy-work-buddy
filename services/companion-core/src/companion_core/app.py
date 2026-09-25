@@ -320,7 +320,7 @@ SPOKEN_REPLY_INSTRUCTION = (
 # no token cap, see route_completion). 75 words is about 30 s of speech.
 SPOKEN_REPLY_MAX_TOKENS = 100
 SPOKEN_REPLY_MAX_WORDS = 75
-_SENTENCE_END = re.compile(r"[.!?](?=[\"')\]]*(?:\s|$))")
+_SENTENCE_END = re.compile(r"[.!?][\"')\]]*(?=\s|$)")
 _LIST_NUMBER = re.compile(r"(?:^|\n)\s*\d+$")
 
 
@@ -330,7 +330,7 @@ def complete_sentences(text: str) -> str:
     text = text.rstrip()
     # "4." opening a numbered-list item is not the end of a sentence.
     ends = [m for m in _SENTENCE_END.finditer(text) if not _LIST_NUMBER.search(text, 0, m.start())]
-    if not ends or ends[-1].end() >= len(text.rstrip("\"')]")):
+    if not ends or ends[-1].end() == len(text):
         return text
     return text[: ends[-1].end()]
 
