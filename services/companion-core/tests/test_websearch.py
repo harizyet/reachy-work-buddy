@@ -528,6 +528,42 @@ def test_voice_replies_are_token_capped_and_end_on_a_whole_sentence():
     assert typed.json()["reply"] == "First point. Second point. Third poi"
 
 
+def test_voice_turns_do_not_token_cap_the_cloud_model_but_still_bound_its_reply():
+    """GLM-5.3 spends max_tokens on reasoning and returns empty content under
+    a small cap, so a cloud fallback gets no cap; the word cap still applies."""
+    from companion_core.app import SPOKEN_REPLY_MAX_WORDS
+
+    requests = []
+    long_reply = " ".join(f"Sentence number {i} has exactly seven words." for i in range(20))
+
+    def llm_respond(request):
+        body = json.loads(request.content)
+        requests.append((request.url.host, body))
+        if request.url.host == "ovms":
+            return httpx.Response(503)
+        return httpx.Response(200, json={"choices": [{"message": {"content": long_reply}}]})
+
+    client = TestClient(core_app(llm_transport=httpx.MockTransport(llm_respond)))
+    client.put("/settings/llm", json={
+        "local": {"base_url": "http://ovms/v1", "model": "qwen"},
+        "cloud": {"base_url": "http://cloud/v1", "model": "glm", "api_key": "k"},
+        "routing": {"mode": "local_with_cloud_fallback"},
+    })
+    reply = client.post("/conversation", json={**TURN, "channel": "reachy", "input_modality": "voice", "text": "hi"}).json()["reply"]
+    (local_host, local_body), (cloud_host, cloud_body) = requests[-2:]
+    assert (local_host, cloud_host) == ("ovms", "cloud")
+    assert "max_tokens" in local_body and "max_tokens" not in cloud_body
+    assert reply.endswith(".") and len(reply.split()) <= SPOKEN_REPLY_MAX_WORDS
+    assert reply.startswith("Sentence number 0")
+
+
+def test_spoken_reply_keeps_a_long_first_sentence_whole():
+    from companion_core.app import SPOKEN_REPLY_MAX_WORDS, spoken_reply
+
+    first = " ".join(["word"] * (SPOKEN_REPLY_MAX_WORDS + 5)) + "."
+    assert spoken_reply(first + " Second sentence.") == first
+
+
 @pytest.mark.parametrize(("text", "expected"), [
     ("Your code word is \"pineapple\".", "Your code word is \"pineapple\"."),
     ("He said \"hi.\"", "He said \"hi.\""),

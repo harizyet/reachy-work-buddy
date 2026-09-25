@@ -315,9 +315,11 @@ SPOKEN_REPLY_INSTRUCTION = (
 )
 # The local model ignored the instruction on some 24d turns (120-160 words,
 # up to a minute of speech), and the long replies then slowed every later
-# turn through the history. The cap bounds generation, speech and history;
-# about 75 words is roughly 30 s of speech.
+# turn through the history. The token cap bounds local generation time; the
+# word cap bounds speech and history for any provider (the cloud model gets
+# no token cap, see route_completion). 75 words is about 30 s of speech.
 SPOKEN_REPLY_MAX_TOKENS = 100
+SPOKEN_REPLY_MAX_WORDS = 75
 _SENTENCE_END = re.compile(r"[.!?](?=[\"')\]]*(?:\s|$))")
 _LIST_NUMBER = re.compile(r"(?:^|\n)\s*\d+$")
 
@@ -331,6 +333,20 @@ def complete_sentences(text: str) -> str:
     if not ends or ends[-1].end() >= len(text.rstrip("\"')]")):
         return text
     return text[: ends[-1].end()]
+
+
+def spoken_reply(text: str) -> str:
+    """Whole sentences up to SPOKEN_REPLY_MAX_WORDS. The first sentence is
+    always kept, so a reply is never emptied."""
+    text = complete_sentences(text)
+    cut = None
+    for m in _SENTENCE_END.finditer(text):
+        if _LIST_NUMBER.search(text, 0, m.start()):
+            continue
+        if cut is not None and len(text[: m.end()].split()) > SPOKEN_REPLY_MAX_WORDS:
+            break
+        cut = m.end()
+    return text[:cut] if cut is not None else text
 
 
 def create_app(
@@ -910,10 +926,10 @@ def create_app(
                         reply = await route_completion(
                             config, history_with_persona, app.state.llm_usage_store,
                             force_frontier=turn.force_frontier, transport=llm_transport,
-                            max_tokens=SPOKEN_REPLY_MAX_TOKENS if spoken else None,
+                            local_max_tokens=SPOKEN_REPLY_MAX_TOKENS if spoken else None,
                         )
                         if spoken:
-                            reply = complete_sentences(reply)
+                            reply = spoken_reply(reply)
                     except ProviderUnavailable:
                         reply = "The language model is unavailable right now. Please try again shortly."
             privacy = classify_privacy(turn.text)
