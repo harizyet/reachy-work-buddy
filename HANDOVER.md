@@ -94,7 +94,9 @@ this documentation pass. Recheck state before relying on them.
   restart policy. Embodiment is host-networked on 8100, daemon loopback on
   8000. Apply the [deployment boundaries](docs/deployment.md#robot-host-and-jetson-nano)
   before daemon starts or motion; `--check` stays read-only.
-- **Homelab:** dev/test stack at `9251efc`, schema `008_assistant_context`.
+- **Homelab:** dev/test stack at `1e04061` (rebuilt 2026-09-25 13:20Z after
+  backup `~/reachy-backups/reachy-before-24f-deploy-20260925T131937.dump`),
+  schema `008_assistant_context`, hub `PALM_STOP_ENABLED` false.
   Start only through `scripts/start-homelab.sh`. Piper `en_US-lessac-medium`;
   search policy Auto, Brave/Exa/Tavily rotation then SearXNG. Backups in
   `~/reachy-backups/` (0600). Core readiness needs a separate check after
