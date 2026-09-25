@@ -722,3 +722,91 @@ def test_follow_up_turns_search_with_topic_and_weather_uses_location():
     system = [m["content"] for m in llm_requests[-1]["messages"] if m["role"] == "system"]
     assert any("Current local date and time" in c and "Asia/Singapore" in c for c in system)
     assert any("do not tell the user to check a link" in c for c in system)
+
+
+# --- Phase 24e: search-trigger fixes from the 24d transcripts' shapes -----
+
+
+@pytest.mark.parametrize("text", [
+    "Goodbye for now.", "Bye for now!", "OK, bye then.", "Thanks!", "Thank you so much, Reachy.",
+    "Hello Reachy.", "Hi there.", "Good morning!", "See you tomorrow.", "Good night.",
+    "How are you doing today?",
+])
+def test_social_turns_never_search_or_follow_up(text):
+    assert not should_search(text, policy=SearchPolicy.AUTO)
+    assert not should_search(text, policy=SearchPolicy.AUTO, follows_search=True)
+
+
+@pytest.mark.parametrize("text", [
+    "Thanks, what's the weather tomorrow?", "Hi Reachy, what's the latest Python version?",
+])
+def test_greeting_does_not_hide_a_real_question(text):
+    assert should_search(text, policy=SearchPolicy.AUTO)
+
+
+@pytest.mark.parametrize(("text", "searches"), [
+    ("I'm busy now.", False),
+    ("Can you help me now?", False),
+    ("What's the traffic like right now in Singapore?", True),
+    ("Is the pharmacy open now?", True),
+])
+def test_now_counts_only_inside_a_freshness_phrase(text, searches):
+    assert should_search(text, policy=SearchPolicy.AUTO) is searches
+
+
+@pytest.mark.parametrize("text", [
+    "Who are you?", "What are you?", "What's your name?", "What can you do?",
+    "Hey Reachy, who are you?", "Tell me about yourself.",
+])
+def test_self_identity_is_neither_search_nor_follow_up(text):
+    assert not should_search(text, policy=SearchPolicy.AUTO, follows_search=True)
+    assert build_query(text, "What's the weather today?", search_topic="What's the weather today?") == text
+
+
+@pytest.mark.parametrize("text", [
+    # Statements after a search that do not point back at its subject.
+    "My code word is pineapple.",
+    "I think that is enough for today",
+    "Is there a way to make my code faster",
+    "Tell me a joke about robots.",
+])
+def test_turn_after_a_search_follows_up_only_when_it_refers_back(text):
+    from companion_core.websearch.policy import is_follow_up
+
+    assert not is_follow_up(text)
+
+
+@pytest.mark.parametrize("text", [
+    "When was it released?", "What about tomorrow?", "And tomorrow?", "How much does it cost?",
+    "How long has she been in office?", "Tell me more about that.", "Any news about it?",
+])
+def test_genuine_follow_ups_still_merge_the_search_topic(text):
+    topic = "What's the weather in Singapore today?"
+    assert should_search(text, policy=SearchPolicy.AUTO, follows_search=True)
+    assert build_query(text, topic, search_topic=topic) == f"{topic} {text}"
+
+
+def test_self_contained_short_question_after_a_search_starts_a_new_topic():
+    from companion_core.websearch.policy import next_search_topic
+
+    topic = "What's the latest stable Python version?"
+    text = "What's the weather today?"
+    assert should_search(text, policy=SearchPolicy.AUTO, follows_search=True)
+    assert build_query(text, topic, search_topic=topic) == text
+    assert next_search_topic(text, text, topic) == text
+
+
+def test_a_bare_short_freshness_question_stands_alone():
+    # Documented limit: with no reference back, "Any news?" is its own topic.
+    topic = "What's the latest stable Python version?"
+    assert build_query("Any news?", topic, search_topic=topic) == "Any news?"
+
+
+@pytest.mark.parametrize("text", [
+    # 24d: long-utterance fragments with "she" and "today" merged the
+    # previous fragment into the search query.
+    "and she said the meeting moved to today",
+    "my sister said she would call today",
+])
+def test_a_statement_with_a_pronoun_does_not_pull_in_the_previous_turn(text):
+    assert build_query(text, "Tell me about Bob.") == text

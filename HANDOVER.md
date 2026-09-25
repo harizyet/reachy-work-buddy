@@ -7,26 +7,26 @@ acceptance. This file holds only session continuation details.
 
 ## Current work
 
-Branch at session start: `main`, `1b363fd`. This session implemented
-[Phase 24e](docs/phase-24e.md) item 1, adaptive end of turn, following the
-[ADR 0023 amendment](docs/adr/0023-robot-voice-conversation.md#addendum-adaptive-end-of-turn-2026-09-25-phase-24e)
-written first: hub `turn_completeness.py` rules, the held turn with the
-`continue` outcome, `X-Voice-Segment`, the finalize route, the
-`voice_turn_continuation` capability, and a robot microphone that stays open
-through a segment's upload. `max_utterance_seconds` now caps the merged
-turn, with the default raised to 30 s. Nothing was deployed: the homelab
-hub and Nano embodiment image still run the pre-24e turn path.
+Branch `main`. [Phase 24e](docs/phase-24e.md) item 1 (adaptive end of turn)
+is committed in `6f292be`. This session added item 2's deterministic part:
+search-rule fixes in `companion_core/websearch/policy.py` (closings,
+greetings and self-identity never search, bare "now" is not a freshness
+cue, and follow-ups must refer back to the previous search) and an STT
+`initial_prompt` with "Reachy" plus the persona name. Design choices are in
+[the item 2 notes](docs/phase-24e.md#implementation-notes-item-2). A parallel
+session had started the same policy rewrite and disconnected mid-edit; its
+version was kept and completed. Nothing is deployed: the homelab hub and
+Nano embodiment image still run the pre-24e turn path.
 
-Verification: ruff passed. Full `pytest services shared` gave 595 passed and
-31 skipped. The `slow` real-speech tests (Silero, tiny.en Whisper and espeak
-via `/tmp/espeak-extract`) passed, including a paused utterance merged into
-one turn. Whisper added a spurious period to "…tell me", which the phrase
-rule holds. These are in-process and simulated-audio checks, not physical
-acceptance.
+Verification: ruff passed. Core 360 passed, 18 skipped; hub 197 passed,
+9 skipped; `slow` real-speech tests (tiny.en, espeak via
+`/tmp/espeak-extract`) 11 passed, 1 skipped (no Piper model). In-process
+only, not physical acceptance.
 
-Next: 24e item 2 (search-rule fixes and STT vocabulary bias). Deploy item 1
-to the hub and Nano when the owner schedules the physical run. Phase 25
-remains blocked on the
+Next: 24e item 3 of the sequence, the correctness set. Write its scoring
+rules, then get the owner's pass threshold **before** any measurement.
+Deploy items 1–2 to the hub and Nano when the owner schedules the physical
+run. Phase 25 remains blocked on the
 [hardware prerequisites](docs/phase-24e.md#prerequisites-for-phase-25).
 
 ## Last-reported machine state

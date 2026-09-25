@@ -113,8 +113,8 @@ class CompanionCoreClient:
         response.raise_for_status()
         return response.json()
 
-    async def get_persona(self) -> dict:
-        response = await self._client.get(PERSONA_SETTINGS)
+    async def get_persona(self, *, timeout: float = 5.0) -> dict:
+        response = await self._client.get(PERSONA_SETTINGS, timeout=timeout)
         response.raise_for_status()
         return response.json()
 

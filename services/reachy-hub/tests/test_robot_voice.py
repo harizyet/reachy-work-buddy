@@ -60,6 +60,7 @@ from shared.models.robot_voice import (
 )
 from shared.models.robot_ws import VoiceStateMessage, WSMessageType
 from shared.models.session import Channel, PrivacyContext
+from shared.protocols.operator_api import PERSONA_SETTINGS
 from shared.protocols.robot_ws import (
     PROTOCOL_VERSION,
     ROBOT_VOICE_TURN,
@@ -484,8 +485,9 @@ class ScriptedSTT:
         self.texts = list(texts)
         self.calls = 0
 
-    def transcribe(self, wav: bytes) -> str:
+    def transcribe(self, wav: bytes, *, vocabulary=()) -> str:
         self.calls += 1
+        self.vocabulary = vocabulary
         return self.texts.pop(0)
 
 
@@ -586,6 +588,20 @@ def upload(client, sid, turn, generation, body=None, token=ROBOT_TOKEN, segment=
     if segment is not None:
         headers["X-Voice-Segment"] = str(segment)
     return client.post(ROBOT_VOICE_TURN, content=body if body is not None else wav_bytes(), headers=headers)
+
+
+def test_recognition_is_biased_toward_the_configured_assistant_name() -> None:
+    stt = ScriptedSTT("hello zephyr")
+    client, _, _ = make_hub(stt, RecordingTTS())
+    with client:
+        assert client.put(PERSONA_SETTINGS, json={"name": "Zephyr"}, headers=OWNER).status_code == 200
+        ws, socket, generation = connect_robot(client)
+        try:
+            sid = start_listening(client, socket)
+            assert upload(client, sid, 1, generation).status_code == 200
+            assert stt.vocabulary == ("Zephyr",)
+        finally:
+            ws.__exit__(None, None, None)
 
 
 def test_spoken_turns_share_the_conversation_with_web_chat() -> None:

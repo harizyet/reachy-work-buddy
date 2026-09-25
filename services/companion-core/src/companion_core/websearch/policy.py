@@ -3,7 +3,7 @@ same placeholder-matcher honesty as the *_intent.py modules: fixed
 keyword/pattern rules, never an LLM classifier. The model has no authority
 to request, skip, or suppress a search; only this module decides. See
 docs/phase-24a.md's "Required behaviour" section for the exact rules this
-implements.
+implements, and docs/phase-24e.md scope item 2 for the 24d misfire fixes.
 """
 
 from __future__ import annotations
@@ -13,8 +13,10 @@ import re
 from shared.models.websearch import SearchPolicy
 
 _SEARCH_PHRASES = ("search for ", "look this up", "check online", "look up ")
+# "now" alone is not a cue (Phase 24e): "Goodbye for now." searched in 24d.
+# It still counts inside the phrases in _FRESHNESS_PHRASE_RE.
 _FRESHNESS_WORDS = (
-    "latest", "current", "today", "recent", "this week", "now",
+    "latest", "current", "today", "recent", "this week",
     "release", "version", "price", "weather", "news",
     "tomorrow", "tonight", "forecast",
 )
@@ -22,77 +24,114 @@ _YEAR_RE = re.compile(r"\b20[2-9]\d\b")
 _FRESHNESS_WORD_RE = re.compile(
     "|".join(rf"\b{re.escape(word)}\b" for word in _FRESHNESS_WORDS)
 )
+_FRESHNESS_PHRASE_RE = re.compile(r"\b(?:right now in|open now|now open|as of now)\b")
 
-# A short, referential-looking follow-up ("How much does it cost?") pulls in
-# the immediately preceding user turn; a self-contained question of similar
-# length ("What's the latest CUDA version?") must not, so the length cutoff
-# alone stays low — the cue list carries the rest of the referential cases.
-_REFERENTIAL_WORD_LIMIT = 4
-_REFERENTIAL_CUES = (
-    "it", "that", "those", "they", "them", "this", "how much", "when was it",
-    "what about", "compared to", "is it", "does it",
-    "he", "she", "him", "her", "his", "their", "there",
+# Closings, greetings and thanks. A turn is social only when nothing but
+# these phrases and _SOCIAL_FILLER remains, so "Thanks, what's the weather
+# today?" still searches.
+_SOCIAL_RE = re.compile(
+    r"\b(?:good ?bye|bye(?: bye)?|see (?:you|ya)|talk (?:to you )?(?:later|soon)|good ?night"
+    r"|thank you|thanks|cheers|hello|hi|hey|hiya|good (?:morning|afternoon|evening)"
+    r"|how are you|how's it going|nice to meet you|that's all)\b"
 )
+_SOCIAL_FILLER = frozenset({
+    "for", "now", "then", "again", "so", "much", "very", "a", "lot", "you", "too",
+    "reachy", "all", "later", "soon", "tomorrow", "tonight", "today", "oh", "well",
+    "ok", "okay", "and", "everyone", "there", "buddy", "doing", "it", "is",
+})
+# The whole turn must be the question, so "What can you do about the
+# latest news?" is not self-identity.
+_SELF_IDENTITY_RE = re.compile(
+    r"(?:(?:hey|hi|hello|so|and|ok|okay|well|oh|reachy) )*"
+    r"(?:who are you|what are you|who am i talking to|what(?:'s| is) your name"
+    r"|what (?:else )?can you do|what are you able to do|what do you do|how do you work"
+    r"|tell me about yourself|introduce yourself|are you a robot)"
+    r"(?: (?:reachy|again|exactly|anyway|then|for me))*"
+)
+
+# A follow-up must point back at the previous search's subject. "there",
+# "how much" and statements are not enough on their own (24d merged
+# unrelated fragments that way).
+_REFERENTIAL_WORD_LIMIT = 4
+_FOLLOW_UP_OPENERS = ("what about", "how about", "compared to", "tell me more", "more about")
+_BACK_REFERENCES = frozenset({
+    "it", "its", "that", "those", "this", "these", "they", "them", "their",
+    "he", "she", "him", "her", "his",
+})
+_QUESTION_STARTS = frozenset({
+    "what", "what's", "when", "where", "who", "whose", "why", "how", "which",
+    "is", "are", "was", "were", "do", "does", "did", "can", "could", "will",
+    "would", "should", "has", "have", "any",
+})
 _QUERY_CHAR_LIMIT = 300
 _WEATHER_RE = re.compile(r"\b(weather|forecast|temperature|rain|raining|humid|humidity)\b")
+
+
+def _normalize(text: str) -> str:
+    return " ".join(re.findall(r"[\w']+", text.lower()))
 
 
 def matches_auto_heuristic(text: str) -> bool:
     lowered = text.lower()
     if any(phrase in lowered for phrase in _SEARCH_PHRASES):
         return True
-    if _FRESHNESS_WORD_RE.search(lowered):
+    if _FRESHNESS_WORD_RE.search(lowered) or _FRESHNESS_PHRASE_RE.search(_normalize(text)):
         return True
     return bool(_YEAR_RE.search(text))
+
+
+def is_social(text: str) -> bool:
+    normalized = _normalize(text)
+    remainder = _SOCIAL_RE.sub(" ", normalized)
+    return remainder != normalized and set(remainder.split()) <= _SOCIAL_FILLER
+
+
+def is_self_identity(text: str) -> bool:
+    return _SELF_IDENTITY_RE.fullmatch(_normalize(text)) is not None
 
 
 def should_search(text: str, *, policy: SearchPolicy, follows_search: bool = False) -> bool:
     """`follows_search`: the immediately preceding user turn searched. Under
     Auto, a follow-up to it ("When was it released?", "What about
-    tomorrow?") searches too, though it has no freshness word of its own."""
+    tomorrow?") searches too, though it has no freshness word of its own.
+    Closings, greetings, thanks and self-identity questions never search
+    under Auto; Always still searches every turn."""
     if policy == SearchPolicy.ALWAYS:
         return True
     if policy == SearchPolicy.AUTO:
+        if is_social(text) or is_self_identity(text):
+            return False
         return matches_auto_heuristic(text) or (follows_search and is_follow_up(text))
     return False
 
 
 def is_follow_up(text: str) -> bool:
-    """Narrower than _is_referential: a bare short reply ("thanks", "ok")
-    must not trigger a search, so short turns count only as questions."""
+    return _refers_back(text, allow_short=True)
+
+
+def _refers_back(text: str, *, allow_short: bool) -> bool:
+    """Opener phrases ("what about Tuesday?") always refer back. Otherwise
+    the turn must be a question and either use a back-reference pronoun or,
+    with `allow_short`, be a short question with no freshness subject of its
+    own ("Why?"), so "What's the weather today?" is self-contained."""
     lowered = text.strip().lower()
     words = re.findall(r"[\w']+", lowered)
-    if not words:
+    if not words or is_social(text) or is_self_identity(text):
         return False
-    if len(words) <= _REFERENTIAL_WORD_LIMIT and lowered.endswith("?"):
+    if any(opener in lowered for opener in _FOLLOW_UP_OPENERS):
         return True
-    return _has_referential_cue(lowered, set(words))
-
-
-def _has_referential_cue(lowered: str, wordset: set[str]) -> bool:
-    for cue in _REFERENTIAL_CUES:
-        if " " in cue:
-            if cue in lowered:
-                return True
-        elif cue in wordset:
-            return True
-    return False
-
-
-def _is_referential(text: str) -> bool:
-    lowered = text.strip().lower()
-    if not lowered:
+    if not (lowered.endswith("?") or words[0] in _QUESTION_STARTS):
         return False
-    words = re.findall(r"[\w']+", lowered)
-    if len(words) <= _REFERENTIAL_WORD_LIMIT:
+    # "And tomorrow?" continues the thread; "and she said…" is not a question.
+    if (words[0] == "and" and len(words) > 1) or _BACK_REFERENCES.intersection(words):
         return True
-    return _has_referential_cue(lowered, set(words))
+    return allow_short and len(words) <= _REFERENTIAL_WORD_LIMIT and not matches_auto_heuristic(text)
 
 
 def build_query(
     current_turn: str, previous_user_turn: str | None, *, search_topic: str | None = None
 ) -> str:
-    """Fixed rules only — never LLM-rewritten. A referential turn is
+    """Fixed rules only — never LLM-rewritten. A follow-up (is_follow_up) is
     prefixed with context: the search topic (the query the thread's last
     self-contained search already sent, so nothing new from the
     conversation reaches the provider) when the previous turn searched.
@@ -102,11 +141,9 @@ def build_query(
     The current turn is never truncated away."""
     current = current_turn.strip()[:_QUERY_CHAR_LIMIT]
     if search_topic:
-        context = search_topic if _is_referential(current) else None
+        context = search_topic if is_follow_up(current) else None
     else:
-        lowered = current.lower()
-        cue = _has_referential_cue(lowered, set(re.findall(r"[\w']+", lowered)))
-        context = previous_user_turn if cue else None
+        context = previous_user_turn if _refers_back(current, allow_short=False) else None
     if not context:
         return current
     room = _QUERY_CHAR_LIMIT - len(current) - 1
@@ -116,7 +153,7 @@ def build_query(
 def next_search_topic(current_turn: str, query: str, search_topic: str | None) -> str:
     """A follow-up keeps its thread's topic so chained follow-ups ("When was
     it released?" then "Any news about it?") don't lose the subject."""
-    return search_topic if search_topic and _is_referential(current_turn.strip()) else query
+    return search_topic if search_topic and is_follow_up(current_turn.strip()) else query
 
 
 def localize_query(query: str, location: str | None) -> str:

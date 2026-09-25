@@ -4,7 +4,10 @@ Status: **in progress** (2026-09-25). This page states what 24e must deliver,
 not what already works. Item 1 (adaptive end of turn) is implemented per the
 [ADR 0023 amendment](adr/0023-robot-voice-conversation.md#addendum-adaptive-end-of-turn-2026-09-25-phase-24e),
 with in-process and simulated-audio tests only; it is not deployed or
-physically accepted. It follows [Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance),
+physically accepted. Item 2's search-rule fixes and STT vocabulary bias are
+implemented and tested in process (see the
+[note below](#implementation-notes-item-2)); the correctness set is not
+started. It follows [Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance),
 which the owner closed on the conversation workflow on 2026-09-25, and it
 addresses what 24d found or deferred. Evidence for each issue is in the
 [24d record](verification/phase-24d-conversation-2026-09-24.md). Scope was
@@ -175,6 +178,21 @@ target-platform verification.
   journal entries, not a monitoring stack.
 - Document the diagnosis procedure (what to collect after an unexpected
   reboot) in the deployment guide.
+
+### Implementation notes (item 2)
+
+- A turn is social only if nothing but closing/greeting/thanks phrases and
+  filler remains, so "Thanks, what's the weather tomorrow?" still searches.
+  Always still searches every turn.
+- A follow-up needs a reference phrase ("what about", "tell me more"), a
+  question that opens with "and" or uses a pronoun, or a short question
+  with no freshness subject of its own. A bare "Any news?" therefore starts
+  a new topic rather than continuing the previous one.
+- STT uses a Whisper `initial_prompt` ("Hello Reachy." plus the persona
+  name, read from core each turn), not `hotwords`: on espeak clips with
+  `base.en`, hotwords dropped final punctuation on 2 of 5 clips, while the
+  prompt kept it and recognised "Reachy" about as often. This is a synthetic
+  comparison, not evidence on real speech; the physical run checks it.
 
 ## Non-goals
 

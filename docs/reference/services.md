@@ -50,7 +50,9 @@ of its monthly limit used, failing over on error, and the SearXNG fallback
 searches in memory for the owner's debug view (`GET /websearch/log`). Every generic
 turn also gets `persona/context.py`'s owner-local date, time and location
 message, and follow-ups reuse the session's search topic
-(`ConversationStore.search_topic`). VOICE-modality turns also get
+(`ConversationStore.search_topic`) only when they refer back to it. Under
+Auto, closings, greetings, thanks and self-identity questions never search
+(Phase 24e). VOICE-modality turns also get
 `SPOKEN_REPLY_INSTRUCTION` (short plain replies), and reachy-hub strips
 citation markers and markdown before synthesis (`tts.spoken_text`).
 Retrieved titles/snippets/URLs are injected as a separate, clearly
@@ -150,7 +152,8 @@ integration. See [ADR 0006](../adr/0006-response-routing.md),
 
 Telegram stores learned chat IDs separately from channel-agnostic sessions.
 Poll health lives in memory and resets on restart. STT/TTS are lazy local
-faster-whisper/espeak providers. WebRTC orchestration is separate from SDP
+faster-whisper/espeak providers. Robot and `/voice/turn` STT is primed with
+"Reachy" and the persona's assistant name (Phase 24e). WebRTC orchestration is separate from SDP
 and audio tracks; playback resamples to 48kHz mono because aiortc's Opus
 encoder does not adapt when tracks with different formats are swapped.
 

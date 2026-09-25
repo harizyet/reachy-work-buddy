@@ -47,3 +47,19 @@ def test_transcribe_silence_returns_empty_string() -> None:
     stt = FasterWhisperSTT(model_size="tiny.en")
     transcript = stt.transcribe(buf.getvalue())
     assert transcript == ""
+
+
+def test_prompt_always_includes_reachy_and_the_configured_name() -> None:
+    calls = []
+
+    class Model:
+        def transcribe(self, audio, **kwargs):
+            calls.append(kwargs)
+            return [], None
+
+    stt = FasterWhisperSTT.__new__(FasterWhisperSTT)
+    stt._model = Model()
+    stt.transcribe(b"")
+    stt.transcribe(b"", vocabulary=("Zephyr", " ", "Reachy"))
+    assert [call["initial_prompt"] for call in calls] == ["Hello Reachy.", "Hello Reachy and Zephyr."]
+    assert all(call["vad_filter"] for call in calls)

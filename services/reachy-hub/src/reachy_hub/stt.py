@@ -19,11 +19,14 @@ up whatever complete audio clip STT is asked to transcribe.
 from __future__ import annotations
 
 import io
+from collections.abc import Sequence
 from typing import Protocol
+
+from shared.models.persona import DEFAULT_NAME
 
 
 class SpeechToText(Protocol):
-    def transcribe(self, wav_bytes: bytes) -> str: ...
+    def transcribe(self, wav_bytes: bytes, *, vocabulary: Sequence[str] = ()) -> str: ...
 
 
 class FasterWhisperSTT:
@@ -32,6 +35,13 @@ class FasterWhisperSTT:
 
         self._model = WhisperModel(model_size, compute_type="int8")
 
-    def transcribe(self, wav_bytes: bytes) -> str:
-        segments, _info = self._model.transcribe(io.BytesIO(wav_bytes), vad_filter=True)
+    def transcribe(self, wav_bytes: bytes, *, vocabulary: Sequence[str] = ()) -> str:
+        # Phase 24e: bias recognition toward the robot's name, which 24d
+        # heard as "Ricci"/"Richi", and the configured assistant name. An
+        # initial prompt, not hotwords: on base.en, hotwords dropped final
+        # punctuation, which the end-of-turn and search rules read.
+        names = dict.fromkeys(w.strip() for w in (DEFAULT_NAME, *vocabulary) if w.strip())
+        segments, _info = self._model.transcribe(
+            io.BytesIO(wav_bytes), vad_filter=True, initial_prompt=f"Hello {' and '.join(names)}.",
+        )
         return " ".join(segment.text.strip() for segment in segments).strip()

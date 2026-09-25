@@ -129,7 +129,7 @@ import logging
 import os
 import secrets
 import threading
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable, Sequence
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
@@ -413,8 +413,17 @@ def create_app(
                 voice_providers["tts"] = tts_factory()
             return voice_providers["tts"]  # type: ignore[return-value]
 
-    def transcribe(wav_bytes: bytes) -> str:
-        return get_stt().transcribe(wav_bytes)
+    def transcribe(wav_bytes: bytes, vocabulary: Sequence[str] = ()) -> str:
+        return get_stt().transcribe(wav_bytes, vocabulary=vocabulary)
+
+    async def stt_vocabulary() -> tuple[str, ...]:
+        """The configured assistant name, read per turn so a rename applies
+        at once. Recognition still runs without it if core is unreachable."""
+        try:
+            name = (await companion_core_client.get_persona(timeout=1.0)).get("name")
+        except (httpx.HTTPError, ValueError, AttributeError):
+            return ()
+        return (name,) if isinstance(name, str) else ()
 
     def synthesize(text: str) -> bytes:
         return get_tts().synthesize(spoken_text(text))
@@ -1146,7 +1155,7 @@ def create_app(
         # faster-whisper and the espeak-ng subprocess are both blocking/
         # CPU-bound; running them inline would stall the event loop for
         # every other request while a transcription/synthesis is in flight.
-        transcript = await asyncio.to_thread(transcribe, wav_bytes)
+        transcript = await asyncio.to_thread(transcribe, wav_bytes, await stt_vocabulary())
         if not transcript:
             raise HTTPException(status_code=422, detail="no speech detected in audio")
 
@@ -1178,7 +1187,7 @@ def create_app(
         return user_id
 
     async def voice_transcribe(wav_bytes: bytes) -> str:
-        return await asyncio.to_thread(transcribe, wav_bytes)
+        return await asyncio.to_thread(transcribe, wav_bytes, await stt_vocabulary())
 
     async def voice_synthesize(text: str) -> bytes:
         return await asyncio.to_thread(synthesize, text)
