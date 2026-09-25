@@ -252,16 +252,41 @@ verify.
 Utterance end → first audible reply, over the live turns:
 **p50 ≤ 4 s, p95 ≤ 8 s.** Agreed with the owner on 2026-09-24 before step 3.
 
+## Preliminary timings (not the formal timed run)
+
+Utterance end = robot "utterance cut" − 0.7 s. First audio = robot "voice
+playback started" (daemon accepted `play_sound`; a lower bound). Hub stage
+times come from the turn records.
+
+| Session / turn | Search | Utterance end → first audio | STT / LLM / TTS (ms) | Reply audio |
+|---|---|---|---|---|
+| `CnPL` 1 | off | 3.59 s | 419 / 1294 / 385 | 12.2 s |
+| `CnPL` 2 | off | 2.51 s | 436 / 767 / 189 | 5.5 s |
+| `Q_UR` 1 | Always, SearXNG | 8.29 s | 345 / 4612 / 1042 | 34.2 s |
+| `Q_UR` 2 | Always, SearXNG | 6.60 s | 490 / 2957 / 241 | 7.1 s |
+| `Q_UR` 3 | Always, SearXNG | 5.86 s | 388 / 2784 / 190 | 5.5 s |
+| `Q_UR` 4 | Always, SearXNG | 11.13 s | 345 / 5438 / 1279 | 42.5 s |
+| `Q_UR` 5 | Always, SearXNG | 46.13 s | 415 / 16014 / 6983 | 232.5 s (stopped) |
+
+Upload → daemon `play_sound` was 40–47 ms on every turn. The hub received
+each upload 114–237 ms after the cut, with one 1.16 s outlier. Most of the
+time goes to the LLM, and it grows with reply length. These runs came
+before `af27338` (short spoken replies, Brave provider), so they don't count
+against the budget.
+
 ## Results
+
+Status on 2026-09-25. The formal run still needs a live Brave key check,
+then ≥10 turns with three context follow-ups.
 
 | Scenario | Result | Evidence |
 |---|---|---|
-| Normal conversation | — | |
-| Turn handling | — | |
-| Session continuity | — | |
-| Privacy | — | |
-| Consent and auth | — | |
-| Stop and expiry | — | |
-| Recovery | — | |
-| Coexistence and sustained use | — | |
-| Timing and quality | — | |
+| Normal conversation | OPEN | Live spoken turns work end to end. Answer accuracy failed (search/model), and no ≥10-turn run yet |
+| Turn handling | OPEN | Short and long utterances and a `no_speech` segment were handled; no self-hearing seen. Silence, noise and echo not yet exercised deliberately |
+| Session continuity | OPEN | Not yet exercised on the robot (the web handoff was only in the 24c simulated run) |
+| Privacy | OPEN | Live withholding observed (routing to web). Carry-over fix `c65c9cd`. Modes, DND and private call not yet exercised on the robot |
+| Consent and auth | OPEN | Covered off the robot in 24c tests; not yet on the robot |
+| Stop and expiry | PARTIAL | Stop during playback: 32 ms and 36 ms from stop receipt to daemon `stop_sound` (the robot-side stop marker came from `1a66f01`). Capture and inference cancellation, logout and expiry not yet run |
+| Recovery | PARTIAL | An unplanned WS drop (tailnet stall) ended the session cleanly, with no auto-reactivation and re-registration in 8 s. Hub restarts were recovered by reconnect. The Nano reboot exposed the camera-socket boot race (open) |
+| Coexistence and sustained use | PARTIAL | Step 3 coexistence PASS. The 30-minute session is not yet run |
+| Timing and quality | OPEN | Budget p50 ≤ 4 s, p95 ≤ 8 s agreed. Preliminary timings above; the formal run is pending |

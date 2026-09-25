@@ -316,8 +316,8 @@ Phase 24c lets the owner talk to Reachy through its own microphone and
 speaker. See [ADR 0023](adr/0023-robot-voice-conversation.md) for the design
 and the [operator guide](operator-guide.md#talk-through-reachys-microphone-phase-24c)
 for use. It is **off by default**. Physical acceptance is
-[Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance) and has
-not been done.
+[Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance). It is
+in progress; see the [24d record](verification/phase-24d-conversation-2026-09-24.md).
 
 To enable it on the robot host:
 
@@ -338,10 +338,27 @@ To enable it on the robot host:
    for it. If the file is not readable, the launcher warns and leaves voice
    disabled.
 
-**Not verified on the Nano:** dsnoop sharing from the container, the running
-UID's access to the camera socket and devices, the ReSpeaker channel layout
-(the loop averages both channels), and daemon `stop_sound`. The first 24d
-step checks them.
+Checked on nano-1 during 24d:
+- dsnoop capture from the container, alongside the daemon's own playback
+  (dmix);
+- camera socket access as the daemon UID;
+- correct transcripts with the averaged channels;
+- daemon `stop_sound` about 32 ms after `voice stop received`.
+
+Acoustic echo is not yet assessed. The image needs
+`gir1.2-gst-plugins-base-1.0` and `gstreamer1.0-alsa`, and must not ship
+`libgstonnx.so`, which crashes GStreamer on the Nano's ARMv8.0 CPU. The
+Dockerfile handles all three. Under the Nano's Docker 20.10.7 seccomp
+profile, GStreamer loads plugins in process, so the first camera or
+microphone use after a container start takes about 10 s.
+
+**Known issue:** after a Nano reboot, Docker's `unless-stopped` restart can
+start `reachy-embodiment` before the daemon. The container's bind mount then
+creates `/tmp/reachymini_camera_socket` as a root-owned directory, and both
+the container and the daemon's media server fail. Until the launcher is
+fixed, recover as described in [HANDOVER](../HANDOVER.md#machine-specific-continuation-notes):
+remove the directory, restart the daemon with the owner present, then
+recreate the container.
 
 Robot traffic uses the same `HUB_WS_URL` origin through Caddy. The WSS socket
 carries only `voice_start`/`voice_stop`/`voice_state`. Each utterance is a

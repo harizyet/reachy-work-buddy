@@ -1,6 +1,6 @@
 # Handover
 
-Current session snapshot, updated 2026-09-24. Read [AGENTS.md](AGENTS.md)
+Current session snapshot, updated 2026-09-25. Read [AGENTS.md](AGENTS.md)
 before working. Durable instructions belong in the [documentation index](docs/README.md),
 not repeated in this file.
 
@@ -33,6 +33,31 @@ remains gated on 24d.
 - **Hardware watch.** `stewart_5` logged "Overheating Error" for 20+ min
   while the head held a strained pose. It cleared after a reboot and motor
   reset, but the cause is unknown. Check the daemon journal for recurrence.
+- **Homelab stack (dev/test, not production-accepted).** Upgraded
+  `004_persona` → `006_search_config` on 2026-09-24. The pre-upgrade dump is
+  `~/reachy-backups/reachy-before-phase24d-20260924T213146.dump` (0600).
+  Hub/core run `af27338`, with SearXNG added. Start it only through
+  `scripts/start-homelab.sh`: it used to mangle `ROBOT_TOKENS`' JSON (fixed,
+  `read_env_file`). The hub now speaks with Piper `en_US-lessac-medium`
+  (espeak was judged too robotic). Each turn record in `GET /robot-voice`
+  carries transcription/conversation/synthesis ms, and the robot logs cut,
+  reply and playback lines at INFO.
+- **Answer quality is the blocker.** Replies were out of date or invented,
+  first with search off (the `006` default) and then with Always. Google
+  and Brave had CAPTCHA'd or suspended the bundled SearXNG from this
+  address, and Bing returned unrelated pages. `af27338` adds a hosted
+  **Brave Search API** provider. It is deployed and fixture-tested, but no
+  live call has been made yet. The owner has a key but hasn't entered it
+  yet (Settings → Web search → Brave Search API). The current setting is
+  policy `always` with `builtin_searxng`. Even with good results, the local
+  `Qwen2.5-1.5B` used them inconsistently. The owner chose to keep it; the
+  configured cloud GLM-5.3 is the fallback option if Brave doesn't fix
+  accuracy.
+- **Reply length.** `af27338` also asks the model for 1–3 plain sentences
+  on voice turns, and strips `[S…]`/markdown before TTS. Utterance-end →
+  first audio was 2.5–3.6 s without search. It was 5.9–11 s with the broken
+  SearXNG, plus one 46 s outlier from a long list reply. None of those runs
+  was the formal timed run; the budget is p50 ≤ 4 s, p95 ≤ 8 s.
 - **Unfixed boot race.** A Nano reboot leaves camera/audio broken until the
   manual recovery under
   [machine notes](#machine-specific-continuation-notes). The homelab session
@@ -310,11 +335,11 @@ after which it came up healthy. A real camera capture then succeeded
 end to end, which surfaced that the existing capture_frame implementation
 (release/acquire+OpenCV) interrupts the daemon's whole media pipeline per
 call; `capture_frame` was refactored to reachy_mini's recommended LOCAL
-media backend (code+tests done, real-device build/run still open). See
+media backend (since run on the Nano during 24d; see the 22c note below). See
 [camera evidence](docs/verification/phase-22b-camera-2026-09-24.md) above.
 
-No production deployment was upgraded. This session did bring up and upgrade
-the homelab's own disposable dev/test stack (through `004_persona`) for
+No production deployment was upgraded. The homelab's disposable dev/test
+stack (now at `006_search_config`, see Current work) was brought up earlier for
 interactive user testing — real owner login, OpenVINO local LLM routing with
 a Together AI cloud fallback, and a bound Telegram owner chat all live there,
 but it is not the production-accepted deployment Phase 23 still gates on.
