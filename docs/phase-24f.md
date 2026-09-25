@@ -1,8 +1,9 @@
 # Phase 24f — Motion conformance and conversational embodiment
 
-Status: **in progress; physical rows waiting on a camera-measured
-Testbench check** (2026-09-25). Item 1 is measured: REST and SDK agree.
-The robot stops 2–5° short of commanded poses on both paths, and whether that is normal for the stock
+Status: **in progress** (2026-09-25). Item 1 is measured: REST, the SDK
+and Pollen's streaming method agree, and the head camera confirms the
+head moves as far as the encoders say. The robot stops 2–5° short of
+commanded poses on every path, and whether that is normal for the stock
 proportional-only gains or a fault is open
 ([conformance record](verification/phase-24f-conformance-2026-09-25.md)).
 Item 3's motion owner is implemented behind two off-by-default switches

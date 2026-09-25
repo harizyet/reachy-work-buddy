@@ -157,13 +157,12 @@ are so small it's not really visually noticable".
   largest joint shortfall here, 0.08 rad (4.6°), passes both checks. So
   the owner's earlier successful Testbench run, on an earlier day, fits
   these numbers.
-- **Still unexplained.** The owner saw no head motion for an
-  encoder-reported 16° yaw, while hearing the motors. A mechanical fault
-  (horn slip, a slack rod or ball joint, a loose head shell) or an
-  insufficient supply are still possible, and 24d's `stewart_5` heat is
-  still unexplained. Neither has been inspected or measured. The
-  Testbench's camera-based rotation test measures actual head motion,
-  independently of the encoders, so it can separate these possibilities.
+- **The head does follow the motors (camera-measured, below).** The owner
+  saw no motion for an encoder-reported 16° yaw, but the head camera
+  measured 0.223 rad against the encoders' 0.230. The owner's view was a
+  perception limit for moves of 5–13°, not a mechanical decoupling. The
+  shortfall itself is real and physical. 24d's `stewart_5` heat is still
+  unexplained.
 - **The command method matches Pollen's.** No raw motor values were sent:
   both paths sent Cartesian head poses to the daemon's IK, as the
   Testbench does (`goto_target`). Pollen's conversation app
@@ -175,19 +174,45 @@ are so small it's not really visually noticable".
   The `stream-sdk` case reproduces the app's method.
 
 Result: item 1's command-path question is answered. REST, the SDK and
-the Testbench send the same targets. Whether the physical shortfall is
-normal for this robot or a fault is **open**. The predeclared 0.05 rad
-tolerance was stricter than anything Pollen checks, and was not based
-on a measured healthy robot. Next, with the owner present:
+the Testbench send the same targets, and the head moves as far as the
+encoders report. It stops 2–5° short of commanded poses on every path,
+including Pollen's streaming method. Whether that is normal for the stock
+proportional-only gains or excess friction or load on this unit is
+**open**. The predeclared 0.05 rad tolerance was stricter than anything
+Pollen checks, and was not based on a measured healthy robot. The
+motion switches stay off. Repair is outside Phase 24f.
 
-1. Run the official Testbench rotation test (camera-measured), with
-   `motion-conformance.py --log 60` recording encoders alongside.
-2. Run `stream-sdk`, which uses the conversation app's streaming method,
-   for comparison with `axes-*`.
-3. Inspect the mechanism and supply if the camera measurement disagrees
-   with the encoders.
+### Camera-measured run (unattended, 12:47Z)
 
-The motion switches stay off until then. Repair is outside Phase 24f.
+This was the first run under the owner's unattended-testing decision, at
+`7e94194`, with `--camera`: zero-rest, visible-rest, axes-rest, axes-sdk,
+stream-sdk, then home. The daemon stayed `running` with `nb_error` 0, and
+the journal had no warnings. The run ended at IDLE_HOME.
+
+- **Encoders:** the same as earlier runs. `stream-sdk`, which is Pollen's
+  conversation-app method (60 Hz `set_target`), reached 0.074 for +0.15,
+  0.061 on the return to 0, and −0.049 for −0.15. It does not avoid the
+  shortfall.
+- **Camera, live:** unusable. The Lite head camera is dark by default even
+  in a lit room (mean 33/255, 29 ORB keypoints raw). Most rows had no
+  matches, and the few that solved were spurious (0.3–1.0 rad).
+- **Camera, offline re-analysis** (read-only, at `65034fd`, with CLAHE
+  equalisation; 452 keypoints on the baseline): wherever the frame was
+  fresh, the camera and encoders agreed within about 0.01 rad. Examples:
+  visible yaw +0.3, 0.223 / 0.230, and its return, −0.115 / −0.115;
+  yaw +0.15, 0.094 / 0.092; stream +0.15, 0.143 / 0.136; SDK yaw −0.15,
+  −0.137 / −0.144. The disagreeing rows lag by one observation. The
+  "after" frame still showed the previous position, and the pair sums to
+  the encoder value, for example roll −0.1: −0.018 then −0.121, against
+  −0.132.
+
+Script changes from this: frames are CLAHE-equalised. The script refuses
+to start below 400 baseline keypoints, drains 0.6 s of frames before
+measuring, and marks a move invalid below 35 inliers or an inlier ratio
+of 0.3. The ratio gate is set from the agreeing rows above (0.36–0.5).
+The owner may want the Lite camera's exposure raised; Pollen's
+troubleshooting suggests auto-exposure priority. That is a host camera
+setting and has not been changed.
 
 ### SDK media side effect
 

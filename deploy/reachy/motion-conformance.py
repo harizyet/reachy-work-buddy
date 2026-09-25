@@ -55,11 +55,12 @@ TOL_HOLD_AFTER_STOP = 0.02
 # centre adds up to ~0.01 of parallax for a scene about 1 m away.
 TOL_CAM_VS_ENCODER = 0.02
 # A camera measurement counts only with enough agreeing features; fewer
-# is reported as invalid, not as a disagreement. The first live run, in a
-# dim room (mean 35/255, 95 keypoints), produced spurious 0.3-1.0 rad
-# homographies from 20-30 matches.
-MIN_CAM_INLIERS = 50
-MIN_CAM_INLIER_RATIO = 0.5
+# is reported as invalid, not as a disagreement. Without contrast
+# equalisation, the dark Lite camera gave spurious 0.3-1.0 rad homographies
+# from 20-30 matches. With it, the Nano's saved frames agreed with the
+# encoders within ~0.01 rad at 38-81 inliers and ratios of 0.36-0.5.
+MIN_CAM_INLIERS = 35
+MIN_CAM_INLIER_RATIO = 0.3
 # Scene check before any motion: the baseline frame must have enough
 # texture, after contrast equalisation, for the measurement to mean
 # anything. Raw brightness is only reported: the Lite camera is dark.
@@ -231,16 +232,25 @@ _last_obs: dict | None = None
 T_HEAD_CAM = ((0, 0, 1), (-1, 0, 0), (0, -1, 0))
 
 
+FRAME_DRAIN_S = 0.6
+
+
 def grab_frame():
-    """A fresh frame: the LOCAL reader is capped at 10 fps, so wait past
-    one frame period and read twice."""
+    """A frame taken after the head settled. Reading twice was not enough:
+    on the Nano the "after" frame was sometimes the previous position and
+    the motion appeared one observation late. So keep reading for
+    FRAME_DRAIN_S (several frames at the LOCAL reader's 10 fps cap) and
+    use the last one."""
     mini = sdk()
     deadline = time.monotonic() + 5.0
     frame = None
     while time.monotonic() < deadline:
-        time.sleep(0.3)
-        mini.media.get_frame()
-        frame = mini.media.get_frame()
+        drain_end = time.monotonic() + FRAME_DRAIN_S
+        while time.monotonic() < drain_end:
+            latest = mini.media.get_frame()
+            if latest is not None:
+                frame = latest
+            time.sleep(0.05)
         if frame is not None:
             return frame
     raise RuntimeError("no camera frame within 5 s")

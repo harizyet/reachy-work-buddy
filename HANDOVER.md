@@ -7,41 +7,22 @@ acceptance. This file holds only session continuation details.
 
 ## Current work
 
-[Phase 24f](docs/phase-24f.md) is in progress. Its physical rows are
-waiting on a camera-measured Testbench check.
-This session worked with the Nano-side session, with the owner at the
-robot. The [conformance record](docs/verification/phase-24f-conformance-2026-09-25.md)
-has the versions: daemon and SDK 1.8.4, hardware id `43c05f5047e8dcfe`.
-REST and the SDK (Testbench) path command the same poses (≤0.005 rad),
-but the robot stops 2–5° short on both. Joints fall short only when
-their angle has to grow in magnitude, and don't settle further. For an
-encoder-reported 16° yaw, the owner saw no head motion and heard the
-motors. After the owner questioned the method, Pollen's sources were
-checked. The stock stewart gains are proportional-only (PID 300/0/0),
-which predicts this one-directional shortfall. The pinned Testbench
-tolerates 5–15°, which explains its earlier pass. Pollen's conversation
-app streams `set_target` rather than using goto, but the path is the same
-from 1.8.4 to 1.11.0. So normal versus fault is open.
-
-Unattended development testing is now allowed (owner's decision,
-2026-09-25, in [AGENTS.md](AGENTS.md)). Full animations and the daemon's
-wake-up still need the owner. `motion-conformance.py --camera DIR`
-measures each move from head-camera frames, so nobody has to watch.
-
-Next (the daemon start needs the owner, since it plays the wake-up; the
-cases below don't):
-- Run `motion-conformance.py --camera ~/24f-logs/frames --run zero-rest
-  visible-rest axes-rest axes-sdk stream-sdk`, comparing camera-measured
-  rotation with the encoders.
-- Optionally run the official Testbench rotation test alongside `--log 60`.
-- Only if the camera measurement disagrees with the encoders, inspect the
-  mechanism and supply.
-
-The Nano was parked in standby by the owner at 09:55:39Z, and
-`reachy-embodiment` is stopped. To resume: `POST /api/daemon/start`
-(wake-up motion, owner present), then start the unit. Not yet run:
-antennas, body yaw, interp, cancel, recorded, preempt and visible-sdk.
-Raw logs are in the Nano's `~/24f-logs`.
+[Phase 24f](docs/phase-24f.md) is in progress. Item 1 is measured on the
+Nano ([record](docs/verification/phase-24f-conformance-2026-09-25.md)).
+REST, the SDK (Testbench) path and Pollen's streaming method send the
+same poses, and the head camera confirms the head moves as far as the
+encoders report. The owner's "no visible motion" was a perception limit.
+The robot stops 2–5° short of commanded poses on every path, only when a
+joint's angle has to grow. The stock proportional-only gains (PID
+300/0/0) predict that, so normal versus a friction or load fault on this
+unit is open. Unattended development testing is allowed (owner,
+2026-09-25, [AGENTS.md](AGENTS.md)), except full animations and the
+daemon wake-up. `motion-conformance.py --camera` measures moves from
+head-camera frames (CLAHE, frame draining and validity gates; see the
+record). The Lite camera is dark by default, and raising its exposure is
+the owner's call. Not yet run: antennas, body yaw, interp, cancel,
+recorded and preempt. The last two need the owner (`--owner-present`).
+Raw logs and frames are in the Nano's `~/24f-logs`.
 
 The motion owner (`reachy_embodiment/motion.py`, `4f43817`) is implemented,
 with its [ADR 0003 amendment](docs/adr/0003-embodiment-command-api.md#phase-24f-motion-ownership-amendment-2026-09-25):

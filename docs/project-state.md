@@ -70,11 +70,12 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
   and the owner saw no head motion for an encoder-reported 16° yaw while
   hearing the motors
   ([record](verification/phase-24f-conformance-2026-09-25.md#analysis)).
-  The stock proportional-only gains (PID 300/0/0) predict a
-  direction-dependent shortfall like this, and the Testbench tolerates up
-  to 5–15°. So it is open whether this is normal or a fault. The owner's
-  "no visible motion" is unexplained. A camera-measured Testbench run
-  with encoder logging is next, and pose-dependent motion stays disabled.
+  The head camera confirms the head moves as far as the encoders report,
+  so this is not a mechanical decoupling, and the owner's "no visible
+  motion" was a perception limit. The stock proportional-only gains (PID
+  300/0/0) predict a direction-dependent shortfall like this, and the
+  Testbench tolerates 5–15°, so normal versus fault is open.
+  Pose-dependent motion stays disabled.
 - An unplanned Nano power loss at 02:38:20Z reported `TEGRA_POWER_ON_RESET`,
   with no undervoltage logged. A supply dropout is suspected, not proven.
   Its RTC loses time across power-offs; pre-NTP journal timestamps are stale.
