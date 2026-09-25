@@ -172,6 +172,30 @@ def test_search_providers_migration_moves_brave_and_caps_usage(database, keys, m
         ).fetchone() == (2,)
 
 
+def test_persona_location_and_timezone_persist(database, keys):
+    """Phase 24d: 008 adds owner location/time zone to persona_config,
+    defaulting to no location and UTC for an existing persona row."""
+    from companion_core.persona.postgres_store import PostgresPersonaStore
+
+    from shared.models.persona import PersonaPatch
+
+    upgrade(database, keys)
+
+    async def check():
+        store = await PostgresPersonaStore.connect(database)
+        default = await store.get()
+        assert default.location is None and default.timezone == "UTC"
+        await store.set(PersonaPatch(location="Singapore", timezone="Asia/Singapore"))
+        await store.close()
+        store = await PostgresPersonaStore.connect(database)
+        config = await store.get()
+        assert (config.location, config.timezone, config.name) == ("Singapore", "Asia/Singapore", "Reachy")
+        await store.set(PersonaPatch(location=""))
+        assert (await store.get()).location is None
+        await store.close()
+    asyncio.run(check())
+
+
 def test_legacy_atomic_migration_and_llm_semantics(database, keys):
     seed_legacy(database)
     with pytest.raises(RuntimeError, match="adopt-legacy"):

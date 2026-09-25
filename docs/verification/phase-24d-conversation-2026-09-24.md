@@ -247,6 +247,38 @@ its media server (`EPERM`). Recovery needs the owner (sudo, then a
 supervised daemon restart). A durable launcher fix needs a real reboot to
 verify.
 
+## Hosted search rotation and multi-turn check (2026-09-25)
+
+Homelab core ran the provider rotation (`0144209`), follow-up search and
+owner context (migration `008`), with policy Auto, 5 results and location
+Singapore (Asia/Singapore). The same scripted session of 11 turns went
+through real core `/conversation` with live providers and the local Qwen
+model. These are homelab-side core calls, not robot audio turns.
+
+- **Keys.** Brave, Exa and Tavily each returned relevant results in
+  0.8–2.1 s when called directly.
+- **Search selection.** Correct on every turn. Rotation spread 21 calls
+  evenly (7 each), with no failover. The follow-ups "When was it
+  released?", "What about tomorrow?", "How long has he been in office?"
+  and "Will it rain tomorrow?" searched using their thread's topic. Before
+  the fix they didn't search, and one chained follow-up searched for game
+  releases. A place-less weather question was searched as
+  "… in Singapore". The joke turn didn't search.
+- **Answers (local Qwen2.5-1.5B).** The Prime Minister answer and its start
+  date were correct. Other answers were wrong despite correct results:
+  - It named 3.14.6 as the latest Python when python.org's result showed
+    3.14.7, and dated its release to another version's date.
+  - It ignored this week's 3.15.0rc2 and 3.14.7 news results.
+  - Its time-in-office arithmetic was wrong even with today's date in
+    context.
+  - Weather replies repeated the same Fahrenheit figures turn after turn
+    ("10 % chance of rain" while a result said 100 %). Voice replies ran
+    past three sentences with disclaimers.
+- **Latency.** Search took 0.7–2.7 s. Whole core turns took 5–9 s for text
+  and 7–16.5 s for voice weather, which is over the p95 8 s budget. The
+  model's time grew with 5 results. Before, with 2 results, weather took
+  7.8 s.
+
 ## Latency budget (agreed before any timed turn)
 
 Utterance end → first audible reply, over the live turns:
@@ -276,8 +308,8 @@ against the budget.
 
 ## Results
 
-Status on 2026-09-25. The formal run still needs a live Brave key check,
-then ≥10 turns with three context follow-ups.
+Status on 2026-09-25. Hosted search keys are verified live; the formal run
+still needs ≥10 robot turns with three context follow-ups.
 
 | Scenario | Result | Evidence |
 |---|---|---|

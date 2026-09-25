@@ -129,6 +129,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import os
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
@@ -194,6 +195,7 @@ from companion_core.llm.router import route_completion
 from companion_core.llm.store import LLMSettingsStore, LLMUsageStore, masked_config
 from companion_core.memory.postgres_store import PostgresMemoryStore
 from companion_core.memory.store import MemoryStore
+from companion_core.persona.context import context_message
 from companion_core.persona.postgres_store import PostgresPersonaStore
 from companion_core.persona.store import PersonaStore
 from companion_core.privacy_classifier import classify_privacy
@@ -212,7 +214,13 @@ from companion_core.task_intent import (
 from companion_core.tasks.models import Task, TaskStatus
 from companion_core.tasks.postgres_store import PostgresTaskStore
 from companion_core.tasks.store import TaskStore
-from companion_core.websearch.policy import build_query, should_search
+from companion_core.websearch.debug_log import SearchDebugLog, SearchLogEntry
+from companion_core.websearch.policy import (
+    build_query,
+    localize_query,
+    next_search_topic,
+    should_search,
+)
 from companion_core.websearch.postgres_store import PostgresSearchSettingsStore
 from companion_core.websearch.prompt import build_grounding_messages
 from companion_core.websearch.provider import SearchProviderError
@@ -233,6 +241,7 @@ from shared.protocols.operator_api import (
     LLM_SETTINGS,
     LLM_USAGE,
     PERSONA_SETTINGS,
+    WEBSEARCH_LOG,
     WEBSEARCH_SETTINGS,
 )
 
@@ -510,6 +519,19 @@ def create_app(
         return {
             **masked_search_config(config),
             "usage": {"period": period, "used": {kind.value: count for kind, count in used.items()}},
+        }
+
+    app.state.search_log = SearchDebugLog()
+
+    @app.get(WEBSEARCH_LOG)
+    async def get_websearch_log() -> dict:
+        config = await app.state.search_settings_store.get()
+        view = await websearch_settings_view(config)
+        limits = {kind.value: hosted.monthly_limit for kind, hosted in config.hosted.items()}
+        enabled = {kind.value: hosted.enabled for kind, hosted in config.hosted.items()}
+        return {
+            "usage": {**view["usage"], "limits": limits, "enabled": enabled},
+            "entries": app.state.search_log.entries(),
         }
 
     @app.get(WEBSEARCH_SETTINGS)
@@ -823,14 +845,27 @@ def create_app(
                     try:
                         persona = await app.state.persona_store.get()
                         search_config = await app.state.search_settings_store.get()
-                        searched = should_search(turn.text, policy=search_config.policy)
+                        search_topic = conversation_store.search_topic(turn.session_id)
+                        searched = should_search(
+                            turn.text, policy=search_config.policy, follows_search=search_topic is not None,
+                        )
                         grounding_messages: list[dict[str, str]] = []
                         if searched:
-                            query = build_query(turn.text, conversation_store.previous_user_message(turn.session_id))
+                            topic_query = build_query(
+                                turn.text, conversation_store.previous_user_message(turn.session_id),
+                                search_topic=search_topic,
+                            )
+                            conversation_store.set_search_topic(
+                                turn.session_id, next_search_topic(turn.text, topic_query, search_topic),
+                            )
+                            query = localize_query(topic_query, persona.location)
+                            attempts = []
+                            results = []
+                            started = time.monotonic()
                             try:
                                 results = await search_with_rotation(
                                     search_config, app.state.search_settings_store, query,
-                                    now=datetime.now(UTC), transport=websearch_transport,
+                                    now=datetime.now(UTC), transport=websearch_transport, attempts=attempts,
                                 )
                                 grounding_messages = build_grounding_messages(searched=True, failed=False, results=results)
                             except SearchProviderError:
@@ -838,8 +873,15 @@ def create_app(
                                 # when a search was actually warranted — the LLM
                                 # call still proceeds, but is told search failed.
                                 grounding_messages = build_grounding_messages(searched=True, failed=True, results=[])
+                            served = attempts[-1].provider if attempts and attempts[-1].outcome == "ok" else None
+                            app.state.search_log.record(SearchLogEntry(
+                                at=datetime.now(UTC), query=query, policy=search_config.policy.value,
+                                served_by=served, total_ms=round((time.monotonic() - started) * 1000),
+                                attempts=attempts, results=results,
+                            ))
                         history_with_persona = [
                             {"role": "system", "content": persona.system_prompt},
+                            context_message(persona, datetime.now(UTC)),
                             *grounding_messages,
                             *([{"role": "system", "content": SPOKEN_REPLY_INSTRUCTION}]
                               if turn.input_modality == InputModality.VOICE else []),

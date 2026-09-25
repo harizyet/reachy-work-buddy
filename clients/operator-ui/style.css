@@ -381,3 +381,40 @@ textarea:focus {
 .websearch-hosted legend {
   font-weight:600
 }
+.search-usage-row {
+  display:grid;
+  grid-template-columns:7em 1fr auto;
+  gap:8px;
+  align-items:center;
+  margin:6px 0
+}
+.search-usage-row meter {
+  width:100%
+}
+#search-log-dialog {
+  width:min(900px,calc(100vw - 32px));
+  max-height:85vh;
+  overflow:auto;
+  background:#17262c;
+  color:inherit;
+  border:1px solid #2a3d45;
+  border-radius:12px;
+  padding:16px
+}
+#search-log-dialog::backdrop {
+  background:rgb(0 0 0 / 60%)
+}
+.dialog-head {
+  display:flex;
+  gap:8px;
+  align-items:center
+}
+.dialog-head h2 {
+  flex:1;
+  margin:0
+}
+.search-entry {
+  border-top:1px solid #2a3d45;
+  padding:8px 0;
+  overflow-wrap:anywhere
+}

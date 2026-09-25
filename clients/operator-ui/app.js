@@ -39,6 +39,7 @@ function showLogin() {
   loggedIn = false; selectedUser = null;
   $('login-panel').hidden = false; $('dashboard').hidden = true; $('nav').hidden = true;
   $('api-key').value = ''; $('cloud-api-key').value = ''; $('websearch-api-key').value = ''; for (const name of HOSTED_SEARCH) $(`websearch-${name}-api-key`).value = ''; $('password').value = '';
+  $('search-log-dialog').close(); $('search-log-entries').replaceChildren();
   chat.reset(); accounts.reset(); voice.reset(); showView('overview');
 }
 async function api(path, options = {}) {
@@ -80,6 +81,8 @@ const DEFAULT_PERSONA_PROMPT = 'You are Reachy, an embodied work assistant. You 
 function renderPersona(config) {
   $('persona-name').value = config.name || '';
   $('persona-prompt').value = config.system_prompt || '';
+  $('persona-location').value = config.location || '';
+  $('persona-timezone').value = config.timezone || 'UTC';
   $('persona-fields').disabled = false;
 }
 const HOSTED_SEARCH = ['brave', 'exa', 'tavily'];
@@ -110,6 +113,57 @@ function renderWebsearch(config) {
   updateWebsearchFallbackFields();
 }
 $('websearch-fallback').addEventListener('change', updateWebsearchFallbackFields);
+function renderSearchUsage(usage = {}) {
+  $('search-usage-period').textContent = usage.period ? `This month (${usage.period}, UTC)` : 'No usage data';
+  const rows = HOSTED_SEARCH.map(name => {
+    const used = usage.used?.[name] ?? 0, limit = usage.limits?.[name] ?? 0;
+    const row = document.createElement('div'); row.className = 'search-usage-row';
+    const label = document.createElement('span'); label.textContent = name + (usage.enabled?.[name] ? '' : ' (off)');
+    const meter = document.createElement('meter'); meter.min = 0; meter.max = limit || 1; meter.value = used;
+    meter.high = (limit || 1) * 0.8;
+    const count = document.createElement('small'); count.textContent = `${used} / ${limit}`;
+    row.append(label, meter, count); return row;
+  });
+  $('search-usage').replaceChildren(...rows);
+}
+function searchLogEntry(entry) {
+  // Queries, titles and snippets are rendered as literal text; result URLs
+  // come from the provider, so only http(s) ones become links.
+  const item = document.createElement('article'); item.className = 'search-entry';
+  const head = document.createElement('p');
+  head.textContent = `${new Date(entry.at).toLocaleString()} · ${entry.served_by ? 'served by ' + entry.served_by : 'FAILED'} · ${entry.total_ms} ms · policy ${entry.policy}`;
+  const query = document.createElement('p'); const q = document.createElement('strong'); q.textContent = entry.query;
+  query.append('Query: ', q);
+  const attempts = document.createElement('small');
+  attempts.textContent = 'Attempts: ' + (entry.attempts.map(a => `${a.provider} ${a.outcome} (${a.ms} ms)`).join(' → ') || 'none');
+  const results = document.createElement('ol');
+  for (const result of entry.results) {
+    const li = document.createElement('li');
+    const title = /^https?:\/\//i.test(result.url) ? document.createElement('a') : document.createElement('span');
+    title.textContent = result.title;
+    if (title.tagName === 'A') { title.href = result.url; title.target = '_blank'; title.rel = 'noopener noreferrer'; }
+    const domain = document.createElement('small'); domain.textContent = ` ${result.source_domain}`;
+    const snippet = document.createElement('p'); snippet.className = 'muted'; snippet.textContent = result.snippet;
+    li.append(title, domain, snippet); results.append(li);
+  }
+  if (!entry.results.length) { const li = document.createElement('li'); li.textContent = 'No results'; results.append(li); }
+  item.append(head, query, attempts, results); return item;
+}
+async function loadSearchLog() {
+  const data = await api('/websearch/log');
+  renderSearchUsage(data?.usage);
+  const entries = Array.isArray(data?.entries) ? data.entries : [];
+  const empty = document.createElement('p'); empty.textContent = 'No searches since Companion Core started.';
+  $('search-log-entries').replaceChildren(...(entries.length ? entries.map(searchLogEntry) : [empty]));
+}
+$('open-search-log').addEventListener('click', async () => {
+  $('search-log-dialog').showModal();
+  try { await loadSearchLog(); } catch (error) { notice(error.message); }
+});
+$('refresh-search-log').addEventListener('click', async () => {
+  try { await loadSearchLog(); } catch (error) { notice(error.message); }
+});
+$('close-search-log').addEventListener('click', () => $('search-log-dialog').close());
 function component(name, value, warning = false) {
   const card = document.createElement('div'); card.className = 'component';
   const title = document.createElement('strong'); title.textContent = name;
@@ -198,6 +252,7 @@ async function enter() {
   try { renderSettings(await api('/settings/llm')); } catch (error) { notice(error.message); }
   try { renderPersona(await api('/settings/persona')); } catch (error) { notice(error.message); }
   try { renderWebsearch(await api('/settings/websearch')); } catch (error) { notice(error.message); }
+  try { await loadSearchLog(); } catch (error) { notice(error.message); }
   await refresh();
   if (new URLSearchParams(location.search).get('google') === 'return') {
     history.replaceState(null, '', location.pathname);
@@ -221,9 +276,15 @@ submit('session-controls', async () => {
   notice('Session settings saved.'); await loadSession(); await chat.refreshSession();
 });
 submit('persona', async () => {
-  const patch = {name: $('persona-name').value.trim(), system_prompt: $('persona-prompt').value.trim()};
+  const patch = {
+    name: $('persona-name').value.trim(), system_prompt: $('persona-prompt').value.trim(),
+    location: $('persona-location').value.trim() || null, timezone: $('persona-timezone').value.trim() || 'UTC',
+  };
   renderPersona(await api('/settings/persona', {method: 'PUT', body: JSON.stringify(patch)}));
   notice('Persona saved.');
+});
+$('persona-browser-timezone').addEventListener('click', () => {
+  $('persona-timezone').value = Intl.DateTimeFormat().resolvedOptions().timeZone;
 });
 $('reset-persona').addEventListener('click', () => {
   $('persona-name').value = DEFAULT_PERSONA_NAME;
@@ -273,6 +334,7 @@ submit('websearch', async () => {
   if (fallback !== 'searxng' || $('websearch-clear-key').checked) patch.api_key = null;
   else if ($('websearch-api-key').value) patch.api_key = $('websearch-api-key').value;
   renderWebsearch(await api('/settings/websearch', {method: 'PUT', body: JSON.stringify(patch)}));
+  await loadSearchLog();
   notice('Web search settings saved.');
 });
 $('disable-websearch').addEventListener('click', async () => {

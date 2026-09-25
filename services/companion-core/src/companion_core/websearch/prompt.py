@@ -21,7 +21,12 @@ _RULES_MESSAGE = (
     "the result(s) supporting each factual claim you draw from them, e.g. "
     "[S1]. Never cite an id that doesn't support the claim, and never "
     "present a claim drawn from the results as certain beyond what they "
-    "actually say."
+    "actually say. Answer the question directly from the results in your "
+    "own words: do not tell the user to check a link, visit a website or "
+    "consult other sources, and do not mention the search results "
+    "themselves. For weather, give a short summary of the conditions, "
+    "temperature and chance of rain for the time asked about. If the "
+    "results don't answer the question, say so in one sentence."
 )
 
 _FAILURE_MESSAGE = (

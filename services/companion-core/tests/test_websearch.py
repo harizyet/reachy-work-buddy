@@ -1,5 +1,6 @@
 import asyncio
 import json
+from datetime import UTC, datetime
 
 import httpx
 import pytest
@@ -504,3 +505,142 @@ def test_voice_turns_ask_for_short_spoken_replies_and_typed_turns_do_not():
     spoken, typed = ([m["content"] for m in r["messages"] if m["role"] == "system"] for r in llm_requests[-2:])
     assert SPOKEN_REPLY_INSTRUCTION in spoken
     assert SPOKEN_REPLY_INSTRUCTION not in typed
+
+
+def test_search_debug_log_records_query_attempts_and_results_in_memory():
+    from companion_core.websearch.debug_log import SearchDebugLog, SearchLogEntry
+
+    def respond(request):
+        if request.url.host == "api.search.brave.com":
+            return httpx.Response(500)
+        return httpx.Response(200, json={"results": [
+            {"title": "Exa hit", "url": "https://exa.example/", "highlights": ["fresh fact"]},
+        ]})
+
+    client = TestClient(core_app(
+        llm_transport=httpx.MockTransport(lambda r: httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})),
+        websearch_transport=httpx.MockTransport(respond),
+    ))
+    client.put("/settings/llm", json={"local": {"base_url": "http://ovms/v1", "model": "qwen"}})
+    client.put("/settings/websearch", json={"policy": "always", "hosted": {
+        "brave": {"enabled": True, "api_key": "brave-secret"}, "exa": {"enabled": True, "api_key": "exa-secret"},
+    }})
+    assert client.get("/websearch/log").json()["entries"] == []
+    client.post("/conversation", json={**TURN, "text": "latest release"})
+
+    log = client.get("/websearch/log").json()
+    assert log["usage"]["used"] == {"brave": 1, "exa": 1, "tavily": 0}
+    assert log["usage"]["limits"]["tavily"] == 900 and log["usage"]["enabled"]["exa"] is True
+    [entry] = log["entries"]
+    assert entry["query"] == "latest release" and entry["served_by"] == "exa" and entry["policy"] == "always"
+    assert [(a["provider"], a["outcome"]) for a in entry["attempts"]] == [("brave", "error"), ("exa", "ok")]
+    assert entry["results"][0]["title"] == "Exa hit" and entry["results"][0]["snippet"] == "fresh fact"
+    assert "secret" not in json.dumps(log)
+
+    small = SearchDebugLog(max_entries=2)
+    for query in ["one", "two", "three"]:
+        small.record(SearchLogEntry(at=datetime.now(UTC), query=query, policy="auto", served_by=None, total_ms=0))
+    assert [e["query"] for e in small.entries()] == ["three", "two"]
+
+
+def test_failed_search_is_logged_without_a_serving_provider():
+    client = TestClient(core_app(
+        llm_transport=httpx.MockTransport(lambda r: httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})),
+        websearch_transport=httpx.MockTransport(lambda r: httpx.Response(503)),
+    ))
+    client.put("/settings/llm", json={"local": {"base_url": "http://ovms/v1", "model": "qwen"}})
+    client.put("/settings/websearch", json={"policy": "always"})
+    client.post("/conversation", json={**TURN, "text": "anything"})
+    [entry] = client.get("/websearch/log").json()["entries"]
+    assert entry["served_by"] is None and entry["results"] == []
+    assert [(a["provider"], a["outcome"]) for a in entry["attempts"]] == [("builtin_searxng", "error")]
+
+
+# --- Phase 24d: follow-ups, search topics, owner date/time/location --------
+
+
+def test_follow_up_detection_is_narrower_than_query_context():
+    from companion_core.websearch.policy import is_follow_up
+
+    for text in ["When was it released?", "What about Tuesday?", "How long has he been in office?"]:
+        assert is_follow_up(text)
+        assert should_search(text, policy=SearchPolicy.AUTO, follows_search=True)
+        assert not should_search(text, policy=SearchPolicy.AUTO)
+    for text in ["thanks", "ok great", "Tell me a joke about robots."]:
+        assert not should_search(text, policy=SearchPolicy.AUTO, follows_search=True)
+
+
+def test_chained_follow_ups_keep_the_search_topic():
+    from companion_core.websearch.policy import next_search_topic
+
+    topic = "What's the latest stable Python version?"
+    second = build_query("When was it released?", topic, search_topic=topic)
+    assert second == "What's the latest stable Python version? When was it released?"
+    topic = next_search_topic("When was it released?", second, topic)
+    third = build_query("Is there any news about it this week?", "When was it released?", search_topic=topic)
+    assert third == "What's the latest stable Python version? Is there any news about it this week?"
+    # A self-contained turn starts a new topic and pulls in nothing.
+    assert build_query("Who is the Prime Minister of Singapore?", "x", search_topic=topic) == \
+        "Who is the Prime Minister of Singapore?"
+    assert next_search_topic("Who is the Prime Minister of Singapore?", "q", topic) == "q"
+    long = build_query("what about it?" + " x" * 200, "y", search_topic="topic " * 100)
+    assert len(long) <= 300 and long.endswith("x")
+
+
+def test_weather_queries_get_the_owner_location_only_when_missing():
+    from companion_core.websearch.policy import localize_query
+
+    assert localize_query("What's the weather tomorrow?", "Singapore") == "What's the weather tomorrow? in Singapore"
+    assert localize_query("Weather in Singapore today", "Singapore") == "Weather in Singapore today"
+    assert localize_query("Latest Python version", "Singapore") == "Latest Python version"
+    assert localize_query("What's the weather?", None) == "What's the weather?"
+
+
+def test_context_message_carries_local_date_time_and_location():
+    from companion_core.persona.context import context_message
+
+    from shared.models.persona import PersonaConfig
+
+    now = datetime(2026, 9, 25, 1, 15, tzinfo=UTC)
+    message = context_message(PersonaConfig(location="Singapore", timezone="Asia/Singapore"), now)
+    assert message["role"] == "system"
+    assert "Friday 25 September 2026, 09:15 (Asia/Singapore, UTC+08:00)" in message["content"]
+    assert "The owner is in Singapore" in message["content"]
+    assert "owner is in" not in context_message(PersonaConfig(), now)["content"]
+    with pytest.raises(ValueError):
+        PersonaConfig(timezone="Mars/Olympus")
+
+
+def test_follow_up_turns_search_with_topic_and_weather_uses_location():
+    llm_requests, queries = [], []
+
+    def llm_respond(request):
+        llm_requests.append(json.loads(request.content))
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    client = TestClient(core_app(
+        llm_transport=httpx.MockTransport(llm_respond),
+        websearch_transport=searxng_transport(canned_results(requests=queries)),
+    ))
+    client.put("/settings/llm", json={"local": {"base_url": "http://ovms/v1", "model": "qwen"}})
+    client.put("/settings/websearch", json={"policy": "auto"})
+    assert client.put("/settings/persona", json={"location": "Singapore", "timezone": "Asia/Singapore"}).status_code == 200
+    assert client.put("/settings/persona", json={"timezone": "Nowhere/Here"}).status_code == 422
+
+    for text in [
+        "What's the latest stable Python version?", "When was it released?",
+        "Is there any news about it this week?", "Tell me a joke about robots.",
+        "When was it released?", "What's the weather today?", "What about Tuesday?",
+    ]:
+        assert client.post("/conversation", json={**TURN, "text": text}).status_code == 200
+    assert queries == [
+        "What's the latest stable Python version?",
+        "What's the latest stable Python version? When was it released?",
+        "What's the latest stable Python version? Is there any news about it this week?",
+        # The joke didn't search, so the thread ended: no search for the repeat.
+        "What's the weather today? in Singapore",
+        "What's the weather today? What about Tuesday? in Singapore",
+    ]
+    system = [m["content"] for m in llm_requests[-1]["messages"] if m["role"] == "system"]
+    assert any("Current local date and time" in c and "Asia/Singapore" in c for c in system)
+    assert any("do not tell the user to check a link" in c for c in system)

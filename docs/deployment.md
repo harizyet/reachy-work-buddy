@@ -155,8 +155,20 @@ provider that has used the smallest share of its **monthly search limit**
 runs only after every hosted provider failed or reached its limit. Calls are
 counted in `search_usage` before they are sent, so restarts and concurrent
 turns can't exceed a limit. A provider that answers with a plan-limit status
-(402, or Tavily's 432/433) is skipped for the rest of the month. The card
-shows this month's count for each provider.
+(402, or Tavily's 432/433) is skipped for the rest of the month. The
+**Search API usage** card shows this month's count for each provider. Its
+**Open search debug log** button lists the last 50 searches: query, which
+provider served it, each attempt's outcome and time, and the results. Core
+keeps that log in memory only (`GET /websearch/log`, owner-authenticated
+through the hub). It is never written to the database, and a restart clears
+it.
+
+Set **Location** and **Time zone** on the Assistant persona card. Each
+conversation turn gives the model the local date, time and location, and a
+weather question that names no place is searched for that location, so the
+search provider receives it. Under Auto, a follow-up to a searched turn
+("When was it released?", "What about tomorrow?") searches too, using the
+earlier query as its topic.
 
 The default limit is 900 per provider, below each free allowance as of
 2026-09. Brave gives $5 of monthly credit (about 1,000 queries) and **bills

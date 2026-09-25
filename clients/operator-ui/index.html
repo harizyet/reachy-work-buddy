@@ -77,6 +77,10 @@
           <form id="persona"><fieldset id="persona-fields" disabled><label>Name<input id="persona-name" required maxlength="64" placeholder="Reachy"></label>
           <label>System prompt<textarea id="persona-prompt" rows="5" required maxlength="4000" placeholder="You are Reachy, an embodied work assistant..."></textarea></label>
           <p class="muted">Sent to the model ahead of every conversation turn.</p>
+          <label>Location<input id="persona-location" maxlength="120" placeholder="Singapore"></label>
+          <label>Time zone<input id="persona-timezone" maxlength="64" placeholder="Asia/Singapore"></label>
+          <button type="button" id="persona-browser-timezone" class="secondary">Use this browser's time zone</button>
+          <p class="muted">Every conversation turn tells the model the local date, time and location. A weather question that names no place is searched for this location, so the search provider receives it too.</p>
           <button>Save persona</button><button type="button" id="reset-persona" class="secondary">Reset to default</button></fieldset></form>
         </section>
         <section class="card"><span class="eyebrow">INFERENCE</span><h2>Language model</h2>
@@ -126,12 +130,20 @@
           <label>Results per search<input id="websearch-result-count" type="number" min="1" max="10"></label>
           <button>Save web search</button><button type="button" id="disable-websearch" class="secondary">Turn off web search</button></fieldset></form>
         </section>
+        <section class="card"><span class="eyebrow">GROUNDING</span><h2>Search API usage</h2>
+          <p class="muted" id="search-usage-period">Loading…</p>
+          <div id="search-usage"></div>
+          <button type="button" id="open-search-log" class="secondary">Open search debug log</button>
+        </section>
         <section class="card wide"><span class="eyebrow">LAST 24 HOURS</span><h2>LLM utilization</h2><p id="usage-summary">Loading…</p><p id="role-usage"></p><p id="latest-escalation"></p><div class="table-wrap"><table><thead><tr><th>Time</th><th>Role / model</th><th>Result</th><th>Input / output tokens</th><th>Latency</th></tr></thead><tbody id="usage-rows"></tbody></table></div></section>
         <section class="card"><h2>Recent activity</h2><ul id="audit"><li>Load a session to view activity.</li></ul></section>
         <section class="card"><h2>Queued notifications</h2><ul id="notifications"><li>Load a session to view notifications.</li></ul></section>
       </div>
       </div>
     </div>
-  </main><footer>Reachy Work Companion · Operator UI</footer><script src="chat.js" defer></script><script src="voice.js" defer></script><script src="accounts.js" defer></script><script src="app.js" defer></script>
+  </main><footer>Reachy Work Companion · Operator UI</footer><dialog id="search-log-dialog" aria-labelledby="search-log-title"><div class="dialog-head"><h2 id="search-log-title">Recent searches</h2><button type="button" id="refresh-search-log" class="secondary">Refresh</button><button type="button" id="close-search-log" class="secondary">Close</button></div>
+  <p class="muted">The last 50 searches, newest first. Companion Core keeps them in memory only; a restart clears them.</p>
+  <div id="search-log-entries"></div></dialog>
+  <script src="chat.js" defer></script><script src="voice.js" defer></script><script src="accounts.js" defer></script><script src="app.js" defer></script>
 </body>
 </html>

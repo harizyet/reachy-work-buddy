@@ -15,8 +15,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from datetime import datetime
 
+from companion_core.websearch.debug_log import SearchAttempt
 from companion_core.websearch.provider import (
     SearchProviderError,
     SearchQuotaExhausted,
@@ -54,14 +56,29 @@ async def search_with_rotation(
     *,
     now: datetime,
     transport=None,
+    attempts: list[SearchAttempt] | None = None,
 ) -> list[SearchResult]:
+    """`attempts`, when given, receives one entry per tier tried or skipped,
+    for the owner's debug log."""
     period = usage_period(now)
+    attempts = [] if attempts is None else attempts
+    started = time.monotonic()
+    current = None
+
+    def note(provider: str, outcome: str) -> None:
+        nonlocal started, current
+        current = None
+        attempts.append(SearchAttempt(provider, outcome, round((time.monotonic() - started) * 1000)))
+        started = time.monotonic()
+
     try:
         async with asyncio.timeout(config.timeout_seconds * CHAIN_TIMEOUT_FACTOR):
             for kind in await rotation_order(config, store, period):
                 hosted = config.hosted[kind]
                 if not await store.reserve(kind, period, hosted.monthly_limit):
+                    note(kind.value, "at_limit")
                     continue
+                current = kind.value
                 provider = create_hosted_provider(
                     kind, hosted.api_key, timeout_seconds=config.timeout_seconds, transport=transport,
                 )
@@ -70,17 +87,28 @@ async def search_with_rotation(
                 except SearchQuotaExhausted:
                     logger.warning("web search provider %s reported its usage limit; skipping it until next period", kind.value)
                     await store.exhaust(kind, period, hosted.monthly_limit)
+                    note(kind.value, "limit_reported")
                     continue
                 except SearchProviderError:
                     logger.warning("web search provider %s failed; trying next tier", kind.value)
+                    note(kind.value, "error")
                     continue
                 logger.info("web search served by %s", kind.value)
+                note(kind.value, "ok")
                 return results
             fallback = create_fallback_provider(config, transport=transport)
             if fallback is None:
                 raise SearchProviderError("No search provider available")
-            results = await fallback.search(query, count=config.result_count)
+            current = config.fallback.value
+            try:
+                results = await fallback.search(query, count=config.result_count)
+            except SearchProviderError:
+                note(current, "error")
+                raise
             logger.info("web search served by fallback %s", config.fallback.value)
+            note(current, "ok")
             return results
     except TimeoutError:
+        if current is not None:
+            note(current, "timeout")
         raise SearchProviderError("search providers timed out") from None

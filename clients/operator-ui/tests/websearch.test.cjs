@@ -16,6 +16,7 @@ test('web search settings card configures hosted rotation and the SearXNG fallba
     usage: {period: '2026-09', used: {brave: 12, exa: 0, tavily: 3}},
   };
   const puts = [];
+  const personaPuts = [];
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://fixture');
     if (!url.pathname.startsWith('/hub/')) url.pathname = '/hub' + url.pathname;
@@ -33,8 +34,27 @@ test('web search settings card configures hosted rotation and the SearXNG fallba
       telegram: {configured: false, healthy: false},
     });
     if (url.pathname === '/hub/settings/llm') return json(200, {local: null});
-    if (url.pathname === '/hub/settings/persona') return json(200, {name: 'Reachy', system_prompt: ''});
+    if (url.pathname === '/hub/settings/persona') {
+      if (req.method === 'PUT') {
+        const chunks = []; for await (const chunk of req) chunks.push(chunk);
+        personaPuts.push(JSON.parse(Buffer.concat(chunks)));
+        return json(200, {name: 'Reachy', system_prompt: 'p', ...personaPuts.at(-1)});
+      }
+      return json(200, {name: 'Reachy', system_prompt: 'p', location: null, timezone: 'UTC'});
+    }
     if (url.pathname.startsWith('/hub/sessions/')) return json(404, {detail: 'No session'});
+    if (url.pathname === '/hub/websearch/log') return json(200, {
+      usage: {period: '2026-09', used: {brave: 12, exa: 0, tavily: 3},
+        limits: {brave: 900, exa: 900, tavily: 500}, enabled: {brave: true, exa: false, tavily: true}},
+      entries: [{
+        at: '2026-09-25T01:00:00+00:00', query: 'latest <b>python</b>', policy: 'auto', served_by: 'exa', total_ms: 812,
+        attempts: [{provider: 'brave', outcome: 'error', ms: 400}, {provider: 'exa', outcome: 'ok', ms: 412}],
+        results: [
+          {title: '<img src=x onerror=alert(1)>', url: 'javascript:alert(1)', snippet: 'hostile', source_domain: 'evil.example'},
+          {title: 'Python 3.14', url: 'https://python.org/', snippet: 'Released.', source_domain: 'python.org'},
+        ],
+      }],
+    });
     if (url.pathname === '/hub/settings/websearch') {
       if (req.method === 'GET') return json(200, searchConfig);
       const chunks = []; for await (const chunk of req) chunks.push(chunk);
@@ -52,7 +72,7 @@ test('web search settings card configures hosted rotation and the SearXNG fallba
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const browser = await chromium.launch({headless: true});
   try {
-    const page = await browser.newPage({viewport: {width: 390, height: 844}});
+    const page = await browser.newPage({viewport: {width: 390, height: 844}, timezoneId: 'Asia/Singapore'});
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await page.goto(`http://127.0.0.1:${server.address().port}/hub/ui/`);
     await page.waitForFunction(() => !document.getElementById('websearch-fields').disabled);
@@ -105,6 +125,36 @@ test('web search settings card configures hosted rotation and the SearXNG fallba
     await save();
     assert.equal(puts.at(-1).fallback, 'searxng');
     assert.equal(puts.at(-1).base_url, 'http://searxng-host:8080');
+    // Usage card and pop-out debug log (Phase 24d). Provider-supplied text
+    // renders literally and a non-http(s) result URL never becomes a link.
+    assert.equal(await page.locator('#search-usage-period').textContent(), 'This month (2026-09, UTC)');
+    assert.equal(await page.locator('.search-usage-row').nth(1).textContent(), 'exa (off)0 / 900');
+    assert.equal(await page.locator('.search-usage-row meter').first().evaluate(m => [m.value, m.max].join('/')), '12/900');
+    await page.locator('#open-search-log').click();
+    await page.locator('#search-log-dialog .search-entry').waitFor();
+    assert.equal(await page.locator('#search-log-dialog').evaluate(d => d.open), true);
+    const entry = page.locator('#search-log-dialog .search-entry');
+    assert.match(await entry.textContent(), /served by exa · 812 ms · policy auto/);
+    assert.equal(await entry.locator('strong').textContent(), 'latest <b>python</b>');
+    assert.match(await entry.textContent(), /brave error \(400 ms\) → exa ok \(412 ms\)/);
+    assert.equal(await entry.locator('img').count(), 0);
+    assert.equal(await entry.locator('li').first().locator('a').count(), 0);
+    assert.equal(await entry.locator('li').nth(1).locator('a').getAttribute('href'), 'https://python.org/');
+    assert.equal(await entry.locator('li').nth(1).locator('a').getAttribute('rel'), 'noopener noreferrer');
+    await page.locator('#close-search-log').click();
+
+    // Owner location and time zone (Phase 24d) for the model's context.
+    assert.equal(await page.locator('#persona-timezone').inputValue(), 'UTC');
+    await page.locator('#persona-location').fill('Singapore');
+    await page.locator('#persona-browser-timezone').click();
+    assert.equal(await page.locator('#persona-timezone').inputValue(), 'Asia/Singapore');
+    await Promise.all([
+      page.waitForResponse(r => r.url().includes('/settings/persona') && r.request().method() === 'PUT'),
+      page.locator('#persona').locator('button', {hasText: 'Save persona'}).click(),
+    ]);
+    assert.deepEqual(personaPuts.at(-1), {name: 'Reachy', system_prompt: 'p', location: 'Singapore', timezone: 'Asia/Singapore'});
+    assert.equal(await page.locator('#persona-location').inputValue(), 'Singapore');
+    assert.equal(await page.locator('#search-log-dialog').evaluate(d => d.open), false);
     assert.deepEqual(errors, []);
   } finally {
     await browser.close();

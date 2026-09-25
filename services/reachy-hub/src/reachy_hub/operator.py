@@ -20,6 +20,7 @@ from shared.protocols.operator_api import (
     LLM_USAGE,
     PERSONA_SETTINGS,
     STATUS,
+    WEBSEARCH_LOG,
     WEBSEARCH_SETTINGS,
 )
 
@@ -115,6 +116,10 @@ def install_operator_routes(
         return await proxy(
             core.set_websearch_settings, patch.model_dump(mode="json", exclude_unset=True)
         )
+
+    @app.get(WEBSEARCH_LOG, dependencies=dependencies)
+    async def get_websearch_log() -> dict:
+        return await proxy(core.get_websearch_log)
 
     @app.get(LLM_USAGE, dependencies=dependencies)
     async def usage(

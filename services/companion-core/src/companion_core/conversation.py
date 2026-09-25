@@ -29,6 +29,8 @@ class ConversationStore:
         self._session_locks: dict[str, asyncio.Lock] = {}
         self._privacy: dict[str, Privacy] = {}
         self._messages: dict[str, list[dict[str, str]]] = {}
+        # session -> (search topic, number of user turns when it was set)
+        self._search_topics: dict[str, tuple[str, int]] = {}
 
     def clear(self) -> None:
         """Remove provider-derived context when an account connection is removed."""
@@ -37,6 +39,7 @@ class ConversationStore:
             self._turns.clear()
             self._messages.clear()
             self._privacy.clear()
+            self._search_topics.clear()
 
     def append(self, session_id: str, channel: str, text: str) -> list[Turn]:
         with self._lock:
@@ -71,6 +74,23 @@ class ConversationStore:
         with self._lock:
             user_texts = [m["content"] for m in self._messages.get(session_id, []) if m["role"] == "user"]
             return user_texts[-2] if len(user_texts) >= 2 else None
+
+    def _user_turns(self, session_id: str) -> int:
+        return sum(1 for m in self._messages.get(session_id, []) if m["role"] == "user")
+
+    def search_topic(self, session_id: str) -> str | None:
+        """The topic set by the immediately preceding user turn's search, or
+        None when that turn didn't search (any non-search turn ends the
+        thread, including deterministic intents)."""
+        with self._lock:
+            topic = self._search_topics.get(session_id)
+            if topic is None or topic[1] != self._user_turns(session_id) - 1:
+                return None
+            return topic[0]
+
+    def set_search_topic(self, session_id: str, topic: str) -> None:
+        with self._lock:
+            self._search_topics[session_id] = (topic, self._user_turns(session_id))
 
     def turn_lock(self, session_id: str) -> asyncio.Lock:
         # A model call yields for seconds; serialize same-session turns so two

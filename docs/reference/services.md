@@ -46,7 +46,11 @@ under `always`) decides whether to search; the model itself never decides
 this. `websearch/rotation.py` then picks one tier per turn: the enabled
 hosted provider (`brave.py`, `exa.py`, `tavily.py`) with the lowest share
 of its monthly limit used, failing over on error, and the SearXNG fallback
-(`searxng.py`) last (Phase 24d). VOICE-modality turns also get
+(`searxng.py`) last (Phase 24d). `websearch/debug_log.py` keeps the last 50
+searches in memory for the owner's debug view (`GET /websearch/log`). Every generic
+turn also gets `persona/context.py`'s owner-local date, time and location
+message, and follow-ups reuse the session's search topic
+(`ConversationStore.search_topic`). VOICE-modality turns also get
 `SPOKEN_REPLY_INSTRUCTION` (short plain replies), and reachy-hub strips
 citation markers and markdown before synthesis (`tts.spoken_text`).
 Retrieved titles/snippets/URLs are injected as a separate, clearly

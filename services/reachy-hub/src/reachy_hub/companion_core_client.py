@@ -23,6 +23,7 @@ from shared.protocols.operator_api import (
     LLM_SETTINGS,
     LLM_USAGE,
     PERSONA_SETTINGS,
+    WEBSEARCH_LOG,
     WEBSEARCH_SETTINGS,
 )
 
@@ -124,6 +125,11 @@ class CompanionCoreClient:
 
     async def get_websearch_settings(self) -> dict:
         response = await self._client.get(WEBSEARCH_SETTINGS)
+        response.raise_for_status()
+        return response.json()
+
+    async def get_websearch_log(self) -> dict:
+        response = await self._client.get(WEBSEARCH_LOG)
         response.raise_for_status()
         return response.json()
 

@@ -199,6 +199,14 @@ def test_websearch_settings_proxy_masks_key_and_redacts_validation_errors():
     assert bad.status_code == 422 and "do-not-echo" not in bad.text
 
 
+def test_websearch_log_requires_owner_login():
+    client = make_client()
+    assert client.get("/websearch/log").status_code == 401
+    login(client)
+    log = client.get("/websearch/log").json()
+    assert log["entries"] == [] and log["usage"]["limits"]["brave"] == 900
+
+
 def test_status_handles_down_core_without_hiding_hub():
     def down(request):
         raise httpx.ConnectError("private connection details", request=request)

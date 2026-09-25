@@ -144,3 +144,31 @@ Limits are Reachy's own counts, not the provider's billing state. Brave
 bills the card on file beyond its monthly credit, so its limit is the only
 safeguard. That is why the defaults (900) sit below each allowance and are
 owner-editable.
+
+## Addendum: follow-up searches and owner context (Phase 24d, 2026-09-25)
+
+A live multi-turn test showed follow-ups ("When was it released?") never
+searched under Auto, and a chained follow-up lost its subject because only
+the raw previous user turn was added to the query. Both rules stay fixed
+code in `websearch/policy.py`:
+
+- Under Auto, a follow-up (an explicit reference word, or a question of at
+  most four words) searches when the immediately preceding user turn
+  searched. Any turn that doesn't search ends the thread.
+- A follow-up's query is prefixed with the thread's **search topic**: the
+  query its last self-contained search sent, which the provider has already
+  received. With no active topic, the previous user turn is added only for
+  an explicit reference word; a short self-contained question no longer
+  carries an unrelated prior turn. Both keep the original privacy intent:
+  nothing from the conversation reaches the provider beyond the current turn
+  and what was already sent.
+- A weather query that names no place gets the owner's configured location
+  appended (`localize_query`). This sends the location to the search
+  provider, which the operator UI discloses.
+
+Every generic conversation turn now carries a code-authored system message
+with the owner's local date, time and location (`persona/context.py`), from
+the persona's `location` and `timezone` (migration `008_assistant_context`).
+The grounding rules also tell the model to answer from the results directly
+(a weather reply is a short summary of conditions, temperature and chance of
+rain) rather than pointing the user at links.

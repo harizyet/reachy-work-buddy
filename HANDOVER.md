@@ -23,8 +23,7 @@ remains gated on 24d.
   timings are in the record.
 - **Still open.** The record's results matrix is still blank, the ≥10-turn
   timed run with 3 context follow-ups hasn't been completed, and the latency
-  budget (p50 ≤ 4 s, p95 ≤ 8 s) is unassessed. Live hosted search (Brave,
-  Exa, Tavily) needs the owner's API keys. Some observed replies were very long (one was 232 s of
+  budget (p50 ≤ 4 s, p95 ≤ 8 s) is unassessed. Some observed replies were very long (one was 232 s of
   audio; one hub turn took 45 s).
 - **Deployed robot image.** `reachy-embodiment:local` is built from
   `1a66f01` (voice enabled, INFO timing logs). Image fixes found on the
@@ -53,13 +52,23 @@ remains gated on 24d.
   `007_search_providers`, per-provider monthly limits and failover. See the
   [ADR 0022 addendum](docs/adr/0022-web-search-grounding.md#addendum-hosted-provider-rotation-within-free-tiers-phase-24d-2026-09-25)
   and [deployment](docs/deployment.md#web-search). It is verified with
-  fixtures, real disposable Postgres and a Chromium UI test. No live
-  provider call has been made yet. **Deployed to the homelab 2026-09-25**:
-  hub/core run `0144209` and the schema is at `007`. The pre-upgrade dump is
+  fixtures, real disposable Postgres and a Chromium UI test. **Deployed
+  to the homelab 2026-09-25**: hub/core run `0144209` plus the UI
+  cache-header and search debug-log changes, and the schema is at `007`.
+  The pre-upgrade dump is
   `~/reachy-backups/reachy-before-007-search-providers-20260925T003652.dump`
-  (0600). The Brave key saved earlier migrated to an enabled Brave entry.
-  Exa and Tavily keys still need entering (Settings → Web search). Policy
-  is `auto` with `builtin_searxng` as the fallback. Even with good results,
+  (0600). The Brave key carried over. **Live-verified 2026-09-25**: all
+  three keys returned relevant results (0.8–2.1 s), and real
+  `/conversation` turns rotated Brave → Exa → Tavily with counted usage.
+  The portal's Search API usage card and in-memory search debug log
+  (`/websearch/log`) are deployed too. Follow-up search, the owner
+  date/time/location context (migration `008`, persona set to Singapore)
+  and results = 5 are deployed. A live 11-turn check picked correct
+  searches every turn, but the local model still misused results and was
+  slow (see the [24d record](docs/verification/phase-24d-conversation-2026-09-24.md#hosted-search-rotation-and-multi-turn-check-2026-09-25)).
+  The pre-`008` dump is
+  `~/reachy-backups/reachy-before-008-assistant-context-20260925T011257.dump`.
+  Policy is `auto` with `builtin_searxng` as the fallback. Even with good results,
   the local `Qwen2.5-1.5B` used them inconsistently. The owner chose to
   keep it; the configured cloud GLM-5.3 is the fallback option if hosted
   search doesn't fix accuracy.

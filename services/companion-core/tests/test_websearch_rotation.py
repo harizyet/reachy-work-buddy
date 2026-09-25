@@ -199,3 +199,17 @@ def test_hosted_adapter_failures_are_safe_errors(adapter, response):
         assert "hosted-secret" not in str(exc)
     else:
         assert results == []
+
+
+def test_attempts_record_each_tier_outcome_for_the_debug_log():
+    calls, attempts = [], []
+    store = InMemorySearchSettingsStore()
+    cfg = config(brave=10, exa=1, tavily=10)
+    asyncio.run(store.reserve(HostedSearchProvider.EXA, "2026-09", 1))
+    asyncio.run(search_with_rotation(
+        cfg, store, "q", now=NOW, attempts=attempts,
+        transport=recording_transport(calls, status={"brave": 500, "tavily": 432}),
+    ))
+    assert [(a.provider, a.outcome) for a in attempts] == [
+        ("brave", "error"), ("tavily", "limit_reported"), ("exa", "at_limit"), ("builtin_searxng", "ok"),
+    ]
