@@ -832,6 +832,12 @@ def main() -> int:
             )
         )
         return 2
+    missing = missing_modules(args.run, camera=args.camera is not None)
+    if missing:
+        # Before any motion: a missing module mid-run would leave the head
+        # wherever the last case put it.
+        print(json.dumps({"refused": "missing Python modules", "modules": missing}))
+        return 2
     daemon_state, errors_before = daemon_errors()
     if daemon_state != "running" or running():
         print(
@@ -843,6 +849,17 @@ def main() -> int:
             )
         )
         return 2
+    if CAMERA_DIR is not None:
+        try:
+            grab_frame()
+        except Exception as exc:  # noqa: BLE001 - refuse before any motion
+            close_sdk()
+            print(
+                json.dumps(
+                    {"refused": f"camera not usable: {type(exc).__name__}: {exc}"}
+                )
+            )
+            return 2
     cases = list(args.run)
     if cases[-1] != "home":
         cases.append("home")  # a normal run ends at IDLE_HOME
@@ -897,10 +914,30 @@ def main() -> int:
                 {"uuid": move.get("uuid") if isinstance(move, dict) else move},
             )
         print(json.dumps({"aborted": f"{type(exc).__name__}: {exc}"}))
+        # The script failed, not the daemon: put the head back at IDLE_HOME
+        # as a normal run would. Skip it if the daemon itself changed.
+        state_now, errors_now = daemon_errors()
+        if state_now == "running" and (errors_now or 0) <= (errors_before or 0):
+            rest_home()
+            print(json.dumps({"returned_home_after_abort": state()}))
         return 4
     finally:
         close_sdk()
     return 0
+
+
+def missing_modules(cases: list[str], *, camera: bool) -> list[str]:
+    """Modules the requested cases import lazily, checked up front."""
+    import importlib.util
+
+    needed = {"numpy", "scipy"}
+    if camera:
+        needed.add("cv2")
+    if camera or any(
+        c.endswith("-sdk") or c in ("interp", "stream-sdk") for c in cases
+    ):
+        needed.add("reachy_mini")
+    return sorted(m for m in needed if importlib.util.find_spec(m) is None)
 
 
 def run_case(name: str) -> None:
