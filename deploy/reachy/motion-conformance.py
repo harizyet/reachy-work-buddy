@@ -63,6 +63,8 @@ CASES = {
     "recorded": "REST attentive1 to completion; final pose compared with start. Then IDLE_HOME",
     "preempt": "REST thoughtful1 stopped by UUID at 1.5 s; pose sampled for 1.5 s. Then IDLE_HOME",
     "failure-rest": "No motion expected: goto with interpolation 'bogus', unknown recorded move, stop of unknown UUID",
+    "visible-rest": "Calibration: REST yaw +0.3 rad over 2 s and back to ZERO over 2 s, with late reads",
+    "visible-sdk": "Calibration: SDK, same as visible-rest",
     "home": "REST goto IDLE_HOME (identity, antennas [-0.1745, 0.1745], body yaw 0), 1.5 s",
 }
 
@@ -87,7 +89,7 @@ def http(
 
 
 def state() -> dict:
-    code, body = http("GET", "/state/full")
+    code, body = http("GET", "/state/full?with_head_joints=true")
     assert code == 200, (code, body)
     pose = body["head_pose"]
     return {
@@ -100,7 +102,33 @@ def state() -> dict:
         "yaw": pose["yaw"],
         "body_yaw": body["body_yaw"],
         "antennas": body["antennas_position"],
+        # [body_yaw, stewart_1..6] from the encoders; compare with ik_joints.
+        "joints": body.get("head_joints"),
     }
+
+
+_KIN = None
+
+
+def ik_joints(roll: float = 0.0, pitch: float = 0.0, yaw: float = 0.0) -> list | None:
+    """The joints the daemon commands for a target (its own IK engine).
+    1.8.4's FullState drops target_head_joints, so recompute them."""
+    global _KIN
+    try:
+        import numpy as np
+        from reachy_mini.kinematics.analytical_kinematics import AnalyticalKinematics
+        from scipy.spatial.transform import Rotation as R
+
+        if _KIN is None:
+            _KIN = AnalyticalKinematics(automatic_body_yaw=True)
+        head = np.eye(4)
+        head[:3, :3] = R.from_euler("xyz", [roll, pitch, yaw]).as_matrix()
+        return [round(float(j), 4) for j in _KIN.ik(head)]
+    except Exception as exc:  # noqa: BLE001 - diagnostics only
+        return [f"unavailable: {exc}"]
+
+
+LATE_S = 2.0
 
 
 def running() -> list:
@@ -235,12 +263,16 @@ def run_axes(path: str) -> None:
     def body(mini=None):
         go(mini=mini)
         base = state()
-        rows.append(record("zero", ZERO, base))
+        rows.append(record("zero", {**ZERO, "ik_joints": ik_joints()}, base))
         for axis, value in AXIS_TARGETS:
             go(mini=mini, **{axis: value})
             measured = state()
             requested = {"roll": 0.0, "pitch": 0.0, "yaw": 0.0, axis: value}
+            requested["ik_joints"] = ik_joints(**{axis: value})
             rows.append(record(f"{axis}{value:+}", requested, measured))
+            # Diagnostic only: does it keep settling after the checked read?
+            time.sleep(LATE_S)
+            record(f"{axis}{value:+} late (+{LATE_S} s)", requested, state())
             fails.extend(
                 f"{axis}{value:+}: {f}" for f in check_abs(requested, measured)
             )
@@ -255,6 +287,46 @@ def run_axes(path: str) -> None:
                         f"{axis}{value:+}: cross-axis {other} moved {measured[other] - base[other]:+.4f}"
                     )
             go(mini=mini)
+            record(
+                f"back to zero after {axis}{value:+}",
+                {**ZERO, "ik_joints": ik_joints()},
+                state(),
+            )
+
+    if path == "rest":
+        body()
+    else:
+        with_sdk(body)
+    summarize(rows, fails)
+
+
+def run_visible(path: str) -> None:
+    """A larger move the owner can see, to calibrate the eye against the
+    readback. Same absolute tolerances."""
+    rows, fails = [], []
+
+    def go(yaw, mini=None):
+        if mini is None:
+            rest_goto(
+                2.0, head_pose=rpy_pose(yaw=yaw), antennas=[0.0, 0.0], body_yaw=0.0
+            )
+        else:
+            sdk_goto(mini, yaw=yaw, duration=2.0, antennas=[0.0, 0.0], body_yaw=0.0)
+
+    def body(mini=None):
+        for yaw in (0.0, 0.3, 0.0):
+            go(yaw, mini)
+            requested = {
+                "roll": 0.0,
+                "pitch": 0.0,
+                "yaw": yaw,
+                "ik_joints": ik_joints(yaw=yaw),
+            }
+            measured = state()
+            rows.append(record(f"yaw {yaw:+}", requested, measured))
+            fails.extend(f"yaw {yaw:+}: {f}" for f in check_abs(requested, measured))
+            time.sleep(LATE_S)
+            record(f"yaw {yaw:+} late (+{LATE_S} s)", requested, state())
 
     if path == "rest":
         body()
@@ -530,6 +602,8 @@ def main() -> int:
         run_zero(name.split("-")[1])
     elif name.startswith("axes-"):
         run_axes(name.split("-")[1])
+    elif name.startswith("visible-"):
+        run_visible(name.split("-")[1])
     elif name.startswith("antennas-"):
         run_antennas(name.split("-")[1])
     elif name.startswith("bodyyaw-"):
