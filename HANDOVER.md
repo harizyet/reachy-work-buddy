@@ -23,14 +23,17 @@ To close 24d, in order:
    (unit enabled, container recreated with `--mount` and no restart policy,
    live recovery passed, launcher idempotency bug fixed in `02f9538`). See
    the [record](docs/verification/phase-24d-conversation-2026-09-24.md#boot-race-fix-on-the-nano-2026-09-25).
-   Cold reboot 2026-09-25: the race is fixed (socket, ordering, camera and
-   voice with no sudo). **But** the daemon's boot wake-up failed with
-   `time value is out of range [0,1]` → `state: error`, `ready: false`.
-   This is probably an upstream reachy_mini 1.8.4 goto timing race (see the
-   record). **Still to do, with the owner present:** `sudo systemctl
-   restart reachy-mini-daemon` → `running`, the container restarts, the
-   camera works, one named behaviour. If the wake-up error recurs on later
-   boots, decide with the owner how to handle it.
+   Cold reboot and daemon restart 2026-09-25: the race fix and container
+   lifecycle pass. **New blocker: hardware.** The head does not return to
+   home. After a clean wake-up it holds about 10° roll, and a mapped nod
+   drove it to an IK "not achievable" pose, with `stewart_5` lagging the
+   other Stewart joints (the same motor as the 09-24 overheat). The boot
+   wake-up error (`time value is out of range`) may be a symptom. All motion
+   is stopped. The owner decides load-off (torque off or gravity
+   compensation; **not** `systemctl stop`, which moves to sleep first) and
+   inspects the linkage. Do not queue behaviours or restart the daemon
+   without the owner. See the
+   [record](docs/verification/phase-24d-conversation-2026-09-24.md#boot-race-fix-on-the-nano-2026-09-25).
 2. ~~Agree the search-turn latency budget~~ Done 2026-09-25: each
    search-assisted turn ≤ 20 s (non-search stays p50 ≤ 4 s, p95 ≤ 8 s).
 3. **Formal run** of the matrix rows. The results table is still mostly

@@ -326,8 +326,41 @@ examined again.
   `sudo -n alsactl restore` by design, which leaves a "password is required"
   line in the auth log. Voice was unaffected.
 
-**Still to verify:** `systemctl restart reachy-mini-daemon` recovers the
-daemon to `running`, and restarts the container with the camera working.
+**Pose after the failed wake-up.** `/api/state/full` at 02:04:47Z: roll
+0.431 rad; x/y/z, pitch and yaw ≈ 0; antennas at home. Home in 1.8.4 is
+`INIT_HEAD_POSE = np.eye(4)`, so the first goto had finished. The head was
+left in the wake-up's 20°-roll step. No overheating that boot.
+
+**Daemon restart (step 5, owner present).** `sudo systemctl restart
+reachy-mini-daemon` at 09:05:32. The embodiment unit waited, then started at
+09:05:41. `BindsTo` restarted the same container (new `StartedAt`). Socket
+correct. `09:05:40 Waking up...` → `09:05:41 Daemon started successfully.`
+State `running`, `nb_error 0`, about 50 Hz. Camera: first frame 6.46 s,
+second 0.046 s. `nano-1` generation 3. `backend_status.ready: false` and
+`last_alive: null` are not faults: in 1.8.4 `robot/backend.py` sets those
+`_status` fields once at startup and never updates them.
+
+**Head does not reach home; mapped nod makes it worse (stopped).** After the
+clean wake-up the head settled at roll 0.169, pitch 0.104. Head joints (body
+yaw, stewart 1–6): `[0.0015, 0.686, -0.597, 0.624, -0.647, 0.420, -0.514]`.
+In 1.8.4 the target pose is not readable over HTTP: the `with_target_*`
+parameters are accepted but dropped. The mapped `acknowledgement` behaviour
+(`POST /behaviour/acknowledgement`, 02:07:40Z) returned 200. The daemon then
+logged `IK error: Collision detected or head pose not achievable!` twice and
+settled holding roll 0.307, pitch 0.120, yaw −0.229. Joints:
+`[0.0, 1.313, -1.285, 1.127, -1.132, 0.621, -1.083]`.
+**`stewart_5` lags the other five Stewart joints each time.** It is the same
+motor that overheated on 09-24. A mechanical bind, a stuck or weak
+`stewart_5`, or a calibration fault is suspected, not a timing race. The
+failed boot wake-up may be a symptom. All motion stopped. Load-off is the
+owner's decision:
+
+- torque off (`/api/motors/set_mode/disabled`);
+- gravity compensation;
+- **not** `systemctl stop`, because its default `goto_sleep_on_stop` makes an
+  active move first.
+
+Robot-side 24d work is paused until the hardware is understood.
 
 ## Latency budget (agreed before any timed turn)
 
@@ -375,6 +408,6 @@ and a Nano cold-reboot recovery check after the boot-race fix.
 | Privacy | OPEN | Live withholding observed (routing to web). Carry-over fix `c65c9cd`. Modes, DND and private call not yet exercised on the robot |
 | Consent and auth | OPEN | Covered off the robot in 24c tests; not yet on the robot |
 | Stop and expiry | PARTIAL | Stop during playback: 32 ms and 36 ms from stop receipt to daemon `stop_sound` (the robot-side stop marker came from `1a66f01`). Capture and inference cancellation, logout and expiry not yet run |
-| Recovery | PARTIAL | An unplanned WS drop (tailnet stall) ended the session cleanly, with no auto-reactivation and re-registration in 8 s. Hub restarts were recovered by reconnect. The Nano reboot exposed the camera-socket boot race: fix installed on the Nano 2026-09-25 and a live recovery passed ([details](#boot-race-fix-on-the-nano-2026-09-25)); cold reboot passed for the race (socket, ordering, camera, voice, no sudo), but the daemon's boot wake-up hit `time value is out of range [0,1]` → `state: error`; daemon-restart check pending |
+| Recovery | PARTIAL | An unplanned WS drop (tailnet stall) ended the session cleanly, with no auto-reactivation and re-registration in 8 s. Hub restarts were recovered by reconnect. The Nano reboot exposed the camera-socket boot race: fix installed on the Nano 2026-09-25 and a live recovery passed ([details](#boot-race-fix-on-the-nano-2026-09-25)); cold reboot and daemon restart pass for the race and container lifecycle, but the head does not reach home, `stewart_5` lags and a mapped nod produced IK errors ([details](#boot-race-fix-on-the-nano-2026-09-25)). Hardware issue open; robot work paused |
 | Coexistence and sustained use | PARTIAL | Step 3 coexistence PASS. The 30-minute session is not yet run |
 | Timing and quality | OPEN | Budgets agreed: non-search p50 ≤ 4 s, p95 ≤ 8 s; each search-assisted turn ≤ 20 s. Preliminary timings above; the formal run is pending |
