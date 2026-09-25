@@ -7,8 +7,10 @@ or physical motion was involved. Mockup-sim has no motor dynamics, so these
 results cover control flow only, not tracking, heat or settling.
 
 Still open for [item 1](../phase-24f.md#1-motion-conformance): the version
-deployed on the Nano, the Testbench revision, firmware and the dataset
-revisions. The source line numbers below refer to 1.8.4 only.
+deployed on the Nano, firmware and the dataset revisions. The Nano was
+offline when this was checked on 2026-09-25 (no LAN route; Tailscale last
+seen 6 h earlier). The Testbench is pinned below. The source line numbers
+below refer to 1.8.4 only.
 
 ## Findings
 
@@ -22,6 +24,79 @@ revisions. The source line numbers below refer to 1.8.4 only.
 | Recorded-move start | `play_recorded_move_dataset` calls `play_move(move)` with `initial_goto_duration=0`, so playback starts from the move's first frame with no blend from the current pose. | `routers/move.py` |
 | Wake-up completion signal | At startup the daemon awaits `backend.wake_up()` before setting `state: running`, so `running` means the boot wake-up is finished (or was skipped). | `daemon/daemon.py` start sequence |
 | Wake-up end pose | Identity head, antennas `(-0.1745, 0.1745)` rad (±10°, "to reduce shaking at vertical"), body yaw `0.0`. This is the proposed `IDLE_HOME`. | `INIT_HEAD_POSE`, `INIT_ANTENNAS_JOINT_POSITIONS`, `wake_up` |
+
+## Testbench and SDK path compared with REST
+
+Testbench revision `480b0cc0252d60f3bc2231131823a4ad7a07bf8c` (Hugging Face
+Space `pollen-robotics/reachy_mini_testbench`, 2026-03-19). Its
+`pyproject.toml` depends on unpinned `reachy-mini`, so it runs whatever SDK
+is installed next to the daemon. The comparison below assumes 1.8.4 on both
+sides and is source reading only.
+
+The Testbench moves the robot through the Python SDK (`ReachyMini(...)`,
+`connection_mode="localhost_only"`), not through REST. The SDK sends a
+`GotoTaskRequest` over the daemon's WebSocket, and `io/ws_server.py` calls
+the same `backend.goto_target` → `play_move` that REST `/api/move/goto`
+calls. Head poses, rotation order and units therefore reach the same
+backend function. The differences are in the entry points:
+
+| Aspect | SDK / Testbench | REST `/api/move/goto` |
+|---|---|---|
+| Pose encoding | 4×4 matrix, flattened; `create_head_pose` uses scipy `"xyz"` Euler, **degrees** by default | `Matrix4x4Pose` `{"m": [16]}` or `XYZRPYPose` with scipy `"xyz"` Euler in **radians**, metres |
+| Interpolation | `method` is passed through | Accepted and ignored: always min-jerk |
+| Omitted body yaw | Default `0.0`: an explicit return to yaw 0 | Default `None`: keeps the current yaw |
+| Tracking and cancellation | Not in the REST move registry: absent from `/api/move/running`, not stoppable by `/api/move/stop` | Registered; stoppable by UUID |
+| Overlap | Runs as its own task on the daemon event loop, so it can overlap a REST move just as two REST moves overlap | Same |
+| Automatic body yaw | `ReachyMini()` sends `set_automatic_body_yaw(True)` on connect; the daemon's default `AnalyticalKinematics` already starts at `True`, so no change in practice | Not touched |
+
+The Testbench's "zero" is identity head with antennas `[0, 0]` and body yaw
+0 (SDK default). That is our proposed `ZERO`, not the wake-up end pose
+(`IDLE_HOME`, antennas ±0.1745 rad). A Testbench zero followed by the
+embodiment's first recorded move is a different start pose from a fresh
+wake-up.
+
+Two consequences for the comparison runs. The Testbench and the embodiment
+must not both be connected to the daemon while measuring, because nothing
+arbitrates between them. A REST body-yaw case must send `body_yaw`
+explicitly, or it will not match the SDK case.
+
+**REST payload check (in process, no daemon):** `GotoModelRequest` resolves
+`{"m": [...]}` to `Matrix4x4Pose` and `{"roll": ...}` to `XYZRPYPose`
+(pydantic 2.13.5). A misspelled key such as `{"rol": 0.1}` also validates,
+as `XYZRPYPose` with every field 0, so a typo sends the head to identity
+without any error. Any client code we add for `/goto` must build the payload
+from fixed keys and be tested against the model.
+
+## Speech wobble in 1.8.4
+
+1.8.4 has daemon-side, audio-reactive head motion. `POST
+/api/media/wobbling/enable` and `/disable` switch it (the SDK uses a
+`SetWobblingCmd` for the same thing). `play_sound`, the path our
+`play_audio` uses after `/media/sounds/upload`, builds its audio sink with a
+tee into a 16 kHz wobbler appsink. It restarts the wobbler at each play, and
+offsets are composed with the current target before IK. The deployed daemon
+runs with media enabled (`reachy-mini-daemon.service` has no `--no-media`),
+so the path exists there, provided the Nano runs 1.8.4. Amplitudes from
+`motion/speech_tapper.py`: pitch 4.5°, yaw 7.5°, roll 2.25°, x/y/z ≤ 4.5 mm,
+scaled by loudness (`SWAY_MASTER` 1.5). Hops are 50 ms.
+
+Gaps found in the source:
+
+- `stop_sound` stops the playbin but does not reset the wobbler. Hops
+  already scheduled against playback time still fire, and the last offset
+  stays applied until the next `play_sound` or a disable. A stop path using
+  wobble would have to call `/media/wobbling/disable`, which zeroes the
+  offsets, and then enable it again.
+- The feature is off until enabled, and the setting belongs to the daemon,
+  not to a client. Enabling it also makes the daemon's own sounds (wake-up,
+  sleep) wobble. `goto_sleep` disables it itself.
+- Not run: mockup-sim was started with `--no-media`, so no wobble probe was
+  possible. Physical behaviour, motor noise during capture, and interaction
+  with recorded moves are untested.
+
+This makes wobble the first candidate for speaking feedback under
+[item 3](../phase-24f.md#3-local-conversational-motion-policy), subject to
+a supervised check. It is not enabled anywhere.
 
 ## Where our code can overlap moves
 

@@ -56,12 +56,14 @@ yaw 0. Overlap is a candidate cause of the 24d tracking anomalies, not an
 established one.
 
 Pollen's [SDK motion documentation](https://github.com/pollen-robotics/reachy_mini/blob/main/docs/source/SDK/python-sdk.md)
-describes head, antennas, body yaw, duration and interpolation. Current
-[SDK source](https://github.com/pollen-robotics/reachy_mini/blob/main/src/reachy_mini/reachy_mini.py)
-contains daemon-side wobbling support; this does not establish availability
-in 1.8.4. Use the official
+describes head, antennas, body yaw, duration and interpolation. The official
 [Testbench source](https://huggingface.co/spaces/pollen-robotics/reachy_mini_testbench/tree/main)
-as a reference, recording the exact revision used. Moving `main` links are
+is pinned at `480b0cc` in the source trace. It drives the SDK's WebSocket
+path into the same backend `goto_target` as REST, but differs on
+interpolation, omitted body yaw and cancellation. 1.8.4 also has
+daemon-side speech wobble driven by `play_sound`, with a gap on
+`stop_sound`; see the
+[trace](verification/phase-24f-source-2026-09-25.md#speech-wobble-in-184). Moving `main` links are
 research entry points, not the version contract for implementation.
 
 ## 1. Motion conformance

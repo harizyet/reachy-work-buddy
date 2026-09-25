@@ -19,9 +19,17 @@ before starting another, and before standby and at shutdown
 This is checked against a mockup-sim daemon and is not deployed; the
 embodiment image on the Nano is unchanged. Embodiment tests: 84 passed, 5
 skipped, after fixing two test STT fakes missing 24e's `vocabulary`
-keyword. Next: confirm the Nano's deployed daemon version and the
-Testbench revision. Timing budgets and the unattended-home policy still
-need settling before physical rollout. The 24e work below remains
+keyword. A later session pinned the Testbench at `480b0cc`. It uses the SDK
+WebSocket path into the same backend `goto_target` as REST, but REST
+ignores interpolation, keeps body yaw when it's omitted, and accepts a
+misspelled pose key as identity. It also found that 1.8.4 has daemon-side
+speech wobble on `play_sound`, where `stop_sound` leaves the last offset
+applied ([trace](docs/verification/phase-24f-source-2026-09-25.md#testbench-and-sdk-path-compared-with-rest)).
+All of this is from source only. The Nano was offline (no LAN route;
+Tailscale last seen 6 h earlier), so its daemon version is still
+unconfirmed: next, run `reachy-venv/bin/pip show reachy-mini` and
+`GET /api/daemon/status` there (read-only). Timing budgets and the
+unattended-home policy still need settling before physical rollout. The 24e work below remains
 outstanding.
 
 The owner added [24e item 5](docs/phase-24e.md#5-open-palm-stop): a held
