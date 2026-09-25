@@ -453,7 +453,10 @@ If the socket path becomes a directory again, use
 
 Robot traffic uses the same `HUB_WS_URL` origin through Caddy. The WSS socket
 carries only `voice_start`/`voice_stop`/`voice_state`. Each utterance is a
-separate authenticated `POST /hub/robot-media/voice-turn` from the robot. The
+separate authenticated `POST /hub/robot-media/voice-turn` from the robot; a
+turn the hub held as unfinished is answered through
+`POST /hub/robot-media/voice-turn/finalize`
+([adaptive end of turn](adr/0023-robot-voice-conversation.md#addendum-adaptive-end-of-turn-2026-09-25-phase-24e)). The
 hub never connects inbound to the robot for voice, and no new robot port is
 opened.
 
@@ -462,8 +465,9 @@ opened.
 | Owner lease (UI renews every 1.5 s) | 15 s | Hub |
 | Maximum session length | 10 min | Hub and robot |
 | No transcribed speech | 120 s | Hub |
-| Maximum utterance | 15 s | Robot cuts; hub rejects above 16 s |
+| Maximum turn, including held segments | 30 s | Robot cuts; hub rejects above 31 s |
 | End-of-speech silence / minimum utterance | 700 ms / 300 ms | Robot VAD |
+| Continuation window after an unfinished-sounding segment | 1.5 s from the cut | Hub decides to hold; robot waits, then asks it to answer |
 | Upload size | 1 MiB, 16 kHz mono 16-bit WAV | Hub |
 | Turns in flight | 1 per session | Hub (409) |
 | Tail guard after playback | 400 ms | Robot |

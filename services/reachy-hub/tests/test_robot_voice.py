@@ -43,6 +43,7 @@ from reachy_hub.robot_voice import (
     RobotVoiceManager,
     VoiceSessionError,
     VoiceTurnPipeline,
+    finalize_turn,
     run_turn,
 )
 from reachy_hub.session_store import InMemorySessionStore
@@ -51,6 +52,7 @@ from reachy_hub.user_store import InMemoryUserStore
 from shared.models.robot_voice import (
     MAX_UTTERANCE_BYTES,
     VOICE_CAPABILITY,
+    VOICE_CONTINUATION_CAPABILITY,
     RobotVoiceState,
     VoiceLimits,
     VoiceSessionState,
@@ -58,7 +60,12 @@ from shared.models.robot_voice import (
 )
 from shared.models.robot_ws import VoiceStateMessage, WSMessageType
 from shared.models.session import Channel, PrivacyContext
-from shared.protocols.robot_ws import PROTOCOL_VERSION, ROBOT_VOICE_TURN, ROBOTS_CONNECT
+from shared.protocols.robot_ws import (
+    PROTOCOL_VERSION,
+    ROBOT_VOICE_TURN,
+    ROBOT_VOICE_TURN_FINALIZE,
+    ROBOTS_CONNECT,
+)
 
 ROBOT_ID = "nano-1"
 ROBOT_TOKEN = "robot-secret"
@@ -268,6 +275,207 @@ def test_stop_mid_turn_discards_the_late_reply() -> None:
     assert session.turns[-1].outcome == VoiceTurnOutcome.CANCELLED
 
 
+# --- adaptive end of turn (Phase 24e), controlled time ---------------------
+
+CONTINUATION = (VOICE_CAPABILITY, VOICE_CONTINUATION_CAPABILITY)
+
+
+class ScriptedPipeline:
+    """Scripted STT; records what core was asked and what was synthesized."""
+
+    def __init__(self, *transcripts: str) -> None:
+        self.transcripts = list(transcripts)
+        self.conversed: list[str] = []
+        self.synthesized: list[str] = []
+
+    def build(self) -> VoiceTurnPipeline:
+        from reachy_hub.response_policy import robot_speech_withheld_reason
+
+        async def transcribe(_):
+            return self.transcripts.pop(0)
+
+        async def converse(user_id, text):
+            self.conversed.append(text)
+            return ConversationReply(reply=f"reply to {text}", delivery_channel=Channel.REACHY)
+
+        async def flags(_):
+            return False, PrivacyContext.UNKNOWN
+
+        async def synthesize(text):
+            self.synthesized.append(text)
+            return b"audio"
+
+        async def deliver(*_):
+            return False
+
+        return VoiceTurnPipeline(transcribe, converse, flags, synthesize, deliver, robot_speech_withheld_reason)
+
+
+def segment(manager, session, pipeline, turn, number=1, seconds=2.0):
+    manager.begin_turn(ROBOT_ID, 1, session.voice_session_id, turn, number)
+    return asyncio.run(run_turn(manager, session, turn, b"", pipeline, seconds=seconds))
+
+
+def finalize(manager, session, pipeline, turn):
+    manager.begin_turn(ROBOT_ID, 1, session.voice_session_id, turn, finalize=True)
+    return asyncio.run(finalize_turn(manager, session, turn, pipeline))
+
+
+def test_unfinished_segment_is_held_and_continued_as_one_turn() -> None:
+    manager, _, _, _, clock = make_manager(capabilities=CONTINUATION)
+    script = ScriptedPipeline("I was wondering if you could tell me.", "what the weather is like tomorrow.")
+    pipeline = script.build()
+    session = asyncio.run(manager.start(ROBOT_ID, "owner"))
+    assert session.continuation
+
+    clock.now += 5
+    assert segment(manager, session, pipeline, 1) == (VoiceTurnOutcome.CONTINUE, None)
+    assert script.conversed == [] and script.synthesized == []
+    assert (session.in_flight_turn, session.state, session.next_turn) == (None, VoiceSessionState.LISTENING, 2)
+    assert session.last_activity == clock.now  # a held turn is activity
+    assert list(session.turns) == []  # held segments are not listed
+
+    outcome, audio = segment(manager, session, pipeline, 1, 2)
+    assert (outcome, audio) == (VoiceTurnOutcome.SPOKEN, b"audio")
+    merged = "I was wondering if you could tell me. what the weather is like tomorrow."
+    assert script.conversed == [merged]
+    record = session.turns[-1]
+    assert (record.turn, record.segments, record.transcript) == (1, 2, merged)
+    assert record.transcription_ms is not None and record.synthesis_ms is not None
+    assert session.held is None and session.next_turn == 2
+
+
+def test_held_turn_is_answered_on_finalize() -> None:
+    manager, _, _, _, _ = make_manager(capabilities=CONTINUATION)
+    script = ScriptedPipeline("So I went to the")
+    pipeline = script.build()
+    session = asyncio.run(manager.start(ROBOT_ID, "owner"))
+
+    assert segment(manager, session, pipeline, 1)[0] == VoiceTurnOutcome.CONTINUE
+    assert finalize(manager, session, pipeline, 1) == (VoiceTurnOutcome.SPOKEN, b"audio")
+    assert script.conversed == ["So I went to the"]
+    record = session.turns[-1]
+    assert (record.segments, record.transcription_ms, record.conversation_ms is not None) == (1, None, True)
+    # Nothing is held any more, so a second finalize is refused.
+    with pytest.raises(VoiceSessionError, match="No held turn"):
+        manager.begin_turn(ROBOT_ID, 1, session.voice_session_id, 1, finalize=True)
+
+
+def test_continuation_fencing() -> None:
+    manager, _, _, _, _ = make_manager(capabilities=CONTINUATION)
+    pipeline = ScriptedPipeline("tell me about").build()
+    session = asyncio.run(manager.start(ROBOT_ID, "owner"))
+    sid = session.voice_session_id
+
+    with pytest.raises(VoiceSessionError, match="No held turn"):
+        manager.begin_turn(ROBOT_ID, 1, sid, 1, finalize=True)  # nothing held yet
+    assert segment(manager, session, pipeline, 1)[0] == VoiceTurnOutcome.CONTINUE
+    with pytest.raises(VoiceSessionError, match="No held turn"):
+        manager.begin_turn(ROBOT_ID, 1, sid, 1, 3)  # skipped segment 2
+    with pytest.raises(VoiceSessionError, match="No held turn"):
+        manager.begin_turn(ROBOT_ID, 1, sid, 2, 2)  # not the held turn
+    with pytest.raises(VoiceSessionError, match="No held turn"):
+        manager.begin_turn(ROBOT_ID, 1, sid, 2, finalize=True)
+    with pytest.raises(VoiceSessionError, match="Unexpected turn"):
+        manager.begin_turn(ROBOT_ID, 1, sid, 1)  # segment 1 of a used number
+    with pytest.raises(VoiceSessionError, match="Stale"):
+        manager.begin_turn(ROBOT_ID, 2, sid, 1, finalize=True)
+    manager.begin_turn(ROBOT_ID, 1, sid, 1, finalize=True)
+    with pytest.raises(VoiceSessionError, match="already in progress"):
+        manager.begin_turn(ROBOT_ID, 1, sid, 1, 2)
+    assert session.held is not None  # still intact for the finalize in flight
+
+
+def test_new_turn_supersedes_a_held_turn_after_a_lost_upload() -> None:
+    manager, _, _, _, _ = make_manager(capabilities=CONTINUATION)
+    script = ScriptedPipeline("remind me about", "hello there")
+    pipeline = script.build()
+    session = asyncio.run(manager.start(ROBOT_ID, "owner"))
+
+    assert segment(manager, session, pipeline, 1)[0] == VoiceTurnOutcome.CONTINUE
+    assert segment(manager, session, pipeline, 2)[0] == VoiceTurnOutcome.SPOKEN
+    assert script.conversed == ["hello there"]  # the held text is never answered
+    assert [(t.turn, t.outcome, t.reason) for t in session.turns] == [
+        (1, VoiceTurnOutcome.CANCELLED, "Superseded by a new turn"),
+        (2, VoiceTurnOutcome.SPOKEN, None),
+    ]
+
+
+def test_stop_discards_a_held_turn_unanswered() -> None:
+    manager, _, _, socket, _ = make_manager(capabilities=CONTINUATION)
+    script = ScriptedPipeline("I was wondering")
+    pipeline = script.build()
+    session = asyncio.run(manager.start(ROBOT_ID, "owner"))
+
+    assert segment(manager, session, pipeline, 1)[0] == VoiceTurnOutcome.CONTINUE
+    asyncio.run(manager.stop(session, "Stopped by owner"))
+    assert session.held is None
+    assert socket.sent[-1]["type"] == "voice_stop"
+    with pytest.raises(VoiceSessionError, match="No active"):
+        manager.begin_turn(ROBOT_ID, 1, session.voice_session_id, 1, finalize=True)
+    assert script.conversed == []
+
+
+def test_stop_during_a_continuation_segment_is_not_held_or_answered() -> None:
+    manager, _, _, _, _ = make_manager(capabilities=CONTINUATION)
+    released = asyncio.Event()
+    script = ScriptedPipeline("I was wondering")
+    pipeline = script.build()
+    slow_transcripts = ["and whether"]
+
+    async def slow_transcribe(_):
+        await released.wait()
+        return slow_transcripts.pop(0)
+
+    session = asyncio.run(manager.start(ROBOT_ID, "owner"))
+    assert segment(manager, session, pipeline, 1)[0] == VoiceTurnOutcome.CONTINUE
+    pipeline.transcribe = slow_transcribe
+
+    async def scenario():
+        manager.begin_turn(ROBOT_ID, 1, session.voice_session_id, 1, 2)
+        task = asyncio.create_task(run_turn(manager, session, 1, b"", pipeline, seconds=2.0))
+        await asyncio.sleep(0)
+        await manager.stop(session, "Stopped by owner")
+        released.set()
+        return await task
+
+    assert asyncio.run(scenario()) == (VoiceTurnOutcome.CANCELLED, None)
+    assert session.held is None and script.conversed == []
+    assert session.turns[-1].transcript == "I was wondering and whether"
+
+
+def test_no_hold_without_the_capability_a_window_or_budget() -> None:
+    # A robot that can't continue gets every segment answered, as before.
+    manager, _, _, _, _ = make_manager()
+    script = ScriptedPipeline("I was wondering if")
+    session = asyncio.run(manager.start(ROBOT_ID, "owner"))
+    assert not session.continuation
+    assert segment(manager, session, script.build(), 1)[0] == VoiceTurnOutcome.SPOKEN
+
+    manager, _, _, _, _ = make_manager(capabilities=CONTINUATION, limits=VoiceLimits(continuation_window_ms=0))
+    assert not asyncio.run(manager.start(ROBOT_ID, "owner")).continuation
+
+    # The merged turn's cap: hold only while a second of budget remains.
+    manager, _, _, _, _ = make_manager(capabilities=CONTINUATION, limits=VoiceLimits(max_utterance_seconds=10))
+    script = ScriptedPipeline("so the", "and the")
+    pipeline = script.build()
+    session = asyncio.run(manager.start(ROBOT_ID, "owner"))
+    assert segment(manager, session, pipeline, 1, seconds=6.0)[0] == VoiceTurnOutcome.CONTINUE
+    assert segment(manager, session, pipeline, 1, 2, seconds=3.5)[0] == VoiceTurnOutcome.SPOKEN
+    assert script.conversed == ["so the and the"]
+
+
+def test_empty_continuation_segment_ends_the_hold() -> None:
+    manager, _, _, _, _ = make_manager(capabilities=CONTINUATION)
+    script = ScriptedPipeline("I think", "  ")
+    pipeline = script.build()
+    session = asyncio.run(manager.start(ROBOT_ID, "owner"))
+    assert segment(manager, session, pipeline, 1)[0] == VoiceTurnOutcome.CONTINUE
+    assert segment(manager, session, pipeline, 1, 2)[0] == VoiceTurnOutcome.SPOKEN  # a cough, not more words
+    assert script.conversed == ["I think"]
+    assert session.turns[-1].segments == 2
+
+
 # --- in-process hub/core chain -------------------------------------------
 
 
@@ -363,21 +571,21 @@ def start_listening(client, socket) -> str:
     assert status.status_code == 200, status.text
     start = socket.receive_json()
     assert start["type"] == "voice_start"
-    assert start["limits"]["max_utterance_seconds"] == 15.0
+    assert start["limits"]["max_utterance_seconds"] == 30.0
+    assert start["limits"]["continuation_window_ms"] == 1500
     socket.send_json({"type": "voice_state", "voice_session_id": start["voice_session_id"], "state": "listening"})
     wait_for_state(client, "listening")
     return start["voice_session_id"]
 
 
-def upload(client, sid, turn, generation, body=None, token=ROBOT_TOKEN):
-    return client.post(
-        ROBOT_VOICE_TURN,
-        content=body if body is not None else wav_bytes(),
-        headers={
-            "X-Robot-Id": ROBOT_ID, "Authorization": f"Bearer {token}", "X-Robot-Generation": str(generation),
-            "X-Voice-Session": sid, "X-Voice-Turn": str(turn), "Content-Type": "audio/wav",
-        },
-    )
+def upload(client, sid, turn, generation, body=None, token=ROBOT_TOKEN, segment=None):
+    headers = {
+        "X-Robot-Id": ROBOT_ID, "Authorization": f"Bearer {token}", "X-Robot-Generation": str(generation),
+        "X-Voice-Session": sid, "X-Voice-Turn": str(turn), "Content-Type": "audio/wav",
+    }
+    if segment is not None:
+        headers["X-Voice-Segment"] = str(segment)
+    return client.post(ROBOT_VOICE_TURN, content=body if body is not None else wav_bytes(), headers=headers)
 
 
 def test_spoken_turns_share_the_conversation_with_web_chat() -> None:
@@ -493,13 +701,75 @@ def test_upload_authentication_bounds_and_validation() -> None:
 
             bad = upload(client, sid, 1, generation, body=wav_bytes(rate=44100))
             assert bad.status_code == 422
-            too_long = upload(client, sid, 2, generation, body=wav_bytes(seconds=17))
+            too_long = upload(client, sid, 2, generation, body=wav_bytes(seconds=32))
             assert too_long.status_code == 422
             assert stt.calls == 0
 
             silence = upload(client, sid, 3, generation)
             assert (silence.status_code, silence.headers["x-voice-turn-outcome"]) == (204, "no_speech")
             assert wait_for_state(client, "listening")["next_turn"] == 4
+        finally:
+            ws.__exit__(None, None, None)
+
+
+def finalize_request(client, sid, turn, generation, token=ROBOT_TOKEN):
+    return client.post(
+        ROBOT_VOICE_TURN_FINALIZE,
+        headers={
+            "X-Robot-Id": ROBOT_ID, "Authorization": f"Bearer {token}", "X-Robot-Generation": str(generation),
+            "X-Voice-Session": sid, "X-Voice-Turn": str(turn),
+        },
+    )
+
+
+def test_held_turn_over_the_upload_and_finalize_routes() -> None:
+    stt = ScriptedSTT("I was wondering if you could tell me.", "what time it is.", "and the")
+    tts = RecordingTTS()
+    client, _, _ = make_hub(stt, tts)
+    with client:
+        ws, socket, generation = connect_robot(client, capabilities=(VOICE_CAPABILITY, VOICE_CONTINUATION_CAPABILITY))
+        try:
+            sid = start_listening(client, socket)
+            held = upload(client, sid, 1, generation)
+            assert (held.status_code, held.headers["x-voice-turn-outcome"], held.content) == (204, "continue", b"")
+            assert wait_for_state(client, "listening")["turns"] == []
+            assert upload(client, sid, 1, generation, segment=3).status_code == 409
+
+            answered = upload(client, sid, 1, generation, segment=2)
+            assert (answered.status_code, answered.headers["x-voice-turn-outcome"]) == (200, "spoken")
+            assert len(tts.spoken) == 1
+            socket.send_json({"type": "voice_state", "voice_session_id": sid, "state": "listening"})
+            turn = wait_for_state(client, "listening")["turns"][0]
+            assert (turn["transcript"], turn["segments"]) == (
+                "I was wondering if you could tell me. what time it is.", 2,
+            )
+
+            assert upload(client, sid, 2, generation).headers["x-voice-turn-outcome"] == "continue"
+            assert finalize_request(client, sid, 2, generation, token="wrong").status_code == 401
+            assert finalize_request(client, sid, 3, generation).status_code == 409
+            final = finalize_request(client, sid, 2, generation)
+            assert (final.status_code, final.headers["x-voice-turn-outcome"]) == (200, "spoken")
+            assert final.headers["content-type"] == "audio/wav"
+            assert finalize_request(client, sid, 2, generation).status_code == 409
+            assert len(tts.spoken) == 2
+        finally:
+            ws.__exit__(None, None, None)
+
+
+def test_merged_turn_over_the_cap_is_rejected() -> None:
+    stt = ScriptedSTT("so the")
+    client, _, _ = make_hub(stt, RecordingTTS())
+    with client:
+        ws, socket, generation = connect_robot(client, capabilities=(VOICE_CAPABILITY, VOICE_CONTINUATION_CAPABILITY))
+        try:
+            sid = start_listening(client, socket)
+            assert upload(client, sid, 1, generation, body=wav_bytes(seconds=20)).status_code == 204
+            too_long = upload(client, sid, 1, generation, body=wav_bytes(seconds=12), segment=2)
+            assert too_long.status_code == 422
+            turns = wait_for_state(client, "listening")["turns"]
+            assert turns[-1]["outcome"] == "failed"
+            # The held text went with it; the robot starts a new turn.
+            assert finalize_request(client, sid, 1, generation).status_code == 409
         finally:
             ws.__exit__(None, None, None)
 

@@ -12,6 +12,11 @@ State here is process-local, like `RobotConnectionManager`: a hub restart
 drops every session and the robot, losing its socket, stops capturing and
 does not resume on reconnect.
 
+Adaptive end of turn (Phase 24e, ADR 0023 addendum): a segment whose
+transcript sounds unfinished is held instead of answered. The robot either
+uploads the next segment of the same turn or asks for the held turn to be
+finalized; stop, expiry and disconnect discard held text unanswered.
+
 `expire()` takes no time argument; the injected `clock` makes lease and
 deadline checks testable without sleeping.
 """
@@ -34,12 +39,16 @@ from fastapi.responses import Response
 
 from reachy_hub.robot_connection_manager import RobotConnection, RobotConnectionManager
 from reachy_hub.robot_credential_store import RobotCredentialStore
+from reachy_hub.turn_completeness import looks_complete
 from shared.models.robot_voice import (
     MAX_UTTERANCE_BYTES,
+    MIN_CONTINUATION_SECONDS,
     ROBOT_GENERATION_HEADER,
     SAMPLE_RATE,
     VOICE_CAPABILITY,
+    VOICE_CONTINUATION_CAPABILITY,
     VOICE_OUTCOME_HEADER,
+    VOICE_SEGMENT_HEADER,
     VOICE_SESSION_HEADER,
     VOICE_TURN_HEADER,
     RobotVoiceAvailability,
@@ -66,7 +75,7 @@ from shared.protocols.operator_api import (
     ROBOT_VOICE_START,
     ROBOT_VOICE_STOP,
 )
-from shared.protocols.robot_ws import ROBOT_VOICE_TURN
+from shared.protocols.robot_ws import ROBOT_VOICE_TURN, ROBOT_VOICE_TURN_FINALIZE
 
 log = logging.getLogger(__name__)
 
@@ -80,6 +89,16 @@ class VoiceSessionError(Exception):
         super().__init__(detail)
         self.status_code = status_code
         self.detail = detail
+
+
+@dataclass
+class HeldTurn:
+    """A turn whose transcript so far sounded unfinished."""
+
+    turn: int
+    segments: int
+    transcript: str
+    seconds: float
 
 
 @dataclass
@@ -97,6 +116,10 @@ class VoiceSession:
     last_error: str | None = None
     next_turn: int = 1
     in_flight_turn: int | None = None
+    # Whether the robot can continue a held turn (its capability and a
+    # non-zero window); fixed at start.
+    continuation: bool = False
+    held: HeldTurn | None = None
     turns: deque[VoiceTurnRecord] = field(default_factory=lambda: deque(maxlen=MAX_TURN_RECORDS))
 
     @property
@@ -179,6 +202,8 @@ class RobotVoiceManager:
             lease_expires_at=now + self._lease_seconds,
             deadline=now + self._limits.max_session_seconds,
             last_activity=now,
+            continuation=VOICE_CONTINUATION_CAPABILITY in connection.capabilities
+            and self._limits.continuation_window_ms > 0,
         )
         self._sessions[robot_id] = session
         message = VoiceStartMessage(voice_session_id=session.voice_session_id, limits=self._limits)
@@ -200,8 +225,10 @@ class RobotVoiceManager:
         session.state = VoiceSessionState.STOPPED
         session.stop_reason = reason
         # A turn still being processed checks `is_current` before replying,
-        # so its late result is discarded rather than played.
+        # so its late result is discarded rather than played. Held text is
+        # dropped, never answered after the session ends.
         session.in_flight_turn = None
+        session.held = None
         log.info("robot %s: voice session ended: %s", session.robot_id, reason)
         if notify_robot:
             connection = self._connections.get(session.robot_id)
@@ -255,7 +282,18 @@ class RobotVoiceManager:
         elif message.state == RobotVoiceState.STOPPED:
             await self.stop(session, (message.detail or "Robot stopped listening")[:200], notify_robot=False)
 
-    def begin_turn(self, robot_id: str, generation: int, voice_session_id: str, turn: int) -> VoiceSession:
+    def begin_turn(
+        self,
+        robot_id: str,
+        generation: int,
+        voice_session_id: str,
+        turn: int,
+        segment: int = 1,
+        *,
+        finalize: bool = False,
+    ) -> VoiceSession:
+        """Accept a new turn's first segment, the next segment of the held
+        turn, or (`finalize`) a request to answer the held turn."""
         session = self._sessions.get(robot_id)
         if session is None or not session.active or session.voice_session_id != voice_session_id:
             raise VoiceSessionError(409, "No active voice session")
@@ -263,14 +301,52 @@ class RobotVoiceManager:
             raise VoiceSessionError(409, "Stale robot connection")
         if session.in_flight_turn is not None:
             raise VoiceSessionError(409, "A turn is already in progress")
-        # Monotonic rather than exact: a robot whose upload was lost in
-        # transit has already moved on to the next number.
-        if turn < session.next_turn:
-            raise VoiceSessionError(409, "Unexpected turn number")
+        held = session.held
+        if finalize or segment > 1:
+            if held is None or held.turn != turn or (not finalize and segment != held.segments + 1):
+                raise VoiceSessionError(409, "No held turn to continue")
+        else:
+            # Monotonic rather than exact: a robot whose upload was lost in
+            # transit has already moved on to the next number.
+            if turn < session.next_turn:
+                raise VoiceSessionError(409, "Unexpected turn number")
+            if held is not None:
+                # Only after a lost continuation or finalize: the robot has
+                # moved on, so the held text is never answered.
+                session.turns.append(
+                    VoiceTurnRecord(
+                        turn=held.turn,
+                        transcript=held.transcript,
+                        outcome=VoiceTurnOutcome.CANCELLED,
+                        reason="Superseded by a new turn",
+                        segments=held.segments,
+                    )
+                )
+                session.held = None
+            session.next_turn = turn + 1
         session.in_flight_turn = turn
-        session.next_turn = turn + 1
         session.state = VoiceSessionState.THINKING
         return session
+
+    @staticmethod
+    def take_held(session: VoiceSession, turn: int) -> HeldTurn | None:
+        held = session.held
+        if held is None or held.turn != turn:
+            return None
+        session.held = None
+        return held
+
+    @staticmethod
+    def may_hold(session: VoiceSession, seconds: float) -> bool:
+        return session.continuation and seconds <= session.limits.max_utterance_seconds - MIN_CONTINUATION_SECONDS
+
+    def hold(self, session: VoiceSession, held: HeldTurn) -> None:
+        if not self.is_current(session, held.turn):
+            return
+        session.held = held
+        session.in_flight_turn = None
+        session.last_activity = self._clock()
+        session.state = VoiceSessionState.LISTENING
 
     @staticmethod
     def is_current(session: VoiceSession, turn: int) -> bool:
@@ -320,7 +396,8 @@ class VoiceTurnPipeline:
     speech_withheld_reason: Callable[..., str | None]
 
 
-def validate_utterance(body: bytes, limits: VoiceLimits) -> None:
+def validate_utterance(body: bytes, limits: VoiceLimits) -> float:
+    """Check the upload's format and length; returns its duration."""
     try:
         with wave.open(io.BytesIO(body), "rb") as wav:
             if wav.getframerate() != SAMPLE_RATE or wav.getnchannels() != 1 or wav.getsampwidth() != 2:
@@ -332,23 +409,31 @@ def validate_utterance(body: bytes, limits: VoiceLimits) -> None:
     # One second of slack for the pre-roll and chunk rounding.
     if duration > limits.max_utterance_seconds + 1.0:
         raise VoiceSessionError(422, "Utterance is longer than the session limit")
+    return duration
 
 
 async def run_turn(
-    manager: RobotVoiceManager, session: VoiceSession, turn: int, body: bytes, pipeline: VoiceTurnPipeline
+    manager: RobotVoiceManager,
+    session: VoiceSession,
+    turn: int,
+    body: bytes,
+    pipeline: VoiceTurnPipeline,
+    *,
+    seconds: float = 0.0,
 ) -> tuple[VoiceTurnOutcome, bytes | None]:
-    """Transcribe, converse, route and (only if permitted) synthesize one
-    turn. Every await is followed by an `is_current` check so a stop that
-    lands mid-turn discards the result instead of playing it later."""
+    """Transcribe one segment, then either hold the turn (it sounds
+    unfinished) or answer it. `seconds` is the segment's audio length,
+    counted against the merged turn's cap."""
 
     timings: dict[str, object] = {"received_at": datetime.now(UTC)}
+    prior = manager.take_held(session, turn)
+    segments = prior.segments + 1 if prior else 1
 
     def finish(outcome: VoiceTurnOutcome, **fields) -> VoiceTurnOutcome:
-        manager.finish_turn(session, VoiceTurnRecord(turn=turn, outcome=outcome, **timings, **fields))
+        manager.finish_turn(
+            session, VoiceTurnRecord(turn=turn, outcome=outcome, segments=segments, **timings, **fields)
+        )
         return outcome
-
-    def elapsed_ms(started: float) -> int:
-        return round((time.perf_counter() - started) * 1000)
 
     started = time.perf_counter()
     try:
@@ -356,21 +441,70 @@ async def run_turn(
     except Exception:
         log.exception("robot voice turn: transcription failed")
         return finish(VoiceTurnOutcome.FAILED, reason="Speech recognition failed"), None
-    timings["transcription_ms"] = elapsed_ms(started)
+    timings["transcription_ms"] = _elapsed_ms(started)
+    merged = " ".join(part for part in (prior.transcript if prior else "", transcript) if part)
     if not manager.is_current(session, turn):
-        return finish(VoiceTurnOutcome.CANCELLED, transcript=transcript or None, reason="Stopped"), None
-    if not transcript:
+        return finish(VoiceTurnOutcome.CANCELLED, transcript=merged or None, reason="Stopped"), None
+    if not merged:
         return finish(VoiceTurnOutcome.NO_SPEECH), None
 
+    total = (prior.seconds if prior else 0.0) + seconds
+    # A segment that transcribed to nothing ends the hold: nothing new was said.
+    if transcript and manager.may_hold(session, total) and not looks_complete(merged):
+        manager.hold(session, HeldTurn(turn=turn, segments=segments, transcript=merged, seconds=total))
+        return VoiceTurnOutcome.CONTINUE, None
+    return await _answer(manager, session, turn, merged, pipeline, finish)
+
+
+async def finalize_turn(
+    manager: RobotVoiceManager, session: VoiceSession, turn: int, pipeline: VoiceTurnPipeline
+) -> tuple[VoiceTurnOutcome, bytes | None]:
+    """Answer the held turn: the robot heard no more speech in its window."""
+
+    timings: dict[str, object] = {"received_at": datetime.now(UTC)}
+    held = manager.take_held(session, turn)
+    if held is None:  # stopped between begin_turn and here
+        manager.finish_turn(session, VoiceTurnRecord(turn=turn, outcome=VoiceTurnOutcome.CANCELLED, reason="Stopped"))
+        return VoiceTurnOutcome.CANCELLED, None
+
+    def finish(outcome: VoiceTurnOutcome, **fields) -> VoiceTurnOutcome:
+        manager.finish_turn(
+            session, VoiceTurnRecord(turn=turn, outcome=outcome, segments=held.segments, **timings, **fields)
+        )
+        return outcome
+
+    return await _answer(manager, session, turn, held.transcript, pipeline, finish)
+
+
+def _elapsed_ms(started: float) -> int:
+    return round((time.perf_counter() - started) * 1000)
+
+
+async def _answer(
+    manager: RobotVoiceManager,
+    session: VoiceSession,
+    turn: int,
+    transcript: str,
+    pipeline: VoiceTurnPipeline,
+    finish: Callable[..., VoiceTurnOutcome],
+) -> tuple[VoiceTurnOutcome, bytes | None]:
+    """Converse, route and (only if permitted) synthesize. Every await is
+    followed by an `is_current` check so a stop that lands mid-turn
+    discards the result instead of playing it later. `finish` records the
+    turn along with the caller's stage timings."""
+
+    timings: dict[str, object] = {}
     started = time.perf_counter()
     try:
         result = await pipeline.converse(session.user_id, transcript)
     except Exception:
         log.exception("robot voice turn: conversation failed")
         return finish(VoiceTurnOutcome.FAILED, transcript=transcript, reason="Companion core did not reply"), None
-    timings["conversation_ms"] = elapsed_ms(started)
+    timings["conversation_ms"] = _elapsed_ms(started)
     if not manager.is_current(session, turn):
-        return finish(VoiceTurnOutcome.CANCELLED, transcript=transcript, reply=result.reply, reason="Stopped"), None
+        return finish(
+            VoiceTurnOutcome.CANCELLED, transcript=transcript, reply=result.reply, reason="Stopped", **timings
+        ), None
 
     dnd, privacy_context = await pipeline.session_flags(session.user_id)
     withheld = pipeline.speech_withheld_reason(result.delivery_channel, dnd=dnd, privacy_context=privacy_context)
@@ -379,7 +513,9 @@ async def run_turn(
         if result.delivery_channel in (Channel.TELEGRAM, Channel.PHONE):
             delivered = await pipeline.deliver_private(session.user_id, Channel.TELEGRAM, result.reply)
             reason += "; also sent to Telegram" if delivered else "; Telegram is not available"
-        return finish(VoiceTurnOutcome.WITHHELD, transcript=transcript, reply=result.reply, reason=reason), None
+        return finish(
+            VoiceTurnOutcome.WITHHELD, transcript=transcript, reply=result.reply, reason=reason, **timings
+        ), None
 
     started = time.perf_counter()
     try:
@@ -387,12 +523,18 @@ async def run_turn(
     except Exception:
         log.exception("robot voice turn: speech synthesis failed")
         return finish(
-            VoiceTurnOutcome.FAILED, transcript=transcript, reply=result.reply, reason="Speech synthesis failed"
+            VoiceTurnOutcome.FAILED,
+            transcript=transcript,
+            reply=result.reply,
+            reason="Speech synthesis failed",
+            **timings,
         ), None
-    timings["synthesis_ms"] = elapsed_ms(started)
+    timings["synthesis_ms"] = _elapsed_ms(started)
     if not manager.is_current(session, turn):
-        return finish(VoiceTurnOutcome.CANCELLED, transcript=transcript, reply=result.reply, reason="Stopped"), None
-    return finish(VoiceTurnOutcome.SPOKEN, transcript=transcript, reply=result.reply), audio
+        return finish(
+            VoiceTurnOutcome.CANCELLED, transcript=transcript, reply=result.reply, reason="Stopped", **timings
+        ), None
+    return finish(VoiceTurnOutcome.SPOKEN, transcript=transcript, reply=result.reply, **timings), audio
 
 
 async def _read_bounded(request: Request, limit: int) -> bytes:
@@ -450,8 +592,7 @@ def install_robot_voice_routes(
         await manager.stop(session, "Stopped by owner")
         return manager.status(session)
 
-    @app.post(ROBOT_VOICE_TURN)
-    async def robot_voice_turn(request: Request) -> Response:
+    async def robot_turn_headers(request: Request) -> tuple[str, int, str, int, int]:
         robot_id = request.headers.get("x-robot-id")
         authorization = request.headers.get("authorization", "")
         token = authorization.removeprefix("Bearer ") if authorization.startswith("Bearer ") else None
@@ -460,21 +601,14 @@ def install_robot_voice_routes(
         try:
             generation = int(request.headers.get(ROBOT_GENERATION_HEADER, ""))
             turn = int(request.headers.get(VOICE_TURN_HEADER, ""))
+            segment = int(request.headers.get(VOICE_SEGMENT_HEADER, "1"))
         except ValueError:
             raise HTTPException(422, "Missing robot generation or turn number") from None
-        voice_session_id = request.headers.get(VOICE_SESSION_HEADER, "")
-        try:
-            body = await _read_bounded(request, MAX_UTTERANCE_BYTES)
-            session = manager.begin_turn(robot_id, generation, voice_session_id, turn)
-        except VoiceSessionError as exc:
-            raise raise_http(exc) from None
-        try:
-            validate_utterance(body, session.limits)
-        except VoiceSessionError as exc:
-            manager.finish_turn(session, VoiceTurnRecord(turn=turn, outcome=VoiceTurnOutcome.FAILED, reason=exc.detail))
-            raise raise_http(exc) from None
+        if segment < 1:
+            raise HTTPException(422, "Invalid segment number")
+        return robot_id, generation, request.headers.get(VOICE_SESSION_HEADER, ""), turn, segment
 
-        outcome, audio = await run_turn(manager, session, turn, body, pipeline)
+    def turn_response(robot_id: str, turn: int, outcome: VoiceTurnOutcome, audio: bytes | None) -> Response:
         log.info("robot %s: voice turn %s: %s", robot_id, turn, outcome.value)
         headers = {VOICE_OUTCOME_HEADER: outcome.value}
         if outcome == VoiceTurnOutcome.SPOKEN and audio is not None:
@@ -482,6 +616,37 @@ def install_robot_voice_routes(
         if outcome == VoiceTurnOutcome.FAILED:
             return Response(status_code=502, headers=headers)
         return Response(status_code=204, headers=headers)
+
+    @app.post(ROBOT_VOICE_TURN)
+    async def robot_voice_turn(request: Request) -> Response:
+        robot_id, generation, voice_session_id, turn, segment = await robot_turn_headers(request)
+        try:
+            body = await _read_bounded(request, MAX_UTTERANCE_BYTES)
+            session = manager.begin_turn(robot_id, generation, voice_session_id, turn, segment)
+        except VoiceSessionError as exc:
+            raise raise_http(exc) from None
+        try:
+            seconds = validate_utterance(body, session.limits)
+            held_seconds = session.held.seconds if session.held and session.held.turn == turn else 0.0
+            if held_seconds + seconds > session.limits.max_utterance_seconds + 1.0:
+                raise VoiceSessionError(422, "Utterance is longer than the session limit")
+        except VoiceSessionError as exc:
+            manager.take_held(session, turn)
+            manager.finish_turn(session, VoiceTurnRecord(turn=turn, outcome=VoiceTurnOutcome.FAILED, reason=exc.detail))
+            raise raise_http(exc) from None
+
+        outcome, audio = await run_turn(manager, session, turn, body, pipeline, seconds=seconds)
+        return turn_response(robot_id, turn, outcome, audio)
+
+    @app.post(ROBOT_VOICE_TURN_FINALIZE)
+    async def robot_voice_turn_finalize(request: Request) -> Response:
+        robot_id, generation, voice_session_id, turn, _ = await robot_turn_headers(request)
+        try:
+            session = manager.begin_turn(robot_id, generation, voice_session_id, turn, finalize=True)
+        except VoiceSessionError as exc:
+            raise raise_http(exc) from None
+        outcome, audio = await finalize_turn(manager, session, turn, pipeline)
+        return turn_response(robot_id, turn, outcome, audio)
 
 
 async def voice_watchdog_loop(manager: RobotVoiceManager, interval: float = 1.0) -> None:

@@ -14,26 +14,39 @@ from pydantic import BaseModel, Field
 
 # Capability a robot advertises at WSS registration when it can capture.
 VOICE_CAPABILITY = "voice_conversation"
+# Advertised alongside it when the robot can continue a held turn (Phase
+# 24e, ADR 0023 adaptive end of turn); the hub holds only for such robots.
+VOICE_CONTINUATION_CAPABILITY = "voice_turn_continuation"
 
 SAMPLE_RATE = 16000
-# 15 s of 16 kHz mono 16-bit PCM is 480 KB; the cap leaves header slack.
+# 30 s of 16 kHz mono 16-bit PCM is 960 KB; the cap leaves header slack.
 MAX_UTTERANCE_BYTES = 1024 * 1024
+# A held turn is continued only while at least this much of the merged
+# turn's `max_utterance_seconds` remains.
+MIN_CONTINUATION_SECONDS = 1.0
 
 # Upload headers (robot -> hub). Identity/credential use ADR 0019's
 # X-Robot-Id + Authorization headers.
 ROBOT_GENERATION_HEADER = "X-Robot-Generation"
 VOICE_SESSION_HEADER = "X-Voice-Session"
 VOICE_TURN_HEADER = "X-Voice-Turn"
+# 1-based segment of a held turn; absent means 1.
+VOICE_SEGMENT_HEADER = "X-Voice-Segment"
 VOICE_OUTCOME_HEADER = "X-Voice-Turn-Outcome"
 
 
 class VoiceLimits(BaseModel):
-    max_utterance_seconds: float = Field(15.0, gt=0, le=30)
+    # Bounds the whole turn, including every segment of a held turn.
+    max_utterance_seconds: float = Field(30.0, gt=0, le=30)
     end_of_speech_silence_ms: int = Field(700, ge=100, le=3000)
     min_utterance_ms: int = Field(300, ge=0, le=5000)
     pre_roll_ms: int = Field(300, ge=0, le=1000)
     playback_tail_guard_ms: int = Field(400, ge=0, le=3000)
     max_session_seconds: float = Field(600.0, gt=0, le=3600)
+    # After a `continue`, how long the robot waits, from the segment cut,
+    # for speech to start again before asking the hub to answer. 0 disables
+    # holding.
+    continuation_window_ms: int = Field(1500, ge=0, le=5000)
 
 
 class RobotVoiceState(StrEnum):
@@ -60,6 +73,9 @@ class VoiceTurnOutcome(StrEnum):
     NO_SPEECH = "no_speech"
     CANCELLED = "cancelled"
     FAILED = "failed"
+    # The segment sounded unfinished; the hub holds it and the robot keeps
+    # listening. Never recorded as a turn.
+    CONTINUE = "continue"
 
 
 class VoiceTurnRecord(BaseModel):
@@ -71,6 +87,8 @@ class VoiceTurnRecord(BaseModel):
     reply: str | None = None
     outcome: VoiceTurnOutcome
     reason: str | None = None
+    # Segments merged into this turn by adaptive end of turn.
+    segments: int = 1
     # Stage durations for latency measurement (Phase 24d). A stage that did
     # not run, because the turn ended earlier, stays None.
     received_at: datetime | None = None

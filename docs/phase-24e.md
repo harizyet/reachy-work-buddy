@@ -1,7 +1,10 @@
 # Phase 24e — Conversation hardening and deferred acceptance
 
-Status: **planned** (2026-09-25). This page states what 24e must deliver, not
-what already works. It follows [Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance),
+Status: **in progress** (2026-09-25). This page states what 24e must deliver,
+not what already works. Item 1 (adaptive end of turn) is implemented per the
+[ADR 0023 amendment](adr/0023-robot-voice-conversation.md#addendum-adaptive-end-of-turn-2026-09-25-phase-24e),
+with in-process and simulated-audio tests only; it is not deployed or
+physically accepted. It follows [Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance),
 which the owner closed on the conversation workflow on 2026-09-25, and it
 addresses what 24d found or deferred. Evidence for each issue is in the
 [24d record](verification/phase-24d-conversation-2026-09-24.md). Scope was

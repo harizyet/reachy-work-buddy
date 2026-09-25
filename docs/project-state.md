@@ -71,8 +71,10 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
 - Daemon 1.8.4 wake-up can fail with `time value is out of range [0,1]`.
   The installed once-per-boot recovery has only fake-tested restart and
   second-error paths; no real error-triggered restart is yet recorded.
-- Voice turns split at 700 ms pauses; unrelated follow-ups and farewell
-  text can trigger searches. These are 24e work. Acoustic echo and deliberate
+- Adaptive end of turn (24e item 1) is implemented and tested in process
+  and with real Silero/Whisper on simulated audio, not yet on the robot; the
+  deployed robot still splits turns at 700 ms pauses until it is rebuilt.
+  Unrelated follow-ups and farewell text can trigger searches (24e item 2). Acoustic echo and deliberate
   silence/noise handling still need physical acceptance.
 - First LOCAL camera frames can take 9–12 s while GStreamer loads plugins.
   Docker 20.10.7 seccomp prevents the external scanner from spawning;

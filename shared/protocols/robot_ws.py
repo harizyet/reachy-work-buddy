@@ -19,3 +19,5 @@ PROTOCOL_VERSION = 1
 # authenticated with the robot's own credential. Not under /robots/ so it
 # can't be mistaken for an owner remote-control route.
 ROBOT_VOICE_TURN = "/robot-media/voice-turn"
+# Phase 24e: ask the hub to answer the turn it is holding (ADR 0023).
+ROBOT_VOICE_TURN_FINALIZE = "/robot-media/voice-turn/finalize"

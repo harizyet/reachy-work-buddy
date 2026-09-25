@@ -201,7 +201,11 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
     else if (turn.outcome === 'withheld') appendMessage(`Reachy · not spoken (${turn.reason || 'withheld'})`, turn.reply || '');
     else if (turn.outcome === 'no_speech') appendMessage('Reachy', 'I heard a sound but no words. Try again.', {note: true});
     else if (turn.outcome === 'failed') appendMessage('Reachy', `That turn failed: ${turn.reason || 'unknown error'}. Speak again when listening resumes.`, {note: true});
-    else if (turn.outcome === 'cancelled') appendMessage('Reachy', 'Stopped before replying.', {note: true});
+    else if (turn.outcome === 'cancelled') {
+      // A held turn the robot moved past carries its own reason (Phase 24e).
+      const why = turn.reason && turn.reason !== 'Stopped' ? `Not answered: ${turn.reason}.` : 'Stopped before replying.';
+      appendMessage('Reachy', why, {note: true});
+    }
   }
 
   return {

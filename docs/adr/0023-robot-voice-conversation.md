@@ -72,8 +72,9 @@ reachy-embodiment -> daemon /media/sounds/upload + /media/play_sound
   /api/media/stop_sound`, not only abandoning HTTP work.
 
 Limits (defaults in `shared/models/robot_ws.py` / `robot_voice.py`): 15 s
-maximum utterance, 700 ms end-of-speech silence, 300 ms minimum utterance,
-1 MiB upload, 15 s owner lease, 10 minute session, 120 s without a transcribed
+maximum utterance (30 s for a whole turn since the
+[adaptive end-of-turn addendum](#addendum-adaptive-end-of-turn-2026-09-25-phase-24e)),
+700 ms end-of-speech silence, 300 ms minimum utterance, 1 MiB upload, 15 s owner lease, 10 minute session, 120 s without a transcribed
 turn, one in-flight turn per session.
 
 ## Consequences
@@ -125,3 +126,68 @@ instead of trusting the instruction:
 
 Typed turns are unchanged. The hub still strips citations and markdown
 before TTS. The owner can ask for more detail in the web chat.
+
+## Addendum: adaptive end of turn (2026-09-25, Phase 24e)
+
+Phase 24d found that a fixed 700 ms end-of-speech silence split one long
+utterance with natural pauses into four turns, each answered on its own
+([24d record](../verification/phase-24d-conversation-2026-09-24.md)).
+[Phase 24e](../phase-24e.md#1-adaptive-end-of-turn) makes the end of a
+turn depend on whether the speaker sounds finished.
+
+**Decision.**
+
+- **Segments and the hold.** The robot still cuts a segment after the
+  end-of-speech silence and uploads it as before. The hub transcribes it and
+  applies fixed rules (`reachy_hub/turn_completeness.py`). If the transcript
+  looks unfinished, the hub holds it: no core call, no synthesis. It answers
+  `204` with the new outcome `continue`. Held text is process-local session
+  state like everything else here. Stop, expiry, logout or disconnect
+  discard it, and it is never answered later.
+- **Completeness rules.** A trailing ellipsis, comma, colon, semicolon or
+  dash marks the segment unfinished. So does a final article, possessive,
+  conjunction or filler ("the", "my", "and", "because", "um", …), or a short
+  unfinished phrase ("tell me", "I was wondering"). Terminal punctuation
+  does not override these, because STT inserts periods. A final
+  preposition ("about", "with", "to", …) means unfinished unless the segment
+  ends with a question mark ("Who are you talking to?"). Everything else,
+  including a finished thought without punctuation, is complete. No LLM
+  takes part. These are heuristics: a false hold costs the continuation
+  window in latency, and a missed hold splits the turn as before.
+- **Continuation and finalize.** A held turn keeps its turn number. Each
+  further segment is uploaded to `ROBOT_VOICE_TURN` with the same
+  `X-Voice-Turn` and `X-Voice-Segment` set to the next segment number
+  (absent means 1). The hub appends its transcript to the held text and
+  decides again. A segment with an empty transcript is not held again. If
+  the robot hears no new speech start within `continuation_window_ms`
+  (default 1500, hub-set in `VoiceLimits`, timed from the segment cut), it
+  POSTs `ROBOT_VOICE_TURN_FINALIZE` with the same identity and fencing
+  headers and no body. The response has the same form as an upload's.
+- **Fencing.** A continuation segment or finalize is accepted only for the
+  held turn number and the exact next segment; anything else is `409`, and
+  the robot ends the session, as for any refused turn. A new turn number
+  while a turn is held (possible only after a lost upload) discards the held
+  text and records it as cancelled. A segment or finalize is an in-flight
+  turn, so the one-in-flight-turn rule is unchanged.
+- **Microphone during upload.** Within a turn, the robot keeps the
+  microphone open while a segment uploads, so a speaker who resumes during
+  that time is not clipped. That audio is used only if the hub answers
+  `continue`. Any other outcome discards it and closes the microphone
+  before playback. Half-duplex is unchanged: the microphone is never open
+  while the robot speaks, and the tail guard still follows playback.
+  `continue` is followed by no playback and no tail guard.
+- **Length cap.** `max_utterance_seconds` now bounds the merged turn, and
+  its default rises from 15 s to 30 s. The robot limits each segment to the
+  remaining budget. The hub holds only when at least
+  `MIN_CONTINUATION_SECONDS` (1 s) of budget remains, and rejects a merged
+  turn more than 1 s over the cap. A 30 s segment still fits the 1 MiB
+  upload limit.
+- **Compatibility.** The robot advertises `voice_turn_continuation` at
+  registration. The hub holds only for robots that advertise it, and only
+  when the window is non-zero; otherwise every segment is answered as
+  before. `PROTOCOL_VERSION` stays 1.
+- **Owner panel.** Held segments are not listed. The answered turn's record
+  carries the merged transcript and its segment count.
+
+Complete-looking turns keep their previous latency. Only turns that sound
+unfinished wait for the window.

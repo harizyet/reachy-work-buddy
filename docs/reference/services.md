@@ -123,7 +123,8 @@ WebRTC, and static UI. It does not own reasoning policy or motor control.
 | `POST /webrtc/telepresence/offer` | Authenticated remote media/control |
 | `WS /robots/connect` | Robot-token-authenticated registration/heartbeat/reconnect; also `voice_start`/`voice_stop`/`voice_state` conversation control (Phase 24c); other commands still HTTP |
 | `GET /robot-voice`; `POST /robot-voice/start`, `/renew`, `/stop` | Phase 24c owner controls: robots with the voice capability, the current session, its lease and recent turns |
-| `POST /robot-media/voice-turn` | Phase 24c robot upload of one WAV utterance, authenticated with the robot's own credential, generation and session; returns reply WAV or 204 with `X-Voice-Turn-Outcome` |
+| `POST /robot-media/voice-turn` | Phase 24c robot upload of one WAV utterance, authenticated with the robot's own credential, generation and session; returns reply WAV or 204 with `X-Voice-Turn-Outcome`, which is `continue` when the hub holds an unfinished-sounding segment (24e; `X-Voice-Segment` numbers the held turn's further segments) |
+| `POST /robot-media/voice-turn/finalize` | Phase 24e: same robot credential and fencing headers, no body; answers the held turn when the robot heard no more speech in the continuation window |
 | `POST /auth/login`, `/auth/logout`; `GET /auth/me` | Owner-cookie lifecycle; login/logout require CSRF header |
 | `GET /status` | Authenticated component probes, model config/usage, Telegram polling health, default user ID |
 | `GET`, `PUT /settings/llm`; `GET /llm/usage` | Authenticated core proxies; usage defaults `limit=50`, `since_hours=24` |
@@ -160,6 +161,11 @@ maximum length or disconnect. A turn is transcribed and sent to core as
 `channel=reachy`, `input_modality=voice`. It is synthesized only when
 `resolve_delivery_channel` → `apply_privacy_override` →
 `robot_speech_withheld_reason` (DND/meeting) all permit the robot speaker.
+Before that, `turn_completeness.py` decides from fixed rules whether the
+transcript sounds unfinished; if so, and the robot advertises
+`voice_turn_continuation`, the hub holds it for the robot's next segment or
+finalize instead of answering
+([ADR 0023 addendum](../adr/0023-robot-voice-conversation.md#addendum-adaptive-end-of-turn-2026-09-25-phase-24e)).
 
 The HTTP heartbeat interval is 2 seconds against embodiment's 5-second
 watchdog. WS connections are process-local, generation-fenced, and require

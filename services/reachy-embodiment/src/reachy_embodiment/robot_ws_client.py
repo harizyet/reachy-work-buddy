@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING
 import websockets
 from websockets.exceptions import WebSocketException
 
-from shared.models.robot_voice import VOICE_CAPABILITY
+from shared.models.robot_voice import VOICE_CAPABILITY, VOICE_CONTINUATION_CAPABILITY
 from shared.models.robot_ws import (
     ErrorMessage,
     HeartbeatAckMessage,
@@ -92,8 +92,10 @@ class RobotWSClient:
         self._token = token
         self._capabilities = list(capabilities or [])
         self._voice = voice
-        if voice is not None and VOICE_CAPABILITY not in self._capabilities:
-            self._capabilities.append(VOICE_CAPABILITY)
+        if voice is not None:
+            for capability in (VOICE_CAPABILITY, VOICE_CONTINUATION_CAPABILITY):
+                if capability not in self._capabilities:
+                    self._capabilities.append(capability)
         self._ws = None
         self._send_lock = asyncio.Lock()
         self._sim = sim

@@ -59,7 +59,12 @@ from reachy_hub.robot_voice import RobotVoiceManager
 from reachy_hub.session_store import InMemorySessionStore
 
 from shared.models.embodiment import EmbodimentState
-from shared.models.robot_voice import VOICE_CAPABILITY, VoiceLimits
+from shared.models.robot_voice import (
+    VOICE_CAPABILITY,
+    VOICE_CONTINUATION_CAPABILITY,
+    VoiceLimits,
+    VoiceTurnOutcome,
+)
 from shared.models.robot_ws import VoiceStartMessage, VoiceStateMessage, WSMessageType
 
 SR = 16000
@@ -311,8 +316,9 @@ class Robot:
     """The robot's VoiceConversation, with the ADR 0019 control socket
     replaced by an in-process bridge into the hub's connection manager."""
 
-    def __init__(self, hub_app, mic, player, *, hub_transport=None):
+    def __init__(self, hub_app, mic, player, *, hub_transport=None, capabilities=(VOICE_CAPABILITY,)):
         self.hub_app = hub_app
+        self.capabilities = list(capabilities)
         self.mic = mic
         self.player = player
         self.state = ServiceState(connected=True, sim=True)
@@ -328,7 +334,7 @@ class Robot:
 
     async def connect(self):
         manager = self.hub_app.state.robot_connection_manager
-        self.connection = await manager.register(ROBOT_ID, self, capabilities=[VOICE_CAPABILITY], sim=True)
+        self.connection = await manager.register(ROBOT_ID, self, capabilities=self.capabilities, sim=True)
 
     async def send_json(self, message: dict) -> None:  # hub -> robot
         if message["type"] == WSMessageType.VOICE_START:
@@ -469,6 +475,219 @@ def test_microphone_failure_and_robot_side_session_limit_end_the_hub_session() -
     asyncio.run(scenario())
 
 
+# --- adaptive end of turn (Phase 24e) --------------------------------------
+
+
+class PushMic:
+    """A microphone the test feeds by hand; `read` drains what was pushed."""
+
+    def __init__(self) -> None:
+        self.pending: list[np.ndarray] = []
+        self.open = False
+        self.starts = 0
+
+    def push(self, samples: np.ndarray) -> None:
+        self.pending.append(samples)
+
+    def start(self) -> None:
+        self.open, self.starts = True, self.starts + 1
+
+    def read(self) -> np.ndarray | None:
+        if not self.open or not self.pending:
+            return None
+        samples, self.pending = np.concatenate(self.pending), []
+        return samples
+
+    def stop(self) -> None:
+        self.open = False
+        self.pending = []
+
+
+class ScriptedUploader:
+    """Stands in for VoiceTurnClient: answers each upload or finalize from
+    a script and records the calls."""
+
+    def __init__(self, *outcomes) -> None:
+        self.outcomes = list(outcomes)
+        self.calls: list[tuple] = []
+
+    async def post(self, wav, *, voice_session_id, turn, generation, segment=1):
+        self.calls.append(("post", turn, segment))
+        return self.outcomes.pop(0), None
+
+    async def finalize(self, *, voice_session_id, turn, generation):
+        self.calls.append(("finalize", turn))
+        return self.outcomes.pop(0), None
+
+    async def aclose(self) -> None:
+        pass
+
+
+def test_continuation_window_under_a_controlled_clock() -> None:
+    """The window is timed from the segment cut on the injected clock; speech
+    that starts inside it runs to its own end even past the window."""
+    async def scenario():
+        now = [100.0]
+        mic = PushMic()
+        uploader = ScriptedUploader(VoiceTurnOutcome.CONTINUE, VoiceTurnOutcome.CONTINUE, VoiceTurnOutcome.WITHHELD)
+        voice = VoiceConversation(
+            lambda: mic, lambda limits: EnergyVAD(), uploader, RecordingPlayer(), ServiceState(connected=True, sim=True),
+            poll_interval=0.001, clock=lambda: now[0],
+        )
+        limits = VoiceLimits(continuation_window_ms=1500, pre_roll_ms=0, playback_tail_guard_ms=0)
+        reports: list[str] = []
+
+        async def report(message):
+            reports.append(message.state.value)
+
+        await voice.start(VoiceStartMessage(voice_session_id="s", limits=limits), 1, report)
+        await wait_until(lambda: mic.open)
+        mic.push(np.concatenate([tone(0.5), silence(0.3)]))
+        await wait_until(lambda: len(uploader.calls) == 1)
+        assert uploader.calls == [("post", 1, 1)]
+        await wait_until(lambda: reports.count("listening") == 2)  # resumed after continue, mic still open
+        assert mic.starts == 1 and mic.open
+
+        now[0] += 1.4  # inside the window: keep waiting
+        await asyncio.sleep(0.05)
+        assert len(uploader.calls) == 1
+        mic.push(tone(0.3))  # speech starts again in time...
+        await asyncio.sleep(0.05)
+        now[0] += 5.0  # ...and runs well past the window
+        await asyncio.sleep(0.05)
+        assert len(uploader.calls) == 1
+        mic.push(silence(0.3))
+        await wait_until(lambda: len(uploader.calls) == 2)
+        assert uploader.calls[1] == ("post", 1, 2)  # same turn, next segment
+
+        await wait_until(lambda: reports.count("listening") == 3)
+        now[0] += 1.4
+        await asyncio.sleep(0.05)
+        assert len(uploader.calls) == 2
+        now[0] += 0.2  # window elapsed with no new speech
+        await wait_until(lambda: len(uploader.calls) == 3)
+        assert uploader.calls[2] == ("finalize", 1)
+        # The turn ended: the microphone was closed, and the next turn has
+        # the next number.
+        await wait_until(lambda: mic.starts == 2)
+        mic.push(np.concatenate([tone(0.5), silence(0.3)]))
+        uploader.outcomes.append(VoiceTurnOutcome.WITHHELD)
+        await wait_until(lambda: len(uploader.calls) == 4)
+        assert uploader.calls[3] == ("post", 2, 1)
+        await voice.aclose()
+        assert not mic.open
+
+    asyncio.run(scenario())
+
+
+def test_a_final_outcome_discards_audio_captured_during_the_upload() -> None:
+    async def scenario():
+        mic = PushMic()
+        released = asyncio.Event()
+
+        class SlowUploader(ScriptedUploader):
+            async def post(self, wav, **kwargs):
+                mic.push(tone(0.4))  # speech arrives while the hub thinks
+                await released.wait()
+                return await super().post(wav, **kwargs)
+
+        uploader = SlowUploader(VoiceTurnOutcome.WITHHELD, VoiceTurnOutcome.WITHHELD)
+        voice = VoiceConversation(
+            lambda: mic, lambda limits: EnergyVAD(), uploader, RecordingPlayer(), ServiceState(connected=True, sim=True),
+            poll_interval=0.001,
+        )
+        limits = VoiceLimits(pre_roll_ms=0, playback_tail_guard_ms=0)
+        await voice.start(VoiceStartMessage(voice_session_id="s", limits=limits), 1, _ignore_report)
+        await wait_until(lambda: mic.open)
+        mic.push(np.concatenate([tone(0.5), silence(0.3)]))
+        await asyncio.sleep(0.05)
+        released.set()
+        await wait_until(lambda: mic.starts == 2)
+        await asyncio.sleep(0.05)
+        # The speech heard during the upload did not become a turn.
+        assert uploader.calls == [("post", 1, 1)]
+        await voice.aclose()
+
+    asyncio.run(scenario())
+
+
+async def _ignore_report(message) -> None:
+    pass
+
+
+CONTINUATION = [VOICE_CAPABILITY, VOICE_CONTINUATION_CAPABILITY]
+
+
+def paused_utterance() -> np.ndarray:
+    # 20x mic time: the 0.4 s pause is ~20 ms of wall time, well inside the
+    # window, but longer than the VAD's end of speech, so it is two segments.
+    return np.concatenate([tone(0.6), silence(0.4), tone(0.6), silence(0.3)])
+
+
+def test_long_utterance_with_a_pause_is_one_turn_through_hub_and_core() -> None:
+    async def scenario():
+        tts = FixedTTS()
+        stt = ScriptedSTT("I was wondering if you could tell me.", "what the weather is like tomorrow.")
+        hub = make_hub(stt, tts)
+        player = RecordingPlayer()
+        robot = Robot(hub, CountingMic([paused_utterance()]), player, capabilities=CONTINUATION)
+        await robot.connect()
+        await owner(hub, "POST", "/robot-voice/start", json={"robot_id": ROBOT_ID})
+        await wait_until(lambda: len(player.played) == 1)
+        turns = (await owner(hub, "GET", "/robot-voice")).json()["session"]["turns"]
+        assert [(t["turn"], t["segments"], t["outcome"]) for t in turns] == [(1, 2, "spoken")]
+        assert turns[0]["transcript"] == "I was wondering if you could tell me. what the weather is like tomorrow."
+        assert len(tts.spoken) == 1 and "turn 1" in tts.spoken[0]  # core saw one turn
+        assert robot.reports[:5] == ["listening", "uploading", "listening", "uploading", "speaking"]
+        await robot.voice.aclose()
+
+    asyncio.run(scenario())
+
+
+def test_trailing_off_is_answered_after_the_window() -> None:
+    async def scenario():
+        tts = FixedTTS()
+        hub = make_hub(
+            ScriptedSTT("So I went to the"), tts, limits=VoiceLimits(playback_tail_guard_ms=0, continuation_window_ms=300)
+        )
+        player = RecordingPlayer()
+        robot = Robot(hub, CountingMic([utterance_fixture()]), player, capabilities=CONTINUATION)
+        await robot.connect()
+        await owner(hub, "POST", "/robot-voice/start", json={"robot_id": ROBOT_ID})
+        await wait_until(lambda: len(player.played) == 1)
+        turns = (await owner(hub, "GET", "/robot-voice")).json()["session"]["turns"]
+        assert [(t["transcript"], t["segments"], t["outcome"]) for t in turns] == [("So I went to the", 1, "spoken")]
+        await robot.voice.aclose()
+
+    asyncio.run(scenario())
+
+
+def test_stop_while_a_turn_is_held_answers_nothing() -> None:
+    async def scenario():
+        tts = FixedTTS()
+        hub = make_hub(
+            ScriptedSTT("I was wondering"), tts, limits=VoiceLimits(playback_tail_guard_ms=0, continuation_window_ms=5000)
+        )
+        player = RecordingPlayer()
+        mic = CountingMic([utterance_fixture()])
+        robot = Robot(hub, mic, player, capabilities=CONTINUATION)
+        await robot.connect()
+        start = (await owner(hub, "POST", "/robot-voice/start", json={"robot_id": ROBOT_ID})).json()
+        manager = hub.state.robot_voice_manager
+        await wait_until(lambda: manager.get(start["voice_session_id"]).held is not None)
+
+        await owner(hub, "POST", "/robot-voice/stop", json={"voice_session_id": start["voice_session_id"]})
+        await wait_until(lambda: robot.state.embodiment_state == EmbodimentState.IDLE)
+        await asyncio.sleep(0.3)
+        assert player.played == [] and tts.spoken == []
+        session = (await owner(hub, "GET", "/robot-voice")).json()["session"]
+        assert (session["state"], session["turns"]) == ("stopped", [])
+        assert mic._started_at is None  # microphone closed, and not reopened
+        await robot.voice.aclose()
+
+    asyncio.run(scenario())
+
+
 def _free_port() -> int:
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
@@ -584,6 +803,38 @@ def test_real_speech_chain_with_silero_whisper_and_espeak() -> None:
 
     asyncio.run(scenario())
 
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(espeak_binary is None, reason="espeak-ng not installed on PATH")
+def test_real_speech_with_a_mid_sentence_pause_is_one_turn() -> None:
+    """Phase 24e: real Silero cuts at the pause, real Whisper transcribes
+    the first half (with whatever punctuation it adds), and the hub holds it
+    until the rest arrives."""
+    from reachy_embodiment.audio.vad import VoiceActivityDetector
+    from reachy_hub.stt import FasterWhisperSTT
+
+    async def scenario():
+        tts = FixedTTS()
+        hub = make_hub(FasterWhisperSTT(model_size="tiny.en"), tts)
+        player = RecordingPlayer()
+        speech = np.concatenate([
+            _espeak_16k("I was wondering if you could tell me"), silence(1.0), _espeak_16k("what time it is in London"),
+        ])
+        robot = Robot(hub, SimulatedMicSource([speech]), player, capabilities=CONTINUATION)
+        robot.voice._vad_factory = lambda limits: VoiceActivityDetector(
+            min_silence_duration_ms=limits.end_of_speech_silence_ms
+        )
+        await robot.connect()
+        await owner(hub, "POST", "/robot-voice/start", json={"robot_id": ROBOT_ID})
+        await wait_until(lambda: len(player.played) == 1, timeout=120)
+        turns = (await owner(hub, "GET", "/robot-voice")).json()["session"]["turns"]
+        assert len(turns) == 1 and turns[0]["segments"] == 2, turns
+        assert "wondering" in turns[0]["transcript"].lower() and "london" in turns[0]["transcript"].lower()
+        assert len(tts.spoken) == 1
+        await robot.voice.aclose()
+
+    asyncio.run(scenario())
 
 def test_simulated_backend_exposes_a_microphone_and_stop() -> None:
     backend = SimulatedRobotBackend()

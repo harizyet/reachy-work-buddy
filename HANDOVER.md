@@ -7,16 +7,26 @@ acceptance. This file holds only session continuation details.
 
 ## Current work
 
-Branch at session start: `main`, `e3511ca`. This session reorganized the
-documentation: added project state, condensed the phase ledger and handover,
-and marked completed design records historical without moving their paths.
-No runtime code or deployment was changed. Verification: local documentation
-links and heading anchors checked; `git diff --check` passed.
+Branch at session start: `main`, `1b363fd`. This session implemented
+[Phase 24e](docs/phase-24e.md) item 1, adaptive end of turn, following the
+[ADR 0023 amendment](docs/adr/0023-robot-voice-conversation.md#addendum-adaptive-end-of-turn-2026-09-25-phase-24e)
+written first: hub `turn_completeness.py` rules, the held turn with the
+`continue` outcome, `X-Voice-Segment`, the finalize route, the
+`voice_turn_continuation` capability, and a robot microphone that stays open
+through a segment's upload. `max_utterance_seconds` now caps the merged
+turn, with the default raised to 30 s. Nothing was deployed: the homelab
+hub and Nano embodiment image still run the pre-24e turn path.
 
-Next priority: [Phase 24e](docs/phase-24e.md), planned, not implemented.
-Follow its [implementation sequence](docs/phase-24e.md#implementation-sequence),
-starting with the ADR 0023 amendment. Include missing and spurious STT
-punctuation in turn-completeness checks. Phase 25 remains blocked on the
+Verification: ruff passed. Full `pytest services shared` gave 595 passed and
+31 skipped. The `slow` real-speech tests (Silero, tiny.en Whisper and espeak
+via `/tmp/espeak-extract`) passed, including a paused utterance merged into
+one turn. Whisper added a spurious period to "…tell me", which the phrase
+rule holds. These are in-process and simulated-audio checks, not physical
+acceptance.
+
+Next: 24e item 2 (search-rule fixes and STT vocabulary bias). Deploy item 1
+to the hub and Nano when the owner schedules the physical run. Phase 25
+remains blocked on the
 [hardware prerequisites](docs/phase-24e.md#prerequisites-for-phase-25).
 
 ## Last-reported machine state
