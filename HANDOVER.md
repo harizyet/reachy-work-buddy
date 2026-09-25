@@ -82,8 +82,12 @@ remains blocked on the
 These are previous session observations, not health checks performed during
 this documentation pass. Recheck state before relying on them.
 
-- **Nano:** checkout `00a5e68` or later; embodiment image from `1a66f01`,
-  voice enabled. `reachy-embodiment.service` and
+- **Nano:** checkout `7d9dc67` (conformance script only; later pushes are
+  docs), and the embodiment image is still from `1a66f01` (2026-09-24),
+  voice enabled. It was left at IDLE_HOME with embodiment active after run 3
+  (2026-09-25 ~13:10Z). The 24f tool dependency `opencv-python-headless`
+  4.11.0.86 is in `~/24f-tools` only (use `PYTHONPATH`), not in
+  `reachy-venv`. Logs and frames are in `~/24f-logs`. `reachy-embodiment.service` and
   `reachy-daemon-recovery.service` enabled; container uses `--mount` and no
   restart policy. Embodiment is host-networked on 8100, daemon loopback on
   8000. Apply the [deployment boundaries](docs/deployment.md#robot-host-and-jetson-nano)
