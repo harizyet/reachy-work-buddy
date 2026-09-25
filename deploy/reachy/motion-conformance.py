@@ -9,6 +9,16 @@ see docs/verification/phase-24f-conformance-*.md for results.
 
 Only one controller may drive the daemon during a case. Stop
 reachy-embodiment first, and do not run two cases at once.
+
+`--camera DIR` also measures each move from head-camera frames taken
+before and after it (ORB features, homography of a pure rotation), so the
+result does not depend on the encoders or on someone watching. Frames are
+saved to DIR. The scene in front of the robot should be static and
+textured, with no one moving through it.
+
+Several cases can be given to one `--run`. Between cases the run stops,
+and sends no further motion, if the daemon leaves `running`, its error
+count rises or a move is still active. A normal run ends at IDLE_HOME.
 """
 
 from __future__ import annotations
@@ -38,6 +48,10 @@ TOL_ABS_JOINT = 0.05
 TOL_REST_VS_SDK = 0.02
 TOL_CROSS_AXIS = 0.03
 TOL_HOLD_AFTER_STOP = 0.02
+# Camera vs encoder rotation, per axis (rad). Synthetic frames recover a
+# known rotation within 0.002; the camera's ~5 cm offset from the rotation
+# centre adds up to ~0.01 of parallax for a scene about 1 m away.
+TOL_CAM_VS_ENCODER = 0.02
 
 AXIS_TARGETS = [
     ("roll", 0.1),
@@ -157,15 +171,151 @@ def rest_goto(duration: float = MOVE_S, *, wait: bool = True, **fields: object) 
     return resp["uuid"]
 
 
-def sdk():
-    from reachy_mini import ReachyMini
+_MINI = None
 
-    return ReachyMini(
-        host="127.0.0.1",
-        port=PORT,
-        connection_mode="localhost_only",
-        media_backend="no_media",
-    )
+
+def sdk():
+    """One SDK client for the whole run. LOCAL media shares the daemon's
+    camera pipeline like reachy-embodiment does; `no_media` would release
+    the daemon's camera and audio for every client (1.8.4)."""
+    global _MINI
+    if _MINI is None:
+        from reachy_mini import ReachyMini
+
+        _MINI = ReachyMini(
+            host="127.0.0.1",
+            port=PORT,
+            connection_mode="localhost_only",
+            media_backend="local",
+        )
+    return _MINI
+
+
+def close_sdk() -> None:
+    global _MINI
+    if _MINI is not None:
+        try:
+            _MINI.__exit__(None, None, None)  # reacquires media if released
+        finally:
+            _MINI = None
+    status = http("GET", "/media/status")[1]
+    if isinstance(status, dict) and status.get("released"):
+        http("POST", "/media/acquire")
+        status = http("GET", "/media/status")[1]
+    print(json.dumps({"media_status_at_exit": status}))
+
+
+# --- camera measurement ------------------------------------------------------
+
+CAMERA_DIR: str | None = None
+CAMERA_FAILS: list[str] = []
+_last_obs: dict | None = None
+# Head-to-camera rotation, from the 1.8.4 SDK (ReachyMini.T_head_cam).
+T_HEAD_CAM = ((0, 0, 1), (-1, 0, 0), (0, -1, 0))
+
+
+def grab_frame():
+    """A fresh frame: the LOCAL reader is capped at 10 fps, so wait past
+    one frame period and read twice."""
+    mini = sdk()
+    deadline = time.monotonic() + 5.0
+    frame = None
+    while time.monotonic() < deadline:
+        time.sleep(0.3)
+        mini.media.get_frame()
+        frame = mini.media.get_frame()
+        if frame is not None:
+            return frame
+    raise RuntimeError("no camera frame within 5 s")
+
+
+def head_rotation_from_frames(before, after, K, D):
+    """Head rotation (rotation vector, rad, head frame) between two frames.
+    Assumes a static, distant, textured scene. Returns (rotvec, inliers,
+    matches); rotvec is None if too few features match."""
+    import cv2
+    import numpy as np
+    from scipy.spatial.transform import Rotation as R
+
+    g1 = cv2.cvtColor(before, cv2.COLOR_BGR2GRAY)
+    g2 = cv2.cvtColor(after, cv2.COLOR_BGR2GRAY)
+    orb = cv2.ORB_create(nfeatures=2000)
+    k1, d1 = orb.detectAndCompute(g1, None)
+    k2, d2 = orb.detectAndCompute(g2, None)
+    if d1 is None or d2 is None:
+        return None, 0, 0
+    matches = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True).match(d1, d2)
+    if len(matches) < 20:
+        return None, 0, len(matches)
+    p1 = np.float32([k1[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
+    p2 = np.float32([k2[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
+    n1 = cv2.undistortPoints(p1, K, D).reshape(-1, 2)
+    n2 = cv2.undistortPoints(p2, K, D).reshape(-1, 2)
+    H, mask = cv2.findHomography(n1, n2, cv2.RANSAC, 0.002)
+    if H is None or int(mask.sum()) < 20:
+        return None, 0 if mask is None else int(mask.sum()), len(matches)
+    # Pure rotation: H is proportional to R_rel, with X2 = R_rel X1.
+    u, _, vt = np.linalg.svd(H)
+    r_rel = u @ vt
+    if np.linalg.det(r_rel) < 0:
+        r_rel = -r_rel
+    # The camera turned by the inverse; express it in the head frame.
+    rotvec_cam = R.from_matrix(r_rel.T).as_rotvec()
+    return np.array(T_HEAD_CAM, dtype=float) @ rotvec_cam, int(mask.sum()), len(matches)
+
+
+def encoder_rotvec(before: dict, after: dict):
+    from scipy.spatial.transform import Rotation as R
+
+    r1 = R.from_euler("xyz", [before["roll"], before["pitch"], before["yaw"]])
+    r2 = R.from_euler("xyz", [after["roll"], after["pitch"], after["yaw"]])
+    return (r2 * r1.inv()).as_rotvec()
+
+
+def observe(label: str) -> dict:
+    """state(), plus with --camera the head rotation since the previous
+    observation measured from frames, next to the encoders' figure."""
+    global _last_obs
+    measured = state()
+    if CAMERA_DIR is None:
+        return measured
+    import os
+
+    import cv2
+
+    mini = sdk()
+    frame = grab_frame()
+    safe = "".join(c if c.isalnum() or c in "+-." else "_" for c in label)
+    path = os.path.join(CAMERA_DIR, f"{int(time.time() * 1000)}_{safe}.jpg")
+    cv2.imwrite(path, frame)
+    measured["frame"] = path
+    if _last_obs is not None:
+        cam, inliers, matches = head_rotation_from_frames(
+            _last_obs["frame"], frame, mini.media.camera.K, mini.media.camera.D
+        )
+        enc = encoder_rotvec(_last_obs["state"], measured)
+        entry = {
+            "since": _last_obs["label"],
+            "encoder_rotvec": [round(float(v), 4) for v in enc],
+            "inliers": inliers,
+            "matches": matches,
+        }
+        if cam is None:
+            entry["camera_rotvec"] = None
+            CAMERA_FAILS.append(
+                f"{label}: too few camera features ({inliers}/{matches})"
+            )
+        else:
+            entry["camera_rotvec"] = [round(float(v), 4) for v in cam]
+            diff = [float(c - e) for c, e in zip(cam, enc)]
+            entry["camera_minus_encoder"] = [round(d, 4) for d in diff]
+            if max(abs(d) for d in diff) > TOL_CAM_VS_ENCODER:
+                CAMERA_FAILS.append(
+                    f"{label}: camera vs encoder {entry['camera_minus_encoder']}"
+                )
+        measured["camera"] = entry
+    _last_obs = {"label": label, "state": measured, "frame": frame}
+    return measured
 
 
 def sdk_goto(
@@ -238,23 +388,12 @@ def run_zero(path: str) -> None:
         rest_zero()
     else:
         with_sdk(lambda m: sdk_goto(m, antennas=[0.0, 0.0], body_yaw=0.0))
-    measured = state()
+    measured = observe(f"zero-{path}")
     summarize([record(f"zero-{path}", ZERO, measured)], check_abs(ZERO, measured))
 
 
 def with_sdk(fn) -> None:
-    mini = sdk()
-    try:
-        fn(mini)
-    finally:
-        # In 1.8.4 a no_media client releases the daemon's camera and audio
-        # on connect and does not give them back on disconnect. Reacquire,
-        # or the camera socket stays gone and reachy-embodiment cannot start.
-        try:
-            mini.acquire_media()
-        finally:
-            mini.client.disconnect()
-        print(json.dumps({"media_status_after_sdk": http("GET", "/media/status")[1]}))
+    fn(sdk())
 
 
 def run_axes(path: str) -> None:
@@ -270,11 +409,11 @@ def run_axes(path: str) -> None:
 
     def body(mini=None):
         go(mini=mini)
-        base = state()
+        base = observe("zero")
         rows.append(record("zero", {**ZERO, "ik_joints": ik_joints()}, base))
         for axis, value in AXIS_TARGETS:
             go(mini=mini, **{axis: value})
-            measured = state()
+            measured = observe(f"{axis}{value:+}")
             requested = {"roll": 0.0, "pitch": 0.0, "yaw": 0.0, axis: value}
             requested["ik_joints"] = ik_joints(**{axis: value})
             rows.append(record(f"{axis}{value:+}", requested, measured))
@@ -298,7 +437,7 @@ def run_axes(path: str) -> None:
             record(
                 f"back to zero after {axis}{value:+}",
                 {**ZERO, "ik_joints": ik_joints()},
-                state(),
+                observe(f"zero after {axis}{value:+}"),
             )
 
     if path == "rest":
@@ -330,7 +469,7 @@ def run_visible(path: str) -> None:
                 "yaw": yaw,
                 "ik_joints": ik_joints(yaw=yaw),
             }
-            measured = state()
+            measured = observe(f"yaw {yaw:+}")
             rows.append(record(f"yaw {yaw:+}", requested, measured))
             fails.extend(f"yaw {yaw:+}: {f}" for f in check_abs(requested, measured))
             time.sleep(LATE_S)
@@ -375,7 +514,7 @@ def run_stream() -> None:
 
     def body(mini):
         sdk_goto(mini, antennas=[0.0, 0.0], body_yaw=0.0)
-        base = state()
+        base = observe("stream zero")
         rows.append(record("zero", {**ZERO, "ik_joints": ik_joints()}, base))
         current = 0.0
         for yaw in (0.15, 0.0, -0.15, 0.0):
@@ -387,7 +526,8 @@ def run_stream() -> None:
                 "yaw": yaw,
                 "ik_joints": ik_joints(yaw=yaw),
             }
-            measured = state()  # read while the target is still being held
+            # The daemon keeps the last set_target until the next one.
+            measured = observe(f"stream yaw {yaw:+}")
             rows.append(record(f"stream yaw {yaw:+}", requested, measured))
             fails.extend(
                 f"stream yaw {yaw:+}: {f}" for f in check_abs(requested, measured)
@@ -627,7 +767,15 @@ def main() -> int:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument(
-        "--run", choices=sorted(CASES), help="execute one case (moves the robot)"
+        "--run",
+        nargs="+",
+        choices=sorted(CASES),
+        help="execute cases in order, then IDLE_HOME (moves the robot)",
+    )
+    parser.add_argument(
+        "--camera",
+        metavar="DIR",
+        help="also measure each move from head-camera frames, saved to DIR",
     )
     parser.add_argument(
         "--port",
@@ -657,6 +805,13 @@ def main() -> int:
         )
         return 0
 
+    if args.camera is not None:
+        import os
+
+        global CAMERA_DIR
+        os.makedirs(args.camera, exist_ok=True)
+        CAMERA_DIR = args.camera
+
     daemon_state, errors_before = daemon_errors()
     if daemon_state != "running" or running():
         print(
@@ -668,16 +823,67 @@ def main() -> int:
             )
         )
         return 2
-    print(
-        json.dumps(
-            {
-                "case": args.run,
-                "daemon_state": daemon_state,
-                "nb_error_before": errors_before,
-            }
-        )
-    )
-    name = args.run
+    cases = list(args.run)
+    if cases[-1] != "home":
+        cases.append("home")  # a normal run ends at IDLE_HOME
+    try:
+        for name in cases:
+            print(
+                json.dumps(
+                    {
+                        "case": name,
+                        "daemon_state": daemon_state,
+                        "nb_error_before": errors_before,
+                    }
+                )
+            )
+            CAMERA_FAILS.clear()
+            run_case(name)
+            if CAMERA_DIR is not None:
+                print(
+                    json.dumps(
+                        {
+                            "camera_summary": "PASS" if not CAMERA_FAILS else "FAIL",
+                            "fails": CAMERA_FAILS,
+                        }
+                    )
+                )
+            daemon_state, errors = daemon_errors()
+            active = running()
+            print(json.dumps({"case_done": name, "daemon": [daemon_state, errors]}))
+            # Guard for runs nobody is watching: stop sending motion at the
+            # first sign of trouble rather than finishing the list.
+            if (
+                daemon_state != "running"
+                or (errors or 0) > (errors_before or 0)
+                or active
+            ):
+                print(
+                    json.dumps(
+                        {
+                            "aborted": "daemon changed",
+                            "state": daemon_state,
+                            "nb_error": errors,
+                            "running": active,
+                        }
+                    )
+                )
+                return 3
+    except Exception as exc:  # noqa: BLE001 - stop moves, then report
+        for move in running() or []:
+            http(
+                "POST",
+                "/move/stop",
+                {"uuid": move.get("uuid") if isinstance(move, dict) else move},
+            )
+        print(json.dumps({"aborted": f"{type(exc).__name__}: {exc}"}))
+        return 4
+    finally:
+        close_sdk()
+    return 0
+
+
+def run_case(name: str) -> None:
     if name.startswith("zero-"):
         run_zero(name.split("-")[1])
     elif name.startswith("axes-"):
@@ -702,17 +908,7 @@ def main() -> int:
         run_failure()
     elif name == "home":
         rest_home()
-        record("home", {"antennas": HOME_ANTENNAS, "body_yaw": 0.0}, state())
-    print(
-        json.dumps(
-            {
-                "case_done": name,
-                "daemon": daemon_errors(),
-                "media": http("GET", "/media/status")[1],
-            }
-        )
-    )
-    return 0
+        record("home", {"antennas": HOME_ANTENNAS, "body_yaw": 0.0}, observe("home"))
 
 
 if __name__ == "__main__":
