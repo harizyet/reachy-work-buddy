@@ -7,6 +7,28 @@ addresses what 24d found or deferred. Evidence for each issue is in the
 [24d record](verification/phase-24d-conversation-2026-09-24.md). Scope was
 agreed with the owner on 2026-09-25.
 
+## Prerequisites for Phase 25
+
+Phase 24d's re-scoped closure alone does not unlock Phase 25. Before
+owner-recognition implementation starts, these 24e gates must **PASS on the
+real robot**, with evidence in the dated 24e verification record:
+
+- Adaptive end of turn, including long utterances with natural pauses and
+  cancellation of a held turn.
+- Deferred Turn handling, Privacy, Consent and auth, Stop and expiry,
+  Recovery (including no stale replay or automatic capture reactivation),
+  and Coexistence and sustained use rows from scope item 3.
+- Normal conversation and Timing repeated after the turn-path changes,
+  within the existing budgets, with renewed owner acceptance of usability.
+
+BLOCKED, deferred or untested prerequisite rows do not unlock Phase 25.
+The answer-quality benchmark, search heuristics, STT vocabulary tuning,
+and Nano diagnostics may proceed independently and are not prerequisites.
+Session continuity remains required 24e work but is not a Phase 25 start
+gate. These exclusions do not remove work from 24e's full exit criteria.
+If subsequent independent work changes the accepted turn path, rerun the
+affected prerequisite rows before building on that changed path.
+
 ## Motivation
 
 24d showed that the robot conversation works end to end within budget. It
@@ -44,7 +66,11 @@ when they have trailed off mid-sentence.
   deterministically whether it looks complete. Fixed, tested rules:
   terminal punctuation, a trailing ellipsis, and a final word that is a
   function word or conjunction ("the", "about", "and", "with", "to",
-  "because", …). No LLM decides.
+  "because", …). No LLM decides. These are heuristics, not semantic
+  certainty: terminal punctuation must not override a trailing incomplete
+  construction. Test missing and spurious STT punctuation, including
+  "I was wondering if you could tell me" both without punctuation and with
+  an inserted final period, as well as complete thoughts without punctuation.
 - An incomplete segment is held. The hub answers with a new `continue`
   outcome instead of a reply. The robot resumes listening at once, with no
   playback and no tail guard, and the next segment is appended to the held
@@ -162,6 +188,10 @@ target-platform verification.
   source; the once-per-boot restart stays the mitigation.
 
 ## Implementation sequence
+
+This is a working order, not a dependency on completing every item before
+physical acceptance. The [Phase 25 prerequisites](#prerequisites-for-phase-25)
+can be implemented and accepted while independent work remains open.
 
 1. ADR 0023 amendment for adaptive end of turn, then its implementation,
    with controlled-time tests for the continuation window, fencing and

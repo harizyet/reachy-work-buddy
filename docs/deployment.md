@@ -253,6 +253,27 @@ for where `/api/daemon/stop`/`start` were found (via the daemon's own
 `/openapi.json`) and their UNVERIFIED-against-real-hardware status as of
 this writing.
 
+### Camera socket directory recovery
+
+The boot-order/socket race was fixed and cold-reboot verified during 24d
+([evidence](verification/phase-24d-conversation-2026-09-24.md#boot-race-fix-on-the-nano-2026-09-25)).
+This is incident recovery if `/tmp/reachymini_camera_socket` is ever found
+as a directory again, not an expected boot step:
+
+1. Run `scripts/start-reachy.sh --check` and confirm the path is a directory,
+   not the daemon's live socket. Check for a legacy container with a Docker
+   restart policy or `-v` bind.
+2. The owner removes the empty directory with
+   `sudo rmdir /tmp/reachymini_camera_socket`. If it is not empty, inspect
+   the contents before taking further action.
+3. With the owner present and supervising wake-up motion, run
+   `sudo systemctl restart reachy-mini-daemon`.
+4. Wait for the daemon to recreate the socket (`srw… reachy`), then run
+   `scripts/start-reachy.sh` to replace any legacy container. Confirm the
+   embodiment unit is enabled, the container has no Docker restart policy,
+   and the socket bind uses `--mount`.
+5. Warm the camera with one authenticated `GET /camera/frame`.
+
 ### Production: unattended boot start (owner-accepted risk, 2026-09-23)
 
 For a Nano the owner has explicitly designated production, `reachy-mini-
@@ -422,13 +443,9 @@ Dockerfile handles all three. Under the Nano's Docker 20.10.7 seccomp
 profile, GStreamer loads plugins in process, so the first camera or
 microphone use after a container start takes about 10 s.
 
-**Known issue:** after a Nano reboot, Docker's `unless-stopped` restart can
-start `reachy-embodiment` before the daemon. The container's bind mount then
-creates `/tmp/reachymini_camera_socket` as a root-owned directory, and both
-the container and the daemon's media server fail. Until the launcher is
-fixed, recover as described in [HANDOVER](../HANDOVER.md#machine-specific-continuation-notes):
-remove the directory, restart the daemon with the owner present, then
-recreate the container.
+The boot-order/socket race was fixed and cold-reboot verified during 24d.
+If the socket path becomes a directory again, use
+[camera socket directory recovery](#camera-socket-directory-recovery).
 
 Robot traffic uses the same `HUB_WS_URL` origin through Caddy. The WSS socket
 carries only `voice_start`/`voice_stop`/`voice_state`. Each utterance is a

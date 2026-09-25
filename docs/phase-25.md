@@ -4,7 +4,13 @@ Status: planned, not implemented. Depends on
 [Phase 24c](phase-24cd.md#phase-24c--audit-and-implement-the-missing-workflow)
 implementing the baseline Reachy conversation workflow and
 [Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance)
-passing its physical acceptance; implementation starts only after 24d passes. It also builds on the Phase 22 physical deployment substrate and the
+closing its core physical conversation workflow. Implementation starts only
+when the [24e conversation-path prerequisites](phase-24e.md#prerequisites-for-phase-25)
+pass, including adaptive end of turn and physical privacy/auth/cancellation,
+expiry, recovery and sustained-use acceptance, with Normal conversation and
+Timing rerun after the changes. BLOCKED or deferred prerequisites do not
+satisfy this gate. Answer quality, search/STT tuning and Nano diagnostics are
+not prerequisites. It also builds on the Phase 22 physical deployment substrate and the
 existing Phase 19 owner login and Phase 20 web-chat session infrastructure. Phase 23
 Google integration is not a prerequisite; its read-only adapters are only
 regression context for the write-gating tests below. Recognition gates an already-working capture,

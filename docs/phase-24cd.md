@@ -10,7 +10,8 @@ usability. The other matrix rows are deferred to
 [Phase 24e](phase-24e.md), not passed (see the
 [24d exit note](#phase-24d--physical-end-to-end-acceptance) and the
 [record](verification/phase-24d-conversation-2026-09-24.md#results)). These
-phases follow Phase 24b and gate Phase 25.
+phases follow Phase 24b. Phase 25 also requires the
+[24e conversation-path prerequisites](phase-24e.md#prerequisites-for-phase-25).
 
 24d proves the physical conversation workflow: capture, turn handling,
 context, intelligible replies, handoff, privacy, cancellation, recovery and
@@ -196,9 +197,12 @@ redacted correlation IDs and owner-observed outcomes in a dated
 audio/transcripts. Fix live failures in 24c and rerun affected scenarios;
 automated tests cannot override a failed physical run.
 
-**24d exit:** all required scenarios pass on the real workflow and the owner
-accepts conversation usability. Missing hardware/provider/channel access leaves
-this phase open. Phase 25 starts only after 24c and 24d pass. Their evidence
+**Original 24d exit (superseded by the owner re-scope below):** all required
+scenarios pass on the real workflow and the owner accepts conversation
+usability. Missing hardware/provider/channel access would leave the original
+gate open. Phase 25 now requires the
+[24e conversation-path prerequisites](phase-24e.md#prerequisites-for-phase-25).
+The 24c/24d evidence
 may satisfy corresponding Phase 22b voice/channel rows, but does not close
 its separate endurance/restore gates, Phase 22c camera acceptance or Phase
 23's real-Google acceptance. Google access is not needed for the baseline

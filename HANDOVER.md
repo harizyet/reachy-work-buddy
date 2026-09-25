@@ -10,7 +10,11 @@ Next priority: **[Phase 24e](docs/phase-24e.md)** (planned 2026-09-25,
 scope agreed with the owner): adaptive end of turn, search-trigger fixes and
 a correctness set, the 24d rows the owner deferred, and Nano diagnostics.
 Follow its [implementation sequence](docs/phase-24e.md#implementation-sequence);
-the ADR 0023 amendment comes first.
+the ADR 0023 amendment comes first. Phase 25 remains blocked until the
+[24e conversation-path prerequisites](docs/phase-24e.md#prerequisites-for-phase-25)
+PASS on hardware; quality/search/STT tuning and Nano diagnostics may proceed
+independently. The turn-completeness test plan includes missing and spurious
+STT punctuation.
 
 **Phase 24d closed 2026-09-25, re-scoped by the owner**
 ([results](docs/verification/phase-24d-conversation-2026-09-24.md#results)).
@@ -395,20 +399,11 @@ were removed; the pre-existing OVMS container was left running.
 - Nano uses host-networked embodiment on 8100 and the loopback daemon on
   8000. Existing `.env` copies can retain obsolete bridge URLs after code
   defaults change. See [deployment](docs/deployment.md#robot-host-and-jetson-nano).
-- **Nano reboot recovery (until the boot-race fix is installed and
-  reboot-verified).** Symptom: after a reboot `/tmp/reachymini_camera_socket`
-  is a root-owned directory, the container exits 127, and the daemon logs
-  "Failed to initialize media server" (EPERM). `start-reachy.sh --check`
-  now reports this. Recover in this order:
-  1. The owner runs `sudo rm -rf /tmp/reachymini_camera_socket`.
-  2. The owner runs `sudo systemctl restart reachy-mini-daemon`, present and
-     watching the wake-up motion. Sessions on the Nano have no
-     passwordless sudo.
-  3. Wait for the daemon to recreate the socket (`srw… reachy`), then run
-     `scripts/start-reachy.sh` (with the fix it replaces the old container).
-  4. Warm the camera with one `GET /camera/frame`.
-  The fix adds a new unit but leaves `reachy-mini-daemon.service`
-  unchanged.
+- **Nano boot-order/socket race:** fixed and cold-reboot verified during
+  24d. If `/tmp/reachymini_camera_socket` is ever a directory again, use
+  [camera socket directory recovery](docs/deployment.md#camera-socket-directory-recovery).
+  The separate daemon wake-up failure and fake-tested automatic restart
+  path remain open as described above.
 - Nano image builds need BuildKit. `start-reachy.sh --build` sets
   `DOCKER_BUILDKIT=1`. For a manual `docker build`, set it yourself.
 - The Nano's Tailscale path to the homelab host switches every few minutes
