@@ -35,6 +35,7 @@ from reachy_hub.audit_log import InMemoryAuditLog
 from reachy_hub.companion_core_client import CompanionCoreClient
 from reachy_hub.embodiment_client import EmbodimentClient
 from reachy_hub.notification_queue import InMemoryNotificationQueue
+from reachy_hub.palm_stop import PalmStop
 from reachy_hub.robot_connection_manager import RobotConnectionManager
 from reachy_hub.robot_credential_store import InMemoryRobotCredentialStore
 from reachy_hub.robot_registry import InMemoryRobotRegistry, Robot
@@ -50,6 +51,7 @@ from reachy_hub.session_store import InMemorySessionStore
 from reachy_hub.user_store import InMemoryUserStore
 
 from shared.models.robot_voice import (
+    MAX_PALM_FRAME_BYTES,
     MAX_UTTERANCE_BYTES,
     VOICE_CAPABILITY,
     VOICE_CONTINUATION_CAPABILITY,
@@ -63,6 +65,7 @@ from shared.models.session import Channel, PrivacyContext
 from shared.protocols.operator_api import PERSONA_SETTINGS
 from shared.protocols.robot_ws import (
     PROTOCOL_VERSION,
+    ROBOT_PALM_FRAME,
     ROBOT_VOICE_TURN,
     ROBOT_VOICE_TURN_FINALIZE,
     ROBOTS_CONNECT,
@@ -951,3 +954,86 @@ def test_legacy_voice_turn_requires_the_owner_before_any_transcription() -> None
         allowed = client.post("/voice/turn", data={"user_id": "default-user"}, files=audio, headers=OWNER)
         assert allowed.status_code == 200
         assert stt.calls == 1
+
+
+# --- open-palm stop (Phase 24e item 5) ---------------------------------------
+
+
+class PalmDetector:
+    """Says open palm for frames whose bytes are b"palm"."""
+
+    def __init__(self) -> None:
+        self.frames = 0
+
+    def is_open_palm(self, jpeg: bytes) -> bool:
+        self.frames += 1
+        return jpeg == b"palm"
+
+    def close(self) -> None:
+        pass
+
+
+def palm_frame(client, sid, turn, generation, body=b"frame", token=ROBOT_TOKEN):
+    headers = {
+        "X-Robot-Id": ROBOT_ID, "Authorization": f"Bearer {token}", "X-Robot-Generation": str(generation),
+        "X-Voice-Session": sid, "X-Voice-Turn": str(turn), "Content-Type": "image/jpeg",
+    }
+    return client.post(ROBOT_PALM_FRAME, content=body, headers=headers)
+
+
+def make_palm_hub(stt, detector):
+    connections = RobotConnectionManager()
+    manager = RobotVoiceManager(connections, palm_stop=PalmStop(lambda: detector))
+    return make_hub(stt, RecordingTTS(), robot_connection_manager=connections, robot_voice_manager=manager)
+
+
+def test_palm_frames_are_checked_only_while_the_reply_plays() -> None:
+    detector = PalmDetector()
+    client, _, _ = make_palm_hub(ScriptedSTT("tell me a story"), detector)
+    with client:
+        ws, socket, generation = connect_robot(client)
+        try:
+            client.post("/robot-voice/start", json={"robot_id": ROBOT_ID}, headers=OWNER)
+            start = socket.receive_json()
+            assert start["palm_stop"] is True
+            sid = start["voice_session_id"]
+            socket.send_json({"type": "voice_state", "voice_session_id": sid, "state": "listening"})
+            wait_for_state(client, "listening")
+            # Nothing is playing yet.
+            assert palm_frame(client, sid, 1, generation).status_code == 409
+
+            assert upload(client, sid, 1, generation).headers["x-voice-turn-outcome"] == "spoken"
+            wait_for_state(client, "speaking")
+            assert palm_frame(client, sid, 1, generation, token="wrong").status_code == 401
+            assert palm_frame(client, "other", 1, generation).status_code == 409
+            assert palm_frame(client, sid, 1, generation + 1).status_code == 409
+            assert palm_frame(client, sid, 2, generation).status_code == 409  # not the reply playing
+            assert palm_frame(client, sid, 1, generation, body=b"x" * (MAX_PALM_FRAME_BYTES + 1)).status_code == 413
+            assert detector.frames == 0  # refused frames are never classified
+
+            assert palm_frame(client, sid, 1, generation).json() == {"stop": False}
+            assert palm_frame(client, sid, 1, generation, body=b"palm").json() == {"stop": False}
+            assert palm_frame(client, sid, 1, generation, body=b"palm").json() == {"stop": True}
+            session = client.get("/robot-voice", headers=OWNER).json()["session"]
+            assert session["turns"][0]["outcome"] == "spoken"
+            assert session["turns"][0]["reason"] == "Stopped by an open palm"
+
+            # Once the robot reports it is listening again, frames are refused.
+            socket.send_json({"type": "voice_state", "voice_session_id": sid, "state": "listening"})
+            wait_for_state(client, "listening")
+            assert palm_frame(client, sid, 1, generation, body=b"palm").status_code == 409
+        finally:
+            ws.__exit__(None, None, None)
+
+
+def test_palm_stop_off_tells_the_robot_and_refuses_frames() -> None:
+    client, _, _ = make_hub(ScriptedSTT("hello"), RecordingTTS())
+    with client:
+        ws, socket, generation = connect_robot(client)
+        try:
+            client.post("/robot-voice/start", json={"robot_id": ROBOT_ID}, headers=OWNER)
+            start = socket.receive_json()
+            assert start["palm_stop"] is False
+            assert palm_frame(client, start["voice_session_id"], 1, generation).status_code == 404
+        finally:
+            ws.__exit__(None, None, None)

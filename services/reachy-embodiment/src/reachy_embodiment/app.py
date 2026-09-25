@@ -29,12 +29,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 
 from reachy_embodiment.behaviours import DESCRIPTIONS, STATE_FOR_BEHAVIOUR
-from reachy_embodiment.gesture import (
-    DEFAULT_PALM_MODEL_PATH,
-    MediaPipePalmDetector,
-    PalmStopWatcher,
-    probe_mediapipe,
-)
+from reachy_embodiment.gesture import HubPalmStop
 from reachy_embodiment.motion import MotionController
 from reachy_embodiment.presence import PresenceLoop
 from reachy_embodiment.robot import (
@@ -46,6 +41,7 @@ from reachy_embodiment.robot_ws_client import RobotWSClient
 from reachy_embodiment.state import ServiceState
 from reachy_embodiment.voice import VoiceConversation, VoiceTurnClient
 from shared.models.embodiment import Behaviour, EmbodimentState
+from shared.models.robot_voice import PALM_FRAME_MAX_WIDTH
 from shared.protocols import embodiment_api as routes
 
 log = logging.getLogger(__name__)
@@ -135,29 +131,18 @@ def _default_voice_conversation(
 
         return VoiceActivityDetector(min_silence_duration_ms=limits.end_of_speech_silence_ms)
 
+    uploader = VoiceTurnClient(hub_url, robot_id, robot_token)
+    # Phase 24e item 5: the hub decides per session whether it watches for
+    # an open palm; the robot only supplies downscaled playback frames.
+    palm_stop = HubPalmStop(lambda: backend.capture_frame(max_width=PALM_FRAME_MAX_WIDTH), uploader.palm_frame)
     return VoiceConversation(
         backend.open_microphone,
         vad_factory,
-        VoiceTurnClient(hub_url, robot_id, robot_token),
+        uploader,
         backend,
         state,
-        stop_gesture=_default_palm_stop(backend),
+        stop_gesture=palm_stop,
         motion=motion,
-    )
-
-
-def _default_palm_stop(backend: RobotBackend) -> PalmStopWatcher | None:
-    """Phase 24e item 5: `PALM_STOP_ENABLED=true` lets a held open palm
-    stop a spoken reply. Off by default until physically accepted.
-    `PALM_STOP_MODEL_PATH` names the MediaPipe gesture model; the image
-    bakes it in at the default path."""
-    if os.environ.get("PALM_STOP_ENABLED", "false").strip().lower() != "true":
-        return None
-    model_path = os.environ.get("PALM_STOP_MODEL_PATH", DEFAULT_PALM_MODEL_PATH)
-    return PalmStopWatcher(
-        backend.capture_frame,
-        lambda: MediaPipePalmDetector(model_path),
-        probe=lambda: probe_mediapipe(model_path),
     )
 
 

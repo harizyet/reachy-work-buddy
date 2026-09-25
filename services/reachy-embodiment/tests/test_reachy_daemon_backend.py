@@ -375,6 +375,17 @@ def test_capture_frame_reads_via_local_media_backend() -> None:
     assert len(frame) > 0  # a real JPEG encode of the fake frame
 
 
+def test_capture_frame_downscales_for_palm_stop_frames() -> None:
+    mini = _FakeReachyMini(np.zeros((1080, 1920, 3), dtype=np.uint8))
+    backend = ReachyDaemonBackend("http://daemon.test", media_client_factory=lambda: mini)
+
+    small = cv2.imdecode(np.frombuffer(backend.capture_frame(max_width=640), np.uint8), cv2.IMREAD_COLOR)
+    full = cv2.imdecode(np.frombuffer(backend.capture_frame(), np.uint8), cv2.IMREAD_COLOR)
+
+    assert small.shape[:2] == (360, 640)
+    assert full.shape[:2] == (1080, 1920)
+
+
 def test_capture_frame_reuses_one_media_client_across_calls() -> None:
     _FakeReachyMini.instances = 0
     backend = ReachyDaemonBackend("http://daemon.test", media_client_factory=_FakeReachyMini)

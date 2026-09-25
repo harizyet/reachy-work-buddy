@@ -12,9 +12,10 @@ were recorded first. The local model then passed: 82 of 87 (94.3%), every
 category ≥ 87.5%
 ([record](verification/phase-24e-correctness-2026-09-25.md)). Item 5
 (open-palm stop) was added by the owner on 2026-09-25 and is implemented
-behind `PALM_STOP_ENABLED`, off by default. It is tested in process and in
-an x86 image build only; the Nano build and physical run are open
-([record](verification/phase-24e-palm-stop-2026-09-25.md)). It follows [Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance),
+behind the hub's `PALM_STOP_ENABLED`, off by default. Detection runs on the
+hub, from frames the robot uploads during playback. It is tested in
+process and in an x86 hub image build only; deployment and the physical
+run are open ([record](verification/phase-24e-palm-stop-2026-09-25.md)). It follows [Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance),
 which the owner closed on the conversation workflow on 2026-09-25, and it
 addresses what 24d found or deferred. Evidence for each issue is in the
 [24d record](verification/phase-24d-conversation-2026-09-24.md). Scope was
@@ -193,27 +194,30 @@ Reachy is speaking stops the reply, and Reachy goes back to listening in
 the same conversation. This is for replies the listener doesn't want to
 hear out. Design: [ADR 0023 addendum](adr/0023-robot-voice-conversation.md#addendum-open-palm-stop-2026-09-25-phase-24e).
 
-- Camera frames are checked only during reply playback, on the robot, and
-  never stored or sent anywhere.
+- Camera frames are read only during reply playback. The robot sends them
+  to the owner's hub, which checks them for a palm and never stores them.
+  Detection moved from the Nano to the hub on 2026-09-25 (owner's
+  decision), so the robot image carries no MediaPipe.
 - It shortens speech only. The microphone stays closed while speaking, so
   this is not audio barge-in, and it grants nothing a voice stop doesn't.
-- It is optional and fails safe: if the model cannot load on the Nano, or
-  the camera errors, replies play to the end.
-- `PALM_STOP_ENABLED=true` turns it on (with voice enabled), off by default.
+- It is optional and fails safe: if the model cannot load on the hub, the
+  hub is unreachable or the camera errors, replies play to the end.
+- `PALM_STOP_ENABLED=true` on the hub turns it on (for robots with voice
+  enabled), off by default.
 
 Physical acceptance, recorded in the dated 24e record:
 
-- **Nano build:** the aarch64 image builds, and the child-process probe
-  passes on the Cortex-A57. If it fails, record the failure and leave the
-  feature off; the rest of 24e is unaffected.
+- **Builds:** the hub image loads the detector (`palm stop ready` in its
+  log at the first frame), and the Nano's embodiment image rebuilds
+  without MediaPipe.
 - **Stop:** a palm held up during a long reply stops audio within 1 s of
   being shown, and the next turn is heard and answered in the same
   session. Try at the owner's normal distance and lighting, both hands.
 - **No false stops:** talking with hands moving, waving, a thumbs-up and
   an empty or busy scene do not stop a reply, over the 30-minute session.
-- **Coexistence:** reply audio does not stutter while frames are checked,
-  and the microphone reopens normally afterwards. Record the Nano's
-  detection time per frame.
+- **Coexistence:** reply audio does not stutter while frames are uploaded,
+  and the microphone reopens normally afterwards. Record the frame round
+  trip (capture, upload, hub detection) and the hub's detection time.
 - **Off:** with the setting false, the camera is not read during replies.
 
 This is not a [Phase 25 prerequisite](#prerequisites-for-phase-25).

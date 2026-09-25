@@ -24,6 +24,10 @@ MAX_UTTERANCE_BYTES = 1024 * 1024
 # A held turn is continued only while at least this much of the merged
 # turn's `max_utterance_seconds` remains.
 MIN_CONTINUATION_SECONDS = 1.0
+# Open-palm stop (Phase 24e item 5): the robot downscales frames to this
+# width before upload, and the hub refuses anything larger than the cap.
+PALM_FRAME_MAX_WIDTH = 640
+MAX_PALM_FRAME_BYTES = 256 * 1024
 
 # Upload headers (robot -> hub). Identity/credential use ADR 0019's
 # X-Robot-Id + Authorization headers.
@@ -47,6 +51,13 @@ class VoiceLimits(BaseModel):
     # for speech to start again before asking the hub to answer. 0 disables
     # holding.
     continuation_window_ms: int = Field(1500, ge=0, le=5000)
+
+
+class PalmFrameResult(BaseModel):
+    """Hub -> robot answer to one palm-stop frame. `stop` means an open
+    palm was held long enough: stop this reply and listen again."""
+
+    stop: bool
 
 
 class RobotVoiceState(StrEnum):

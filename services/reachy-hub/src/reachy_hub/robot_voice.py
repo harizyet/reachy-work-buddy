@@ -12,6 +12,11 @@ State here is process-local, like `RobotConnectionManager`: a hub restart
 drops every session and the robot, losing its socket, stops capturing and
 does not resume on reconnect.
 
+Open-palm stop (Phase 24e item 5, ADR 0023 addendum): with a `PalmStop`,
+the robot uploads camera frames to `ROBOT_PALM_FRAME` while a reply plays,
+and is told to stop the reply once an open palm is held up. Frames are
+classified in memory and dropped.
+
 Adaptive end of turn (Phase 24e, ADR 0023 addendum): a segment whose
 transcript sounds unfinished is held instead of answered. The robot either
 uploads the next segment of the same turn or asks for the held turn to be
@@ -37,10 +42,12 @@ from datetime import UTC, datetime
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import Response
 
+from reachy_hub.palm_stop import PalmStop
 from reachy_hub.robot_connection_manager import RobotConnection, RobotConnectionManager
 from reachy_hub.robot_credential_store import RobotCredentialStore
 from reachy_hub.turn_completeness import looks_complete
 from shared.models.robot_voice import (
+    MAX_PALM_FRAME_BYTES,
     MAX_UTTERANCE_BYTES,
     MIN_CONTINUATION_SECONDS,
     ROBOT_GENERATION_HEADER,
@@ -51,6 +58,7 @@ from shared.models.robot_voice import (
     VOICE_SEGMENT_HEADER,
     VOICE_SESSION_HEADER,
     VOICE_TURN_HEADER,
+    PalmFrameResult,
     RobotVoiceAvailability,
     RobotVoiceState,
     StartVoiceRequest,
@@ -75,7 +83,11 @@ from shared.protocols.operator_api import (
     ROBOT_VOICE_START,
     ROBOT_VOICE_STOP,
 )
-from shared.protocols.robot_ws import ROBOT_VOICE_TURN, ROBOT_VOICE_TURN_FINALIZE
+from shared.protocols.robot_ws import (
+    ROBOT_PALM_FRAME,
+    ROBOT_VOICE_TURN,
+    ROBOT_VOICE_TURN_FINALIZE,
+)
 
 log = logging.getLogger(__name__)
 
@@ -136,8 +148,10 @@ class RobotVoiceManager:
         idle_timeout_seconds: float = IDLE_TIMEOUT_SECONDS,
         limits: VoiceLimits | None = None,
         clock: Callable[[], float] = time.monotonic,
+        palm_stop: PalmStop | None = None,
     ) -> None:
         self._connections = connections
+        self.palm_stop = palm_stop
         self._lease_seconds = lease_seconds
         self._idle_timeout_seconds = idle_timeout_seconds
         self._limits = limits or VoiceLimits()
@@ -206,7 +220,9 @@ class RobotVoiceManager:
             and self._limits.continuation_window_ms > 0,
         )
         self._sessions[robot_id] = session
-        message = VoiceStartMessage(voice_session_id=session.voice_session_id, limits=self._limits)
+        message = VoiceStartMessage(
+            voice_session_id=session.voice_session_id, limits=self._limits, palm_stop=self.palm_stop is not None
+        )
         if not await _send(connection, message.model_dump(mode="json")):
             session.state = VoiceSessionState.STOPPED
             session.stop_reason = "Could not reach the robot"
@@ -328,6 +344,31 @@ class RobotVoiceManager:
         session.state = VoiceSessionState.THINKING
         return session
 
+    def playing_session(self, robot_id: str, generation: int, voice_session_id: str, turn: int) -> VoiceSession:
+        """The session whose reply for `turn` the robot is playing now."""
+        session = self._sessions.get(robot_id)
+        if session is None or not session.active or session.voice_session_id != voice_session_id:
+            raise VoiceSessionError(409, "No active voice session")
+        if session.generation != generation:
+            raise VoiceSessionError(409, "Stale robot connection")
+        last = session.turns[-1] if session.turns else None
+        if (
+            session.state != VoiceSessionState.SPEAKING
+            or last is None
+            or last.turn != turn
+            or last.outcome != VoiceTurnOutcome.SPOKEN
+        ):
+            raise VoiceSessionError(409, "No reply is playing")
+        return session
+
+    @staticmethod
+    def note_palm_stop(session: VoiceSession, turn: int) -> None:
+        # The record stays `spoken`: the model's history holds the whole
+        # reply, though the listener heard only part of it.
+        for record in session.turns:
+            if record.turn == turn:
+                record.reason = "Stopped by an open palm"
+
     @staticmethod
     def take_held(session: VoiceSession, turn: int) -> HeldTurn | None:
         held = session.held
@@ -347,6 +388,17 @@ class RobotVoiceManager:
         session.in_flight_turn = None
         session.last_activity = self._clock()
         session.state = VoiceSessionState.LISTENING
+
+    @staticmethod
+    def is_current_reply(session: VoiceSession, turn: int) -> bool:
+        """The reply for `turn` is still the one playing (no stop landed
+        while its frame was being classified)."""
+        return (
+            session.active
+            and session.state == VoiceSessionState.SPEAKING
+            and bool(session.turns)
+            and session.turns[-1].turn == turn
+        )
 
     @staticmethod
     def is_current(session: VoiceSession, turn: int) -> bool:
@@ -540,13 +592,13 @@ async def _answer(
 async def _read_bounded(request: Request, limit: int) -> bytes:
     declared = request.headers.get("content-length")
     if declared is not None and declared.isdigit() and int(declared) > limit:
-        raise VoiceSessionError(413, "Utterance is too large")
+        raise VoiceSessionError(413, "Upload is too large")
     chunks: list[bytes] = []
     size = 0
     async for chunk in request.stream():
         size += len(chunk)
         if size > limit:
-            raise VoiceSessionError(413, "Utterance is too large")
+            raise VoiceSessionError(413, "Upload is too large")
         chunks.append(chunk)
     return b"".join(chunks)
 
@@ -637,6 +689,23 @@ def install_robot_voice_routes(
 
         outcome, audio = await run_turn(manager, session, turn, body, pipeline, seconds=seconds)
         return turn_response(robot_id, turn, outcome, audio)
+
+    @app.post(ROBOT_PALM_FRAME)
+    async def robot_palm_frame(request: Request) -> PalmFrameResult:
+        robot_id, generation, voice_session_id, turn, _ = await robot_turn_headers(request)
+        if manager.palm_stop is None:
+            raise HTTPException(404, "Open-palm stop is not enabled")
+        try:
+            body = await _read_bounded(request, MAX_PALM_FRAME_BYTES)
+            session = manager.playing_session(robot_id, generation, voice_session_id, turn)
+        except VoiceSessionError as exc:
+            raise raise_http(exc) from None
+        stop = await manager.palm_stop.check(voice_session_id, turn, body)
+        if stop and manager.is_current_reply(session, turn):
+            manager.note_palm_stop(session, turn)
+            log.info("robot %s: voice turn %s: open palm, stopping the reply", robot_id, turn)
+            return PalmFrameResult(stop=True)
+        return PalmFrameResult(stop=False)
 
     @app.post(ROBOT_VOICE_TURN_FINALIZE)
     async def robot_voice_turn_finalize(request: Request) -> Response:

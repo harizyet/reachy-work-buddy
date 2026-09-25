@@ -90,9 +90,10 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
   still sometimes misreports numbers from search results and answers
   statements at length ([record](verification/phase-24e-correctness-2026-09-25.md)). Acoustic echo and deliberate
   silence/noise handling still need physical acceptance.
-- Open-palm stop (24e item 5) is implemented behind `PALM_STOP_ENABLED`
-  (off). MediaPipe has not been built or run on the Nano's Cortex-A57; see
-  the [record](verification/phase-24e-palm-stop-2026-09-25.md).
+- Open-palm stop (24e item 5) is implemented behind the hub's
+  `PALM_STOP_ENABLED` (off). Detection runs on the hub from frames the
+  robot uploads during playback. It is not deployed or physically tested;
+  see the [record](verification/phase-24e-palm-stop-2026-09-25.md).
 - First LOCAL camera frames can take 9–12 s while GStreamer loads plugins.
   Docker 20.10.7 seccomp prevents the external scanner from spawning;
   the documented workaround loads plugins in-process.

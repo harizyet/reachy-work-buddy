@@ -159,6 +159,11 @@ from reachy_hub.interruption_policy import (
 )
 from reachy_hub.notification_queue import NotificationQueue, QueuedNotification
 from reachy_hub.operator import install_operator_routes, require_csrf
+from reachy_hub.palm_stop import (
+    DEFAULT_PALM_MODEL_PATH,
+    MediaPipePalmDetector,
+    PalmStop,
+)
 from reachy_hub.postgres_audit_log import PostgresAuditLog
 from reachy_hub.postgres_notification_queue import PostgresNotificationQueue
 from reachy_hub.postgres_registry import PostgresRobotRegistry
@@ -305,6 +310,17 @@ class RevalidatedStaticFiles(StaticFiles):
         response = super().file_response(*args, **kwargs)
         response.headers["Cache-Control"] = "no-cache"
         return response
+
+
+def _default_palm_stop() -> PalmStop | None:
+    """Phase 24e item 5: `PALM_STOP_ENABLED=true` lets a held open palm
+    stop a robot's spoken reply. Off by default until physically accepted.
+    `PALM_STOP_MODEL_PATH` names the MediaPipe gesture model; the image
+    bakes it in at the default path. The model loads at the first frame."""
+    if os.environ.get("PALM_STOP_ENABLED", "false").strip().lower() != "true":
+        return None
+    model_path = os.environ.get("PALM_STOP_MODEL_PATH", DEFAULT_PALM_MODEL_PATH)
+    return PalmStop(lambda: MediaPipePalmDetector(model_path))
 
 
 def create_app(
@@ -575,6 +591,8 @@ def create_app(
             yield
         finally:
             await robot_voice_manager.stop_all("Hub is shutting down")
+            if robot_voice_manager.palm_stop is not None:
+                robot_voice_manager.palm_stop.close()
             for task in (heartbeat_task, telegram_task, voice_task):
                 if task is not None:
                     task.cancel()
@@ -660,7 +678,9 @@ def create_app(
     robot_credential_store = robot_credential_store or load_robot_tokens_from_env()
     robot_connection_manager = robot_connection_manager or RobotConnectionManager()
     # Phase 24c (ADR 0023): process-local like the connection manager.
-    robot_voice_manager = robot_voice_manager or RobotVoiceManager(robot_connection_manager)
+    robot_voice_manager = robot_voice_manager or RobotVoiceManager(
+        robot_connection_manager, palm_stop=_default_palm_stop()
+    )
     app.state.robot_credential_store = robot_credential_store
     app.state.robot_connection_manager = robot_connection_manager
     app.state.robot_voice_manager = robot_voice_manager

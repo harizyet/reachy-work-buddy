@@ -19,6 +19,13 @@ dependencies = [
     # CameraPollTrack).
     "pillow>=10.0",
     "piper-tts>=1.3",
+    # Phase 24e item 5: open-palm stop (reachy_hub/palm_stop.py), imported
+    # only when PALM_STOP_ENABLED=true. Detection runs here rather than on
+    # the robot. Its opencv-contrib-python dependency is overridden away in
+    # the root pyproject.toml; the headless build below provides the `cv2`
+    # MediaPipe imports.
+    "mediapipe==1.0.1",
+    "opencv-python-headless>=4.9",
 ]
 
 [tool.uv.sources]

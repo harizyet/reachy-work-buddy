@@ -34,6 +34,7 @@ from companion_core.rag.store import InMemoryDocumentStore
 from companion_core.tasks.store import InMemoryTaskStore
 from companion_core.websearch.store import InMemorySearchSettingsStore
 from reachy_embodiment.audio.vad import CHUNK_SAMPLES
+from reachy_embodiment.gesture import HubPalmStop
 from reachy_embodiment.motion import MotionController
 from reachy_embodiment.robot import (
     ReachyDaemonBackend,
@@ -54,6 +55,7 @@ from reachy_hub.app import create_app as create_hub_app
 from reachy_hub.audit_log import InMemoryAuditLog
 from reachy_hub.companion_core_client import CompanionCoreClient
 from reachy_hub.notification_queue import InMemoryNotificationQueue
+from reachy_hub.palm_stop import PalmStop
 from reachy_hub.robot_credential_store import InMemoryRobotCredentialStore
 from reachy_hub.robot_registry import InMemoryRobotRegistry
 from reachy_hub.robot_voice import RobotVoiceManager
@@ -61,6 +63,7 @@ from reachy_hub.session_store import InMemorySessionStore
 
 from shared.models.embodiment import Behaviour, EmbodimentState
 from shared.models.robot_voice import (
+    PALM_FRAME_MAX_WIDTH,
     VOICE_CAPABILITY,
     VOICE_CONTINUATION_CAPABILITY,
     VoiceLimits,
@@ -287,7 +290,7 @@ def create_core_app():
     )
 
 
-def make_hub(stt, tts, *, limits: VoiceLimits | None = None):
+def make_hub(stt, tts, *, limits: VoiceLimits | None = None, palm_detector=None):
     from reachy_hub.robot_connection_manager import RobotConnectionManager
 
     credentials = InMemoryRobotCredentialStore()
@@ -305,7 +308,11 @@ def make_hub(stt, tts, *, limits: VoiceLimits | None = None):
         run_voice_watchdog_task=False,
         robot_credential_store=credentials,
         robot_connection_manager=connections,
-        robot_voice_manager=RobotVoiceManager(connections, limits=limits),
+        robot_voice_manager=RobotVoiceManager(
+            connections,
+            limits=limits,
+            palm_stop=PalmStop(lambda: palm_detector) if palm_detector is not None else None,
+        ),
         remote_ui_token="owner-token",
         stt=stt,
         tts=tts,
@@ -433,8 +440,8 @@ def test_stop_during_playback_silences_the_speaker() -> None:
 
 
 class FakePalm:
-    """Stands in for PalmStopWatcher: `show()` makes a waiting `wait()`
-    return, as a held open palm would."""
+    """Stands in for the robot's HubPalmStop: `show()` makes a waiting
+    `wait()` return, as the hub's stop answer would."""
 
     def __init__(self, *, ready: bool = True, fail: bool = False) -> None:
         self.ready = ready
@@ -452,8 +459,9 @@ class FakePalm:
         self.prepared += 1
         return self.ready
 
-    async def wait(self) -> None:
+    async def wait(self, voice_session_id: str, turn: int, generation: int) -> None:
         self.waits += 1
+        self.context = (voice_session_id, turn, generation)
         if self.fail:
             raise RuntimeError("camera gone")
         try:
@@ -470,7 +478,7 @@ class FakePalm:
 def test_open_palm_stops_a_long_reply_and_listening_resumes() -> None:
     async def scenario():
         tts = FixedTTS(seconds=30)
-        hub = make_hub(ScriptedSTT("tell me a long story", "thanks"), tts)
+        hub = make_hub(ScriptedSTT("tell me a long story", "thanks"), tts, palm_detector=NoPalm())
         mic = CountingMic([utterance_fixture(), utterance_fixture()])
         player = RecordingPlayer()
         palm = FakePalm()
@@ -480,6 +488,7 @@ def test_open_palm_stops_a_long_reply_and_listening_resumes() -> None:
         await wait_until(lambda: player.played)
         assert robot.state.embodiment_state == EmbodimentState.SPEAKING
         assert palm.prepared == 1 and palm.waits == 1
+        assert palm.context == (start["voice_session_id"], 1, robot.connection.generation)
 
         shown_at = time.monotonic()
         palm.show()
@@ -502,9 +511,79 @@ def test_open_palm_stops_a_long_reply_and_listening_resumes() -> None:
     asyncio.run(scenario())
 
 
+class NoPalm:
+    """Hub-side detector that never sees a palm; enables palm stop."""
+
+    def is_open_palm(self, jpeg: bytes) -> bool:
+        return False
+
+    def close(self) -> None:
+        pass
+
+
+class ShownPalm:
+    """Hub-side detector: an open palm once `show()` is called."""
+
+    def __init__(self) -> None:
+        self.shown = False
+        self.frames = 0
+
+    def is_open_palm(self, jpeg: bytes) -> bool:
+        self.frames += 1
+        return self.shown and jpeg.startswith(b"\xff\xd8")
+
+    def close(self) -> None:
+        pass
+
+
+def test_open_palm_over_the_real_frame_upload_stops_the_reply() -> None:
+    """Robot HubPalmStop -> hub ROBOT_PALM_FRAME -> hub PalmStop, in process."""
+
+    async def scenario():
+        detector = ShownPalm()
+        hub = make_hub(ScriptedSTT("tell me a long story", "thanks"), FixedTTS(seconds=30), palm_detector=detector)
+        player = RecordingPlayer()
+        backend = SimulatedRobotBackend()
+        uploader = VoiceTurnClient("http://hub", ROBOT_ID, ROBOT_TOKEN, transport=httpx.ASGITransport(app=hub))
+        palm = HubPalmStop(lambda: backend.capture_frame(max_width=PALM_FRAME_MAX_WIDTH), uploader.palm_frame, interval=0.05)
+        robot = Robot(hub, CountingMic([utterance_fixture(), utterance_fixture()]), player, stop_gesture=palm)
+        await robot.connect()
+        await owner(hub, "POST", "/robot-voice/start", json={"robot_id": ROBOT_ID})
+        await wait_until(lambda: player.played and detector.frames >= 2)
+        assert player.stopped == 0  # frames flow, no palm yet
+
+        shown_at = time.monotonic()
+        detector.shown = True
+        await wait_until(lambda: player.stopped == 1)
+        assert time.monotonic() - shown_at < 1.0
+        await wait_until(lambda: len(player.played) == 2)  # same session, next turn answered
+        session = (await owner(hub, "GET", "/robot-voice")).json()["session"]
+        assert session["turns"][0]["reason"] == "Stopped by an open palm"
+        await robot.voice.aclose()
+        await uploader.aclose()
+
+    asyncio.run(scenario())
+
+
+def test_robot_does_not_watch_when_the_hub_has_palm_stop_off() -> None:
+    async def scenario():
+        hub = make_hub(ScriptedSTT("hello"), FixedTTS(seconds=0.2))
+        player = RecordingPlayer()
+        palm = FakePalm()
+        robot = Robot(hub, CountingMic([utterance_fixture()]), player, stop_gesture=palm)
+        await robot.connect()
+        await owner(hub, "POST", "/robot-voice/start", json={"robot_id": ROBOT_ID})
+        await wait_until(lambda: player.played)
+        await wait_until(lambda: robot.state.embodiment_state == EmbodimentState.LISTENING)
+        assert (palm.prepared, palm.waits) == (0, 0)  # camera never read
+        await robot.voice.aclose()
+
+    asyncio.run(scenario())
+
+
 def test_reply_that_ends_normally_cancels_the_palm_watcher() -> None:
     async def scenario():
-        hub = make_hub(ScriptedSTT("hello"), FixedTTS(seconds=0.1))
+        hub = make_hub(ScriptedSTT("hello"), FixedTTS(seconds=0.1), palm_detector=NoPalm())
         player = RecordingPlayer()
         palm = FakePalm()
         robot = Robot(hub, CountingMic([utterance_fixture()]), player, stop_gesture=palm)
@@ -520,7 +599,7 @@ def test_reply_that_ends_normally_cancels_the_palm_watcher() -> None:
 
 def test_palm_stop_unavailable_or_failing_leaves_replies_playing() -> None:
     async def scenario(palm: FakePalm):
-        hub = make_hub(ScriptedSTT("hello"), FixedTTS(seconds=0.5))
+        hub = make_hub(ScriptedSTT("hello"), FixedTTS(seconds=0.5), palm_detector=NoPalm())
         player = RecordingPlayer()
         robot = Robot(hub, CountingMic([utterance_fixture()]), player, stop_gesture=palm)
         await robot.connect()

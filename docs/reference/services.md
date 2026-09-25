@@ -158,6 +158,10 @@ faster-whisper/espeak providers. Robot and `/voice/turn` STT is primed with
 and audio tracks; playback resamples to 48kHz mono because aiortc's Opus
 encoder does not adapt when tracks with different formats are swapped.
 
+Open-palm stop (`palm_stop.py`, `PALM_STOP_ENABLED`, off) classifies the
+frames a robot uploads to `ROBOT_PALM_FRAME` while its reply plays, using
+MediaPipe. Frames are accepted only for the reply currently playing.
+
 Robot voice sessions ([ADR 0023](../adr/0023-robot-voice-conversation.md),
 `robot_voice.py`) are process-local, one per robot. They are bound to the
 robot's connection generation and ended by logout, lease lapse, idle timeout,
@@ -206,9 +210,10 @@ bounded utterance, closes the microphone, uploads the utterance to the hub,
 then plays any permitted reply. It is half-duplex, and cancelling stops daemon
 playback. It is enabled only by `VOICE_CONVERSATION_ENABLED=true`, and has not
 passed physical acceptance. Audio barge-in and wake words are not implemented.
-With `PALM_STOP_ENABLED=true`, `gesture.py`'s `PalmStopWatcher` checks
-camera frames during playback. A held open palm (MediaPipe gesture model)
-stops playback and the loop returns to listening in the same session.
+When the hub turns on open-palm stop for a session, `gesture.py`'s
+`HubPalmStop` uploads downscaled camera frames to the hub during playback.
+When the hub answers `stop`, playback stops and the loop returns to
+listening in the same session.
 
 `motion.py` (Phase 24f) is the single local motion owner. See the
 [ADR 0003 amendment](../adr/0003-embodiment-command-api.md#phase-24f-motion-ownership-amendment-2026-09-25).

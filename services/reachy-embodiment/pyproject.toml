@@ -84,14 +84,6 @@ dependencies = [
     # this same base image, but no live capture through this exact
     # pinned version has been run yet.
     "reachy_mini==1.8.4",
-    # Phase 24e item 5: open-palm stop (reachy_embodiment/gesture.py).
-    # Imported only when PALM_STOP_ENABLED=true. Pinned exactly because its
-    # native aarch64 build is not yet verified on the Nano's Cortex-A57;
-    # gesture.py probes it in a child process before loading it. Its
-    # opencv-contrib-python dependency is overridden away in the root
-    # pyproject.toml: it installs the same `cv2` module as the headless
-    # build above, and the headless build serves MediaPipe's tasks API.
-    "mediapipe==1.0.1",
 ]
 
 [tool.uv.sources]

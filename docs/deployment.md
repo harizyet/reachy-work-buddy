@@ -440,13 +440,12 @@ To enable it on the robot host:
    disabled.
 
 Open-palm stop ([ADR 0023 addendum](adr/0023-robot-voice-conversation.md#addendum-open-palm-stop-2026-09-25-phase-24e))
-is a further opt-in on top of voice: set `PALM_STOP_ENABLED=true` too, then
-recreate the container as in step 2. The launcher passes it through only
-when voice is enabled. At the first conversation start, the container
-checks that MediaPipe loads on this CPU, in a child process; the log shows
-`palm stop ready` or `palm stop unavailable, continuing without it`. The
-model is baked into the image. It has not been built or run on the Nano
-yet ([Phase 24e item 5](phase-24e.md#5-open-palm-stop)).
+is switched on the hub: set `PALM_STOP_ENABLED=true` in the homelab `.env`
+and recreate the hub container. The robot needs no setting beyond voice.
+The hub tells it per session to upload playback frames. The hub loads
+the MediaPipe model at the first frame and logs `palm stop ready`, or
+`palm stop unavailable, replies will play to the end`. The model is baked
+into the hub image.
 
 Conversational motion ([Phase 24f](phase-24f.md), `CONVERSATION_MOTION_ENABLED`
 and `SPEECH_WOBBLE_ENABLED`) is also passed through only when voice is on.

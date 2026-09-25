@@ -93,8 +93,9 @@ class RobotBackend(Protocol):
         """Switches the daemon's audio-reactive head motion. Phase 24f."""
         ...
 
-    def capture_frame(self) -> bytes:
-        """Returns a single JPEG-encoded camera frame. Phase 16/ADR 0013."""
+    def capture_frame(self, max_width: int | None = None) -> bytes:
+        """Returns a single JPEG-encoded camera frame. Phase 16/ADR 0013.
+        `max_width` downscales before encoding (Phase 24e palm-stop frames)."""
         ...
 
     def play_audio(self, wav_bytes: bytes) -> float:
@@ -158,13 +159,15 @@ class SimulatedRobotBackend:
     def set_speech_wobble(self, enabled: bool) -> None:
         log.info("sim: speech wobble %s", "on" if enabled else "off")
 
-    def capture_frame(self) -> bytes:
+    def capture_frame(self, max_width: int | None = None) -> bytes:
         # No physical camera exists in this environment. The marker's
         # position is derived from wall-clock time so consecutive polls
         # visibly differ — proof a live transport is delivering fresh
         # frames, not a cached static image, the same purpose
         # play_behaviour's log line serves for motion.
         width, height = _FRAME_SIZE
+        if max_width is not None and width > max_width:
+            width, height = max_width, round(height * max_width / width)
         image = Image.new("RGB", (width, height), color=(20, 24, 32))
         draw = ImageDraw.Draw(image)
         x = int((time.monotonic() % 2.0) / 2.0 * (width - 12))
@@ -524,7 +527,7 @@ class ReachyDaemonBackend:
         except httpx.HTTPError as exc:
             log.warning("stop of move %s failed; it may still be running: %s", uuid, exc)
 
-    def capture_frame(self) -> bytes:
+    def capture_frame(self, max_width: int | None = None) -> bytes:
         """Grabs one JPEG frame via the reachy_mini SDK's LOCAL media
         backend, per Pollen's documented media architecture
         (huggingface.co/docs/reachy_mini/SDK/media-architecture): the
@@ -586,6 +589,10 @@ class ReachyDaemonBackend:
             raise RobotBackendError(f"get_frame() failed: {exc}") from exc
         if frame is None:
             raise RobotBackendError("camera not initialized yet (get_frame() returned None)")
+        if max_width is not None and frame.shape[1] > max_width:
+            # Resizing first makes the Nano's JPEG encode cheaper too.
+            height = round(frame.shape[0] * max_width / frame.shape[1])
+            frame = cv2.resize(frame, (max_width, height), interpolation=cv2.INTER_AREA)
         ok, encoded = cv2.imencode(".jpg", frame)
         if not ok:
             raise RobotBackendError("failed to JPEG-encode captured frame")

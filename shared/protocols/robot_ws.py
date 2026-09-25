@@ -21,3 +21,6 @@ PROTOCOL_VERSION = 1
 ROBOT_VOICE_TURN = "/robot-media/voice-turn"
 # Phase 24e: ask the hub to answer the turn it is holding (ADR 0023).
 ROBOT_VOICE_TURN_FINALIZE = "/robot-media/voice-turn/finalize"
+# Phase 24e item 5: one camera frame taken while a reply plays, checked by
+# the hub for a held open palm (ADR 0023 open-palm stop addendum).
+ROBOT_PALM_FRAME = "/robot-media/palm-frame"

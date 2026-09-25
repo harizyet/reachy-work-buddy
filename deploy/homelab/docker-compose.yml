@@ -147,6 +147,11 @@ services:
       # use this at all). See scripts/start-reachy.sh/start-jetson.sh and
       # services/reachy-hub/src/reachy_hub/robot_credential_store.py.
       ROBOT_TOKENS: ${ROBOT_TOKENS:-}
+      # Phase 24e item 5 (ADR 0023 addendum): true lets a held open palm
+      # stop a robot's spoken reply. The robot uploads frames only while a
+      # reply plays; they are classified here in memory and never stored.
+      # Off by default until physically accepted.
+      PALM_STOP_ENABLED: ${PALM_STOP_ENABLED:-false}
     depends_on:
       migrate:
         condition: service_completed_successfully

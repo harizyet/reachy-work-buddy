@@ -82,6 +82,9 @@ class VoiceStartMessage(BaseModel):
     type: Literal[WSMessageType.VOICE_START] = WSMessageType.VOICE_START
     voice_session_id: str
     limits: VoiceLimits = VoiceLimits()
+    # Phase 24e item 5: upload camera frames to the hub while a reply plays
+    # so it can watch for an open palm. Older robots ignore the field.
+    palm_stop: bool = False
 
 
 class VoiceStopMessage(BaseModel):

@@ -35,11 +35,37 @@ One close-up photo of fingers ("Open Palm of the Left Hand, Fingers") was
 classified `None`: the recognizer needs the hand framed, not filling the
 image. Distance and framing belong in the physical stop row.
 
+## Detection moved to the hub (same day)
+
+At the owner's direction, detection moved from the Nano to the hub, so the
+robot image carries no MediaPipe
+([ADR 0023 addendum](../adr/0023-robot-voice-conversation.md#addendum-open-palm-stop-2026-09-25-phase-24e)).
+The robot uploads 640 px frames to `ROBOT_PALM_FRAME` during playback,
+and the hub answers `stop`. The earlier sections describe the robot-side
+version and are kept as history. These checks ran on the x86_64
+development machine only.
+
+| Check | Result |
+|---|---|
+| Hub tests (`pytest services/reachy-hub`) | 204 passed, 10 skipped. Includes the route's refusals: wrong credential 401, other session or generation 409, a turn not playing 409, 257 KB 413, and palm stop off 404. None of these frames is classified. Also covers the stop answer after two consecutive palms, the turn record note, refusal once the robot reports listening, and `voice_start.palm_stop` |
+| Embodiment tests | 124 passed, 5 skipped. Includes the robot's uploader over the real hub route in process: stop within 1 s of the palm, then the next turn answered in the same session. No camera reads when the hub has palm stop off. Also covers the 1920 → 640 px downscale |
+| Hub image, amd64, `--network none` | First build: the model failed to load, `libEGL.so.1` missing. The embodiment image had it through GStreamer. Added `libegl1`, and `ldd` then reported nothing missing. Pinned model, 640 px palm photo: open palm detected, a blank frame rejected, 25.1 ms per frame including JPEG decode. Frame size 47 KB |
+| Embodiment image, amd64 | Builds without MediaPipe, `libgles2` or the model; `mediapipe` not importable; gesture and voice modules import |
+| Isolated `uv sync --package reachy-embodiment` | No `mediapipe` in the environment |
+| Decoder change (OpenCV → PIL on the hub) | Same results on three photos after the 0.6 threshold. One scores 0.52 either way, below the threshold |
+
+Image sizes: the hub grew from 1.18 GB to 1.92 GB, and the embodiment image
+is back to its size before item 5 (3.46 GB, amd64).
+
 ## Still open
 
-- aarch64 image build on the Nano, and the probe on its Cortex-A57.
+- Deploying both images: the hub on the homelab, and embodiment rebuilt on
+  the Nano without MediaPipe.
 - Live frames through the LOCAL camera path during daemon playback, the
-  Nano's time per frame, and whether audio stutters.
+  frame round trip, and whether audio stutters. The Lite head camera's
+  frames are dark by default (mean about 33/255 in a lit room, 24f
+  conformance run), which may affect detection. Pollen's troubleshooting
+  suggests enabling auto-exposure priority.
 - Every [item 5 physical row](../phase-24e.md#5-open-palm-stop).
-- The `start-reachy.sh` pass-through has only had `bash -n`; `--check` exits
-  before it.
+- The launcher no longer passes a palm setting; the hub's
+  `PALM_STOP_ENABLED` (homelab compose) replaces it.

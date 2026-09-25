@@ -57,13 +57,14 @@ case per `--run`. Its SDK cases now reacquire daemon media: a 1.8.4
 blocked the embodiment start once.
 
 The owner added [24e item 5](docs/phase-24e.md#5-open-palm-stop): a held
-open palm stops a spoken reply and Reachy listens again. It is implemented
-in `reachy_embodiment/gesture.py` with MediaPipe, behind `PALM_STOP_ENABLED`
-(off). The launcher, `.env.example`, Dockerfile (`libgles2`, pinned model)
-and uv lock are updated. It was checked in process and in an amd64 image
-build only ([record](docs/verification/phase-24e-palm-stop-2026-09-25.md)).
-Next for it: build the image on the Nano and check the startup log for
-`palm stop ready`. That needs no motion.
+open palm stops a spoken reply and Reachy listens again. At the owner's
+direction, detection now runs on the hub (`reachy_hub/palm_stop.py`,
+MediaPipe). The robot (`reachy_embodiment/gesture.py`) only uploads 640 px
+frames during playback when the hub's `PALM_STOP_ENABLED` (off) turns it
+on for the session. Tested in process and in amd64 hub/embodiment image
+builds, not deployed ([record](docs/verification/phase-24e-palm-stop-2026-09-25.md)).
+Next: rebuild the hub on the homelab and the embodiment image on the Nano
+(no motion needed), then the physical rows.
 
 Branch `main`. [Phase 24e](docs/phase-24e.md) item 1 (adaptive end of turn)
 is committed in `6f292be`. This session added item 2's deterministic part:

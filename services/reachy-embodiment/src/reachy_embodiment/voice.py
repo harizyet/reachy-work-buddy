@@ -14,10 +14,11 @@ turn is captured from that audio; if no speech starts within the
 continuation window, the robot asks the hub to finalize the held turn. Any
 other outcome discards the audio and closes the microphone before playback.
 
-Open-palm stop (Phase 24e item 5): when a `PalmStopWatcher` is supplied,
-the camera is watched during playback. A held open palm stops the daemon's
-audio and the loop moves straight on to the next listening turn in the
-same session; it does not end the conversation.
+Open-palm stop (Phase 24e item 5): when the hub turns it on for the
+session and a `StopGesture` is supplied, camera frames go to the hub during
+playback. When the hub sees a held open palm, the daemon's audio stops and
+the loop moves straight on to the next listening turn in the same session;
+it does not end the conversation.
 
 Stopping cancels the loop wherever it is: capture closes the microphone,
 an in-flight upload is abandoned, and playback is stopped on the daemon
@@ -41,6 +42,7 @@ import httpx
 import numpy as np
 
 from reachy_embodiment.audio.vad import CHUNK_SAMPLES
+from reachy_embodiment.gesture import PalmStopGone
 from reachy_embodiment.motion import MotionController
 from reachy_embodiment.state import ServiceState
 from shared.models.embodiment import EmbodimentState
@@ -52,12 +54,17 @@ from shared.models.robot_voice import (
     VOICE_SEGMENT_HEADER,
     VOICE_SESSION_HEADER,
     VOICE_TURN_HEADER,
+    PalmFrameResult,
     RobotVoiceState,
     VoiceLimits,
     VoiceTurnOutcome,
 )
 from shared.models.robot_ws import VoiceStartMessage, VoiceStateMessage
-from shared.protocols.robot_ws import ROBOT_VOICE_TURN, ROBOT_VOICE_TURN_FINALIZE
+from shared.protocols.robot_ws import (
+    ROBOT_PALM_FRAME,
+    ROBOT_VOICE_TURN,
+    ROBOT_VOICE_TURN_FINALIZE,
+)
 
 log = logging.getLogger(__name__)
 
@@ -92,7 +99,7 @@ class SpeakerPlayer(Protocol):
 class StopGesture(Protocol):
     async def prepare(self) -> bool: ...
 
-    async def wait(self) -> None: ...
+    async def wait(self, voice_session_id: str, turn: int, generation: int) -> None: ...
 
     def close(self) -> None: ...
 
@@ -224,6 +231,17 @@ class VoiceTurnClient:
         headers[VOICE_SEGMENT_HEADER] = str(segment)
         return self._outcome(await self._client.post(ROBOT_VOICE_TURN, content=wav_bytes, headers=headers))
 
+    async def palm_frame(self, jpeg: bytes, voice_session_id: str, turn: int, generation: int) -> bool:
+        """Send one playback frame; True when the hub says stop the reply.
+        Raises PalmStopGone once the hub stops accepting frames for it."""
+        headers = self._headers(voice_session_id, turn, generation)
+        headers["Content-Type"] = "image/jpeg"
+        response = await self._client.post(ROBOT_PALM_FRAME, content=jpeg, headers=headers, timeout=5.0)
+        if response.status_code in (401, 404, 409):
+            raise PalmStopGone(f"hub refused palm frame: {response.status_code}")
+        response.raise_for_status()
+        return PalmFrameResult.model_validate(response.json()).stop
+
     async def finalize(
         self, *, voice_session_id: str, turn: int, generation: int
     ) -> tuple[VoiceTurnOutcome, bytes | None]:
@@ -343,7 +361,10 @@ class VoiceConversation:
             # stalls — the hub-side version of this disconnected the robot.
             segmenter = UtteranceSegmenter(await asyncio.to_thread(self._vad_factory, limits), limits)
             microphone = await asyncio.to_thread(self._microphone_factory)
-            self._palm_stop_ready = self._stop_gesture is not None and await self._stop_gesture.prepare()
+            # The hub decides per session whether it watches for a palm.
+            self._palm_stop_ready = (
+                message.palm_stop and self._stop_gesture is not None and await self._stop_gesture.prepare()
+            )
             while True:
                 try:
                     result = await self._take_turn(
@@ -368,7 +389,7 @@ class VoiceConversation:
                 if outcome == VoiceTurnOutcome.SPOKEN and audio:
                     self._set_state(EmbodimentState.SPEAKING, turn - 1)
                     await report(RobotVoiceState.SPEAKING)
-                    if await self._play(audio, report):
+                    if await self._play(audio, report, session_id, turn - 1, generation):
                         log.info("voice turn %s: reply stopped by open palm", turn - 1)
                     else:
                         log.info("voice turn %s: playback done %.2fs after the cut", turn - 1, self._clock() - cut_at)
@@ -522,14 +543,16 @@ class VoiceConversation:
         except Exception as exc:
             raise MicrophoneFailed from exc
 
-    async def _play(self, audio: bytes, report: Callable[..., Awaitable[None]]) -> bool:
+    async def _play(
+        self, audio: bytes, report: Callable[..., Awaitable[None]], session_id: str, turn: int, generation: int
+    ) -> bool:
         """Plays the reply to the end. Returns True if an open palm stopped
         it early."""
         play = asyncio.ensure_future(asyncio.to_thread(self._player.play_audio, audio))
         try:
             duration = await asyncio.shield(play)
             log.info("voice playback started (%.2fs of audio)", duration)
-            if await self._palm_during(duration + PLAYBACK_MARGIN_SECONDS):
+            if await self._palm_during(duration + PLAYBACK_MARGIN_SECONDS, session_id, turn, generation):
                 log.info("open palm seen, stopping daemon audio")
                 with contextlib.suppress(Exception):
                     await asyncio.to_thread(self._player.stop_audio)
@@ -550,7 +573,7 @@ class VoiceConversation:
             await report(RobotVoiceState.ERROR, "Speaker playback failed")
         return False
 
-    async def _palm_during(self, seconds: float) -> bool:
+    async def _palm_during(self, seconds: float, session_id: str, turn: int, generation: int) -> bool:
         """Waits `seconds`, or less if an open palm is seen first. A
         failing watcher leaves the reply playing to its end."""
         if not self._palm_stop_ready or self._stop_gesture is None:
@@ -558,7 +581,7 @@ class VoiceConversation:
             return False
         loop = asyncio.get_running_loop()
         end = loop.time() + seconds
-        watch = asyncio.ensure_future(self._stop_gesture.wait())
+        watch = asyncio.ensure_future(self._stop_gesture.wait(session_id, turn, generation))
         try:
             done, _ = await asyncio.wait({watch}, timeout=seconds)
             if watch in done:
