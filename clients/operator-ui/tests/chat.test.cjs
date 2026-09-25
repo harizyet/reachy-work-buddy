@@ -12,6 +12,7 @@ test('web chat handles identities, replies, failures, login expiry, and fresh ta
   let telegramHealthy = false;
   let delayReply = false;
   let failReply = false;
+  let webSearch = null;
   let pendingReply;
   async function waitForPendingReply() {
     const deadline = Date.now() + 10000;
@@ -47,7 +48,7 @@ test('web chat handles identities, replies, failures, login expiry, and fresh ta
       const chunks = []; for await (const chunk of req) chunks.push(chunk);
       const body = JSON.parse(Buffer.concat(chunks)); messages.push(body);
       sessions.set(body.user_id, {interaction_mode: 'office', dnd: true, active_channel: 'web'});
-      const respond = () => failReply ? json(502, {detail: 'Core unavailable'}) : json(200, {reply: '<img src=x onerror="window.injection=true">\nA plain-text reply', delivery_channel: 'phone'});
+      const respond = () => failReply ? json(502, {detail: 'Core unavailable'}) : json(200, {reply: '<img src=x onerror="window.injection=true">\nA plain-text reply', delivery_channel: 'phone', web_search: webSearch});
       if (delayReply) { pendingReply = respond; return; }
       return respond();
     }
@@ -82,6 +83,41 @@ test('web chat handles identities, replies, failures, login expiry, and fresh ta
     await page.waitForFunction(() => document.querySelectorAll('.from-reachy').length === 1);
     assert.equal(await page.locator('#chat-transcript script, #chat-transcript img').count(), 0);
     assert.match(await page.locator('#chat-session').textContent(), /office.*DND: on.*web/);
+
+    assert.equal(await page.locator('.chat-search').count(), 0);
+    webSearch = {query: '<script>query</script>', failed: false, results: [
+      {title: '<img src=x onerror="window.injection=true">', url: 'https://example.com/source', snippet: '<script>snippet</script>', source_domain: 'example.com'},
+      {title: 'Unsafe URL', url: 'javascript:alert(1)', snippet: 'Plain text only', source_domain: 'invalid'},
+    ]};
+    await page.locator('#chat-text').fill('Latest news');
+    await page.locator('#chat-send').click();
+    const details = page.locator('.chat-search');
+    await details.waitFor();
+    assert.equal(await details.getAttribute('open'), null);
+    await details.locator('summary').focus();
+    await page.keyboard.press('Enter');
+    assert.equal(await details.locator('li').count(), 2);
+    assert.equal(await details.locator('a').count(), 1);
+    assert.equal(await details.locator('a').getAttribute('href'), 'https://example.com/source');
+    assert.equal(await details.locator('a').getAttribute('rel'), 'noopener noreferrer');
+    assert.equal(await details.locator('img, script').count(), 0);
+    assert.match(await details.textContent(), /<script>snippet<\/script>/);
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await details.locator('summary').click();
+    assert.equal(await details.getAttribute('open'), null);
+    // Voice replies use the same evidence presentation, including empty/failure states.
+    await page.evaluate(() => {
+      chat.appendVoiceTurn({outcome: 'spoken', reply: 'No sources', web_search: {query: 'empty', failed: false, results: []}});
+      chat.appendVoiceTurn({outcome: 'withheld', reply: 'Unavailable', web_search: {query: 'failed', failed: true, results: []}});
+    });
+    await page.locator('.chat-search').nth(1).locator('summary').click();
+    assert.match(await page.locator('.chat-search').nth(1).textContent(), /No results were found/);
+    await page.locator('.chat-search').nth(2).locator('summary').click();
+    assert.match(await page.locator('.chat-search').nth(2).textContent(), /The search failed/);
+    // Restore the original fixture transcript/counts for the lifecycle checks below.
+    await page.evaluate(() => [...document.querySelectorAll('.chat-message')].slice(2).forEach(item => item.remove()));
+    messages.pop();
+    webSearch = null;
 
     await page.locator('#force-frontier').check();
     failReply = true;

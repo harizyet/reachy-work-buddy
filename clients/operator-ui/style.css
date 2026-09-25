@@ -418,3 +418,12 @@ textarea:focus {
   padding:8px 0;
   overflow-wrap:anywhere
 }
+
+.chat-search { margin-top: .8rem; border-top: 1px solid #42536b; padding-top: .6rem; }
+.chat-search summary { cursor: pointer; color: #a8d8ff; min-height: 44px; }
+.chat-search summary:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.chat-search summary svg { width: 30px; height: 30px; vertical-align: middle; margin-right: .5rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.chat-search ol { padding-left: 1.5rem; }
+.chat-search li { margin: .8rem 0; overflow-wrap: anywhere; }
+.chat-search li small { display: block; color: #aebed0; }
+.chat-search .chat-search-query { color: #aebed0; }

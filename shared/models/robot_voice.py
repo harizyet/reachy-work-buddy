@@ -12,6 +12,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
+from shared.models.websearch import TurnWebSearch
+
 # Capability a robot advertises at WSS registration when it can capture.
 VOICE_CAPABILITY = "voice_conversation"
 # Advertised alongside it when the robot can continue a held turn (Phase
@@ -96,6 +98,7 @@ class VoiceTurnRecord(BaseModel):
     turn: int
     transcript: str | None = None
     reply: str | None = None
+    web_search: TurnWebSearch | None = None
     outcome: VoiceTurnOutcome
     reason: str | None = None
     # Segments merged into this turn by adaptive end of turn.

@@ -147,3 +147,20 @@ class SearchConfigPatch(BaseModel):
     api_key: str | None = Field(default=None, max_length=4096, repr=False)
     result_count: int | None = Field(default=None, ge=1, le=10)
     timeout_seconds: float | None = Field(default=None, gt=0, le=15)
+
+
+class SearchSource(BaseModel):
+    """A normalized result returned for one conversation turn."""
+
+    title: str
+    url: str
+    snippet: str
+    source_domain: str
+
+
+class TurnWebSearch(BaseModel):
+    """Core-authored search evidence; absent when the turn did not search."""
+
+    query: str
+    failed: bool = False
+    results: list[SearchSource] = Field(default_factory=list)

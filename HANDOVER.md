@@ -7,6 +7,15 @@ acceptance. This file holds only session continuation details.
 
 ## Current work
 
+Chat portal search indicators are implemented locally: a clickable Reachy
+search icon expands each searched turn's query, source links and snippets,
+including robot voice turns. Core supplies optional `web_search` evidence
+through existing hub responses; ordinary turns carry none. See the
+[Chat guide](docs/operator-guide.md#chat-phase-20). Verification: core/hub/shared
+non-slow suite 583 passed, 21 skipped; three Chromium chat/voice fixture tests
+passed, mobile UI inspected, and ruff passed. Search/model responses were
+fixtures; no live provider, deployment or robot activity was performed.
+
 [Phase 24f](docs/phase-24f.md) is in progress. Item 1 is measured on the
 Nano ([record](docs/verification/phase-24f-conformance-2026-09-25.md)).
 REST, the SDK (Testbench) path and Pollen's streaming method send the

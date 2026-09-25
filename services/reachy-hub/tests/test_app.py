@@ -652,3 +652,30 @@ def test_manual_flush_endpoint_delivers_queued_notifications() -> None:
     assert len(resp.json()) == 1
     assert resp.json()[0]["action"] == "interrupt"
     assert client.get("/notifications/hariz").json() == []
+
+
+def test_web_search_evidence_stays_with_its_turn_through_core_and_hub():
+    core = create_core_app(
+        llm_transport=httpx.MockTransport(lambda _: httpx.Response(200, json={
+            "choices": [{"message": {"content": "A grounded answer [S1]."}}],
+        })),
+        websearch_transport=httpx.MockTransport(lambda _: httpx.Response(200, json={
+            "results": [{"title": "News", "url": "https://example.com/news", "content": "Today's news"}],
+        })),
+    )
+    with TestClient(core) as config:
+        config.put("/settings/llm", json={"local": {"base_url": "http://model/v1", "model": "test"}})
+        config.put("/settings/websearch", json={"policy": "auto"})
+    client = make_hub_with_core_app(make_embodiment_app(), core)
+    message = {"user_id": "owner", "channel": "web", "text": "What is the latest news?"}
+    response = client.post("/messages", json=message)
+    assert response.status_code == 200
+    evidence = response.json()["web_search"]
+    assert evidence == {
+        "query": message["text"], "failed": False,
+        "results": [{"title": "News", "url": "https://example.com/news",
+                     "snippet": "Today's news", "source_domain": "example.com"}],
+    }
+    response = client.post("/messages", json={**message, "text": "Thanks"})
+    assert response.status_code == 200
+    assert response.json()["web_search"] is None

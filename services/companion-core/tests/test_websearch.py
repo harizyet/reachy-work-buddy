@@ -275,6 +275,7 @@ def test_builtin_provider_needs_no_base_url_and_hits_the_internal_address():
     assert resp.status_code == 200
     assert len(search_requests) == 1
     assert search_requests[0].startswith("http://searxng:8080/")
+    assert resp.json()["web_search"] == {"query": "anything", "failed": False, "results": []}
 
 
 def test_auto_policy_triggers_search_and_grounds_cited_answer():
@@ -365,6 +366,7 @@ def test_search_failure_on_warranted_turn_still_replies_with_failure_notice():
     client.put("/settings/websearch", json={"policy": "always", "fallback": "searxng", "base_url": "http://searxng.local"})
     resp = client.post("/conversation", json={**TURN, "text": "anything"})
     assert resp.status_code == 200
+    assert resp.json()["web_search"] == {"query": "anything", "failed": True, "results": []}
     sent_messages = llm_requests[-1]["messages"]
     assert any("unavailable" in m["content"] for m in sent_messages if m["role"] == "system")
 

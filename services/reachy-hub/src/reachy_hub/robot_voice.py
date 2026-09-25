@@ -77,6 +77,7 @@ from shared.models.robot_ws import (
     WSMessageType,
 )
 from shared.models.session import Channel, PrivacyContext
+from shared.models.websearch import TurnWebSearch
 from shared.protocols.operator_api import (
     ROBOT_VOICE,
     ROBOT_VOICE_RENEW,
@@ -433,6 +434,7 @@ async def _send(connection: RobotConnection, message: dict) -> bool:
 class ConversationReply:
     reply: str
     delivery_channel: Channel
+    web_search: TurnWebSearch | None = None
 
 
 @dataclass
@@ -553,6 +555,7 @@ async def _answer(
         log.exception("robot voice turn: conversation failed")
         return finish(VoiceTurnOutcome.FAILED, transcript=transcript, reason="Companion core did not reply"), None
     timings["conversation_ms"] = _elapsed_ms(started)
+    timings["web_search"] = result.web_search
     if not manager.is_current(session, turn):
         return finish(
             VoiceTurnOutcome.CANCELLED, transcript=transcript, reply=result.reply, reason="Stopped", **timings

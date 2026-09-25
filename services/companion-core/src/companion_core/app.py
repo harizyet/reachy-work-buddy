@@ -237,7 +237,12 @@ from shared.models.persona import PersonaConfig, PersonaPatch
 from shared.models.rag import DocumentChunk, RetrievedChunk
 from shared.models.response import Privacy, Urgency
 from shared.models.session import InputModality
-from shared.models.websearch import SearchConfig, SearchConfigPatch
+from shared.models.websearch import (
+    SearchConfig,
+    SearchConfigPatch,
+    SearchSource,
+    TurnWebSearch,
+)
 from shared.protocols.operator_api import (
     LLM_SETTINGS,
     LLM_USAGE,
@@ -257,6 +262,7 @@ class ConversationTurnRequest(BaseModel):
 
 
 class ConversationTurnResponse(BaseModel):
+    web_search: TurnWebSearch | None = None
     reply: str
     turn_count: int
     privacy: Privacy
@@ -627,6 +633,7 @@ def create_app(
             return await process_conversation_turn(turn)
 
     async def process_conversation_turn(turn: ConversationTurnRequest) -> ConversationTurnResponse:
+        web_search = None
         generation = conversation_store.generation
         history = conversation_store.append(turn.session_id, turn.channel, turn.text)
 
@@ -896,6 +903,7 @@ def create_app(
                             query = localize_query(topic_query, persona.location)
                             attempts = []
                             results = []
+                            failed = False
                             started = time.monotonic()
                             try:
                                 results = await search_with_rotation(
@@ -904,10 +912,18 @@ def create_app(
                                 )
                                 grounding_messages = build_grounding_messages(searched=True, failed=False, results=results)
                             except SearchProviderError:
+                                failed = True
                                 # Never silently fall back to an ungrounded answer
                                 # when a search was actually warranted — the LLM
                                 # call still proceeds, but is told search failed.
                                 grounding_messages = build_grounding_messages(searched=True, failed=True, results=[])
+                            web_search = TurnWebSearch(
+                                query=query, failed=failed,
+                                results=[SearchSource(
+                                    title=r.title, url=r.url, snippet=r.snippet,
+                                    source_domain=r.source_domain,
+                                ) for r in results],
+                            )
                             served = attempts[-1].provider if attempts and attempts[-1].outcome == "ok" else None
                             app.state.search_log.record(SearchLogEntry(
                                 at=datetime.now(UTC), query=query, policy=search_config.policy.value,
@@ -946,7 +962,9 @@ def create_app(
                 turn_count=0, privacy=Privacy.WORK_PRIVATE,
             )
         conversation_store.record_reply(turn.session_id, reply, privacy, carried=carried)
-        return ConversationTurnResponse(reply=reply, turn_count=len(history), privacy=privacy)
+        return ConversationTurnResponse(
+            reply=reply, turn_count=len(history), privacy=privacy, web_search=web_search,
+        )
 
     @app.post("/calendar/events")
     async def add_calendar_event(event: CalendarEvent) -> CalendarEvent:

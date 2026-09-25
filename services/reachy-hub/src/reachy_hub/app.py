@@ -207,6 +207,7 @@ from shared.models.session import (
     InteractionMode,
     PrivacyContext,
 )
+from shared.models.websearch import TurnWebSearch
 from shared.protocols.operator_api import (
     ROBOT_VOICE,
     ROBOTS,
@@ -236,6 +237,7 @@ class InboundMessage(BaseModel):
 
 
 class MessageResponse(BaseModel):
+    web_search: TurnWebSearch | None = None
     session_id: str
     conversation_id: str
     active_channel: Channel
@@ -1176,6 +1178,7 @@ def create_app(
             delivery_channel=delivery_channel,
             privacy=privacy,
             reply=result["reply"],
+            web_search=result.get("web_search"),
         )
 
     @app.post("/messages")
@@ -1235,7 +1238,10 @@ def create_app(
         response = await handle_inbound_message(
             InboundMessage(user_id=user_id, channel=Channel.REACHY, text=transcript, input_modality=InputModality.VOICE)
         )
-        return ConversationReply(reply=response.reply, delivery_channel=response.delivery_channel)
+        return ConversationReply(
+            reply=response.reply, delivery_channel=response.delivery_channel,
+            web_search=response.web_search,
+        )
 
     async def voice_session_flags(user_id: str) -> tuple[bool, PrivacyContext]:
         session = await app.state.session_store.get_by_user(user_id)

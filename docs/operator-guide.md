@@ -34,6 +34,13 @@ preserve the draft and warn that processing may already have happened;
 there is no automatic retry. User/assistant text is rendered literally,
 including any HTML-looking content.
 
+Replies that performed a web search show a Reachy search icon with a result
+count. Click it (or focus it and press Enter) to expand the query, source
+links and snippets. Source labels such as `[S1]` match the search result
+order. Empty results and failed searches are labeled explicitly. This also
+applies to robot microphone replies displayed in Chat; ordinary turns have
+no search indicator. Search details clear with the visible transcript.
+
 The transcript is only the current tab's view: refresh, logout, user
 switch, or “Clear view” removes displayed messages. This does not erase
 work memory or reset the companion session. There is no chat-history API

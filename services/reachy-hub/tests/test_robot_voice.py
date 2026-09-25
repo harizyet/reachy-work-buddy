@@ -1037,3 +1037,23 @@ def test_palm_stop_off_tells_the_robot_and_refuses_frames() -> None:
             assert palm_frame(client, start["voice_session_id"], 1, generation).status_code == 404
         finally:
             ws.__exit__(None, None, None)
+
+
+def test_voice_turn_retains_search_evidence_for_portal():
+    from shared.models.websearch import TurnWebSearch
+
+    manager, *_ = make_manager()
+    session = asyncio.run(manager.start(ROBOT_ID, "owner"))
+    pipeline = ScriptedPipeline("What's the latest news?").build()
+    evidence = TurnWebSearch(query="latest news", results=[])
+
+    async def converse(user_id, text):
+        return ConversationReply(
+            reply="No results", delivery_channel=Channel.REACHY, web_search=evidence,
+        )
+
+    pipeline.converse = converse
+    outcome, audio = segment(manager, session, pipeline, 1)
+    assert outcome == VoiceTurnOutcome.SPOKEN
+    assert audio == b"audio"
+    assert session.turns[-1].web_search == evidence

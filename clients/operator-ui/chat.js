@@ -12,6 +12,58 @@ function telegramLabel(telegram) {
 const REACHY_COMMANDS = ['/reachy standby', '/reachy wake', '/reachy status'];
 const SUGGESTED_COMMAND_PATTERN = /\/reachy (standby|wake|status)\b/;
 
+// Search evidence belongs to this reply, never the global debug log.
+function searchDetails(search) {
+  const details = document.createElement('details');
+  details.className = 'chat-search';
+  const summary = document.createElement('summary');
+  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  icon.setAttribute('viewBox', '0 0 32 32');
+  icon.setAttribute('aria-hidden', 'true');
+  // Reachy's antennae, rounded head and eyes, with a search lens.
+  for (const d of ['M9 9 6 3M21 9l3-6', 'M7 9h15a4 4 0 0 1 4 4v7a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4v-7a4 4 0 0 1 4-4Z', 'M10 15v3m8-3v3', 'M28 25a5 5 0 1 1-10 0 5 5 0 0 1 10 0Zm-1 4 4 2']) {
+    const path = document.createElementNS(icon.namespaceURI, 'path');
+    path.setAttribute('d', d);
+    icon.append(path);
+  }
+  const label = document.createElement('span');
+  label.textContent = search.failed ? 'Web search unavailable' : `Web search · ${search.results.length} results`;
+  summary.append(icon, label);
+  const query = document.createElement('p');
+  query.className = 'chat-search-query';
+  query.textContent = `Searched: ${search.query}`;
+  details.append(summary, query);
+  if (search.failed || !search.results.length) {
+    const status = document.createElement('p');
+    status.textContent = search.failed ? 'The search failed. No results were available for this reply.' : 'No results were found.';
+    details.append(status);
+  }
+  const list = document.createElement('ol');
+  for (const [index, result] of search.results.entries()) {
+    const item = document.createElement('li');
+    let url;
+    try {
+      const parsed = new URL(result.url);
+      if (['https:', 'http:'].includes(parsed.protocol) && !parsed.username && !parsed.password) url = parsed.href;
+    } catch { /* Invalid source URLs remain plain text. */ }
+    const title = document.createElement(url ? 'a' : 'span');
+    title.textContent = `[S${index + 1}] ${result.title || result.source_domain || result.url}`;
+    if (url) {
+      title.href = url;
+      title.target = '_blank';
+      title.rel = 'noopener noreferrer';
+    }
+    const domain = document.createElement('small');
+    domain.textContent = result.source_domain;
+    const snippet = document.createElement('p');
+    snippet.textContent = result.snippet;
+    item.append(title, domain, snippet);
+    list.append(item);
+  }
+  if (list.children.length) details.append(list);
+  return details;
+}
+
 function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
   const el = id => document.getElementById(id);
   let user = null;
@@ -44,13 +96,14 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
     el('chat-form').requestSubmit();
   }
 
-  function appendMessage(speaker, text, {fromUser = speaker === 'You', note = false} = {}) {
+  function appendMessage(speaker, text, {fromUser = speaker === 'You', note = false, webSearch = null} = {}) {
     el('chat-empty')?.remove();
     const item = document.createElement('article');
     item.className = `chat-message ${fromUser ? 'from-user' : 'from-reachy'}${note ? ' voice-note' : ''}`;
     const label = document.createElement('strong'); label.textContent = speaker;
     const body = document.createElement('p'); body.textContent = text;
     item.append(label, body);
+    if (!fromUser && webSearch) item.append(searchDetails(webSearch));
     // Phase 24b: a suggested-command reply renders as a real button, not
     // by re-parsing the reply text as HTML — clicking it re-sends the
     // literal command text through the normal /messages path, the same
@@ -168,7 +221,7 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
         body: JSON.stringify({user_id: recipient, channel: 'web', text, input_modality: 'text', ...(forceFrontier ? {force_frontier: true} : {})}),
       });
       if (generation !== version || !isLoggedIn()) return;
-      appendMessage('Reachy', result.reply);
+      appendMessage('Reachy', result.reply, {webSearch: result.web_search});
       el('chat-status').textContent = '';
       await refreshSession();
     } catch (error) {
@@ -197,8 +250,8 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
   // sees one conversation across speech and typing. Text stays literal.
   function appendVoiceTurn(turn) {
     if (turn.transcript) appendMessage('You · spoken to Reachy', turn.transcript, {fromUser: true});
-    if (turn.outcome === 'spoken') appendMessage('Reachy · said aloud', turn.reply || '');
-    else if (turn.outcome === 'withheld') appendMessage(`Reachy · not spoken (${turn.reason || 'withheld'})`, turn.reply || '');
+    if (turn.outcome === 'spoken') appendMessage('Reachy · said aloud', turn.reply || '', {webSearch: turn.web_search});
+    else if (turn.outcome === 'withheld') appendMessage(`Reachy · not spoken (${turn.reason || 'withheld'})`, turn.reply || '', {webSearch: turn.web_search});
     else if (turn.outcome === 'no_speech') appendMessage('Reachy', 'I heard a sound but no words. Try again.', {note: true});
     else if (turn.outcome === 'failed') appendMessage('Reachy', `That turn failed: ${turn.reason || 'unknown error'}. Speak again when listening resumes.`, {note: true});
     else if (turn.outcome === 'cancelled') {
