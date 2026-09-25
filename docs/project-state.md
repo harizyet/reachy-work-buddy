@@ -74,9 +74,10 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
 - Adaptive end of turn (24e item 1) is implemented and tested in process
   and with real Silero/Whisper on simulated audio, not yet on the robot; the
   deployed robot still splits turns at 700 ms pauses until it is rebuilt.
-  The 24e item 2 search-rule fixes (closings, greetings, self-identity, bare
-  "now", unrelated follow-ups) and the STT name prompt are tested in process
-  only and not deployed. Acoustic echo and deliberate
+  The 24e item 2 search-rule fixes and STT name prompt are tested in process
+  only and not deployed. The local model passed the correctness set but
+  still sometimes misreports numbers from search results and answers
+  statements at length ([record](verification/phase-24e-correctness-2026-09-25.md)). Acoustic echo and deliberate
   silence/noise handling still need physical acceptance.
 - First LOCAL camera frames can take 9–12 s while GStreamer loads plugins.
   Docker 20.10.7 seccomp prevents the external scanner from spawning;

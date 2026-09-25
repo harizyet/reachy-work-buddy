@@ -18,7 +18,7 @@ session had started the same policy rewrite and disconnected mid-edit; its
 version was kept and completed. Nothing is deployed: the homelab hub and
 Nano embodiment image still run the pre-24e turn path.
 
-Verification: ruff passed. Core 360 passed, 18 skipped; hub 197 passed,
+Verification: ruff passed. Core 380 passed, 18 skipped; hub 197 passed,
 9 skipped; `slow` real-speech tests (tiny.en, espeak via
 `/tmp/espeak-extract`) 11 passed, 1 skipped (no Piper model). In-process
 only, not physical acceptance.
@@ -27,10 +27,10 @@ The correctness set (`services/companion-core/eval/`), its
 [scoring rules](docs/phase-24e.md#correctness-set-scoring-rules) and the
 owner's threshold (≥90% overall, every category ≥80%) were committed before
 any measurement; plain statements with a freshness word no longer search.
-Next: measure on the homelab's local model (OVMS Qwen2.5-1.5B on
-localhost:8000, the same one homelab core uses), then record the result in
-a dated 24e verification record. Only if it fails, run the cloud model and
-re-check the voice latency budget; switching is the owner's call.
+The local model then passed it: 82/87 (94.3%), every category ≥ 87.5%,
+in the [correctness record](docs/verification/phase-24e-correctness-2026-09-25.md);
+the cloud model was not needed. Next: 24e item 4 (Nano diagnostics, needs
+the owner's approval for system changes), then the physical run.
 Deploy items 1–2 when the owner schedules the physical run. Phase 25
 remains blocked on the
 [hardware prerequisites](docs/phase-24e.md#prerequisites-for-phase-25).

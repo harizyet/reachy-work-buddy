@@ -118,6 +118,11 @@ These are dated evidence, not startup instructions or current health checks.
   remaining matrix rows and Nano diagnostics deferred to Phase 24e; motor
   inspection remains the owner's separate follow-up.
 
+- [Phase 24e correctness set](verification/phase-24e-correctness-2026-09-25.md):
+  in-process run of the voice-turn correctness set on the local model;
+  passed the owner's pre-agreed threshold, with grounded-number and
+  statement-length failures recorded.
+
 - [Phase 24b command authorization](verification/phase-24b-command-authorization-2026-09-24.md):
   isolated-fixture checks for the retired substring matcher's replacement
   (structured `/reachy` commands, the fail-closed suggestion classifier,

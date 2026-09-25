@@ -8,7 +8,9 @@ physically accepted. Item 2's search-rule fixes and STT vocabulary bias are
 implemented and tested in process (see the
 [note below](#implementation-notes-item-2)). The correctness set and its
 [scoring rules](#correctness-set-scoring-rules) and the owner's threshold
-are recorded; nothing has been measured yet. It follows [Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance),
+were recorded first. The local model then passed: 82 of 87 (94.3%), every
+category ≥ 87.5%
+([record](verification/phase-24e-correctness-2026-09-25.md)). It follows [Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance),
 which the owner closed on the conversation workflow on 2026-09-25, and it
 addresses what 24d found or deferred. Evidence for each issue is in the
 [24d record](verification/phase-24d-conversation-2026-09-24.md). Scope was
