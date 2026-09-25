@@ -380,7 +380,13 @@ AGENTS.md). Homelab test against a fake status server and a stub
 `systemctl`, four cases: error → one restart; error again in the same boot
 → no restart, exit 1 plus a `crit` journal line; a restart that errors
 again → exactly one restart, then exit 1; an unreachable daemon → nothing.
-Not yet installed on the Nano.
+**Installed on the Nano** at `00a5e68` (09:17:39 WIB). Its `python3` is
+3.6.9; the script's status check read `running` from the live daemon.
+`enable --now` left the daemon PID (9751) unchanged. The recovery unit is
+active with no journal entries and no marker. `--check` reports it
+installed, enabled and active. The restart and second-error paths remain
+fake-tested only: `state: error` cannot be forced, so the first real proof
+will be a boot where the wake-up fails.
 
 ## Latency budget (agreed before any timed turn)
 
@@ -428,6 +434,6 @@ and a Nano cold-reboot recovery check after the boot-race fix.
 | Privacy | OPEN | Live withholding observed (routing to web). Carry-over fix `c65c9cd`. Modes, DND and private call not yet exercised on the robot |
 | Consent and auth | OPEN | Covered off the robot in 24c tests; not yet on the robot |
 | Stop and expiry | PARTIAL | Stop during playback: 32 ms and 36 ms from stop receipt to daemon `stop_sound` (the robot-side stop marker came from `1a66f01`). Capture and inference cancellation, logout and expiry not yet run |
-| Recovery | PARTIAL | An unplanned WS drop (tailnet stall) ended the session cleanly, with no auto-reactivation and re-registration in 8 s. Hub restarts were recovered by reconnect. The Nano reboot exposed the camera-socket boot race: fix installed on the Nano 2026-09-25 and a live recovery passed ([details](#boot-race-fix-on-the-nano-2026-09-25)); cold reboot and daemon restart pass for the race and container lifecycle, but the head does not reach home, `stewart_5` lags and a mapped nod produced IK errors ([details](#boot-race-fix-on-the-nano-2026-09-25)). The owner found the robot physically fine: finding closed, `stewart_5` on watch. Once-per-boot auto-restart on `state: error` approved and implemented, pending Nano install |
+| Recovery | PARTIAL | An unplanned WS drop (tailnet stall) ended the session cleanly, with no auto-reactivation and re-registration in 8 s. Hub restarts were recovered by reconnect. The Nano reboot exposed the camera-socket boot race: fix installed on the Nano 2026-09-25 and a live recovery passed ([details](#boot-race-fix-on-the-nano-2026-09-25)); cold reboot and daemon restart pass for the race and container lifecycle, but the head does not reach home, `stewart_5` lags and a mapped nod produced IK errors ([details](#boot-race-fix-on-the-nano-2026-09-25)). The owner found the robot physically fine: finding closed, `stewart_5` on watch. Once-per-boot auto-restart on `state: error` approved, installed on the Nano (restart path fake-tested only) |
 | Coexistence and sustained use | PARTIAL | Step 3 coexistence PASS. The 30-minute session is not yet run |
 | Timing and quality | OPEN | Budgets agreed: non-search p50 ≤ 4 s, p95 ≤ 8 s; each search-assisted turn ≤ 20 s. Preliminary timings above; the formal run is pending |

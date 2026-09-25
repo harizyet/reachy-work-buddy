@@ -27,7 +27,7 @@ To close 24d, in order:
    lifecycle pass. The boot wake-up once failed (`time value is out of
    range`), leaving the daemon in `state: error`. The owner approved an
    automatic restart **once per boot**: `reachy-daemon-recovery.service`,
-   tested with fakes on the homelab, **to install and verify on the Nano**.
+   installed on the Nano at `00a5e68`; the restart path is fake-tested only.
    Odd head-pose/IK readings (`stewart_5` lagging) came up. The owner found
    the robot physically fine, so the finding is closed; keep `stewart_5`
    on watch. See the
