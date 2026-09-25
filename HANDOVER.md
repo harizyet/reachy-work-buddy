@@ -7,30 +7,33 @@ acceptance. This file holds only session continuation details.
 
 ## Current work
 
-[Phase 24f](docs/phase-24f.md) now has a draft plan for motion conformance,
-startup home and conversational animation, linked from the roadmap. No motion
-code, deployment or physical checks were performed in this planning session.
-24f item 1 has started. The [1.8.4 source trace](docs/verification/phase-24f-source-2026-09-25.md)
-(source plus mockup-sim, no robot) settled the home targets, the wake-up
-completion signal and UUID cancellation. It also found that overlapping
-REST moves both run. `ReachyDaemonBackend` now stops its previous move
-before starting another, and before standby and at shutdown
-([ADR 0003 amendment](docs/adr/0003-embodiment-command-api.md#phase-24f-move-preemption-amendment-2026-09-25)).
-This is checked against a mockup-sim daemon and is not deployed; the
-embodiment image on the Nano is unchanged. Embodiment tests: 84 passed, 5
-skipped, after fixing two test STT fakes missing 24e's `vocabulary`
-keyword. A later session pinned the Testbench at `480b0cc`. It uses the SDK
-WebSocket path into the same backend `goto_target` as REST, but REST
-ignores interpolation, keeps body yaw when it's omitted, and accepts a
-misspelled pose key as identity. It also found that 1.8.4 has daemon-side
-speech wobble on `play_sound`, where `stop_sound` leaves the last offset
-applied ([trace](docs/verification/phase-24f-source-2026-09-25.md#testbench-and-sdk-path-compared-with-rest)).
-All of this is from source only. The Nano was offline (no LAN route;
-Tailscale last seen 6 h earlier), so its daemon version is still
-unconfirmed: next, run `reachy-venv/bin/pip show reachy-mini` and
-`GET /api/daemon/status` there (read-only). Timing budgets and the
-unattended-home policy still need settling before physical rollout. The 24e work below remains
-outstanding.
+[Phase 24f](docs/phase-24f.md) is in progress and blocked on hardware.
+This session worked with the Nano-side session, with the owner at the
+robot. The [conformance record](docs/verification/phase-24f-conformance-2026-09-25.md)
+has the versions: daemon and SDK 1.8.4, hardware id `43c05f5047e8dcfe`.
+REST and the SDK (Testbench) path command the same poses (≤0.005 rad),
+but the robot misses them on both. Several motors stop about 3° short
+without settling. For an encoder-reported 16° yaw, the owner saw no head
+motion and heard the motors. A mechanical fault between the motors and the
+head is suspected but not inspected. Repair is outside 24f. Stopped
+advice: park with the owner-approved standby before any hands-on check.
+Don't run further motion cases until the owner has inspected it. The
+remaining conformance cases (antennas, body yaw, interp, cancel, recorded,
+preempt, visible-sdk) were not run. The Nano session was still sending the
+second round's full jsonl.
+
+The motion owner (`reachy_embodiment/motion.py`, `4f43817`) is implemented,
+with its [ADR 0003 amendment](docs/adr/0003-embodiment-command-api.md#phase-24f-motion-ownership-amendment-2026-09-25):
+`CONVERSATION_MOTION_ENABLED` and `SPEECH_WOBBLE_ENABLED`, both off. It
+was decided not to add a startup home, because 1.8.4's wake-up already
+ends at IDLE_HOME. Tests are fake-backend and in-process only: embodiment
+125 passed, 6 skipped, and ruff passes. The launcher passthrough is
+untested on the Nano. Nothing is deployed: the Nano checkout was pulled to
+`17a8ef9` for the conformance script, but the embodiment image is still
+from 2026-09-24. `deploy/reachy/motion-conformance.py` runs one bounded
+case per `--run`. Its SDK cases now reacquire daemon media: a 1.8.4
+`no_media` SDK client releases the daemon's camera for everyone, which
+blocked the embodiment start once.
 
 The owner added [24e item 5](docs/phase-24e.md#5-open-palm-stop): a held
 open palm stops a spoken reply and Reachy listens again. It is implemented

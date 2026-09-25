@@ -1,6 +1,12 @@
 # Phase 24f — Motion conformance and conversational embodiment
 
-Status: **draft plan, not implemented or physically accepted** (2026-09-25).
+Status: **in progress; physical rows blocked on a suspected mechanical
+fault** (2026-09-25). Item 1 is measured: REST and SDK agree, but the robot
+misses commanded poses on both paths
+([conformance record](verification/phase-24f-conformance-2026-09-25.md)).
+Item 3's motion owner is implemented behind two off-by-default switches
+([ADR 0003 amendment](adr/0003-embodiment-command-api.md#phase-24f-motion-ownership-amendment-2026-09-25)).
+Item 2 settled on no startup home. Nothing is deployed or accepted.
 Validate motion against Pollen's version-matched SDK/Testbench, establish a
 verified home after wake-up, and express conversation state locally on Reachy.
 The LLM does not select trajectories or authorize motion.

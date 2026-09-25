@@ -90,4 +90,68 @@ cases matched the source trace:
 
 ## Physical results
 
-Pending: to be run with the owner present.
+Run on the Nano by the Nano-side session, with the owner at the robot and
+approving each case. `reachy-embodiment` was stopped first, and the daemon
+was left running. The first round started 09:34:19Z at `e8ee988`. The
+second round used `17a8ef9`, which added joint telemetry, late reads and
+media reacquisition. `nb_error` stayed 0 throughout. The daemon journal
+showed no IK, overheat or warning lines. Its only traceback is the expected
+`KeyError` behind `failure-rest`'s HTTP 500.
+
+| Case | Result | Evidence |
+|---|---|---|
+| failure-rest | PASS | 422 bad interpolation, 404 unknown move, 500 unknown stop UUID; head moved 0.0001 rad; no running move |
+| home | Recorded | roll 0.033, pitch 0.034, yaw 0.011; antennas `[-0.178, 0.175]`. Owner: "seems fine" |
+| zero-rest | PASS | roll 0.032, pitch 0.039, yaw 0.010; antennas `[-0.002, 0.0]`. Owner saw no change |
+| zero-sdk | PASS | roll 0.034, pitch 0.046, yaw 0.006. Already at ZERO |
+| axes-rest (first run) | **FAIL** | Signs correct. Reached roll +0.096 / −0.050, pitch +0.092 / −0.039, yaw +0.080 / −0.059 of ±0.1 / ±0.1 / ±0.15. Cross-axis changes up to 0.067 |
+| axes-sdk | **FAIL**, same as REST | Same targets over the SDK: roll +0.075 / −0.053, pitch +0.093 / −0.039, yaw +0.080 / −0.060 |
+| axes-rest (second run) | **FAIL** | Within about 0.005 rad of axes-sdk at every row. Returns to ZERO barely moved: yaw stayed 0.078 after +0.15 and −0.059 after −0.15, pitch 0.061 after +0.1. Late reads 2 s later were identical |
+| visible-rest | **FAIL** | Yaw −0.063 → +0.223 for a +0.3 target, then +0.114 after returning to 0. Owner watched from the front: "It looked like it didn't move but I hear the motors move" |
+| visible-sdk, antennas, body yaw, interp, cancel, recorded, preempt | Not run | Stopped after visible-rest |
+
+The owner saw no head motion in any case. Earlier they said "the movements
+are so small it's not really visually noticable".
+
+### Analysis
+
+- **REST and SDK agree.** Both paths gave the same result to about
+  0.005 rad in every axis case, so the REST path matches the Testbench's
+  SDK path at the command level. This is the question item 1 asked. The
+  interpolation, omitted body yaw and cancellation differences are already
+  settled from source and mockup-sim.
+- **The readback is self-consistent.** After the first axes-rest, the
+  encoder joints were `[0.002, 0.571, -0.623, 0.597, -0.627, 0.575,
+  -0.598]`. The daemon's own 1.8.4 IK commands 0 and ±0.6265 for identity.
+  The shortfalls were stewart_1 −0.056, stewart_3 −0.030, stewart_5 −0.052
+  and stewart_6 +0.029. FK of these joints (computed offline with the same
+  engine) gives yaw −0.0565, as reported. So the pose readback reflects
+  the encoders: several motors stop about 3° short of their goals, from
+  either direction, and do not creep closer over 2 s.
+- **The head is not following the motors.** The encoders report a 16°
+  yaw that the owner did not see, with motor noise. The joints stop short
+  without settling, and the result depends on the direction of approach.
+  Together this points to a mechanical fault between the motors and the
+  head, such as horn slip, loose screws, a slack rod or ball joint, or a
+  detached head shell, or to binding. It has not been inspected. It would
+  also be consistent with 24d's `stewart_5` heat and drift.
+- **Testbench discrepancy.** This contradicts the owner's earlier report of
+  successful Testbench rotations, since the Testbench uses the same SDK
+  path. When and on which boot that run happened is not recorded.
+
+Result: the item 1 conformance rows are **BLOCKED on hardware**. The
+command paths conform. The robot does not reach commanded poses within
+tolerance on either path, and the owner could not see the motion. Motion
+work that depends on accurate poses stays disabled until the mechanism is
+inspected. Repair is outside Phase 24f.
+
+### SDK media side effect
+
+In 1.8.4, `ReachyMini(media_backend="no_media")` calls `release_media()` on
+connect. This releases the daemon's camera and audio for every client, and
+the media is not restored on disconnect. After the first SDK case the
+camera socket was gone. `reachy-embodiment`'s start then waited in
+`wait-media-socket.sh` until `POST /api/media/acquire` restored it, which
+was done with the owner's OK and involved no motion. `17a8ef9` reacquires
+media after every SDK case. Nothing that shares the daemon with the
+embodiment's camera or voice should use a `no_media` SDK client.

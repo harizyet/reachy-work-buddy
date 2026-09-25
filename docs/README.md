@@ -133,6 +133,10 @@ These are dated evidence, not startup instructions or current health checks.
   pinned 1.8.4 daemon source plus a mockup-sim probe; overlapping REST moves
   both run, real UUID stop exists, `running` follows wake-up; no robot.
 
+- [Phase 24f motion conformance](verification/phase-24f-conformance-2026-09-25.md):
+  Nano versions, predeclared tolerances, supervised REST vs SDK run; paths
+  agree, robot misses commanded poses on both; blocked on hardware.
+
 - [Phase 24b command authorization](verification/phase-24b-command-authorization-2026-09-24.md):
   isolated-fixture checks for the retired substring matcher's replacement
   (structured `/reachy` commands, the fail-closed suggestion classifier,

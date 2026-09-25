@@ -64,10 +64,14 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
 - Earlier companion/daemon runs during 24d showed `stewart_5` overheating
   and anomalous tracking (lag and drift). The owner subsequently reported
   successful zeroing and rotation tests using the official Pollen Reachy Mini
-  Testbench, with no observed issue. A persistent hardware fault is therefore
-  not established. [Phase 24f](phase-24f.md#1-motion-conformance) will compare
-  the deployed motion path against the pinned official reference before
-  drawing further conclusions.
+  Testbench, with no observed issue. The 24f conformance run on 2026-09-25
+  then found that REST and the SDK (Testbench) path command the same poses,
+  but the robot misses them on both. Several motors stop about 3° short,
+  and the owner saw no head motion for an encoder-reported 16° yaw while
+  hearing the motors
+  ([record](verification/phase-24f-conformance-2026-09-25.md#analysis)).
+  A mechanical fault between the motors and the head is suspected. It has
+  not been inspected, and pose-dependent motion stays disabled.
 - An unplanned Nano power loss at 02:38:20Z reported `TEGRA_POWER_ON_RESET`,
   with no undervoltage logged. A supply dropout is suspected, not proven.
   Its RTC loses time across power-offs; pre-NTP journal timestamps are stale.
