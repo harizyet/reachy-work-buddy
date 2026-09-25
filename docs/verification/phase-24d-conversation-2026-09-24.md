@@ -442,7 +442,11 @@ At 02:26:29Z the owner chose torque off
 (`/api/motors/set_mode/disabled`). The head stayed where it was, within
 0.06 rad per joint, which points to friction or binding rather than sag.
 The flag was still reported 3 min later; it may be the servo's latched
-error status. This reverses the earlier "physically fine" reading. **Robot
+error status. Daemon 1.8.4 has no HTTP endpoint for motor temperature or
+error registers. `/api/motors/status` returns only the mode, and
+`POST /health-check` only resets a keepalive watchdog. The serial port
+belongs to the daemon, so the flag can't be read directly while it runs.
+Clearing it needs a motor reboot or power cycle, which is the owner's call. This reverses the earlier "physically fine" reading. **Robot
 work is paused until the owner has inspected `stewart_5`**, and the formal
 run must be repeated: all three context checks, plus Session B.
 
