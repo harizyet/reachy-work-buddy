@@ -261,8 +261,10 @@ search-assisted turns, and does not gate on answer accuracy
 Utterance end → first audible reply, over the live turns:
 **p50 ≤ 4 s, p95 ≤ 8 s.** Agreed with the owner on 2026-09-24 before step 3.
 As of 2026-09-25 this budget applies to **non-search** turns. Search-assisted
-turns get their own budget, to be agreed with the owner before the formal
-run (not yet agreed).
+turns get their own budget: **each search-assisted turn ≤ 20 s** utterance
+end → first audible reply. Agreed with the owner on 2026-09-25 before the
+formal run. It is a per-turn cap rather than p50/p95 because the run has
+only one or two search turns.
 
 ## Preliminary timings (not the formal timed run)
 
@@ -302,4 +304,4 @@ and a Nano cold-reboot recovery check after the boot-race fix.
 | Stop and expiry | PARTIAL | Stop during playback: 32 ms and 36 ms from stop receipt to daemon `stop_sound` (the robot-side stop marker came from `1a66f01`). Capture and inference cancellation, logout and expiry not yet run |
 | Recovery | PARTIAL | An unplanned WS drop (tailnet stall) ended the session cleanly, with no auto-reactivation and re-registration in 8 s. Hub restarts were recovered by reconnect. The Nano reboot exposed the camera-socket boot race: fix implemented 2026-09-25 (`reachy-embodiment.service`, `--mount`, no Docker restart policy), awaiting Nano install and a real-reboot check |
 | Coexistence and sustained use | PARTIAL | Step 3 coexistence PASS. The 30-minute session is not yet run |
-| Timing and quality | OPEN | Non-search budget p50 ≤ 4 s, p95 ≤ 8 s agreed; search-turn budget still to agree. Preliminary timings above; the formal run is pending |
+| Timing and quality | OPEN | Budgets agreed: non-search p50 ≤ 4 s, p95 ≤ 8 s; each search-assisted turn ≤ 20 s. Preliminary timings above; the formal run is pending |

@@ -32,8 +32,8 @@ To close 24d, in order:
    container started after the daemon, and camera and voice work with no
    sudo step. Also confirm `sudo systemctl restart reachy-mini-daemon`
    restarts the container and the camera still works.
-2. **Agree the search-turn latency budget** with the owner (the non-search
-   budget stays p50 ≤ 4 s, p95 ≤ 8 s).
+2. ~~Agree the search-turn latency budget~~ Done 2026-09-25: each
+   search-assisted turn ≤ 20 s (non-search stays p50 ≤ 4 s, p95 ≤ 8 s).
 3. **Formal run** of the matrix rows. The results table is still mostly
    OPEN/PARTIAL.
 
