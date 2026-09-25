@@ -116,7 +116,7 @@ reachy-hub removes `[S…]` markers and markdown symbols before synthesis
 (`reachy_hub.tts.spoken_text`). Core adds a short-plain-reply instruction to
 VOICE-modality generic turns only.
 
-## Addendum: hosted provider rotation within free tiers (Phase 24d, 2026-09-25)
+## Addendum: hosted provider rotation within free tiers (24a follow-up, 2026-09-25)
 
 A single hosted provider on its free tier would run out of monthly quota,
 and falling back to scraped SearXNG from one home address brings back the
@@ -145,7 +145,7 @@ bills the card on file beyond its monthly credit, so its limit is the only
 safeguard. That is why the defaults (900) sit below each allowance and are
 owner-editable.
 
-## Addendum: follow-up searches and owner context (Phase 24d, 2026-09-25)
+## Addendum: follow-up searches and owner context (24a follow-up, 2026-09-25)
 
 A live multi-turn test showed follow-ups ("When was it released?") never
 searched under Auto, and a chained follow-up lost its subject because only

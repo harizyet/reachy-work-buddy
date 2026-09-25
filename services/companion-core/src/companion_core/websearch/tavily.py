@@ -1,4 +1,4 @@
-"""Tavily Search API adapter (Phase 24d). Like Brave, a hosted provider
+"""Tavily Search API adapter (Phase 24a follow-up). Like Brave, a hosted provider
 receives the query itself."""
 
 from __future__ import annotations

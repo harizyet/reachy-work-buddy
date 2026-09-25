@@ -9,8 +9,8 @@ the homelab host and one running locally on nano-1. **In progress.**
 
 | Item | Value |
 |---|---|
-| Hub/core host | Homelab, Compose project `reachy-homelab`, Caddy on `:8080`, commit `40ae760` plus the launcher fix below |
-| Schema | `006_search_config`, upgraded from `004_persona` after a `pg_dump` backup |
+| Hub/core host | Homelab, Compose project `reachy-homelab`, Caddy on `:8080`. Initial run: commit `40ae760` plus the launcher fix below; later `af27338`, then `0144209` plus uncommitted 24a search follow-ups (2026-09-25) |
+| Schema | Initial run: `006_search_config`, upgraded from `004_persona` after a `pg_dump` backup. 2026-09-25: `007_search_providers`, then `008_assistant_context`, each after a `pg_dump` |
 | Robot | nano-1 (`reachy-mini`, Jetson Nano, Tegra 4.9.253), WSS over the tailnet to `http://<homelab>.ts.net:8080/hub` |
 | Daemon | `reachy-mini-daemon` 1.8.4, systemd-enabled, running since 13:20:45 UTC, `simulation_enabled=false`; not restarted for this test |
 | STT | faster-whisper `base.en`, int8, CPU, in reachy-hub; model pre-loaded before the first timed turn (40 s cold load) |
@@ -247,42 +247,22 @@ its media server (`EPERM`). Recovery needs the owner (sudo, then a
 supervised daemon restart). A durable launcher fix needs a real reboot to
 verify.
 
-## Hosted search rotation and multi-turn check (2026-09-25)
+## Search-assisted answer quality moved to 24a (2026-09-25)
 
-Homelab core ran the provider rotation (`0144209`), follow-up search and
-owner context (migration `008`), with policy Auto, 5 results and location
-Singapore (Asia/Singapore). The same scripted session of 11 turns went
-through real core `/conversation` with live providers and the local Qwen
-model. These are homelab-side core calls, not robot audio turns.
-
-- **Keys.** Brave, Exa and Tavily each returned relevant results in
-  0.8–2.1 s when called directly.
-- **Search selection.** Correct on every turn. Rotation spread 21 calls
-  evenly (7 each), with no failover. The follow-ups "When was it
-  released?", "What about tomorrow?", "How long has he been in office?"
-  and "Will it rain tomorrow?" searched using their thread's topic. Before
-  the fix they didn't search, and one chained follow-up searched for game
-  releases. A place-less weather question was searched as
-  "… in Singapore". The joke turn didn't search.
-- **Answers (local Qwen2.5-1.5B).** The Prime Minister answer and its start
-  date were correct. Other answers were wrong despite correct results:
-  - It named 3.14.6 as the latest Python when python.org's result showed
-    3.14.7, and dated its release to another version's date.
-  - It ignored this week's 3.15.0rc2 and 3.14.7 news results.
-  - Its time-in-office arithmetic was wrong even with today's date in
-    context.
-  - Weather replies repeated the same Fahrenheit figures turn after turn
-    ("10 % chance of rain" while a result said 100 %). Voice replies ran
-    past three sentences with disclaimers.
-- **Latency.** Search took 0.7–2.7 s. Whole core turns took 5–9 s for text
-  and 7–16.5 s for voice weather, which is over the p95 8 s budget. The
-  model's time grew with 5 results. Before, with 2 results, weather took
-  7.8 s.
+Hosted search rotation, follow-up search and owner-context work, and the live
+multi-turn search check, are 24a follow-up work. Their evidence is in the
+[24a record](phase-24a-search-assisted-2026-09-24.md#addendum--hosted-provider-rotation-and-multi-turn-check-2026-09-25).
+The 24d formal run uses deterministic context turns plus one or two separate
+search-assisted turns, and does not gate on answer accuracy
+([rule](../phase-24cd.md#phase-24d--physical-end-to-end-acceptance)).
 
 ## Latency budget (agreed before any timed turn)
 
 Utterance end → first audible reply, over the live turns:
 **p50 ≤ 4 s, p95 ≤ 8 s.** Agreed with the owner on 2026-09-24 before step 3.
+As of 2026-09-25 this budget applies to **non-search** turns. Search-assisted
+turns get their own budget, to be agreed with the owner before the formal
+run (not yet agreed).
 
 ## Preliminary timings (not the formal timed run)
 
@@ -308,17 +288,18 @@ against the budget.
 
 ## Results
 
-Status on 2026-09-25. Hosted search keys are verified live; the formal run
-still needs ≥10 robot turns with three context follow-ups.
+Status on 2026-09-25. The formal run still needs ≥10 robot turns with
+three deterministic context follow-ups, plus separate search-assisted turns,
+and a Nano cold-reboot recovery check after the boot-race fix.
 
 | Scenario | Result | Evidence |
 |---|---|---|
-| Normal conversation | OPEN | Live spoken turns work end to end. Answer accuracy failed (search/model), and no ≥10-turn run yet |
+| Normal conversation | OPEN | Live spoken turns work end to end. No ≥10-turn deterministic run yet. Search answer accuracy is tracked in 24a, not here |
 | Turn handling | OPEN | Short and long utterances and a `no_speech` segment were handled; no self-hearing seen. Silence, noise and echo not yet exercised deliberately |
 | Session continuity | OPEN | Not yet exercised on the robot (the web handoff was only in the 24c simulated run) |
 | Privacy | OPEN | Live withholding observed (routing to web). Carry-over fix `c65c9cd`. Modes, DND and private call not yet exercised on the robot |
 | Consent and auth | OPEN | Covered off the robot in 24c tests; not yet on the robot |
 | Stop and expiry | PARTIAL | Stop during playback: 32 ms and 36 ms from stop receipt to daemon `stop_sound` (the robot-side stop marker came from `1a66f01`). Capture and inference cancellation, logout and expiry not yet run |
-| Recovery | PARTIAL | An unplanned WS drop (tailnet stall) ended the session cleanly, with no auto-reactivation and re-registration in 8 s. Hub restarts were recovered by reconnect. The Nano reboot exposed the camera-socket boot race (open) |
+| Recovery | PARTIAL | An unplanned WS drop (tailnet stall) ended the session cleanly, with no auto-reactivation and re-registration in 8 s. Hub restarts were recovered by reconnect. The Nano reboot exposed the camera-socket boot race: fix implemented 2026-09-25 (`reachy-embodiment.service`, `--mount`, no Docker restart policy), awaiting Nano install and a real-reboot check |
 | Coexistence and sustained use | PARTIAL | Step 3 coexistence PASS. The 30-minute session is not yet run |
-| Timing and quality | OPEN | Budget p50 ≤ 4 s, p95 ≤ 8 s agreed. Preliminary timings above; the formal run is pending |
+| Timing and quality | OPEN | Non-search budget p50 ≤ 4 s, p95 ≤ 8 s agreed; search-turn budget still to agree. Preliminary timings above; the formal run is pending |

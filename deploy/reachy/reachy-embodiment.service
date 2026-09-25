@@ -1,0 +1,28 @@
+[Unit]
+Description=Reachy embodiment container (starts after the daemon's camera socket exists)
+# The container is created by scripts/start-reachy.sh (image, devices,
+# env, --mount of the camera socket, no Docker restart policy); this unit
+# only starts and stops it, so systemd, not Docker, decides when.
+#
+# BindsTo + After + WantedBy=reachy-mini-daemon.service: the container
+# starts only after the daemon, stops when the daemon stops, and starts
+# again when the daemon starts. The bind of the daemon's socket is fixed
+# to the socket file that existed when the container started, so a daemon
+# restart (which recreates the socket) must restart the container too.
+# Enabling this unit never starts the daemon: a boot or remote resume
+# that starts the daemon brings this container up afterwards.
+Requires=docker.service
+After=docker.service reachy-mini-daemon.service
+BindsTo=reachy-mini-daemon.service
+
+[Service]
+Type=simple
+# Hardcoded path for the same %h reason as reachy-mini-daemon.service.
+ExecStartPre=/home/reachy/reachy-work-buddy/deploy/reachy/wait-media-socket.sh 120
+ExecStart=/usr/bin/docker start --attach reachy-embodiment
+ExecStop=/usr/bin/docker stop reachy-embodiment
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=reachy-mini-daemon.service

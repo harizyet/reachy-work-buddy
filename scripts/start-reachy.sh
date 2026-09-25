@@ -116,6 +116,29 @@ fi
 # hardware testing (same fix already applied to ReachyDaemonBackend).
 DAEMON_STATUS_URL="http://127.0.0.1:8000/api/daemon/status"
 
+CAMERA_SOCKET=/tmp/reachymini_camera_socket
+EMBODIMENT_SERVICE="reachy-embodiment"
+
+# Read-only: the facts behind the Nano reboot race (see
+# deploy/reachy/wait-media-socket.sh).
+report_media_boot_state() {
+    if [[ -S "$CAMERA_SOCKET" ]]; then
+        log_info "$CAMERA_SOCKET is the daemon's socket"
+    elif [[ -d "$CAMERA_SOCKET" ]]; then
+        log_warn "$CAMERA_SOCKET is a directory — the reboot race happened; see HANDOVER/deployment recovery steps"
+    else
+        log_info "$CAMERA_SOCKET does not exist yet"
+    fi
+    if docker ps -a --filter "name=^/${CONTAINER_NAME}\$" -q 2>/dev/null | grep -q .; then
+        log_info "$CONTAINER_NAME restart policy: $(docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' "$CONTAINER_NAME"), legacy -v binds: $(docker inspect -f '{{len .HostConfig.Binds}}' "$CONTAINER_NAME")"
+    fi
+    if systemd_unit_installed "$EMBODIMENT_SERVICE"; then
+        log_info "${EMBODIMENT_SERVICE}.service installed, enabled: $(systemctl is-enabled "$EMBODIMENT_SERVICE" 2>/dev/null || true)"
+    else
+        log_info "${EMBODIMENT_SERVICE}.service not installed — the container does not start at boot"
+    fi
+}
+
 if [[ "$COMMON_CHECK_ONLY" -eq 1 ]]; then
     if systemctl is-active --quiet "$DAEMON_SERVICE"; then
         log_info "$DAEMON_SERVICE is active"
@@ -128,6 +151,7 @@ if [[ "$COMMON_CHECK_ONLY" -eq 1 ]]; then
     else
         log_info "$DAEMON_SERVICE is installed but not active (--check never starts it)"
     fi
+    report_media_boot_state
     log_info "--check complete. Nothing was started or moved."
     exit 0
 fi
@@ -194,17 +218,17 @@ fi
 
 # Phase 22b: reachy_mini's LOCAL media backend (ReachyDaemonBackend.
 # capture_frame) reads camera frames from this Unix socket, which the
-# daemon's own media_server creates once it's running (not present while
-# the daemon is in an error/stopped state — see docs/verification). --network
-# host does not share the filesystem namespace, so this still needs an
-# explicit bind mount even though both processes are on the same host.
-VOLUME_ARGS=()
-CAMERA_SOCKET=/tmp/reachymini_camera_socket
-if [[ -S "$CAMERA_SOCKET" ]]; then
-    VOLUME_ARGS+=(-v "${CAMERA_SOCKET}:${CAMERA_SOCKET}")
-else
-    log_warn "$CAMERA_SOCKET not found — daemon may not be running/healthy yet; camera capture will fail until it exists"
-fi
+# daemon's own media_server creates once it's running. --network host does
+# not share the filesystem namespace, so it needs an explicit bind mount.
+#
+# 24d reboot race: `--mount`, never `-v`. A `-v` bind whose source is
+# missing makes Docker create it as a root-owned directory, which then
+# stops the daemon creating its socket; `--mount` refuses to start instead.
+# The container is only started once the socket exists, and has no Docker
+# restart policy: reachy-embodiment.service starts it after the daemon.
+"${REACHY_DIR}/wait-media-socket.sh" 60 \
+    || die "the daemon's camera socket is not available (see the message above); not starting $CONTAINER_NAME"
+VOLUME_ARGS=(--mount "type=bind,src=${CAMERA_SOCKET},dst=${CAMERA_SOCKET}")
 
 # Phase 24c (ADR 0023): robot microphone conversation, opt-in via
 # VOICE_CONVERSATION_ENABLED=true in the env file. The SDK's LOCAL audio
@@ -240,6 +264,16 @@ for grp in dialout video audio; do
     fi
 done
 
+# A container created before the reboot-race fix (Docker restart policy,
+# `-v` bind) would recreate the root-owned directory at the next boot, so
+# it is replaced rather than reused. Recreating it moves nothing.
+if docker ps -a --filter "name=^/${CONTAINER_NAME}\$" -q | grep -q .; then
+    if [[ "$(docker inspect -f '{{.HostConfig.RestartPolicy.Name}} {{len .HostConfig.Binds}}' "$CONTAINER_NAME")" != "no 0" ]]; then
+        log_info "replacing $CONTAINER_NAME: it was created with a Docker restart policy or -v bind (reboot race)"
+        docker rm -f "$CONTAINER_NAME" >/dev/null
+    fi
+fi
+
 # Idempotent: starting twice must be safe (phase-22-23.md). An existing
 # stopped container is restarted, not duplicated; an already-running one
 # is left alone.
@@ -249,10 +283,9 @@ else
     if docker ps -a --filter "name=^/${CONTAINER_NAME}\$" -q | grep -q .; then
         # An existing container keeps the options it was created with;
         # changing VOICE_CONVERSATION_ENABLED needs `docker rm` first.
-        log_info "restarting existing $CONTAINER_NAME container (created options are kept; remove it to apply env-file changes)"
-        docker start "$CONTAINER_NAME" >/dev/null
+        log_info "reusing existing $CONTAINER_NAME container (created options are kept; remove it to apply env-file changes)"
     else
-        log_info "starting $CONTAINER_NAME (port $HTTP_PORT, real backend, WSS to $HUB_WS_URL)"
+        log_info "creating $CONTAINER_NAME (port $HTTP_PORT, real backend, WSS to $HUB_WS_URL)"
         # --network host, not bridge + -p/--add-host: reachy-mini-daemon
         # binds host 127.0.0.1 only (its own default, confirmed live on
         # the Nano) and refuses connections arriving via any other
@@ -273,7 +306,7 @@ else
         # CMD must be overridden to the resolved $HTTP_PORT here, or it
         # would try to claim host port 8000 too and collide with the
         # daemon the same way the original bridge-mode default did.
-        docker run -d --name "$CONTAINER_NAME" --restart unless-stopped \
+        docker create --name "$CONTAINER_NAME" --restart no \
             --network host \
             -e "ROBOT_BACKEND=${ROBOT_BACKEND}" \
             -e "REACHY_DAEMON_URL=${REACHY_DAEMON_URL}" \
@@ -284,6 +317,16 @@ else
             "$IMAGE_NAME" \
             /app/.venv/bin/uvicorn reachy_embodiment.app:app --app-dir services/reachy-embodiment/src \
             --host 0.0.0.0 --port "$HTTP_PORT" >/dev/null
+    fi
+    # With the unit installed, systemd owns the running container so that
+    # BindsTo restarts it with the daemon; otherwise start it directly (it
+    # then does not come back after a reboot until this script runs again).
+    if systemd_unit_installed "$EMBODIMENT_SERVICE"; then
+        log_info "starting $CONTAINER_NAME through ${EMBODIMENT_SERVICE}.service"
+        sudo systemctl start "$EMBODIMENT_SERVICE" || die "failed to start ${EMBODIMENT_SERVICE} — check: systemctl status $EMBODIMENT_SERVICE"
+    else
+        log_warn "${EMBODIMENT_SERVICE}.service is not installed — starting the container directly; it will not start after a reboot (see deploy/reachy/README.md)"
+        docker start "$CONTAINER_NAME" >/dev/null
     fi
 fi
 

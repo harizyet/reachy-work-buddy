@@ -125,7 +125,7 @@ test('web search settings card configures hosted rotation and the SearXNG fallba
     await save();
     assert.equal(puts.at(-1).fallback, 'searxng');
     assert.equal(puts.at(-1).base_url, 'http://searxng-host:8080');
-    // Usage card and pop-out debug log (Phase 24d). Provider-supplied text
+    // Usage card and pop-out debug log (Phase 24a follow-up). Provider-supplied text
     // renders literally and a non-http(s) result URL never becomes a link.
     assert.equal(await page.locator('#search-usage-period').textContent(), 'This month (2026-09, UTC)');
     assert.equal(await page.locator('.search-usage-row').nth(1).textContent(), 'exa (off)0 / 900');
@@ -143,7 +143,7 @@ test('web search settings card configures hosted rotation and the SearXNG fallba
     assert.equal(await entry.locator('li').nth(1).locator('a').getAttribute('rel'), 'noopener noreferrer');
     await page.locator('#close-search-log').click();
 
-    // Owner location and time zone (Phase 24d) for the model's context.
+    // Owner location and time zone (Phase 24a follow-up) for the model's context.
     assert.equal(await page.locator('#persona-timezone').inputValue(), 'UTC');
     await page.locator('#persona-location').fill('Singapore');
     await page.locator('#persona-browser-timezone').click();

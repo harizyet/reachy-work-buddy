@@ -1,5 +1,5 @@
 """Owner-local date, time and location for generic conversation turns
-(Phase 24d). Without it the model answered relative-date questions from its
+(Phase 24a follow-up). Without it the model answered relative-date questions from its
 training cutoff ("close to 9 months" for a 16-month term)."""
 
 from __future__ import annotations

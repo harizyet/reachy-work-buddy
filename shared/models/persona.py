@@ -1,6 +1,6 @@
 """Assistant identity/system-prompt configuration, separate from LLM provider settings.
 
-Location and time zone (Phase 24d) give every conversation turn the owner's
+Location and time zone (Phase 24a follow-up) give every conversation turn the owner's
 local date/time and place, so relative dates and weather resolve correctly."""
 
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError

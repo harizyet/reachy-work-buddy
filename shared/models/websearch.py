@@ -5,7 +5,7 @@ Provider API keys are credentials, never configuration — this model never
 stores a plaintext key at rest, only the `secret_ref` a SecretStore issues
 (see companion_core/websearch/postgres_store.py).
 
-Phase 24d: searches rotate across the hosted providers the owner enabled
+Phase 24a follow-up (found in 24d): searches rotate across the hosted providers the owner enabled
 (Brave, Exa, Tavily), each capped at a monthly count kept under its free
 tier, and fall back to SearXNG only after every hosted tier failed or hit
 its cap (companion_core/websearch/rotation.py)."""

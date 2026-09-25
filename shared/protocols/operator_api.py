@@ -4,7 +4,7 @@ LLM_SETTINGS = "/settings/llm"
 LLM_USAGE = "/llm/usage"
 PERSONA_SETTINGS = "/settings/persona"
 WEBSEARCH_SETTINGS = "/settings/websearch"
-# Phase 24d: in-memory owner debug view of recent searches.
+# Phase 24a follow-up: in-memory owner debug view of recent searches.
 WEBSEARCH_LOG = "/websearch/log"
 STATUS = "/status"
 AUTH_LOGIN = "/auth/login"

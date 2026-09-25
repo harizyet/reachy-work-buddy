@@ -556,7 +556,7 @@ def test_failed_search_is_logged_without_a_serving_provider():
     assert [(a["provider"], a["outcome"]) for a in entry["attempts"]] == [("builtin_searxng", "error")]
 
 
-# --- Phase 24d: follow-ups, search topics, owner date/time/location --------
+# --- Phase 24a follow-up: follow-ups, search topics, owner context --------
 
 
 def test_follow_up_detection_is_narrower_than_query_context():

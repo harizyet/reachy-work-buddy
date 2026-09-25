@@ -8,23 +8,42 @@ not repeated in this file.
 
 Next priority: **[Phase 24d](docs/phase-24cd.md#phase-24d--physical-end-to-end-acceptance)**,
 supervised physical acceptance of the robot conversation workflow, **in
-progress** (2026-09-24). Follow the
+progress** since 2026-09-24. Follow the
 [24d hardware procedure](docs/phase-24cd.md#phase-24d-hardware-procedure);
-all evidence so far is in the
+evidence is in the
 [24d record](docs/verification/phase-24d-conversation-2026-09-24.md). Phase 25
-remains gated on 24d.
+remains gated on 24d. **24d proves the physical workflow, not answer
+quality** (owner, 2026-09-25): the formal ≥10-turn run uses deterministic
+context turns (code word, block count, project name) plus one or two
+separate search-assisted turns whose factual accuracy is 24a scope.
 
-24d state at the end of 2026-09-24:
+To close 24d, in order:
+
+1. **Boot race (the real blocker).** Fix implemented 2026-09-25, not yet on
+   the Nano: `deploy/reachy/reachy-embodiment.service` +
+   `wait-media-socket.sh`, and `start-reachy.sh` now creates the container
+   with `--mount` and no Docker restart policy (see
+   [deployment](docs/deployment.md#production-unattended-boot-start-owner-accepted-risk-2026-09-23)).
+   Docker's `-v`-creates-a-root-directory and `--mount`-refuses behaviour
+   was reproduced on the homelab's Docker, not the Nano's. On the Nano, with
+   the owner present: `git pull`, install and enable the unit, run
+   `scripts/start-reachy.sh --check` then `scripts/start-reachy.sh`, then
+   do a **real cold reboot** and confirm the socket is `srw… reachy`, the
+   container started after the daemon, and camera and voice work with no
+   sudo step. Also confirm `sudo systemctl restart reachy-mini-daemon`
+   restarts the container and the camera still works.
+2. **Agree the search-turn latency budget** with the owner (the non-search
+   budget stays p50 ≤ 4 s, p95 ≤ 8 s).
+3. **Formal run** of the matrix rows. The results table is still mostly
+   OPEN/PARTIAL.
+
+24d state so far:
 
 - **Done on the real Nano.** Preflight, voice enable, and step 3 device
   coexistence passed. A behaviour sound, a camera frame and live voice
   capture ran together through dmix/dsnoop, with no ALSA/shm errors. The
   owner held two short live sessions (Piper TTS). Robot-side per-turn
   timings are in the record.
-- **Still open.** The record's results matrix is still blank, the ≥10-turn
-  timed run with 3 context follow-ups hasn't been completed, and the latency
-  budget (p50 ≤ 4 s, p95 ≤ 8 s) is unassessed. Some observed replies were very long (one was 232 s of
-  audio; one hub turn took 45 s).
 - **Deployed robot image.** `reachy-embodiment:local` is built from
   `1a66f01` (voice enabled, INFO timing logs). Image fixes found on the
   hardware: the GstApp/GstPbutils typelibs and ALSA plugin, and removing
@@ -32,55 +51,28 @@ remains gated on 24d.
 - **Hardware watch.** `stewart_5` logged "Overheating Error" for 20+ min
   while the head held a strained pose. It cleared after a reboot and motor
   reset, but the cause is unknown. Check the daemon journal for recurrence.
-- **Homelab stack (dev/test, not production-accepted).** Upgraded
-  `004_persona` → `006_search_config` on 2026-09-24. The pre-upgrade dump is
-  `~/reachy-backups/reachy-before-phase24d-20260924T213146.dump` (0600).
-  Hub/core ran `af27338` with SearXNG (now `0144209` at `007`, see
-  below). Start it only through
-  `scripts/start-homelab.sh`: it used to mangle `ROBOT_TOKENS`' JSON (fixed,
-  `read_env_file`). The hub now speaks with Piper `en_US-lessac-medium`
-  (espeak was judged too robotic). Each turn record in `GET /robot-voice`
-  carries transcription/conversation/synthesis ms, and the robot logs cut,
-  reply and playback lines at INFO.
-- **Answer quality is the blocker.** Replies were out of date or invented,
-  first with search off (the `006` default) and then with Always. Google
-  and Brave had CAPTCHA'd or suspended the bundled SearXNG from this
-  address, and Bing returned unrelated pages. `af27338` added a hosted
-  **Brave Search API** provider. The owner then decided (2026-09-25) to
-  rotate Brave, Exa and Tavily within their free tiers, with SearXNG only
-  as the last-resort fallback. That change is implemented, with migration
-  `007_search_providers`, per-provider monthly limits and failover. See the
-  [ADR 0022 addendum](docs/adr/0022-web-search-grounding.md#addendum-hosted-provider-rotation-within-free-tiers-phase-24d-2026-09-25)
-  and [deployment](docs/deployment.md#web-search). It is verified with
-  fixtures, real disposable Postgres and a Chromium UI test. **Deployed
-  to the homelab 2026-09-25**: hub/core run `0144209` plus the UI
-  cache-header and search debug-log changes, and the schema is at `007`.
-  The pre-upgrade dump is
-  `~/reachy-backups/reachy-before-007-search-providers-20260925T003652.dump`
-  (0600). The Brave key carried over. **Live-verified 2026-09-25**: all
-  three keys returned relevant results (0.8–2.1 s), and real
-  `/conversation` turns rotated Brave → Exa → Tavily with counted usage.
-  The portal's Search API usage card and in-memory search debug log
-  (`/websearch/log`) are deployed too. Follow-up search, the owner
-  date/time/location context (migration `008`, persona set to Singapore)
-  and results = 5 are deployed. A live 11-turn check picked correct
-  searches every turn, but the local model still misused results and was
-  slow (see the [24d record](docs/verification/phase-24d-conversation-2026-09-24.md#hosted-search-rotation-and-multi-turn-check-2026-09-25)).
-  The pre-`008` dump is
-  `~/reachy-backups/reachy-before-008-assistant-context-20260925T011257.dump`.
-  Policy is `auto` with `builtin_searxng` as the fallback. Even with good results,
-  the local `Qwen2.5-1.5B` used them inconsistently. The owner chose to
-  keep it; the configured cloud GLM-5.3 is the fallback option if hosted
-  search doesn't fix accuracy.
-- **Reply length.** `af27338` also asks the model for 1–3 plain sentences
-  on voice turns, and strips `[S…]`/markdown before TTS. Utterance-end →
-  first audio was 2.5–3.6 s without search. It was 5.9–11 s with the broken
-  SearXNG, plus one 46 s outlier from a long list reply. None of those runs
-  was the formal timed run; the budget is p50 ≤ 4 s, p95 ≤ 8 s.
-- **Unfixed boot race.** A Nano reboot leaves camera/audio broken until the
-  manual recovery under
-  [machine notes](#machine-specific-continuation-notes). The homelab session
-  is proposing a launcher fix, which needs a real-reboot verification.
+- **Homelab stack (dev/test, not production-accepted).** Start it only
+  through `scripts/start-homelab.sh`. Schema `008_assistant_context`;
+  hub/core run `0144209` plus uncommitted work (UI no-cache headers, search
+  debug log, follow-up search, owner context). Dumps before each upgrade
+  are in `~/reachy-backups/` (0600): `…phase24d-20260924T213146`,
+  `…007-search-providers-20260925T003652`,
+  `…008-assistant-context-20260925T011257`. The hub speaks with Piper
+  `en_US-lessac-medium`; each `GET /robot-voice` turn record carries
+  transcription/conversation/synthesis ms.
+- **Reply length.** `af27338` asks the model for 1–3 plain sentences on
+  voice turns and strips `[S…]`/markdown before TTS. Utterance-end → first
+  audio was 2.5–3.6 s without search in preliminary runs.
+- **Search quality is 24a follow-up work, not a 24d gate.** The bundled
+  SearXNG was CAPTCHA'd/suspended from this address, so search now rotates
+  hosted Brave, Exa and Tavily within their free tiers (SearXNG last),
+  with follow-up search and owner date/time/location context (persona set
+  to Singapore), results = 5 and policy `auto`. All live-verified; see the
+  [ADR 0022 addenda](docs/adr/0022-web-search-grounding.md#addendum-hosted-provider-rotation-within-free-tiers-24a-follow-up-2026-09-25)
+  and the [24a record](docs/verification/phase-24a-search-assisted-2026-09-24.md#addendum--hosted-provider-rotation-and-multi-turn-check-2026-09-25).
+  Search picks the right query every turn, but the local `Qwen2.5-1.5B`
+  still misuses results and search turns ran 7–16.5 s. The owner kept the
+  local model; GLM-5.3 (cloud) is the option if 24a quality needs it.
 
 Phase 24c (robot microphone → conversation → speaker) is implemented
 (2026-09-24). See [ADR 0023](docs/adr/0023-robot-voice-conversation.md), the
@@ -428,20 +420,20 @@ were removed; the pre-existing OVMS container was left running.
 - Nano uses host-networked embodiment on 8100 and the loopback daemon on
   8000. Existing `.env` copies can retain obsolete bridge URLs after code
   defaults change. See [deployment](docs/deployment.md#robot-host-and-jetson-nano).
-- **Nano reboot recovery (until the boot-race fix lands).** After a reboot,
-  Docker's `unless-stopped` policy starts `reachy-embodiment` before the
-  daemon. That creates `/tmp/reachymini_camera_socket` as a root-owned
-  directory, the container exits 127, and the daemon logs "Failed to
-  initialize media server" (EPERM). Recover in this order:
+- **Nano reboot recovery (until the boot-race fix is installed and
+  reboot-verified).** Symptom: after a reboot `/tmp/reachymini_camera_socket`
+  is a root-owned directory, the container exits 127, and the daemon logs
+  "Failed to initialize media server" (EPERM). `start-reachy.sh --check`
+  now reports this. Recover in this order:
   1. The owner runs `sudo rm -rf /tmp/reachymini_camera_socket`.
   2. The owner runs `sudo systemctl restart reachy-mini-daemon`, present and
      watching the wake-up motion. Sessions on the Nano have no
      passwordless sudo.
   3. Wait for the daemon to recreate the socket (`srw… reachy`), then run
-     `docker rm -f reachy-embodiment && scripts/start-reachy.sh`.
+     `scripts/start-reachy.sh` (with the fix it replaces the old container).
   4. Warm the camera with one `GET /camera/frame`.
-  Leave the daemon unit unchanged until the fix has had a real-reboot
-  verification.
+  The fix adds a new unit but leaves `reachy-mini-daemon.service`
+  unchanged.
 - Nano image builds need BuildKit. `start-reachy.sh --build` sets
   `DOCKER_BUILDKIT=1`. For a manual `docker build`, set it yourself.
 - The Nano's Tailscale path to the homelab host switches every few minutes

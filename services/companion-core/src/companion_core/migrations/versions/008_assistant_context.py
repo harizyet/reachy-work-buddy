@@ -1,4 +1,4 @@
-"""Owner location and time zone for the conversation context (Phase 24d)."""
+"""Owner location and time zone for the conversation context (Phase 24a follow-up)."""
 from alembic import op
 
 revision = "008_assistant_context"

@@ -265,10 +265,27 @@ disabled by default). A dev/test host, or any host not explicitly
 designated this way, keeps the owner-present rule above.
 
 Enabling the daemon unit alone is not the whole unattended-boot story:
-- `reachy-embodiment`'s container already restarts automatically (`docker
-  run --restart unless-stopped`, confirmed live) as long as Docker's own
-  service starts at boot and the container was created at least once by
-  `start-reachy.sh`/`start-jetson.sh`.
+- `reachy-embodiment` starts at boot only through
+  `reachy-embodiment.service`, never through a Docker restart policy.
+  The earlier `--restart unless-stopped` container came up before the
+  daemon after a reboot, and its `-v` bind created
+  `/tmp/reachymini_camera_socket` as a root-owned directory, which blocked
+  the daemon's media server (24d). The unit is `WantedBy`, `After` and
+  `BindsTo` the daemon: it waits for the daemon's socket
+  (`deploy/reachy/wait-media-socket.sh`), then runs the container that
+  `start-reachy.sh` created, and restarts it whenever the daemon restarts,
+  because the container's bind is fixed to the socket file that existed
+  when it started. The launcher now creates the container with `--mount`,
+  which refuses to start rather than create a missing path, and with no
+  restart policy. It replaces a container created the old way. Install
+  once, from the repository on the Nano:
+  `sudo cp deploy/reachy/reachy-embodiment.service /etc/systemd/system/ &&
+  sudo systemctl daemon-reload && sudo systemctl enable reachy-embodiment`,
+  then run `scripts/start-reachy.sh` to recreate the container. Enabling
+  the unit never starts the daemon. `start-reachy.sh --check` reports the
+  socket, container and unit state without changing anything. **Pending
+  target verification**: not yet installed on the Nano or proven by a real
+  reboot.
 - The ADR 0019 outbound WSS connection self-reconnects with backoff once
   embodiment is up — no manual step needed.
 - The old HTTP command-routing registration (`POST /robots` with

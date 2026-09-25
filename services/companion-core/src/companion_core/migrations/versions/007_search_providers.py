@@ -1,4 +1,4 @@
-"""Hosted web-search provider rotation with per-provider monthly caps (Phase 24d)."""
+"""Hosted web-search provider rotation with per-provider monthly caps (Phase 24a follow-up)."""
 from alembic import op
 
 revision = "007_search_providers"

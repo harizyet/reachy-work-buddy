@@ -91,3 +91,14 @@ turn, one in-flight turn per session.
   any ambient mode; this ADR does not permit unattended or default-on capture.
 - The original `POST /voice/turn` remains a caller-upload diagnostic and is
   not the robot workflow.
+
+## Status addendum (2026-09-25)
+
+Physical acceptance (Phase 24d) started on 2026-09-24 on the real Nano and
+Reachy: live capture, STT, conversation, Piper TTS and daemon playback ran
+end to end, and stop reached the daemon in about 32 ms. The formal matrix is
+still open; see the
+[24d record](../verification/phase-24d-conversation-2026-09-24.md). The
+decision above is unchanged. Piper replaced espeak-ng as the hub's TTS
+during 24d because espeak was judged unpleasant to listen to on the robot,
+a usability defect of this workflow rather than a cosmetic change.

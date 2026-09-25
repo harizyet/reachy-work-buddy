@@ -118,7 +118,7 @@ def test_search_config_defaults_secret_round_trip_and_provider_switch(database, 
 
 
 def test_search_providers_migration_moves_brave_and_caps_usage(database, keys, monkeypatch):
-    """Phase 24d: 007 turns a 006 Brave selection into the enabled Brave
+    """Phase 24a follow-up: 007 turns a 006 Brave selection into the enabled Brave
     rotation entry with the same secret, and usage reservations never pass
     the cap, even when concurrent."""
     import companion_core.migrations.__main__ as runner
@@ -173,7 +173,7 @@ def test_search_providers_migration_moves_brave_and_caps_usage(database, keys, m
 
 
 def test_persona_location_and_timezone_persist(database, keys):
-    """Phase 24d: 008 adds owner location/time zone to persona_config,
+    """Phase 24a follow-up: 008 adds owner location/time zone to persona_config,
     defaulting to no location and UTC for an existing persona row."""
     from companion_core.persona.postgres_store import PostgresPersonaStore
 

@@ -1,5 +1,5 @@
 """Spread each turn's single search across the hosted providers so every
-one stays inside its free tier (Phase 24d).
+one stays inside its free tier (Phase 24a follow-up).
 
 Per turn: the enabled hosted providers are tried in order of the fraction
 of their monthly cap already used (least first, declaration order on ties),

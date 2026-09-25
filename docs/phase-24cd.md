@@ -4,9 +4,18 @@ Status: **24c implemented 2026-09-24** (automated, browser and real-process
 checks with a simulated robot microphone; see the
 [audit result](#phase-24c-audit-result-2026-09-24) and
 [verification record](verification/phase-24c-conversation-2026-09-24.md)).
-**24d not started**: nothing here has run on the physical robot. These phases
-follow Phase 24b and gate Phase 25. Existing speech components and isolated
-tests do not establish that this workflow works on hardware.
+**24d physical acceptance in progress since 2026-09-24**: real microphone →
+STT → LLM → TTS → speaker conversation has been demonstrated on the robot;
+the formal acceptance matrix remains open (see the
+[24d record](verification/phase-24d-conversation-2026-09-24.md)). These
+phases follow Phase 24b and gate Phase 25.
+
+24d proves the physical conversation workflow: capture, turn handling,
+context, intelligible replies, handoff, privacy, cancellation, recovery and
+latency. It does not accept the factual quality of the model's answers.
+Search retrieval and small-model answer quality are
+[Phase 24a](phase-24a.md) follow-up work, so a wrong current-affairs answer
+from the local model does not fail a 24d row.
 
 ## Required workflow
 
@@ -143,8 +152,10 @@ running normally. Don't restart it for this test.
    `GET /camera/frame` works, start listening. If the status reports
    "Microphone unavailable", check `docker logs reachy-embodiment` for ALSA
    or shm errors. That is a 24c defect: fix it and rerun.
-4. **Agree the latency budget** with the owner before any timed turn, and
-   record it (the matrix requires this).
+4. **Agree the latency budgets** with the owner before any timed turn, and
+   record them (the matrix requires this): one for non-search turns and a
+   separate one for search-assisted turns, since a search adds a provider
+   round trip and a longer prompt.
 5. Run the matrix rows above in order. For timing, use hub logs (turn
    outcome timestamps) and a phone recording of the room for utterance end
    and first audible reply. Measure the stop tail from the Stop click to
@@ -167,15 +178,15 @@ consequential-action probes, never real destructive writes.
 
 | Scenario | Required evidence |
 |---|---|
-| Normal conversation | At least 10 consecutive live spoken turns, including three context-dependent follow-ups, starting/stopping from the UI; intelligible physical replies and no manual per-turn transport steps |
+| Normal conversation | At least 10 consecutive live spoken turns, including three context-dependent follow-ups, starting/stopping from the UI; intelligible physical replies and no manual per-turn transport steps. Use deterministic context checks whose correct answer is known in advance ("My code word is pineapple." → "What was my code word?"; "I have three red blocks and two blue blocks." → "How many blocks did I mention?"; "My fictional project is called Zephyr." → "What is the project called?"). Run one or two search-assisted turns separately; they must complete the workflow (search, reply, playback), but their factual accuracy is 24a scope |
 | Turn handling | Short and long utterances, silence and background noise; bounded capture, no duplicated/lost turns in the normal run, no speaker-to-mic self-conversation; visible half-duplex behavior if used |
 | Session continuity | Speak a harmless fact, refer to it in a later spoken turn, continue in authenticated web chat and bound Telegram, then return to Reachy with the same owner/conversation context; unavailable Telegram is BLOCKED, not fixture-accepted |
 | Privacy | Exercise Desk, Office, Silent, DND and private-call policy as applicable; private replies never leak through the robot; unavailable private destination does not fall back to room speech |
 | Consent and auth | Voice confirmation cannot approve consequential actions; Phase 24b negative requests do not actuate; unauthenticated/mismatched-owner capture controls fail; exercise without live destructive writes |
 | Stop and expiry | Cancel during capture, inference and physical playback; logout/session expiry stop further capture/delivery; measure actual audible tail and require stop within 1 second of the stop control reaching the robot |
-| Recovery | Disconnect microphone/speaker or simulate their failure, interrupt hub/network and restart application processes; show bounded errors and successful new turns after recovery, with no stale replay or automatic capture reactivation |
+| Recovery | Disconnect microphone/speaker or simulate their failure, interrupt hub/network and restart application processes; show bounded errors and successful new turns after recovery, with no stale replay or automatic capture reactivation. A cold reboot of the Nano must come back with the daemon owning its camera socket, embodiment started after it, and camera and voice usable, with no manual or sudo step |
 | Coexistence and sustained use | A 30-minute supervised mixed conversation/idle session with camera access and normal presence activity; no audio device loss, feedback loop, stuck state or unbounded buffers |
-| Timing and quality | Record utterance-end → transcript, LLM completion, first audible response and playback completion; report p50/p95 over the live turns, failure counts and owner assessment of intelligibility/usability; agree a numerical response-latency budget before the run and pass it, rather than choosing it after seeing results |
+| Timing and quality | Record utterance-end → transcript, LLM completion, first audible response and playback completion; report p50/p95 separately for non-search and search-assisted turns, failure counts and owner assessment of intelligibility/usability; agree both numerical response-latency budgets before the run and pass them, rather than choosing them after seeing results |
 
 Record PASS/FAIL/BLOCKED per row, commands/procedure, measured results,
 redacted correlation IDs and owner-observed outcomes in a dated

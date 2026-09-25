@@ -1,4 +1,4 @@
-"""Owner debug view of recent searches (Phase 24d). Deliberately in memory
+"""Owner debug view of recent searches (Phase 24a follow-up). Deliberately in memory
 only: queries are drawn from user turns, so they are never persisted and a
 restart clears them. Bounded so it can't grow with conversation volume."""
 

@@ -49,8 +49,10 @@ settings specifically require the browser owner session. See
 The Chat view has a **Robot microphone** panel. It works only when the
 robot's deployment has enabled it
 ([deployment](deployment.md#robot-voice-conversation)). Otherwise the robot is
-listed as "voice not enabled" or "offline". Physical acceptance is still
-pending ([Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance)).
+listed as "voice not enabled" or "offline". Physical acceptance is in
+progress ([Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance)).
+Search and weather usage appear on the Web search and Search API usage
+cards; set your location and time zone on the Assistant persona card.
 
 - Choose the robot and select **Start listening**. When the status shows
   "Listening — speak now", say one thing and pause. Reachy then shows
