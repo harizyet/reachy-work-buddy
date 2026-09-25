@@ -243,6 +243,50 @@ travel at 25/50/75 %. On mockup-sim: SDK linear 0.23/0.48/0.74, min-jerk
 0.09/0.47/0.89, REST "linear" 0.09/0.47/0.88 (min-jerk, as the source
 says).
 
+### Camera-measured run 3 (unattended, 13:07Z)
+
+At `7d9dc67`. A first attempt at 13:04Z refused before any motion: the
+scene had 256 keypoints after equalisation (under the 400 minimum). The
+owner then placed a textured target, raising it to 1436. The daemon
+stayed `running` with `nb_error` 0, the journal was clean, and the run
+ended at IDLE_HOME. No move was invalid and the stillness wait never
+timed out. The daemon's media pipeline reports a latency of 36.7 ms
+minimum and 1.064 s maximum at startup. That maximum is why a fixed
+0.6 s wait could still return a stale frame.
+
+| Case | Encoders | Camera |
+|---|---|---|
+| visible-rest | +0.3 → 0.233, return → 0.093 | PASS |
+| visible-sdk | +0.3 → 0.248, return → 0.105 | PASS |
+| axes-rest | Usual shortfall and coupling | 2 of 13 rows over 0.02: pitch −0.1 (camera −0.165, encoders −0.097) and yaw −0.15 (−0.087 vs −0.110). Their neighbouring rows agree, so this is not the stale-frame pattern. The camera sits about 5 cm from the rotation centre, and a target placed near the head breaks the distant-scene assumption, so these two are attributed to parallax, not to motion |
+| interp | Travel fraction at 25/50/75 %: SDK linear 0.12/0.30/0.54, SDK min-jerk 0.01/0.29/0.84, REST "linear" 0.01/0.29/0.81 | PASS |
+
+Interpolation is now shown physically: REST ignores `"linear"` and moves
+with the min-jerk profile. Each profile keeps its shape but trails its
+ideal by about 0.2 of travel at 50 %, roughly 0.4 s on a 2 s move,
+consistent with the proportional-only tracking lag. The start was about
+−0.11 rather than −0.2 for the same reason.
+
+### Item 1 outcome
+
+| Row | Result |
+|---|---|
+| Identity head / zero antennas | ZERO reached within tolerance on both paths |
+| Roll, pitch, yaw | Signs correct on both paths, which agree within about 0.005 rad. Shortfall 2–5° when a joint's angle must grow. The camera confirms the head moves as the encoders report |
+| Antennas | Order `[right, left]` per the SDK, identical on both paths, on target. Physical side unchecked |
+| Body yaw | REST omitted value keeps the current yaw; the SDK default returns to 0. Explicit values match |
+| Duration / interpolation | REST always min-jerk; the SDK honours linear. Both lag their ideal by about 0.4 s at mid-travel |
+| Cancellation | Stop by UUID works; the pose holds within 0.002 rad |
+| Recorded moves | Not run: they are full animations and need the owner (`--owner-present`) |
+| Failure | 422 bad interpolation, 404 unknown move, 500 stop of an unknown UUID; no motion |
+
+The command paths conform. The one open physical question is the
+direction-dependent 2–5° shortfall. It appears on every path, including
+Pollen's streaming method, and the stock proportional-only gains predict
+it. Whether this unit has extra friction or load is a hardware question
+outside 24f. Until the owner accepts it or it is fixed, pose-dependent
+motion should not assume better than about 0.08 rad accuracy.
+
 ### SDK media side effect
 
 In 1.8.4, `ReachyMini(media_backend="no_media")` calls `release_media()` on

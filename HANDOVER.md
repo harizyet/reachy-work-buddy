@@ -20,9 +20,11 @@ unit is open. Unattended development testing is allowed (owner,
 daemon wake-up. `motion-conformance.py --camera` measures moves from
 head-camera frames (CLAHE, frame draining and validity gates; see the
 record). The Lite camera is dark by default, and raising its exposure is
-the owner's call. Not yet run: antennas, body yaw, interp, cancel,
-recorded and preempt. The last two need the owner (`--owner-present`).
-Raw logs and frames are in the Nano's `~/24f-logs`.
+the owner's call. Every bounded case has now run unattended (runs 2–3). Only `recorded`
+and `preempt` remain, and they need the owner (`--owner-present`).
+Raw logs and frames are in the Nano's `~/24f-logs`. Item 1's outcome table
+is in the record: the paths conform, and only `recorded`/`preempt` (owner
+present) remain.
 
 The motion owner (`reachy_embodiment/motion.py`, `4f43817`) is implemented,
 with its [ADR 0003 amendment](docs/adr/0003-embodiment-command-api.md#phase-24f-motion-ownership-amendment-2026-09-25):
