@@ -152,6 +152,9 @@ report_media_boot_state() {
     else
         log_info "${EMBODIMENT_SERVICE}.service not installed — the container does not start at boot"
     fi
+    if systemd_unit_installed reachy-daemon-recovery; then
+        log_info "reachy-daemon-recovery.service installed, enabled: $(systemctl is-enabled reachy-daemon-recovery 2>/dev/null || true), active: $(systemctl is-active reachy-daemon-recovery 2>/dev/null || true)"
+    fi
 }
 
 if [[ "$COMMON_CHECK_ONLY" -eq 1 ]]; then

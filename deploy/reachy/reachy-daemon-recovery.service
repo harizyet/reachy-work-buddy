@@ -1,0 +1,17 @@
+[Unit]
+Description=Restart reachy-mini-daemon once per boot if it reports state error
+# Designated production Nano only (owner decision, 2026-09-25). See
+# daemon-error-recovery.sh and docs/deployment.md. Runs as root because it
+# calls systemctl restart. It is not bound to the daemon, so it keeps
+# watching across the restart it triggers.
+After=reachy-mini-daemon.service
+
+[Service]
+Type=simple
+# Hardcoded path for the same %h reason as reachy-mini-daemon.service.
+ExecStart=/home/reachy/reachy-work-buddy/deploy/reachy/daemon-error-recovery.sh
+# Exiting failed after a second error is the alert; do not loop.
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

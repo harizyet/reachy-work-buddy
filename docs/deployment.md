@@ -283,9 +283,27 @@ Enabling the daemon unit alone is not the whole unattended-boot story:
   sudo systemctl daemon-reload && sudo systemctl enable reachy-embodiment`,
   then run `scripts/start-reachy.sh` to recreate the container. Enabling
   the unit never starts the daemon. `start-reachy.sh --check` reports the
-  socket, container and unit state without changing anything. **Pending
-  target verification**: not yet installed on the Nano or proven by a real
-  reboot.
+  socket, container and unit state without changing anything. Verified on
+  the Nano on 2026-09-25 by a real cold reboot and a daemon restart
+  ([record](verification/phase-24d-conversation-2026-09-24.md#boot-race-fix-on-the-nano-2026-09-25)).
+- **Automatic restart after a daemon error (owner decision, 2026-09-25).**
+  The daemon's start-up wake-up can fail (24d: `time value is out of range
+  [0,1]` at boot). The process then stays up in `state: error`, holding the
+  head wherever the failed goto stopped, so systemd's `Restart=` never sees
+  it. On the designated production Nano only, `reachy-daemon-recovery.service`
+  (`deploy/reachy/daemon-error-recovery.sh`, root) polls
+  `/api/daemon/status` every 5 s. On `state: error` it restarts the daemon
+  **once per boot** (marker in `/run`), which replays the wake-up motion
+  unattended. If the daemon reports `error` again during the same boot, it
+  logs at `crit` (`journalctl -t reachy-daemon-recovery`), leaves the daemon
+  alone and exits failed, so the unit shows in `systemctl --failed`. It
+  ignores an unreachable daemon and `stopped` (standby). It never reads
+  `backend_status.ready`, which is always false in reachy_mini 1.8.4.
+  Install:
+  `sudo cp deploy/reachy/reachy-daemon-recovery.service /etc/systemd/system/
+  && sudo systemctl daemon-reload && sudo systemctl enable --now
+  reachy-daemon-recovery`. There is no Telegram alert yet: robots have no
+  route to the hub's owner notifications.
 - The ADR 0019 outbound WSS connection self-reconnects with backoff once
   embodiment is up — no manual step needed.
 - The old HTTP command-routing registration (`POST /robots` with

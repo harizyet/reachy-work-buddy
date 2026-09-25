@@ -106,6 +106,17 @@ a general relaxation — it's gated by `require_remote_auth`'s
 owner-bound credential, exactly like every other remote-control route,
 and it only exists for this one narrow phrase-triggered path.
 
+Automatic daemon restart on error (`reachy-daemon-recovery.service`,
+`deploy/reachy/daemon-error-recovery.sh`) is a further exception the owner
+explicitly approved, 2026-09-25, during 24d, after the daemon's boot
+wake-up failed and left it in `state: error`. On the same designated
+production Nano only, when the daemon reports `state == "error"`, it may
+be restarted unattended, replaying its wake-up motion, **at most once per
+boot**. If it errors again in the same boot, the recovery stops, logs a
+`crit` alert and leaves the daemon for the owner, with no loop. It is
+not a general relaxation: any other trigger, a higher restart count, or
+any corrective move still needs the owner present, per the rules above.
+
 ## Documentation maintenance
 
 Use the ownership table in [docs/README.md](docs/README.md#where-information-belongs).

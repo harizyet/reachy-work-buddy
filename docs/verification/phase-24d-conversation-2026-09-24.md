@@ -360,7 +360,27 @@ owner's decision:
 - **not** `systemctl stop`, because its default `goto_sleep_on_stop` makes an
   active move first.
 
-Robot-side 24d work is paused until the hardware is understood.
+Robot-side 24d work was paused until the hardware was understood.
+
+**Owner assessment: robot physically fine; finding closed.** The owner
+checked the robot and found nothing physically wrong. They consider the
+pose and IK readings possible false positives, so no load-off was needed
+(motors stayed enabled; no overheating at 02:08:55Z). The readings stay
+unexplained, not a confirmed fault. **Watch item:** if `stewart_5` lags or
+overheats again, recheck the pose readings against the physical head.
+
+**Automatic recovery (owner decision, 2026-09-25).** The daemon stays up in
+`state: error` after a failed wake-up, so the owner approved a restart
+**at most once per boot**. A second error in the same boot is logged at
+`crit`, and the daemon is left alone. Implemented as
+`reachy-daemon-recovery.service` +
+`deploy/reachy/daemon-error-recovery.sh`
+([deployment](../deployment.md#production-unattended-boot-start-owner-accepted-risk-2026-09-23),
+AGENTS.md). Homelab test against a fake status server and a stub
+`systemctl`, four cases: error → one restart; error again in the same boot
+→ no restart, exit 1 plus a `crit` journal line; a restart that errors
+again → exactly one restart, then exit 1; an unreachable daemon → nothing.
+Not yet installed on the Nano.
 
 ## Latency budget (agreed before any timed turn)
 
@@ -408,6 +428,6 @@ and a Nano cold-reboot recovery check after the boot-race fix.
 | Privacy | OPEN | Live withholding observed (routing to web). Carry-over fix `c65c9cd`. Modes, DND and private call not yet exercised on the robot |
 | Consent and auth | OPEN | Covered off the robot in 24c tests; not yet on the robot |
 | Stop and expiry | PARTIAL | Stop during playback: 32 ms and 36 ms from stop receipt to daemon `stop_sound` (the robot-side stop marker came from `1a66f01`). Capture and inference cancellation, logout and expiry not yet run |
-| Recovery | PARTIAL | An unplanned WS drop (tailnet stall) ended the session cleanly, with no auto-reactivation and re-registration in 8 s. Hub restarts were recovered by reconnect. The Nano reboot exposed the camera-socket boot race: fix installed on the Nano 2026-09-25 and a live recovery passed ([details](#boot-race-fix-on-the-nano-2026-09-25)); cold reboot and daemon restart pass for the race and container lifecycle, but the head does not reach home, `stewart_5` lags and a mapped nod produced IK errors ([details](#boot-race-fix-on-the-nano-2026-09-25)). Hardware issue open; robot work paused |
+| Recovery | PARTIAL | An unplanned WS drop (tailnet stall) ended the session cleanly, with no auto-reactivation and re-registration in 8 s. Hub restarts were recovered by reconnect. The Nano reboot exposed the camera-socket boot race: fix installed on the Nano 2026-09-25 and a live recovery passed ([details](#boot-race-fix-on-the-nano-2026-09-25)); cold reboot and daemon restart pass for the race and container lifecycle, but the head does not reach home, `stewart_5` lags and a mapped nod produced IK errors ([details](#boot-race-fix-on-the-nano-2026-09-25)). The owner found the robot physically fine: finding closed, `stewart_5` on watch. Once-per-boot auto-restart on `state: error` approved and implemented, pending Nano install |
 | Coexistence and sustained use | PARTIAL | Step 3 coexistence PASS. The 30-minute session is not yet run |
 | Timing and quality | OPEN | Budgets agreed: non-search p50 ≤ 4 s, p95 ≤ 8 s; each search-assisted turn ≤ 20 s. Preliminary timings above; the formal run is pending |
