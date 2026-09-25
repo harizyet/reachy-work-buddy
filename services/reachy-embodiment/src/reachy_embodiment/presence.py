@@ -26,6 +26,7 @@ import threading
 import time
 from datetime import UTC, datetime
 
+from reachy_embodiment.motion import MotionController
 from reachy_embodiment.robot import RobotBackend
 from reachy_embodiment.state import ServiceState
 from shared.models.embodiment import Behaviour, EmbodimentState
@@ -56,8 +57,12 @@ class PresenceLoop:
         idle_cycle_seconds: float = 3.0,
         tick_hz: float = 30.0,
         connection_check_seconds: float = 2.0,
+        motion: MotionController | None = None,
     ) -> None:
         self._backend = backend
+        # Phase 24f: idle motion goes through the motion owner, which
+        # drops it while a conversation owns motion.
+        self._motion = motion
         self._state = state
         self._heartbeat_timeout = heartbeat_timeout
         self._idle_cycle_seconds = idle_cycle_seconds
@@ -142,9 +147,12 @@ class PresenceLoop:
 
         self._last_idle_tick_monotonic = monotonic_now
         behaviour = IDLE_CYCLE[self._idle_index % len(IDLE_CYCLE)]
+        if self._motion is not None:
+            if not self._motion.request_behaviour(behaviour, {}, idle=True):
+                return
+        else:
+            self._backend.play_behaviour(behaviour, {})
         self._idle_index += 1
-
-        self._backend.play_behaviour(behaviour, {})
         self._state.last_behaviour = behaviour
         self._state.last_behaviour_at = datetime.now(UTC)
         # Idle-cycle behaviours are animation only. The standing state here

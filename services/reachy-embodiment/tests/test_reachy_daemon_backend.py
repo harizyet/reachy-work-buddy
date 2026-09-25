@@ -480,3 +480,72 @@ def test_close_exits_media_client_and_clears_it() -> None:
 def test_close_without_ever_capturing_is_a_noop() -> None:
     backend = ReachyDaemonBackend("http://daemon.test")
     backend.close()  # no error even though self._mini was never created
+
+
+def _goto_daemon(calls: list[tuple[str, object]]):
+    """_move_daemon plus /move/goto and the wobbling routes."""
+    moves = _move_daemon(calls)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/move/goto":
+            calls.append(("goto", json.loads(request.content)))
+            return httpx.Response(200, json={"uuid": "goto-1"})
+        if request.url.path.startswith("/api/media/wobbling/"):
+            calls.append(("wobble", request.url.path.rsplit("/", 1)[1]))
+            return httpx.Response(200, json={"status": "ok"})
+        return moves(request)
+
+    return handler
+
+
+def test_goto_home_stops_previous_move_and_is_itself_stoppable() -> None:
+    calls: list[tuple[str, object]] = []
+    backend = make_backend(_goto_daemon(calls))
+
+    backend.play_behaviour(Behaviour.THINKING, {})
+    backend.goto_home()
+    backend.stop_motion()
+    backend.stop_motion()
+
+    assert [c[0] for c in calls] == ["play", "stop", "goto", "stop"]
+    assert calls[1] == ("stop", "move-1")
+    assert calls[3] == ("stop", "goto-1")
+
+
+def test_goto_home_payload_is_the_184_wake_up_pose_with_explicit_body_yaw() -> None:
+    """Validated against the daemon's own request model: in 1.8.4 a
+    misspelled pose key silently validates as identity, so check every
+    field resolves, not just that the request is accepted."""
+    move = pytest.importorskip("reachy_mini.daemon.app.routers.move")
+    models = pytest.importorskip("reachy_mini.daemon.app.models")
+    from reachy_embodiment.robot import HOME_GOTO
+    from reachy_mini.reachy_mini import INIT_ANTENNAS_JOINT_POSITIONS
+
+    request = move.GotoModelRequest.model_validate(HOME_GOTO)
+    assert isinstance(request.head_pose, models.XYZRPYPose)
+    assert request.head_pose.model_dump() == HOME_GOTO["head_pose"]
+    assert list(request.antennas) == INIT_ANTENNAS_JOINT_POSITIONS
+    assert request.body_yaw == 0.0
+    assert 0 < request.duration <= 2.0
+    assert "interpolation" not in HOME_GOTO  # REST ignores it in 1.8.4
+
+
+def test_goto_home_failure_is_logged_not_raised() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(503, json={"detail": "Backend not running"})
+
+    backend = make_backend(handler)
+    backend.goto_home()
+    backend.stop_motion()  # nothing remembered to stop
+
+
+def test_speech_wobble_routes_and_failure() -> None:
+    calls: list[tuple[str, object]] = []
+    backend = make_backend(_goto_daemon(calls))
+    backend.set_speech_wobble(True)
+    backend.set_speech_wobble(False)
+    assert calls == [("wobble", "enable"), ("wobble", "disable")]
+
+    failing = make_backend(lambda request: httpx.Response(503, json={}))
+    with pytest.raises(RobotBackendError):
+        failing.set_speech_wobble(True)

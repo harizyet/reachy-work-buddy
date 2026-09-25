@@ -274,6 +274,14 @@ if [[ "${VOICE_CONVERSATION_ENABLED:-false}" == "true" ]]; then
             VOICE_ARGS+=(-e PALM_STOP_ENABLED=true)
             log_info "open-palm stop enabled"
         fi
+        # Phase 24f: conversational motion and speech wobble, both driven
+        # by the voice loop. Off until physically accepted.
+        for flag in CONVERSATION_MOTION_ENABLED SPEECH_WOBBLE_ENABLED; do
+            if [[ "${!flag:-false}" == "true" ]]; then
+                VOICE_ARGS+=(-e "${flag}=true")
+                log_info "${flag} set"
+            fi
+        done
     else
         log_warn "VOICE_CONVERSATION_ENABLED=true but ${DAEMON_HOME:-<no home for $DAEMON_USER>}/.asoundrc is not readable here — voice stays disabled for this container"
     fi

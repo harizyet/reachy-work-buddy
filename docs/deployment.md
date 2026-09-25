@@ -442,6 +442,12 @@ checks that MediaPipe loads on this CPU, in a child process; the log shows
 model is baked into the image. It has not been built or run on the Nano
 yet ([Phase 24e item 5](phase-24e.md#5-open-palm-stop)).
 
+Conversational motion ([Phase 24f](phase-24f.md), `CONVERSATION_MOTION_ENABLED`
+and `SPEECH_WOBBLE_ENABLED`) is also passed through only when voice is on.
+Both stay `false` on this host: they add motion that has not been accepted,
+and turning either on is a supervised check with the owner present, not an
+operating setting.
+
 Checked on nano-1 during 24d:
 - dsnoop capture from the container, alongside the daemon's own playback
   (dmix);

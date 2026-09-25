@@ -1,6 +1,8 @@
 from fastapi.testclient import TestClient
 from reachy_embodiment.app import create_app
+from reachy_embodiment.motion import MotionController
 from reachy_embodiment.robot import SimulatedRobotBackend
+from reachy_embodiment.state import ServiceState
 
 from shared.models.embodiment import Behaviour, EmbodimentState
 
@@ -122,3 +124,55 @@ def test_behaviour_command_counts_as_heartbeat() -> None:
     client = make_client()
     resp = client.post("/behaviour/listening")
     assert resp.json()["last_heartbeat_at"] is not None
+
+
+class RecordingSimBackend(SimulatedRobotBackend):
+    def __init__(self) -> None:
+        super().__init__()
+        self.calls: list[str] = []
+
+    def play_behaviour(self, name, parameters) -> None:
+        self.calls.append(f"play:{name.value}")
+
+    def stop_motion(self) -> None:
+        self.calls.append("stop")
+
+    def daemon_standby(self) -> dict[str, object]:
+        self.calls.append("standby")
+        return super().daemon_standby()
+
+
+def test_behaviour_rejected_with_409_while_robot_conversation_owns_motion() -> None:
+    backend = RecordingSimBackend()
+    motion = MotionController(backend, ServiceState(), conversation_motion=True, threaded=False)
+    client = TestClient(create_app(backend, run_presence_loop=False, motion=motion))
+    token = motion.begin_conversation()
+
+    resp = client.post("/behaviour/greeting")
+    assert resp.status_code == 409
+    assert "play:greeting" not in backend.calls
+    assert client.get("/state").json()["last_behaviour"] is None
+
+    motion.end_conversation(token, completed=False)
+    motion.run_pending()
+    assert client.post("/behaviour/greeting").status_code == 200
+    assert backend.calls[-1] == "play:greeting"
+
+
+def test_behaviour_allowed_during_conversation_when_motion_switches_are_off() -> None:
+    backend = RecordingSimBackend()
+    client = TestClient(create_app(backend, run_presence_loop=False))
+    client.app.state.motion.begin_conversation()
+    assert client.post("/behaviour/greeting").status_code == 200
+
+
+def test_standby_stops_motion_before_the_daemon_parks() -> None:
+    backend = RecordingSimBackend()
+    motion = MotionController(backend, ServiceState(), conversation_motion=True, threaded=False)
+    client = TestClient(create_app(backend, run_presence_loop=False, motion=motion))
+    token = motion.begin_conversation()
+    motion.conversation_state(token, 1, EmbodimentState.LISTENING)
+    client.post("/daemon/standby")
+    assert backend.calls[:2] == ["stop", "standby"]
+    motion.run_pending()  # the pending listening gesture was invalidated
+    assert "play:listening" not in backend.calls

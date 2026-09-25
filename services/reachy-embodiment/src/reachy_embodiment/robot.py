@@ -80,6 +80,19 @@ class RobotBackend(Protocol):
 
     def play_behaviour(self, name: Behaviour, parameters: dict[str, str]) -> None: ...
 
+    def stop_motion(self) -> None:
+        """Stops the move this backend last started, if any. Phase 24f."""
+        ...
+
+    def goto_home(self) -> None:
+        """One bounded move to IDLE_HOME, the daemon's own wake-up end pose.
+        Phase 24f; only the motion controller calls it."""
+        ...
+
+    def set_speech_wobble(self, enabled: bool) -> None:
+        """Switches the daemon's audio-reactive head motion. Phase 24f."""
+        ...
+
     def capture_frame(self) -> bytes:
         """Returns a single JPEG-encoded camera frame. Phase 16/ADR 0013."""
         ...
@@ -135,6 +148,15 @@ class SimulatedRobotBackend:
 
     def play_behaviour(self, name: Behaviour, parameters: dict[str, str]) -> None:
         log.info("sim: playing behaviour %s params=%s", name.value, parameters)
+
+    def stop_motion(self) -> None:
+        log.info("sim: stop motion")
+
+    def goto_home(self) -> None:
+        log.info("sim: goto home")
+
+    def set_speech_wobble(self, enabled: bool) -> None:
+        log.info("sim: speech wobble %s", "on" if enabled else "off")
 
     def capture_frame(self) -> bytes:
         # No physical camera exists in this environment. The marker's
@@ -308,6 +330,19 @@ _DEFAULT_BEHAVIOUR_MOVES: dict[Behaviour, tuple[str, str]] = {
 }
 
 
+# IDLE_HOME: reachy-mini 1.8.4's wake-up end pose (INIT_HEAD_POSE identity,
+# INIT_ANTENNAS_JOINT_POSITIONS [right, left] in rad) with body yaw 0 sent
+# explicitly, since REST keeps the current yaw when it is omitted. Built
+# from fixed keys: a misspelled pose key validates as identity in 1.8.4
+# (docs/verification/phase-24f-source-2026-09-25.md).
+HOME_GOTO: dict[str, object] = {
+    "head_pose": {"x": 0.0, "y": 0.0, "z": 0.0, "roll": 0.0, "pitch": 0.0, "yaw": 0.0},
+    "antennas": [-0.1745, 0.1745],
+    "body_yaw": 0.0,
+    "duration": 1.0,
+}
+
+
 class ReachyDaemonBackend:
     """Drives a real Reachy Mini via `reachy-mini-daemon`'s HTTP API.
 
@@ -436,10 +471,41 @@ class ReachyDaemonBackend:
                 # entirely) are still visible via `connected` going False.
                 log.warning("play_behaviour(%s) -> %s/%s failed: %s", name.value, dataset, move_name, exc)
                 return
+            self._remember_move_locked(resp, name.value)
+
+    def _remember_move_locked(self, resp: httpx.Response, what: str) -> None:
+        try:
+            self._active_move_uuid = str(resp.json()["uuid"])
+        except (ValueError, KeyError, TypeError):
+            log.warning("%s: daemon response had no move uuid; cannot stop it later", what)
+
+    def stop_motion(self) -> None:
+        with self._move_lock:
+            self._stop_active_move_locked()
+
+    def goto_home(self) -> None:
+        """POST /move/goto with HOME_GOTO, after stopping our previous move.
+        REST ignores `interpolation` (always min-jerk), so none is sent.
+        Failures are logged like play_behaviour's."""
+        with self._move_lock:
+            self._stop_active_move_locked()
             try:
-                self._active_move_uuid = str(resp.json()["uuid"])
-            except (ValueError, KeyError, TypeError):
-                log.warning("play_behaviour(%s): daemon response had no move uuid; cannot stop it later", name.value)
+                resp = self._client.post("/move/goto", json=HOME_GOTO)
+                resp.raise_for_status()
+            except httpx.HTTPError as exc:
+                log.warning("goto_home failed: %s", exc)
+                return
+            self._remember_move_locked(resp, "goto_home")
+
+    def set_speech_wobble(self, enabled: bool) -> None:
+        """POST /media/wobbling/enable or /disable. Disable also zeroes the
+        offsets. It is a daemon-wide setting: while on, the daemon's own
+        sounds wobble too."""
+        path = "/media/wobbling/enable" if enabled else "/media/wobbling/disable"
+        try:
+            self._client.post(path).raise_for_status()
+        except httpx.HTTPError as exc:
+            raise RobotBackendError(f"{path} failed: {exc}") from exc
 
     def _stop_active_move_locked(self) -> None:
         """Stops the move this backend last started, if any. Caller holds

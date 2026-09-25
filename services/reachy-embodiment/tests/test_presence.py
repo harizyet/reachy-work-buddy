@@ -145,3 +145,22 @@ def test_real_thread_animates_continuously_and_survives_disconnect() -> None:
         assert behaviour_while_disconnected is not None
     finally:
         loop.stop()
+
+
+def test_idle_motion_yields_while_a_conversation_owns_motion() -> None:
+    from reachy_embodiment.motion import MotionController
+
+    backend = SimulatedRobotBackend()
+    state = ServiceState(connected=True, sim=True)
+    motion = MotionController(backend, state, conversation_motion=True, threaded=False)
+    loop = PresenceLoop(backend, state, heartbeat_timeout=1000.0, idle_cycle_seconds=1.0, motion=motion)
+    loop._last_heartbeat_at = datetime.now(UTC)
+    token = motion.begin_conversation()
+
+    loop.tick(datetime.now(UTC), 100.0)
+    assert state.last_behaviour is None
+
+    motion.end_conversation(token, completed=False)
+    motion.run_pending()
+    loop.tick(datetime.now(UTC), 101.5)
+    assert state.last_behaviour == IDLE_CYCLE[0]

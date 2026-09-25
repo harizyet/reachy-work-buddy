@@ -34,6 +34,7 @@ from companion_core.rag.store import InMemoryDocumentStore
 from companion_core.tasks.store import InMemoryTaskStore
 from companion_core.websearch.store import InMemorySearchSettingsStore
 from reachy_embodiment.audio.vad import CHUNK_SAMPLES
+from reachy_embodiment.motion import MotionController
 from reachy_embodiment.robot import (
     ReachyDaemonBackend,
     ReachyMiniMicSource,
@@ -58,7 +59,7 @@ from reachy_hub.robot_registry import InMemoryRobotRegistry
 from reachy_hub.robot_voice import RobotVoiceManager
 from reachy_hub.session_store import InMemorySessionStore
 
-from shared.models.embodiment import EmbodimentState
+from shared.models.embodiment import Behaviour, EmbodimentState
 from shared.models.robot_voice import (
     VOICE_CAPABILITY,
     VOICE_CONTINUATION_CAPABILITY,
@@ -317,13 +318,24 @@ class Robot:
     replaced by an in-process bridge into the hub's connection manager."""
 
     def __init__(
-        self, hub_app, mic, player, *, hub_transport=None, capabilities=(VOICE_CAPABILITY,), stop_gesture=None
+        self,
+        hub_app,
+        mic,
+        player,
+        *,
+        hub_transport=None,
+        capabilities=(VOICE_CAPABILITY,),
+        stop_gesture=None,
+        motion_backend=None,
     ):
         self.hub_app = hub_app
         self.capabilities = list(capabilities)
         self.mic = mic
         self.player = player
         self.state = ServiceState(connected=True, sim=True)
+        self.motion = None
+        if motion_backend is not None:
+            self.motion = MotionController(motion_backend, self.state, conversation_motion=True, speech_wobble=True)
         self.voice = VoiceConversation(
             lambda: mic,
             lambda limits: EnergyVAD(),
@@ -331,6 +343,7 @@ class Robot:
             player,
             self.state,
             stop_gesture=stop_gesture,
+            motion=self.motion,
         )
         self.reports: list[str] = []
         self.connection = None
@@ -952,3 +965,84 @@ def test_simulated_backend_exposes_a_microphone_and_stop() -> None:
     backend = SimulatedRobotBackend()
     assert isinstance(backend.open_microphone(), SimulatedMicSource)
     backend.stop_audio()
+
+
+# --- conversational motion (Phase 24f) --------------------------------------
+
+
+class MotionRecorder:
+    def __init__(self) -> None:
+        self.calls: list[tuple] = []
+
+    def play_behaviour(self, name, parameters) -> None:
+        self.calls.append(("play", name))
+
+    def stop_motion(self) -> None:
+        self.calls.append(("stop",))
+
+    def goto_home(self) -> None:
+        self.calls.append(("home",))
+
+    def set_speech_wobble(self, enabled: bool) -> None:
+        self.calls.append(("wobble", enabled))
+
+
+def test_conversation_drives_motion_and_a_stop_holds_without_going_home() -> None:
+    async def scenario():
+        hub = make_hub(ScriptedSTT("hello reachy"), FixedTTS(seconds=30))
+        player = RecordingPlayer()
+        motion = MotionRecorder()
+        robot = Robot(hub, CountingMic([utterance_fixture()]), player, motion_backend=motion)
+        await robot.connect()
+        start = (await owner(hub, "POST", "/robot-voice/start", json={"robot_id": ROBOT_ID})).json()
+        await wait_until(lambda: ("wobble", True) in motion.calls)
+        assert ("play", Behaviour.LISTENING) in motion.calls
+        assert ("play", Behaviour.THINKING) in motion.calls
+        assert motion.calls.index(("play", Behaviour.LISTENING)) < motion.calls.index(("play", Behaviour.THINKING))
+        # The conversation owns motion: an explicit behaviour is refused.
+        assert robot.motion.request_behaviour(Behaviour.GREETING, {}) is False
+
+        await owner(hub, "POST", "/robot-voice/stop", json={"voice_session_id": start["voice_session_id"]})
+        assert player.stopped == 1
+        await wait_until(lambda: motion.calls[-2:] == [("wobble", False), ("stop",)])
+        await asyncio.sleep(0.2)
+        assert ("home",) not in motion.calls
+        assert not robot.motion.conversation_owns_motion
+        await robot.voice.aclose()
+        robot.motion.close()
+
+    asyncio.run(scenario())
+
+
+def test_session_limit_is_a_normal_end_and_returns_home_once() -> None:
+    async def scenario():
+        hub = make_hub(ScriptedSTT(), FixedTTS(), limits=VoiceLimits(max_session_seconds=0.3))
+        motion = MotionRecorder()
+        robot = Robot(hub, CountingMic([]), RecordingPlayer(), motion_backend=motion)
+        await robot.connect()
+        await owner(hub, "POST", "/robot-voice/start", json={"robot_id": ROBOT_ID})
+        await wait_until(lambda: ("home",) in motion.calls)
+        await asyncio.sleep(0.2)
+        assert motion.calls.count(("home",)) == 1
+        robot.motion.close()
+
+    asyncio.run(scenario())
+
+
+def test_withheld_reply_gets_no_speaking_motion() -> None:
+    async def scenario():
+        hub = make_hub(ScriptedSTT("what is on my calendar", "hello"), FixedTTS())
+        player = RecordingPlayer()
+        motion = MotionRecorder()
+        robot = Robot(hub, CountingMic([utterance_fixture(), utterance_fixture()]), player, motion_backend=motion)
+        await robot.connect()
+        await owner(hub, "POST", "/robot-voice/start", json={"robot_id": ROBOT_ID})
+        await wait_until(lambda: len(player.played) == 1 and ("wobble", True) in motion.calls)
+        turns = (await owner(hub, "GET", "/robot-voice")).json()["session"]["turns"]
+        assert [t["outcome"] for t in turns] == ["withheld", "spoken"]
+        # Only the spoken second turn wobbled.
+        assert motion.calls.count(("wobble", True)) == 1
+        await robot.voice.aclose()
+        robot.motion.close()
+
+    asyncio.run(scenario())

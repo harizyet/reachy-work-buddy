@@ -210,10 +210,19 @@ With `PALM_STOP_ENABLED=true`, `gesture.py`'s `PalmStopWatcher` checks
 camera frames during playback. A held open palm (MediaPipe gesture model)
 stops playback and the loop returns to listening in the same session.
 
+`motion.py` (Phase 24f) is the single local motion owner. See the
+[ADR 0003 amendment](../adr/0003-embodiment-command-api.md#phase-24f-motion-ownership-amendment-2026-09-25).
+`CONVERSATION_MOTION_ENABLED` and `SPEECH_WOBBLE_ENABLED` are both off by
+default. While either is on, a voice conversation owns motion and
+`POST /behaviour/{name}` answers 409. The motion itself is not physically
+accepted.
+
 `ReachyDaemonBackend` calls daemon HTTP under `/api`. Recorded moves use the
 Pollen emotions dataset. Camera frames and the microphone share one
 `reachy_mini` LOCAL media client. Audio playback is upload-then-play, and
-`stop_audio` calls `/api/media/stop_sound`.
+`stop_audio` calls `/api/media/stop_sound`. `stop_motion` stops the move
+it last started by UUID, `goto_home` sends one bounded `/move/goto` to the
+wake-up end pose, and `set_speech_wobble` switches `/api/media/wobbling/*`.
 Physical camera/audio acceptance is still outstanding. Read
 [bring-up evidence](../verification/phase-22-bring-up.md) before treating the
 simulator's successful move lifecycle as validated real motion.

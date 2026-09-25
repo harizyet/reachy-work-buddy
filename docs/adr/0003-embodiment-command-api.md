@@ -24,6 +24,52 @@ stopped move holds its pose and is not followed by a return home.
 `interruptible` and `priority` are still not enforced. Conversation-level
 ownership and rejection are Phase 24f item 3 and need their own amendment.
 
+## Phase 24f motion-ownership amendment (2026-09-25)
+
+Status: accepted for implementation. Enabled behaviour is not physically
+accepted yet.
+
+One local owner, `MotionController` in `reachy-embodiment`, handles every
+motion path in the service: the robot voice conversation, explicit
+`POST /behaviour/{name}`, idle presence and daemon standby. Core and hub
+keep their roles. No transcript or LLM output selects a gesture.
+
+- **Switches.** `CONVERSATION_MOTION_ENABLED` covers listening and thinking
+  gestures and one return home. `SPEECH_WOBBLE_ENABLED` covers the daemon's
+  audio-reactive head motion while speaking. Both default to off. With both
+  off, the controller takes no ownership, and every path behaves as it did
+  before 24f.
+- **Ownership.** While a switch is on, a robot voice conversation owns
+  motion for its whole session. Explicit behaviours get HTTP 409, and idle
+  presence skips its tick. Nothing is queued to play later. When `/remote`
+  is active, the conversation sends no motion, because remote control owns
+  the robot.
+- **Fencing.** Each conversation gets a token, so calls from a replaced
+  session are ignored. A gesture plays at most once per turn and state:
+  returning to listening after a held segment stops the thinking gesture
+  and does not replay the listening one. Repeated state reports do nothing.
+- **Dispatch.** Transitions go to one worker thread, so the voice event loop
+  never waits on the daemon. Only the latest transition is kept. Each
+  transition states the complete motion wanted, so a dropped intermediate
+  one loses nothing.
+- **Stop.** Standby and shutdown call `stop()`, which invalidates pending
+  work first. It then waits for any in-flight daemon call and stops that
+  move by UUID. It also disables speech wobble, which zeroes the offsets
+  that 1.8.4's `stop_sound` leaves applied. A voice stop, disconnect or
+  failure ends ownership with a stop and no return home. Only a normal
+  session end (the session length limit) returns home, with one bounded
+  `/move/goto` to `IDLE_HOME` sent with fixed keys and explicit body yaw.
+- **Startup.** The embodiment sends no startup home. In 1.8.4 the daemon
+  reports `running` only after its wake-up, which already ends at
+  `IDLE_HOME`. Cold boot, resume and once-per-boot recovery all run that
+  wake-up. An embodiment restart or hub reconnect must not replay a home
+  move, and has no other safe lifecycle boundary to key one to. This means
+  no motion is added beyond the existing unattended-start exception.
+
+Speaking uses daemon wobble, not a recorded move. It is a daemon-wide
+setting, so it is enabled only during playback and disabled on every other
+transition and on stop.
+
 ## Context
 
 `companion-core` needs to make Reachy express behaviours (listening,

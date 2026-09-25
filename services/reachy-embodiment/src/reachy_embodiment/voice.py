@@ -41,6 +41,7 @@ import httpx
 import numpy as np
 
 from reachy_embodiment.audio.vad import CHUNK_SAMPLES
+from reachy_embodiment.motion import MotionController
 from reachy_embodiment.state import ServiceState
 from shared.models.embodiment import EmbodimentState
 from shared.models.robot_voice import (
@@ -262,6 +263,7 @@ class VoiceConversation:
         poll_interval: float = 0.01,
         clock: Callable[[], float] | None = None,
         stop_gesture: StopGesture | None = None,
+        motion: MotionController | None = None,
     ) -> None:
         self._microphone_factory = microphone_factory
         self._vad_factory = vad_factory
@@ -277,6 +279,10 @@ class VoiceConversation:
         self._stop_gesture = stop_gesture
         # Set per session once the watcher's detector and camera are ready.
         self._palm_stop_ready = False
+        # Phase 24f: conversation states drive local motion through this,
+        # fenced by the token from begin_conversation.
+        self._motion = motion
+        self._motion_token: int | None = None
 
     @property
     def voice_session_id(self) -> str | None:
@@ -307,10 +313,14 @@ class VoiceConversation:
         if self._stop_gesture is not None:
             await asyncio.to_thread(self._stop_gesture.close)
 
-    def _set_state(self, state: EmbodimentState | None) -> None:
+    def _set_state(self, state: EmbodimentState | None, turn: int = 0) -> None:
         if state is None:
-            state = EmbodimentState.REMOTE if self._state.remote_active else EmbodimentState.IDLE
+            # The session is ending; end_conversation decides the motion.
+            self._state.embodiment_state = EmbodimentState.REMOTE if self._state.remote_active else EmbodimentState.IDLE
+            return
         self._state.embodiment_state = state
+        if self._motion is not None and self._motion_token is not None:
+            self._motion.conversation_state(self._motion_token, turn, state)
 
     async def _run(self, message: VoiceStartMessage, generation: int, send_state: SendState) -> None:
         limits = message.limits
@@ -324,6 +334,9 @@ class VoiceConversation:
 
         deadline = self._clock() + limits.max_session_seconds
         turn = 1
+        completed = False
+        if self._motion is not None:
+            self._motion_token = self._motion.begin_conversation()
         try:
             # Both can take seconds (model load; SDK media client connecting
             # to the daemon). Off the event loop, or the hub WSS keepalive
@@ -346,13 +359,14 @@ class VoiceConversation:
                     await report(RobotVoiceState.STOPPED, "Hub refused the turn")
                     return
                 if result is None:
+                    completed = True
                     await report(RobotVoiceState.STOPPED, "Maximum conversation length reached")
                     return
                 outcome, audio, cut_at = result
                 turn += 1
 
                 if outcome == VoiceTurnOutcome.SPOKEN and audio:
-                    self._set_state(EmbodimentState.SPEAKING)
+                    self._set_state(EmbodimentState.SPEAKING, turn - 1)
                     await report(RobotVoiceState.SPEAKING)
                     if await self._play(audio, report):
                         log.info("voice turn %s: reply stopped by open palm", turn - 1)
@@ -366,6 +380,10 @@ class VoiceConversation:
             await report(RobotVoiceState.STOPPED, "Robot voice loop failed")
         finally:
             self._set_state(None)
+            if self._motion is not None and self._motion_token is not None:
+                # Only a normal end returns home; a stop or failure holds.
+                self._motion.end_conversation(self._motion_token, completed=completed)
+                self._motion_token = None
 
     async def _take_turn(
         self,
@@ -389,7 +407,7 @@ class VoiceConversation:
             raise MicrophoneFailed from exc
         capture: asyncio.Task[np.ndarray] | None = None
         try:
-            self._set_state(EmbodimentState.LISTENING)
+            self._set_state(EmbodimentState.LISTENING, turn)
             await report(RobotVoiceState.LISTENING)
             capture = asyncio.create_task(self._capture(microphone, segmenter))
             utterance = await self._await_capture(capture, segmenter, deadline)
@@ -410,7 +428,7 @@ class VoiceConversation:
                     segmenter.limit(remaining)
                     capture = asyncio.create_task(self._capture(microphone, segmenter))
 
-                self._set_state(EmbodimentState.THINKING)
+                self._set_state(EmbodimentState.THINKING, turn)
                 await report(RobotVoiceState.UPLOADING)
                 outcome, audio = await self._send(
                     report,
@@ -432,7 +450,7 @@ class VoiceConversation:
                 if outcome != VoiceTurnOutcome.CONTINUE:
                     return outcome, audio, cut_at
 
-                self._set_state(EmbodimentState.LISTENING)
+                self._set_state(EmbodimentState.LISTENING, turn)
                 await report(RobotVoiceState.LISTENING)
                 window_end = cut_at + limits.continuation_window_ms / 1000
                 utterance = None

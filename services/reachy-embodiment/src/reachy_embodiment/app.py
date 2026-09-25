@@ -35,6 +35,7 @@ from reachy_embodiment.gesture import (
     PalmStopWatcher,
     probe_mediapipe,
 )
+from reachy_embodiment.motion import MotionController
 from reachy_embodiment.presence import PresenceLoop
 from reachy_embodiment.robot import (
     ReachyDaemonBackend,
@@ -78,7 +79,26 @@ def _default_backend() -> RobotBackend:
     raise ValueError(f"unknown ROBOT_BACKEND {kind!r}; expected 'simulated' or 'reachy_daemon'")
 
 
-def _default_robot_ws_client(backend: RobotBackend, state: ServiceState) -> RobotWSClient | None:
+def _env_flag(name: str) -> bool:
+    return os.environ.get(name, "false").strip().lower() == "true"
+
+
+def _default_motion_controller(backend: RobotBackend, state: ServiceState) -> MotionController:
+    """Phase 24f: `CONVERSATION_MOTION_ENABLED` (listening/thinking gestures
+    and one return home at a normal session end) and `SPEECH_WOBBLE_ENABLED`
+    (daemon audio-reactive head motion while speaking). Both off until
+    physically accepted; off means no conversation motion and no ownership."""
+    return MotionController(
+        backend,
+        state,
+        conversation_motion=_env_flag("CONVERSATION_MOTION_ENABLED"),
+        speech_wobble=_env_flag("SPEECH_WOBBLE_ENABLED"),
+    )
+
+
+def _default_robot_ws_client(
+    backend: RobotBackend, state: ServiceState, motion: MotionController
+) -> RobotWSClient | None:
     """Builds the ADR 0019 WS client from `HUB_WS_URL`/`ROBOT_ID`/
     `ROBOT_TOKEN`. Returns None (no outbound connection attempted) unless
     all three are set — this is additive to the HTTP dev/simulation
@@ -96,13 +116,18 @@ def _default_robot_ws_client(backend: RobotBackend, state: ServiceState) -> Robo
     if not (hub_ws_url and robot_id and robot_token):
         return None
     voice = None
-    if os.environ.get("VOICE_CONVERSATION_ENABLED", "false").strip().lower() == "true":
-        voice = _default_voice_conversation(backend, state, hub_ws_url, robot_id, robot_token)
+    if _env_flag("VOICE_CONVERSATION_ENABLED"):
+        voice = _default_voice_conversation(backend, state, hub_ws_url, robot_id, robot_token, motion)
     return RobotWSClient(hub_ws_url, robot_id, robot_token, sim=backend.sim, voice=voice)
 
 
 def _default_voice_conversation(
-    backend: RobotBackend, state: ServiceState, hub_url: str, robot_id: str, robot_token: str
+    backend: RobotBackend,
+    state: ServiceState,
+    hub_url: str,
+    robot_id: str,
+    robot_token: str,
+    motion: MotionController,
 ) -> VoiceConversation:
     def vad_factory(limits):
         # Local import: loads torch/Silero only once a session starts.
@@ -117,6 +142,7 @@ def _default_voice_conversation(
         backend,
         state,
         stop_gesture=_default_palm_stop(backend),
+        motion=motion,
     )
 
 
@@ -160,12 +186,15 @@ def create_app(
     run_presence_loop: bool = True,
     robot_ws_client: RobotWSClient | None = None,
     run_robot_ws_client: bool = True,
+    motion: MotionController | None = None,
 ) -> FastAPI:
     backend = backend or _default_backend()
     state = ServiceState(connected=backend.connected, sim=backend.sim)
-    presence_loop = PresenceLoop(backend, state)
+    if motion is None:
+        motion = _default_motion_controller(backend, state)
+    presence_loop = PresenceLoop(backend, state, motion=motion)
     if robot_ws_client is None and run_robot_ws_client:
-        robot_ws_client = _default_robot_ws_client(backend, state)
+        robot_ws_client = _default_robot_ws_client(backend, state, motion)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -189,12 +218,14 @@ def create_app(
                     log.exception("robot WS client task raised during shutdown")
             if robot_ws_client is not None and robot_ws_client.voice is not None:
                 await robot_ws_client.voice.aclose()
+            await asyncio.to_thread(motion.close)
             backend.close()
 
     app = FastAPI(title="reachy-embodiment", lifespan=lifespan)
     app.state.backend = backend
     app.state.service_state = state
     app.state.presence_loop = presence_loop
+    app.state.motion = motion
     app.state.robot_ws_client = robot_ws_client
 
     @app.get(routes.HEALTH)
@@ -221,7 +252,9 @@ def create_app(
         presence_loop.heartbeat()
 
         parameters = body.parameters if body else {}
-        backend.play_behaviour(behaviour, parameters)
+        if not motion.request_behaviour(behaviour, parameters):
+            # Rejected, not queued: replaying after the turn would be stale.
+            raise HTTPException(status_code=409, detail="robot conversation owns motion")
 
         state.last_behaviour = behaviour
         state.last_behaviour_at = datetime.now(UTC)
@@ -277,6 +310,7 @@ def create_app(
         docstring for why this may still show a transitional status.
         """
         presence_loop.heartbeat()
+        motion.stop()
         daemon_status = backend.daemon_standby()
         state.embodiment_state = EmbodimentState.SLEEP
         state.connected = backend.connected
