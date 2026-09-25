@@ -534,6 +534,7 @@ def test_voice_replies_are_token_capped_and_end_on_a_whole_sentence():
     ("You have 3.5 blocks. And then", "You have 3.5 blocks."),
     ("No sentence end at all", "No sentence end at all"),
     ("Done!  ", "Done!"),
+    ("Set up a desk.\n3. Add a lamp.\n4.", "Set up a desk.\n3. Add a lamp."),
 ])
 def test_complete_sentences(text, expected):
     from companion_core.app import complete_sentences

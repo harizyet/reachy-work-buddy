@@ -319,13 +319,15 @@ SPOKEN_REPLY_INSTRUCTION = (
 # about 75 words is roughly 30 s of speech.
 SPOKEN_REPLY_MAX_TOKENS = 100
 _SENTENCE_END = re.compile(r"[.!?](?=[\"')\]]*(?:\s|$))")
+_LIST_NUMBER = re.compile(r"(?:^|\n)\s*\d+$")
 
 
 def complete_sentences(text: str) -> str:
     """Drop a trailing partial sentence left by the token cap, so the robot
     does not stop mid-word. Text without any sentence end is kept whole."""
     text = text.rstrip()
-    ends = list(_SENTENCE_END.finditer(text))
+    # "4." opening a numbered-list item is not the end of a sentence.
+    ends = [m for m in _SENTENCE_END.finditer(text) if not _LIST_NUMBER.search(text, 0, m.start())]
     if not ends or ends[-1].end() >= len(text.rstrip("\"')]")):
         return text
     return text[: ends[-1].end()]
