@@ -54,6 +54,16 @@ TOL_HOLD_AFTER_STOP = 0.02
 # known rotation within 0.002; the camera's ~5 cm offset from the rotation
 # centre adds up to ~0.01 of parallax for a scene about 1 m away.
 TOL_CAM_VS_ENCODER = 0.02
+# A camera measurement counts only with enough agreeing features; fewer
+# is reported as invalid, not as a disagreement. The first live run, in a
+# dim room (mean 35/255, 95 keypoints), produced spurious 0.3-1.0 rad
+# homographies from 20-30 matches.
+MIN_CAM_INLIERS = 50
+MIN_CAM_INLIER_RATIO = 0.5
+# Scene check before any motion: the baseline frame must have enough
+# texture, after contrast equalisation, for the measurement to mean
+# anything. Raw brightness is only reported: the Lite camera is dark.
+MIN_SCENE_KEYPOINTS = 400
 
 AXIS_TARGETS = [
     ("roll", 0.1),
@@ -215,6 +225,7 @@ def close_sdk() -> None:
 
 CAMERA_DIR: str | None = None
 CAMERA_FAILS: list[str] = []
+CAMERA_INVALID: list[str] = []
 _last_obs: dict | None = None
 # Head-to-camera rotation, from the 1.8.4 SDK (ReachyMini.T_head_cam).
 T_HEAD_CAM = ((0, 0, 1), (-1, 0, 0), (0, -1, 0))
@@ -243,8 +254,8 @@ def head_rotation_from_frames(before, after, K, D):
     import numpy as np
     from scipy.spatial.transform import Rotation as R
 
-    g1 = cv2.cvtColor(before, cv2.COLOR_BGR2GRAY)
-    g2 = cv2.cvtColor(after, cv2.COLOR_BGR2GRAY)
+    g1 = feature_gray(before)
+    g2 = feature_gray(after)
     orb = cv2.ORB_create(nfeatures=2000)
     k1, d1 = orb.detectAndCompute(g1, None)
     k2, d2 = orb.detectAndCompute(g2, None)
@@ -268,6 +279,27 @@ def head_rotation_from_frames(before, after, K, D):
     # The camera turned by the inverse; express it in the head frame.
     rotvec_cam = R.from_matrix(r_rel.T).as_rotvec()
     return np.array(T_HEAD_CAM, dtype=float) @ rotvec_cam, int(mask.sum()), len(matches)
+
+
+def feature_gray(frame):
+    """Grayscale with local contrast equalised (CLAHE). The Lite head
+    camera's frames are dark by default even in a lit room (Pollen's
+    troubleshooting lists it; the Nano measured mean 33/255, 29 ORB
+    keypoints raw, 452 after CLAHE). CLAHE changes intensities only, not
+    pixel positions, so the homography geometry is unaffected."""
+    import cv2
+
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    return cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8)).apply(gray)
+
+
+def scene_quality(frame) -> tuple[float, int]:
+    """Raw mean brightness (0-255), and ORB keypoints after CLAHE."""
+    import cv2
+
+    raw_mean = float(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY).mean())
+    keypoints = cv2.ORB_create(nfeatures=2000).detect(feature_gray(frame), None)
+    return raw_mean, len(keypoints)
 
 
 def encoder_rotvec(before: dict, after: dict):
@@ -306,12 +338,18 @@ def observe(label: str) -> dict:
             "inliers": inliers,
             "matches": matches,
         }
-        if cam is None:
+        if (
+            cam is None
+            or inliers < MIN_CAM_INLIERS
+            or inliers < MIN_CAM_INLIER_RATIO * matches
+        ):
             entry["camera_rotvec"] = None
-            CAMERA_FAILS.append(
-                f"{label}: too few camera features ({inliers}/{matches})"
+            entry["camera_valid"] = False
+            CAMERA_INVALID.append(
+                f"{label}: too few agreeing features ({inliers}/{matches})"
             )
         else:
+            entry["camera_valid"] = True
             entry["camera_rotvec"] = [round(float(v), 4) for v in cam]
             diff = [float(c - e) for c, e in zip(cam, enc)]
             entry["camera_minus_encoder"] = [round(d, 4) for d in diff]
@@ -851,7 +889,22 @@ def main() -> int:
         return 2
     if CAMERA_DIR is not None:
         try:
-            grab_frame()
+            brightness, keypoints = scene_quality(grab_frame())
+            print(
+                json.dumps(
+                    {
+                        "scene": {
+                            "brightness": round(brightness, 1),
+                            "keypoints": keypoints,
+                        }
+                    }
+                )
+            )
+            if keypoints < MIN_SCENE_KEYPOINTS:
+                raise RuntimeError(
+                    f"scene too plain or dark ({keypoints} keypoints after contrast equalisation"
+                    f" < {MIN_SCENE_KEYPOINTS}); face the head at a textured, lit target"
+                )
         except Exception as exc:  # noqa: BLE001 - refuse before any motion
             close_sdk()
             print(
@@ -875,13 +928,18 @@ def main() -> int:
                 )
             )
             CAMERA_FAILS.clear()
+            CAMERA_INVALID.clear()
             run_case(name)
             if CAMERA_DIR is not None:
+                verdict = (
+                    "FAIL" if CAMERA_FAILS else "INVALID" if CAMERA_INVALID else "PASS"
+                )
                 print(
                     json.dumps(
                         {
-                            "camera_summary": "PASS" if not CAMERA_FAILS else "FAIL",
+                            "camera_summary": verdict,
                             "fails": CAMERA_FAILS,
+                            "invalid": CAMERA_INVALID,
                         }
                     )
                 )
