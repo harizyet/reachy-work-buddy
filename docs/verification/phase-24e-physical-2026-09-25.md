@@ -254,7 +254,7 @@ logged `palm stop ready` 1.8 s after voice start (camera warm-up).
 | Stop | **PASS at the owner-accepted 1–2 s** | Turn 2 ("long story about a dragon"): playback started 10:18:44.770, "open palm seen" at 10:18:51.255, daemon stop at 10:18:51.297 (42 ms after detection). Hub turn record "Stopped by an open palm". Follow-up "What's 2 plus 2?" answered in the same session. The owner estimated 1–2 s from palm shown to silence, against the planned 1 s. The Nano camera pipeline reports up to 1.06 s of latency (24f), and detection needs two consecutive frames at 0.25 s intervals. The owner accepted 1–2 s and kept the two-frame rule (2026-09-26) |
 | No false stops | PASS | Turn 4 ("long story about the sea") played its full 21.5 s while the owner talked with moving hands, waved, gave a thumbs-up and stepped out of view |
 | Coexistence | PASS | No audio stutter; every next question was heard |
-| Other hand | Rerun pending | Not performed in this session |
+| Other hand | PASS | Session `YL7n…` (10:24:53–10:25:24Z): "open palm seen" 3.7 s into playback, daemon stop 40 ms later. Follow-up answered in the same session |
 | Off | PASS (earlier) | With the hub switch off, `voice_start.palm_stop` was false and the robot never read the camera during replies (all earlier sessions) |
 
 A stray "That's it." became turn 1. Frame round-trip time and hub
