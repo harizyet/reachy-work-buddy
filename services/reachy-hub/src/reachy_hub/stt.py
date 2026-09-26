@@ -19,6 +19,7 @@ up whatever complete audio clip STT is asked to transcribe.
 from __future__ import annotations
 
 import io
+import os
 from collections.abc import Sequence
 from typing import Protocol
 
@@ -30,10 +31,13 @@ class SpeechToText(Protocol):
 
 
 class FasterWhisperSTT:
-    def __init__(self, model_size: str = "base.en") -> None:
+    def __init__(self, model_size: str | None = None) -> None:
         from faster_whisper import WhisperModel
 
-        self._model = WhisperModel(model_size, compute_type="int8")
+        # STT_MODEL is any faster-whisper model name. The owner chose to try
+        # a larger one after the 24e physical run misheard "cold and the flu"
+        # as "coil and the flue".
+        self._model = WhisperModel(model_size or os.environ.get("STT_MODEL") or "base.en", compute_type="int8")
 
     def transcribe(self, wav_bytes: bytes, *, vocabulary: Sequence[str] = ()) -> str:
         # Phase 24e: bias recognition toward the robot's name, which 24d

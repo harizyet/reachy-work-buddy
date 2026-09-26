@@ -81,8 +81,13 @@ Same-session turns serialize; the latest 39 user/assistant messages provide
 bounded context, reset on restart. Work-memory recall queries persistent
 records, never dumps that transcript. Calendar/email replies are
 work-private; generated follow-ups retain the strongest prior context label.
-Generic privacy classification and intent matching remain keyword-based, not
-semantic understanding.
+A generated reply is labelled from the owner's question only, never from
+the model's wording, and a work word makes that question work-private only
+when it refers to the owner's own data ("my next meeting", "I have a
+meeting"), not in a general question ("How do I schedule a meeting on
+Outlook?"). Local time and date questions are answered from the clock
+(`clock_intent.py`). Generic privacy classification and intent matching
+remain keyword-based, not semantic understanding.
 
 Memory records carry source, sensitivity, optional expiry, and soft-delete
 time. Expiry is enforced on reads without a cleanup worker. Recall combines
@@ -154,7 +159,8 @@ integration. See [ADR 0006](../adr/0006-response-routing.md),
 
 Telegram stores learned chat IDs separately from channel-agnostic sessions.
 Poll health lives in memory and resets on restart. STT/TTS are lazy local
-faster-whisper/espeak providers. Robot and `/voice/turn` STT is primed with
+faster-whisper/espeak providers; `STT_MODEL` picks the Whisper model
+(default `base.en`). Robot and `/voice/turn` STT is primed with
 "Reachy" and the persona's assistant name (Phase 24e). WebRTC orchestration is separate from SDP
 and audio tracks; playback resamples to 48kHz mono because aiortc's Opus
 encoder does not adapt when tracks with different formats are swapped.

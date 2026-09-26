@@ -63,3 +63,19 @@ def test_prompt_always_includes_reachy_and_the_configured_name() -> None:
     stt.transcribe(b"", vocabulary=("Zephyr", " ", "Reachy"))
     assert [call["initial_prompt"] for call in calls] == ["Hello Reachy.", "Hello Reachy and Zephyr."]
     assert all(call["vad_filter"] for call in calls)
+
+
+def test_model_comes_from_stt_model_then_base_en(monkeypatch) -> None:
+    import sys
+    import types
+
+    loaded: list[str] = []
+    fake = types.ModuleType("faster_whisper")
+    fake.WhisperModel = lambda name, **kwargs: loaded.append(name)
+    monkeypatch.setitem(sys.modules, "faster_whisper", fake)
+    monkeypatch.delenv("STT_MODEL", raising=False)
+    FasterWhisperSTT()
+    monkeypatch.setenv("STT_MODEL", "small.en")
+    FasterWhisperSTT()
+    FasterWhisperSTT(model_size="tiny.en")
+    assert loaded == ["base.en", "small.en", "tiny.en"]
