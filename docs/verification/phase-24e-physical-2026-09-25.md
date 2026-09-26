@@ -238,7 +238,9 @@ reopen-on-failure would be a robustness improvement. It is not a 24e gate.
 
 **Recovery row: PASS** for hub, network and process interruption. The
 physical microphone/speaker fault is **not tested**, with in-process
-coverage only (owner's decision pending).
+coverage only. The owner decided on 2026-09-26 to record it this way rather
+than unplug the robot's USB, which also carries the motors and camera. The
+camera was restored by an embodiment restart (10:14:20, frame 200).
 
 ## Step 2: still open
 
