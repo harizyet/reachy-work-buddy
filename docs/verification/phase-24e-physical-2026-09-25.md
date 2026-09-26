@@ -198,12 +198,24 @@ set has no case the guard catches.
 Core still held 0 drafts afterwards. **Consent and auth row: PASS**,
 including the 401 checks in step 1.
 
+## Step 2, block 5: session continuity (09:54–09:56Z)
+
+Core was restarted at 09:54:08Z, before the first step, to clear a
+work-private label carried from block 4. Owner: "all worked as expected".
+
+| Step | Channel | Result | Audit (hub) |
+|---|---|---|---|
+| "My favourite colour is teal." | Robot voice | Spoken ack | 09:54:50 reachy, public, session `a81c2e86` |
+| "What's my favourite colour?" | Web chat | "teal" | 09:55:15 web, same session |
+| "And what colour did I say?" | Telegram (bound chat) | "teal" | 09:55:31 telegram, same session |
+| "Which colour did I mention earlier?" | Robot voice, new session | "teal", **spoken** | 09:55:50 reachy, same session |
+
+**Session continuity row: PASS.**
+
 ## Step 2: still open
 
 The owner ended testing for the day after block 3 (09:33Z). Not yet run:
 
-- **Session continuity:** robot → web chat → bound Telegram → robot with
-  the same context. Telegram is configured.
 - **Recovery:** a microphone or speaker failure, a hub or network
   interruption, and process restarts, with no stale replay or automatic
   capture reactivation.
