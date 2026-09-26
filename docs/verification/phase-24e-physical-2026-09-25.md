@@ -212,13 +212,38 @@ work-private label carried from block 4. Owner: "all worked as expected".
 
 **Session continuity row: PASS.**
 
+## Step 2, block 6: recovery (10:01–10:11Z)
+
+Each item ran against a listening voice session mid-conversation. The
+checks were: the session ends with a bounded stop, nothing replays, capture
+does not restart by itself, and a new owner-started session works. Clocks
+agree: the homelab and the Nano matched within 0.1 s once my own misquoted
+times were corrected. Homelab times come from command output and
+`docker inspect`; robot times from the embodiment log.
+
+| Item | Result | Evidence |
+|---|---|---|
+| Hub restart | PASS | Restart issued 10:02:11.5Z. The robot saw WS close 1012 at 10:02:11.588, and voice stopped 26 ms later. It re-registered at 10:02:40.561, about 26 s after the hub was healthy (client reconnect backoff). No capture after reconnect. New session `q8QW` answered |
+| Network path (Caddy restart) | PASS | Restart issued 10:04:50.798Z. The robot stopped at 10:04:50.848, and the hub recorded "Robot disconnected". It re-registered 1.3 s later. No capture after reconnect. New session `tHyh` answered |
+| Embodiment process restart | PASS | `systemctl restart reachy-embodiment` during `tHyh`. The voice stop came 17 ms into shutdown, and the hub recorded "Robot disconnected". The daemon PID was unchanged. It re-registered at 10:06:20 (about 6 s container stop, then 23.5 s). No capture after. New session `HJwq` answered |
+| Microphone/speaker failure | **Not injected (test design error)** | `POST /api/media/release` does not affect voice: the robot's microphone (dsnoop `reachymini_audio_src`) and the daemon's `play_sound` (ALSA `reachymini_audio_sink`) bypass the released media server. Turns kept working. A physical microphone or speaker fault was not injected. The in-process path is covered: a failing microphone ends the hub session with "Microphone unavailable" (`test_voice.py`) |
+
+**Side effect found:** releasing and reacquiring daemon media deletes and
+recreates the camera socket. The embodiment container's bind still points
+at the old inode, so `/camera/frame` returned 500 ("camera not initialized
+yet") after reacquire until embodiment was restarted. Any SDK client using
+`no_media` (as the Testbench does) will break the embodiment camera this
+way. This follows the known socket-bind behaviour, and a camera
+reopen-on-failure would be a robustness improvement. It is not a 24e gate.
+
+**Recovery row: PASS** for hub, network and process interruption. The
+physical microphone/speaker fault is **not tested**, with in-process
+coverage only (owner's decision pending).
+
 ## Step 2: still open
 
 The owner ended testing for the day after block 3 (09:33Z). Not yet run:
 
-- **Recovery:** a microphone or speaker failure, a hub or network
-  interruption, and process restarts, with no stale replay or automatic
-  capture reactivation.
 - **Palm stop** (item 5, hub `PALM_STOP_ENABLED`), then the 24f motion
   steps, and the 30-minute session last. The 24f steps first need the hub
   and Nano rebuilt with `5c9679d` (portal motion settings).
