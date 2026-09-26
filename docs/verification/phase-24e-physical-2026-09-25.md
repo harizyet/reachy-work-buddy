@@ -96,6 +96,20 @@ owner setting in the hub environment (`da93df9`). The owner chose
 03:13Z with `VOICE_CONTINUATION_WINDOW_MS=3000`. Only trailing-off turns
 pay the wait.
 
+### Block 1 retest with the 3.0 s window (03:19–03:22Z)
+
+Session `QOEh…`, hub `da93df9`.
+
+| Item | Result | Evidence |
+|---|---|---|
+| Non-speech noise, no speech | PASS | No turn in the 54 s before the first question |
+| Long utterance, natural ~2 s pauses | **PASS** | One turn from **4 segments**: "I was wondering... If you could tell me... About the history of... The Eiffel Tower." Three were held (`continue`); the fourth was answered directly. Gaps between cuts were 2.56, 3.58 and 2.59 s. First audio came 6.43 s after the last cut, about 7.1 s after the end of speech (LLM 4.67 s on the merged question). No window wait was added after the last segment |
+| Short story | PASS | 19.5 s reply, no self-hearing |
+
+**Turn handling row:** PASS for silence, non-speech noise, long paused
+utterances and self-hearing. TV speech FAILs as a recorded known limit,
+deferred to Phase 25.
+
 ## Step 2: deferred 24d rows (not run)
 
 The owner stopped for the day on 2026-09-25 at about 13:50Z, before step 2
