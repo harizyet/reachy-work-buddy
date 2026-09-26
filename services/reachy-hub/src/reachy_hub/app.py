@@ -201,6 +201,7 @@ from shared.models.embodiment import Behaviour
 from shared.models.interruption import InterruptionAction
 from shared.models.motion import MotionSettings, MotionSettingsStatus
 from shared.models.response import Privacy, Urgency
+from shared.models.robot_voice import VoiceLimits
 from shared.models.session import (
     AgentSession,
     Channel,
@@ -326,6 +327,23 @@ async def _warm_voice_providers(*loaders: Callable[[], object]) -> None:
             log.exception("voice provider warm-up failed")
         else:
             log.info("voice provider ready in %.1fs", time.perf_counter() - started)
+
+
+# Owner-tunable robot voice limits (ADR 0023). Unset keeps the model's
+# defaults; out-of-range values fail at startup through VoiceLimits' own
+# bounds rather than being clamped silently.
+_VOICE_LIMIT_ENV = {
+    "VOICE_CONTINUATION_WINDOW_MS": "continuation_window_ms",
+    "VOICE_END_OF_SPEECH_SILENCE_MS": "end_of_speech_silence_ms",
+    "VOICE_MAX_SESSION_SECONDS": "max_session_seconds",
+}
+
+
+def _voice_limits_from_env() -> VoiceLimits:
+    overrides = {
+        field: os.environ[name].strip() for name, field in _VOICE_LIMIT_ENV.items() if os.environ.get(name, "").strip()
+    }
+    return VoiceLimits(**overrides)
 
 
 def _default_palm_stop() -> PalmStop | None:
@@ -702,7 +720,7 @@ def create_app(
     robot_connection_manager = robot_connection_manager or RobotConnectionManager()
     # Phase 24c (ADR 0023): process-local like the connection manager.
     robot_voice_manager = robot_voice_manager or RobotVoiceManager(
-        robot_connection_manager, palm_stop=_default_palm_stop()
+        robot_connection_manager, limits=_voice_limits_from_env(), palm_stop=_default_palm_stop()
     )
     app.state.robot_credential_store = robot_credential_store
     app.state.robot_connection_manager = robot_connection_manager

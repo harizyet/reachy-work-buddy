@@ -152,6 +152,11 @@ services:
       # reply plays; they are classified here in memory and never stored.
       # Off by default until physically accepted.
       PALM_STOP_ENABLED: ${PALM_STOP_ENABLED:-false}
+      # ADR 0023 robot voice limits; unset keeps the defaults (1500 ms,
+      # 700 ms, 600 s). Bounds are enforced at startup.
+      VOICE_CONTINUATION_WINDOW_MS: ${VOICE_CONTINUATION_WINDOW_MS:-}
+      VOICE_END_OF_SPEECH_SILENCE_MS: ${VOICE_END_OF_SPEECH_SILENCE_MS:-}
+      VOICE_MAX_SESSION_SECONDS: ${VOICE_MAX_SESSION_SECONDS:-}
     depends_on:
       migrate:
         condition: service_completed_successfully

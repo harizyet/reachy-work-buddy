@@ -1057,3 +1057,18 @@ def test_voice_turn_retains_search_evidence_for_portal():
     assert outcome == VoiceTurnOutcome.SPOKEN
     assert audio == b"audio"
     assert session.turns[-1].web_search == evidence
+
+
+def test_voice_limits_can_be_tuned_from_the_environment(monkeypatch) -> None:
+    from pydantic import ValidationError
+    from reachy_hub.app import _voice_limits_from_env
+
+    assert _voice_limits_from_env() == VoiceLimits()
+    monkeypatch.setenv("VOICE_CONTINUATION_WINDOW_MS", "3000")
+    monkeypatch.setenv("VOICE_MAX_SESSION_SECONDS", "1800")
+    limits = _voice_limits_from_env()
+    assert (limits.continuation_window_ms, limits.max_session_seconds) == (3000, 1800.0)
+    assert limits.end_of_speech_silence_ms == VoiceLimits().end_of_speech_silence_ms
+    monkeypatch.setenv("VOICE_CONTINUATION_WINDOW_MS", "9000")  # above the model's 5000 cap
+    with pytest.raises(ValidationError):
+        _voice_limits_from_env()
