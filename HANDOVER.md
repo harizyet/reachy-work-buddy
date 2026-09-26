@@ -1,6 +1,6 @@
 # Handover
 
-Current session snapshot: 2026-09-25. Read [AGENTS.md](AGENTS.md) first.
+Current session snapshot: 2026-09-26. Read [AGENTS.md](AGENTS.md) first.
 The [documentation index](docs/README.md) defines ownership;
 [project state](docs/project-state.md) collects deployment limits and open
 acceptance. This file holds only session continuation details.
@@ -20,16 +20,30 @@ environment defaults on restart; see the
 [operator guide](docs/operator-guide.md#conversational-animations).
 
 The [24e physical run](docs/verification/phase-24e-physical-2026-09-25.md)
-is in progress with the owner. Normal conversation passed. Timing failed
-only on a cold first turn, fixed by the STT/TTS warm-up (`540413e`), and is
-to be measured again warm. Turn handling passed, apart from TV speech, a
-known limit deferred to Phase 25; the continuation window is now owner-set
-at 3.0 s (`VOICE_CONTINUATION_WINDOW_MS`, `da93df9`). Stop and expiry
-passed with a 31 ms playback stop. Privacy passed by voice after fixing
-the conversation privacy carry-over (`52fefdb`, ADR 0006 amendment).
-**Next:** consent, session continuity, recovery, palm stop, then the 24f
-motion steps (rebuild hub and Nano with `5c9679d` first), and the
-30-minute session last.
+ran with the owner on 2026-09-25 and 2026-09-26. Passed: Normal
+conversation; Timing (warm re-run p50 3.63 s, p95 5.22 s); turn handling
+apart from TV speech (known limit, deferred to Phase 25; continuation
+window owner-set at 3.0 s, `da93df9`); stop and expiry (31 ms playback
+stop); privacy by voice after the carry-over fix (`52fefdb`); consent after
+the deterministic email-action refusal (`c383370`); session continuity
+(robot → web → Telegram → robot); recovery from hub, network and
+embodiment restarts (the audio-fault sub-row is in-process only, by owner
+decision, because a daemon media release doesn't affect the ALSA mic or
+speaker); open-palm stop with either hand and no false stops (owner accepts
+1–2 s to silence). **Next for 24e:** the 30-minute session.
+
+24f physical ([record](docs/verification/phase-24f-physical-2026-09-26.md)):
+the owner's portal toggle reaches the robot. The step B motion-off
+baseline is recorded. Step C (gestures on) failed on the robot's daemon
+client: stopping an already-finished move made the daemon drop the
+connection, and the next gesture or home move reused it. That's fixed in
+`b36736d` and verified against a mockup only. The robot-side cost of
+gestures was +19.5 ms median. The owner switched gestures back OFF and
+ended testing for the day. **Next:** with the owner present, swap in the
+`b36736d` embodiment image (built on the Nano, not deployed), check it,
+then rerun step C (`docker tag reachy-embodiment:b36736d reachy-embodiment:local`
+first, then the usual swap via `start-reachy.sh`): 22 lines, a Stop during the thinking gesture, and the
+409 explicit-behaviour check.
 
 [Phase 24f](docs/phase-24f.md) is in progress. Item 1 is measured on the
 Nano ([record](docs/verification/phase-24f-conformance-2026-09-25.md)).
@@ -108,14 +122,15 @@ remains blocked on the
 These are previous session observations, not health checks performed during
 this documentation pass. Recheck state before relying on them.
 
-- **Nano:** booted 2026-09-26 ~02:30Z (power-on reset); daemon running
-  (0 errors), embodiment healthy, no overheat or recovery entries. Checkout
-  `5c9679d`, but the embodiment image is still `7ecc81f5` (2.17 GB),
-  built on the Nano 2026-09-25 13:30Z: no MediaPipe (palm stop is hub-side),
-  motion switches unset (off), voice enabled, hub reports it online and
-  voice-capable. The previous image (`1a66f01`) predated palm stop, so
-  MediaPipe never ran on the Nano. It was left at IDLE_HOME with embodiment active after run 3
-  (2026-09-25 ~13:10Z). The 24f tool dependency `opencv-python-headless`
+- **Nano:** booted 2026-09-26 ~02:35Z (the owner's power cycle); daemon
+  running (0 errors), embodiment healthy, no overheat or recovery entries.
+  Checkout `65c7e75`. The running embodiment image is `eb1e92e9`, built at
+  `67bfc5f` on 2026-09-26 10:33Z, with gestures and speech wobble OFF.
+  A `b36736d` image is built under the tag `reachy-embodiment:b36736d` but
+  not deployed; `docker tag` it as `reachy-embodiment:local` before the swap.
+  No MediaPipe on the Nano (palm stop is hub-side); voice enabled; the hub
+  reports it online and voice-capable. Left at IDLE_HOME with embodiment
+  active (2026-09-26 ~10:55Z). The 24f tool dependency `opencv-python-headless`
   4.11.0.86 is in `~/24f-tools` only (use `PYTHONPATH`), not in
   `reachy-venv`. Logs and frames are in `~/24f-logs`. `reachy-embodiment.service` and
   `reachy-daemon-recovery.service` enabled; container uses `--mount` and no
