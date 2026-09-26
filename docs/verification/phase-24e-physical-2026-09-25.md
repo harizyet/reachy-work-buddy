@@ -110,6 +110,22 @@ Session `QOEh…`, hub `da93df9`.
 utterances and self-hearing. TV speech FAILs as a recorded known limit,
 deferred to Phase 25.
 
+## Step 2, block 2: stop and expiry (03:22–03:25Z)
+
+A new session for each item, motion off. Owner: "it all went as
+expected".
+
+| Item | Result | Evidence |
+|---|---|---|
+| Stop while still speaking | PASS | Sessions `_XZq` and `E1t1`: stop received with no utterance cut and no reply |
+| Stop during inference | PASS | Session `xOQi`: cut at 03:24:14.712, stop at 03:24:16.671. No reply logged and no playback later |
+| Stop during playback | **PASS, 31 ms** | Session `dZh2`: playback started 03:24:37.638. Stop received 03:24:38.369, daemon `stop_sound` 200 at 03:24:38.398 (29 ms), "daemon audio stop returned" at .400. The owner heard it stop promptly |
+| Logout while listening | PASS | Session `fMlh`: stop received 3.48 s after start. Hub stop reason "Owner logged out" |
+
+**Stop and expiry row: PASS.** The software stop tail was 31 ms against
+the 1 s budget, confirmed by ear. The daemon journal and embodiment log
+had no warnings or errors.
+
 ## Step 2: deferred 24d rows (not run)
 
 The owner stopped for the day on 2026-09-25 at about 13:50Z, before step 2
