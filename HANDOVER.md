@@ -35,14 +35,31 @@ speaker); open-palm stop with either hand and no false stops (owner accepts
 Homelab fixes after the owner ended testing (deployed, not yet exercised
 on the robot): weather search keeps a question's own place instead of
 appending the owner's location (`4a9dd16`), and the hub's INFO logging
-(`7a597e6`). Open owner decisions from the run: whether time-of-day
-questions should search or use the clock; whether a keyword in the
-model's own wording (e.g. "schedule") should still be able to withhold a
-public answer from the speaker; whether to try a larger STT model after
-mishearings ("coil and the flue", "court would"). Known, not fixed: a
-daemon media release/reacquire (any `no_media` SDK client) breaks the
-embodiment camera until embodiment restarts, since the socket bind keeps
-the old inode.
+(`7a597e6`). Known, not fixed: a daemon media release/reacquire (any
+`no_media` SDK client) breaks the embodiment camera until embodiment
+restarts, since the socket bind keeps the old inode.
+
+The owner settled the run's three open decisions on 2026-09-26; the work
+is committed, tested in process, and **not deployed**:
+- `637fcad`: the local time or date is answered from the clock in the
+  owner's timezone, and a time question naming another place searches.
+  A generated reply is labelled from the question only, never the model's
+  wording, and a work word counts only for the owner's own data ("How do I
+  schedule a meeting on Outlook?" is public). See the
+  [ADR 0006 amendment](docs/adr/0006-response-routing.md#generated-replies-are-labelled-from-the-question-only-2026-09-26).
+- `c2db3d2`: `STT_MODEL` picks the hub's Whisper model. A synthetic
+  comparison ([record](docs/verification/stt-model-comparison-2026-09-26.md))
+  favours small.en under noise, at about +0.55 s per turn, which likely
+  takes non-search p50 over the 4 s budget. `STT_MODEL=small.en` is in the
+  homelab's private `.env`.
+
+**Next:** the owner runs `scripts/start-homelab.sh --build` (this session's
+rebuild was blocked by the permission check). The hub then downloads
+small.en (~480 MB) once and warms it in the background; confirm the
+warm-up log line before a voice turn. Then check on the robot: the time
+questions, "What's a good way to start the morning?" spoken aloud, the
+mishearing phrases, and the timing against the budget. If mishearings
+remain with small.en, suspect the microphone. Unset `STT_MODEL` to revert.
 
 24f physical ([record](docs/verification/phase-24f-physical-2026-09-26.md)):
 the owner's portal toggle reaches the robot. The step B motion-off
@@ -149,7 +166,8 @@ this documentation pass. Recheck state before relying on them.
   restart policy. Embodiment is host-networked on 8100, daemon loopback on
   8000. Apply the [deployment boundaries](docs/deployment.md#robot-host-and-jetson-nano)
   before daemon starts or motion; `--check` stays read-only.
-- **Homelab:** rebuilt 2026-09-26 14:27Z at `7a597e6`; hub and core
+- **Homelab:** rebuilt 2026-09-26 14:27Z at `7a597e6` (`c2db3d2` not yet
+  deployed; `.env` has `STT_MODEL=small.en` waiting for the rebuild); hub and core
   healthy, nano-1 online and voice-capable. Latest pre-change backup is
   `~/reachy-backups/reachy-before-24f-deploy-20260925T131937.dump`; schema
   `008_assistant_context`. The private `.env` now sets

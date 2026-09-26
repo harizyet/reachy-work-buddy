@@ -152,6 +152,10 @@ These are dated evidence, not startup instructions or current health checks.
   homelab redeploy, live search/browser checks and powered-off robot UI;
   Nano deployment and physical animation remain open.
 
+- [STT model comparison](verification/stt-model-comparison-2026-09-26.md):
+  synthetic noisy-speech comparison of Whisper models on the homelab CPU;
+  small.en is more accurate but adds about 0.55 s per turn.
+
 ## Where information belongs
 
 | Information | Canonical home | Elsewhere |
