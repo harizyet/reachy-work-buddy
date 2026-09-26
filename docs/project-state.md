@@ -76,8 +76,13 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
   300/0/0) predict a direction-dependent shortfall like this, and the
   Testbench tolerates 5–15°, so normal versus fault is open.
   Pose-dependent motion stays disabled.
-- An unplanned Nano power loss at 02:38:20Z reported `TEGRA_POWER_ON_RESET`,
-  with no undervoltage logged. A supply dropout is suspected, not proven.
+- An unplanned Nano power loss on 2026-09-25 at 02:38:20Z reported
+  `TEGRA_POWER_ON_RESET`, with no undervoltage logged. A second hard reset
+  happened on 2026-09-26 at about 02:35Z, about 5 minutes after a boot. It
+  was also `TEGRA_POWER_ON_RESET`, and the ext4 recovered orphan inodes;
+  one git object written a minute earlier was left empty and was repaired
+  from the remote. Whether the owner caused it is unconfirmed. Both came
+  within minutes of a boot. A supply dropout is suspected, not proven.
   Its RTC loses time across power-offs; pre-NTP journal timestamps are stale.
   Power/time diagnostics are in 24e.
 - Daemon 1.8.4 wake-up can fail with `time value is out of range [0,1]`.
