@@ -32,6 +32,18 @@ decision, because a daemon media release doesn't affect the ALSA mic or
 speaker); open-palm stop with either hand and no false stops (owner accepts
 1–2 s to silence). **Next for 24e:** the 30-minute session.
 
+Homelab fixes after the owner ended testing (deployed, not yet exercised
+on the robot): weather search keeps a question's own place instead of
+appending the owner's location (`4a9dd16`), and the hub's INFO logging
+(`7a597e6`). Open owner decisions from the run: whether time-of-day
+questions should search or use the clock; whether a keyword in the
+model's own wording (e.g. "schedule") should still be able to withhold a
+public answer from the speaker; whether to try a larger STT model after
+mishearings ("coil and the flue", "court would"). Known, not fixed: a
+daemon media release/reacquire (any `no_media` SDK client) breaks the
+embodiment camera until embodiment restarts, since the socket bind keeps
+the old inode.
+
 24f physical ([record](docs/verification/phase-24f-physical-2026-09-26.md)):
 the owner's portal toggle reaches the robot. The step B motion-off
 baseline is recorded. Step C (gestures on) failed on the robot's daemon
@@ -137,10 +149,15 @@ this documentation pass. Recheck state before relying on them.
   restart policy. Embodiment is host-networked on 8100, daemon loopback on
   8000. Apply the [deployment boundaries](docs/deployment.md#robot-host-and-jetson-nano)
   before daemon starts or motion; `--check` stays read-only.
-- **Homelab:** rebuilt 2026-09-25 14:32Z from `9b84d93` plus the
-  working-tree animation-controls change; hub/core healthy. Image IDs and
-  backup are in the [portal record](docs/verification/portal-controls-2026-09-25.md),
-  schema `008_assistant_context`, hub `PALM_STOP_ENABLED` false.
+- **Homelab:** rebuilt 2026-09-26 14:27Z at `7a597e6`; hub and core
+  healthy, nano-1 online and voice-capable. Latest pre-change backup is
+  `~/reachy-backups/reachy-before-24f-deploy-20260925T131937.dump`; schema
+  `008_assistant_context`. The private `.env` now sets
+  `PALM_STOP_ENABLED=true` and `VOICE_CONTINUATION_WINDOW_MS=3000` (owner
+  decisions, 2026-09-26). The hub now logs its own INFO lines (`7a597e6`).
+  Restarting only core: `docker restart reachy-homelab-companion-core-1`,
+  since `docker compose restart` without the launcher fails on the
+  generated SearXNG secret.
   Start only through `scripts/start-homelab.sh`. Piper `en_US-lessac-medium`;
   search policy Auto, Brave/Exa/Tavily rotation then SearXNG. Backups in
   `~/reachy-backups/` (0600). Core readiness needs a separate check after
