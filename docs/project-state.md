@@ -80,7 +80,8 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
   `TEGRA_POWER_ON_RESET`, with no undervoltage logged. The 2026-09-26
   ~02:35Z power-on reset was the owner switching it off. The owner reports
   a known issue with the shared USB hub: plugging or removing a device can
-  reset the hub. The owner accepts this and considers it fine. Such resets
+  reset the hub. The owner accepts this for development: production will
+  power the Nano from a barrel-jack supply instead. Such resets
   can leave recently written files empty. A 2026-09-26 git object was
   repaired from the remote, so check `git fsck` after one.
   Its RTC loses time across power-offs; pre-NTP journal timestamps are stale.
