@@ -133,6 +133,10 @@ These are dated evidence, not startup instructions or current health checks.
   pinned 1.8.4 daemon source plus a mockup-sim probe; overlapping REST moves
   both run, real UUID stop exists, `running` follows wake-up; no robot.
 
+- [Phase 24f physical run](verification/phase-24f-physical-2026-09-26.md):
+  motion-off baseline, gestures on (daemon stop 500 reset the next request;
+  fixed), owner-present acceptance rows in progress.
+
 - [Phase 24f motion conformance](verification/phase-24f-conformance-2026-09-25.md):
   Nano versions, predeclared tolerances, supervised REST vs SDK run; paths
   agree; robot stops 2–5° short on both, normal vs fault still open.
