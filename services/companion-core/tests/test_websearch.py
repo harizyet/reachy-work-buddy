@@ -674,6 +674,10 @@ def test_weather_queries_get_the_owner_location_only_when_missing():
     assert localize_query("Weather in Singapore today", "Singapore") == "Weather in Singapore today"
     assert localize_query("Latest Python version", "Singapore") == "Latest Python version"
     assert localize_query("What's the weather?", None) == "What's the weather?"
+    # 24e physical run: another named place is kept as asked.
+    assert localize_query("What's the weather in Jakarta today?", "Singapore") == "What's the weather in Jakarta today?"
+    assert localize_query("Weather forecast for Tokyo", "Singapore") == "Weather forecast for Tokyo"
+    assert localize_query("Will it rain in the morning?", "Singapore") == "Will it rain in the morning? in Singapore"
 
 
 def test_context_message_carries_local_date_time_and_location():

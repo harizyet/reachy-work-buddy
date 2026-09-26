@@ -185,9 +185,21 @@ def next_search_topic(current_turn: str, query: str, search_topic: str | None) -
     return search_topic if search_topic and is_follow_up(current_turn.strip()) else query
 
 
+# A named place after a preposition, e.g. "in Jakarta". STT and typed text
+# capitalize place names; "in the morning" stays unmatched.
+_NAMED_PLACE_RE = re.compile(r"\b(?:in|at|for|near|around)\s+[A-Z][\w'-]+")
+
+
 def localize_query(query: str, location: str | None) -> str:
     """Weather without a place means the owner's own location. Sending that
-    location to the search provider is disclosed in the operator UI."""
-    if not location or not _WEATHER_RE.search(query.lower()) or location.lower() in query.lower():
+    location to the search provider is disclosed in the operator UI. A
+    question that names its own place keeps it: the 24e physical run sent
+    "What's the weather in Jakarta today? in Singapore"."""
+    if (
+        not location
+        or not _WEATHER_RE.search(query.lower())
+        or location.lower() in query.lower()
+        or _NAMED_PLACE_RE.search(query)
+    ):
         return query
     return f"{query} in {location}"
