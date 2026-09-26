@@ -73,3 +73,19 @@ def test_the_owners_own_sensitive_statement_keeps_later_replies_private() -> Non
     client = chat_client("Noted.", "It was hunter2.")
     assert say(client, "My password is hunter2") == "sensitive"
     assert say(client, "What was it again?") == "sensitive"
+
+
+def test_a_carried_label_expires_once_its_message_leaves_the_context() -> None:
+    # 24e physical run: one "meeting" in a question kept every later reply
+    # private until core restarted. Owner decision 2026-09-26: the label
+    # lasts only while the model can still see that message.
+    from companion_core.conversation import CONTEXT_MESSAGES
+
+    # The private reply is message 2; filler turn k (0-based) runs with
+    # 3 + 2k messages, so the reply is out of the window from this turn on.
+    expires_at = (CONTEXT_MESSAGES - 1) // 2
+    client = chat_client("Noted.", *["Okay."] * (expires_at + 1))
+    assert say(client, "I have a meeting at noon.") == "work-private"
+    labels = [say(client, f"Filler question number {n}?") for n in range(expires_at + 1)]
+    assert set(labels[:expires_at]) == {"work-private"}  # still in the model's context
+    assert labels[expires_at] == "public"  # scrolled out: the robot may speak again

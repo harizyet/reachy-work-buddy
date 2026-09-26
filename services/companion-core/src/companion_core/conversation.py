@@ -14,6 +14,13 @@ from dataclasses import dataclass
 
 from shared.models.response import Privacy
 
+# Messages the model sees per turn. A carried privacy label expires once
+# the message it came from has left this window: nothing private can then
+# be repeated, so it no longer needs to silence the robot.
+CONTEXT_MESSAGES = 39
+
+_RANK = {Privacy.PUBLIC: 0, Privacy.WORK_PRIVATE: 1, Privacy.SENSITIVE: 2}
+
 
 @dataclass
 class Turn:
@@ -27,7 +34,8 @@ class ConversationStore:
         self.generation = 0
         self._turns: dict[str, list[Turn]] = {}
         self._session_locks: dict[str, asyncio.Lock] = {}
-        self._privacy: dict[str, Privacy] = {}
+        # session -> [(index in _messages of the reply it came with, label)]
+        self._private_marks: dict[str, list[tuple[int, Privacy]]] = {}
         self._messages: dict[str, list[dict[str, str]]] = {}
         # session -> (search topic, number of user turns when it was set)
         self._search_topics: dict[str, tuple[str, int]] = {}
@@ -38,7 +46,7 @@ class ConversationStore:
             self.generation += 1
             self._turns.clear()
             self._messages.clear()
-            self._privacy.clear()
+            self._private_marks.clear()
             self._search_topics.clear()
 
     def append(self, session_id: str, channel: str, text: str) -> list[Turn]:
@@ -56,14 +64,19 @@ class ConversationStore:
         replies: a keyword in the model's own wording labels only that reply,
         while private data (tool results, the owner's own sensitive
         statements) stays in history and must keep later replies private."""
+        label = privacy if carried is None else carried
         with self._lock:
-            self._messages.setdefault(session_id, []).append({"role": "assistant", "content": text})
-            self._privacy[session_id] = self.reply_privacy(session_id, privacy if carried is None else carried)
+            messages = self._messages.setdefault(session_id, [])
+            messages.append({"role": "assistant", "content": text})
+            if label != Privacy.PUBLIC:
+                # Marked at the reply, the later of the two messages, since
+                # private tool results live in the reply.
+                self._private_marks.setdefault(session_id, []).append((len(messages) - 1, label))
 
     def messages(self, session_id: str) -> list[dict[str, str]]:
         with self._lock:
             # Bound inference context independently of the historical turn counter.
-            return [dict(message) for message in self._messages.get(session_id, [])[-39:]]
+            return [dict(message) for message in self._messages.get(session_id, [])[-CONTEXT_MESSAGES:]]
 
     def previous_user_message(self, session_id: str) -> str | None:
         """The user turn immediately before the current one — used only by
@@ -98,9 +111,13 @@ class ConversationStore:
         return self._session_locks.setdefault(session_id, asyncio.Lock())
 
     def reply_privacy(self, session_id: str, current: Privacy) -> Privacy:
-        # Generated replies can repeat earlier calendar/email/memory content.
-        # Keep the strongest carried label for this in-memory conversation
-        # rather than silently treating a follow-up such as "tell me more"
-        # as public.
-        rank = {Privacy.PUBLIC: 0, Privacy.WORK_PRIVATE: 1, Privacy.SENSITIVE: 2}
-        return max(current, self._privacy.get(session_id, Privacy.PUBLIC), key=rank.__getitem__)
+        """Generated replies can repeat earlier calendar/email/memory
+        content, so a follow-up such as "tell me more" keeps the strongest
+        label still in the model's context. Owner decision (2026-09-26, 24e
+        physical run): it expires once that message has left the context,
+        rather than silencing the robot for the rest of the conversation."""
+        with self._lock:
+            window_start = max(0, len(self._messages.get(session_id, [])) - CONTEXT_MESSAGES)
+            marks = [m for m in self._private_marks.get(session_id, []) if m[0] >= window_start]
+            self._private_marks[session_id] = marks
+        return max([current, *(label for _, label in marks)], key=_RANK.__getitem__)

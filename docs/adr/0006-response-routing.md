@@ -115,3 +115,20 @@ delivery_channel, whether an override fired) and exposed at
 `GET /audit/{user_id}` — the "audit events" half of Phase 9's deliverable,
 and the mechanism that makes "the policy engine has final authority"
 checkable after the fact, not just trusted at request time.
+
+## Carried privacy expires with the model's context (2026-09-26)
+
+Core carries a conversation's strongest privacy label into later replies,
+so a follow-up such as "tell me more" cannot speak earlier calendar, email
+or sensitive content aloud. Since Phase 24d, a keyword in the model's own
+wording labels only that reply; private data in the history keeps
+carrying. In the 24e physical run, one typed question containing "meeting"
+labelled the whole conversation work-private, and the robot stayed silent
+in Desk mode until core restarted.
+
+**Decision (owner, 2026-09-26):** a carried label applies only while the
+message it came from is still in the context the model sees
+(`CONTEXT_MESSAGES`, the last 39 messages). After that the model cannot
+repeat it, so later replies are labelled on their own content again. A
+label on the current turn is unaffected, and private content still in
+context keeps the conversation private.
