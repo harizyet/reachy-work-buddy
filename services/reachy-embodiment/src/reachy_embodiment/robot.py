@@ -511,20 +511,29 @@ class ReachyDaemonBackend:
             raise RobotBackendError(f"{path} failed: {exc}") from exc
 
     def _stop_active_move_locked(self) -> None:
-        """Stops the move this backend last started, if any. Caller holds
-        `_move_lock`. In 1.8.4, stopping a move that already finished
-        returns 500 (unhandled KeyError), so an HTTP status error here
-        usually just means the move had ended. The move is forgotten either
-        way. A transport error means we can't know, and is logged."""
+        """Stops the move this backend last started, if it is still running.
+        Caller holds `_move_lock`. The move is forgotten either way.
+
+        In 1.8.4, stopping a move that already finished raises an unhandled
+        KeyError (500), and uvicorn then drops that connection. The next
+        request reusing it from the pool failed with "Connection reset by
+        peer": 34 failed gestures in the 24f step C run. So only stop a move
+        the daemon still lists as running, and close the connection after
+        the stop in case it finishes in between. A transport error means we
+        can't know, and is logged."""
         uuid = self._active_move_uuid
         if uuid is None:
             return
         self._active_move_uuid = None
         try:
-            self._client.post("/move/stop", json={"uuid": uuid}).raise_for_status()
+            running = self._client.get("/move/running")
+            running.raise_for_status()
+            if uuid not in {str(move.get("uuid")) for move in running.json() if isinstance(move, dict)}:
+                return  # already finished
+            self._client.post("/move/stop", json={"uuid": uuid}, headers={"Connection": "close"}).raise_for_status()
         except httpx.HTTPStatusError as exc:
-            log.debug("stop of move %s not applied (likely already finished): %s", uuid, exc)
-        except httpx.HTTPError as exc:
+            log.debug("stop of move %s not applied (likely finished meanwhile): %s", uuid, exc)
+        except (httpx.HTTPError, ValueError) as exc:
             log.warning("stop of move %s failed; it may still be running: %s", uuid, exc)
 
     def capture_frame(self, max_width: int | None = None) -> bytes:

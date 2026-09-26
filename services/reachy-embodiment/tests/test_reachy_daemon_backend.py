@@ -187,17 +187,34 @@ def test_play_behaviour_skips_unmapped_behaviour_without_raising() -> None:
 _MOVE_PREFIX = "/api/move/play/recorded-move-dataset/pollen-robotics/reachy-mini-emotions-library/"
 
 
-def _move_daemon(calls: list[tuple[str, object]], *, stop_status: int = 200):
-    """Fake daemon handing out sequential move UUIDs and recording stops."""
+def _move_daemon(
+    calls: list[tuple[str, object]],
+    *,
+    stop_status: int = 200,
+    finish_immediately: bool = False,
+    running: set[str] | None = None,
+):
+    """Fake daemon handing out sequential move UUIDs, listing the running
+    ones at /move/running and recording stops. `finish_immediately` makes
+    every move end before the next request, as a short gesture does."""
     counter = iter(range(1, 100))
+    running = set() if running is None else running
 
     def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/move/running":
+            return httpx.Response(200, json=[{"uuid": uuid} for uuid in sorted(running)])
         if request.url.path == "/api/move/stop":
-            calls.append(("stop", json.loads(request.content)["uuid"]))
+            uuid = json.loads(request.content)["uuid"]
+            calls.append(("stop", uuid))
+            assert request.headers.get("connection") == "close"
+            running.discard(uuid)
             return httpx.Response(stop_status, json={})
         if request.url.path.startswith(_MOVE_PREFIX):
             calls.append(("play", request.url.path.removeprefix(_MOVE_PREFIX)))
-            return httpx.Response(200, json={"uuid": f"move-{next(counter)}"})
+            uuid = f"move-{next(counter)}"
+            if not finish_immediately:
+                running.add(uuid)
+            return httpx.Response(200, json={"uuid": uuid})
         calls.append(("other", request.url.path))
         return httpx.Response(200, json={"state": "running"})
 
@@ -216,22 +233,29 @@ def test_play_behaviour_stops_previous_move_before_starting_next() -> None:
     assert calls == [("play", "attentive1"), ("stop", "move-1"), ("play", "thoughtful1")]
 
 
-def test_play_behaviour_proceeds_when_previous_move_already_finished() -> None:
-    """1.8.4 answers 500 when stopping a move that already ended."""
+def test_a_finished_move_is_not_stopped() -> None:
+    """1.8.4 answers a stop of a finished move with an unhandled 500 and
+    then drops the connection, which reset the next request in the 24f
+    step C run. A move no longer listed as running is simply forgotten."""
     calls: list[tuple[str, object]] = []
-    backend = make_backend(_move_daemon(calls, stop_status=500))
+    backend = make_backend(_move_daemon(calls, finish_immediately=True))
 
     backend.play_behaviour(Behaviour.LISTENING, {})
     backend.play_behaviour(Behaviour.THINKING, {})
     backend.play_behaviour(Behaviour.WAITING, {})
 
-    assert calls == [
-        ("play", "attentive1"),
-        ("stop", "move-1"),
-        ("play", "thoughtful1"),
-        ("stop", "move-2"),
-        ("play", "waiting"),
-    ]
+    assert calls == [("play", "attentive1"), ("play", "thoughtful1"), ("play", "waiting")]
+
+
+def test_a_stop_that_loses_the_race_is_tolerated() -> None:
+    """Listed as running, but finished before the stop landed: 500."""
+    calls: list[tuple[str, object]] = []
+    backend = make_backend(_move_daemon(calls, stop_status=500))
+
+    backend.play_behaviour(Behaviour.LISTENING, {})
+    backend.play_behaviour(Behaviour.THINKING, {})
+
+    assert calls == [("play", "attentive1"), ("stop", "move-1"), ("play", "thoughtful1")]
 
 
 def test_failed_play_leaves_nothing_to_stop() -> None:
@@ -495,11 +519,13 @@ def test_close_without_ever_capturing_is_a_noop() -> None:
 
 def _goto_daemon(calls: list[tuple[str, object]]):
     """_move_daemon plus /move/goto and the wobbling routes."""
-    moves = _move_daemon(calls)
+    running: set[str] = set()
+    moves = _move_daemon(calls, running=running)
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/api/move/goto":
             calls.append(("goto", json.loads(request.content)))
+            running.add("goto-1")
             return httpx.Response(200, json={"uuid": "goto-1"})
         if request.url.path.startswith("/api/media/wobbling/"):
             calls.append(("wobble", request.url.path.rsplit("/", 1)[1]))
