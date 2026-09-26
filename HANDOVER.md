@@ -19,6 +19,13 @@ can work; physical animation testing is still open. Runtime settings restore
 environment defaults on restart; see the
 [operator guide](docs/operator-guide.md#conversational-animations).
 
+The [24e physical run](docs/verification/phase-24e-physical-2026-09-25.md)
+started 2026-09-25 with the owner. Step 1 (Normal conversation and Timing)
+is recorded: context checks passed, and timing failed only on a cold-start
+first turn, since fixed by the hub's STT/TTS warm-up (`540413e`). The owner
+stopped before step 2 (the deferred 24d rows); its checklist is in the
+record. **Next:** resume at step 2 with the owner present.
+
 [Phase 24f](docs/phase-24f.md) is in progress. Item 1 is measured on the
 Nano ([record](docs/verification/phase-24f-conformance-2026-09-25.md)).
 REST, the SDK (Testbench) path and Pollen's streaming method send the
@@ -96,7 +103,9 @@ remains blocked on the
 These are previous session observations, not health checks performed during
 this documentation pass. Recheck state before relying on them.
 
-- **Nano:** checkout `d940e27`, and embodiment image `7ecc81f5` (2.17 GB),
+- **Nano:** booted 2026-09-26 ~02:30Z (power-on reset); daemon running
+  (0 errors), embodiment healthy, no overheat or recovery entries. Checkout
+  `5c9679d`, but the embodiment image is still `7ecc81f5` (2.17 GB),
   built on the Nano 2026-09-25 13:30Z: no MediaPipe (palm stop is hub-side),
   motion switches unset (off), voice enabled, hub reports it online and
   voice-capable. The previous image (`1a66f01`) predated palm stop, so

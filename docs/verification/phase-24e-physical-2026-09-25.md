@@ -78,3 +78,32 @@ and palm stop were off, and no behaviours were played. The hub recorded
   and a robot upload with a wrong robot token returns 401.
 - The hub process logs no `reachy_hub` INFO lines (only uvicorn's). This
   is pre-existing. Hub timings come from its turn records.
+
+## Step 2: deferred 24d rows (not run)
+
+The owner stopped for the day on 2026-09-25 at about 13:50Z, before step 2
+started. Nothing in this section has evidence yet. The planned order, with
+motion and palm stop off, is:
+
+- **Turn handling, one session:** 20 s of silence (no reply); 15 s of
+  background music or TV with no speech (no reply); a long utterance with
+  pauses of about 1.5 s ("I was wondering… if you could tell me… about the
+  history of… the Eiffel Tower"), expecting one reply built from two or
+  more hub segments, which exercises hold and continue; a short story played
+  to the end with no self-hearing.
+- **Stop and expiry, a new session each:** Stop pressed while the owner is
+  still speaking; Stop during inference; Stop during playback, with the
+  audible tail measured (≤ 1 s) from `voice stop received` → `daemon audio
+  stop returned` in the embodiment log and `stop_sound` in
+  `journalctl -u reachy-mini-daemon -o short-iso-precise`; logging out of
+  the UI while Reachy listens ends capture.
+- **Privacy, one question each, then back to Desk:** Office (not spoken;
+  reply to phone or Telegram), Silent (not spoken; reply in web), Desk with
+  DND (not spoken), Desk with meeting context if the UI offers it.
+- **Consent:** voice cannot confirm a drafted email ("Yes, send it" must not
+  send), and a spoken "Reachy standby" must not actuate.
+
+The Session continuity, Recovery and 30-minute rows from
+[scope item 3](../phase-24e.md#3-deferred-24d-acceptance-rows) come after
+these. Record the UTC time of each action; the hub turn records give the
+per-session details.
