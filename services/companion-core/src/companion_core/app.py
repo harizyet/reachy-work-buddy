@@ -161,6 +161,7 @@ from companion_core.calendar_intent import (
     is_today_schedule_query,
     today_window,
 )
+from companion_core.clock_intent import format_clock_reply, match_local_clock
 from companion_core.consent.gate import (
     ConfirmationExpiredError,
     ConfirmationNotFoundError,
@@ -199,7 +200,10 @@ from companion_core.memory.store import MemoryStore
 from companion_core.persona.context import context_message
 from companion_core.persona.postgres_store import PostgresPersonaStore
 from companion_core.persona.store import PersonaStore
-from companion_core.privacy_classifier import classify_privacy
+from companion_core.privacy_classifier import (
+    classify_privacy,
+    classify_question_privacy,
+)
 from companion_core.rag.postgres_store import PostgresDocumentStore
 from companion_core.rag.store import DocumentStore
 from companion_core.task_intent import (
@@ -885,6 +889,10 @@ def create_app(
             # Fixed text revealing nothing, so it is spoken even when the
             # request mentions email; carried labels are not applied here.
             privacy = Privacy.PUBLIC
+        elif clock_kind := match_local_clock(turn.text):
+            persona = await app.state.persona_store.get()
+            reply = format_clock_reply(clock_kind, datetime.now(UTC), persona.timezone)
+            privacy = Privacy.PUBLIC
         else:
             config = await app.state.llm_settings_store.get()
             if config.local is None and config.cloud is None and not turn.force_frontier:
@@ -965,13 +973,13 @@ def create_app(
                             reply = spoken_reply(reply)
                     except ProviderUnavailable:
                         reply = "The language model is unavailable right now. Please try again shortly."
-            privacy = classify_privacy(turn.text)
+            privacy = classify_question_privacy(turn.text)
             carried = privacy
             if config.local is not None or config.cloud is not None or turn.force_frontier:
-                # Phase 24d: a keyword in the model's wording (a 5G answer
-                # mentioning "medical") labels this reply only. Carrying it
-                # silenced the robot for the rest of the conversation.
-                privacy = conversation_store.reply_privacy(turn.session_id, classify_privacy(turn.text + "\n" + reply))
+                # The model's own wording is not classified (owner, 2026-09-26):
+                # "reviewing your schedule" in a morning-routine answer kept it
+                # off the speaker. Earlier private content still carries.
+                privacy = conversation_store.reply_privacy(turn.session_id, privacy)
 
         if generation != conversation_store.generation:
             return ConversationTurnResponse(

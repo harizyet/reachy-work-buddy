@@ -830,3 +830,14 @@ def test_a_statement_with_a_pronoun_does_not_pull_in_the_previous_turn(text):
 ])
 def test_freshness_words_search_only_in_a_request(text, searches):
     assert should_search(text, policy=SearchPolicy.AUTO) is searches
+
+
+@pytest.mark.parametrize(("text", "searches"), [
+    ("What time is it in Tokyo now?", True),
+    ("What's the time in New York?", True),
+    ("What time is it?", False),
+    ("What time is it right now?", False),
+])
+def test_only_the_time_in_another_place_searches(text, searches):
+    # Owner decision 2026-09-26: the local time comes from the clock.
+    assert should_search(text, policy=SearchPolicy.AUTO) is searches

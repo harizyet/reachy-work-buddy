@@ -1,7 +1,7 @@
 """Which privacy labels carry forward through a conversation (Phase 24d).
 
-A keyword in the model's own wording labels only that reply; private data
-that stays in the conversation history keeps later replies private.
+The model's own wording is never classified (owner, 2026-09-26); private
+data that stays in the conversation history keeps later replies private.
 """
 
 import httpx
@@ -52,13 +52,24 @@ def say(client: TestClient, text: str) -> str:
     return resp.json()["privacy"]
 
 
-def test_keyword_in_a_generated_reply_labels_only_that_reply() -> None:
-    # The live 24d failure: a general 5G answer mentioning medical uses
-    # silenced the robot for every later turn.
-    client = chat_client("5G is used in medical imaging and factories.", "Four.", "Teal.")
-    assert say(client, "What can you tell me about 5G?") == "sensitive"
-    assert say(client, "What is two plus two?") == "public"
+def test_keywords_in_a_generated_reply_do_not_withhold_it() -> None:
+    # 24d: a 5G answer mentioning "medical" silenced the robot. 24e physical
+    # run: a morning-routine answer "reviewing your schedule" was withheld.
+    client = chat_client(
+        "5G is used in medical imaging and factories.",
+        "Try stretching, then start by reviewing your schedule.",
+        "Teal.",
+    )
+    assert say(client, "What can you tell me about 5G?") == "public"
+    assert say(client, "What's a good way to start the morning?") == "public"
     assert say(client, "What colour did I pick?") == "public"
+
+
+def test_a_general_work_question_is_public_but_the_owners_own_is_not() -> None:
+    client = chat_client("Open Outlook, then choose New Meeting.", "Noted.", "Okay.")
+    assert say(client, "How do I schedule a meeting on Outlook?") == "public"
+    assert say(client, "I have a meeting at noon.") == "work-private"
+    assert say(client, "What's my salary?") == "sensitive"
 
 
 def test_calendar_results_keep_later_generated_replies_private() -> None:

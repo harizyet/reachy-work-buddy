@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 
+from companion_core.clock_intent import is_remote_time_query
 from shared.models.websearch import SearchPolicy
 
 _SEARCH_PHRASES = ("search for ", "look this up", "check online", "look up ")
@@ -124,13 +125,18 @@ def should_search(text: str, *, policy: SearchPolicy, follows_search: bool = Fal
     Auto, a follow-up to it ("When was it released?", "What about
     tomorrow?") searches too, though it has no freshness word of its own.
     Closings, greetings, thanks and self-identity questions never search
-    under Auto; Always still searches every turn."""
+    under Auto; Always still searches every turn. The time in another place
+    searches (owner decision, 2026-09-26); the local time never reaches
+    here, since the conversation answers it from the clock."""
     if policy == SearchPolicy.ALWAYS:
         return True
     if policy == SearchPolicy.AUTO:
         if is_social(text) or is_self_identity(text):
             return False
-        return matches_auto_heuristic(text) or (follows_search and is_follow_up(text))
+        return (
+            matches_auto_heuristic(text) or is_remote_time_query(text)
+            or (follows_search and is_follow_up(text))
+        )
     return False
 
 

@@ -132,3 +132,21 @@ message it came from is still in the context the model sees
 repeat it, so later replies are labelled on their own content again. A
 label on the current turn is unaffected, and private content still in
 context keeps the conversation private.
+
+## Generated replies are labelled from the question only (2026-09-26)
+
+In the 24e physical run, "What's a good way to start the morning?" was
+withheld from the speaker because the model's answer mentioned "reviewing
+your schedule".
+
+**Decision (owner, 2026-09-26):** a harmless word must not make a general
+answer private. The generated-reply branch labels the owner's question
+only (`classify_question_privacy`), never the model's wording. A work word
+counts only when the question is about the owner's own data ("my next
+meeting", "Do I have any meetings today?", "I have a meeting at noon"),
+so "How do I schedule a meeting on Outlook?" is public. Sensitive words in
+the question still count anywhere. The generic model sees no private data
+except conversation history, whose labels still carry as described above,
+so dropping the reply check does not let earlier calendar, email or
+sensitive content reach the speaker. Tool and memory branches keep their
+own labels.

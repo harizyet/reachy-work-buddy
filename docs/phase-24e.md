@@ -114,6 +114,11 @@ fixed set. Change model only if the measurement says so.
     freshness phrase ("right now in", "open now").
   - Self-identity questions ("who are you", "what can you do") are neither
     follow-ups nor searches.
+  - The local time or date is answered from the clock in the owner's
+    timezone (`companion_core/clock_intent.py`), before the model, and
+    never searches. A time question naming another place ("What time is it
+    in Tokyo?") searches. Owner decision, 2026-09-26, after the physical
+    run's Tokyo question got "no real-time data".
   - A follow-up merges the previous query only when it refers back to that
     search's subject, not merely because a search came before. Adaptive end
     of turn removes the fragment case.
