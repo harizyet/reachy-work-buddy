@@ -242,6 +242,25 @@ coverage only. The owner decided on 2026-09-26 to record it this way rather
 than unplug the robot's USB, which also carries the motors and camera. The
 camera was restored by an embodiment restart (10:14:20, frame 200).
 
+## Block 7: open-palm stop, item 5 (10:18–10:20Z)
+
+Hub recreated at 10:15Z with `PALM_STOP_ENABLED=true` (`c496276`
+detector, pinned model). Session `YK2N…`, motion off. The embodiment
+logged `palm stop ready` 1.8 s after voice start (camera warm-up).
+
+| Row | Result | Evidence |
+|---|---|---|
+| Builds | PASS | The hub image runs the detector. The Nano image has no MediaPipe (`7ecc81f5`) |
+| Stop | **PASS at the owner-accepted 1–2 s** | Turn 2 ("long story about a dragon"): playback started 10:18:44.770, "open palm seen" at 10:18:51.255, daemon stop at 10:18:51.297 (42 ms after detection). Hub turn record "Stopped by an open palm". Follow-up "What's 2 plus 2?" answered in the same session. The owner estimated 1–2 s from palm shown to silence, against the planned 1 s. The Nano camera pipeline reports up to 1.06 s of latency (24f), and detection needs two consecutive frames at 0.25 s intervals. The owner accepted 1–2 s and kept the two-frame rule (2026-09-26) |
+| No false stops | PASS | Turn 4 ("long story about the sea") played its full 21.5 s while the owner talked with moving hands, waved, gave a thumbs-up and stepped out of view |
+| Coexistence | PASS | No audio stutter; every next question was heard |
+| Other hand | Rerun pending | Not performed in this session |
+| Off | PASS (earlier) | With the hub switch off, `voice_start.palm_stop` was false and the robot never read the camera during replies (all earlier sessions) |
+
+A stray "That's it." became turn 1. Frame round-trip time and hub
+detection time per frame were not measured separately. The 640 px hub
+detection took 25 ms per frame in the x86 image check.
+
 ## Step 2: still open
 
 The owner ended testing for the day after block 3 (09:33Z). Not yet run:
