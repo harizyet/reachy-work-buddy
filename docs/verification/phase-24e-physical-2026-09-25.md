@@ -261,6 +261,22 @@ A stray "That's it." became turn 1. Frame round-trip time and hub
 detection time per frame were not measured separately. The 640 px hub
 detection took 25 ms per frame in the x86 image check.
 
+## Timing again, warm (24f step B, 10:36–10:42Z)
+
+This run is also the 24f motion-off baseline. Hub `c383370` with the
+warm-up, Nano image `eb1e92e9` (`67bfc5f`, motion switches off, palm stop
+on at the hub). Session `1jhV…`: a fixed script of 22 short
+general-knowledge questions, each checked public and non-search.
+
+All 22 turns were spoken, each one segment, with no withheld, no
+`no_speech`, no palm stop and no errors. Utterance end → first audio, per
+turn (s): 4.27, 3.25, 3.53, 2.78, 3.46, 5.22, 4.67, 5.49, 3.50, 3.84,
+4.04, 4.49, 3.54, 3.63, 3.48, 5.05, 4.21, 3.57, 4.13, 3.06, 4.18, 3.29.
+
+**Timing row: PASS.** Non-search p50 3.63 s and p95 5.22 s (nearest
+rank, 22 turns), against 4 s and 8 s. Search turns were covered in step 1
+(8.63 s against 20 s).
+
 ## Step 2: still open
 
 The owner ended testing for the day after block 3 (09:33Z). Not yet run:
@@ -268,5 +284,3 @@ The owner ended testing for the day after block 3 (09:33Z). Not yet run:
 - **Palm stop** (item 5, hub `PALM_STOP_ENABLED`), then the 24f motion
   steps, and the 30-minute session last. The 24f steps first need the hub
   and Nano rebuilt with `5c9679d` (portal motion settings).
-- **Timing** is still to be measured again with a warm model, in the 24f
-  motion-off baseline.
