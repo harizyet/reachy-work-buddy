@@ -314,6 +314,15 @@ class CreateDraftRequest(BaseModel):
 # Phase 24d: generated replies to spoken turns are read aloud by Reachy. A
 # long markdown answer took 16 s to generate and 7 s to synthesize, then ran
 # for minutes on the speaker. The owner can still ask for more detail.
+# 24e physical run: with no tool behind it, the model still replied "Your
+# email has been sent" and "I'll delete all your emails now".
+ACTION_BOUNDARY_INSTRUCTION = (
+    "You cannot send, approve, delete or change emails, calendar events, "
+    "tasks, reminders, accounts or the robot, and you have no tools. Never "
+    "say you have done, are doing or will do such an action. If asked, say "
+    "you can't do it from here."
+)
+
 SPOKEN_REPLY_INSTRUCTION = (
     "This reply will be spoken aloud by a robot. Answer in one to three short "
     "sentences of plain conversational text, unless the user asks for more "
@@ -869,6 +878,13 @@ def create_app(
                     f"{m['id']} — {m['sender']}: {m['subject']}" for m in result["messages"]
                 ) or "No matching Gmail messages."
             privacy = Privacy.WORK_PRIVATE
+        elif email_intent.match_unsupported_email_action(turn.text):
+            reply = email_intent.format_unsupported_email_action_reply(
+                spoken=turn.input_modality == InputModality.VOICE
+            )
+            # Fixed text revealing nothing, so it is spoken even when the
+            # request mentions email; carried labels are not applied here.
+            privacy = Privacy.PUBLIC
         else:
             config = await app.state.llm_settings_store.get()
             if config.local is None and config.cloud is None and not turn.force_frontier:
@@ -932,6 +948,7 @@ def create_app(
                             ))
                         history_with_persona = [
                             {"role": "system", "content": persona.system_prompt},
+                            {"role": "system", "content": ACTION_BOUNDARY_INSTRUCTION},
                             context_message(persona, datetime.now(UTC)),
                             *grounding_messages,
                             *([{"role": "system", "content": SPOKEN_REPLY_INSTRUCTION}]

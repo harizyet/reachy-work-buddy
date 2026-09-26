@@ -113,3 +113,39 @@ def format_send_not_found_reply(query: str) -> str:
 
 def format_send_not_approved_reply(draft: EmailDraft) -> str:
     return f"That draft to {draft.to} needs approval first — say \"approve draft {draft.to}\"."
+
+
+# 24e physical run: natural requests such as "Delete all my emails." or a
+# bare "Yes, send it." matched no rigid intent above, so the model answered
+# them and claimed actions that never happened ("Your email has been sent",
+# "I'll delete all your emails now"). The owner chose a deterministic
+# refusal ahead of the model for them. Checked after the exact intents, so
+# "approve draft …" and the others still work.
+_ACTION_VERBS = r"send|approve|confirm|delete|remove|erase|trash|clear|empty|archive|forward"
+_EMAIL_NOUNS = r"e-?mails?|mails?|inbox|drafts?"
+_EMAIL_ACTION = re.compile(rf"\b(?:{_ACTION_VERBS})\b.*\b(?:{_EMAIL_NOUNS})\b", re.IGNORECASE)
+_BARE_CONFIRMATION = re.compile(
+    r"^(?:(?:yes|yeah|yep|ok|okay|sure|go ahead)[\s,]+)?(?:please\s+)?"
+    rf"(?:{_ACTION_VERBS})(?:\s+(?:it|that|this|them))?(?:\s+(?:now|please))?[.!]*$",
+    re.IGNORECASE,
+)
+# Questions about how email works are left to the model.
+_QUESTION_OPENERS = ("how ", "what ", "why ", "when ", "where ", "which ", "who ", "explain ", "tell me how ")
+
+
+def match_unsupported_email_action(text: str) -> bool:
+    """A request to send, approve, delete or otherwise act on email that no
+    exact intent handles. None of them can be carried out from here."""
+    stripped = text.strip()
+    if stripped.lower().startswith(_QUESTION_OPENERS):
+        return False
+    return bool(_BARE_CONFIRMATION.match(stripped) or _EMAIL_ACTION.search(stripped))
+
+
+def format_unsupported_email_action_reply(*, spoken: bool) -> str:
+    """Fixed text with nothing private in it, so the robot may speak it."""
+    how = "by voice" if spoken else "from a request like this"
+    return (
+        f"I can't send, approve or delete email {how}, and I haven't done anything. "
+        "To send one, draft it and approve the draft by typing in the web chat."
+    )

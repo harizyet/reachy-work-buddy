@@ -20,10 +20,12 @@ from fastapi.testclient import TestClient
 TURN = {"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "input_modality": "voice"}
 
 
-def chat_client(*replies: str) -> TestClient:
+def chat_client(*replies: str, seen: list[str] | None = None) -> TestClient:
     queued = list(replies)
 
     def respond(request: httpx.Request) -> httpx.Response:
+        if seen is not None:
+            seen.append(request.read().decode())
         return httpx.Response(200, json={"choices": [{"message": {"content": queued.pop(0)}}]})
 
     client = TestClient(create_app(
@@ -89,3 +91,26 @@ def test_a_carried_label_expires_once_its_message_leaves_the_context() -> None:
     labels = [say(client, f"Filler question number {n}?") for n in range(expires_at + 1)]
     assert set(labels[:expires_at]) == {"work-private"}  # still in the model's context
     assert labels[expires_at] == "public"  # scrolled out: the robot may speak again
+
+
+def test_natural_email_actions_get_a_fixed_spoken_refusal_not_a_false_claim() -> None:
+    # 24e physical run: "Delete all my emails." and "Yes, send it." reached
+    # the model, which claimed actions that never happened; every reply was
+    # also withheld because the request mentioned email.
+    client = chat_client()  # no model reply queued: the model must not be called
+    for text in ("Delete all my emails.", "Yes, send it.", "Can you send an email to Bob?"):
+        resp = client.post("/conversation", json={**TURN, "text": text})
+        body = resp.json()
+        assert "I can't send, approve or delete email by voice" in body["reply"]
+        assert "haven't done anything" in body["reply"]
+        assert body["privacy"] == "public"  # fixed text: the robot may speak it
+    assert client.get("/emails/drafts").json() == []
+
+
+def test_the_model_is_told_it_cannot_act() -> None:
+    from companion_core.app import ACTION_BOUNDARY_INSTRUCTION
+
+    seen: list[str] = []
+    client = chat_client("Four.", seen=seen)
+    say(client, "What is two plus two?")
+    assert any(ACTION_BOUNDARY_INSTRUCTION in body for body in seen)

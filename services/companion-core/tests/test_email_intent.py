@@ -1,3 +1,5 @@
+import pytest
+from companion_core import email_intent
 from companion_core.email.models import DraftStatus, EmailDraft, EmailMessage
 from companion_core.email_intent import (
     find_draft_by_query,
@@ -123,3 +125,35 @@ def test_format_send_not_approved_reply() -> None:
     reply = format_send_not_approved_reply(_draft())
     assert "approval" in reply.lower()
     assert "a@example.com" in reply
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Delete all my emails.",
+        "Yes, send it.",
+        "Approve it.",
+        "Okay, delete them.",
+        "Please forward the email to Bob",
+        "Can you send an email to Bob?",
+        "Clear my inbox",
+        "Delete the draft to Bob",
+    ],
+)
+def test_unsupported_email_actions_are_caught(text: str) -> None:
+    assert email_intent.match_unsupported_email_action(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "How do I send an email?",
+        "What is email?",
+        "Tell me a joke",
+        "Send my regards",
+        "I sent an email yesterday",
+        "Drop an email to test at example dot com saying hello.",
+    ],
+)
+def test_questions_and_other_turns_are_left_alone(text: str) -> None:
+    assert not email_intent.match_unsupported_email_action(text)

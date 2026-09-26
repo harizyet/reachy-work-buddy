@@ -168,3 +168,23 @@ assumption doesn't silently stop holding unnoticed.
   production behavior is unchanged. The two hard rules (bulk block, voice
   block) are not affected — only how long an already-approved, already
   text-confirmed send waits before dispatch.
+
+## Addendum: no false action claims (2026-09-26, 24e physical run)
+
+A spoken "Delete all my emails." and "Yes, send it." matched none of the
+rigid email intents, so the model answered them. It claimed "Your email
+has been sent successfully" and "I'll delete all your emails now".
+Nothing ran: the model has no tools and the store held no drafts. But the
+claims were false, and the replies were withheld from the speaker.
+
+**Decision (owner):** a deterministic matcher
+(`email_intent.match_unsupported_email_action`) runs after the exact
+email intents and before the model. It catches natural send, approve,
+delete, forward and clear requests for email, and bare confirmations such
+as "Yes, send it". It answers with fixed text: "I can't send, approve or
+delete email by voice, and I haven't done anything …". That text reveals
+nothing, so it is labelled public and spoken even when the request
+mentions email. Questions about how email works still go to the model.
+Every generated turn also gets a system instruction that the model has no
+tools and must never claim to have done, or to be doing, an action.
+Approval stays text-only, as above.

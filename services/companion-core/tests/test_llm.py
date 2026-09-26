@@ -339,7 +339,7 @@ def test_simultaneous_channels_keep_user_assistant_order():
 
             results = await asyncio.gather(send("web"), send("telegram"))
             assert all(r.status_code == 200 for r in results)
-            assert [m["role"] for m in seen[1]] == ["system", "system", "user", "assistant", "user"]
+            assert [m["role"] for m in seen[1]] == ["system", "system", "system", "user", "assistant", "user"]
 
     asyncio.run(run())
 
