@@ -79,6 +79,23 @@ and palm stop were off, and no behaviours were played. The hub recorded
 - The hub process logs no `reachy_hub` INFO lines (only uvicorn's). This
   is pre-existing. Hub timings come from its turn records.
 
+## Step 2, block 1: turn handling (2026-09-26, 02:59–03:03Z)
+
+Session `RxDc…`, motion off, hub at `9b84d93` with the model warm.
+
+| Item | Result | Evidence (hub records, embodiment log) |
+|---|---|---|
+| 20 s of silence | PASS | No turn |
+| 15 s of TV, no speech | **FAIL (known limit)** | Turn 1 "I'm off." and turn 2, a 30.0 s capture (the `max_utterance_seconds` cap) of TV dialogue, were both answered. TV speech is speech to the VAD; nothing tells the owner's voice from another until Phase 25's speaker attribution. The owner decided on 2026-09-26 to record this as a known limit deferred to Phase 25, and to retest with non-speech noise |
+| Long utterance, ~1.5 s pauses | **FAIL** | "I was wondering..." was correctly held (`continue`), but finalized because no speech resumed within the 1.5 s window, about 2.2 s of real pause after the 0.7 s cut. It was answered "Of course, shoot." "if you could tell me" was spoken during that playback with the mic closed, and was lost. "About the history of..." was held and finalized the same way. "The Eiffel Tower." was answered on its own |
+| Short story played to the end | PASS | 20.3 s reply; no turn followed, so no self-hearing |
+
+The cough "Ahem." became turn 3. Fix: the continuation window is now an
+owner setting in the hub environment (`da93df9`). The owner chose
+**3.0 s** (about 3.7 s of real pause), and the hub was redeployed at
+03:13Z with `VOICE_CONTINUATION_WINDOW_MS=3000`. Only trailing-off turns
+pay the wait.
+
 ## Step 2: deferred 24d rows (not run)
 
 The owner stopped for the day on 2026-09-25 at about 13:50Z, before step 2
