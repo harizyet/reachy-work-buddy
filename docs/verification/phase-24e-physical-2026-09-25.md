@@ -126,31 +126,57 @@ expected".
 the 1 s budget, confirmed by ear. The daemon journal and embodiment log
 had no warnings or errors.
 
-## Step 2: deferred 24d rows (not run)
+## Step 2, block 3: privacy (2026-09-26)
 
-The owner stopped for the day on 2026-09-25 at about 13:50Z, before step 2
-started. Nothing in this section has evidence yet. The planned order, with
-motion and palm stop off, is:
+**First attempt, 03:26–03:36Z, in web chat: invalid, and found a defect.**
+The owner ran the items by typing in web chat, where a reply always
+returns to the chat, so it could not show whether the robot speaker was
+withheld. The hub audit log showed Office → phone and Silent → web as
+intended. At 03:34:31Z a typed question in Desk mode was classified
+work-private. Core carried that label for the whole in-memory
+conversation, so every later reply, including the Desk control
+"Hello there." by voice, was routed to web. It would have stayed that
+way until core restarted.
 
-- **Turn handling, one session:** 20 s of silence (no reply); 15 s of
-  background music or TV with no speech (no reply); a long utterance with
-  pauses of about 1.5 s ("I was wondering… if you could tell me… about the
-  history of… the Eiffel Tower"), expecting one reply built from two or
-  more hub segments, which exercises hold and continue; a short story played
-  to the end with no self-hearing.
-- **Stop and expiry, a new session each:** Stop pressed while the owner is
-  still speaking; Stop during inference; Stop during playback, with the
-  audible tail measured (≤ 1 s) from `voice stop received` → `daemon audio
-  stop returned` in the embodiment log and `stop_sound` in
-  `journalctl -u reachy-mini-daemon -o short-iso-precise`; logging out of
-  the UI while Reachy listens ends capture.
-- **Privacy, one question each, then back to Desk:** Office (not spoken;
-  reply to phone or Telegram), Silent (not spoken; reply in web), Desk with
-  DND (not spoken), Desk with meeting context if the UI offers it.
-- **Consent:** voice cannot confirm a drafted email ("Yes, send it" must not
-  send), and a spoken "Reachy standby" must not actuate.
+**Fix:** the owner decided that a carried label expires once its
+message leaves the model's 39-message context
+([ADR 0006 amendment](../adr/0006-response-routing.md#carried-privacy-expires-with-the-models-context-2026-09-26),
+`52fefdb`; core 381 passed). Deployed at 03:41Z; the core restart also
+cleared the stuck label.
 
-The Session continuity, Recovery and 30-minute rows from
-[scope item 3](../phase-24e.md#3-deferred-24d-acceptance-rows) come after
-these. Record the UTC time of each action; the hub turn records give the
-per-session details.
+**Redone by voice, 09:28–09:33Z:** a robot voice session per item, with
+the question "What's the capital of France?". Mode and DND were set in the
+portal's Session controls card. Meeting context was set and cleared
+through `PATCH /sessions/default-user/privacy-context`, since the portal
+has no control for it.
+
+| Item | Result | Evidence |
+|---|---|---|
+| Office | PASS | Session `ainm`: withheld. Audit: office, public, → phone. The owner received it on Telegram |
+| Silent | PASS | Session `mPIx`: withheld. Audit: silent → web. Shown in web chat |
+| Desk + DND | PASS | Session `44MM`: withheld. Audit: desk → reachy, withheld by DND |
+| Desk + meeting context | PASS | Session `VniH`: withheld |
+| Desk, normal (control) | PASS | Session `GqLW`: spoken. The question arrived as two segments (a short mid-question pause), held once, with first audio 5.07 s after the last cut |
+
+**Privacy row: PASS** after the carry-over fix. The private-call part of
+the row was not exercised. The control turn shows that the 3.0 s window
+also holds a short question with a pause in it. That turn was answered
+once the second segment arrived, with no window wait; latency is watched
+in the 24f timing baseline. Daemon journal: no warnings.
+
+## Step 2: still open
+
+The owner ended testing for the day after block 3 (09:33Z). Not yet run:
+
+- **Consent:** voice cannot confirm a drafted email ("Yes, send it" must
+  not send); a spoken "Reachy standby" must not actuate.
+- **Session continuity:** robot → web chat → bound Telegram → robot with
+  the same context. Telegram is configured.
+- **Recovery:** a microphone or speaker failure, a hub or network
+  interruption, and process restarts, with no stale replay or automatic
+  capture reactivation.
+- **Palm stop** (item 5, hub `PALM_STOP_ENABLED`), then the 24f motion
+  steps, and the 30-minute session last. The 24f steps first need the hub
+  and Nano rebuilt with `5c9679d` (portal motion settings).
+- **Timing** is still to be measured again with a warm model, in the 24f
+  motion-off baseline.

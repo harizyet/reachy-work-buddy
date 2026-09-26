@@ -20,11 +20,16 @@ environment defaults on restart; see the
 [operator guide](docs/operator-guide.md#conversational-animations).
 
 The [24e physical run](docs/verification/phase-24e-physical-2026-09-25.md)
-started 2026-09-25 with the owner. Step 1 (Normal conversation and Timing)
-is recorded: context checks passed, and timing failed only on a cold-start
-first turn, since fixed by the hub's STT/TTS warm-up (`540413e`). The owner
-stopped before step 2 (the deferred 24d rows); its checklist is in the
-record. **Next:** resume at step 2 with the owner present.
+is in progress with the owner. Normal conversation passed. Timing failed
+only on a cold first turn, fixed by the STT/TTS warm-up (`540413e`), and is
+to be measured again warm. Turn handling passed, apart from TV speech, a
+known limit deferred to Phase 25; the continuation window is now owner-set
+at 3.0 s (`VOICE_CONTINUATION_WINDOW_MS`, `da93df9`). Stop and expiry
+passed with a 31 ms playback stop. Privacy passed by voice after fixing
+the conversation privacy carry-over (`52fefdb`, ADR 0006 amendment).
+**Next:** consent, session continuity, recovery, palm stop, then the 24f
+motion steps (rebuild hub and Nano with `5c9679d` first), and the
+30-minute session last.
 
 [Phase 24f](docs/phase-24f.md) is in progress. Item 1 is measured on the
 Nano ([record](docs/verification/phase-24f-conformance-2026-09-25.md)).
