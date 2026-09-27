@@ -137,6 +137,10 @@ These are dated evidence, not startup instructions or current health checks.
   motion-off baseline, gestures on (daemon stop 500 reset the next request;
   fixed), owner-present acceptance rows in progress.
 
+- [Phase 24f physical run, 2026-09-27](verification/phase-24f-physical-2026-09-27.md):
+  first real once-per-boot recovery (motor power off), `b36736d` swap,
+  step C stopped by the owner; recorded gestures replaced by silent poses.
+
 - [Phase 24f motion conformance](verification/phase-24f-conformance-2026-09-25.md):
   Nano versions, predeclared tolerances, supervised REST vs SDK run; paths
   agree; robot stops 2–5° short on both, normal vs fault still open.

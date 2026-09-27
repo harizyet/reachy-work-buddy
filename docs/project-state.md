@@ -87,8 +87,10 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
   Its RTC loses time across power-offs; pre-NTP journal timestamps are stale.
   Power/time diagnostics are in 24e.
 - Daemon 1.8.4 wake-up can fail with `time value is out of range [0,1]`.
-  The installed once-per-boot recovery has only fake-tested restart and
-  second-error paths; no real error-triggered restart is yet recorded.
+  The once-per-boot recovery ran for real on 2026-09-27 (motor power off):
+  one restart, then a stop on the second error
+  ([record](verification/phase-24f-physical-2026-09-27.md#boot-with-motor-power-off-first-real-automatic-recovery)).
+  Recovery from a wake-up error specifically is still fake-tested only.
 - Adaptive end of turn (24e item 1) is implemented and tested in process
   and with real Silero/Whisper on simulated audio, not yet on the robot; the
   deployed robot still splits turns at 700 ms pauses until it is rebuilt.

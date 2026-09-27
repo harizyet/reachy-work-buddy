@@ -1,6 +1,6 @@
 # Handover
 
-Current session snapshot: 2026-09-26. Read [AGENTS.md](AGENTS.md) first.
+Current session snapshot: 2026-09-27. Read [AGENTS.md](AGENTS.md) first.
 The [documentation index](docs/README.md) defines ownership;
 [project state](docs/project-state.md) collects deployment limits and open
 acceptance. This file holds only session continuation details.
@@ -67,12 +67,20 @@ baseline is recorded. Step C (gestures on) failed on the robot's daemon
 client: stopping an already-finished move made the daemon drop the
 connection, and the next gesture or home move reused it. That's fixed in
 `b36736d` and verified against a mockup only. The robot-side cost of
-gestures was +19.5 ms median. The owner switched gestures back OFF and
-ended testing for the day. **Next:** with the owner present, swap in the
-`b36736d` embodiment image (built on the Nano, not deployed), check it,
-then rerun step C (`docker tag reachy-embodiment:b36736d reachy-embodiment:local`
-first, then the usual swap via `start-reachy.sh`): 22 lines, a Stop during the thinking gesture, and the
-409 explicit-behaviour check.
+gestures was +19.5 ms median.
+
+2026-09-27 ([record](docs/verification/phase-24f-physical-2026-09-27.md)):
+the `b36736d` image is deployed on the Nano. Step C's rerun had 0 gesture
+failures over 4 turns, but the owner stopped it: the recorded
+listening/thinking gestures are repetitive, too long (4.3 s and 5.9 s),
+and play a sound every time, which the mic captured as two `no_speech`
+turns. Every emotion move has a sound, and the daemon can't mute it.
+**Next:** replace listening/thinking with short, silent, bounded goto
+poses (small random variation, held until the state ends), with an ADR
+0003 amendment and mockup tests, tune the angles on the robot with the
+owner, then rerun step C once in full: the 22 questions, a Stop during
+thinking, and the 409 check. No 22-question script is stored; the 2026-09-27
+list is in this session's chat only, so commit one with the rerun.
 
 [Phase 24f](docs/phase-24f.md) is in progress. Item 1 is measured on the
 Nano ([record](docs/verification/phase-24f-conformance-2026-09-25.md)).
@@ -151,20 +159,23 @@ remains blocked on the
 These are previous session observations, not health checks performed during
 this documentation pass. Recheck state before relying on them.
 
-- **Nano:** booted 2026-09-26 ~02:35Z (the owner's power cycle); daemon
-  running (0 errors), embodiment healthy, no overheat or recovery entries.
-  Checkout `65c7e75`. The running embodiment image is `eb1e92e9`, built at
-  `67bfc5f` on 2026-09-26 10:33Z, with gestures and speech wobble OFF.
-  A `b36736d` image is built under the tag `reachy-embodiment:b36736d` but
-  not deployed; `docker tag` it as `reachy-embodiment:local` before the swap.
-  No MediaPipe on the Nano (palm stop is hub-side); voice enabled; the hub
-  reports it online and voice-capable. Left at IDLE_HOME with embodiment
-  active (2026-09-26 ~10:55Z). The 24f tool dependency `opencv-python-headless`
-  4.11.0.86 is in `~/24f-tools` only (use `PYTHONPATH`), not in
-  `reachy-venv`. Logs and frames are in `~/24f-logs`. `reachy-embodiment.service` and
-  `reachy-daemon-recovery.service` enabled; container uses `--mount` and no
-  restart policy. Embodiment is host-networked on 8100, daemon loopback on
-  8000. Apply the [deployment boundaries](docs/deployment.md#robot-host-and-jetson-nano)
+- **Nano:** rebooted 2026-09-27 ~06:47 WIB after the first boot found the
+  motor supply off (daemon "No motors detected"; the once-per-boot recovery
+  restarted it once and stopped, as designed). Daemon running, 0 errors;
+  checkout `1473674`. Embodiment runs `reachy-embodiment:local` =
+  `b36736d` (`c314d4fa`); the old image is kept as
+  `reachy-embodiment:eb1e92e9`. The owner asked for portal gestures to be
+  switched off after the run; recheck `GET :8100/settings/motion`. Sudo on
+  the Nano needs a password, so the owner runs `systemctl` steps; this dev
+  box has key SSH as `Reachy-Mini-Jetson`. The Nano's system `python3` is
+  too old for `voice-timing.py`; use `~/reachy-venv/bin/python`.
+  No MediaPipe on the Nano (palm stop is hub-side); voice enabled. The 24f
+  tool dependency `opencv-python-headless` 4.11.0.86 is in `~/24f-tools`
+  only (use `PYTHONPATH`). Logs and frames are in `~/24f-logs`.
+  `reachy-embodiment.service` and `reachy-daemon-recovery.service` are
+  enabled; the container uses `--mount` and no restart policy. Embodiment
+  is host-networked on 8100, daemon loopback on 8000. Apply the
+  [deployment boundaries](docs/deployment.md#robot-host-and-jetson-nano)
   before daemon starts or motion; `--check` stays read-only.
 - **Homelab:** rebuilt 2026-09-26 14:27Z at `7a597e6` (`c2db3d2` not yet
   deployed; `.env` has `STT_MODEL=small.en` waiting for the rebuild); hub and core
@@ -200,7 +211,7 @@ Phase 24f will compare the motion paths; current evidence is recorded below
 in project state.
 The unexplained power loss, RTC problem and daemon recovery verification
 limit are in [project state](docs/project-state.md#known-hardware-and-software-limitations).
-The automatic error restart remains fake-tested only.
+The automatic error restart has one real run (2026-09-27, no motor power); a wake-up error restart is still fake-tested only.
 
 Inspect `git status`, recent commits and the diff before implementation.
 Hardware work previously involved a separate Nano-side session; verify raw
