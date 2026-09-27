@@ -5,7 +5,8 @@ voice session is running and the daemon is up. The microphone feeds a local
 keyword detector; audio stays in a short ring buffer that is continuously
 overwritten. A detection starts a candidate: the robot lifts its head to
 the silent alert pose (with the `wake_animation` switch on), a cue to go
-on speaking, and captures the wake phrase
+on speaking; an admitted conversation brings it home, and anything else
+lowers it back to sleep. It captures the wake phrase
 from the ring buffer together with the request that follows it. When the
 first segment is too short to hold more than the phrase, the robot waits
 up to `speech_start_seconds` for the request; silence discards the
@@ -40,7 +41,7 @@ from typing import Protocol
 import httpx
 import numpy as np
 
-from reachy_embodiment.motion import MotionController
+from reachy_embodiment.motion import MotionController, RestPose
 from reachy_embodiment.voice import (
     ChunkVAD,
     MicSource,
@@ -251,7 +252,7 @@ class WakeMonitor:
             while True:
                 await self._wait_until_free()
                 if not self._resting:
-                    await self._rest_move(awake=False)
+                    await self._rest_move("sleep")
                     self._resting = True
                 candidate = await self._listen_and_capture(microphone, self._detector, vad, limits)
                 if candidate is None:
@@ -278,16 +279,18 @@ class WakeMonitor:
             self._ready_at = now
         return self._ready
 
-    async def _rest_move(self, *, awake: bool) -> None:
+    async def _rest_move(self, pose: RestPose) -> None:
+        """Waits for the sleep move; the alert and home cues run alongside
+        capture and the conversation's start."""
         if self._motion is None:
             return
         previous = self._motion_task
         if previous is not None:
             with contextlib.suppress(Exception):
                 await previous
-        move = asyncio.ensure_future(asyncio.to_thread(self._motion.rest_move, awake))
+        move = asyncio.ensure_future(asyncio.to_thread(self._motion.rest_move, pose))
         self._motion_task = move
-        if not awake:
+        if pose == "sleep":
             with contextlib.suppress(Exception):
                 await move
 
@@ -303,7 +306,7 @@ class WakeMonitor:
             if ring is None:
                 return None
             self._resting = False
-            await self._rest_move(awake=True)
+            await self._rest_move("alert")
             candidate = await self._capture_candidate(microphone, ring, vad, limits)
             if candidate is None:
                 log.info("wake candidate discarded on the robot: no request followed")
@@ -401,6 +404,7 @@ class WakeMonitor:
             log.info("wake candidate rejected by the hub")
             return False
         log.info("wake candidate admitted")
+        await self._rest_move("home")
         # The hub's voice_start makes the control client suspend this task.
         # If it never arrives, drop the candidate and listen again.
         waited_until = self._clock() + self._admission_wait

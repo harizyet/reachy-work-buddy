@@ -78,7 +78,10 @@ class RobotBackend(Protocol):
     @property
     def sim(self) -> bool: ...
 
-    def play_behaviour(self, name: Behaviour, parameters: dict[str, str]) -> None: ...
+    def play_behaviour(self, name: Behaviour, parameters: dict[str, str]) -> bool:
+        """Starts the behaviour's move; False when none started (unmapped
+        or refused)."""
+        ...
 
     def stop_motion(self) -> None:
         """Stops the move this backend last started, if any. Phase 24f."""
@@ -97,12 +100,6 @@ class RobotBackend(Protocol):
 
     def set_speech_wobble(self, enabled: bool) -> None:
         """Switches the daemon's audio-reactive head motion. Phase 24f."""
-        ...
-
-    def play_goto_sleep(self) -> None:
-        """The daemon's own go-to-sleep move (with its sound), motors
-        staying on. Phase 24g wake monitoring; only the motion controller
-        calls it."""
         ...
 
     def capture_frame(self, max_width: int | None = None) -> bytes:
@@ -159,8 +156,9 @@ class SimulatedRobotBackend:
     def sim(self) -> bool:
         return True
 
-    def play_behaviour(self, name: Behaviour, parameters: dict[str, str]) -> None:
+    def play_behaviour(self, name: Behaviour, parameters: dict[str, str]) -> bool:
         log.info("sim: playing behaviour %s params=%s", name.value, parameters)
+        return True
 
     def stop_motion(self) -> None:
         log.info("sim: stop motion")
@@ -173,9 +171,6 @@ class SimulatedRobotBackend:
 
     def set_speech_wobble(self, enabled: bool) -> None:
         log.info("sim: speech wobble %s", "on" if enabled else "off")
-
-    def play_goto_sleep(self) -> None:
-        log.info("sim: go to sleep")
 
     def capture_frame(self, max_width: int | None = None) -> bytes:
         # No physical camera exists in this environment. The marker's
@@ -487,11 +482,11 @@ class ReachyDaemonBackend:
             return True
         return bool(status.get("simulation_enabled")) or bool(status.get("mockup_sim_enabled"))
 
-    def play_behaviour(self, name: Behaviour, parameters: dict[str, str]) -> None:
+    def play_behaviour(self, name: Behaviour, parameters: dict[str, str]) -> bool:
         mapping = self._behaviour_moves.get(name)
         if mapping is None:
             log.warning("no move mapping for behaviour %s, skipping", name.value)
-            return
+            return False
         dataset, move_name = mapping
         with self._move_lock:
             self._stop_active_move_locked()
@@ -505,8 +500,9 @@ class ReachyDaemonBackend:
                 # command failures worth surfacing loudly (daemon unreachable
                 # entirely) are still visible via `connected` going False.
                 log.warning("play_behaviour(%s) -> %s/%s failed: %s", name.value, dataset, move_name, exc)
-                return
+                return False
             self._remember_move_locked(resp, name.value)
+            return True
 
     def _remember_move_locked(self, resp: httpx.Response, what: str) -> None:
         try:
@@ -529,21 +525,6 @@ class ReachyDaemonBackend:
         The goto starts from wherever the head is, so no return home is
         needed first."""
         self._goto(pose, "goto_pose")
-
-    def play_goto_sleep(self) -> None:
-        """POST /move/play/goto_sleep, after stopping our previous move.
-        Unlike standby, sleep keeps the motors on and the backend running.
-        Failures are logged like play_behaviour's."""
-        name = "goto_sleep"
-        with self._move_lock:
-            self._stop_active_move_locked()
-            try:
-                resp = self._client.post(f"/move/play/{name}")
-                resp.raise_for_status()
-            except httpx.HTTPError as exc:
-                log.warning("%s failed: %s", name, exc)
-                return
-            self._remember_move_locked(resp, name)
 
     def _goto(self, body: dict[str, object], what: str) -> None:
         with self._move_lock:

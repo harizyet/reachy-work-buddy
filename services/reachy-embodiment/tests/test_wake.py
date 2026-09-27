@@ -15,16 +15,15 @@ import json
 import threading
 import time
 
-import httpx
 import numpy as np
 import websockets
 from reachy_embodiment.motion import ALERT_POSE, SLEEP_POSE, MotionController
-from reachy_embodiment.robot import ReachyDaemonBackend
 from reachy_embodiment.robot_ws_client import RobotWSClient
 from reachy_embodiment.state import ServiceState
 from reachy_embodiment.voice import VoiceConversation, VoiceSessionGone
 from reachy_embodiment.wake import WakeMonitor
 
+from shared.models.embodiment import Behaviour
 from shared.models.robot_voice import (
     WAKE_CAPABILITY,
     VoiceLimits,
@@ -146,8 +145,8 @@ class RecordingMotion:
     def __init__(self) -> None:
         self.moves: list[str] = []
 
-    def rest_move(self, awake: bool) -> bool:
-        self.moves.append("wake" if awake else "sleep")
+    def rest_move(self, pose: str) -> bool:
+        self.moves.append(pose)
         return True
 
 
@@ -198,10 +197,10 @@ def test_rejected_candidate_uploads_phrase_and_request_then_rests_and_listens_ag
         samples, arm_id, generation = uploader.uploads[0]
         assert (arm_id, generation) == ("arm-1", 3)
         assert samples >= int(2.0 * SR)  # the phrase and the request together
-        assert motion.moves[:2] == ["sleep", "wake"]
+        assert motion.moves[:2] == ["sleep", "alert"]
 
         await wait_until(lambda: mic.starts == 2 and mic.open)
-        assert motion.moves == ["sleep", "wake", "sleep"]
+        assert motion.moves == ["sleep", "alert", "sleep"]
         assert conversation.primed is None
         await monitor.aclose()
         assert not mic.open
@@ -216,7 +215,7 @@ def test_wake_then_silence_is_discarded_on_the_robot() -> None:
         await monitor.arm(arm, generation=1)
         await wait_until(lambda: mic.open)
         mic.push(np.concatenate([silence(1.0), wake_phrase(), silence(0.6)]))
-        await wait_until(lambda: motion.moves == ["sleep", "wake"])
+        await wait_until(lambda: motion.moves == ["sleep", "alert"])
         await asyncio.sleep(0.05)
         clock.now += 3.9  # still inside the speech-start allowance
         await asyncio.sleep(0.05)
@@ -224,7 +223,7 @@ def test_wake_then_silence_is_discarded_on_the_robot() -> None:
         clock.now += 0.2
         await wait_until(lambda: mic.starts == 2)
         assert uploader.uploads == []
-        assert motion.moves == ["sleep", "wake", "sleep"]
+        assert motion.moves == ["sleep", "alert", "sleep"]
         await monitor.aclose()
 
     asyncio.run(scenario())
@@ -260,11 +259,11 @@ def test_admitted_candidate_is_primed_and_monitoring_waits_for_the_session() -> 
         conversation.voice_session_id = "sid-1"  # the hub's voice_start arrived
         await asyncio.sleep(0.1)
         assert mic.starts == 1 and not mic.open  # the microphone is the session's now
-        assert motion.moves == ["sleep", "wake"]
+        assert motion.moves == ["sleep", "alert", "home"]  # admitted: head up for the conversation
 
         conversation.voice_session_id = None  # the session ended
         await wait_until(lambda: mic.starts == 2 and mic.open)
-        assert motion.moves == ["sleep", "wake", "sleep"]
+        assert motion.moves == ["sleep", "alert", "home", "sleep"]
         await monitor.aclose()
 
     asyncio.run(scenario())
@@ -462,9 +461,11 @@ def test_control_socket_arms_suspends_before_a_session_and_disarms_on_disconnect
 class RecordingBackend:
     def __init__(self) -> None:
         self.calls: list[str] = []
+        self.started = True
 
-    def play_behaviour(self, name, parameters) -> None:
+    def play_behaviour(self, name, parameters) -> bool:
         self.calls.append(f"behaviour {name.value}")
+        return self.started
 
     def stop_motion(self) -> None:
         self.calls.append("stop")
@@ -478,42 +479,57 @@ class RecordingBackend:
     def set_speech_wobble(self, enabled: bool) -> None:
         self.calls.append(f"wobble {enabled}")
 
-    def play_goto_sleep(self) -> None:
-        self.calls.append("goto_sleep")
-
 
 def test_rest_moves_need_the_switch_and_yield_to_a_conversation_or_remote_control() -> None:
     backend = RecordingBackend()
     off = MotionController(backend, ServiceState(connected=True, sim=True), threaded=False)
-    assert off.rest_move(False) is False and backend.calls == []
+    assert off.rest_move("sleep") is False and backend.calls == []
 
     state = ServiceState(connected=True, sim=True)
-    motion = MotionController(backend, state, wake_animation=True, conversation_motion=True, threaded=False)
-    # From an unknown pose the daemon's own routine plans the way down;
-    # after that, the alert cue and the return are silent gotos.
-    assert motion.rest_move(False) and motion.rest_move(True) and motion.rest_move(False)
-    assert backend.calls == ["goto_sleep", "alert", "sleep"]
+    waits: list[float] = []
+    motion = MotionController(
+        backend, state, wake_animation=True, conversation_motion=True, threaded=False, sleep=waits.append
+    )
+    # From an unknown pose the head goes home and, once there, down; after
+    # that every rest move is one silent goto. No daemon routine is used.
+    assert motion.rest_move("sleep") and waits == [1.2]
+    assert motion.rest_move("alert") and motion.rest_move("home") and motion.rest_move("sleep")
+    assert backend.calls == ["home", "sleep", "alert", "home", "sleep"]
+    assert motion.rest_move("alert") and motion.rest_move("sleep")  # a false wake
+    assert backend.calls[-2:] == ["alert", "sleep"] and waits == [1.2]
     motion.stop()  # any other motion forgets the rest pose
-    assert motion.rest_move(False) and backend.calls[-1] == "goto_sleep"
+    backend.calls.clear()
+    assert motion.rest_move("sleep") and backend.calls == ["home", "sleep"] and waits == [1.2, 1.2]
 
     token = motion.begin_conversation()
-    assert motion.rest_move(False) is False
+    assert motion.rest_move("sleep") is False
     motion.end_conversation(token, completed=False)
     state.remote_active = True
-    assert motion.rest_move(False) is False
+    assert motion.rest_move("sleep") is False
     motion.close()
 
 
-def test_daemon_go_to_sleep_uses_the_daemons_own_route() -> None:
-    paths: list[str] = []
+def test_idle_behaviours_without_a_move_keep_the_rest_pose() -> None:
+    # Presence asks for idle behaviours every few seconds; they map to no
+    # move. Forgetting the pose made every false wake fall back to a noisy
+    # path (24g first physical run).
+    backend = RecordingBackend()
+    waits: list[float] = []
+    motion = MotionController(
+        backend, ServiceState(connected=True, sim=True), wake_animation=True, threaded=False, sleep=waits.append
+    )
+    motion.rest_move("sleep")
+    backend.started = False
+    motion.request_behaviour(Behaviour.IDLE_BREATHING, {}, idle=True)
+    backend.calls.clear()
+    assert motion.rest_move("alert") and motion.rest_move("sleep")
+    assert backend.calls == ["alert", "sleep"] and waits == [1.2]
 
-    def handler(request: httpx.Request) -> httpx.Response:
-        paths.append(request.url.path)
-        return httpx.Response(200, json={"uuid": "move-1"})
-
-    backend = ReachyDaemonBackend("http://daemon:8000", transport=httpx.MockTransport(handler))
-    backend.play_goto_sleep()
-    assert paths == ["/api/move/play/goto_sleep"]
+    backend.started = True  # a move that did start leaves the pose unknown
+    motion.request_behaviour(Behaviour.GREETING, {})
+    backend.calls.clear()
+    assert motion.rest_move("sleep") and backend.calls == ["home", "sleep"]
+    motion.close()
 
 
 def test_wake_animation_is_on_by_default_and_the_env_file_can_turn_it_off(monkeypatch) -> None:
@@ -523,10 +539,10 @@ def test_wake_animation_is_on_by_default_and_the_env_file_can_turn_it_off(monkey
     state = ServiceState(connected=True, sim=True)
     monkeypatch.delenv("WAKE_ANIMATION_ENABLED", raising=False)
     motion = _default_motion_controller(backend, state)
-    assert motion.rest_move(False) and backend.calls == ["goto_sleep"]
+    assert motion.rest_move("alert") and backend.calls == ["alert"]
     motion.close()
 
     monkeypatch.setenv("WAKE_ANIMATION_ENABLED", "false")
     motion = _default_motion_controller(backend, state)
-    assert motion.rest_move(False) is False
+    assert motion.rest_move("alert") is False
     motion.close()

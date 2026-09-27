@@ -336,11 +336,17 @@ ADR permits no unattended or default-on capture.
   - **Cue:** a detection lifts the head to a silent alert pose while the
     candidate is captured. It is one 0.5 s goto, about a third of the way
     from the sleep pose to home, with the antennas lifted a little.
+  - **Conversation:** an admitted candidate brings the head up to home
+    for the conversation.
   - **Rest:** monitoring rests the robot in the daemon's sleep pose before
-    it listens, and again after every candidate or conversation. From the
-    sleep or alert pose, that is one silent goto. From an unknown pose,
-    the daemon's own go-to-sleep routine plans the way down; it plays its
-    sound every time.
+    it listens, and again after every rejected or discarded candidate and
+    every conversation. From the sleep, alert or home pose, that is one
+    silent goto. From an unknown pose, the head goes home first and then
+    down, the path the daemon's go-to-sleep routine takes.
+  - **No daemon routine:** neither the daemon's wake-up nor its
+    go-to-sleep routine is used. Both play a sound: the wake-up sound was
+    recorded into candidates, and the go-to-sleep snore made every false
+    wake audible (first physical run).
   - **Motors:** no rest move de-torques them, unlike standby.
   - **Arbitration:** all rest moves go through the motion controller, and
     yield to conversation motion and remote control.
@@ -411,7 +417,6 @@ ADR permits no unattended or default-on capture.
 - **Motion.** On 2026-09-27 the owner made `WAKE_ANIMATION_ENABLED` the
   default, including unattended production use on the designated Nano
   while wake listening is armed. This is a narrow exception recorded in
-  [AGENTS.md](../../AGENTS.md#verification-and-safety). The daemon's
-  go-to-sleep routine is a full animation with sound, so testing it in a
-  development session still needs the owner present. The alert and sleep
-  gotos are bounded motion.
+  [AGENTS.md](../../AGENTS.md#verification-and-safety). Every rest move is
+  a bounded, silent goto, so development testing follows the ordinary
+  bounded-motion rule.

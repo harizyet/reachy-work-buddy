@@ -169,7 +169,7 @@ def test_play_behaviour_posts_to_mapped_move() -> None:
         return httpx.Response(200, json={"uuid": "abc"})
 
     backend = make_backend(handler)
-    backend.play_behaviour(Behaviour.GREETING, {})
+    assert backend.play_behaviour(Behaviour.GREETING, {}) is True
     assert calls == ["/api/move/play/recorded-move-dataset/pollen-robotics/reachy-mini-emotions-library/welcoming1"]
 
 
@@ -178,7 +178,7 @@ def test_play_behaviour_logs_and_does_not_raise_on_daemon_error() -> None:
         return httpx.Response(404, json={"detail": "no such move"})
 
     backend = make_backend(handler)
-    backend.play_behaviour(Behaviour.GREETING, {})  # must not raise
+    assert backend.play_behaviour(Behaviour.GREETING, {}) is False  # must not raise
 
 
 def test_play_behaviour_skips_unmapped_behaviour_without_raising() -> None:
@@ -186,7 +186,7 @@ def test_play_behaviour_skips_unmapped_behaviour_without_raising() -> None:
         raise AssertionError("should not be called for an unmapped behaviour")
 
     backend = ReachyDaemonBackend("http://daemon.test", behaviour_moves={}, transport=httpx.MockTransport(handler))
-    backend.play_behaviour(Behaviour.GREETING, {})  # must not raise
+    assert backend.play_behaviour(Behaviour.GREETING, {}) is False  # must not raise
 
 
 _MOVE_PREFIX = "/api/move/play/recorded-move-dataset/pollen-robotics/reachy-mini-emotions-library/"

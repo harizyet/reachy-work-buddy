@@ -50,7 +50,9 @@ records:
 - **Animation and follow-up:** a detected wake phrase lifts the head
   slightly to a silent alert pose. It replaced the full wake-up move after
   the [first physical run](verification/phase-24g-physical-2026-09-27.md).
-  The robot rests in its sleep pose while armed and not conversing. This replaces the "no large animation before admission"
+  An admitted conversation brings the head to home. The robot rests in its
+  sleep pose while armed and not conversing, and a false wake returns there
+  silently: no daemon routine or sound is used. This replaces the "no large animation before admission"
   guidance below. A wake-started session ends when no further turn starts
   within 10 s.
 

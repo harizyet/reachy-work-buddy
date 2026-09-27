@@ -28,15 +28,21 @@ Both switches are off by default. With both off, ownership is not taken
 and every path behaves as before 24f.
 
 Phase 24g adds a third switch, `wake_animation` (on by default, owner
-decision 2026-09-27): while wake monitoring is armed, the robot rests in
-the daemon's sleep pose between conversations, and a detected wake phrase
-lifts the head slightly to an alert pose as a quick, silent cue to go on
-speaking. Both are short gotos. The daemon's full wake-up routine plays a
-sound the microphone recorded into the candidate and lasts long enough
-that people waited for it and missed their window (24g first physical run),
-so it is not used. The daemon's own go-to-sleep routine, which plans a safe
-path but plays a sound every time, is used only when the head's pose is
-unknown; from the sleep or alert pose the return is one silent goto.
+decision 2026-09-27). While wake monitoring is armed:
+- the robot rests in the daemon's sleep pose between conversations;
+- a detected wake phrase lifts the head slightly to an alert pose, a quick
+  cue to go on speaking;
+- an admitted conversation brings the head up to home.
+
+Every rest move is a silent goto. The daemon's own routines are not used:
+- **Wake-up** plays a sound the microphone recorded into the candidate, and
+  lasts long enough that people waited for it and missed their window.
+- **Go-to-sleep** plays its snore every time, which made every false wake
+  audible.
+
+Both were found in the 24g first physical run. From an unknown pose, the
+head goes home first and then down, the path the daemon's go-to-sleep
+takes.
 """
 
 from __future__ import annotations
@@ -44,9 +50,11 @@ from __future__ import annotations
 import logging
 import random
 import threading
+import time
 from collections.abc import Callable
-from typing import Protocol
+from typing import Literal, Protocol
 
+from reachy_embodiment.robot import HOME_GOTO
 from reachy_embodiment.state import ServiceState
 from shared.models.embodiment import Behaviour, EmbodimentState
 from shared.models.motion import MotionSettings, MotionSettingsStatus
@@ -86,6 +94,8 @@ ALERT_POSE: dict[str, object] = {
     "body_yaw": 0.0,
     "duration": 0.5,
 }
+
+RestPose = Literal["sleep", "alert", "home"]
 
 # Hard bounds every pose is clamped to, whatever the constants above say.
 MAX_ROLL = 0.40
@@ -152,7 +162,7 @@ _CONVERSATION_POSES: dict[EmbodimentState, Callable[[random.Random], dict[str, o
 
 
 class MotionBackend(Protocol):
-    def play_behaviour(self, name: Behaviour, parameters: dict[str, str]) -> None: ...
+    def play_behaviour(self, name: Behaviour, parameters: dict[str, str]) -> bool | None: ...
 
     def stop_motion(self) -> None: ...
 
@@ -161,8 +171,6 @@ class MotionBackend(Protocol):
     def goto_pose(self, pose: dict[str, object]) -> None: ...
 
     def set_speech_wobble(self, enabled: bool) -> None: ...
-
-    def play_goto_sleep(self) -> None: ...
 
 
 class MotionController:
@@ -176,6 +184,7 @@ class MotionController:
         wake_animation: bool = False,
         threaded: bool = True,
         rng: random.Random | None = None,
+        sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         """`threaded=False` runs no worker; the caller drives it with
         `run_pending()` (deterministic tests)."""
@@ -204,9 +213,10 @@ class MotionController:
         # True after a pose or recorded move left the head away from home;
         # cleared by a return home. Only touched with `_dispatch_lock` held.
         self._away_from_home = False
-        # Phase 24g: "sleep" or "alert" while the head is known to hold that
-        # rest pose; any other motion or a stop forgets it.
-        self._rest_pose: str | None = None
+        # Phase 24g: "sleep", "alert" or "home" while the head is known to
+        # hold that pose; any other motion or a stop forgets it.
+        self._rest_pose: RestPose | None = None
+        self._sleep = sleep
 
     def settings(self) -> MotionSettingsStatus:
         with self._lock:
@@ -295,16 +305,19 @@ class MotionController:
                 self._pending = None
                 self._lock.notify_all()
         with self._dispatch_lock:
-            self._backend.play_behaviour(behaviour, parameters)
-            self._away_from_home = True
-            self._rest_pose = None
+            # Idle presence asks every few seconds for behaviours that map
+            # to no move; only a move that started leaves the rest pose.
+            if self._backend.play_behaviour(behaviour, parameters) is not False:
+                self._away_from_home = True
+                self._rest_pose = None
         return True
 
-    def rest_move(self, awake: bool) -> bool:
-        """Phase 24g: the alert pose for a detected wake phrase, or the
-        sleep pose while monitoring between conversations. Blocks until the
-        daemon accepts the move. False when the switch is off, or when a
-        conversation or remote control owns motion."""
+    def rest_move(self, pose: RestPose) -> bool:
+        """Phase 24g: "alert" for a detected wake phrase, "home" for an
+        admitted conversation, or "sleep" while monitoring between
+        conversations. Blocks until the daemon accepts the move (from an
+        unknown pose, until the head is home). False when the switch is
+        off, or when a conversation or remote control owns motion."""
         if not self._wake_animation:
             return False
         with self._lock:
@@ -315,16 +328,19 @@ class MotionController:
             self._lock.notify_all()
         with self._dispatch_lock:
             self._set_wobble(False)
-            if awake:
+            if pose == "home":
+                self._backend.goto_home()
+            elif pose == "alert":
                 self._backend.goto_pose(ALERT_POSE)
-                self._rest_pose = "alert"
-            elif self._rest_pose is not None:
-                self._backend.goto_pose(SLEEP_POSE)
-                self._rest_pose = "sleep"
             else:
-                self._backend.play_goto_sleep()
-                self._rest_pose = "sleep"
-            self._away_from_home = True
+                if self._rest_pose is None:
+                    # Unknown pose: home first, then down. A goto preempts
+                    # the previous one, so the first has to finish.
+                    self._backend.goto_home()
+                    self._sleep(float(HOME_GOTO["duration"]) + 0.2)
+                self._backend.goto_pose(SLEEP_POSE)
+            self._rest_pose = pose
+            self._away_from_home = pose != "home"
         return True
 
     def stop(self) -> None:
