@@ -58,4 +58,39 @@ The owner's findings:
 
 The logs traced the snore to a rest-pose tracking bug: idle presence
 requests that start no move reset it, so every rest used the daemon's
-`goto_sleep` routine. The fix is pending (see HANDOVER).
+`goto_sleep` routine. It was fixed in `0880b1b` (third run, below).
+
+## Third run on `0880b1b` (silent rest poses)
+
+The owner recreated the robot on `15ba2797` (`0880b1b`) at 10:43:42Z, with
+voice on, `WAKE_ANIMATION_ENABLED=true`, 24f motion off and wake armed.
+The times below are from the embodiment log and the daemon's access log.
+
+| Time (Z) | Event | Head moves (daemon) |
+|---|---|---|
+| 10:44:14 | armed | 10:44:23 home, 10:44:24 sleep (first rest, pose unknown) |
+| 10:44:26 | detected (0.73); discarded 10:44:31, no request | 10:44:26 alert, 10:44:31 sleep |
+| 10:45:59 | detected (0.98); session, 1 turn, ended 10:46:14 | 10:45:59 alert, 10:46:14 sleep |
+| 10:46:38 | detected (0.95); session, 2 turns, ended 10:47:50 | 10:46:38 alert, 10:47:50 sleep |
+| ~10:48 | owner switched the 24f motion on (`PUT /settings/motion`) | — |
+| 10:48:46 | detected (0.99); rejected by the hub 10:48:49 | 10:48:46 alert, 10:48:49 sleep |
+| 10:48:55 | detected (0.89); session, 3 turns, ended 10:49:49 | alert, then conversation motion and wobble |
+| 10:50:07 | detected (0.99); discarded 10:50:12, no request | 10:50:07 alert, 10:50:12 sleep |
+
+Results:
+- **False wakes pass.** Rejected and discarded candidates went from the
+  alert pose straight to sleep in one silent goto. No daemon routine
+  played. The owner confirmed it "works as intended".
+- The owner saw a false wake apparently go through home. That was the
+  one-time rest after the recreate (home, then down, 3 s before the
+  detection), not the false wake's own return.
+- **The owner reported the 24f conversational motion behaved as
+  expected**, from 10:48 with those switches on. This is an owner
+  observation, not a row of the deferred 24f acceptance.
+- **Home on admission failed.** The two sessions with motion off have no
+  home goto. The hub opens an admitted candidate's session, and sends
+  `voice_start`, before it answers the upload. The robot then suspended the
+  monitor mid-upload, so the move after the upload never ran; the tests'
+  fake uploader answered first. Fixed in `c579cc8`: a suspend during a
+  pending candidate is the admission. That fix is built (`a9baf002`) and
+  not yet run on the robot.

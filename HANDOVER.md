@@ -64,26 +64,28 @@ relevance rules gate candidates.
     10:00Z. Whether those were the owner's attempts or background speech is
     unattributed.
 
-**Owner requests 1–2 implemented (`0880b1b`, 2026-09-27), not yet on the
-robot.**
-1. An admitted conversation raises the head to **home**; afterwards it
-   returns to sleep.
-2. False wakes return to sleep **silently**. The snore came from idle
-   presence behaviours (which start no move) clearing the rest pose, so
-   every rest fell back to the daemon's `goto_sleep`. Now `play_behaviour`
-   reports whether a move started, only a started move forgets the pose,
-   and no daemon routine is used: from an unknown pose the head goes home,
-   then down, with silent gotos. ADR 0023, the AGENTS.md exception and the
-   guides are updated. Fast suites pass (808); checked off the robot only.
+**Owner requests 1–2 (2026-09-27)** — see the
+[third physical run](docs/verification/phase-24g-physical-2026-09-27.md#third-run-on-0880b1b-silent-rest-poses):
+1. **False wakes return to sleep silently: passed on the robot** with
+   `0880b1b` (owner confirmed). The snore cause was idle behaviours
+   clearing the rest pose; no daemon routine is used now.
+2. **Home on admission: fixed in `c579cc8`, not yet on the robot.** On
+   `0880b1b` it never ran, because the hub sends `voice_start` before it
+   answers the candidate upload, and the suspend cancelled the monitor
+   mid-upload. A suspend during a pending candidate now counts as the
+   admission.
+
+The owner also switched the 24f motion on for a session and reported it
+behaved as expected. That is an observation, not 24f acceptance. The
+motion switches reset to off on the next embodiment restart.
 
 **Next:**
-1. The owner recreates the embodiment container on the new image
-   (`sudo systemctl stop reachy-embodiment && docker rm reachy-embodiment
-   && scripts/start-reachy.sh --no-browser`, voice and wake env unchanged).
-   No hub rebuild is needed.
-2. Physically check: a false wake (say "Hey Reachy" then nothing) returns
-   to sleep with no sound; an admitted conversation brings the head home;
-   the first rest after the recreate goes home then down, silently.
+1. The owner recreates the embodiment container on `a9baf002` (`c579cc8`):
+   `sudo systemctl stop reachy-embodiment && docker rm reachy-embodiment
+   && scripts/start-reachy.sh --no-browser`. No hub rebuild is needed.
+2. Check, with 24f motion off, that an admitted conversation brings the
+   head home. The daemon's access log should show a goto right after the
+   alert, and `wake candidate admitted` in the embodiment log.
 3. Then run the 24g scenarios as acceptance rows. Agree numeric targets
    first (see the exit criteria).
 
@@ -129,19 +131,18 @@ this documentation pass. Recheck state before relying on them.
 - **Nano:** booted 2026-09-27 06:47 WIB (motor supply was off on the first
   boot; the once-per-boot recovery restarted the daemon once and stopped,
   as designed). The daemon runs as PID 7340 and was `running` at 09:33Z.
-  - **Checkout and image:** the checkout is `0880b1b`, and
-    `reachy-embodiment:local` = `0880b1b` (`15ba2797`, built 2026-09-27,
-    log `~/24g-logs/build-0880b1b.log`). The **running container is still
-    on `ebfffcef` (`b62a023`)** until the owner recreates it. It was
-    recreated at about 10:01Z with voice on and
-    `WAKE_ANIMATION_ENABLED=true`, and "Hey Reachy" was **armed** (the arm
-    is stored in the hub database; disarm from the robot microphone panel).
-    `796d65ee` (`b77ff6a`) is untagged.
-  - **Rollback:** `:b62a023` (`ebfffcef`) for this change, then `:6f6eb24`
-    (`0ab5ebdf`); roll the checkout back with it. Older images are `:edb03f5` (`e9df1677`, which lacks the
-    `/host-tmp` link), `:b36736d` and `:eb1e92e9`.
-  - **Motion:** 24f gestures and wobble are **off**, and reset to off on
-    any embodiment restart.
+  - **Checkout and image:** the checkout is `c579cc8`, and
+    `reachy-embodiment:local` = `c579cc8` (`a9baf002`, log
+    `~/24g-logs/build-c579cc8.log`). The **running container is on
+    `15ba2797` (`0880b1b`)**, recreated by the owner at 10:43:42Z with
+    voice on and `WAKE_ANIMATION_ENABLED=true`. "Hey Reachy" was **armed**
+    (the arm is stored in the hub database; disarm from the robot
+    microphone panel). The owner switched the 24f motion on at about
+    10:48Z.
+  - **Rollback:** `:0880b1b` (`15ba2797`), then `:b62a023` (`ebfffcef`),
+    then `:6f6eb24` (`0ab5ebdf`); roll the checkout back with it.
+  - **Motion:** 24f gestures and wobble were switched **on** by the owner
+    at about 10:48Z; they reset to off on any embodiment restart.
   - **Access:** sudo on the Nano needs a password, so the owner runs
     `systemctl` steps and container recreates. This dev box has key SSH
     as `Reachy-Mini-Jetson`.
