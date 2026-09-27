@@ -25,10 +25,14 @@ Owner decisions after closing, 2026-09-27:
   journal, no power logging and no diagnosis procedure. It needs the
   owner's sudo and approval.
 
-**[Phase 24g](docs/phase-24g.md) is next, planned but not implemented:**
-local wake admission and silent false-trigger rejection. Resolve the
-no-STT versus transcript-based relevance requirement and document wake-start
-authorization before implementation. Phase 25 owner recognition follows; its
+**[Phase 24g](docs/phase-24g.md) is next; decisions resolved, not
+implemented:** local wake admission and silent false-trigger rejection. On
+2026-09-27 the owner chose owner-armed monitoring that stays armed across
+restarts until disabled, pre-Phase-25 wake by anyone under unchanged gates,
+and in-memory hub STT of candidates for relevance. See the
+[ADR 0023 addendum](docs/adr/0023-robot-voice-conversation.md#addendum-wake-started-sessions-2026-09-27-phase-24g).
+Next: measure wake-detector and acoustic-filter candidates (latency, CPU,
+memory) on the Nano, then implement. No 24g code exists yet. Phase 25 owner recognition follows; its
 24e prerequisites remain settled. Keep conversational motion off until
 24f's deferred rows pass.
 

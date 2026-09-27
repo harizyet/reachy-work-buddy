@@ -1,6 +1,6 @@
 # Phase 24g — Wake admission and false-trigger rejection
 
-Status: **planned, not implemented** (2026-09-27). Next in
+Status: **decisions resolved, not implemented** (2026-09-27). Next in
 [the roadmap](plan.md#6-implementation-roadmap), after the closed 24e/24f
 phases and before [Phase 25](phase-25.md) owner recognition.
 
@@ -17,26 +17,31 @@ unauthorized speech in an already-open session remain Phase 25 work.
 Keep conversational motion off until 24f's deferred rows pass. Any optional
 wake acknowledgement must obey existing motion switches and acceptance gates.
 
-## Decisions required before implementation
+## Decisions (resolved 2026-09-27)
 
 Preserve [service ownership](adr/0001-service-boundaries.md) and
 [robot voice transport](adr/0023-robot-voice-conversation.md): embodiment
 owns local capture/filtering, hub owns authenticated sessions/routing, and
-core retains reasoning and action gates. Document wake-start authorization
-and the bounded session lifecycle in an ADR amendment before changing the
-currently owner-started capture contract. Monitoring needs explicit owner
-controlled enablement; wake events cannot bypass disabled capture, stop,
-expiry, privacy or authentication. Spoken wake detection is distinct from
-daemon resume and the `/reachy wake` command.
+core retains reasoning and action gates. Spoken wake detection is distinct
+from daemon resume and the `/reachy wake` command.
 
-The requirements below contain an unresolved STT boundary: rejected audio
-must not reach STT, but proposed relevance signals include ASR confidence,
-text and temporary transcripts before admission. Until resolved, the stricter
-no-STT-before-admission rule applies. Evaluate non-transcribing local signals
-first. If textual relevance is needed, document and obtain agreement on a
-narrow local, volatile ASR exception before implementation. Ordinary hub STT
-or cloud processing must not silently become candidate filters. Phase 25's
-pre-STT attribution gate still applies when recognition is introduced.
+On 2026-09-27 the owner settled the STT boundary and wake-start authorization,
+which the [wake-started sessions addendum](adr/0023-robot-voice-conversation.md#addendum-wake-started-sessions-2026-09-27-phase-24g)
+records:
+
+- **Arming:** the owner arms monitoring per robot through an authenticated
+  control, and it stays armed across restarts until disabled.
+- **Before Phase 25:** anyone may converse while armed; every existing
+  speaker, privacy and consent gate still applies.
+- **STT boundary:** candidates that pass the robot's local acoustic gates
+  are transcribed in hub memory for relevance only, through a dedicated
+  endpoint. Rejected audio and transcripts never reach core, tools, the owner
+  panel, logs or storage. Ordinary session STT and cloud processing are not
+  candidate filters. Phase 25's pre-STT attribution gate will run before that
+  upload.
+
+Wake events cannot bypass disarm, stop, expiry, standby, DND/meeting or
+authentication.
 
 Select the wake detector and lightweight acoustic-event filter after
 measuring latency, CPU and memory on the target hardware. Define candidate
@@ -105,7 +110,7 @@ speech / acoustic admission
                        LISTENING
 ```
 
-The post-wake buffer should remain local until the candidate has passed the admission checks. Rejected audio should not reach STT, Companion Core, tools, durable conversation history or memory.
+The post-wake buffer stays on the robot until it passes the local acoustic gates. After that, the hub may transcribe it in memory for relevance only ([decisions](#decisions-resolved-2026-09-27)). Rejected audio and transcripts must not reach Companion Core, tools, durable conversation history or memory.
 
 A wake candidate should also expire quickly. If no suitable speech begins within a bounded interval after the wake-word detection, Reachy returns silently to its previous state. There should be no error response such as “I didn't understand” for an unconfirmed activation because that would turn false positives into audible interruptions.
 

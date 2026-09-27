@@ -90,6 +90,7 @@ turn, one in-flight turn per session.
 - Push-to-talk-free listening inside an owner-started session does not
   identify who is speaking. The UI says so. Phase 25 adds recognition before
   any ambient mode; this ADR does not permit unattended or default-on capture.
+  (Changed 2026-09-27: see [wake-started sessions](#addendum-wake-started-sessions-2026-09-27-phase-24g).)
 - The original `POST /voice/turn` remains a caller-upload diagnostic and is
   not the robot workflow.
 
@@ -246,3 +247,108 @@ actuator).
   hub tells the robot per session (`voice_start.palm_stop`), so the robot
   has no setting of its own and never reads the camera for this otherwise.
   It stays off in production until physical acceptance.
+
+## Addendum: wake-started sessions (2026-09-27, Phase 24g)
+
+[Phase 24g](../phase-24g.md) adds a spoken wake phrase, initially "Hey
+Reachy". Until now only an owner-authenticated `start` could open a session,
+and the owner's UI kept it alive by renewing a 15 s lease. A wake-started
+session has no such UI. The owner made three decisions on 2026-09-27, which
+this addendum records. They explicitly change the rule under
+[Consequences](#consequences) that this ADR permits no unattended or
+default-on capture.
+
+**Owner decisions.**
+
+1. **Wake monitoring is armed by the owner and stays armed until disabled.**
+   It persists across hub and robot restarts. This is a deliberate ambient
+   mode before Phase 25 recognition.
+2. **Anyone in the room can start a conversation while monitoring is
+   armed.** The speaker is not identified, just as in an owner-started
+   session today. Every existing gate still applies unchanged: ADR 0006
+   speaker permission, DND and meeting withholding, text-only destructive
+   consent ([ADR 0011](0011-destructive-action-consent.md)), and `/reachy`
+   commands only from typed text.
+3. **The hub may transcribe a candidate before it is admitted.** Audio that
+   passes the robot's local acoustic gates is uploaded to a dedicated hub
+   endpoint. That endpoint transcribes it in memory to decide relevance.
+   Rejected speech therefore reaches the homelab's STT process. It never
+   reaches core, tools, the owner panel, logs or storage. This replaces
+   Phase 24g's provisional no-STT-before-admission rule.
+
+**Decision.**
+
+- **Arming.** An owner-authenticated control (owner cookie plus CSRF, or the
+  remote bearer, like `start`) arms or disarms one robot. The hub stores the
+  arm in Postgres: robot, arming user, a random arm ID and time. It is
+  therefore a schema revision, applied through the normal
+  [upgrade path](0020-schema-and-secrets.md). Each arm gets a new arm ID.
+  Disarming deletes the row. If the arming user no longer exists, the arm
+  is void.
+- **Delivery to the robot.** The robot advertises a `wake_admission`
+  capability at registration, and `PROTOCOL_VERSION` stays 1. After every
+  registration, and on every arm change, the hub sends a control-only
+  `wake_arm` message with the arm ID (or none) and the candidate limits.
+  The robot monitors only while it holds an arm from its current
+  connection. Disconnecting ends monitoring immediately, and the hub sends
+  the arm again after reconnection. This restore is intended. Unlike a
+  session, an arm is standing owner authority, not a conversation.
+- **When the robot listens for the wake phrase.** Only while it is armed
+  and connected, no session is active (owner- or wake-started), and its
+  daemon backend is running and not in standby. The standby/resume
+  commands and a spoken wake are independent: a spoken wake never resumes
+  the daemon.
+- **Robot-side candidate.** The wake detector runs locally. It keeps only
+  a pre-roll ring buffer that it continuously overwrites. A detection
+  starts `WAKE_CANDIDATE`, which is distinct from `LISTENING`. The robot
+  then waits up to the candidate deadline for speech to start. It captures
+  one segment with the existing segmenter, capped at the maximum candidate
+  length, and applies local gates: VAD speech duration and the acoustic
+  event filter (cough, sneeze, throat clearing, laughter, noise). A
+  candidate that fails any gate or the deadline is discarded on the robot,
+  and nothing is uploaded. There is no audible or motion acknowledgement
+  in 24g, since conversational motion stays off until 24f's deferred rows
+  pass.
+- **Hub admission.** The robot uploads a candidate that passes its gates
+  to `POST /robot-media/wake-candidate` with its ADR 0019 credential, its
+  connection generation and the arm ID. The hub rejects it, discarding it
+  unheard, unless the arm is current, no session is active, and DND and
+  meeting are off. Otherwise the hub transcribes it in memory. It then
+  applies deterministic relevance rules, like `turn_completeness`, with no
+  LLM. The rules reject an empty or low-confidence transcript, fillers
+  only, and a transcript with no plausible wake phrase near its start. They
+  also reject text that looks like the continuation of a third-party
+  conversation. Ambiguous candidates are rejected.
+- **Reject.** The hub answers `204` with the outcome `rejected`, and the
+  robot silently restores the state it had before the candidate. A stop,
+  disarm, disconnect or standby in the meantime takes precedence. Nothing
+  is recorded except content-free counters: candidates and rejections by
+  reason, for the per-hour metrics. A late, failed or cancelled candidate
+  is discarded the same way and is never replayed.
+- **Admit.** The hub creates an ordinary session for the arming user,
+  marked wake-started. It sends `voice_start` and processes the candidate
+  as turn 1 through the unchanged turn path, reusing its transcript, so the
+  first words are kept. The upload's response is that turn's normal
+  response. If the length cap cut the candidate, or it sounds unfinished,
+  the hub holds turn 1 as in
+  [adaptive end of turn](#addendum-adaptive-end-of-turn-2026-09-25-phase-24e).
+- **Session lifecycle.** A wake-started session has no owner lease. It
+  ends when speech doesn't start within the follow-up timeout after a
+  reply, at the existing maximum duration, or on disarm, owner stop,
+  disconnect, or DND or meeting turning on. The idle and one-in-flight-turn
+  rules are unchanged. It never restarts itself, and the robot then returns
+  to monitoring. Owner-started sessions are unchanged.
+- **Starting values** (calibration defaults, to be confirmed before
+  acceptance per [Phase 24g](../phase-24g.md#verification-and-exit-criteria)):
+  3 s from wake to speech start, 10 s maximum candidate segment, and 8 s
+  follow-up timeout after a reply. The upload limits are unchanged.
+- **Phase 25.** Wake admission is interaction routing, never identity.
+  When recognition lands, its pre-STT attribution gate runs before the
+  candidate upload. This addendum's STT exception does not relax it.
+
+**Consequences.** The robot's microphone is open for wake detection
+whenever monitoring is armed. Only the local pre-roll buffer is kept before
+a detection. Candidate speech, including speech from bystanders and TV, is
+transcribed on the owner's homelab and then discarded. While armed, anyone
+in the room can hold a spoken conversation within the existing gates. The
+owner accepted this on 2026-09-27. Disarming is the privacy control.
