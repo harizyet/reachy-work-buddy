@@ -399,6 +399,11 @@ class WakeMonitor:
         self._submitting = True
         try:
             try:
+                # A separate log line from the admitted/rejected one below,
+                # so the gap between them is the upload round trip (24g
+                # exit criteria's admission latency), not conflated with
+                # how long the candidate itself took to capture.
+                log.info("wake candidate uploading")
                 session_id = await self._uploader.wake_candidate(
                     encode_wav(candidate), arm_id=arm_id, generation=generation
                 )
