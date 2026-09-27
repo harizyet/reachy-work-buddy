@@ -20,6 +20,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import platform
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -40,6 +41,7 @@ from reachy_embodiment.robot import (
 from reachy_embodiment.robot_ws_client import RobotWSClient
 from reachy_embodiment.state import ServiceState
 from reachy_embodiment.voice import VoiceConversation, VoiceTurnClient
+from reachy_embodiment.wake import EdgeImpulseWakeDetector, WakeMonitor
 from shared.models.embodiment import Behaviour, EmbodimentState
 from shared.models.motion import MotionSettings, MotionSettingsStatus
 from shared.models.robot_voice import PALM_FRAME_MAX_WIDTH
@@ -80,16 +82,31 @@ def _env_flag(name: str) -> bool:
     return os.environ.get(name, "false").strip().lower() == "true"
 
 
+# Phase 24g: the image bakes in the community "Hey Reachy" Edge Impulse
+# model for both architectures (see the Dockerfile's checksums).
+_DEFAULT_WAKE_MODEL = f"/opt/wake/hey-reachy-{platform.machine().lower()}.eim"
+
+
+def _vad_factory(limits):
+    # Local import: loads torch/Silero only once a session starts.
+    from reachy_embodiment.audio.vad import VoiceActivityDetector
+
+    return VoiceActivityDetector(min_silence_duration_ms=limits.end_of_speech_silence_ms)
+
+
 def _default_motion_controller(backend: RobotBackend, state: ServiceState) -> MotionController:
     """Phase 24f: `CONVERSATION_MOTION_ENABLED` (listening/thinking gestures
     and one return home at a normal session end) and `SPEECH_WOBBLE_ENABLED`
     (daemon audio-reactive head motion while speaking). Both off until
-    physically accepted; off means no conversation motion and no ownership."""
+    physically accepted; off means no conversation motion and no ownership.
+    Phase 24g: `WAKE_ANIMATION_ENABLED` (the daemon's wake-up and go-to-sleep
+    moves around wake-started conversations), also off by default."""
     return MotionController(
         backend,
         state,
         conversation_motion=_env_flag("CONVERSATION_MOTION_ENABLED"),
         speech_wobble=_env_flag("SPEECH_WOBBLE_ENABLED"),
+        wake_animation=_env_flag("WAKE_ANIMATION_ENABLED"),
     )
 
 
@@ -106,39 +123,58 @@ def _default_robot_ws_client(
     the voice capability so the owner can start a microphone conversation
     from the hub. Off by default — the robot never offers capture unless
     this deployment opted in.
+
+    Phase 24g: with voice enabled and the wake model present
+    (`WAKE_MODEL_PATH`, default baked into the image; empty turns it off),
+    the robot also offers wake monitoring. It still listens for the wake
+    phrase only while the owner has armed it from the hub.
     """
     hub_ws_url = os.environ.get("HUB_WS_URL")
     robot_id = os.environ.get("ROBOT_ID")
     robot_token = os.environ.get("ROBOT_TOKEN")
     if not (hub_ws_url and robot_id and robot_token):
         return None
-    voice = None
+    voice = wake = None
     if _env_flag("VOICE_CONVERSATION_ENABLED"):
-        voice = _default_voice_conversation(backend, state, hub_ws_url, robot_id, robot_token, motion)
-    return RobotWSClient(hub_ws_url, robot_id, robot_token, sim=backend.sim, voice=voice)
+        uploader = VoiceTurnClient(hub_ws_url, robot_id, robot_token)
+        voice = _default_voice_conversation(backend, state, uploader, motion)
+        wake = _default_wake_monitor(backend, voice, uploader, motion)
+    return RobotWSClient(hub_ws_url, robot_id, robot_token, sim=backend.sim, voice=voice, wake=wake)
+
+
+def _default_wake_monitor(
+    backend: RobotBackend, voice: VoiceConversation, uploader: VoiceTurnClient, motion: MotionController
+) -> WakeMonitor | None:
+    model_path = os.environ.get("WAKE_MODEL_PATH", _DEFAULT_WAKE_MODEL).strip()
+    if not model_path or not os.path.isfile(model_path):
+        if model_path:
+            log.warning("wake model %s not found; wake listening unavailable", model_path)
+        return None
+    monitor = WakeMonitor(
+        backend.open_microphone,
+        lambda: EdgeImpulseWakeDetector(model_path),
+        _vad_factory,
+        uploader,
+        voice,
+        motion=motion,
+        daemon_ready=lambda: backend.connected,
+    )
+    voice.on_idle = monitor.resume
+    return monitor
 
 
 def _default_voice_conversation(
     backend: RobotBackend,
     state: ServiceState,
-    hub_url: str,
-    robot_id: str,
-    robot_token: str,
+    uploader: VoiceTurnClient,
     motion: MotionController,
 ) -> VoiceConversation:
-    def vad_factory(limits):
-        # Local import: loads torch/Silero only once a session starts.
-        from reachy_embodiment.audio.vad import VoiceActivityDetector
-
-        return VoiceActivityDetector(min_silence_duration_ms=limits.end_of_speech_silence_ms)
-
-    uploader = VoiceTurnClient(hub_url, robot_id, robot_token)
     # Phase 24e item 5: the hub decides per session whether it watches for
     # an open palm; the robot only supplies downscaled playback frames.
     palm_stop = HubPalmStop(lambda: backend.capture_frame(max_width=PALM_FRAME_MAX_WIDTH), uploader.palm_frame)
     return VoiceConversation(
         backend.open_microphone,
-        vad_factory,
+        _vad_factory,
         uploader,
         backend,
         state,
@@ -202,6 +238,8 @@ def create_app(
                     pass
                 except Exception:
                     log.exception("robot WS client task raised during shutdown")
+            if robot_ws_client is not None and robot_ws_client.wake is not None:
+                await robot_ws_client.wake.aclose()
             if robot_ws_client is not None and robot_ws_client.voice is not None:
                 await robot_ws_client.voice.aclose()
             await asyncio.to_thread(motion.close)

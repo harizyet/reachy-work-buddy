@@ -1,6 +1,13 @@
 # Phase 24g — Wake admission and false-trigger rejection
 
-Status: **decisions resolved, not implemented** (2026-09-27). Next in
+Status: **implemented, not deployed or accepted** (2026-09-27). Detector cost
+on the Nano is [measured](verification/phase-24g-detector-bench-2026-09-27.md).
+The owner selected the community Edge Impulse "Hey Reachy" model as the
+wake detector after a live microphone session. The local acoustic-event
+filter (candidate: YAMNet) is deferred to calibration, so the VAD and the
+hub's relevance rules are the gates for now. The
+[ADR 0023 wake addendum](adr/0023-robot-voice-conversation.md#addendum-wake-started-sessions-2026-09-27-phase-24g)
+describes the implemented design. Next in
 [the roadmap](plan.md#6-implementation-roadmap), after the closed 24e/24f
 phases and before [Phase 25](phase-25.md) owner recognition.
 
@@ -39,6 +46,12 @@ records:
   panel, logs or storage. Ordinary session STT and cloud processing are not
   candidate filters. Phase 25's pre-STT attribution gate will run before that
   upload.
+
+- **Animation and follow-up:** a detected wake phrase plays the wake-up
+  animation, and the robot rests in its sleep pose while armed and not
+  conversing. This replaces the "no large animation before admission"
+  guidance below. A wake-started session ends when no further turn starts
+  within 10 s.
 
 Wake events cannot bypass disarm, stop, expiry, standby, DND/meeting or
 authentication.

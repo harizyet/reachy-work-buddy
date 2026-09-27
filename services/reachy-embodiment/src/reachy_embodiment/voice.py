@@ -20,6 +20,12 @@ playback. When the hub sees a held open palm, the daemon's audio stops and
 the loop moves straight on to the next listening turn in the same session;
 it does not end the conversation.
 
+Wake-started sessions (Phase 24g, ADR 0023 addendum): the wake monitor
+primes the admitted candidate, which is uploaded as turn 1 without capturing
+again, and the session ends itself when no speech starts within
+`follow_up_seconds` of listening. `on_idle` tells the monitor whenever no
+session is running any more.
+
 Stopping cancels the loop wherever it is: capture closes the microphone,
 an in-flight upload is abandoned, and playback is stopped on the daemon
 (`stop_audio`), not merely left to finish. Nothing here restarts capture on
@@ -54,16 +60,19 @@ from shared.models.robot_voice import (
     VOICE_SEGMENT_HEADER,
     VOICE_SESSION_HEADER,
     VOICE_TURN_HEADER,
+    WAKE_ARM_HEADER,
     PalmFrameResult,
     RobotVoiceState,
     VoiceLimits,
     VoiceTurnOutcome,
+    WakeAdmission,
 )
 from shared.models.robot_ws import VoiceStartMessage, VoiceStateMessage
 from shared.protocols.robot_ws import (
     ROBOT_PALM_FRAME,
     ROBOT_VOICE_TURN,
     ROBOT_VOICE_TURN_FINALIZE,
+    ROBOT_WAKE_CANDIDATE,
 )
 
 log = logging.getLogger(__name__)
@@ -195,6 +204,22 @@ class VoiceSessionGone(Exception):
     credential); this session's loop ends rather than retrying."""
 
 
+async def start_microphone(microphone: MicSource) -> None:
+    """Starts capture in a thread. The thread can't be interrupted, so a
+    stop that lands meanwhile waits for the start and then closes the
+    microphone again rather than leaving it capturing."""
+    start = asyncio.ensure_future(asyncio.to_thread(microphone.start))
+    try:
+        await asyncio.shield(start)
+    except asyncio.CancelledError:
+        with contextlib.suppress(Exception):
+            await start
+            await asyncio.to_thread(microphone.stop)
+        raise
+    except Exception as exc:
+        raise MicrophoneFailed from exc
+
+
 class VoiceTurnClient:
     """Uploads one utterance to the hub (ADR 0019's robot-initiated media
     path) and returns the hub's decision plus reply audio, if any."""
@@ -242,6 +267,25 @@ class VoiceTurnClient:
         response.raise_for_status()
         return PalmFrameResult.model_validate(response.json()).stop
 
+    async def wake_candidate(self, wav_bytes: bytes, *, arm_id: str, generation: int) -> str | None:
+        """Phase 24g: ask the hub to admit a wake candidate. Returns the new
+        session's id, or None when the hub rejected it. Raises
+        VoiceSessionGone when the arm or connection is stale."""
+        headers = {
+            "X-Robot-Id": self._robot_id,
+            "Authorization": f"Bearer {self._token}",
+            ROBOT_GENERATION_HEADER: str(generation),
+            WAKE_ARM_HEADER: arm_id,
+            "Content-Type": "audio/wav",
+        }
+        response = await self._client.post(ROBOT_WAKE_CANDIDATE, content=wav_bytes, headers=headers)
+        if response.status_code in (401, 404, 409):
+            raise VoiceSessionGone(f"hub refused wake candidate: {response.status_code}")
+        response.raise_for_status()
+        if response.status_code == 204:
+            return None
+        return WakeAdmission.model_validate(response.json()).voice_session_id
+
     async def finalize(
         self, *, voice_session_id: str, turn: int, generation: int
     ) -> tuple[VoiceTurnOutcome, bytes | None]:
@@ -282,6 +326,7 @@ class VoiceConversation:
         clock: Callable[[], float] | None = None,
         stop_gesture: StopGesture | None = None,
         motion: MotionController | None = None,
+        on_idle: Callable[[], None] | None = None,
     ) -> None:
         self._microphone_factory = microphone_factory
         self._vad_factory = vad_factory
@@ -301,16 +346,28 @@ class VoiceConversation:
         # fenced by the token from begin_conversation.
         self._motion = motion
         self._motion_token: int | None = None
+        self.on_idle = on_idle
+        # Phase 24g: the admitted wake candidate, taken as turn 1 by the
+        # next wake-started session.
+        self._primed: np.ndarray | None = None
 
     @property
     def voice_session_id(self) -> str | None:
         return self._session_id
 
+    def prime(self, utterance: np.ndarray | None) -> None:
+        """Phase 24g: the next wake-started session answers this first
+        (None clears it)."""
+        self._primed = utterance
+
     async def start(self, message: VoiceStartMessage, generation: int, send_state: SendState) -> None:
         await self.stop()
         log.info("voice start received (session %s…)", message.voice_session_id[:4])
+        primed, self._primed = self._primed, None
         self._session_id = message.voice_session_id
-        self._task = asyncio.create_task(self._run(message, generation, send_state))
+        self._task = asyncio.create_task(
+            self._run(message, generation, send_state, primed if message.wake_started else None)
+        )
 
     async def stop(self, voice_session_id: str | None = None) -> None:
         if voice_session_id is not None and voice_session_id != self._session_id:
@@ -324,6 +381,13 @@ class VoiceConversation:
             with contextlib.suppress(asyncio.CancelledError):
                 await task
             log.info("voice stop complete")
+        if task is not None:
+            # A task cancelled before it ran never reaches _run's finally.
+            self._idle()
+
+    def _idle(self) -> None:
+        if self.on_idle is not None and self._session_id is None:
+            self.on_idle()
 
     async def aclose(self) -> None:
         await self.stop()
@@ -340,9 +404,16 @@ class VoiceConversation:
         if self._motion is not None and self._motion_token is not None:
             self._motion.conversation_state(self._motion_token, turn, state)
 
-    async def _run(self, message: VoiceStartMessage, generation: int, send_state: SendState) -> None:
+    async def _run(
+        self,
+        message: VoiceStartMessage,
+        generation: int,
+        send_state: SendState,
+        primed: np.ndarray | None = None,
+    ) -> None:
         limits = message.limits
         session_id = message.voice_session_id
+        follow_up = message.follow_up_seconds if message.wake_started else None
 
         async def report(state: RobotVoiceState, detail: str | None = None) -> None:
             try:
@@ -368,8 +439,18 @@ class VoiceConversation:
             while True:
                 try:
                     result = await self._take_turn(
-                        microphone, segmenter, limits, deadline, session_id, turn, generation, report
+                        microphone,
+                        segmenter,
+                        limits,
+                        deadline,
+                        session_id,
+                        turn,
+                        generation,
+                        report,
+                        first=primed,
+                        follow_up=follow_up,
                     )
+                    primed = None
                 except MicrophoneFailed:
                     log.exception("microphone capture failed")
                     await report(RobotVoiceState.STOPPED, "Microphone unavailable")
@@ -381,7 +462,11 @@ class VoiceConversation:
                     return
                 if result is None:
                     completed = True
-                    await report(RobotVoiceState.STOPPED, "Maximum conversation length reached")
+                    if self._clock() >= deadline:
+                        await report(RobotVoiceState.STOPPED, "Maximum conversation length reached")
+                    else:
+                        log.info("voice session ended: no follow-up within %.0fs", follow_up or 0)
+                        await report(RobotVoiceState.STOPPED, "No follow-up heard")
                     return
                 outcome, audio, cut_at = result
                 turn += 1
@@ -405,6 +490,12 @@ class VoiceConversation:
                 # Only a normal end returns home; a stop or failure holds.
                 self._motion.end_conversation(self._motion_token, completed=completed)
                 self._motion_token = None
+            # An ended session no longer holds the robot; a stop already
+            # cleared this, and a newer start has replaced it.
+            if self._session_id == session_id and self._task is asyncio.current_task():
+                self._session_id = None
+                self._task = None
+                self._idle()
 
     async def _take_turn(
         self,
@@ -416,22 +507,28 @@ class VoiceConversation:
         turn: int,
         generation: int,
         report: Callable[..., Awaitable[None]],
+        *,
+        first: np.ndarray | None = None,
+        follow_up: float | None = None,
     ) -> tuple[VoiceTurnOutcome, bytes | None, float] | None:
         """One turn, possibly several segments long. Returns the hub's final
         outcome, reply audio and the last cut time, or None when the
-        session's maximum length is reached. The microphone is closed on
-        return, before any playback."""
+        session's maximum length is reached or, with `follow_up`, when no
+        speech started that long after listening began. `first` is an
+        already-captured first segment (the admitted wake candidate). The
+        microphone is closed on return, before any playback."""
         segmenter.reset()
-        try:
-            await asyncio.to_thread(microphone.start)
-        except Exception as exc:
-            raise MicrophoneFailed from exc
+        await start_microphone(microphone)
         capture: asyncio.Task[np.ndarray] | None = None
         try:
             self._set_state(EmbodimentState.LISTENING, turn)
             await report(RobotVoiceState.LISTENING)
-            capture = asyncio.create_task(self._capture(microphone, segmenter))
-            utterance = await self._await_capture(capture, segmenter, deadline)
+            if first is not None:
+                utterance: np.ndarray | None = first
+            else:
+                capture = asyncio.create_task(self._capture(microphone, segmenter))
+                start_by = self._clock() + follow_up if follow_up is not None else None
+                utterance = await self._await_capture(capture, segmenter, deadline, start_by=start_by)
             segment = 1
             turn_seconds = 0.0
             while utterance is not None:

@@ -150,6 +150,12 @@ These are dated evidence, not startup instructions or current health checks.
   clock answers, a public "start the morning" reply and the known
   mishearings pass; open-ended replies take 7.8–9.9 s (model length).
 
+- [Phase 24g detector cost on the Nano](verification/phase-24g-detector-bench-2026-09-27.md):
+  file-driven benchmark; openWakeWord takes 23% of one core continuously,
+  YAMNet 30 ms per 0.96 s patch; the community Edge Impulse "Hey Reachy"
+  model is cheap but caught 4 of 15 synthetic phrases; after a live session
+  with the owner it was selected as the initial detector.
+
 - [Phase 24f motion conformance](verification/phase-24f-conformance-2026-09-25.md):
   Nano versions, predeclared tolerances, supervised REST vs SDK run; paths
   agree; robot stops 2–5° short on both, normal vs fault still open.

@@ -58,6 +58,19 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # it dangles harmlessly.
 RUN ln -s /host-tmp/reachymini_camera_socket /tmp/reachymini_camera_socket
 
+# Phase 24g: the community "Hey Reachy" Edge Impulse keyword model
+# (BSD-3-Clause-Clear project, CC0 data), a native runner executable the
+# wake monitor drives over a Unix socket. Pinned to one Space revision and
+# checksummed like the hub's models; the app picks the file named for
+# platform.machine(). Benchmarked on nano-1 in
+# docs/verification/phase-24g-detector-bench-2026-09-27.md.
+ADD --chmod=755 --checksum=sha256:9861b8d43bd9a2b95bf0105262d358c9f6b5aa17fa0b266b0dadae8328c3f229 \
+    https://huggingface.co/spaces/luisomoreau/hey_reachy_wake_word_detection/resolve/3b6670748dc3ffda9f09dce18810b283ace7147e/hey_reachy_wake_word_detection/models/hey-reachy-wake-word-detection-linux-aarch64.eim \
+    /opt/wake/hey-reachy-aarch64.eim
+ADD --chmod=755 --checksum=sha256:d861eaa1cf6a329150f6caf4181d7c03e1eecbfe52fbc5ce2334907a5eb708dd \
+    https://huggingface.co/spaces/luisomoreau/hey_reachy_wake_word_detection/resolve/3b6670748dc3ffda9f09dce18810b283ace7147e/hey_reachy_wake_word_detection/models/hey-reachy-wake-word-detection-linux-x86_64.eim \
+    /opt/wake/hey-reachy-x86_64.eim
+
 EXPOSE 8000
 # Invoke the venv's uvicorn directly rather than `uv run` — `uv run` would
 # re-check/sync the project (including pulling dev dependencies) on every

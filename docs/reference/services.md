@@ -130,10 +130,12 @@ WebRTC, and static UI. It does not own reasoning policy or motor control.
 | `GET`, `PUT /robots/{robot_id}/settings/motion` | Owner-authenticated proxy for robot-local conversational animation switches; changes only between conversations |
 | `POST /robots/standby`, `/resume` | Phase 22b: authenticated remote power control — parks/de-torques (`standby`) or wakes (`resume`, `wake_up` query param) every registered robot; no `{id}` in the path, loops the registry like the existing gesture-trigger helper does |
 | `POST /webrtc/telepresence/offer` | Authenticated remote media/control |
-| `WS /robots/connect` | Robot-token-authenticated registration/heartbeat/reconnect; also `voice_start`/`voice_stop`/`voice_state` conversation control (Phase 24c); other commands still HTTP |
+| `WS /robots/connect` | Robot-token-authenticated registration/heartbeat/reconnect; also `voice_start`/`voice_stop`/`voice_state` conversation control (Phase 24c) and `wake_arm` (Phase 24g, sent after every registration); other commands still HTTP |
 | `GET /robot-voice`; `POST /robot-voice/start`, `/renew`, `/stop` | Phase 24c owner controls: robots with the voice capability, the current session, its lease and recent turns |
 | `POST /robot-media/voice-turn` | Phase 24c robot upload of one WAV utterance, authenticated with the robot's own credential, generation and session; returns reply WAV or 204 with `X-Voice-Turn-Outcome`, which is `continue` when the hub holds an unfinished-sounding segment (24e; `X-Voice-Segment` numbers the held turn's further segments) |
 | `POST /robot-media/voice-turn/finalize` | Phase 24e: same robot credential and fencing headers, no body; answers the held turn when the robot heard no more speech in the continuation window |
+| `POST /robot-voice/wake` | Phase 24g owner control: arm or disarm "Hey Reachy" for one robot (persisted, `robot_wake_arm`); returns the overview, whose robots carry `wake_capable`, `wake_armed` and content-free `wake_counts` |
+| `POST /robot-media/wake-candidate` | Phase 24g robot upload of one wake candidate WAV with the robot credential, generation and `X-Wake-Arm`; 200 with the new session ID when admitted, 204 `rejected` otherwise, 409 for a stale arm or connection |
 | `POST /auth/login`, `/auth/logout`; `GET /auth/me` | Owner-cookie lifecycle; login/logout require CSRF header |
 | `GET /status` | Authenticated component probes, model config/usage, Telegram polling health, default user ID |
 | `GET`, `PUT /settings/llm`; `GET /llm/usage` | Authenticated core proxies; usage defaults `limit=50`, `since_hours=24` |
@@ -182,6 +184,12 @@ transcript sounds unfinished; if so, and the robot advertises
 finalize instead of answering
 ([ADR 0023 addendum](../adr/0023-robot-voice-conversation.md#addendum-adaptive-end-of-turn-2026-09-25-phase-24e)).
 
+Wake-started sessions (Phase 24g, [ADR 0023 wake addendum](../adr/0023-robot-voice-conversation.md#addendum-wake-started-sessions-2026-09-27-phase-24g)): the owner's arm is persisted by
+`wake_arm_store.py`/`postgres_wake_arm_store.py` and cached by the manager.
+A candidate is transcribed in memory and judged by the fixed rules in
+`wake_relevance.py`. An admitted one opens a session with no owner lease,
+whose turn 1 reuses the admitted request instead of transcribing again.
+
 The HTTP heartbeat interval is 2 seconds against embodiment's 5-second
 watchdog. WS connections are process-local, generation-fenced, and require
 one hub worker. `ROBOT_TOKENS` provisions hashed robot credentials in memory;
@@ -217,7 +225,11 @@ opens the microphone, lets Silero VAD (512 samples at 16 kHz) delimit one
 bounded utterance, closes the microphone, uploads the utterance to the hub,
 then plays any permitted reply. It is half-duplex, and cancelling stops daemon
 playback. It is enabled only by `VOICE_CONVERSATION_ENABLED=true`, and has not
-passed physical acceptance. Audio barge-in and wake words are not implemented.
+passed physical acceptance. Audio barge-in is not implemented. Phase 24g's
+`wake.py` monitors for "Hey Reachy" while the hub has armed the robot: an
+Edge Impulse runner scores the microphone locally, and a candidate (the
+phrase plus the request) goes to the hub for admission. See the
+[ADR 0023 wake addendum](../adr/0023-robot-voice-conversation.md#addendum-wake-started-sessions-2026-09-27-phase-24g). It is not physically accepted.
 When the hub turns on open-palm stop for a session, `gesture.py`'s
 `HubPalmStop` uploads downscaled camera frames to the hub during playback.
 When the hub answers `stop`, playback stops and the loop returns to
@@ -226,7 +238,8 @@ listening in the same session.
 `motion.py` (Phase 24f) is the single local motion owner. See the
 [ADR 0003 amendment](../adr/0003-embodiment-command-api.md#phase-24f-motion-ownership-amendment-2026-09-25).
 `CONVERSATION_MOTION_ENABLED` and `SPEECH_WOBBLE_ENABLED` are both off by
-default. While either is on, a voice conversation owns motion and
+default, as is Phase 24g's `WAKE_ANIMATION_ENABLED` (the daemon's own
+wake-up and go-to-sleep moves around wake monitoring). While either is on, a voice conversation owns motion and
 `POST /behaviour/{name}` answers 409. The motion itself is not physically
 accepted.
 

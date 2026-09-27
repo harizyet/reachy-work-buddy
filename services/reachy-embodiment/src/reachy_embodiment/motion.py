@@ -26,6 +26,12 @@ return home.
 
 Both switches are off by default. With both off, ownership is not taken
 and every path behaves as before 24f.
+
+Phase 24g adds a third switch, `wake_animation`: while wake monitoring is
+armed, the daemon's go-to-sleep move rests the robot between
+conversations and its wake-up move answers a detected wake phrase. These
+are the daemon's own full moves (wake-up plays its sound), so they are off
+by default like the others.
 """
 
 from __future__ import annotations
@@ -134,6 +140,8 @@ class MotionBackend(Protocol):
 
     def set_speech_wobble(self, enabled: bool) -> None: ...
 
+    def play_rest_move(self, awake: bool) -> None: ...
+
 
 class MotionController:
     def __init__(
@@ -143,6 +151,7 @@ class MotionController:
         *,
         conversation_motion: bool = False,
         speech_wobble: bool = False,
+        wake_animation: bool = False,
         threaded: bool = True,
         rng: random.Random | None = None,
     ) -> None:
@@ -152,6 +161,7 @@ class MotionController:
         self._state = state
         self._conversation_motion = conversation_motion
         self._speech_wobble = speech_wobble
+        self._wake_animation = wake_animation
         # `_lock` guards the fields below. `_dispatch_lock` serializes daemon
         # motion calls, so `stop()` waits for an in-flight play and then
         # stops it rather than racing ahead of it.
@@ -262,6 +272,26 @@ class MotionController:
         with self._dispatch_lock:
             self._backend.play_behaviour(behaviour, parameters)
             self._away_from_home = True
+        return True
+
+    def rest_move(self, awake: bool) -> bool:
+        """Phase 24g: wake up for a detected wake phrase, or go to sleep
+        while monitoring between conversations. Blocks until the daemon
+        accepts the move. False when the switch is off, or when a
+        conversation or remote control owns motion."""
+        if not self._wake_animation:
+            return False
+        with self._lock:
+            if self.conversation_owns_motion or self._closed or self._state.remote_active:
+                return False
+            self._generation += 1
+            self._pending = None
+            self._lock.notify_all()
+        with self._dispatch_lock:
+            self._set_wobble(False)
+            self._backend.play_rest_move(awake)
+            # Wake-up ends at the daemon's home pose; sleep is away from it.
+            self._away_from_home = not awake
         return True
 
     def stop(self) -> None:

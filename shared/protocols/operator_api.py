@@ -18,5 +18,7 @@ ROBOT_VOICE = "/robot-voice"
 ROBOT_VOICE_START = "/robot-voice/start"
 ROBOT_VOICE_RENEW = "/robot-voice/renew"
 ROBOT_VOICE_STOP = "/robot-voice/stop"
+# Phase 24g: owner arms or disarms spoken wake monitoring for one robot.
+ROBOT_VOICE_WAKE = "/robot-voice/wake"
 
 ROBOT_MOTION_SETTINGS = "/robots/{robot_id}/settings/motion"

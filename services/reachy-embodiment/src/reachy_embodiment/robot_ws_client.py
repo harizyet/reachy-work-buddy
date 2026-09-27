@@ -5,7 +5,10 @@ heartbeats, and reconnects with exponential backoff on any failure or
 disconnect. Phase 24c adds conversation control only (ADR 0023):
 `voice_start`/`voice_stop` drive an optional VoiceConversation, which
 reports `voice_state` back over this socket; any disconnect stops it and
-nothing restarts it on reconnect. Behaviour/camera/audio commands still
+nothing restarts it on reconnect. Phase 24g adds `wake_arm`, which arms an
+optional WakeMonitor; a disconnect disarms it until the hub arms it again,
+and monitoring is suspended before any voice session starts so the
+microphone is free. Behaviour/camera/audio commands still
 arrive over HTTP. HTTP remains the dev/simulation transport per ADR 0019; this
 client is additive to reachy-embodiment's existing local HTTP server, not
 a replacement for it — the HTTP API keeps serving local/dev callers
@@ -27,7 +30,11 @@ from typing import TYPE_CHECKING
 import websockets
 from websockets.exceptions import WebSocketException
 
-from shared.models.robot_voice import VOICE_CAPABILITY, VOICE_CONTINUATION_CAPABILITY
+from shared.models.robot_voice import (
+    VOICE_CAPABILITY,
+    VOICE_CONTINUATION_CAPABILITY,
+    WAKE_CAPABILITY,
+)
 from shared.models.robot_ws import (
     ErrorMessage,
     HeartbeatAckMessage,
@@ -36,12 +43,14 @@ from shared.models.robot_ws import (
     VoiceStartMessage,
     VoiceStateMessage,
     VoiceStopMessage,
+    WakeArmMessage,
     WSMessageType,
 )
 from shared.protocols.robot_ws import PROTOCOL_VERSION, ROBOTS_CONNECT
 
 if TYPE_CHECKING:
     from reachy_embodiment.voice import VoiceConversation
+    from reachy_embodiment.wake import WakeMonitor
 
 log = logging.getLogger(__name__)
 
@@ -86,6 +95,7 @@ class RobotWSClient:
         sim: bool = False,
         registration_timeout: float = 5.0,
         voice: VoiceConversation | None = None,
+        wake: WakeMonitor | None = None,
     ) -> None:
         self._hub_ws_url = _as_ws_url(hub_ws_url.rstrip("/")) + ROBOTS_CONNECT
         self._robot_id = robot_id
@@ -96,6 +106,9 @@ class RobotWSClient:
             for capability in (VOICE_CAPABILITY, VOICE_CONTINUATION_CAPABILITY):
                 if capability not in self._capabilities:
                     self._capabilities.append(capability)
+        self._wake = wake if voice is not None else None
+        if self._wake is not None and WAKE_CAPABILITY not in self._capabilities:
+            self._capabilities.append(WAKE_CAPABILITY)
         self._ws = None
         self._send_lock = asyncio.Lock()
         self._sim = sim
@@ -128,6 +141,8 @@ class RobotWSClient:
                 self._ws = None
                 # ADR 0023: losing the hub ends capture/playback; only a
                 # fresh voice_start after reconnecting may begin again.
+                if self._wake is not None:
+                    await self._wake.disarm()
                 if self._voice is not None:
                     await self._voice.stop()
 
@@ -166,7 +181,11 @@ class RobotWSClient:
                     await self.send(HeartbeatAckMessage().model_dump_json())
                 elif message_type == WSMessageType.VOICE_START and self._voice is not None:
                     start = VoiceStartMessage.model_validate(message)
+                    if self._wake is not None:
+                        await self._wake.suspend()
                     await self._voice.start(start, registered.generation, self._send_voice_state)
+                elif message_type == WSMessageType.WAKE_ARM and self._wake is not None:
+                    await self._wake.arm(WakeArmMessage.model_validate(message), registered.generation)
                 elif message_type == WSMessageType.VOICE_STOP and self._voice is not None:
                     stop = VoiceStopMessage.model_validate(message)
                     await self._voice.stop(stop.voice_session_id)
@@ -180,6 +199,10 @@ class RobotWSClient:
     @property
     def voice(self) -> VoiceConversation | None:
         return self._voice
+
+    @property
+    def wake(self) -> WakeMonitor | None:
+        return self._wake
 
     async def send(self, text: str) -> None:
         ws = self._ws

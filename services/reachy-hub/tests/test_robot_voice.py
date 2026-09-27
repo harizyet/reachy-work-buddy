@@ -51,12 +51,14 @@ from reachy_hub.robot_voice import (
 )
 from reachy_hub.session_store import InMemorySessionStore
 from reachy_hub.user_store import InMemoryUserStore
+from reachy_hub.wake_arm_store import InMemoryWakeArmStore
 
 from shared.models.robot_voice import (
     MAX_PALM_FRAME_BYTES,
     MAX_UTTERANCE_BYTES,
     VOICE_CAPABILITY,
     VOICE_CONTINUATION_CAPABILITY,
+    WAKE_CAPABILITY,
     RobotVoiceState,
     VoiceLimits,
     VoiceSessionState,
@@ -70,6 +72,7 @@ from shared.protocols.robot_ws import (
     ROBOT_PALM_FRAME,
     ROBOT_VOICE_TURN,
     ROBOT_VOICE_TURN_FINALIZE,
+    ROBOT_WAKE_CANDIDATE,
     ROBOTS_CONNECT,
 )
 
@@ -830,7 +833,10 @@ def test_robot_without_voice_capability_cannot_be_started_and_disconnect_stops()
     with client:
         ws, _, _ = connect_robot(client, capabilities=())
         overview = client.get("/robot-voice", headers=OWNER).json()
-        assert overview["robots"] == [{"robot_id": ROBOT_ID, "online": True, "voice_capable": False}]
+        robot = overview["robots"][0]
+        assert (robot["robot_id"], robot["online"], robot["voice_capable"], robot["wake_capable"]) == (
+            ROBOT_ID, True, False, False
+        )
         refused = client.post("/robot-voice/start", json={"robot_id": ROBOT_ID}, headers=OWNER)
         assert refused.status_code == 409
         ws.__exit__(None, None, None)
@@ -1091,3 +1097,204 @@ def test_an_upload_the_robot_abandons_is_a_session_error_not_a_crash() -> None:
     with pytest.raises(VoiceSessionError) as caught:
         asyncio.run(_read_bounded(request, 1024))
     assert caught.value.status_code == 400
+
+
+# --- Phase 24g: wake arm and admission (ADR 0023 wake-started sessions) ----
+
+
+def test_arm_is_persisted_pushed_to_a_capable_robot_and_reissued_on_rearm() -> None:
+    store = InMemoryWakeArmStore()
+    manager, _, connection, socket, _ = make_manager(
+        capabilities=(VOICE_CAPABILITY, WAKE_CAPABILITY), wake_store=store
+    )
+    asyncio.run(manager.set_arm(ROBOT_ID, "owner", True))
+    first = socket.sent[-1]
+    assert first["type"] == WSMessageType.WAKE_ARM and first["arm_id"]
+    assert first["limits"]["follow_up_seconds"] == 10.0
+    assert asyncio.run(store.get(ROBOT_ID)).arm_id == first["arm_id"]
+
+    asyncio.run(manager.set_arm(ROBOT_ID, "owner", True))
+    assert socket.sent[-1]["arm_id"] not in (None, first["arm_id"])
+
+    # A registration (e.g. after a robot restart) gets the current arm again.
+    asyncio.run(manager.on_robot_register(connection))
+    assert socket.sent[-1]["arm_id"] == socket.sent[-2]["arm_id"]
+
+    asyncio.run(manager.set_arm(ROBOT_ID, "owner", False))
+    assert socket.sent[-1]["arm_id"] is None
+    assert asyncio.run(store.get(ROBOT_ID)) is None
+
+
+def test_arm_survives_a_hub_restart_through_its_store() -> None:
+    store = InMemoryWakeArmStore()
+    manager, _, _, _, _ = make_manager(capabilities=(VOICE_CAPABILITY, WAKE_CAPABILITY), wake_store=store)
+    asyncio.run(manager.set_arm(ROBOT_ID, "owner", True))
+
+    restarted, _, connection, socket, _ = make_manager(
+        capabilities=(VOICE_CAPABILITY, WAKE_CAPABILITY), wake_store=store
+    )
+    asyncio.run(restarted.load_arms())
+    asyncio.run(restarted.on_robot_register(connection))
+    assert socket.sent[-1]["arm_id"] == asyncio.run(store.get(ROBOT_ID)).arm_id
+    assert restarted.overview([]).robots[0].wake_armed
+
+
+def test_robot_without_wake_capability_is_never_sent_an_arm() -> None:
+    manager, _, connection, socket, _ = make_manager()
+    asyncio.run(manager.set_arm(ROBOT_ID, "owner", True))
+    asyncio.run(manager.on_robot_register(connection))
+    assert socket.sent == []
+
+
+def test_candidate_fencing_and_busy_robot() -> None:
+    manager, _, _, _, _ = make_manager(capabilities=(VOICE_CAPABILITY, WAKE_CAPABILITY))
+    with pytest.raises(VoiceSessionError, match="not armed"):
+        manager.begin_candidate(ROBOT_ID, 1, "no-arm")
+    asyncio.run(manager.set_arm(ROBOT_ID, "owner", True))
+    arm = manager.arm_for(ROBOT_ID)
+    with pytest.raises(VoiceSessionError, match="not armed"):
+        manager.begin_candidate(ROBOT_ID, 1, "old-arm")
+    with pytest.raises(VoiceSessionError, match="Stale"):
+        manager.begin_candidate(ROBOT_ID, 99, arm.arm_id)
+
+    assert manager.begin_candidate(ROBOT_ID, 1, arm.arm_id) is arm
+    assert manager.begin_candidate(ROBOT_ID, 1, arm.arm_id) is None  # one at a time
+    manager.end_candidate(ROBOT_ID)
+    asyncio.run(manager.start(ROBOT_ID, "owner"))
+    assert manager.begin_candidate(ROBOT_ID, 1, arm.arm_id) is None  # a session is running
+
+
+def test_wake_session_has_no_lease_and_disarm_ends_it() -> None:
+    manager, _, _, socket, clock = make_manager(capabilities=(VOICE_CAPABILITY, WAKE_CAPABILITY))
+    asyncio.run(manager.set_arm(ROBOT_ID, "owner", True))
+    arm = manager.arm_for(ROBOT_ID)
+    session = asyncio.run(manager.open_wake_session(arm, 1, "What time is it?"))
+    start = socket.sent[-1]
+    assert (start["type"], start["wake_started"], start["follow_up_seconds"]) == ("voice_start", True, 10.0)
+    assert manager.status(session).wake_started
+
+    clock.now += 60  # far past the 15 s owner lease; renewing is a no-op
+    manager.renew(session.voice_session_id)
+    asyncio.run(manager.expire())
+    assert session.active
+
+    asyncio.run(manager.set_arm(ROBOT_ID, "owner", False))
+    assert not session.active and session.stop_reason == "Wake listening turned off"
+
+
+def test_admitted_request_is_turn_one_without_a_second_transcription() -> None:
+    manager, _, _, _, _ = make_manager(capabilities=(VOICE_CAPABILITY, WAKE_CAPABILITY))
+    asyncio.run(manager.set_arm(ROBOT_ID, "owner", True))
+    session = asyncio.run(manager.open_wake_session(manager.arm_for(ROBOT_ID), 1, "What time is it?"))
+    pipeline = ScriptedPipeline("second turn")
+    built = pipeline.build()
+    assert segment(manager, session, built, 1)[0] == VoiceTurnOutcome.SPOKEN
+    assert segment(manager, session, built, 2)[0] == VoiceTurnOutcome.SPOKEN
+    assert pipeline.conversed == ["What time is it?", "second turn"]
+    assert pipeline.transcripts == []  # only turn 2 was transcribed
+
+
+def wake_candidate(client, generation, arm_id, body=None, token=ROBOT_TOKEN):
+    headers = {
+        "X-Robot-Id": ROBOT_ID, "Authorization": f"Bearer {token}", "X-Robot-Generation": str(generation),
+        "X-Wake-Arm": arm_id, "Content-Type": "audio/wav",
+    }
+    return client.post(ROBOT_WAKE_CANDIDATE, content=body if body is not None else wav_bytes(2.0), headers=headers)
+
+
+def arm_robot(client, socket, armed=True) -> str | None:
+    response = client.post("/robot-voice/wake", json={"robot_id": ROBOT_ID, "armed": armed}, headers=OWNER)
+    assert response.status_code == 200, response.text
+    assert response.json()["robots"][0]["wake_armed"] is armed
+    message = socket.receive_json()
+    assert message["type"] == "wake_arm"
+    return message["arm_id"]
+
+
+def test_admitted_wake_opens_a_session_and_answers_the_request() -> None:
+    stt = ScriptedSTT("Hey Reachy, remember that my favourite colour is green.")
+    tts = RecordingTTS()
+    client, _, _ = make_hub(stt, tts)
+    with client:
+        ws, socket, generation = connect_robot(client, capabilities=(VOICE_CAPABILITY, WAKE_CAPABILITY))
+        try:
+            assert socket.receive_json() == {
+                "type": "wake_arm", "arm_id": None, "limits": socket_limits(),
+            }  # pushed right after registration: not armed yet
+            arm_id = arm_robot(client, socket)
+
+            admitted = wake_candidate(client, generation, arm_id)
+            assert admitted.status_code == 200, admitted.text
+            start = socket.receive_json()
+            assert start["type"] == "voice_start" and start["wake_started"] is True
+            assert admitted.json() == {"voice_session_id": start["voice_session_id"]}
+
+            # The robot uploads the candidate again as turn 1; it is not
+            # transcribed a second time.
+            turn = upload(client, start["voice_session_id"], 1, generation)
+            assert (turn.status_code, turn.headers["x-voice-turn-outcome"]) == (200, "spoken")
+            assert stt.calls == 1
+            session = client.get("/robot-voice", headers=OWNER).json()["session"]
+            assert session["wake_started"] and session["turns"][0]["transcript"] == (
+                "Remember that my favourite colour is green."
+            )
+            counts = client.get("/robot-voice", headers=OWNER).json()["robots"][0]["wake_counts"]
+            assert (counts["candidates"], counts["admitted"]) == (1, 1)
+        finally:
+            ws.__exit__(None, None, None)
+
+
+def socket_limits() -> dict:
+    from shared.models.robot_voice import WakeLimits
+
+    return WakeLimits().model_dump()
+
+
+def test_rejected_candidates_leave_no_session_speech_or_conversation() -> None:
+    stt = ScriptedSTT("So anyway, the meeting moved to Thursday.", "Hey Reachy.")
+    tts = RecordingTTS()
+    client, _, _ = make_hub(stt, tts)
+    with client:
+        ws, socket, generation = connect_robot(client, capabilities=(VOICE_CAPABILITY, WAKE_CAPABILITY))
+        try:
+            socket.receive_json()
+            arm_id = arm_robot(client, socket)
+            for _ in range(2):
+                rejected = wake_candidate(client, generation, arm_id)
+                assert (rejected.status_code, rejected.headers["x-voice-turn-outcome"]) == (204, "rejected")
+
+            # Do not disturb rejects before anything is transcribed.
+            client.post("/messages", json={"user_id": "default-user", "channel": "web", "text": "hi"})
+            assert client.patch("/sessions/default-user/dnd", json={"dnd": True}, headers=OWNER).status_code == 200
+            dnd = wake_candidate(client, generation, arm_id)
+            assert dnd.headers["x-voice-turn-outcome"] == "rejected"
+            assert stt.calls == 2
+
+            overview = client.get("/robot-voice", headers=OWNER).json()
+            assert overview["session"] is None and tts.spoken == []
+            assert overview["robots"][0]["wake_counts"] == {
+                "candidates": 3, "admitted": 0,
+                "rejected": {"no_wake_phrase": 1, "no_request": 1, "do_not_disturb": 1},
+            }
+        finally:
+            ws.__exit__(None, None, None)
+
+
+def test_stale_arm_is_refused_and_a_busy_robot_is_only_rejected() -> None:
+    stt = ScriptedSTT()
+    client, _, _ = make_hub(stt, RecordingTTS())
+    with client:
+        ws, socket, generation = connect_robot(client, capabilities=(VOICE_CAPABILITY, WAKE_CAPABILITY))
+        try:
+            socket.receive_json()
+            old = arm_robot(client, socket)
+            current = arm_robot(client, socket)
+            assert wake_candidate(client, generation, old).status_code == 409
+            assert wake_candidate(client, generation, current, token="wrong").status_code == 401
+
+            start_listening(client, socket)
+            busy = wake_candidate(client, generation, current)
+            assert (busy.status_code, busy.headers["x-voice-turn-outcome"]) == (204, "rejected")
+            assert stt.calls == 0
+        finally:
+            ws.__exit__(None, None, None)

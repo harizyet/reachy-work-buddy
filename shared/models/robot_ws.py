@@ -17,7 +17,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from shared.models.robot_voice import RobotVoiceState, VoiceLimits
+from shared.models.robot_voice import RobotVoiceState, VoiceLimits, WakeLimits
 
 
 class WSMessageType(StrEnum):
@@ -30,6 +30,8 @@ class WSMessageType(StrEnum):
     VOICE_START = "voice_start"
     VOICE_STOP = "voice_stop"
     VOICE_STATE = "voice_state"
+    # Phase 24g (ADR 0023 wake-started sessions): hub -> robot arm state.
+    WAKE_ARM = "wake_arm"
 
 
 class RegisterMessage(BaseModel):
@@ -85,6 +87,11 @@ class VoiceStartMessage(BaseModel):
     # Phase 24e item 5: upload camera frames to the hub while a reply plays
     # so it can watch for an open palm. Older robots ignore the field.
     palm_stop: bool = False
+    # Phase 24g: opened by an admitted wake candidate. The robot uploads
+    # that candidate as turn 1, and ends the session itself when no speech
+    # starts within `follow_up_seconds` of listening again.
+    wake_started: bool = False
+    follow_up_seconds: float | None = None
 
 
 class VoiceStopMessage(BaseModel):
@@ -93,6 +100,17 @@ class VoiceStopMessage(BaseModel):
     type: Literal[WSMessageType.VOICE_STOP] = WSMessageType.VOICE_STOP
     voice_session_id: str
     reason: str
+
+
+class WakeArmMessage(BaseModel):
+    """Hub -> robot: monitor for the wake phrase under `arm_id`, or stop
+    monitoring when it is None. Sent after every registration and on every
+    arm change; the robot never monitors without one from its current
+    connection."""
+
+    type: Literal[WSMessageType.WAKE_ARM] = WSMessageType.WAKE_ARM
+    arm_id: str | None
+    limits: WakeLimits = WakeLimits()
 
 
 class VoiceStateMessage(BaseModel):

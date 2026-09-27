@@ -459,6 +459,17 @@ Both stay `false` on this host: they add motion that has not been accepted,
 and turning either on is a supervised check with the owner present, not an
 operating setting.
 
+Spoken wake ("Hey Reachy", Phase 24g, [ADR 0023 wake addendum](adr/0023-robot-voice-conversation.md#addendum-wake-started-sessions-2026-09-27-phase-24g)) needs no robot flag beyond
+voice. The embodiment image bakes in the pinned wake model, and the robot
+then advertises wake listening. It listens only while the owner has armed it
+from the hub's robot microphone panel, which stores the arm in Postgres
+(schema `009_wake_arm`). Upgrading an existing hub therefore needs the usual
+backup and migration job first. `WAKE_MODEL_PATH=` (empty) turns wake
+listening off on a robot. `WAKE_ANIMATION_ENABLED` adds the daemon's
+go-to-sleep and wake-up moves around it. Like the 24f switches, it stays
+`false` outside a supervised check, and changing it needs
+`docker rm -f reachy-embodiment` first.
+
 Checked on nano-1 during 24d:
 - dsnoop capture from the container, alongside the daemon's own playback
   (dmix);

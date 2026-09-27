@@ -923,7 +923,8 @@ def test_real_websocket_control_and_http_upload_against_a_running_hub() -> None:
             await wait_until(lambda: client.connected)
             async with httpx.AsyncClient(base_url=url, headers=OWNER) as owner_client:
                 overview = (await owner_client.get("/robot-voice")).json()
-                assert overview["robots"] == [{"robot_id": ROBOT_ID, "online": True, "voice_capable": True}]
+                robot = overview["robots"][0]
+                assert (robot["robot_id"], robot["online"], robot["voice_capable"]) == (ROBOT_ID, True, True)
                 assert (await owner_client.post("/robot-voice/start", json={"robot_id": ROBOT_ID})).status_code == 200
                 await wait_until(lambda: player.played)
                 await wait_until(lambda: state.embodiment_state == EmbodimentState.LISTENING)

@@ -24,3 +24,6 @@ ROBOT_VOICE_TURN_FINALIZE = "/robot-media/voice-turn/finalize"
 # Phase 24e item 5: one camera frame taken while a reply plays, checked by
 # the hub for a held open palm (ADR 0023 open-palm stop addendum).
 ROBOT_PALM_FRAME = "/robot-media/palm-frame"
+# Phase 24g (ADR 0023 wake-started sessions): one wake candidate that
+# passed the robot's local gates, for in-memory admission on the hub.
+ROBOT_WAKE_CANDIDATE = "/robot-media/wake-candidate"

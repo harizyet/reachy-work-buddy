@@ -19,6 +19,9 @@ VOICE_CAPABILITY = "voice_conversation"
 # Advertised alongside it when the robot can continue a held turn (Phase
 # 24e, ADR 0023 adaptive end of turn); the hub holds only for such robots.
 VOICE_CONTINUATION_CAPABILITY = "voice_turn_continuation"
+# Advertised by a robot that can monitor for the spoken wake phrase (Phase
+# 24g, ADR 0023 wake-started sessions).
+WAKE_CAPABILITY = "wake_admission"
 
 SAMPLE_RATE = 16000
 # 30 s of 16 kHz mono 16-bit PCM is 960 KB; the cap leaves header slack.
@@ -39,6 +42,8 @@ VOICE_TURN_HEADER = "X-Voice-Turn"
 # 1-based segment of a held turn; absent means 1.
 VOICE_SEGMENT_HEADER = "X-Voice-Segment"
 VOICE_OUTCOME_HEADER = "X-Voice-Turn-Outcome"
+# The arm a wake candidate was captured under; a stale arm is refused.
+WAKE_ARM_HEADER = "X-Wake-Arm"
 
 
 class VoiceLimits(BaseModel):
@@ -53,6 +58,31 @@ class VoiceLimits(BaseModel):
     # for speech to start again before asking the hub to answer. 0 disables
     # holding.
     continuation_window_ms: int = Field(1500, ge=0, le=5000)
+
+
+class WakeLimits(BaseModel):
+    """Phase 24g candidate bounds, sent to the robot in `wake_arm`.
+    Calibration defaults; see docs/phase-24g.md."""
+
+    # Detector score that starts a candidate.
+    detection_threshold: float = Field(0.7, gt=0, le=1)
+    # A first segment shorter than this is taken to hold only the wake
+    # phrase, so the robot waits for the request that follows it.
+    min_request_seconds: float = Field(1.6, ge=0, le=5)
+    # How long after the wake phrase the request may start.
+    speech_start_seconds: float = Field(3.0, gt=0, le=10)
+    # Cap on the whole candidate, wake phrase included.
+    max_candidate_seconds: float = Field(10.0, gt=0, le=15)
+    # A wake-started session ends when no speech starts this long after
+    # the robot starts listening again.
+    follow_up_seconds: float = Field(10.0, gt=0, le=60)
+
+
+class WakeAdmission(BaseModel):
+    """Hub -> robot answer to an admitted wake candidate. The hub also
+    sends `voice_start` for the session over the control socket."""
+
+    voice_session_id: str
 
 
 class PalmFrameResult(BaseModel):
@@ -89,6 +119,8 @@ class VoiceTurnOutcome(StrEnum):
     # The segment sounded unfinished; the hub holds it and the robot keeps
     # listening. Never recorded as a turn.
     CONTINUE = "continue"
+    # Phase 24g: a wake candidate the hub did not admit. Never recorded.
+    REJECTED = "rejected"
 
 
 class VoiceTurnRecord(BaseModel):
@@ -122,12 +154,27 @@ class VoiceSessionStatus(BaseModel):
     lease_seconds_remaining: float
     session_seconds_remaining: float
     turns: list[VoiceTurnRecord] = []
+    # Opened by the spoken wake phrase rather than the owner's control;
+    # such a session has no owner lease.
+    wake_started: bool = False
+
+
+class WakeCounts(BaseModel):
+    """Content-free admission counters since the hub started (Phase 24g
+    per-hour metrics). Rejections are keyed by reason."""
+
+    candidates: int = 0
+    admitted: int = 0
+    rejected: dict[str, int] = {}
 
 
 class RobotVoiceAvailability(BaseModel):
     robot_id: str
     online: bool
     voice_capable: bool
+    wake_capable: bool = False
+    wake_armed: bool = False
+    wake_counts: WakeCounts = WakeCounts()
 
 
 class VoiceOverview(BaseModel):
@@ -137,6 +184,12 @@ class VoiceOverview(BaseModel):
 
 class StartVoiceRequest(BaseModel):
     robot_id: str
+    user_id: str | None = None
+
+
+class WakeArmRequest(BaseModel):
+    robot_id: str
+    armed: bool
     user_id: str | None = None
 
 

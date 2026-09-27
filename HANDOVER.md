@@ -25,14 +25,42 @@ Owner decisions after closing, 2026-09-27:
   journal, no power logging and no diagnosis procedure. It needs the
   owner's sudo and approval.
 
-**[Phase 24g](docs/phase-24g.md) is next; decisions resolved, not
-implemented:** local wake admission and silent false-trigger rejection. On
-2026-09-27 the owner chose owner-armed monitoring that stays armed across
-restarts until disabled, pre-Phase-25 wake by anyone under unchanged gates,
-and in-memory hub STT of candidates for relevance. See the
-[ADR 0023 addendum](docs/adr/0023-robot-voice-conversation.md#addendum-wake-started-sessions-2026-09-27-phase-24g).
-Next: measure wake-detector and acoustic-filter candidates (latency, CPU,
-memory) on the Nano, then implement. No 24g code exists yet. Phase 25 owner recognition follows; its
+**[Phase 24g](docs/phase-24g.md) is implemented, not deployed or
+accepted (2026-09-27).** It is described in the
+[ADR 0023 wake addendum](docs/adr/0023-robot-voice-conversation.md#addendum-wake-started-sessions-2026-09-27-phase-24g).
+
+Owner decisions:
+- monitoring is owner-armed and stays armed across restarts;
+- anyone may converse while it is armed;
+- candidates are transcribed in hub memory;
+- the robot plays the wake animation on detection and rests in its sleep
+  pose while armed and idle;
+- the follow-up timeout is 10 s.
+
+The detector is the community Edge Impulse "Hey Reachy" `.eim`
+([bench and live session](docs/verification/phase-24g-detector-bench-2026-09-27.md)).
+The robot's local acoustic-event filter is deferred, so the VAD and the hub
+relevance rules gate candidates.
+
+Verified off the robot:
+- the fast suites, the browser tests and the Postgres migration suite (new
+  `009_wake_arm`);
+- the detector client against the real aarch64 model on the Nano, in a
+  `--network none` container;
+- the pinned `ADD` lines, built on the Nano's Docker 20.10.7.
+
+Not yet done:
+- **Deploy:** homelab backup, migration and hub rebuild; Nano embodiment
+  image rebuild and container recreate (owner sudo).
+- **Physical run:** arm from the panel and run the 24g scenarios. The
+  wake-up move is a full animation with sound, so any development test of
+  `WAKE_ANIMATION_ENABLED` needs the owner present.
+- **Owner decision:** unattended production use of that switch needs an
+  AGENTS.md exception, which the owner has not given yet.
+
+Scratch on the Nano: `~/24g-bench` (models, clips, wheels) and `~/24g-src`
+(source mounts for the detector check); both are disposable.
+Phase 25 owner recognition follows; its
 24e prerequisites remain settled. Keep conversational motion off until
 24f's deferred rows pass.
 

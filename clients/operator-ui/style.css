@@ -353,6 +353,15 @@ textarea:focus {
 .voice-form button {
   margin: 0;
 }
+.voice-wake {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 10px;
+}
+.voice-wake button {
+  margin: 0;
+}
 .voice-state {
   font-size: 13px;
   padding: 4px 10px;
@@ -369,7 +378,7 @@ textarea:focus {
   border: 1px dashed #3b5059;
 }
 @media(max-width: 700px) {
-  .chat-user-form, .voice-form { flex-wrap: wrap; }
+  .chat-user-form, .voice-form, .voice-wake { flex-wrap: wrap; }
   .chat-message { max-width: 100%; }
   .chat-compose-footer { align-items: end; }
 }

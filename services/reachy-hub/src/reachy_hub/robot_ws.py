@@ -105,6 +105,7 @@ def install_robot_ws_routes(
     registration_timeout: float = 5.0,
     on_message: Callable[[RobotConnection, dict], Awaitable[None]] | None = None,
     on_disconnect: Callable[[RobotConnection], Awaitable[None]] | None = None,
+    on_register: Callable[[RobotConnection], Awaitable[None]] | None = None,
 ) -> None:
     @app.websocket(ROBOTS_CONNECT)
     async def robots_connect(websocket: WebSocket) -> None:
@@ -160,6 +161,10 @@ def install_robot_ws_routes(
             robot_id, websocket, capabilities=register.capabilities, sim=register.sim
         )
         await websocket.send_json(RegisteredMessage(robot_id=robot_id, generation=connection.generation).model_dump())
+        # Phase 24g: pushes the wake arm; runs before the message loop, so
+        # it is the first message after `registered`.
+        if on_register is not None:
+            await on_register(connection)
 
         await connection_loop(
             websocket,

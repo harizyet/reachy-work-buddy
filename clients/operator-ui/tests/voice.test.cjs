@@ -118,3 +118,81 @@ test('robot microphone controls start, show turns literally, and stop', async ()
     server.close();
   }
 });
+
+// Phase 24g: the "Hey Reachy" arm is a hub setting, not a tab lease. The
+// toggle posts it with CSRF; while it is on, the tab polls the overview and
+// shows a session the wake phrase opened, with its turns.
+test('"Hey Reachy" toggle arms the robot and shows voice-woken sessions', async () => {
+  let armed = false;
+  let session = null;
+  const calls = [];
+  const server = http.createServer(async (req, res) => {
+    const url = new URL(req.url, 'http://fixture');
+    const json = (status, body) => { res.writeHead(status, {'Content-Type': 'application/json'}); res.end(JSON.stringify(body)); };
+    if (url.pathname.startsWith('/hub/ui/')) {
+      const name = url.pathname.substring('/hub/ui/'.length) || 'index.html';
+      if (!['index.html', 'app.js', 'chat.js', 'voice.js', 'accounts.js', 'style.css'].includes(name)) return json(404, {});
+      res.writeHead(200, {'Content-Type': name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : 'text/html'});
+      return res.end(fs.readFileSync(path.join(__dirname, '..', name)));
+    }
+    const chunks = []; for await (const chunk of req) chunks.push(chunk);
+    const body = chunks.length ? JSON.parse(Buffer.concat(chunks)) : null;
+    if (url.pathname.startsWith('/hub/robot-voice')) calls.push({path: url.pathname, csrf: req.headers['x-reachy-csrf'], body});
+    const overview = () => ({
+      robots: [{robot_id: 'nano-1', online: true, voice_capable: true, wake_capable: true, wake_armed: armed,
+        wake_counts: {candidates: armed ? 3 : 0, admitted: armed ? 1 : 0, rejected: {}}}],
+      session,
+    });
+    if (url.pathname === '/hub/auth/me') return json(200, {username: 'owner'});
+    if (url.pathname === '/hub/status') return json(200, {
+      reachy_hub: {status: 'ok'}, companion_core: {status: 'ok'}, robots: [], default_user_id: 'owner-user', owner_bound: true,
+      llm: {configured: false, usage: {data: {summary: {calls: 0, errors: 0, prompt_tokens: 0, completion_tokens: 0, avg_latency_ms: 0}, entries: []}}},
+      telegram: {configured: false, healthy: false},
+    });
+    if (url.pathname === '/hub/robot-voice') return json(200, overview());
+    if (url.pathname === '/hub/robot-voice/wake') { armed = body.armed; return json(200, overview()); }
+    if (url.pathname === '/hub/robot-voice/renew') return json(200, session);
+    if (url.pathname.startsWith('/hub/sessions/')) return json(200, {interaction_mode: 'desk', dnd: false, active_channel: 'reachy'});
+    if (url.pathname === '/hub/settings/llm') return json(200, {local: null});
+    return json(200, {});
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const browser = await chromium.launch({headless: true});
+  try {
+    const page = await browser.newPage({viewport: {width: 390, height: 844}});
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await page.goto(`http://127.0.0.1:${server.address().port}/hub/ui/`);
+    await page.locator('#chat-tab').click();
+    await page.waitForFunction(() => !document.getElementById('voice-wake').disabled);
+    assert.equal(await page.locator('#voice-wake').textContent(), 'Turn on “Hey Reachy”');
+
+    await page.locator('#voice-wake').click();
+    await page.waitForFunction(() => document.getElementById('voice-wake').textContent === 'Turn off “Hey Reachy”');
+    const arm = calls.find(call => call.path === '/hub/robot-voice/wake');
+    assert.deepEqual(arm.body, {robot_id: 'nano-1', armed: true, user_id: 'owner-user'});
+    assert.equal(arm.csrf, '1');
+    assert.match(await page.locator('#voice-wake-detail').textContent(), /Listening for “Hey Reachy” · 3 heard, 1 answered/);
+
+    // A session the wake phrase opened shows up without pressing Start.
+    session = {voice_session_id: 'vs-w', robot_id: 'nano-1', user_id: 'owner-user', state: 'speaking', wake_started: true,
+      stop_reason: null, last_error: null, next_turn: 2, lease_seconds_remaining: 600, session_seconds_remaining: 600,
+      turns: [{turn: 1, transcript: 'What time is it?', reply: 'It is ten.', outcome: 'spoken', reason: null}]};
+    await page.waitForFunction(() => document.getElementById('voice-state').textContent === 'Speaking (woken by voice)', null, {timeout: 10000});
+    await page.waitForFunction(() => document.querySelectorAll('.chat-message').length === 2);
+
+    session = {...session, state: 'stopped', stop_reason: 'No follow-up heard'};
+    await page.waitForFunction(() => document.getElementById('voice-state').textContent === 'Off', null, {timeout: 10000});
+    assert.match(await page.locator('#voice-detail').textContent(), /Stopped: No follow-up heard/);
+
+    await page.locator('#voice-wake').click();
+    await page.waitForFunction(() => document.getElementById('voice-wake').textContent === 'Turn on “Hey Reachy”');
+    assert.equal(calls.filter(call => call.path === '/hub/robot-voice/wake').at(-1).body.armed, false);
+    const pollsAfterOff = calls.filter(call => call.path === '/hub/robot-voice').length;
+    await new Promise(r => setTimeout(r, 4000));
+    assert.equal(calls.filter(call => call.path === '/hub/robot-voice').length, pollsAfterOff);
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser.close();
+    server.close();
+  }
+});

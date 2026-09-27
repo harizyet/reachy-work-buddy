@@ -22,6 +22,14 @@ transcript sounds unfinished is held instead of answered. The robot either
 uploads the next segment of the same turn or asks for the held turn to be
 finalized; stop, expiry and disconnect discard held text unanswered.
 
+Wake-started sessions (Phase 24g, ADR 0023 addendum): while the owner has
+armed a robot, it monitors for the spoken wake phrase and uploads a
+candidate to `ROBOT_WAKE_CANDIDATE`. The hub transcribes it in memory only
+to decide relevance; a rejected candidate leaves nothing behind but a
+content-free counter. An admitted one opens an ordinary session with no
+owner lease, whose first turn reuses the admission transcript. The arm is
+persisted and pushed to the robot after every registration.
+
 `expire()` takes no time argument; the injected `clock` makes lease and
 deadline checks testable without sleeping.
 """
@@ -47,6 +55,13 @@ from reachy_hub.palm_stop import PalmStop
 from reachy_hub.robot_connection_manager import RobotConnection, RobotConnectionManager
 from reachy_hub.robot_credential_store import RobotCredentialStore
 from reachy_hub.turn_completeness import looks_complete
+from reachy_hub.wake_arm_store import (
+    InMemoryWakeArmStore,
+    WakeArm,
+    WakeArmStore,
+    new_arm,
+)
+from reachy_hub.wake_relevance import assess
 from shared.models.robot_voice import (
     MAX_PALM_FRAME_BYTES,
     MAX_UTTERANCE_BYTES,
@@ -59,6 +74,8 @@ from shared.models.robot_voice import (
     VOICE_SEGMENT_HEADER,
     VOICE_SESSION_HEADER,
     VOICE_TURN_HEADER,
+    WAKE_ARM_HEADER,
+    WAKE_CAPABILITY,
     PalmFrameResult,
     RobotVoiceAvailability,
     RobotVoiceState,
@@ -70,11 +87,16 @@ from shared.models.robot_voice import (
     VoiceSessionStatus,
     VoiceTurnOutcome,
     VoiceTurnRecord,
+    WakeAdmission,
+    WakeArmRequest,
+    WakeCounts,
+    WakeLimits,
 )
 from shared.models.robot_ws import (
     VoiceStartMessage,
     VoiceStateMessage,
     VoiceStopMessage,
+    WakeArmMessage,
     WSMessageType,
 )
 from shared.models.session import Channel, PrivacyContext
@@ -84,11 +106,13 @@ from shared.protocols.operator_api import (
     ROBOT_VOICE_RENEW,
     ROBOT_VOICE_START,
     ROBOT_VOICE_STOP,
+    ROBOT_VOICE_WAKE,
 )
 from shared.protocols.robot_ws import (
     ROBOT_PALM_FRAME,
     ROBOT_VOICE_TURN,
     ROBOT_VOICE_TURN_FINALIZE,
+    ROBOT_WAKE_CANDIDATE,
 )
 
 log = logging.getLogger(__name__)
@@ -134,6 +158,11 @@ class VoiceSession:
     # non-zero window); fixed at start.
     continuation: bool = False
     held: HeldTurn | None = None
+    # Phase 24g: opened by an admitted wake candidate; no owner lease.
+    wake_started: bool = False
+    # The admitted request, answered as turn 1 without transcribing the
+    # re-uploaded candidate again.
+    pretranscribed: str | None = None
     turns: deque[VoiceTurnRecord] = field(default_factory=lambda: deque(maxlen=MAX_TURN_RECORDS))
 
     @property
@@ -151,9 +180,18 @@ class RobotVoiceManager:
         limits: VoiceLimits | None = None,
         clock: Callable[[], float] = time.monotonic,
         palm_stop: PalmStop | None = None,
+        wake_store: WakeArmStore | None = None,
+        wake_limits: WakeLimits | None = None,
     ) -> None:
         self._connections = connections
         self.palm_stop = palm_stop
+        self.wake_store: WakeArmStore = wake_store or InMemoryWakeArmStore()
+        self.wake_limits = wake_limits or WakeLimits()
+        # Write-through copy of the persisted arms, loaded by `load_arms`.
+        self._arms: dict[str, WakeArm] = {}
+        self._wake_counts: dict[str, WakeCounts] = {}
+        # Robots with a candidate being assessed; one at a time each.
+        self._candidates: set[str] = set()
         self._lease_seconds = lease_seconds
         self._idle_timeout_seconds = idle_timeout_seconds
         self._limits = limits or VoiceLimits()
@@ -175,6 +213,7 @@ class RobotVoiceManager:
             lease_seconds_remaining=max(0.0, session.lease_expires_at - now) if session.active else 0.0,
             session_seconds_remaining=max(0.0, session.deadline - now) if session.active else 0.0,
             turns=list(session.turns),
+            wake_started=session.wake_started,
         )
 
     def overview(self, registered_robot_ids: list[str]) -> VoiceOverview:
@@ -184,8 +223,11 @@ class RobotVoiceManager:
                 robot_id=robot_id,
                 online=robot_id in online,
                 voice_capable=robot_id in online and VOICE_CAPABILITY in online[robot_id].capabilities,
+                wake_capable=robot_id in online and WAKE_CAPABILITY in online[robot_id].capabilities,
+                wake_armed=robot_id in self._arms,
+                wake_counts=self._wake_counts.get(robot_id, WakeCounts()),
             )
-            for robot_id in sorted(set(registered_robot_ids) | set(online))
+            for robot_id in sorted(set(registered_robot_ids) | set(online) | set(self._arms))
         ]
         sessions = sorted(self._sessions.values(), key=lambda s: (s.active, s.deadline), reverse=True)
         return VoiceOverview(robots=robots, session=self.status(sessions[0]) if sessions else None)
@@ -233,7 +275,7 @@ class RobotVoiceManager:
 
     def renew(self, voice_session_id: str) -> VoiceSession:
         session = self.get(voice_session_id)
-        if session.active:
+        if session.active and not session.wake_started:
             session.lease_expires_at = self._clock() + self._lease_seconds
         return session
 
@@ -265,7 +307,7 @@ class RobotVoiceManager:
                 continue
             if now >= session.deadline:
                 await self.stop(session, "Maximum conversation length reached")
-            elif now >= session.lease_expires_at:
+            elif not session.wake_started and now >= session.lease_expires_at:
                 await self.stop(session, "Owner control stopped responding")
             elif session.in_flight_turn is None and now - session.last_activity >= self._idle_timeout_seconds:
                 await self.stop(session, "No speech heard for a while")
@@ -299,6 +341,121 @@ class RobotVoiceManager:
             session.last_error = (message.detail or "Robot reported an error")[:200]
         elif message.state == RobotVoiceState.STOPPED:
             await self.stop(session, (message.detail or "Robot stopped listening")[:200], notify_robot=False)
+
+    # --- Phase 24g: wake arm and admission ---------------------------------
+
+    async def load_arms(self) -> None:
+        self._arms = {arm.robot_id: arm for arm in await self.wake_store.list()}
+
+    def arm_for(self, robot_id: str) -> WakeArm | None:
+        return self._arms.get(robot_id)
+
+    async def set_arm(self, robot_id: str, user_id: str, armed: bool) -> None:
+        """Owner arm or disarm. Arming again issues a new arm id, so a
+        candidate captured under the previous one is refused."""
+        if armed:
+            arm = new_arm(robot_id, user_id)
+            await self.wake_store.set(arm)
+            self._arms[robot_id] = arm
+        else:
+            await self.wake_store.delete(robot_id)
+            self._arms.pop(robot_id, None)
+            session = self._sessions.get(robot_id)
+            if session is not None and session.active and session.wake_started:
+                await self.stop(session, "Wake listening turned off")
+        log.info("robot %s: wake listening %s", robot_id, "armed" if armed else "disarmed")
+        connection = self._connections.get(robot_id)
+        if connection is not None:
+            await self._send_arm(connection)
+
+    async def on_robot_register(self, connection: RobotConnection) -> None:
+        await self._send_arm(connection)
+
+    async def _send_arm(self, connection: RobotConnection) -> None:
+        if WAKE_CAPABILITY not in connection.capabilities:
+            return
+        arm = self._arms.get(connection.robot_id)
+        message = WakeArmMessage(arm_id=arm.arm_id if arm else None, limits=self.wake_limits)
+        await _send(connection, message.model_dump(mode="json"))
+
+    def count_wake(self, robot_id: str, reason: str) -> None:
+        counts = self._wake_counts.setdefault(robot_id, WakeCounts())
+        counts.candidates += 1
+        if reason == "admitted":
+            counts.admitted += 1
+        else:
+            counts.rejected[reason] = counts.rejected.get(reason, 0) + 1
+
+    def begin_candidate(self, robot_id: str, generation: int, arm_id: str) -> WakeArm | None:
+        """Checks the candidate's arm and connection. A stale arm or
+        connection is a 409, and the robot stops monitoring under it. None
+        means the robot is busy (a session or another candidate), which is
+        only a rejection. Pair a returned arm with `end_candidate`."""
+        arm = self._arms.get(robot_id)
+        if arm is None or arm.arm_id != arm_id:
+            raise VoiceSessionError(409, "Wake listening is not armed with this arm")
+        connection = self._connections.get(robot_id)
+        if connection is None or connection.generation != generation:
+            raise VoiceSessionError(409, "Stale robot connection")
+        existing = self._sessions.get(robot_id)
+        if (existing is not None and existing.active) or robot_id in self._candidates:
+            return None
+        self._candidates.add(robot_id)
+        return arm
+
+    def end_candidate(self, robot_id: str) -> None:
+        self._candidates.discard(robot_id)
+
+    async def open_wake_session(self, arm: WakeArm, generation: int, request: str) -> VoiceSession:
+        """Opens the admitted candidate's session. Rechecks the arm and
+        connection, which may have changed while the candidate was
+        transcribed."""
+        connection = self._connections.get(arm.robot_id)
+        current = self._arms.get(arm.robot_id)
+        if current is None or current.arm_id != arm.arm_id:
+            raise VoiceSessionError(409, "Wake listening was turned off")
+        if connection is None or connection.generation != generation:
+            raise VoiceSessionError(409, "Stale robot connection")
+        existing = self._sessions.get(arm.robot_id)
+        if existing is not None and existing.active:
+            raise VoiceSessionError(409, "Robot is already in a voice session")
+        now = self._clock()
+        deadline = now + self._limits.max_session_seconds
+        session = VoiceSession(
+            voice_session_id=secrets.token_urlsafe(16),
+            robot_id=arm.robot_id,
+            user_id=arm.user_id,
+            generation=generation,
+            limits=self._limits,
+            lease_expires_at=deadline,
+            deadline=deadline,
+            last_activity=now,
+            continuation=VOICE_CONTINUATION_CAPABILITY in connection.capabilities
+            and self._limits.continuation_window_ms > 0,
+            wake_started=True,
+            pretranscribed=request,
+        )
+        self._sessions[arm.robot_id] = session
+        message = VoiceStartMessage(
+            voice_session_id=session.voice_session_id,
+            limits=self._limits,
+            palm_stop=self.palm_stop is not None,
+            wake_started=True,
+            follow_up_seconds=self.wake_limits.follow_up_seconds,
+        )
+        if not await _send(connection, message.model_dump(mode="json")):
+            session.state = VoiceSessionState.STOPPED
+            session.stop_reason = "Could not reach the robot"
+            raise VoiceSessionError(502, "Could not reach the robot")
+        log.info("robot %s: wake admitted, voice session started", arm.robot_id)
+        return session
+
+    @staticmethod
+    def take_pretranscribed(session: VoiceSession, turn: int, segment: int) -> str | None:
+        if turn != 1 or segment != 1 or session.pretranscribed is None:
+            return None
+        request, session.pretranscribed = session.pretranscribed, None
+        return request
 
     def begin_turn(
         self,
@@ -475,6 +632,7 @@ async def run_turn(
     pipeline: VoiceTurnPipeline,
     *,
     seconds: float = 0.0,
+    segment: int = 1,
 ) -> tuple[VoiceTurnOutcome, bytes | None]:
     """Transcribe one segment, then either hold the turn (it sounds
     unfinished) or answer it. `seconds` is the segment's audio length,
@@ -491,12 +649,14 @@ async def run_turn(
         return outcome
 
     started = time.perf_counter()
-    try:
-        transcript = (await pipeline.transcribe(body)).strip()
-    except Exception:
-        log.exception("robot voice turn: transcription failed")
-        return finish(VoiceTurnOutcome.FAILED, reason="Speech recognition failed"), None
-    timings["transcription_ms"] = _elapsed_ms(started)
+    transcript = manager.take_pretranscribed(session, turn, segment)
+    if transcript is None:
+        try:
+            transcript = (await pipeline.transcribe(body)).strip()
+        except Exception:
+            log.exception("robot voice turn: transcription failed")
+            return finish(VoiceTurnOutcome.FAILED, reason="Speech recognition failed"), None
+        timings["transcription_ms"] = _elapsed_ms(started)
     merged = " ".join(part for part in (prior.transcript if prior else "", transcript) if part)
     if not manager.is_current(session, turn):
         return finish(VoiceTurnOutcome.CANCELLED, transcript=merged or None, reason="Stopped"), None
@@ -644,6 +804,11 @@ def install_robot_voice_routes(
         except VoiceSessionError as exc:
             raise raise_http(exc) from None
 
+    @app.post(ROBOT_VOICE_WAKE, dependencies=owner)
+    async def voice_wake(body: WakeArmRequest) -> VoiceOverview:
+        await manager.set_arm(body.robot_id, resolve_user(body.user_id), body.armed)
+        return manager.overview(await registered_robot_ids())
+
     @app.post(ROBOT_VOICE_STOP, dependencies=owner)
     async def voice_stop(body: VoiceSessionRef) -> VoiceSessionStatus:
         try:
@@ -653,12 +818,16 @@ def install_robot_voice_routes(
         await manager.stop(session, "Stopped by owner")
         return manager.status(session)
 
-    async def robot_turn_headers(request: Request) -> tuple[str, int, str, int, int]:
+    async def authenticated_robot(request: Request) -> str:
         robot_id = request.headers.get("x-robot-id")
         authorization = request.headers.get("authorization", "")
         token = authorization.removeprefix("Bearer ") if authorization.startswith("Bearer ") else None
         if not robot_id or not token or not await credential_store.verify(robot_id, token):
             raise HTTPException(401, "Robot authentication failed")
+        return robot_id
+
+    async def robot_turn_headers(request: Request) -> tuple[str, int, str, int, int]:
+        robot_id = await authenticated_robot(request)
         try:
             generation = int(request.headers.get(ROBOT_GENERATION_HEADER, ""))
             turn = int(request.headers.get(VOICE_TURN_HEADER, ""))
@@ -696,8 +865,48 @@ def install_robot_voice_routes(
             manager.finish_turn(session, VoiceTurnRecord(turn=turn, outcome=VoiceTurnOutcome.FAILED, reason=exc.detail))
             raise raise_http(exc) from None
 
-        outcome, audio = await run_turn(manager, session, turn, body, pipeline, seconds=seconds)
+        outcome, audio = await run_turn(manager, session, turn, body, pipeline, seconds=seconds, segment=segment)
         return turn_response(robot_id, turn, outcome, audio)
+
+    def reject_candidate(robot_id: str, reason: str) -> Response:
+        # Never the transcript: only the reason is kept or logged.
+        manager.count_wake(robot_id, reason)
+        log.info("robot %s: wake candidate rejected: %s", robot_id, reason)
+        return Response(status_code=204, headers={VOICE_OUTCOME_HEADER: VoiceTurnOutcome.REJECTED.value})
+
+    @app.post(ROBOT_WAKE_CANDIDATE)
+    async def robot_wake_candidate(request: Request) -> Response:
+        robot_id = await authenticated_robot(request)
+        try:
+            generation = int(request.headers.get(ROBOT_GENERATION_HEADER, ""))
+        except ValueError:
+            raise HTTPException(422, "Missing robot generation") from None
+        try:
+            body = await _read_bounded(request, MAX_UTTERANCE_BYTES)
+            arm = manager.begin_candidate(robot_id, generation, request.headers.get(WAKE_ARM_HEADER, ""))
+        except VoiceSessionError as exc:
+            raise raise_http(exc) from None
+        if arm is None:
+            return reject_candidate(robot_id, "busy")
+        try:
+            validate_utterance(body, VoiceLimits(max_utterance_seconds=manager.wake_limits.max_candidate_seconds))
+            reason, request_text = await _assess_candidate(arm, body, pipeline)
+            del body
+            if reason == "admitted":
+                session = await manager.open_wake_session(arm, generation, request_text)
+                manager.count_wake(robot_id, reason)
+                return Response(
+                    content=WakeAdmission(voice_session_id=session.voice_session_id).model_dump_json(),
+                    media_type="application/json",
+                )
+        except VoiceSessionError as exc:
+            if exc.status_code != 409:
+                raise raise_http(exc) from None
+            # The arm, connection or robot changed while it was assessed.
+            reason = "busy"
+        finally:
+            manager.end_candidate(robot_id)
+        return reject_candidate(robot_id, reason)
 
     @app.post(ROBOT_PALM_FRAME)
     async def robot_palm_frame(request: Request) -> PalmFrameResult:
@@ -725,6 +934,21 @@ def install_robot_voice_routes(
             raise raise_http(exc) from None
         outcome, audio = await finalize_turn(manager, session, turn, pipeline)
         return turn_response(robot_id, turn, outcome, audio)
+
+
+async def _assess_candidate(arm: WakeArm, body: bytes, pipeline: VoiceTurnPipeline) -> tuple[str, str]:
+    """(reason, request): "admitted" with the request text, or why not.
+    The transcript lives only in this call's locals."""
+    dnd, privacy_context = await pipeline.session_flags(arm.user_id)
+    if dnd or privacy_context == PrivacyContext.MEETING:
+        return "do_not_disturb", ""
+    try:
+        transcript = (await pipeline.transcribe(body)).strip()
+    except Exception:
+        log.exception("robot %s: wake candidate transcription failed", arm.robot_id)
+        return "stt_failed", ""
+    relevance = assess(transcript)
+    return relevance.reason, relevance.request
 
 
 async def voice_watchdog_loop(manager: RobotVoiceManager, interval: float = 1.0) -> None:

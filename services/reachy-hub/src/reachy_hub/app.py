@@ -170,6 +170,7 @@ from reachy_hub.postgres_notification_queue import PostgresNotificationQueue
 from reachy_hub.postgres_registry import PostgresRobotRegistry
 from reachy_hub.postgres_session_store import PostgresSessionStore
 from reachy_hub.postgres_telegram_chat_registry import PostgresTelegramChatRegistry
+from reachy_hub.postgres_wake_arm_store import PostgresWakeArmStore
 from reachy_hub.response_policy import (
     apply_privacy_override,
     resolve_delivery_channel,
@@ -196,6 +197,7 @@ from reachy_hub.telegram_client import TelegramClient
 from reachy_hub.telegram_health import TelegramPollHealth, poll_updates
 from reachy_hub.tts import TextToSpeech, default_tts, spoken_text
 from reachy_hub.user_store import PostgresUserStore, UserStore
+from reachy_hub.wake_arm_store import WakeArmStore
 from reachy_hub.webrtc import CallTurnHandler, negotiate_call, negotiate_telepresence
 from shared.models.embodiment import Behaviour
 from shared.models.interruption import InterruptionAction
@@ -393,6 +395,7 @@ def create_app(
     robot_ws_watchdog_timeout: float = 15.0,
     robot_voice_manager: RobotVoiceManager | None = None,
     run_voice_watchdog_task: bool = True,
+    wake_arm_store: WakeArmStore | None = None,
 ) -> FastAPI:
     # Phase 16/ADR 0013: fail closed. Unset means the whole remote-control
     # surface below 503s rather than silently allowing unauthenticated
@@ -564,6 +567,9 @@ def create_app(
     owns_session_store = session_store is None
     owns_audit_log = audit_log is None
     owns_notification_queue = notification_queue is None
+    # Phase 24g: the persisted wake arm follows the other Postgres stores;
+    # with injected in-memory stores (tests) the manager keeps its own.
+    owns_wake_arm_store = wake_arm_store is None and owns_session_store
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -593,6 +599,12 @@ def create_app(
         if owns_notification_queue:
             dsn = database_url or os.environ["DATABASE_URL"]
             app.state.notification_queue = await PostgresNotificationQueue.connect(dsn)
+        if owns_wake_arm_store:
+            dsn = database_url or os.environ["DATABASE_URL"]
+            robot_voice_manager.wake_store = await PostgresWakeArmStore.connect(dsn)
+        elif wake_arm_store is not None:
+            robot_voice_manager.wake_store = wake_arm_store
+        await robot_voice_manager.load_arms()
 
         # Production only (main.py): load STT/TTS in the background at
         # startup. Otherwise the first voice turn after a hub restart paid
@@ -657,6 +669,8 @@ def create_app(
                 await app.state.telegram_chat_registry.close()
             if owns_audit_log:
                 await app.state.audit_log.close()
+            if owns_wake_arm_store:
+                await robot_voice_manager.wake_store.close()
             if owns_notification_queue:
                 await app.state.notification_queue.close()
 
@@ -743,6 +757,7 @@ def create_app(
         watchdog_timeout=robot_ws_watchdog_timeout,
         on_message=robot_voice_manager.on_robot_message,
         on_disconnect=robot_voice_manager.on_robot_disconnect,
+        on_register=robot_voice_manager.on_robot_register,
     )
     app.state.webrtc_connections = set()
     if not owns_registry:

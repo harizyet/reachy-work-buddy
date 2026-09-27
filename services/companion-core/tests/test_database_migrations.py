@@ -581,3 +581,29 @@ def test_desktop_oauth_client_type_persists_and_isolates_flows(database, keys):
             assert (await (await conn.execute("SELECT count(*) FROM google_oauth_states")).fetchone())[0] == 0
         await repository.close()
     asyncio.run(run())
+
+
+def test_wake_arm_persists_across_store_reconnects(database, keys):
+    """Phase 24g: 009 stores the owner's wake arm per robot; it survives a
+    hub restart and re-arming replaces it."""
+    from reachy_hub.postgres_wake_arm_store import PostgresWakeArmStore
+    from reachy_hub.wake_arm_store import new_arm
+
+    upgrade(database, keys)
+
+    async def check():
+        store = await PostgresWakeArmStore.connect(database)
+        assert await store.list() == []
+        first = new_arm("nano-1", "owner")
+        await store.set(first)
+        await store.close()
+
+        store = await PostgresWakeArmStore.connect(database)
+        assert await store.get("nano-1") == first
+        second = new_arm("nano-1", "owner")
+        await store.set(second)
+        assert [arm.arm_id for arm in await store.list()] == [second.arm_id]
+        await store.delete("nano-1")
+        assert await store.get("nano-1") is None
+        await store.close()
+    asyncio.run(check())
