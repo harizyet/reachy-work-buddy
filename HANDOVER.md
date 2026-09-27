@@ -101,6 +101,27 @@ motion switches reset to off on the next embodiment restart.
 `wake candidate admitted` (11:05:12.9Z and 11:06:28.7Z), before the later
 sleep return. No further action needed on this item.
 
+**Session 1 (calibration) done, 2026-09-27 13:43-14:46Z — clean, no
+issues found.** 26 wake detections, 24 rejected `no_wake_phrase`, 1
+discarded (no speech followed), 1 admitted. The owner confirms only 1
+deliberate "Hey Reachy" attempt was made and it succeeded first try; the
+other 25 were the scripted false-trigger scenarios, all correctly
+rejected. Isolation checks (no TTS/tools/search/durable transcript,
+robot returns to sleep) pass for all 25. Raw logs in
+`/tmp/.../scratchpad/24g-acceptance/` (session-scoped, not durable).
+
+Added a log line (`bab441e`) so admission latency (upload -> voice_start)
+can actually be measured — the existing logs only gave detected-to-
+admitted, which conflates the caller's own speech duration. Built on the
+Nano as `reachy-embodiment:local`; **not yet running** (needs the
+owner's sudo: `sudo systemctl stop reachy-embodiment && docker rm
+reachy-embodiment && scripts/start-reachy.sh --no-browser`).
+
+**Before Session 2 (the scored held-out run):** make several genuine
+"Hey Reachy" attempts (3-5 each of immediate-question and
+natural-pause), not just one — 1/1 isn't a real sample for the ≥90%
+genuine-acceptance target.
+
 **Numeric targets agreed (owner, 2026-09-27)** — see
 [phase-24g.md](docs/phase-24g.md#agreed-numeric-targets-owner-2026-09-27):
 false conversations ≤1/2h (held-out), genuine-turn acceptance ≥90%, added
