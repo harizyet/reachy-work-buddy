@@ -454,10 +454,13 @@ class _StaleCamera:
     """1.8.4's IPC camera after the daemon recreated its socket: no frames
     until the pipeline is restarted, then frames again if `recovers`."""
 
-    def __init__(self, *, recovers: bool = True) -> None:
+    def __init__(self, *, recovers: bool = True, empty_reads_after_open: int = 0) -> None:
         self.recovers = recovers
         self.connected = False
         self.reopens = 0
+        # Reads that still miss after open(), which consumed the first frame.
+        self.empty_reads_after_open = empty_reads_after_open
+        self.pending_empty_reads = 0
 
     def close(self) -> None:
         self.connected = False
@@ -465,6 +468,7 @@ class _StaleCamera:
     def open(self) -> None:
         self.reopens += 1
         self.connected = self.recovers
+        self.pending_empty_reads = self.empty_reads_after_open
 
 
 class _StaleCameraMedia:
@@ -472,7 +476,12 @@ class _StaleCameraMedia:
         self.camera = camera
 
     def get_frame(self) -> np.ndarray | None:
-        return np.zeros((4, 4, 3), dtype=np.uint8) if self.camera.connected else None
+        if not self.camera.connected:
+            return None
+        if self.camera.pending_empty_reads:
+            self.camera.pending_empty_reads -= 1
+            return None
+        return np.zeros((4, 4, 3), dtype=np.uint8)
 
 
 class _StaleCameraMini:
@@ -482,6 +491,16 @@ class _StaleCameraMini:
 
 def test_capture_frame_reopens_the_camera_after_the_daemon_recreates_its_socket() -> None:
     camera = _StaleCamera()
+    backend = ReachyDaemonBackend("http://daemon.test", media_client_factory=lambda: _StaleCameraMini(camera))
+
+    assert backend.capture_frame()
+    assert camera.reopens == 1
+
+
+def test_reopened_camera_is_read_until_its_next_frame_arrives() -> None:
+    # Found on nano-1: open() takes the first frame, so the read right after
+    # a reopen can still miss.
+    camera = _StaleCamera(empty_reads_after_open=3)
     backend = ReachyDaemonBackend("http://daemon.test", media_client_factory=lambda: _StaleCameraMini(camera))
 
     assert backend.capture_frame()

@@ -324,6 +324,7 @@ class RobotBackendError(RuntimeError):
 # Palm stop captures every few hundred ms during playback; one reopen per
 # window bounds how often a missing camera stalls a capture for 2 s.
 CAMERA_REOPEN_INTERVAL_S = 10.0
+CAMERA_REOPEN_READ_ATTEMPTS = 25
 
 _EMOTIONS_DATASET = "pollen-robotics/reachy-mini-emotions-library"
 _DANCES_DATASET = "pollen-robotics/reachy-mini-dances-library"
@@ -627,7 +628,12 @@ class ReachyDaemonBackend:
         try:
             frame = media.get_frame()
             if frame is None and self._reopen_camera(media):
-                frame = media.get_frame()
+                # open() consumes the first frame while waiting for it, and
+                # get_frame() waits only 20 ms for the next at 10 fps.
+                for _ in range(CAMERA_REOPEN_READ_ATTEMPTS):
+                    frame = media.get_frame()
+                    if frame is not None:
+                        break
         except Exception as exc:
             raise RobotBackendError(f"get_frame() failed: {exc}") from exc
         if frame is None:
