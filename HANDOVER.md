@@ -70,6 +70,17 @@ relevance rules gate candidates.
     10:00Z. Whether those were the owner's attempts or background speech is
     unattributed.
 
+**Privacy carry-forward window shortened (`56f65dc`, 2026-09-27), deployed.**
+The 24g physical run also showed "what's my next appointment" muting a
+later, unrelated "tell me a story" for about 19 filler turns. Core's
+`CONTEXT_MESSAGES` is now 15 (was 39); ADR 0006 ties it to the model's own
+context on purpose, so both numbers moved together, not just the privacy
+side. Companion-core was rebuilt and recreated on the homelab
+(`docker restart` alone would not have picked up the code change); the hub
+container itself was not touched, so the robot's WS connection and wake
+arm were undisturbed. Not yet checked with a live "next appointment" ->
+follow-up sequence on the robot.
+
 **Owner requests 1–2 (2026-09-27)** — see the
 [third physical run](docs/verification/phase-24g-physical-2026-09-27.md#third-run-on-0880b1b-silent-rest-poses):
 1. **False wakes return to sleep silently: passed on the robot** with
