@@ -2,9 +2,12 @@
 
 **Scope:** rerun of step C (listening and thinking gestures on, wobble
 off) from the [2026-09-26 run](phase-24f-physical-2026-09-26.md), on
-nano-1 with the owner present. The owner stopped it after four turns on
-the gesture design, not on a fault. Nano logs are in
-`~/24f-logs/boot-20260927-no-motors.log` and the embodiment container log.
+nano-1 with the owner present. The owner stopped the first rerun after
+four turns on the gesture design, not on a fault. The recorded gestures
+were replaced with silent poses, which the owner tuned on the robot, and
+the [second rerun](#step-c-rerun-with-silent-poses-passed) passed.
+Nano logs are in `~/24f-logs/boot-20260927-no-motors.log`,
+`~/24f-logs/stepC-rerun2-*` and the embodiment container log.
 
 ## Versions
 
@@ -101,6 +104,39 @@ owner judging:
 No IK warnings, and the daemon stayed `running` throughout. The head was
 returned home with nothing left running. These values are the constants
 in `motion.py`.
+
+## Step C rerun with silent poses: passed
+
+**Run:** 03:54–04:05Z. **Versions:** Nano checkout and embodiment image `edb03f5` (`e9df1677`),
+recreated at 01:35Z. Hub and core were unchanged at `7a597e6`, and the
+daemon was 1.8.4. The owner resumed the daemon from standby at 03:52:16Z
+and watched the wake-up. It reported `running` with no error. The owner
+switched listening/thinking gestures on in the portal, and the robot
+reported `conversation_motion: true`, `speech_wobble: false`. The
+[question script](#question-script-for-the-step-c-rerun) was asked in one
+voice session (03:54:52–04:01:53Z).
+
+| Measure | Result |
+|---|---|
+| Utterance end → first audio | **PASS.** 22 non-search turns, all spoken: p50 3.75 s, p95 6.69 s (step B: p50 3.63 s, p95 5.22 s). The slower turns (14–17, 19: 5.5–6.7 s) had 14–24 s replies, and short replies stayed at 2.4–4.2 s. So the p95 difference follows reply length on the hub, as on 2026-09-26, not motion |
+| Robot-side overhead | Median 115.5 ms (+17.5 ms against step B's 98 ms), mean 112.5 ms, max 137 ms. There were no outliers like the 500–600 ms of the failing 2026-09-26 run. This is the part motion can affect, and it is within the proposed 250 ms regression budget |
+| Pose delivery | **PASS.** 0 `play_behaviour`/`goto` failures, 0 connection resets, 0 daemon `move/stop` 500s, and 0 IK warnings during the voice session |
+| False speech | **PASS.** 0 `no_speech` cuts. Every question was one segment with one spoken reply, and the silent poses were not captured by the microphone |
+| Owner observation | Poses held until the next state, with no sound. All 22 replies were as expected |
+| Stop during thinking | **PASS.** Turn 23 was cut at 04:01:45.96. The owner pressed Stop in the portal while the head held the thinking pose. The hub's reply was ready at 04:01:52.12, and the session ended "Stopped by owner" at 04:01:53.21. The robot played no reply audio, and the head stayed where it was (owner confirmed) |
+| Explicit behaviour during a turn | **PASS.** In a second voice session, `POST /behaviour/acknowledgement` during an active turn (04:02:31Z) returned 409 `robot conversation owns motion`, and nothing moved. After that session ended (04:04:25Z), the same request returned 200 and the recorded nod played exactly once (owner watching) |
+
+**Observation:** the daemon logged three throttled IK "collision detected
+or head pose not achievable" warnings at 04:04:28–29Z, during the recorded
+acknowledgement nod, not a conversation pose. The daemon stayed `running`
+with no error. The 00:57Z warnings above are still unexplained, and these
+may share a cause with the recorded moves.
+
+Timing table: `~/24f-logs/stepC-rerun2-timing.md`
+(`voice-timing.py --session 0`, since the log holds two voice sessions).
+The owner left gestures **on** after the run. This does not cover speech
+wobble, coexistence, the 30-minute session, or rollback, which are still
+open.
 
 ## Question script for the step C rerun
 
