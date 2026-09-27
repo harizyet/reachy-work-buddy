@@ -235,3 +235,22 @@ requires resolved STT/session-boundary decisions, passing required scenarios
 and downstream-isolation checks, agreed usability targets met on the robot,
 and passing conversation/authorization regressions. This documentation change
 adds no runtime feature and makes no live acceptance claim.
+
+### Agreed numeric targets (owner, 2026-09-27)
+
+Recorded before the scored run, per the rule above against tuning on final
+trials.
+
+| Metric | Target |
+|---|---|
+| False conversations admitted/hour (primary usability measure) | ≤ 1 per 2 hours of normal occupied-room exposure, held-out session only |
+| Wake candidates/hour | Reported only, no target |
+| Genuine-turn acceptance rate | ≥ 90% of real "Hey Reachy" attempts admitted with the request preserved (same bar as the [24e correctness set](verification/phase-24e-correctness-2026-09-25.md)) |
+| Added admission latency (candidate upload → `voice_start`) | p50 ≤ 1.5 s, p95 ≤ 3 s |
+
+**Trial design:** one calibration session (≥ 30 min exposure plus the full
+scenario list once, not scored, nothing tuned from it), then one held-out
+session run cold to the same script and scored against the targets above.
+24f conversational motion stays off in both, so a false admission's effects
+stay isolated to wake/voice. Evidence goes in a dated
+`docs/verification/phase-24g-<date>.md`.
