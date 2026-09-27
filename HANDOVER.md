@@ -25,16 +25,19 @@ Owner decisions after closing, 2026-09-27:
   journal, no power logging and no diagnosis procedure. It needs the
   owner's sudo and approval.
 
-**[Phase 24g](docs/phase-24g.md) is implemented, not deployed or
-accepted (2026-09-27).** It is described in the
+**[Phase 24g](docs/phase-24g.md) is deployed and in physical testing; it is
+not accepted (2026-09-27).** The design is in the
 [ADR 0023 wake addendum](docs/adr/0023-robot-voice-conversation.md#addendum-wake-started-sessions-2026-09-27-phase-24g).
 
-Owner decisions:
+Owner decisions, 2026-09-27:
 - monitoring is owner-armed and stays armed across restarts;
 - anyone may converse while it is armed;
 - candidates are transcribed in hub memory;
-- the robot plays the wake animation on detection and rests in its sleep
-  pose while armed and idle;
+- the robot rests in its sleep pose while armed and idle, and lifts its head
+  slightly to a silent alert pose on "Hey Reachy". This replaced the
+  daemon's full wake-up move after the first physical run;
+- `WAKE_ANIMATION_ENABLED` is on by default, including unattended production
+  use while armed (exception recorded in AGENTS.md);
 - the follow-up timeout is 10 s.
 
 The detector is the community Edge Impulse "Hey Reachy" `.eim`
@@ -42,23 +45,55 @@ The detector is the community Edge Impulse "Hey Reachy" `.eim`
 The robot's local acoustic-event filter is deferred, so the VAD and the hub
 relevance rules gate candidates.
 
-Verified off the robot:
-- the fast suites, the browser tests and the Postgres migration suite (new
-  `009_wake_arm`);
-- the detector client against the real aarch64 model on the Nano, in a
-  `--network none` container;
-- the pinned `ADD` lines, built on the Nano's Docker 20.10.7.
+**Done this session.** Everything below is committed through `b62a023`:
+- **Build:** the decisions, detector bench and live microphone session,
+  implementation and tests. Checked off the robot: fast suites, browser
+  tests, Postgres migration suite, the detector client against the real
+  aarch64 model, and the pinned `ADD` lines on the Nano's Docker.
+- **Deploy:** the homelab database was backed up and migrated to
+  `009_wake_arm`. The hub and core were rebuilt at `b62a023`, and the Nano
+  image rebuilt and recreated.
+- **Physical runs:** see the
+  [physical record](docs/verification/phase-24g-physical-2026-09-27.md).
+  - Detection works: 8/8 in the first run, scores 0.77–0.99.
+  - The full wake-up move broke candidates (its sound was recorded, and
+    people waited for it). That led to the alert pose and new timings.
+  - On `b62a023`, a conversation started by voice ran from 10:02:26 to
+    10:03:52Z, then ended on the 10 s follow-up.
+  - The hub also logged 4 `no_wake_phrase` rejections between 09:56 and
+    10:00Z. Whether those were the owner's attempts or background speech is
+    unattributed.
 
-Deployed 2026-09-27 (see machine state below). Not yet done:
-- **Physical run:** the [first physical run](docs/verification/phase-24g-physical-2026-09-27.md) found
-  that the full wake-up move's sound and length broke candidates. The owner
-  replaced it with a silent alert pose, and the timings were revised
-  (speech measured without padding, 4 s for the request). That change needs
-  a hub rebuild (it sends the limits) and a robot image rebuild and
-  recreate, then the 24g scenarios again.
+**Next: the owner's open requests (2026-09-27, not implemented).**
+1. When a conversation is admitted, the head should go to **home**, not
+   stay in the alert pose. After the conversation it returns to sleep.
+2. A false positive (rejected or discarded candidate) must return to sleep
+   **silently**. The owner hears the daemon's snore (`go_sleep.wav`) after
+   false wakes.
+   - **Cause, found in the logs:** the presence loop calls
+     `MotionController.request_behaviour(idle=True)` every 3 s. Those idle
+     behaviours map to no move, but `request_behaviour` still clears
+     `_rest_pose`. So the next rest always falls back to the daemon's
+     `goto_sleep` routine, which plays the snore every time.
 
-`WAKE_ANIMATION_ENABLED` is on by default, including unattended production
-use while armed (owner decision, 2026-09-27, recorded in AGENTS.md).
+   A drafted fix is saved as `git stash` "24g WIP: silent home/alert/sleep
+   rest poses …". It is **untested, and its test updates are not written**.
+   It does the following:
+   - `play_behaviour` returns whether a move started;
+   - rest poses become `sleep`/`alert`/`home`, and the monitor sends `home`
+     on admission;
+   - daemon `goto_sleep` is dropped, and from an unknown pose the head goes
+     silently home, then to sleep.
+
+   Finish it, update `test_wake.py`, `test_motion.py` and the fakes whose
+   `play_behaviour` returns None, then redeploy the robot image. The owner
+   runs the recreate.
+
+   A hub rebuild is not needed unless `WakeLimits` changes. Also update the
+   ADR animation bullet and the AGENTS.md exception text: after this change
+   no daemon routine is used.
+3. After that, run the 24g scenarios as acceptance rows. Agree numeric
+   targets first (see the exit criteria).
 
 Scratch on the Nano: `~/24g-bench` (models, clips, wheels) and `~/24g-src`
 (source mounts for the detector check); both are disposable.
@@ -102,11 +137,12 @@ this documentation pass. Recheck state before relying on them.
 - **Nano:** booted 2026-09-27 06:47 WIB (motor supply was off on the first
   boot; the once-per-boot recovery restarted the daemon once and stopped,
   as designed). The daemon runs as PID 7340 and was `running` at 09:33Z.
-  - **Checkout and image:** the checkout is `b77ff6a`, and embodiment
-    runs `reachy-embodiment:local` = `b77ff6a` (`796d65ee`). The container
-    was recreated by the owner at about 09:32Z with voice on and
-    `WAKE_ANIMATION_ENABLED=true`, and registered as generation 4, wake
-    capable. "Hey Reachy" was not armed yet at that point.
+  - **Checkout and image:** the checkout is `b62a023`, and embodiment
+    runs `reachy-embodiment:local` = `b62a023` (`ebfffcef`). The container
+    was recreated by the owner at about 10:01Z with voice on and
+    `WAKE_ANIMATION_ENABLED=true`, and "Hey Reachy" was **armed** (the arm
+    is stored in the hub database; disarm from the robot microphone panel).
+    `796d65ee` (`b77ff6a`) is untagged.
   - **Rollback:** the image is `:6f6eb24` (`0ab5ebdf`); roll the checkout
     back with it. Older images are `:edb03f5` (`e9df1677`, which lacks the
     `/host-tmp` link), `:b36736d` and `:eb1e92e9`.
@@ -130,8 +166,8 @@ this documentation pass. Recheck state before relying on them.
 
   Apply the [deployment boundaries](docs/deployment.md#robot-host-and-jetson-nano)
   before daemon starts or motion; `--check` stays read-only.
-- **Homelab:** hub, core and migrate were rebuilt at `95cbc0a` (09:18Z,
-  24g). `b77ff6a` changed only the robot side and docs. `STT_MODEL=small.en`,
+- **Homelab:** hub, core and migrate were rebuilt at `b62a023` (09:54Z).
+  The schema migration ran at 09:18Z (`95cbc0a`). `STT_MODEL=small.en`,
   `PALM_STOP_ENABLED=true` and `VOICE_CONTINUATION_WINDOW_MS=3000` are in
   the private `.env`. The schema is `009_wake_arm`. The latest
   pre-deploy backup is

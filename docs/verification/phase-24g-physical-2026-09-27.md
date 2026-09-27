@@ -39,3 +39,23 @@ The candidate timings changed as well:
 
 This needs a rebuild of both the hub, which sends these limits, and the
 robot, then the scenarios again.
+
+## Second run on `b62a023` (alert pose)
+
+The hub was rebuilt at `b62a023` (09:54Z), and the robot was recreated on
+`ebfffcef` at about 10:01Z. The arm survived the hub restart and was sent to
+the robot again when it registered.
+
+- A conversation started by voice ran from 10:02:26Z until 10:03:52Z, and
+  ended with "No follow-up heard".
+- Between 09:56 and 10:00Z, while the old robot container was still running
+  with the new hub limits, the hub rejected 4 candidates as
+  `no_wake_phrase`. They are unattributed.
+
+The owner's findings:
+- the head should go home once a conversation is admitted;
+- a false positive should return to sleep without the daemon's snore sound.
+
+The logs traced the snore to a rest-pose tracking bug: idle presence
+requests that start no move reset it, so every rest used the daemon's
+`goto_sleep` routine. The fix is pending (see HANDOVER).
