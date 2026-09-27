@@ -139,7 +139,12 @@ These are dated evidence, not startup instructions or current health checks.
 
 - [Phase 24f physical run, 2026-09-27](verification/phase-24f-physical-2026-09-27.md):
   first real once-per-boot recovery (motor power off), `b36736d` swap,
-  step C stopped by the owner; recorded gestures replaced by silent poses.
+  step C stopped by the owner; recorded gestures replaced by silent poses,
+  then the step C rerun with them passed.
+
+- [Clock, reply labelling and small.en on the robot](verification/clock-routing-stt-physical-2026-09-27.md):
+  clock answers, a public "start the morning" reply and the known
+  mishearings pass; open-ended replies take 7.8–9.9 s (model length).
 
 - [Phase 24f motion conformance](verification/phase-24f-conformance-2026-09-25.md):
   Nano versions, predeclared tolerances, supervised REST vs SDK run; paths

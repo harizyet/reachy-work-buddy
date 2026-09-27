@@ -55,9 +55,15 @@ cached, with no hub or core changes since.
   predicted about +0.55 s per turn. On the robot, the 2026-09-27 step C
   rerun measured non-search p50 3.75 s, within budget.
 
-**Next, on the robot:** the time questions, "What's a good way to start the
-morning?" spoken aloud, and the mishearing phrases. If mishearings remain
-with small.en, suspect the microphone. Unset `STT_MODEL` to revert.
+The robot checks passed on 2026-09-27
+([record](docs/verification/clock-routing-stt-physical-2026-09-27.md)).
+The clock answers and the public "start the morning" reply work, and
+"code word" and "cold and the flu" are now heard correctly. "Tokyo" was
+misheard once. **Open:** the open-ended questions took 7.8–9.9 s, because
+the local model spends 4–5 s on replies of about 60 words. That fails the
+4 s budget for such questions. The owner needs to decide between shorter
+replies and streaming the first sentence. Unset `STT_MODEL` to revert
+small.en.
 
 24f physical ([record](docs/verification/phase-24f-physical-2026-09-26.md)):
 the owner's portal toggle reaches the robot. The step B motion-off
