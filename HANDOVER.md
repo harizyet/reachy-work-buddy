@@ -78,9 +78,9 @@ turns. Every emotion move has a sound, and the daemon can't mute it.
 The silent goto poses are implemented (see the
 [ADR 0003 amendment](docs/adr/0003-embodiment-command-api.md#conversation-poses-amendment-2026-09-27)):
 embodiment tests pass, and a 1.8.4 mockup-sim daemon reached every pose
-with no move errors. **Next:** tune the pose signs and amplitudes on the
-robot with the owner watching (bounded REST gotos), set the constants in
-`motion.py`, build the embodiment image on the Nano, then rerun step C
+with no move errors. The owner tuned the pose signs and sizes on the robot, and the
+values are the constants in `motion.py`. **Next:** build the embodiment
+image on the Nano and swap it in, then rerun step C
 once in full with the
 [question script](docs/verification/phase-24f-physical-2026-09-27.md#question-script-for-the-step-c-rerun),
 a Stop during thinking, and the 409 check.

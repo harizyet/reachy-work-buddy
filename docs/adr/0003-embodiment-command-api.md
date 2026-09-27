@@ -116,8 +116,10 @@ microphone captured it as speech.
   body yaw, and holds it until the next transition. Listening is a small
   head tilt with the antennas raised (0.5 s). Thinking is a glance up and to
   one side with the antennas offset (0.8 s). The angles are constants in
-  `motion.py`, clamped to fixed bounds (roll 0.20, pitch 0.15, yaw 0.25,
-  antennas 0.60 rad), and tuned on the robot with the owner present.
+  `motion.py`, clamped to fixed bounds (roll 0.40, pitch 0.30, yaw 0.45,
+  antennas 0.60 rad), and were tuned on the robot with the owner present
+  (listening roll about 0.31 with antennas perked 0.25; thinking yaw about
+  0.39 and pitch about −0.22 up).
 - **Variation.** The side and amplitudes are drawn per turn and state.
   Returning to a state within the same turn (a held segment) reuses that
   turn's pose.

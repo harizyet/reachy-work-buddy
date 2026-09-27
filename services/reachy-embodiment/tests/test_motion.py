@@ -139,6 +139,23 @@ def test_poses_vary_and_stay_within_bounds() -> None:
         assert {p["head_pose"]["roll"] > 0 for p in poses} == {True, False}
 
 
+def test_thinking_looks_up_and_folds_back_the_glance_side_antenna() -> None:
+    # Owner-tuned on nano-1: negative pitch is up; +right/-left perks an
+    # antenna, -right/+left folds it back.
+    rng = random.Random(11)
+    for _ in range(50):
+        pose = thinking_pose(rng)
+        head, (right, left) = pose["head_pose"], pose["antennas"]
+        assert head["pitch"] < 0
+        assert head["roll"] * head["yaw"] < 0  # tilts against the glance
+        if head["yaw"] > 0:
+            assert (right, left) == (-0.5, -0.25)
+        else:
+            assert (right, left) == (0.25, 0.5)
+        listen = listening_pose(rng)["antennas"]
+        assert listen[0] > 0 > listen[1]  # both perked
+
+
 def test_speaking_after_a_gesture_returns_home_before_wobble() -> None:
     ctl, backend, _ = make(conversation_motion=True, speech_wobble=True)
     token = ctl.begin_conversation()

@@ -43,25 +43,26 @@ from shared.models.motion import MotionSettings, MotionSettingsStatus
 log = logging.getLogger(__name__)
 
 # Conversation poses, in the daemon's units: head roll/pitch/yaw in
-# radians, antennas [right, left] in radians (home is [-0.1745, 0.1745]).
-# The stock controller stops 2-5 deg short of small targets (24f
-# conformance record), so these are sized to stay visible. Signs and
-# amplitudes are tuned on the robot with the owner watching.
+# radians (negative pitch looks up), antennas [right, left] in radians.
+# Home antennas are [-0.1745, 0.1745]; +right / -left perks an antenna up,
+# -right / +left folds it back. Tuned on nano-1 with the owner watching
+# (2026-09-27): the first, smaller candidates were too subtle.
 LISTEN_DURATION = 0.5
-LISTEN_ROLL = (0.08, 0.14)  # tilt to a random side
+LISTEN_ROLL = (0.28, 0.34)  # tilt to a random side
 LISTEN_YAW = 0.06  # +/- random
-LISTEN_ANTENNAS = (0.0, 0.0)  # perked from home
+LISTEN_ANTENNA = 0.25  # both perked
 THINK_DURATION = 0.8
-THINK_YAW = (0.15, 0.22)  # glance to a random side
-THINK_PITCH = -0.10  # glance up
-THINK_ROLL = (0.03, 0.06)  # against the glance
-THINK_ANTENNA_OFFSET = 0.30  # the glance side's antenna folds further back
+THINK_YAW = (0.36, 0.42)  # glance to a random side
+THINK_PITCH = (-0.24, -0.19)  # and up
+THINK_ROLL = (0.08, 0.11)  # against the glance
+THINK_ANTENNA_BACK = 0.50  # the glance side's antenna folds back
+THINK_ANTENNA_PERKED = 0.25  # the other one perks
 ANTENNA_JITTER = 0.05
 
 # Hard bounds every pose is clamped to, whatever the constants above say.
-MAX_ROLL = 0.20
-MAX_PITCH = 0.15
-MAX_YAW = 0.25
+MAX_ROLL = 0.40
+MAX_PITCH = 0.30
+MAX_YAW = 0.45
 MAX_ANTENNA = 0.60
 
 
@@ -92,8 +93,8 @@ def listening_pose(rng: random.Random) -> dict[str, object]:
         pitch=0.0,
         yaw=rng.uniform(-LISTEN_YAW, LISTEN_YAW),
         antennas=(
-            LISTEN_ANTENNAS[0] + rng.uniform(-ANTENNA_JITTER, ANTENNA_JITTER),
-            LISTEN_ANTENNAS[1] + rng.uniform(-ANTENNA_JITTER, ANTENNA_JITTER),
+            LISTEN_ANTENNA + rng.uniform(-ANTENNA_JITTER, ANTENNA_JITTER),
+            -LISTEN_ANTENNA + rng.uniform(-ANTENNA_JITTER, ANTENNA_JITTER),
         ),
         duration=LISTEN_DURATION,
     )
@@ -101,16 +102,15 @@ def listening_pose(rng: random.Random) -> dict[str, object]:
 
 def thinking_pose(rng: random.Random) -> dict[str, object]:
     side = rng.choice((-1, 1))
-    right, left = -0.1745, 0.1745
-    if side > 0:
-        left += THINK_ANTENNA_OFFSET
+    if side > 0:  # glance with positive yaw: right folds back
+        antennas = (-THINK_ANTENNA_BACK, -THINK_ANTENNA_PERKED)
     else:
-        right -= THINK_ANTENNA_OFFSET
+        antennas = (THINK_ANTENNA_PERKED, THINK_ANTENNA_BACK)
     return _pose(
         roll=-side * rng.uniform(*THINK_ROLL),
-        pitch=THINK_PITCH * rng.uniform(0.8, 1.2),
+        pitch=rng.uniform(*THINK_PITCH),
         yaw=side * rng.uniform(*THINK_YAW),
-        antennas=(right, left),
+        antennas=antennas,
         duration=THINK_DURATION,
     )
 

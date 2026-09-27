@@ -82,6 +82,26 @@ the head where it was, with no move running. The daemon logged no 500s or
 path, not how the poses look. Embodiment tests: 133 passed and 5 skipped. The
 poses validate against the daemon's own `GotoModelRequest`.
 
+## Pose tuning on the robot (owner watching)
+
+The daemon had been put into standby from the hub at 01:09Z. The owner
+resumed it (wake-up watched), and it reported `running` with 0 errors
+before any pose was sent. Bounded REST gotos, each from home, with the
+owner judging:
+
+| Pose sent | Reached | Owner |
+|---|---|---|
+| Listening: roll 0.12, antennas [0, 0], 0.5 s | roll 0.113, antennas [−0.006, −0.002] | Perked up, but too small |
+| Listening: roll 0.22, antennas [0.12, −0.12] | roll 0.228 | Bigger still |
+| Listening: roll 0.32, antennas [0.25, −0.25] | roll 0.345, yaw −0.060 (coupling) | Happy |
+| Thinking: roll −0.08, pitch −0.15, yaw 0.30, antennas [−0.50, −0.25], 0.8 s | roll −0.061, pitch −0.142, yaw 0.271 | Looks **up** (negative pitch is up); antennas fine; exaggerate more |
+| Thinking: roll −0.10, pitch −0.22, yaw 0.40, same antennas | roll −0.097, pitch −0.225, yaw 0.380 | Better |
+| Thinking mirrored: roll 0.10, pitch −0.22, yaw −0.40, antennas [0.25, 0.50] | roll 0.091, pitch −0.262, yaw −0.385 | Good, a proper mirror |
+
+No IK warnings, and the daemon stayed `running` throughout. The head was
+returned home with nothing left running. These values are the constants
+in `motion.py`.
+
 ## Question script for the step C rerun
 
 The step B questions from 2026-09-26 were not saved (the database keeps no
