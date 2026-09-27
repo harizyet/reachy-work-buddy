@@ -159,6 +159,83 @@ Deploy items 1–2 when the owner schedules the physical run. Phase 25
 remains blocked on the
 [hardware prerequisites](docs/phase-24e.md#prerequisites-for-phase-25).
 
+## Step C rerun checklist (24f, owner present)
+
+Everything needed to run the next physical test. Background is in the
+[2026-09-27 record](docs/verification/phase-24f-physical-2026-09-27.md).
+It plays the silent conversation poses: listening is a head tilt of about
+18° with both antennas perked, and thinking is a glance up and to one side
+with that side's antenna folded back.
+
+**Before starting**
+1. Check the robot state (the session does this over SSH as
+   `Reachy-Mini-Jetson`): the daemon should be `running` with 0 errors,
+   embodiment healthy on image `edb03f5` (`e9df1677`), and
+   `GET :8100/settings/motion` showing gestures off.
+   If the daemon is in standby, resume it with `/reachy wake` or the
+   portal, with the owner watching the wake-up.
+2. In the portal, go to Settings · Accounts → Conversational animations.
+   Turn listening/thinking gestures **on** and leave speech wobble
+   **off**. Confirm `conversation_motion: true` on the robot (the hub
+   logs `PUT /settings/motion` 200).
+3. Mark the start time (`date -u` on the Nano into `~/24f-logs/`).
+
+**The 22 questions:** ask them one at a time, and let each reply finish before the next:
+
+1. What's the capital of France?
+2. How many legs does a spider have?
+3. What colour do you get when you mix blue and yellow?
+4. Who wrote Romeo and Juliet?
+5. What's the largest planet in our solar system?
+6. How many days are there in a leap year?
+7. What gas do plants take in from the air?
+8. What's the boiling point of water in Celsius?
+9. Which ocean is the largest?
+10. How many sides does a hexagon have?
+11. What's the chemical symbol for gold?
+12. Who painted the Mona Lisa?
+13. What's the tallest animal in the world?
+14. How many continents are there?
+15. What's the freezing point of water in Fahrenheit?
+16. Which planet is known as the Red Planet?
+17. What's the main ingredient in guacamole?
+18. How many minutes are in an hour?
+19. What language is spoken in Brazil?
+20. What's the square root of sixty-four?
+21. Which bird is a symbol of peace?
+22. What do bees make?
+
+**Then**
+- **Stop during thinking:** ask a question with a longer answer and press
+  Stop in the portal while the head holds the thinking pose, before the
+  reply starts. Expected: no reply audio, and the head holds where it is
+  (a stop never returns home).
+- **409 check:** during a turn, while the conversation is active, run on
+  the Nano:
+  `curl -s -w ' %{http_code}\n' -X POST localhost:8100/behaviour/acknowledgement`.
+  Expected: `robot conversation owns motion` with 409, and no nod. Run
+  after the turn ends, the robot plays the recorded nod once (a full
+  animation, so the owner must be watching).
+- Afterwards, switch gestures off in the portal, or leave them on if the
+  owner accepts the result.
+
+**What the session checks from the logs:** timing with
+`docker logs reachy-embodiment 2>&1 | ~/reachy-venv/bin/python
+deploy/reachy/voice-timing.py`. The Nano's system `python3` is too old.
+The budget is non-search p50 ≤ 4 s and p95 ≤ 8 s, against the step B
+baseline p50 3.63 s. Pass needs 0 `play_behaviour`/`goto` failures, 0
+connection resets, 0 daemon `move/stop` 500s and no IK errors. Also check
+that no turn is a false `no_speech` cut caused by motion, and that every
+pose is held until the next state. Record the results in a new dated 24f
+verification record.
+
+**Rollback:** `docker tag reachy-embodiment:b36736d reachy-embodiment:local`,
+then have the owner run (sudo needs a password):
+`sudo systemctl stop reachy-embodiment && docker rm reachy-embodiment &&
+cd ~/reachy-work-buddy && scripts/start-reachy.sh --no-browser`. The same
+command recreates the container after any image change. It does not start
+or restart the daemon.
+
 ## Last-reported machine state
 
 These are previous session observations, not health checks performed during
