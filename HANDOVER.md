@@ -101,13 +101,14 @@ motion switches reset to off on the next embodiment restart.
 `wake candidate admitted` (11:05:12.9Z and 11:06:28.7Z), before the later
 sleep return. No further action needed on this item.
 
+**Numeric targets agreed (owner, 2026-09-27)** — see
+[phase-24g.md](docs/phase-24g.md#agreed-numeric-targets-owner-2026-09-27):
+false conversations ≤1/2h (held-out), genuine-turn acceptance ≥90%, added
+admission latency p50≤1.5s/p95≤3s, one calibration session then one
+held-out session, both with 24f motion off.
+
 **Next: run the 24g acceptance scenarios (the phase's remaining gate).**
-1. Agree numeric targets with the owner first (see
-   [exit criteria](docs/phase-24g.md#verification-and-exit-criteria)):
-   false conversations/hour, genuine-turn acceptance rate, added latency,
-   and the trial design (independent trials, observation duration,
-   calibration vs. held-out).
-2. Run every scenario in the
+1. Run every scenario in the
    [acceptance requirements](docs/phase-24g.md#acceptance-requirements)
    list (coughs, sneezes, TV/podcast speech, nearby conversation, false
    wake + continued talk, wake + silence, genuine immediate and
