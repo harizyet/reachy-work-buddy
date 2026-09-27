@@ -169,6 +169,28 @@ daemon media release was already known to.
 traceback) in `robot_palm_frame` at 05:00:29Z, when the robot dropped a
 palm-frame upload as playback ended. There was no behavioural effect.
 
+## Camera socket fix on nano-1
+
+`0ec9c52` and `6f6eb24`: the container binds the host's `/tmp` read-only
+at `/host-tmp`, and the image links the SDK's socket path there. The
+backend reopens the SDK camera pipeline after a missed frame (at most
+every 10 s) and reads for up to about 0.5 s until the next frame. Image
+`0ab5ebdf`, recreated by the owner at 05:26:54Z; the daemon was not
+restarted, and nothing moved. Reachy was idle with motion off.
+
+| Step | Result |
+|---|---|
+| Before | 3 of 3 `/camera/frame` 200s (about 385 KB) through the link on the read-only mount |
+| `POST /api/media/release`, then `/acquire` on the daemon (05:27:31Z) | Both 200; the socket was recreated (inode 5212 → 5213); the daemon stayed `running`, no error |
+| After, no embodiment restart | 6 of 6 `/camera/frame` 200s (0.06–0.13 s). The log shows the old pipeline's End-of-stream, then one "reopening the daemon camera socket" at 05:27:38Z |
+
+The first image (`91b5b27a`, without the read loop) recovered too, but
+the request that triggered the reopen returned a 500. The SDK's `open()`
+consumes the first frame, and `get_frame()` waits only 20 ms at 10 fps.
+A standby wake recreates the socket the same way. It was not repeated
+here because it replays the wake-up motion. The microphone path (ALSA)
+was not exercised after the release in this check.
+
 ## Question script for the step C rerun
 
 The step B questions from 2026-09-26 were not saved (the database keeps no

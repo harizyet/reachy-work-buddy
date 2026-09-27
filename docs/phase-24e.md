@@ -169,7 +169,12 @@ Run on the real robot. The row definitions and evidence rules are the
 
 Repeat the Normal conversation and Timing rows after items 1 and 2 change
 the turn path, with the same budgets (non-search p50 ≤ 4 s, p95 ≤ 8 s;
-search ≤ 20 s each).
+search ≤ 20 s each). These budgets are measured on short questions.
+Open-ended questions get replies of about 60 words, which the local model
+takes 4–5 s to write, so they reach first audio in about 8 s. The owner
+accepted that as is on 2026-09-27, rather than shortening spoken replies
+or streaming the first sentence
+([record](verification/clock-routing-stt-physical-2026-09-27.md)).
 
 ### 4. Nano diagnostics
 

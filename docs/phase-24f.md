@@ -1,14 +1,35 @@
 # Phase 24f — Motion conformance and conversational embodiment
 
-Status: **in progress** (2026-09-25). Item 1 is measured: REST, the SDK
-and Pollen's streaming method agree, and the head camera confirms the
-head moves as far as the encoders say. The robot stops 2–5° short of
-commanded poses on every path, and whether that is normal for the stock
-proportional-only gains or a fault is open
+Status: **closed by owner re-scope (2026-09-27).** The remaining rows
+are deferred to a future phase, not passed.
+
+Passed on nano-1 with the owner present
+([2026-09-27 record](verification/phase-24f-physical-2026-09-27.md)):
+- **Voice feedback:** silent listening/thinking poses over 22 turns. There
+  were 0 move failures and no false `no_speech` cuts, p50 was 3.75 s, and
+  robot-side overhead was +17.5 ms median.
+- **Speech wobble.**
+- **Stop during thinking and during playback:** the head holds, and no
+  move follows.
+- **Explicit behaviour arbitration:** 409 during a turn, one nod after.
+- **Palm stop with motion on.**
+- **Switch-off between sessions.**
+
+Item 1's paths conform: REST, the SDK and Pollen's streaming method agree,
+and the robot stops 2–5° short on every path. Whether that shortfall is
+normal or a fault stays open
 ([conformance record](verification/phase-24f-conformance-2026-09-25.md)).
-Item 3's motion owner is implemented behind two off-by-default switches
-([ADR 0003 amendment](adr/0003-embodiment-command-api.md#phase-24f-motion-ownership-amendment-2026-09-25)).
-Item 2 settled on no startup home. Nothing is deployed or accepted.
+Item 2 settled on no startup home. The motion owner is in the
+[ADR 0003 amendments](adr/0003-embodiment-command-api.md#conversation-poses-amendment-2026-09-27).
+The environment switches stay off by default. The owner turns the
+features on at runtime in the portal, and a restart resets them.
+
+**Deferred** to a future phase: the supervised 30-minute session;
+switching off *during* a reply; Stop while returning home; expiry,
+logout and disconnect cancellation with motion on; withheld-audio privacy
+with motion on; and the 2–5° shortfall question. Until those pass, Phase
+25 should run with motion off, per the dependency rule below.
+
 Validate motion against Pollen's version-matched SDK/Testbench, establish a
 verified home after wake-up, and express conversation state locally on Reachy.
 The LLM does not select trajectories or authorize motion.

@@ -35,15 +35,16 @@ speaker); open-palm stop with either hand and no false stops (owner accepts
 Homelab fixes after the owner ended testing (deployed, not yet exercised
 on the robot): weather search keeps a question's own place instead of
 appending the owner's location (`4a9dd16`), and the hub's INFO logging
-(`7a597e6`). Known, not fixed: any daemon socket recreation breaks the embodiment
-camera and palm stop until embodiment restarts. That covers a daemon
-start, a **standby wake**, or a `no_media` media release, because the
-container's file bind keeps the old inode. See
-[project state](docs/project-state.md#known-hardware-and-software-limitations).
-The proposed fix is to bind the socket's directory, which needs Nano
-verification including a standby wake. A small cleanup is also pending:
-the hub's `robot_palm_frame` raises an unhandled `ClientDisconnect` (500)
-when the robot drops an upload.
+(`7a597e6`). Fixed and deployed 2026-09-27: the embodiment camera now survives the
+daemon recreating its socket (a standby wake, a `no_media` release). The
+container binds host `/tmp` read-only at `/host-tmp`, and the backend
+reopens the camera pipeline (`0ec9c52`, `6f6eb24`, Nano image `0ab5ebdf`).
+This was verified with a no-motion media release/acquire
+([record](docs/verification/phase-24f-physical-2026-09-27.md#camera-socket-fix-on-nano-1));
+a real standby wake has not been retried. The hub now answers an
+abandoned palm-frame upload with a 400 instead of a traceback (homelab,
+05:10Z). A recreated hub container re-downloads small.en (112 s before
+voice works). Not investigated.
 
 The owner settled the run's three open decisions on 2026-09-26. Both
 commits have been **deployed since 2026-09-26 15:09Z**: the homelab
@@ -65,11 +66,10 @@ The robot checks passed on 2026-09-27
 ([record](docs/verification/clock-routing-stt-physical-2026-09-27.md)).
 The clock answers and the public "start the morning" reply work, and
 "code word" and "cold and the flu" are now heard correctly. "Tokyo" was
-misheard once. **Open:** the open-ended questions took 7.8–9.9 s, because
-the local model spends 4–5 s on replies of about 60 words. That fails the
-4 s budget for such questions. The owner needs to decide between shorter
-replies and streaming the first sentence. Unset `STT_MODEL` to revert
-small.en.
+misheard once. The open-ended questions took 7.8–9.9 s, because the local
+model spends 4–5 s on replies of about 60 words. The owner accepted that
+as is (2026-09-27): the 4 s budget is measured on short questions. Unset
+`STT_MODEL` to revert small.en.
 
 24f physical ([record](docs/verification/phase-24f-physical-2026-09-26.md)):
 the owner's portal toggle reaches the robot. The step B motion-off
@@ -95,13 +95,13 @@ The owner left gestures **on**. After that,
 - Stop during playback (the head holds);
 - palm stop with motion on, 2 of 2;
 - switching motion off between sessions.
-Palm stop first failed because the embodiment camera was stale after the
-03:52Z standby wake. See the camera caution below. **Next for 24f:** the
-30-minute session, switching off *during* a reply, and Stop while
-returning home
-([acceptance rows](docs/phase-24f.md#4-verification-and-acceptance)).
+**24f is closed by owner re-scope (2026-09-27).** The 30-minute session,
+mid-reply switch-off, Stop while homing, cancellation and privacy with
+motion on, and the 2–5° shortfall are deferred to a future phase
+([status](docs/phase-24f.md)). Phase 25 runs with motion off until they
+pass.
 
-[Phase 24f](docs/phase-24f.md) is in progress. Item 1 is measured on the
+Background for [Phase 24f](docs/phase-24f.md), now closed. Item 1 is measured on the
 Nano ([record](docs/verification/phase-24f-conformance-2026-09-25.md)).
 REST, the SDK (Testbench) path and Pollen's streaming method send the
 same poses, and the head camera confirms the head moves as far as the
@@ -184,8 +184,12 @@ this documentation pass. Recheck state before relying on them.
   checkout `edb03f5`. Embodiment runs `reachy-embodiment:local` =
   `edb03f5` (`e9df1677`, silent conversation poses), recreated at 01:35Z;
   rollback images are tagged `:b36736d` (`c314d4fa`) and `:eb1e92e9`.
-  The owner restarted embodiment at 04:56:52Z to reattach the camera
-  socket (inode 5213). Gestures and wobble are **off**: the owner switched
+  Embodiment runs `reachy-embodiment:local` = `6f6eb24` (`0ab5ebdf`),
+  recreated at 05:26:54Z with the read-only `/tmp` → `/host-tmp` mount.
+  The rollback image is `:edb03f5` (`e9df1677`). It lacks the
+  `/host-tmp` link, so roll back the checkout with it (the launcher at
+  `edb03f5` recreates the old file bind), not the image alone.
+  The Nano checkout is `6f6eb24`. Gestures and wobble are **off**: the owner switched
   them off at about 05:00Z. The daemon has run since the 06:47 WIB boot
   (PID 7340); it was resumed from standby at 03:52Z and was `running`
   with no error at 05:01Z. Sudo on

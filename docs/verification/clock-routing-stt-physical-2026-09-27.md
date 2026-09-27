@@ -57,8 +57,9 @@ or replies are stored here beyond the scripted questions.
   54–66 words, and TTS 0.6 s, before the first audio. The budget counts
   non-search turns, so this script alone would fail it (p50 8.0 s over
   its 7 non-search spoken turns). The cause is reply length on the hub,
-  not STT or motion. Shorter replies or streaming the first sentence are
-  options, and neither is decided.
+  not STT or motion. The owner accepted this as is (2026-09-27), rather
+  than lowering the spoken-reply cap (100 tokens / 75 words) or streaming
+  the first sentence. The 4 s budget is measured on short questions.
 - **Two `no_speech` fragments** (1.22–1.28 s) were rejected by the hub as
   designed. Turn 4's audio began about 0.8 s after the previous reply
   finished (04:31:05.74Z), close to when the listening pose starts. Turn
