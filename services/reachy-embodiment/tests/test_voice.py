@@ -35,7 +35,7 @@ from companion_core.tasks.store import InMemoryTaskStore
 from companion_core.websearch.store import InMemorySearchSettingsStore
 from reachy_embodiment.audio.vad import CHUNK_SAMPLES
 from reachy_embodiment.gesture import HubPalmStop
-from reachy_embodiment.motion import MotionController
+from reachy_embodiment.motion import LISTEN_DURATION, THINK_DURATION, MotionController
 from reachy_embodiment.robot import (
     ReachyDaemonBackend,
     ReachyMiniMicSource,
@@ -343,7 +343,7 @@ class Robot:
         self.motion = None
         if motion_backend is not None:
             self.motion = MotionController(
-                motion_backend, self.state, conversation_motion=True, speech_wobble=True, home_settle_seconds=0.0
+                motion_backend, self.state, conversation_motion=True, speech_wobble=True
             )
         self.voice = VoiceConversation(
             lambda: mic,
@@ -1064,6 +1064,10 @@ class MotionRecorder:
     def goto_home(self) -> None:
         self.calls.append(("home",))
 
+    def goto_pose(self, pose) -> None:
+        kind = {LISTEN_DURATION: "listen", THINK_DURATION: "think"}[pose["duration"]]
+        self.calls.append(("pose", kind))
+
     def set_speech_wobble(self, enabled: bool) -> None:
         self.calls.append(("wobble", enabled))
 
@@ -1077,14 +1081,13 @@ def test_conversation_drives_motion_and_a_stop_holds_without_going_home() -> Non
         await robot.connect()
         start = (await owner(hub, "POST", "/robot-voice/start", json={"robot_id": ROBOT_ID})).json()
         await wait_until(lambda: ("wobble", True) in motion.calls)
-        assert ("play", Behaviour.LISTENING) in motion.calls
-        assert ("play", Behaviour.THINKING) in motion.calls
-        assert motion.calls.index(("play", Behaviour.LISTENING)) < motion.calls.index(("play", Behaviour.THINKING))
+        assert motion.calls.index(("pose", "listen")) < motion.calls.index(("pose", "think"))
+        assert not any(call[0] == "play" for call in motion.calls)  # no recorded moves
         # The conversation owns motion: an explicit behaviour is refused.
         assert robot.motion.request_behaviour(Behaviour.GREETING, {}) is False
 
-        # Thinking started from home, since listening left the head away.
-        assert motion.calls.index(("home",)) < motion.calls.index(("play", Behaviour.THINKING))
+        # Speaking returned home from the thinking pose.
+        assert motion.calls.index(("pose", "think")) < motion.calls.index(("home",))
         homes = motion.calls.count(("home",))
         await owner(hub, "POST", "/robot-voice/stop", json={"voice_session_id": start["voice_session_id"]})
         assert player.stopped == 1

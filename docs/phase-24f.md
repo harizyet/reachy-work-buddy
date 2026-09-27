@@ -176,7 +176,10 @@ small controller within the service to a generic scheduling framework.
 | Stop/error/sleep | Cancel; no automatic return-home gesture after stop |
 
 Listening/thinking mappings are candidates, not automatic acceptance of the
-whole recorded move. Adaptive-turn uploads can leave the mic open: respect
+whole recorded move. The recorded candidates failed on the robot on
+2026-09-27 (a sound on every move, 4–6 s long), so conversation motion now
+uses silent goto poses; see the
+[ADR 0003 amendment](adr/0003-embodiment-command-api.md#conversation-poses-amendment-2026-09-27). Adaptive-turn uploads can leave the mic open: respect
 actual capture activity, not just the coarse THINKING label. Do not add a
 microphone pause, tail delay or motion on every held segment to hide motor noise.
 

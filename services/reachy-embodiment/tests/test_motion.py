@@ -1,6 +1,17 @@
+import random
 import threading
 
-from reachy_embodiment.motion import MotionController
+from reachy_embodiment.motion import (
+    LISTEN_DURATION,
+    MAX_ANTENNA,
+    MAX_PITCH,
+    MAX_ROLL,
+    MAX_YAW,
+    THINK_DURATION,
+    MotionController,
+    listening_pose,
+    thinking_pose,
+)
 from reachy_embodiment.state import ServiceState
 
 from shared.models.embodiment import Behaviour, EmbodimentState
@@ -10,11 +21,17 @@ THINKING = EmbodimentState.THINKING
 SPEAKING = EmbodimentState.SPEAKING
 
 
+_POSE_KINDS = {LISTEN_DURATION: "listen", THINK_DURATION: "think"}
+LISTEN = ("pose", "listen")
+THINK = ("pose", "think")
+
+
 class FakeBackend:
     def __init__(self) -> None:
         self.calls: list[tuple] = []
         self.gate: threading.Event | None = None
         self.entered = threading.Event()
+        self.poses: list[dict] = []
 
     def play_behaviour(self, name: Behaviour, parameters: dict[str, str]) -> None:
         self.entered.set()
@@ -28,6 +45,13 @@ class FakeBackend:
     def goto_home(self) -> None:
         self.calls.append(("home",))
 
+    def goto_pose(self, pose: dict) -> None:
+        self.entered.set()
+        if self.gate is not None:
+            self.gate.wait(5.0)
+        self.calls.append(("pose", _POSE_KINDS[pose["duration"]]))
+        self.poses.append(pose)
+
     def set_speech_wobble(self, enabled: bool) -> None:
         self.calls.append(("wobble", enabled))
 
@@ -36,7 +60,6 @@ def make(**kwargs) -> tuple[MotionController, FakeBackend, ServiceState]:
     backend = FakeBackend()
     state = ServiceState()
     kwargs.setdefault("threaded", False)
-    kwargs.setdefault("home_settle_seconds", 0.0)
     return MotionController(backend, state, **kwargs), backend, state
 
 
@@ -65,27 +88,55 @@ def test_begin_stops_a_move_started_before_the_conversation() -> None:
     assert step(ctl, backend) == [("stop",)]
 
 
-def test_gestures_once_per_turn_and_state() -> None:
+def test_each_state_goes_straight_to_its_pose() -> None:
     ctl, backend, _ = make(conversation_motion=True)
     token = ctl.begin_conversation()
     ctl.run_pending()
 
     ctl.conversation_state(token, 1, LISTENING)
-    assert step(ctl, backend) == [("play", Behaviour.LISTENING)]
-    # A gesture leaves the head at its own end pose, so the next one
-    # starts from home rather than jumping to its first frame.
+    assert step(ctl, backend) == [LISTEN]
+    # A goto starts from the current pose: no return home in between.
     ctl.conversation_state(token, 1, THINKING)
-    assert step(ctl, backend) == [("home",), ("play", Behaviour.THINKING)]
-    # Held segment: back to listening in the same turn returns home
-    # without replaying the listening gesture.
-    ctl.conversation_state(token, 1, LISTENING)
-    assert step(ctl, backend) == [("home",)]
-    ctl.conversation_state(token, 1, THINKING)
-    assert step(ctl, backend) == [("stop",)]  # already home
+    assert step(ctl, backend) == [THINK]
+    # Speaking has no pose, so the head returns home.
     ctl.conversation_state(token, 1, SPEAKING)
-    assert step(ctl, backend) == [("stop",)]
+    assert step(ctl, backend) == [("home",)]
     ctl.conversation_state(token, 2, LISTENING)
-    assert step(ctl, backend) == [("play", Behaviour.LISTENING)]
+    assert step(ctl, backend) == [LISTEN]
+    assert ("play", Behaviour.LISTENING) not in backend.calls  # no recorded, sounding move
+
+
+def test_held_segment_returns_to_the_same_turns_pose() -> None:
+    ctl, backend, _ = make(conversation_motion=True)
+    token = ctl.begin_conversation()
+    ctl.run_pending()
+    for state in (LISTENING, THINKING, LISTENING, THINKING):
+        ctl.conversation_state(token, 1, state)
+        ctl.run_pending()
+    assert backend.poses[2] == backend.poses[0]
+    assert backend.poses[3] == backend.poses[1]
+    ctl.conversation_state(token, 2, LISTENING)
+    ctl.run_pending()
+    # A new turn draws a new pose (the rng makes an identical one unlikely).
+    assert backend.poses[4] != backend.poses[0]
+
+
+def test_poses_vary_and_stay_within_bounds() -> None:
+    rng = random.Random(7)
+    for make_pose in (listening_pose, thinking_pose):
+        poses = [make_pose(rng) for _ in range(200)]
+        assert len({str(p) for p in poses}) > 150
+        for pose in poses:
+            head = pose["head_pose"]
+            assert abs(head["roll"]) <= MAX_ROLL
+            assert abs(head["pitch"]) <= MAX_PITCH
+            assert abs(head["yaw"]) <= MAX_YAW
+            assert (head["x"], head["y"], head["z"]) == (0.0, 0.0, 0.0)
+            assert all(abs(a) <= MAX_ANTENNA for a in pose["antennas"])
+            assert pose["body_yaw"] == 0.0
+            assert 0 < pose["duration"] <= 1.0
+        # Both sides are used.
+        assert {p["head_pose"]["roll"] > 0 for p in poses} == {True, False}
 
 
 def test_speaking_after_a_gesture_returns_home_before_wobble() -> None:
@@ -105,30 +156,6 @@ def test_conversation_start_after_an_explicit_behaviour_returns_home() -> None:
     assert step(ctl, backend) == [("home",)]
 
 
-def test_stop_during_the_return_home_cancels_the_next_gesture() -> None:
-    backend = FakeBackend()
-    ctl = MotionController(
-        backend, ServiceState(), conversation_motion=True, threaded=True, home_settle_seconds=5.0
-    )
-    try:
-        token = ctl.begin_conversation()
-        ctl.conversation_state(token, 1, LISTENING)
-        deadline = threading.Event()
-        while ("play", Behaviour.LISTENING) not in backend.calls and not deadline.wait(0.01):
-            pass
-        ctl.conversation_state(token, 1, THINKING)  # worker goes home, then waits
-        while backend.calls.count(("home",)) < 1 and not deadline.wait(0.01):
-            pass
-        stopper = threading.Thread(target=ctl.stop)
-        stopper.start()
-        stopper.join(2.0)
-        assert not stopper.is_alive()  # the wait ended at once, not after 5 s
-        assert ("play", Behaviour.THINKING) not in backend.calls
-        assert backend.calls[-1] == ("stop",)
-    finally:
-        ctl.close()
-
-
 def test_repeated_state_report_does_not_restart() -> None:
     ctl, backend, _ = make(conversation_motion=True)
     token = ctl.begin_conversation()
@@ -144,7 +171,7 @@ def test_rapid_transitions_coalesce_to_the_latest() -> None:
     token = ctl.begin_conversation()
     ctl.conversation_state(token, 1, LISTENING)
     ctl.conversation_state(token, 1, THINKING)
-    assert step(ctl, backend) == [("play", Behaviour.THINKING)]
+    assert step(ctl, backend) == [THINK]
 
 
 def test_explicit_behaviour_rejected_while_conversation_owns_motion() -> None:
@@ -275,7 +302,7 @@ def test_stop_waits_for_in_flight_play_then_stops_it() -> None:
         backend.gate.set()
         stopper.join(5.0)
         assert not stopper.is_alive()
-        assert backend.calls[-2:] == [("play", Behaviour.LISTENING), ("stop",)]
+        assert backend.calls[-2:] == [LISTEN, ("stop",)]
     finally:
         if backend.gate is not None:
             backend.gate.set()
@@ -299,7 +326,7 @@ def test_worker_does_not_block_the_caller() -> None:
         ctl.close()
     # Coalesced: THINKING was superseded by SPEAKING before it ran, then
     # close stopped everything.
-    assert ("play", Behaviour.THINKING) not in backend.calls
+    assert THINK not in backend.calls
     assert backend.calls[-1] == ("stop",)
 
 

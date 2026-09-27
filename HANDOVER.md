@@ -75,12 +75,15 @@ failures over 4 turns, but the owner stopped it: the recorded
 listening/thinking gestures are repetitive, too long (4.3 s and 5.9 s),
 and play a sound every time, which the mic captured as two `no_speech`
 turns. Every emotion move has a sound, and the daemon can't mute it.
-**Next:** replace listening/thinking with short, silent, bounded goto
-poses (small random variation, held until the state ends), with an ADR
-0003 amendment and mockup tests, tune the angles on the robot with the
-owner, then rerun step C once in full: the 22 questions, a Stop during
-thinking, and the 409 check. No 22-question script is stored; the 2026-09-27
-list is in this session's chat only, so commit one with the rerun.
+The silent goto poses are implemented (see the
+[ADR 0003 amendment](docs/adr/0003-embodiment-command-api.md#conversation-poses-amendment-2026-09-27)):
+embodiment tests pass, and a 1.8.4 mockup-sim daemon reached every pose
+with no move errors. **Next:** tune the pose signs and amplitudes on the
+robot with the owner watching (bounded REST gotos), set the constants in
+`motion.py`, build the embodiment image on the Nano, then rerun step C
+once in full with the
+[question script](docs/verification/phase-24f-physical-2026-09-27.md#question-script-for-the-step-c-rerun),
+a Stop during thinking, and the 409 check.
 
 [Phase 24f](docs/phase-24f.md) is in progress. Item 1 is measured on the
 Nano ([record](docs/verification/phase-24f-conformance-2026-09-25.md)).

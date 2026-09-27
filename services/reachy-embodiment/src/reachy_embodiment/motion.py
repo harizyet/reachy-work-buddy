@@ -13,13 +13,16 @@ turns collapse into one command. Each transition fully describes the
 motion wanted (gesture or none, speech wobble on or off), which is what
 makes dropping the superseded ones safe.
 
-A recorded gesture ends at its own final pose, and reachy-mini 1.8.4
-starts the next one from its first frame with no blend (24f conformance
-record). So while the head is away from home after a gesture, a
-conversation transition first returns it home: before the next gesture,
-or instead of a plain stop when no gesture follows (speech wobble then
-moves around home). Stop, standby, errors and a stopped conversation
-still only stop and hold, with no return home.
+Listening and thinking are short, silent goto poses held until the
+state changes, not recorded moves: every recorded emotion move plays a
+sound the daemon cannot mute, which the microphone captured as speech,
+and they run 4-6 s (24f physical record, 2026-09-27). A goto starts from
+the current pose, so poses follow each other with no return home. Each
+pose varies a little per turn, and returning to a state within the same
+turn reuses that turn's pose. When no pose follows (speaking), the head
+returns home, and speech wobble then moves around home. Stop, standby,
+errors and a stopped conversation still only stop and hold, with no
+return home.
 
 Both switches are off by default. With both off, ownership is not taken
 and every path behaves as before 24f.
@@ -28,6 +31,7 @@ and every path behaves as before 24f.
 from __future__ import annotations
 
 import logging
+import random
 import threading
 from collections.abc import Callable
 from typing import Protocol
@@ -38,16 +42,85 @@ from shared.models.motion import MotionSettings, MotionSettingsStatus
 
 log = logging.getLogger(__name__)
 
-# Candidates, per docs/phase-24f.md item 3. Speaking has no recorded move;
-# it uses the daemon's speech wobble when that switch is on.
-_CONVERSATION_GESTURES: dict[EmbodimentState, Behaviour] = {
-    EmbodimentState.LISTENING: Behaviour.LISTENING,
-    EmbodimentState.THINKING: Behaviour.THINKING,
-}
+# Conversation poses, in the daemon's units: head roll/pitch/yaw in
+# radians, antennas [right, left] in radians (home is [-0.1745, 0.1745]).
+# The stock controller stops 2-5 deg short of small targets (24f
+# conformance record), so these are sized to stay visible. Signs and
+# amplitudes are tuned on the robot with the owner watching.
+LISTEN_DURATION = 0.5
+LISTEN_ROLL = (0.08, 0.14)  # tilt to a random side
+LISTEN_YAW = 0.06  # +/- random
+LISTEN_ANTENNAS = (0.0, 0.0)  # perked from home
+THINK_DURATION = 0.8
+THINK_YAW = (0.15, 0.22)  # glance to a random side
+THINK_PITCH = -0.10  # glance up
+THINK_ROLL = (0.03, 0.06)  # against the glance
+THINK_ANTENNA_OFFSET = 0.30  # the glance side's antenna folds further back
+ANTENNA_JITTER = 0.05
 
-# How long a return home is given before the next gesture starts: the
-# backend's home goto takes 1.0 s.
-HOME_SETTLE_SECONDS = 1.2
+# Hard bounds every pose is clamped to, whatever the constants above say.
+MAX_ROLL = 0.20
+MAX_PITCH = 0.15
+MAX_YAW = 0.25
+MAX_ANTENNA = 0.60
+
+
+def _clamp(value: float, limit: float) -> float:
+    return max(-limit, min(limit, value))
+
+
+def _pose(roll: float, pitch: float, yaw: float, antennas: tuple[float, float], duration: float) -> dict[str, object]:
+    return {
+        "head_pose": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "roll": round(_clamp(roll, MAX_ROLL), 4),
+            "pitch": round(_clamp(pitch, MAX_PITCH), 4),
+            "yaw": round(_clamp(yaw, MAX_YAW), 4),
+        },
+        "antennas": [round(_clamp(a, MAX_ANTENNA), 4) for a in antennas],
+        "body_yaw": 0.0,
+        "duration": duration,
+    }
+
+
+def listening_pose(rng: random.Random) -> dict[str, object]:
+    side = rng.choice((-1, 1))
+    return _pose(
+        roll=side * rng.uniform(*LISTEN_ROLL),
+        pitch=0.0,
+        yaw=rng.uniform(-LISTEN_YAW, LISTEN_YAW),
+        antennas=(
+            LISTEN_ANTENNAS[0] + rng.uniform(-ANTENNA_JITTER, ANTENNA_JITTER),
+            LISTEN_ANTENNAS[1] + rng.uniform(-ANTENNA_JITTER, ANTENNA_JITTER),
+        ),
+        duration=LISTEN_DURATION,
+    )
+
+
+def thinking_pose(rng: random.Random) -> dict[str, object]:
+    side = rng.choice((-1, 1))
+    right, left = -0.1745, 0.1745
+    if side > 0:
+        left += THINK_ANTENNA_OFFSET
+    else:
+        right -= THINK_ANTENNA_OFFSET
+    return _pose(
+        roll=-side * rng.uniform(*THINK_ROLL),
+        pitch=THINK_PITCH * rng.uniform(0.8, 1.2),
+        yaw=side * rng.uniform(*THINK_YAW),
+        antennas=(right, left),
+        duration=THINK_DURATION,
+    )
+
+
+# Speaking has no pose; it uses the daemon's speech wobble when that
+# switch is on.
+_CONVERSATION_POSES: dict[EmbodimentState, Callable[[random.Random], dict[str, object]]] = {
+    EmbodimentState.LISTENING: listening_pose,
+    EmbodimentState.THINKING: thinking_pose,
+}
 
 
 class MotionBackend(Protocol):
@@ -56,6 +129,8 @@ class MotionBackend(Protocol):
     def stop_motion(self) -> None: ...
 
     def goto_home(self) -> None: ...
+
+    def goto_pose(self, pose: dict[str, object]) -> None: ...
 
     def set_speech_wobble(self, enabled: bool) -> None: ...
 
@@ -69,7 +144,7 @@ class MotionController:
         conversation_motion: bool = False,
         speech_wobble: bool = False,
         threaded: bool = True,
-        home_settle_seconds: float = HOME_SETTLE_SECONDS,
+        rng: random.Random | None = None,
     ) -> None:
         """`threaded=False` runs no worker; the caller drives it with
         `run_pending()` (deterministic tests)."""
@@ -85,18 +160,18 @@ class MotionController:
         self._generation = 0
         self._conversation: int | None = None
         self._last_state: EmbodimentState | None = None
-        self._gestured: set[tuple[int, EmbodimentState]] = set()
+        # This conversation's pose per (turn, state), so a held segment
+        # returns to the same listening pose.
+        self._turn_poses: dict[tuple[int, EmbodimentState], dict[str, object]] = {}
+        self._rng = rng or random.Random()
         self._pending: tuple[int, Callable[[], None]] | None = None
         self._wobbling = False
         self._closed = False
         self._threaded = threaded
         self._worker: threading.Thread | None = None
-        self._home_settle_seconds = home_settle_seconds
-        # True after a recorded move left the head at its own end pose;
+        # True after a pose or recorded move left the head away from home;
         # cleared by a return home. Only touched with `_dispatch_lock` held.
         self._away_from_home = False
-        # Generation of the transition the worker is running.
-        self._running_generation = 0
 
     def settings(self) -> MotionSettingsStatus:
         with self._lock:
@@ -134,7 +209,7 @@ class MotionController:
             token = self._generation
             self._conversation = token
             self._last_state = None
-            self._gestured.clear()
+            self._turn_poses.clear()
         if self.enabled:
             # A move started before the conversation must not keep playing.
             self._submit(token, lambda: self._transition(None, wobble=False))
@@ -149,14 +224,14 @@ class MotionController:
             self._last_state = state
             if self._state.remote_active:
                 return  # remote control owns the robot, not the conversation
-            gesture = None
-            if self._conversation_motion and state in _CONVERSATION_GESTURES and (turn, state) not in self._gestured:
-                # Once per turn: returning to LISTENING after a held segment
-                # stops the thinking gesture but does not replay attentive1.
-                self._gestured.add((turn, state))
-                gesture = _CONVERSATION_GESTURES[state]
+            pose = None
+            if self._conversation_motion and state in _CONVERSATION_POSES:
+                pose = self._turn_poses.get((turn, state))
+                if pose is None:
+                    pose = _CONVERSATION_POSES[state](self._rng)
+                    self._turn_poses[(turn, state)] = pose
             wobble = self._speech_wobble and state == EmbodimentState.SPEAKING
-            self._submit_locked(lambda: self._transition(gesture, wobble=wobble))
+            self._submit_locked(lambda: self._transition(pose, wobble=wobble))
 
     def end_conversation(self, token: int, *, completed: bool) -> None:
         """`completed` is a normal end (session limit reached). A stop,
@@ -197,7 +272,7 @@ class MotionController:
             self._pending = None
             self._conversation = None
             self._last_state = None
-            self._lock.notify_all()  # ends a worker's wait for a return home
+            self._lock.notify_all()
         with self._dispatch_lock:
             self._backend.stop_motion()
             self._set_wobble(False, force=True)
@@ -246,24 +321,19 @@ class MotionController:
             with self._lock:
                 if generation != self._generation:
                     return True  # superseded or stopped while waiting
-                self._running_generation = generation
             try:
                 action()
             except Exception:
                 log.exception("conversation motion failed")
         return True
 
-    def _transition(self, gesture: Behaviour | None, *, wobble: bool) -> None:
+    def _transition(self, pose: dict[str, object] | None, *, wobble: bool) -> None:
         """A conversation state change. Runs on the worker with
         `_dispatch_lock` held."""
         if not wobble:
             self._set_wobble(False)
-        if gesture is not None:
-            if self._away_from_home:
-                self._go_home()
-                if self._superseded_within(self._home_settle_seconds):
-                    return  # a newer transition or a stop took over
-            self._backend.play_behaviour(gesture, {})  # preempts our previous move
+        if pose is not None:
+            self._backend.goto_pose(pose)  # preempts our previous move
             self._away_from_home = True
         elif self._away_from_home and self._conversation_motion:
             self._go_home()
@@ -284,14 +354,6 @@ class MotionController:
     def _go_home(self) -> None:
         self._backend.goto_home()  # stops our previous move first
         self._away_from_home = False
-
-    def _superseded_within(self, seconds: float) -> bool:
-        """Waits up to `seconds`; True as soon as a newer transition, a
-        stop or close makes the running one stale."""
-        with self._lock:
-            return self._lock.wait_for(
-                lambda: self._generation != self._running_generation or self._closed, timeout=seconds
-            )
 
     def _set_wobble(self, enabled: bool, *, force: bool = False) -> None:
         # With the switch off we never enable it, so there is nothing to undo.

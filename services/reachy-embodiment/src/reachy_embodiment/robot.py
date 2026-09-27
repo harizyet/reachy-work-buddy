@@ -89,6 +89,12 @@ class RobotBackend(Protocol):
         Phase 24f; only the motion controller calls it."""
         ...
 
+    def goto_pose(self, pose: dict[str, object]) -> None:
+        """One bounded goto to a conversation pose (a `/move/goto` body),
+        held until the next move. Phase 24f; only the motion controller
+        calls it, with poses it has clamped."""
+        ...
+
     def set_speech_wobble(self, enabled: bool) -> None:
         """Switches the daemon's audio-reactive head motion. Phase 24f."""
         ...
@@ -155,6 +161,9 @@ class SimulatedRobotBackend:
 
     def goto_home(self) -> None:
         log.info("sim: goto home")
+
+    def goto_pose(self, pose: dict[str, object]) -> None:
+        log.info("sim: goto pose %s", pose)
 
     def set_speech_wobble(self, enabled: bool) -> None:
         log.info("sim: speech wobble %s", "on" if enabled else "off")
@@ -490,15 +499,24 @@ class ReachyDaemonBackend:
         """POST /move/goto with HOME_GOTO, after stopping our previous move.
         REST ignores `interpolation` (always min-jerk), so none is sent.
         Failures are logged like play_behaviour's."""
+        self._goto(HOME_GOTO, "goto_home")
+
+    def goto_pose(self, pose: dict[str, object]) -> None:
+        """POST /move/goto with `pose`, after stopping our previous move.
+        The goto starts from wherever the head is, so no return home is
+        needed first."""
+        self._goto(pose, "goto_pose")
+
+    def _goto(self, body: dict[str, object], what: str) -> None:
         with self._move_lock:
             self._stop_active_move_locked()
             try:
-                resp = self._client.post("/move/goto", json=HOME_GOTO)
+                resp = self._client.post("/move/goto", json=body)
                 resp.raise_for_status()
             except httpx.HTTPError as exc:
-                log.warning("goto_home failed: %s", exc)
+                log.warning("%s failed: %s", what, exc)
                 return
-            self._remember_move_locked(resp, "goto_home")
+            self._remember_move_locked(resp, what)
 
     def set_speech_wobble(self, enabled: bool) -> None:
         """POST /media/wobbling/enable or /disable. Disable also zeroes the

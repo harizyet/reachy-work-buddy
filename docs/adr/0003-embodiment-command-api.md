@@ -45,9 +45,9 @@ keep their roles. No transcript or LLM output selects a gesture.
   is active, the conversation sends no motion, because remote control owns
   the robot.
 - **Fencing.** Each conversation gets a token, so calls from a replaced
-  session are ignored. A gesture plays at most once per turn and state:
-  returning to listening after a held segment stops the thinking gesture
-  and does not replay the listening one. Repeated state reports do nothing.
+  session are ignored. Repeated state reports do nothing. (The original
+  once-per-turn gesture rule is superseded by the
+  [conversation poses amendment](#conversation-poses-amendment-2026-09-27).)
 - **Dispatch.** Transitions go to one worker thread, so the voice event loop
   never waits on the daemon. Only the latest transition is kept. Each
   transition states the complete motion wanted, so a dropped intermediate
@@ -66,7 +66,9 @@ keep their roles. No transcript or LLM output selects a gesture.
   move, and has no other safe lifecycle boundary to key one to. This means
   no motion is added beyond the existing unattended-start exception.
 
-- **Between gestures** (added after the 24f conformance run): a recorded
+- **Between gestures** (added after the 24f conformance run; superseded
+  for conversation motion by the
+  [conversation poses amendment](#conversation-poses-amendment-2026-09-27)): a recorded
   gesture ends at its own final pose, and 1.8.4 starts the next recorded
   move from its first frame without a blend. So while a gesture has left
   the head away from home, the next transition first returns home. Before
@@ -95,6 +97,38 @@ motion command. Values live in embodiment memory; a service restart reads
 `CONVERSATION_MOTION_ENABLED` and `SPEECH_WOBBLE_ENABLED` again, both off by
 default. This adds no persistent store or daemon restart path. The existing
 physical acceptance and supervision requirements still apply to playback.
+
+## Conversation poses amendment (2026-09-27)
+
+Status: accepted by the owner for implementation. Not yet physically
+accepted.
+
+Conversation listening and thinking use short, silent goto poses, not
+recorded moves. In the 2026-09-27 physical run
+([record](../verification/phase-24f-physical-2026-09-27.md)), the owner
+found `attentive1` and `thoughtful1` repetitive and too long (4.3 s and
+5.9 s) to tell when to speak. Every emotion move except `waiting` plays a
+sound, which 1.8.4's recorded-move endpoint cannot mute, and the
+microphone captured it as speech.
+
+- **Poses.** Each listening or thinking state sends one bounded
+  `/move/goto` to that state's pose, sent with fixed keys and explicit
+  body yaw, and holds it until the next transition. Listening is a small
+  head tilt with the antennas raised (0.5 s). Thinking is a glance up and to
+  one side with the antennas offset (0.8 s). The angles are constants in
+  `motion.py`, clamped to fixed bounds (roll 0.20, pitch 0.15, yaw 0.25,
+  antennas 0.60 rad), and tuned on the robot with the owner present.
+- **Variation.** The side and amplitudes are drawn per turn and state.
+  Returning to a state within the same turn (a held segment) reuses that
+  turn's pose.
+- **Transitions.** A goto starts from the present pose, so poses follow
+  one another directly. The 1.2 s return home before a recorded gesture
+  no longer applies to conversation motion. Speaking has no pose: the head
+  returns home, and wobble (if on) moves around it. Stop, fencing,
+  ownership, the 409 for explicit behaviours and the single return home at
+  a normal end are unchanged.
+- **Explicit behaviours** (`POST /behaviour/{name}`) keep their recorded
+  moves and sounds; this amendment changes conversation motion only.
 
 ## Context
 

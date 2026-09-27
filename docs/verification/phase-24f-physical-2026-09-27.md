@@ -68,3 +68,45 @@ self-capture. The mapping also misses the plan's own listening row,
 
 **Next:** replace the listening and thinking gestures with short, silent,
 bounded goto poses. Rerun step C once, in full, with the new poses.
+
+## Silent poses against the 1.8.4 mockup (not physical)
+
+`MotionController` with `ReachyDaemonBackend` was run against a local
+`reachy-mini-daemon --mockup-sim --no-media` on port 18000 through listening,
+thinking, a held segment, speaking, a second turn, and a Stop during
+thinking. Every pose was reached and held with nothing left running. The held
+segment returned to the same turn's listening pose, and speaking returned
+to home. A thinking goto preempted by speaking ended cleanly. The Stop left
+the head where it was, with no move running. The daemon logged no 500s or
+`KeyError`s. Mockup-sim has no motor dynamics, so this checks the command
+path, not how the poses look. Embodiment tests: 133 passed and 5 skipped. The
+poses validate against the daemon's own `GotoModelRequest`.
+
+## Question script for the step C rerun
+
+The step B questions from 2026-09-26 were not saved (the database keeps no
+transcripts), so the rerun uses this fixed script: short, public,
+non-search general-knowledge questions, asked one at a time.
+
+1. What's the capital of France?
+2. How many legs does a spider have?
+3. What colour do you get when you mix blue and yellow?
+4. Who wrote Romeo and Juliet?
+5. What's the largest planet in our solar system?
+6. How many days are there in a leap year?
+7. What gas do plants take in from the air?
+8. What's the boiling point of water in Celsius?
+9. Which ocean is the largest?
+10. How many sides does a hexagon have?
+11. What's the chemical symbol for gold?
+12. Who painted the Mona Lisa?
+13. What's the tallest animal in the world?
+14. How many continents are there?
+15. What's the freezing point of water in Fahrenheit?
+16. Which planet is known as the Red Planet?
+17. What's the main ingredient in guacamole?
+18. How many minutes are in an hour?
+19. What language is spoken in Brazil?
+20. What's the square root of sixty-four?
+21. Which bird is a symbol of peace?
+22. What do bees make?

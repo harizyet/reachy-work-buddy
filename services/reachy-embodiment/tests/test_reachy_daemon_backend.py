@@ -11,6 +11,7 @@ ReachyDaemonBackend is a first draft pending live verification.
 from __future__ import annotations
 
 import json
+import random
 import sys
 import wave
 from io import BytesIO
@@ -565,6 +566,38 @@ def test_goto_home_payload_is_the_184_wake_up_pose_with_explicit_body_yaw() -> N
     assert request.body_yaw == 0.0
     assert 0 < request.duration <= 2.0
     assert "interpolation" not in HOME_GOTO  # REST ignores it in 1.8.4
+
+
+def test_goto_pose_stops_previous_move_and_sends_the_pose() -> None:
+    from reachy_embodiment.motion import listening_pose
+
+    calls: list[tuple[str, object]] = []
+    backend = make_backend(_goto_daemon(calls))
+    pose = listening_pose(random.Random(1))
+
+    backend.play_behaviour(Behaviour.THINKING, {})
+    backend.goto_pose(pose)
+    backend.stop_motion()
+
+    assert [c[0] for c in calls] == ["play", "stop", "goto", "stop"]
+    assert calls[2] == ("goto", pose)
+    assert calls[3] == ("stop", "goto-1")
+
+
+def test_conversation_poses_validate_against_the_daemon_goto_model() -> None:
+    """In 1.8.4 a misspelled pose key silently validates as identity, so
+    check every field resolves to what was sent."""
+    move = pytest.importorskip("reachy_mini.daemon.app.routers.move")
+    models = pytest.importorskip("reachy_mini.daemon.app.models")
+    from reachy_embodiment.motion import listening_pose, thinking_pose
+
+    rng = random.Random(3)
+    for pose in (listening_pose(rng), thinking_pose(rng)):
+        request = move.GotoModelRequest.model_validate(pose)
+        assert isinstance(request.head_pose, models.XYZRPYPose)
+        assert request.head_pose.model_dump() == pose["head_pose"]
+        assert list(request.antennas) == pose["antennas"]
+        assert request.duration == pose["duration"]
 
 
 def test_goto_home_failure_is_logged_not_raised() -> None:
