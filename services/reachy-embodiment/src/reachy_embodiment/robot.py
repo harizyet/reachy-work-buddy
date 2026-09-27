@@ -99,10 +99,10 @@ class RobotBackend(Protocol):
         """Switches the daemon's audio-reactive head motion. Phase 24f."""
         ...
 
-    def play_rest_move(self, awake: bool) -> None:
-        """The daemon's own wake-up (`awake`, with its sound) or go-to-sleep
-        move, motors staying on. Phase 24g wake monitoring; only the motion
-        controller calls it."""
+    def play_goto_sleep(self) -> None:
+        """The daemon's own go-to-sleep move (with its sound), motors
+        staying on. Phase 24g wake monitoring; only the motion controller
+        calls it."""
         ...
 
     def capture_frame(self, max_width: int | None = None) -> bytes:
@@ -174,8 +174,8 @@ class SimulatedRobotBackend:
     def set_speech_wobble(self, enabled: bool) -> None:
         log.info("sim: speech wobble %s", "on" if enabled else "off")
 
-    def play_rest_move(self, awake: bool) -> None:
-        log.info("sim: %s", "wake up" if awake else "go to sleep")
+    def play_goto_sleep(self) -> None:
+        log.info("sim: go to sleep")
 
     def capture_frame(self, max_width: int | None = None) -> bytes:
         # No physical camera exists in this environment. The marker's
@@ -530,11 +530,11 @@ class ReachyDaemonBackend:
         needed first."""
         self._goto(pose, "goto_pose")
 
-    def play_rest_move(self, awake: bool) -> None:
-        """POST /move/play/wake_up or /move/play/goto_sleep, after stopping
-        our previous move. Unlike standby, sleep keeps the motors on and
-        the backend running. Failures are logged like play_behaviour's."""
-        name = "wake_up" if awake else "goto_sleep"
+    def play_goto_sleep(self) -> None:
+        """POST /move/play/goto_sleep, after stopping our previous move.
+        Unlike standby, sleep keeps the motors on and the backend running.
+        Failures are logged like play_behaviour's."""
+        name = "goto_sleep"
         with self._move_lock:
             self._stop_active_move_locked()
             try:

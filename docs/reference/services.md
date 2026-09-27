@@ -238,8 +238,8 @@ listening in the same session.
 `motion.py` (Phase 24f) is the single local motion owner. See the
 [ADR 0003 amendment](../adr/0003-embodiment-command-api.md#phase-24f-motion-ownership-amendment-2026-09-25).
 `CONVERSATION_MOTION_ENABLED` and `SPEECH_WOBBLE_ENABLED` are both off by
-default. Phase 24g's `WAKE_ANIMATION_ENABLED` (the daemon's own wake-up and
-go-to-sleep moves around wake monitoring) is on by default and moves only
+default. Phase 24g's `WAKE_ANIMATION_ENABLED` (the sleep pose between
+conversations and a silent alert pose on a detection) is on by default and moves only
 while wake listening is armed. While either 24f switch is on, a voice conversation owns motion and
 `POST /behaviour/{name}` answers 409. The motion itself is not physically
 accepted.

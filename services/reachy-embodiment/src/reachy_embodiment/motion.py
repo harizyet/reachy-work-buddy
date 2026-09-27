@@ -27,11 +27,16 @@ return home.
 Both switches are off by default. With both off, ownership is not taken
 and every path behaves as before 24f.
 
-Phase 24g adds a third switch, `wake_animation`: while wake monitoring is
-armed, the daemon's go-to-sleep move rests the robot between
-conversations and its wake-up move answers a detected wake phrase. These
-are the daemon's own full moves (wake-up plays its sound), so they are off
-by default like the others.
+Phase 24g adds a third switch, `wake_animation` (on by default, owner
+decision 2026-09-27): while wake monitoring is armed, the robot rests in
+the daemon's sleep pose between conversations, and a detected wake phrase
+lifts the head slightly to an alert pose as a quick, silent cue to go on
+speaking. Both are short gotos. The daemon's full wake-up routine plays a
+sound the microphone recorded into the candidate and lasts long enough
+that people waited for it and missed their window (24g first physical run),
+so it is not used. The daemon's own go-to-sleep routine, which plans a safe
+path but plays a sound every time, is used only when the head's pose is
+unknown; from the sleep or alert pose the return is one silent goto.
 """
 
 from __future__ import annotations
@@ -64,6 +69,23 @@ THINK_ROLL = (0.08, 0.11)  # against the glance
 THINK_ANTENNA_BACK = 0.50  # the glance side's antenna folds back
 THINK_ANTENNA_PERKED = 0.25  # the other one perks
 ANTENNA_JITTER = 0.05
+
+# Phase 24g rest poses, outside the conversation clamp below: the daemon's
+# own sleep pose (reachy_mini 1.8.4 SLEEP_HEAD_POSE, pitched down 0.426 rad,
+# and SLEEP_ANTENNAS_JOINT_POSITIONS), and an alert pose about a third of
+# the way from it towards home with the antennas lifted a little.
+SLEEP_POSE: dict[str, object] = {
+    "head_pose": {"x": -0.021, "y": 0.0, "z": -0.044, "roll": 0.0, "pitch": 0.4257, "yaw": 0.0},
+    "antennas": [-3.05, 3.05],
+    "body_yaw": 0.0,
+    "duration": 1.0,
+}
+ALERT_POSE: dict[str, object] = {
+    "head_pose": {"x": -0.014, "y": 0.0, "z": -0.029, "roll": 0.0, "pitch": 0.28, "yaw": 0.0},
+    "antennas": [-2.4, 2.4],
+    "body_yaw": 0.0,
+    "duration": 0.5,
+}
 
 # Hard bounds every pose is clamped to, whatever the constants above say.
 MAX_ROLL = 0.40
@@ -140,7 +162,7 @@ class MotionBackend(Protocol):
 
     def set_speech_wobble(self, enabled: bool) -> None: ...
 
-    def play_rest_move(self, awake: bool) -> None: ...
+    def play_goto_sleep(self) -> None: ...
 
 
 class MotionController:
@@ -182,6 +204,9 @@ class MotionController:
         # True after a pose or recorded move left the head away from home;
         # cleared by a return home. Only touched with `_dispatch_lock` held.
         self._away_from_home = False
+        # Phase 24g: "sleep" or "alert" while the head is known to hold that
+        # rest pose; any other motion or a stop forgets it.
+        self._rest_pose: str | None = None
 
     def settings(self) -> MotionSettingsStatus:
         with self._lock:
@@ -272,12 +297,13 @@ class MotionController:
         with self._dispatch_lock:
             self._backend.play_behaviour(behaviour, parameters)
             self._away_from_home = True
+            self._rest_pose = None
         return True
 
     def rest_move(self, awake: bool) -> bool:
-        """Phase 24g: wake up for a detected wake phrase, or go to sleep
-        while monitoring between conversations. Blocks until the daemon
-        accepts the move. False when the switch is off, or when a
+        """Phase 24g: the alert pose for a detected wake phrase, or the
+        sleep pose while monitoring between conversations. Blocks until the
+        daemon accepts the move. False when the switch is off, or when a
         conversation or remote control owns motion."""
         if not self._wake_animation:
             return False
@@ -289,9 +315,16 @@ class MotionController:
             self._lock.notify_all()
         with self._dispatch_lock:
             self._set_wobble(False)
-            self._backend.play_rest_move(awake)
-            # Wake-up ends at the daemon's home pose; sleep is away from it.
-            self._away_from_home = not awake
+            if awake:
+                self._backend.goto_pose(ALERT_POSE)
+                self._rest_pose = "alert"
+            elif self._rest_pose is not None:
+                self._backend.goto_pose(SLEEP_POSE)
+                self._rest_pose = "sleep"
+            else:
+                self._backend.play_goto_sleep()
+                self._rest_pose = "sleep"
+            self._away_from_home = True
         return True
 
     def stop(self) -> None:
@@ -306,6 +339,7 @@ class MotionController:
         with self._dispatch_lock:
             self._backend.stop_motion()
             self._set_wobble(False, force=True)
+            self._rest_pose = None
 
     def close(self) -> None:
         self.stop()
@@ -365,6 +399,7 @@ class MotionController:
         if pose is not None:
             self._backend.goto_pose(pose)  # preempts our previous move
             self._away_from_home = True
+            self._rest_pose = None
         elif self._away_from_home and self._conversation_motion:
             self._go_home()
         else:
@@ -384,6 +419,7 @@ class MotionController:
     def _go_home(self) -> None:
         self._backend.goto_home()  # stops our previous move first
         self._away_from_home = False
+        self._rest_pose = None
 
     def _set_wobble(self, enabled: bool, *, force: bool = False) -> None:
         # With the switch off we never enable it, so there is nothing to undo.

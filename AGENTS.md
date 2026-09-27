@@ -121,16 +121,20 @@ Wake and sleep animation around spoken wake listening is a further
 exception the owner explicitly decided, 2026-09-27, during 24g:
 "lets make animations enabled by default". On the designated production
 Nano, while the owner has armed "Hey Reachy", the robot may, unattended:
-- play the daemon's own go-to-sleep move (`/api/move/play/goto_sleep`,
-  motors on) between conversations;
-- play its wake-up move (`/api/move/play/wake_up`, with its sound) when the
-  wake phrase is detected.
+- rest in the daemon's sleep pose between conversations. It gets there with
+  the daemon's own go-to-sleep move (`/api/move/play/goto_sleep`, motors on,
+  with its sound) when the head's pose is unknown, and otherwise with one
+  silent goto to that pose;
+- lift its head slightly to the silent alert pose (one bounded goto) when
+  the wake phrase is detected. The owner chose this pose on 2026-09-27,
+  replacing the daemon's full wake-up move after the first physical run.
 
 `WAKE_ANIMATION_ENABLED` defaults to on; `false` in the robot env file
-turns it off. This covers only those two daemon moves, triggered only by
-armed wake monitoring. It is not a relaxation for any other move, for
-daemon start/restart/resume, or for development sessions, where playing
-them still needs the owner present per the next paragraph.
+turns it off. This covers only those rest moves, triggered only by armed
+wake monitoring. It is not a relaxation for any other move, for daemon
+start/restart/resume, or for development sessions. There, the daemon's
+go-to-sleep routine still needs the owner present, per the next paragraph;
+the silent gotos are bounded motion.
 
 Unattended development testing is allowed. The owner decided this
 explicitly on 2026-09-25, during 24f: "waive the safety rules to allow for

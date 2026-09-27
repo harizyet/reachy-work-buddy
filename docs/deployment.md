@@ -465,8 +465,8 @@ then advertises wake listening. It listens only while the owner has armed it
 from the hub's robot microphone panel, which stores the arm in Postgres
 (schema `009_wake_arm`). Upgrading an existing hub therefore needs the usual
 backup and migration job first. `WAKE_MODEL_PATH=` (empty) turns wake
-listening off on a robot. `WAKE_ANIMATION_ENABLED` plays the daemon's
-go-to-sleep and wake-up moves around it. It is on by default (owner
+listening off on a robot. `WAKE_ANIMATION_ENABLED` rests the robot in its
+sleep pose and lifts its head slightly on a detection. It is on by default (owner
 decision, 2026-09-27, [AGENTS.md](../AGENTS.md#verification-and-safety)) and
 moves the robot only while wake listening is armed. Setting it `false`
 keeps the robot still. Changing it needs `docker rm -f reachy-embodiment`

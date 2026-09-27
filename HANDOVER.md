@@ -50,14 +50,15 @@ Verified off the robot:
 - the pinned `ADD` lines, built on the Nano's Docker 20.10.7.
 
 Deployed 2026-09-27 (see machine state below). Not yet done:
-- **Physical run:** arm from the panel and run the 24g scenarios. The
-  wake-up move is a full animation with sound, so a development test of it
-  needs the owner present.
+- **Physical run:** the [first physical run](docs/verification/phase-24g-physical-2026-09-27.md) found
+  that the full wake-up move's sound and length broke candidates. The owner
+  replaced it with a silent alert pose, and the timings were revised
+  (speech measured without padding, 4 s for the request). That change needs
+  a hub rebuild (it sends the limits) and a robot image rebuild and
+  recreate, then the 24g scenarios again.
 
 `WAKE_ANIMATION_ENABLED` is on by default, including unattended production
-use while armed. This is an owner decision of 2026-09-27, recorded in
-AGENTS.md. The moves had not yet run on the robot in this flow when it was
-made.
+use while armed (owner decision, 2026-09-27, recorded in AGENTS.md).
 
 Scratch on the Nano: `~/24g-bench` (models, clips, wheels) and `~/24g-src`
 (source mounts for the detector check); both are disposable.

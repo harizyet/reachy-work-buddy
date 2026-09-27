@@ -156,6 +156,10 @@ These are dated evidence, not startup instructions or current health checks.
   model is cheap but caught 4 of 15 synthetic phrases; after a live session
   with the owner it was selected as the initial detector.
 
+- [Phase 24g first physical run](verification/phase-24g-physical-2026-09-27.md):
+  8 of 8 wake phrases detected, but the full wake-up move's sound and
+  length broke most candidates; replaced by a silent alert pose.
+
 - [Phase 24f motion conformance](verification/phase-24f-conformance-2026-09-25.md):
   Nano versions, predeclared tolerances, supervised REST vs SDK run; paths
   agree; robot stops 2–5° short on both, normal vs fault still open.

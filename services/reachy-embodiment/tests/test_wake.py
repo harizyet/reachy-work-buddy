@@ -18,7 +18,7 @@ import time
 import httpx
 import numpy as np
 import websockets
-from reachy_embodiment.motion import MotionController
+from reachy_embodiment.motion import ALERT_POSE, SLEEP_POSE, MotionController
 from reachy_embodiment.robot import ReachyDaemonBackend
 from reachy_embodiment.robot_ws_client import RobotWSClient
 from reachy_embodiment.state import ServiceState
@@ -218,7 +218,7 @@ def test_wake_then_silence_is_discarded_on_the_robot() -> None:
         mic.push(np.concatenate([silence(1.0), wake_phrase(), silence(0.6)]))
         await wait_until(lambda: motion.moves == ["sleep", "wake"])
         await asyncio.sleep(0.05)
-        clock.now += 2.9  # still inside the speech-start allowance
+        clock.now += 3.9  # still inside the speech-start allowance
         await asyncio.sleep(0.05)
         assert mic.starts == 1
         clock.now += 0.2
@@ -473,13 +473,13 @@ class RecordingBackend:
         self.calls.append("home")
 
     def goto_pose(self, pose) -> None:
-        self.calls.append("pose")
+        self.calls.append("alert" if pose == ALERT_POSE else "sleep" if pose == SLEEP_POSE else "pose")
 
     def set_speech_wobble(self, enabled: bool) -> None:
         self.calls.append(f"wobble {enabled}")
 
-    def play_rest_move(self, awake: bool) -> None:
-        self.calls.append("wake_up" if awake else "goto_sleep")
+    def play_goto_sleep(self) -> None:
+        self.calls.append("goto_sleep")
 
 
 def test_rest_moves_need_the_switch_and_yield_to_a_conversation_or_remote_control() -> None:
@@ -489,8 +489,12 @@ def test_rest_moves_need_the_switch_and_yield_to_a_conversation_or_remote_contro
 
     state = ServiceState(connected=True, sim=True)
     motion = MotionController(backend, state, wake_animation=True, conversation_motion=True, threaded=False)
-    assert motion.rest_move(False) and motion.rest_move(True)
-    assert backend.calls == ["goto_sleep", "wake_up"]
+    # From an unknown pose the daemon's own routine plans the way down;
+    # after that, the alert cue and the return are silent gotos.
+    assert motion.rest_move(False) and motion.rest_move(True) and motion.rest_move(False)
+    assert backend.calls == ["goto_sleep", "alert", "sleep"]
+    motion.stop()  # any other motion forgets the rest pose
+    assert motion.rest_move(False) and backend.calls[-1] == "goto_sleep"
 
     token = motion.begin_conversation()
     assert motion.rest_move(False) is False
@@ -500,7 +504,7 @@ def test_rest_moves_need_the_switch_and_yield_to_a_conversation_or_remote_contro
     motion.close()
 
 
-def test_daemon_rest_moves_use_the_daemons_own_routes() -> None:
+def test_daemon_go_to_sleep_uses_the_daemons_own_route() -> None:
     paths: list[str] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -508,10 +512,8 @@ def test_daemon_rest_moves_use_the_daemons_own_routes() -> None:
         return httpx.Response(200, json={"uuid": "move-1"})
 
     backend = ReachyDaemonBackend("http://daemon:8000", transport=httpx.MockTransport(handler))
-    backend.play_rest_move(False)
-    backend.play_rest_move(True)
-    assert paths[0] == "/api/move/play/goto_sleep"
-    assert paths[-1] == "/api/move/play/wake_up"
+    backend.play_goto_sleep()
+    assert paths == ["/api/move/play/goto_sleep"]
 
 
 def test_wake_animation_is_on_by_default_and_the_env_file_can_turn_it_off(monkeypatch) -> None:

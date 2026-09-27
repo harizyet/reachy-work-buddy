@@ -3,8 +3,9 @@
 Runs only while the hub has armed this robot over the control socket, no
 voice session is running and the daemon is up. The microphone feeds a local
 keyword detector; audio stays in a short ring buffer that is continuously
-overwritten. A detection starts a candidate: the robot plays the wake-up
-move (with the `wake_animation` switch on), then captures the wake phrase
+overwritten. A detection starts a candidate: the robot lifts its head to
+the silent alert pose (with the `wake_animation` switch on), a cue to go
+on speaking, and captures the wake phrase
 from the ring buffer together with the request that follows it. When the
 first segment is too short to hold more than the phrase, the robot waits
 up to `speech_start_seconds` for the request; silence discards the
@@ -336,8 +337,13 @@ class WakeMonitor:
     async def _capture_candidate(
         self, microphone: MicSource, ring: np.ndarray, vad: ChunkVAD, limits: WakeLimits
     ) -> np.ndarray | None:
-        segmenter = UtteranceSegmenter(vad, VoiceLimits(max_utterance_seconds=limits.max_candidate_seconds))
+        segment_limits = VoiceLimits(max_utterance_seconds=limits.max_candidate_seconds)
+        segmenter = UtteranceSegmenter(vad, segment_limits)
         segmenter.reset()
+        # A segment carries the pre-roll before speech and the end-of-speech
+        # silence after it; "Hey Reachy" alone is about a second of each
+        # plus under a second of speech.
+        padding = (segment_limits.pre_roll_ms + segment_limits.end_of_speech_silence_ms) / 1000
         deadline = self._clock() + limits.max_candidate_seconds
         first = await asyncio.to_thread(segmenter.feed, ring)
         if first is None:
@@ -345,7 +351,7 @@ class WakeMonitor:
         if first is None:
             return None
         parts = [first]
-        if len(first) / SAMPLE_RATE < limits.min_request_seconds:
+        if len(first) / SAMPLE_RATE - padding < limits.min_request_seconds:
             # Only the phrase so far: a natural pause before the request.
             segmenter.limit(max(0.1, limits.max_candidate_seconds - len(first) / SAMPLE_RATE))
             second = await self._segment(

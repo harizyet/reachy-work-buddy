@@ -66,11 +66,12 @@ class WakeLimits(BaseModel):
 
     # Detector score that starts a candidate.
     detection_threshold: float = Field(0.7, gt=0, le=1)
-    # A first segment shorter than this is taken to hold only the wake
-    # phrase, so the robot waits for the request that follows it.
-    min_request_seconds: float = Field(1.6, ge=0, le=5)
-    # How long after the wake phrase the request may start.
-    speech_start_seconds: float = Field(3.0, gt=0, le=10)
+    # A first segment with less speech than this (pre-roll and trailing
+    # silence not counted) is taken to hold only the wake phrase, so the
+    # robot waits for the request that follows it.
+    min_request_seconds: float = Field(1.2, ge=0, le=5)
+    # How long after the wake phrase's segment ends the request may start.
+    speech_start_seconds: float = Field(4.0, gt=0, le=10)
     # Cap on the whole candidate, wake phrase included.
     max_candidate_seconds: float = Field(10.0, gt=0, le=15)
     # A wake-started session ends when no speech starts this long after

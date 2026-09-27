@@ -47,9 +47,10 @@ records:
   candidate filters. Phase 25's pre-STT attribution gate will run before that
   upload.
 
-- **Animation and follow-up:** a detected wake phrase plays the wake-up
-  animation, and the robot rests in its sleep pose while armed and not
-  conversing. This replaces the "no large animation before admission"
+- **Animation and follow-up:** a detected wake phrase lifts the head
+  slightly to a silent alert pose. It replaced the full wake-up move after
+  the [first physical run](verification/phase-24g-physical-2026-09-27.md).
+  The robot rests in its sleep pose while armed and not conversing. This replaces the "no large animation before admission"
   guidance below. A wake-started session ends when no further turn starts
   within 10 s.
 

@@ -274,10 +274,15 @@ ADR permits no unattended or default-on capture.
    therefore reaches the homelab's STT process. It never reaches core,
    tools, the owner panel, logs or storage. This replaces Phase 24g's
    provisional no-STT-before-admission rule.
-4. **Wake and sleep animation, and a 10 s follow-up.** A detected wake
-   phrase plays the wake-up animation. While monitoring is armed and no
-   conversation is running, the robot rests in its sleep pose. A
+4. **Wake and sleep animation, and a 10 s follow-up.** While monitoring
+   is armed and no conversation is running, the robot rests in its sleep
+   pose. A detected wake phrase lifts the head slightly, as a quick cue
+   that Reachy is awake and waiting for the rest of the turn. A
    wake-started session ends when no further turn starts within 10 s.
+   - The first design played the daemon's full wake-up move. After the
+     [first physical run](../verification/phase-24g-physical-2026-09-27.md)
+     the owner replaced it with this lighter pose, the same day.
+   - The animation is on by default (the owner's decision).
 
 **Decision.**
 
@@ -326,16 +331,23 @@ ADR permits no unattended or default-on capture.
     (cough, sneeze, laughter) is deferred to calibration on robot audio.
     The measured candidate is YAMNet, so non-speech that passes the VAD is
     rejected by the hub's relevance rules.
-- **Animation.** With `WAKE_ANIMATION_ENABLED` on the robot, a detection
-  plays the daemon's own wake-up move while the candidate is captured.
-  Monitoring rests the robot with the daemon's go-to-sleep move before it
-  listens, and again after every candidate or conversation. Neither move
-  de-torques the motors, unlike standby.
-  - Both moves go through the motion controller, and yield to
-    conversation motion and remote control.
-  - The switch is on by default (owner decision, 2026-09-27, below).
-  - The wake-up move plays the daemon's own sound, which the microphone
-    hears during capture. Its effect on candidates is a calibration item.
+- **Animation.** With `WAKE_ANIMATION_ENABLED` on the robot (the
+  default):
+  - **Cue:** a detection lifts the head to a silent alert pose while the
+    candidate is captured. It is one 0.5 s goto, about a third of the way
+    from the sleep pose to home, with the antennas lifted a little.
+  - **Rest:** monitoring rests the robot in the daemon's sleep pose before
+    it listens, and again after every candidate or conversation. From the
+    sleep or alert pose, that is one silent goto. From an unknown pose,
+    the daemon's own go-to-sleep routine plans the way down; it plays its
+    sound every time.
+  - **Motors:** no rest move de-torques them, unlike standby.
+  - **Arbitration:** all rest moves go through the motion controller, and
+    yield to conversation motion and remote control.
+  - **Why not the full move:** the daemon's wake-up move is not used. In
+    the [first physical run](../verification/phase-24g-physical-2026-09-27.md),
+    its sound went into the candidate, and speakers waited for it and
+    missed their window.
 - **Hub admission.** The robot uploads a candidate to
   `POST /robot-media/wake-candidate` with its ADR 0019 credential, its
   connection generation and the arm ID.
@@ -377,8 +389,9 @@ ADR permits no unattended or default-on capture.
 - **Starting values** (`WakeLimits`, calibration defaults to confirm before
   acceptance per [Phase 24g](../phase-24g.md#verification-and-exit-criteria)):
   - detection threshold 0.7;
-  - a first segment under 1.6 s holds only the phrase;
-  - 3 s for the request to start;
+  - a first segment with under 1.2 s of speech (not counting its pre-roll
+    and trailing silence) holds only the phrase;
+  - 4 s after that segment for the request to start;
   - 10 s maximum candidate;
   - 10 s follow-up (the owner's value).
 
@@ -395,11 +408,10 @@ ADR permits no unattended or default-on capture.
 - **Access.** While monitoring is armed, anyone in the room can hold a
   spoken conversation within the existing gates. The owner accepted this
   on 2026-09-27. Disarming is the privacy control.
-- **Motion.** The wake-up move is a full animation with sound. On
-  2026-09-27 the owner made `WAKE_ANIMATION_ENABLED` the default, including
-  unattended production use on the designated Nano while wake listening is
-  armed. This is a narrow exception recorded in
-  [AGENTS.md](../../AGENTS.md#verification-and-safety).
-  - Testing it in a development session still needs the owner present.
-  - It was enabled before any physical run of these moves in this flow, so
-    the first physical 24g run is also its first physical check.
+- **Motion.** On 2026-09-27 the owner made `WAKE_ANIMATION_ENABLED` the
+  default, including unattended production use on the designated Nano
+  while wake listening is armed. This is a narrow exception recorded in
+  [AGENTS.md](../../AGENTS.md#verification-and-safety). The daemon's
+  go-to-sleep routine is a full animation with sound, so testing it in a
+  development session still needs the owner present. The alert and sleep
+  gotos are bounded motion.
