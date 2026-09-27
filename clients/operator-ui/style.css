@@ -103,6 +103,9 @@ fieldset {
   border-radius:12px;
   padding:24px
 }
+#accounts-pane > .card + .card {
+  margin-top:24px
+}
 .login {
   max-width:430px;
   margin:60px auto

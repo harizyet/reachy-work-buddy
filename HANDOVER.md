@@ -7,6 +7,11 @@ acceptance. This file holds only session continuation details.
 
 ## Current work
 
+**Settings UI cleanup (2026-09-27):** conversational animations and connected
+accounts now occupy separate cards in Settings · Accounts. Local Chromium
+checks passed at mobile/desktop widths, as did the three existing Accounts/
+animation browser tests and Ruff. This UI change has not been deployed.
+
 **[Phase 24e](docs/phase-24e.md) closed by owner re-scope (2026-09-27).**
 Everything it built is deployed. Most of its rows passed on the robot with
 the owner:
