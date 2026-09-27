@@ -96,15 +96,33 @@ The owner also switched the 24f motion on for a session and reported it
 behaved as expected. That is an observation, not 24f acceptance. The
 motion switches reset to off on the next embodiment restart.
 
-**Next:**
-1. The owner recreates the embodiment container on `a9baf002` (`c579cc8`):
-   `sudo systemctl stop reachy-embodiment && docker rm reachy-embodiment
-   && scripts/start-reachy.sh --no-browser`. No hub rebuild is needed.
-2. Check, with 24f motion off, that an admitted conversation brings the
-   head home. The daemon's access log should show a goto right after the
-   alert, and `wake candidate admitted` in the embodiment log.
-3. Then run the 24g scenarios as acceptance rows. Agree numeric targets
-   first (see the exit criteria).
+**Home on admission: confirmed on the robot, `c579cc8` running since
+10:57:45Z.** The daemon's access log shows a goto right after each
+`wake candidate admitted` (11:05:12.9Z and 11:06:28.7Z), before the later
+sleep return. No further action needed on this item.
+
+**Next: run the 24g acceptance scenarios (the phase's remaining gate).**
+1. Agree numeric targets with the owner first (see
+   [exit criteria](docs/phase-24g.md#verification-and-exit-criteria)):
+   false conversations/hour, genuine-turn acceptance rate, added latency,
+   and the trial design (independent trials, observation duration,
+   calibration vs. held-out).
+2. Run every scenario in the
+   [acceptance requirements](docs/phase-24g.md#acceptance-requirements)
+   list (coughs, sneezes, TV/podcast speech, nearby conversation, false
+   wake + continued talk, wake + silence, genuine immediate and
+   naturally-paused requests, etc.), each checked against the rejected-
+   candidate isolation list (no session, no TTS, no tools/search, no
+   durable transcript, discarded audio, robot returns to its prior state).
+3. Record wake candidates/hour, false conversations admitted/hour,
+   exposure hours, scenario counts, false rejects and p50/p95 admission
+   latency in a new dated
+   `docs/verification/phase-24g-<date>.md`, separating fixture/real-
+   process/physical evidence.
+4. While at it, do a live check of the shortened privacy window
+   (`56f65dc`): ask a calendar question, then ~7-8 unrelated follow-ups,
+   and confirm the speaker un-mutes instead of staying silent for ~19
+   turns.
 
 Scratch on the Nano: `~/24g-bench` (models, clips, wheels) and `~/24g-src`
 (source mounts for the detector check); both are disposable.
