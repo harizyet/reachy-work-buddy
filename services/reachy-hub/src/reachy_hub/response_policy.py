@@ -26,11 +26,14 @@ def resolve_delivery_channel(mode: InteractionMode, active_channel: Channel) -> 
         return active_channel if active_channel != Channel.REACHY else Channel.WEB
     if mode == InteractionMode.REMOTE:
         return Channel.PHONE
+    if mode == InteractionMode.TRUSTED:
+        return Channel.REACHY
     raise ValueError(f"unhandled interaction mode: {mode!r}")
 
 
 # Privacy levels that must never be spoken aloud through Reachy's speaker,
-# regardless of mode. Desk mode is nominally "private room" (docs/plan.md
+# regardless of mode except TRUSTED (2026-09-27 addendum, see
+# apply_privacy_override). Desk mode is nominally "private room" (docs/plan.md
 # §4), but the routing table is explicit that sensitive/work-private
 # content goes to "a private channel only" — a blanket rule, not one
 # conditioned on an assumption about the room the robot happens to be in
@@ -38,7 +41,9 @@ def resolve_delivery_channel(mode: InteractionMode, active_channel: Channel) -> 
 _NEVER_SPOKEN_ALOUD = frozenset({Privacy.SENSITIVE, Privacy.WORK_PRIVATE})
 
 
-def apply_privacy_override(base_channel: Channel, privacy: Privacy, active_channel: Channel) -> Channel:
+def apply_privacy_override(
+    base_channel: Channel, privacy: Privacy, active_channel: Channel, mode: InteractionMode
+) -> Channel:
     """Phase 9 (ADR 0006): a second, separate function from
     resolve_delivery_channel, not a modified version of it — that function's
     signature (mode, active_channel only) is itself a structural guarantee
@@ -47,7 +52,18 @@ def apply_privacy_override(base_channel: Channel, privacy: Privacy, active_chann
     authority" clause: it can veto a mode-driven Reachy delivery, but it
     never has the power to introduce Reachy delivery that resolve_delivery_channel
     didn't already choose.
+
+    TRUSTED mode (2026-09-27 addendum) is the one exception: the owner has
+    declared this room/session exempt from the work-private/sensitive veto,
+    so this returns base_channel unchanged regardless of privacy. This is
+    the only mode-conditioned branch in this function, deliberately narrow —
+    it does not touch _NEVER_SPOKEN_ALOUD's meaning for any other mode, and
+    has no bearing on ADR 0011's destructive-action consent rules, which
+    live entirely in companion_core/consent/gate.py and are untouched by
+    interaction_mode.
     """
+    if mode == InteractionMode.TRUSTED:
+        return base_channel
     if base_channel == Channel.REACHY and privacy in _NEVER_SPOKEN_ALOUD:
         return active_channel if active_channel != Channel.REACHY else Channel.WEB
     return base_channel

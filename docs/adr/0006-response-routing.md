@@ -157,3 +157,32 @@ except conversation history, whose labels still carry as described above,
 so dropping the reply check does not let earlier calendar, email or
 sensitive content reach the speaker. Tool and memory branches keep their
 own labels.
+
+## Trusted mode exempts the privacy veto (2026-09-27)
+
+**Decision (owner, 2026-09-27):** a fifth `InteractionMode`, `TRUSTED`,
+lets the owner declare a session's current room/situation fully private,
+so work-private/sensitive content is spoken on Reachy's speaker instead of
+being vetoed to a text channel. `resolve_delivery_channel` treats it like
+Desk (routes to Reachy); `apply_privacy_override` gained a `mode`
+parameter purely to special-case it — when `mode == TRUSTED` it returns
+`base_channel` unchanged, before the existing `_NEVER_SPOKEN_ALOUD` check
+runs. This includes the forced-`WORK_PRIVATE` briefing path
+(`app.py`'s `check_reminders`/proactive-briefing call sites) — a briefing
+is spoken in full in Trusted mode, same as any other reply.
+
+Deliberately unaffected:
+
+- `robot_speech_withheld_reason`'s `dnd`/`PrivacyContext.MEETING` vetoes
+  are a separate, ambient-context mechanism (room occupancy, not content
+  classification) and are out of scope for this change.
+- ADR 0011's destructive-action consent rules (voice can never confirm a
+  destructive action; bulk actions are always blocked) are untouched —
+  they live in `companion_core/consent/gate.py`, have no
+  `interaction_mode` input, and this addendum does not give any mode
+  authority over them.
+- Trusted mode is settable only via the operator UI's `PATCH
+  /sessions/{user_id}/mode` (same auth-gated endpoint as the other four
+  modes) — deliberately not exposed through any spoken/text command in
+  `companion_core.commands.parser`, so declaring a room trusted always
+  requires the owner at the web UI, never a voice utterance.

@@ -7,12 +7,21 @@ from pydantic import BaseModel, Field
 
 
 class InteractionMode(StrEnum):
-    """See docs: section 4, Primary operating modes."""
+    """See docs: section 4, Primary operating modes.
+
+    TRUSTED (docs/adr/0006-response-routing.md addendum, 2026-09-27): like
+    DESK for base routing, but exempt from apply_privacy_override — content
+    classified work-private/sensitive is still spoken on Reachy's speaker.
+    Settable only from the operator UI, never from a spoken/text command
+    (docs/adr/0011's voice-exclusion and bulk-block rules are unaffected —
+    this mode changes nothing about destructive-action consent).
+    """
 
     DESK = "desk"
     OFFICE = "office"
     SILENT = "silent"
     REMOTE = "remote"
+    TRUSTED = "trusted"
 
 
 class Channel(StrEnum):

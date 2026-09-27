@@ -107,6 +107,30 @@ false conversations ≤1/2h (held-out), genuine-turn acceptance ≥90%, added
 admission latency p50≤1.5s/p95≤3s, one calibration session then one
 held-out session, both with 24f motion off.
 
+**New `Trusted` interaction mode added (2026-09-27), not yet deployed.**
+Owner asked for a mode where Reachy answers everything spoken, with no
+privacy-centric restrictions. Scoped with the owner to exactly one thing:
+`apply_privacy_override` (ADR 0006) no longer vetoes work-private/sensitive
+content to a text channel when `session.interaction_mode == TRUSTED` —
+everything else is untouched, confirmed with the owner explicitly:
+- ADR 0011's destructive-action consent (voice can never confirm a
+  destructive action; bulk always blocked) is unaffected — it has no
+  `interaction_mode` input at all.
+- `robot_speech_withheld_reason`'s DND/meeting vetoes (ambient room
+  occupancy, not content classification) are unaffected — out of scope.
+- Settable only from the operator UI's mode selector (`PATCH
+  /sessions/{user_id}/mode`), never from a spoken/text command — owner was
+  explicit trusted mode must not be reachable via `/reachy ...` parsing.
+
+See the [ADR 0006 addendum](docs/adr/0006-response-routing.md#trusted-mode-exempts-the-privacy-veto-2026-09-27).
+Changed: `shared/models/session.py` (new enum member),
+`reachy_hub/response_policy.py` (`apply_privacy_override` gained a `mode`
+param), the four call sites in `reachy_hub/app.py`, operator-ui's mode
+`<select>`, and `docs/plan.md`'s mode table. Full `pytest services shared`
+(813 passed) and Ruff pass locally. Not yet deployed to the homelab or
+exercised on the robot — needs a rebuild/redeploy of reachy-hub and a live
+operator-UI check before the owner tries it.
+
 **Next: run the 24g acceptance scenarios (the phase's remaining gate).**
 1. Run every scenario in the
    [acceptance requirements](docs/phase-24g.md#acceptance-requirements)

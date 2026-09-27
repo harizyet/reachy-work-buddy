@@ -985,7 +985,9 @@ def create_app(
         results: list[ReminderRoutingResult] = []
         for notification in queued:
             base_channel = resolve_delivery_channel(session.interaction_mode, session.active_channel)
-            delivery_channel = apply_privacy_override(base_channel, notification.privacy, session.active_channel)
+            delivery_channel = apply_privacy_override(
+                base_channel, notification.privacy, session.active_channel, session.interaction_mode
+            )
 
             await app.state.audit_log.record(
                 user_id=user_id,
@@ -1039,7 +1041,9 @@ def create_app(
             privacy = Privacy(reminder["privacy"])
             urgency = Urgency(reminder["urgency"])
             base_channel = resolve_delivery_channel(session.interaction_mode, session.active_channel)
-            delivery_channel = apply_privacy_override(base_channel, privacy, session.active_channel)
+            delivery_channel = apply_privacy_override(
+                base_channel, privacy, session.active_channel, session.interaction_mode
+            )
 
             action = decide_action(
                 occupied=occupied,
@@ -1157,7 +1161,11 @@ def create_app(
         # check_reminders uses to keep aggregated work data off Reachy's
         # speaker regardless of mode — a briefing is inherently a work-data
         # aggregate, not classified per-item privacy at delivery time.
-        delivery_channel = apply_privacy_override(base_channel, Privacy.WORK_PRIVATE, session.active_channel)
+        # ("Regardless of mode" excepts TRUSTED, per apply_privacy_override's
+        # 2026-09-27 addendum.)
+        delivery_channel = apply_privacy_override(
+            base_channel, Privacy.WORK_PRIVATE, session.active_channel, session.interaction_mode
+        )
 
         await app.state.audit_log.record(
             user_id=user_id,
@@ -1218,7 +1226,9 @@ def create_app(
 
         privacy = Privacy(result["privacy"])
         base_channel = resolve_delivery_channel(session.interaction_mode, session.active_channel)
-        delivery_channel = apply_privacy_override(base_channel, privacy, session.active_channel)
+        delivery_channel = apply_privacy_override(
+            base_channel, privacy, session.active_channel, session.interaction_mode
+        )
 
         await app.state.audit_log.record(
             user_id=message.user_id,

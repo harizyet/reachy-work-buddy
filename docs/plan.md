@@ -143,6 +143,7 @@ reachy-work-companion/
 | Office | Reachy or phone | Phone preferred | Open office |
 | Silent | Text/PTT | Text | Meetings / quiet work |
 | Remote | Phone/web | Phone/web + robot control | Travel / overseas |
+| Trusted | Reachy microphone | Reachy speaker, no privacy veto | Owner-declared fully-private room (web-only toggle; see [ADR 0006 addendum](adr/0006-response-routing.md#trusted-mode-exempts-the-privacy-veto-2026-09-27)) |
 
 ### Response routing
 

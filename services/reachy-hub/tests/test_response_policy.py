@@ -26,6 +26,10 @@ def test_silent_mode_falls_back_to_web_if_active_channel_is_reachy() -> None:
     assert resolve_delivery_channel(InteractionMode.SILENT, Channel.REACHY) == Channel.WEB
 
 
+def test_trusted_mode_routes_to_reachy() -> None:
+    assert resolve_delivery_channel(InteractionMode.TRUSTED, Channel.TELEGRAM) == Channel.REACHY
+
+
 def test_policy_is_pure_and_ignores_anything_but_mode_and_channel() -> None:
     """The exit criterion, structurally: the function has no parameter for
     response content, so it cannot possibly route based on what was said."""
@@ -39,23 +43,52 @@ def test_policy_is_pure_and_ignores_anything_but_mode_and_channel() -> None:
 
 
 def test_sensitive_content_is_never_routed_to_reachy() -> None:
-    assert apply_privacy_override(Channel.REACHY, Privacy.SENSITIVE, Channel.TELEGRAM) == Channel.TELEGRAM
+    assert (
+        apply_privacy_override(Channel.REACHY, Privacy.SENSITIVE, Channel.TELEGRAM, InteractionMode.DESK)
+        == Channel.TELEGRAM
+    )
 
 
 def test_work_private_content_is_never_routed_to_reachy() -> None:
-    assert apply_privacy_override(Channel.REACHY, Privacy.WORK_PRIVATE, Channel.WEB) == Channel.WEB
+    assert (
+        apply_privacy_override(Channel.REACHY, Privacy.WORK_PRIVATE, Channel.WEB, InteractionMode.DESK)
+        == Channel.WEB
+    )
 
 
 def test_public_content_is_unaffected() -> None:
-    assert apply_privacy_override(Channel.REACHY, Privacy.PUBLIC, Channel.TELEGRAM) == Channel.REACHY
+    assert (
+        apply_privacy_override(Channel.REACHY, Privacy.PUBLIC, Channel.TELEGRAM, InteractionMode.DESK)
+        == Channel.REACHY
+    )
 
 
 def test_override_falls_back_to_web_when_active_channel_is_also_reachy() -> None:
-    assert apply_privacy_override(Channel.REACHY, Privacy.SENSITIVE, Channel.REACHY) == Channel.WEB
+    assert (
+        apply_privacy_override(Channel.REACHY, Privacy.SENSITIVE, Channel.REACHY, InteractionMode.DESK)
+        == Channel.WEB
+    )
 
 
 def test_override_never_fires_when_base_channel_is_not_reachy() -> None:
     """apply_privacy_override can only ever veto a Reachy delivery that
     resolve_delivery_channel already chose — it never introduces routing to
     a *different* non-Reachy channel than the mode policy picked."""
-    assert apply_privacy_override(Channel.PHONE, Privacy.SENSITIVE, Channel.TELEGRAM) == Channel.PHONE
+    assert (
+        apply_privacy_override(Channel.PHONE, Privacy.SENSITIVE, Channel.TELEGRAM, InteractionMode.DESK)
+        == Channel.PHONE
+    )
+
+
+def test_trusted_mode_never_vetoes_sensitive_content() -> None:
+    assert (
+        apply_privacy_override(Channel.REACHY, Privacy.SENSITIVE, Channel.TELEGRAM, InteractionMode.TRUSTED)
+        == Channel.REACHY
+    )
+
+
+def test_trusted_mode_never_vetoes_work_private_content() -> None:
+    assert (
+        apply_privacy_override(Channel.REACHY, Privacy.WORK_PRIVATE, Channel.WEB, InteractionMode.TRUSTED)
+        == Channel.REACHY
+    )
