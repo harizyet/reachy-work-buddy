@@ -7,9 +7,9 @@ acceptance. This file holds only session continuation details.
 
 ## Current work
 
-**[Phase 24e](docs/phase-24e.md) is in progress and is not ready to
-close.** Everything it built is deployed. Most of its rows passed on the
-robot with the owner:
+**[Phase 24e](docs/phase-24e.md) closed by owner re-scope (2026-09-27).**
+Everything it built is deployed. Most of its rows passed on the robot with
+the owner:
 - the [24e physical run](docs/verification/phase-24e-physical-2026-09-25.md)
   (2026-09-25/26);
 - [clock, reply labelling and small.en](docs/verification/clock-routing-stt-physical-2026-09-27.md)
@@ -17,17 +17,18 @@ robot with the owner:
 - the [correctness set](docs/verification/phase-24e-correctness-2026-09-25.md)
   (94.3%).
 
-These exit criteria are still open:
-- **Coexistence and sustained use:** the supervised 30-minute session.
-  It's also a [Phase 25 prerequisite](docs/phase-24e.md#prerequisites-for-phase-25).
-  It needs `max_session_seconds` ≥ 1800 for the run.
-- **Adaptive end of turn:** cancelling a *held* turn on the robot. Long
-  utterances with pauses already passed.
-- **Item 4, Nano diagnostics:** not started. The Nano has no persistent
-  journal (`/var/log/journal` is missing, and only the current boot is
-  listed), no power logging, and no diagnosis procedure in the deployment
-  guide. It needs the owner's sudo and approval for system changes.
-- **Renewed owner acceptance of usability,** recorded after the above.
+Deferred, not passed:
+- **The supervised 30-minute session.** It needs `max_session_seconds` ≥
+  1800 for the run.
+- **Cancelling a held turn** on the robot.
+- **Item 4, Nano diagnostics:** the Nano has no persistent journal, no
+  power logging and no diagnosis procedure. It needs the owner's sudo and
+  approval.
+- **Renewed owner acceptance of usability.**
+The first two are still
+[Phase 25 prerequisites](docs/phase-24e.md#prerequisites-for-phase-25), so
+**Phase 25 stays blocked until they pass on the robot.** They're the next
+physical work before any Phase 25 implementation.
 
 TV speech answered as a turn is a known limit, deferred to Phase 25 by
 the owner. The audio-fault recovery sub-row is in process only, also by

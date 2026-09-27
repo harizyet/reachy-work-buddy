@@ -237,7 +237,7 @@ that every physical deployment scenario has passed.
 | 24b | Implemented | Structured command authorization and suggestions | Fixture/browser verified; live Telegram commands and robot standby/resume open | [Commands](verification/phase-24b-command-authorization-2026-09-24.md) |
 | 24c | Implemented | Robot mic → shared conversation → routed speaker reply | Automated/browser/simulated-mic real-process checks; physical proof in 24d | [Conversation](verification/phase-24c-conversation-2026-09-24.md) |
 | 24d | Closed by owner re-scope | Physical conversation, context, latency and usability | Normal conversation and timing PASS; cold reboot PASS; other rows deferred to 24e, not passed | [Results](verification/phase-24d-conversation-2026-09-24.md#results) |
-| 24e | In progress | Adaptive turns, search/correctness, deferred 24d rows, Nano diagnostics | Deployed; most rows PASS on the robot. Open: 30-minute session, held-turn cancellation, Nano diagnostics, renewed usability acceptance. Hardware conversation-path subset must PASS before 25 | [Status](phase-24e.md), [25 prerequisites](phase-24e.md#prerequisites-for-phase-25) |
+| 24e | Closed by owner re-scope | Adaptive turns, search/correctness, deferred 24d rows, Nano diagnostics | Deployed; most rows PASS on the robot. Deferred: 30-minute session, held-turn cancellation, Nano diagnostics, renewed usability acceptance. The first two still gate Phase 25 | [Status](phase-24e.md), [25 prerequisites](phase-24e.md#prerequisites-for-phase-25) |
 | 24f | Closed by owner re-scope | Motion conformance, verified startup home, local conversation animation | Silent poses, wobble, stops, 409 arbitration, palm stop and switch-off PASS on the robot; 30-minute session, mid-reply switch-off, stop while homing and the 2–5° shortfall deferred to a future phase. Run Phase 25 with motion off until they pass | [Status](phase-24f.md), [record](verification/phase-24f-physical-2026-09-27.md) |
 | 25 | Planned; gated | Owner recognition, enrollment, voice access control | Requires 24e subset; hardware/adversarial acceptance before ambient voice | [Acceptance](phase-25.md#acceptance-and-release-gate) |
 | 26 | Planned | Async transcription/minutes, confirmed action items | Real recording and private output acceptance; depends on 23 migration framework | [Exit criteria](phase-26.md#exit-criteria) |
@@ -379,11 +379,11 @@ baseline reference. [1]
 
 ## 12. Immediate Next Actions
 
-Finish [Phase 24e](phase-24e.md): the supervised 30-minute session,
-held-turn cancellation on the robot, item 4 (Nano diagnostics) and renewed
-usability acceptance. Its
-[conversation-path prerequisites](phase-24e.md#prerequisites-for-phase-25)
-must pass on hardware before Phase 25 begins. Outstanding platform and
+[Phase 24e](phase-24e.md) closed by owner re-scope. Two of its deferred
+rows, the supervised 30-minute session and held-turn cancellation, are
+[Phase 25 prerequisites](phase-24e.md#prerequisites-for-phase-25), so run
+them on the robot before Phase 25 begins. The Nano diagnostics (24e
+item 4) and renewed usability acceptance are also deferred. Outstanding platform and
 Google acceptance can proceed independently. [Phase 24f](phase-24f.md) is
 closed by re-scope; per its
 [dependency rule](phase-24f.md#order-and-dependencies), Phase 25 runs with
