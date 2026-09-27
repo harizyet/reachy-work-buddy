@@ -71,7 +71,10 @@ class WakeLimits(BaseModel):
     # robot waits for the request that follows it.
     min_request_seconds: float = Field(1.2, ge=0, le=5)
     # How long after the wake phrase's segment ends the request may start.
-    speech_start_seconds: float = Field(4.0, gt=0, le=10)
+    # Raised from 4.0 (owner, 2026-09-27, phase 24g Session 2): a genuine
+    # attempt was discarded because noticing the alert-pose cue and then
+    # starting to speak took most of the 4 s budget.
+    speech_start_seconds: float = Field(6.0, gt=0, le=10)
     # Cap on the whole candidate, wake phrase included.
     max_candidate_seconds: float = Field(10.0, gt=0, le=15)
     # A wake-started session ends when no speech starts this long after

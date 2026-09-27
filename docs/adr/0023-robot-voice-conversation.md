@@ -397,7 +397,10 @@ ADR permits no unattended or default-on capture.
   - detection threshold 0.7;
   - a first segment with under 1.2 s of speech (not counting its pre-roll
     and trailing silence) holds only the phrase;
-  - 4 s after that segment for the request to start;
+  - 6 s after that segment for the request to start (raised from 4 s,
+    owner, 2026-09-27, Session 2: a genuine attempt was discarded because
+    noticing the alert-pose cue and starting to speak took most of the
+    4 s budget);
   - 10 s maximum candidate;
   - 10 s follow-up (the owner's value).
 

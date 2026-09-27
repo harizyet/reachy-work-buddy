@@ -222,7 +222,7 @@ def test_wake_then_silence_is_discarded_on_the_robot() -> None:
         mic.push(np.concatenate([silence(1.0), wake_phrase(), silence(0.6)]))
         await wait_until(lambda: motion.moves == ["sleep", "alert"])
         await asyncio.sleep(0.05)
-        clock.now += 3.9  # still inside the speech-start allowance
+        clock.now += 5.9  # still inside the speech-start allowance
         await asyncio.sleep(0.05)
         assert mic.starts == 1
         clock.now += 0.2
@@ -242,7 +242,7 @@ def test_natural_pause_joins_the_phrase_and_the_request_into_one_candidate() -> 
         await wait_until(lambda: mic.open)
         mic.push(np.concatenate([silence(1.0), wake_phrase(), silence(0.6)]))
         await asyncio.sleep(0.1)
-        clock.now += 1.5  # a natural pause, under the 3 s allowance
+        clock.now += 1.5  # a natural pause, under the 6 s allowance
         mic.push(np.concatenate([tone(1.2), silence(0.4)]))
         await wait_until(lambda: len(uploader.uploads) == 1)
         assert uploader.uploads[0][0] >= int(1.6 * SR)
