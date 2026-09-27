@@ -1,20 +1,22 @@
 # Project state
 
-Snapshot: 2026-09-25. This page owns current deployment and cross-phase
+Snapshot: 2026-09-27. This page owns current deployment and cross-phase
 acceptance limits. The [phase ledger](plan.md#6-implementation-roadmap)
 owns phase status and scope; dated [verification records](README.md#verification-records)
 own evidence. This snapshot is not a live health check.
 
 ## Current priority and next gates
 
-[Phase 25](phase-25.md) is next and unblocked. [Phase 24e](phase-24e.md)
+[Phase 24g](phase-24g.md) is next: local wake admission and silent
+false-trigger rejection, planned but not implemented. [Phase 25](phase-25.md)
+follows for owner recognition; its earlier 24e prerequisites are settled. [Phase 24e](phase-24e.md)
 and [Phase 24f](phase-24f.md) closed by owner re-scope on 2026-09-27. The
 owner then settled the
 [24e prerequisites](phase-24e.md#prerequisites-for-phase-25): they waived
 the 30-minute session and held-turn cancellation, which were never run on
 the robot, and renewed usability acceptance. 24e's Nano diagnostics (item
 4) are deferred. Phase 25 runs with conversational motion off until 24f's
-deferred rows pass. Phases 25–27 remain planned.
+deferred rows pass. Phases 24g and 25–27 remain planned.
 
 ## Deployment and production acceptance
 
@@ -122,8 +124,10 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
   misreports numbers from search results and answers statements at length
   ([record](verification/phase-24e-correctness-2026-09-25.md)). small.en
   fixed the known mishearings, but proper nouns can still fail ("Tokyo" as
-  "2Q"). TV or other speech is taken as a turn; that's a known limit,
-  deferred to Phase 25. Acoustic echo is not addressed.
+  "2Q"). TV or other speech is taken as a turn; that's a known limit.
+  [Phase 24g](phase-24g.md) addresses false wake admission; Phase 25 retains
+  speaker attribution and rejection within an open session. Acoustic echo
+  is not addressed.
 - First LOCAL camera frames can take 9–12 s while GStreamer loads plugins.
   Docker 20.10.7 seccomp prevents the external scanner from spawning;
   the documented workaround loads plugins in-process.

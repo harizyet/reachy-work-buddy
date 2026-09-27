@@ -21,8 +21,8 @@ point into this index rather than maintaining parallel instructions.
 The [roadmap](plan.md#6-implementation-roadmap) owns phase order and status.
 Detailed future requirements remain in their dedicated plans; they are not
 claims that those features already work. Paths stay stable: completed phase
-records are historical design/implementation references, while 24e–24f and 25–27
-remain future plans. The mixed 22–23 document retains open acceptance matrices.
+records are historical design/implementation references. Phases 24e–24f
+closed by owner re-scope; 24g and 25–27 remain future plans. The mixed 22–23 document retains open acceptance matrices.
 Use the ledger for current status, deployment for procedures, and dated
 verification records for empirical results. Historical records change only to
 correct facts or links, not to track each new phase dependency.
@@ -43,8 +43,10 @@ correct facts or links, not to track each new phase dependency.
   [24e conversation-path prerequisites](phase-24e.md#prerequisites-for-phase-25) gated
   Phase 25; they passed or were waived by the owner on 2026-09-27, and
   the phase closed by re-scope.
-- [Phase 24f](phase-24f.md): draft motion conformance, startup home and local
-  conversational embodiment plan, with supervised acceptance and version gates.
+- [Phase 24f](phase-24f.md): motion conformance and local conversational
+  embodiment; closed by re-scope with deferred physical acceptance.
+- [Phase 24g](phase-24g.md): local wake admission and silent false-trigger
+  rejection; next planned phase, before owner recognition.
 - [Phase 25](phase-25.md): owner recognition and voice access control.
 - [Phase 26](phase-26.md): meeting transcription and minutes.
 - [Phase 27](phase-27.md): embodied meeting secretary — owner-present companion, then physical secretary attendance, then bounded delegation; virtual/cloud attendance is deferred.

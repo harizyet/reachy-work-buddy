@@ -239,7 +239,8 @@ that every physical deployment scenario has passed.
 | 24d | Closed by owner re-scope | Physical conversation, context, latency and usability | Normal conversation and timing PASS; cold reboot PASS; other rows deferred to 24e, not passed | [Results](verification/phase-24d-conversation-2026-09-24.md#results) |
 | 24e | Closed by owner re-scope | Adaptive turns, search/correctness, deferred 24d rows, Nano diagnostics | Deployed; most rows PASS on the robot; usability re-accepted. 30-minute session and held-turn cancellation waived by the owner; Nano diagnostics deferred | [Status](phase-24e.md), [25 prerequisites](phase-24e.md#prerequisites-for-phase-25) |
 | 24f | Closed by owner re-scope | Motion conformance, verified startup home, local conversation animation | Silent poses, wobble, stops, 409 arbitration, palm stop and switch-off PASS on the robot; 30-minute session, mid-reply switch-off, stop while homing and the 2–5° shortfall deferred to a future phase. Run Phase 25 with motion off until they pass | [Status](phase-24f.md), [record](verification/phase-24f-physical-2026-09-27.md) |
-| 25 | Planned; unblocked | Owner recognition, enrollment, voice access control | 24e prerequisites passed or waived (2026-09-27); hardware/adversarial acceptance before ambient voice; motion off until 24f's deferred rows pass | [Acceptance](phase-25.md#acceptance-and-release-gate) |
+| 24g | Planned; next | Local wake monitoring, admission and false-trigger rejection | Silent rejection, local buffers, acoustic/relevance gates and physical false-admission metrics; STT boundary to resolve | [Requirements](phase-24g.md), [Exit criteria](phase-24g.md#verification-and-exit-criteria) |
+| 25 | Planned; follows 24g | Owner recognition, enrollment, voice access control | 24e prerequisites passed or waived (2026-09-27); hardware/adversarial acceptance before ambient voice; motion off until 24f's deferred rows pass | [Acceptance](phase-25.md#acceptance-and-release-gate) |
 | 26 | Planned | Async transcription/minutes, confirmed action items | Real recording and private output acceptance; depends on 23 migration framework | [Exit criteria](phase-26.md#exit-criteria) |
 | 27 | Planned | Staged embodied meeting secretary | Builds on 26 and 22b hardware; separate absence-policy amendments for 27a.2 and 27b; virtual attendance deferred | [Sequence and acceptance](phase-27.md#implementation-sequence-and-acceptance) |
 
@@ -379,7 +380,9 @@ baseline reference. [1]
 
 ## 12. Immediate Next Actions
 
-Start [Phase 25](phase-25.md). Its
+Start [Phase 24g](phase-24g.md): local wake admission and silent false-trigger
+rejection. Resolve its STT boundary and wake-start session contract before
+implementation. [Phase 25](phase-25.md) follows for owner recognition; its
 [24e prerequisites](phase-24e.md#prerequisites-for-phase-25) are passed or
 waived: the owner waived the 30-minute session and held-turn cancellation,
 and renewed usability acceptance, on 2026-09-27. The Nano diagnostics (24e

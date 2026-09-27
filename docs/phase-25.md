@@ -1,7 +1,11 @@
 # Phase 25 — owner recognition and voice access control
 
-Status: planned, not implemented; **unblocked on 2026-09-27** (the 24e
-prerequisites passed or were waived by the owner). Depends on
+Status: planned, not implemented; **follows [Phase 24g](phase-24g.md)**
+in the roadmap. The 24e prerequisites passed or were waived on 2026-09-27.
+Compose recognition with 24g wake admission: relevance is interaction routing,
+never identity evidence. Unknown/ambiguous speakers still require rejection
+during an open session; wake admission cannot relax this phase’s pre-STT
+attribution or input/output gates. Depends on
 [Phase 24c](phase-24cd.md#phase-24c--audit-and-implement-the-missing-workflow)
 implementing the baseline Reachy conversation workflow and
 [Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance)

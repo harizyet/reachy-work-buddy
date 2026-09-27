@@ -25,12 +25,16 @@ Owner decisions after closing, 2026-09-27:
   journal, no power logging and no diagnosis procedure. It needs the
   owner's sudo and approval.
 
-**[Phase 25](docs/phase-25.md) (owner recognition) is next and
-unblocked.** Run it with conversational motion off until 24f's deferred
-rows pass.
+**[Phase 24g](docs/phase-24g.md) is next, planned but not implemented:**
+local wake admission and silent false-trigger rejection. Resolve the
+no-STT versus transcript-based relevance requirement and document wake-start
+authorization before implementation. Phase 25 owner recognition follows; its
+24e prerequisites remain settled. Keep conversational motion off until
+24f's deferred rows pass.
 
-TV speech answered as a turn is a known limit, deferred to Phase 25 by
-the owner. The audio-fault recovery sub-row is in process only, also by
+TV speech answered as a turn remains a known limit: 24g now covers false
+wake admission, while Phase 25 retains speaker attribution and open-session
+input gating. The audio-fault recovery sub-row is in process only, also by
 owner decision.
 
 **Owner decisions on 2026-09-27:**
