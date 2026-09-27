@@ -292,14 +292,22 @@ if [[ "${VOICE_CONVERSATION_ENABLED:-false}" == "true" ]]; then
             -e VOICE_CONVERSATION_ENABLED=true)
         log_info "voice conversation enabled: sharing ${DAEMON_USER}'s ALSA config and IPC namespace with the container"
         # Phase 24f: conversational motion and speech wobble, both driven
-        # by the voice loop; Phase 24g: the wake-up and go-to-sleep moves
-        # around wake-started conversations. Off until physically accepted.
-        for flag in CONVERSATION_MOTION_ENABLED SPEECH_WOBBLE_ENABLED WAKE_ANIMATION_ENABLED; do
+        # by the voice loop. Off until physically accepted.
+        for flag in CONVERSATION_MOTION_ENABLED SPEECH_WOBBLE_ENABLED; do
             if [[ "${!flag:-false}" == "true" ]]; then
                 VOICE_ARGS+=(-e "${flag}=true")
                 log_info "${flag} set"
             fi
         done
+        # Phase 24g: the wake-up and go-to-sleep moves around wake
+        # monitoring are on unless the env file says false (owner decision,
+        # 2026-09-27). Passed explicitly so the container matches the file.
+        if [[ "${WAKE_ANIMATION_ENABLED:-true}" == "false" ]]; then
+            VOICE_ARGS+=(-e WAKE_ANIMATION_ENABLED=false)
+            log_info "WAKE_ANIMATION_ENABLED off"
+        else
+            VOICE_ARGS+=(-e WAKE_ANIMATION_ENABLED=true)
+        fi
     else
         log_warn "VOICE_CONVERSATION_ENABLED=true but ${DAEMON_HOME:-<no home for $DAEMON_USER>}/.asoundrc is not readable here — voice stays disabled for this container"
     fi

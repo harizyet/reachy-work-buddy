@@ -78,8 +78,8 @@ def _default_backend() -> RobotBackend:
     raise ValueError(f"unknown ROBOT_BACKEND {kind!r}; expected 'simulated' or 'reachy_daemon'")
 
 
-def _env_flag(name: str) -> bool:
-    return os.environ.get(name, "false").strip().lower() == "true"
+def _env_flag(name: str, default: bool = False) -> bool:
+    return os.environ.get(name, "true" if default else "false").strip().lower() == "true"
 
 
 # Phase 24g: the image bakes in the community "Hey Reachy" Edge Impulse
@@ -100,13 +100,14 @@ def _default_motion_controller(backend: RobotBackend, state: ServiceState) -> Mo
     (daemon audio-reactive head motion while speaking). Both off until
     physically accepted; off means no conversation motion and no ownership.
     Phase 24g: `WAKE_ANIMATION_ENABLED` (the daemon's wake-up and go-to-sleep
-    moves around wake-started conversations), also off by default."""
+    moves around wake monitoring) is on by default, by the owner's decision
+    of 2026-09-27; it only moves while the owner has armed wake listening."""
     return MotionController(
         backend,
         state,
         conversation_motion=_env_flag("CONVERSATION_MOTION_ENABLED"),
         speech_wobble=_env_flag("SPEECH_WOBBLE_ENABLED"),
-        wake_animation=_env_flag("WAKE_ANIMATION_ENABLED"),
+        wake_animation=_env_flag("WAKE_ANIMATION_ENABLED", default=True),
     )
 
 

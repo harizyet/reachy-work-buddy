@@ -53,10 +53,13 @@ Not yet done:
 - **Deploy:** homelab backup, migration and hub rebuild; Nano embodiment
   image rebuild and container recreate (owner sudo).
 - **Physical run:** arm from the panel and run the 24g scenarios. The
-  wake-up move is a full animation with sound, so any development test of
-  `WAKE_ANIMATION_ENABLED` needs the owner present.
-- **Owner decision:** unattended production use of that switch needs an
-  AGENTS.md exception, which the owner has not given yet.
+  wake-up move is a full animation with sound, so a development test of it
+  needs the owner present.
+
+`WAKE_ANIMATION_ENABLED` is on by default, including unattended production
+use while armed. This is an owner decision of 2026-09-27, recorded in
+AGENTS.md. The moves had not yet run on the robot in this flow when it was
+made.
 
 Scratch on the Nano: `~/24g-bench` (models, clips, wheels) and `~/24g-src`
 (source mounts for the detector check); both are disposable.

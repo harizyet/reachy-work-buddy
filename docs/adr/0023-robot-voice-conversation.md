@@ -333,7 +333,7 @@ ADR permits no unattended or default-on capture.
   de-torques the motors, unlike standby.
   - Both moves go through the motion controller, and yield to
     conversation motion and remote control.
-  - The switch is off by default, like the 24f motion switches.
+  - The switch is on by default (owner decision, 2026-09-27, below).
   - The wake-up move plays the daemon's own sound, which the microphone
     hears during capture. Its effect on candidates is a calibration item.
 - **Hub admission.** The robot uploads a candidate to
@@ -395,8 +395,11 @@ ADR permits no unattended or default-on capture.
 - **Access.** While monitoring is armed, anyone in the room can hold a
   spoken conversation within the existing gates. The owner accepted this
   on 2026-09-27. Disarming is the privacy control.
-- **Motion.** The wake-up move is a full animation with sound. Under
-  [AGENTS.md](../../AGENTS.md#verification-and-safety), testing it in a
-  development session needs the owner present. Unattended production use
-  of `WAKE_ANIMATION_ENABLED` needs physical acceptance and an explicit
-  owner exception recorded there. Neither exists yet.
+- **Motion.** The wake-up move is a full animation with sound. On
+  2026-09-27 the owner made `WAKE_ANIMATION_ENABLED` the default, including
+  unattended production use on the designated Nano while wake listening is
+  armed. This is a narrow exception recorded in
+  [AGENTS.md](../../AGENTS.md#verification-and-safety).
+  - Testing it in a development session still needs the owner present.
+  - It was enabled before any physical run of these moves in this flow, so
+    the first physical 24g run is also its first physical check.

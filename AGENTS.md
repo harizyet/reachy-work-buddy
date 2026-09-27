@@ -117,6 +117,21 @@ boot**. If it errors again in the same boot, the recovery stops, logs a
 not a general relaxation: any other trigger, a higher restart count, or
 any corrective move still needs the owner present, per the rules above.
 
+Wake and sleep animation around spoken wake listening is a further
+exception the owner explicitly decided, 2026-09-27, during 24g:
+"lets make animations enabled by default". On the designated production
+Nano, while the owner has armed "Hey Reachy", the robot may, unattended:
+- play the daemon's own go-to-sleep move (`/api/move/play/goto_sleep`,
+  motors on) between conversations;
+- play its wake-up move (`/api/move/play/wake_up`, with its sound) when the
+  wake phrase is detected.
+
+`WAKE_ANIMATION_ENABLED` defaults to on; `false` in the robot env file
+turns it off. This covers only those two daemon moves, triggered only by
+armed wake monitoring. It is not a relaxation for any other move, for
+daemon start/restart/resume, or for development sessions, where playing
+them still needs the owner present per the next paragraph.
+
 Unattended development testing is allowed. The owner decided this
 explicitly on 2026-09-25, during 24f: "waive the safety rules to allow for
 development testing unattended unless full animations is to be played.

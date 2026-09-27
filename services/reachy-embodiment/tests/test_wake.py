@@ -512,3 +512,19 @@ def test_daemon_rest_moves_use_the_daemons_own_routes() -> None:
     backend.play_rest_move(True)
     assert paths[0] == "/api/move/play/goto_sleep"
     assert paths[-1] == "/api/move/play/wake_up"
+
+
+def test_wake_animation_is_on_by_default_and_the_env_file_can_turn_it_off(monkeypatch) -> None:
+    from reachy_embodiment.app import _default_motion_controller
+
+    backend = RecordingBackend()
+    state = ServiceState(connected=True, sim=True)
+    monkeypatch.delenv("WAKE_ANIMATION_ENABLED", raising=False)
+    motion = _default_motion_controller(backend, state)
+    assert motion.rest_move(False) and backend.calls == ["goto_sleep"]
+    motion.close()
+
+    monkeypatch.setenv("WAKE_ANIMATION_ENABLED", "false")
+    motion = _default_motion_controller(backend, state)
+    assert motion.rest_move(False) is False
+    motion.close()
