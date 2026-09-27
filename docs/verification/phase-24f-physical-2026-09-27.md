@@ -139,6 +139,36 @@ The owner left gestures **on** after the run. This does not cover speech
 wobble, coexistence, the 30-minute session, or rollback, which are still
 open.
 
+## Wobble, stops, palm stop and switch-off: passed
+
+**Run:** 04:51–05:01Z, with the owner present, on the same versions as the
+[step C rerun](#step-c-rerun-with-silent-poses-passed). Logs:
+`~/24f-logs/item1-checks-embodiment.log` and
+`~/24f-logs/item1-checks-after-restart.log`.
+
+| Row | Result |
+|---|---|
+| Speech wobble | **PASS.** Gestures and wobble were on. Replies of 2.0 s, 2.3 s, 21.5 s and 23.6 s played with the head moving, and the wobble stopped with the audio (owner observed) |
+| Stop during playback | **PASS.** Stop 2.2 s into a 23.4 s reply: daemon audio stopped 39 ms after "voice stop received". The head held where it was, and no move followed (owner observed) |
+| Palm stop with motion on | **FAIL at first, not a palm stop fault.** The embodiment camera had no frames: see below. After an embodiment restart: **PASS**, 2 of 2. An open palm stopped 24.2 s and 22.9 s replies about 5 s in, with the daemon audio stopped 37 ms and 30 ms after "open palm seen". Reachy listened again and answered the next question normally |
+| Switch-off | **PASS.** The owner switched gestures and wobble off between voice sessions, not during a reply (05:00:30–05:00:38Z). The next session's turn, a 22.9 s reply, had no motion, and no move played later. The daemon stayed `running` with the same PID, and it logged no IK or other errors throughout. Switching off *during* a reply was not exercised |
+
+**Camera cause:** the daemon's camera socket is recreated whenever the
+daemon starts, including a resume from standby. The embodiment
+container bind-mounts the socket file. So after the 03:52Z resume, the
+container held the old inode (5065) while the host had the new one
+(5213). Every voice session since then logged `palm stop camera warm-up
+failed ... camera not initialized yet`, and no frames reached the hub.
+The owner ran `sudo systemctl restart reachy-embodiment` (04:56:52Z).
+The inodes then matched, `/camera/frame` returned 3 of 3 JPEGs (about
+380 KB), and the daemon was not restarted. So a standby followed by a
+wake breaks the camera and palm stop until embodiment restarts, as a
+daemon media release was already known to.
+
+**Minor:** the hub logged an unhandled `ClientDisconnect` (a 500 with a
+traceback) in `robot_palm_frame` at 05:00:29Z, when the robot dropped a
+palm-frame upload as playback ended. There was no behavioural effect.
+
 ## Question script for the step C rerun
 
 The step B questions from 2026-09-26 were not saved (the database keeps no

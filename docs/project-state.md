@@ -91,6 +91,13 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
   one restart, then a stop on the second error
   ([record](verification/phase-24f-physical-2026-09-27.md#boot-with-motor-power-off-first-real-automatic-recovery)).
   Recovery from a wake-up error specifically is still fake-tested only.
+- The embodiment container bind-mounts the daemon's camera socket file.
+  When the daemon recreates the socket, the container keeps the old inode.
+  That happens on a daemon start, a resume from standby (`/reachy wake`),
+  or a `no_media` SDK client's media release. The camera and palm stop
+  then get no frames until `reachy-embodiment` restarts
+  ([record](verification/phase-24f-physical-2026-09-27.md#wobble-stops-palm-stop-and-switch-off-passed)).
+  Not fixed.
 - Adaptive end of turn (24e item 1) is implemented and tested in process
   and with real Silero/Whisper on simulated audio, not yet on the robot; the
   deployed robot still splits turns at 700 ms pauses until it is rebuilt.

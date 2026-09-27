@@ -35,9 +35,15 @@ speaker); open-palm stop with either hand and no false stops (owner accepts
 Homelab fixes after the owner ended testing (deployed, not yet exercised
 on the robot): weather search keeps a question's own place instead of
 appending the owner's location (`4a9dd16`), and the hub's INFO logging
-(`7a597e6`). Known, not fixed: a daemon media release/reacquire (any
-`no_media` SDK client) breaks the embodiment camera until embodiment
-restarts, since the socket bind keeps the old inode.
+(`7a597e6`). Known, not fixed: any daemon socket recreation breaks the embodiment
+camera and palm stop until embodiment restarts. That covers a daemon
+start, a **standby wake**, or a `no_media` media release, because the
+container's file bind keeps the old inode. See
+[project state](docs/project-state.md#known-hardware-and-software-limitations).
+The proposed fix is to bind the socket's directory, which needs Nano
+verification including a standby wake. A small cleanup is also pending:
+the hub's `robot_palm_frame` raises an unhandled `ClientDisconnect` (500)
+when the robot drops an upload.
 
 The owner settled the run's three open decisions on 2026-09-26. Both
 commits have been **deployed since 2026-09-26 15:09Z**: the homelab
@@ -83,9 +89,16 @@ with owner-tuned values. The `edb03f5` image is on the Nano. The
 - 22 turns: p50 3.75 s, p95 6.69 s. Robot-side overhead +17.5 ms median.
 - 0 move failures, resets or 500s, and no false `no_speech` cuts.
 - Stop during thinking passed, and so did the 409 check.
-The owner left gestures **on**. **Next for 24f:** speech wobble,
-coexistence with the camera, stop during home and playback, rollback via
-the switches, and the 30-minute session
+The owner left gestures **on**. After that,
+[more checks passed](docs/verification/phase-24f-physical-2026-09-27.md#wobble-stops-palm-stop-and-switch-off-passed):
+- speech wobble;
+- Stop during playback (the head holds);
+- palm stop with motion on, 2 of 2;
+- switching motion off between sessions.
+Palm stop first failed because the embodiment camera was stale after the
+03:52Z standby wake. See the camera caution below. **Next for 24f:** the
+30-minute session, switching off *during* a reply, and Stop while
+returning home
 ([acceptance rows](docs/phase-24f.md#4-verification-and-acceptance)).
 
 [Phase 24f](docs/phase-24f.md) is in progress. Item 1 is measured on the
@@ -171,10 +184,11 @@ this documentation pass. Recheck state before relying on them.
   checkout `edb03f5`. Embodiment runs `reachy-embodiment:local` =
   `edb03f5` (`e9df1677`, silent conversation poses), recreated at 01:35Z;
   rollback images are tagged `:b36736d` (`c314d4fa`) and `:eb1e92e9`.
-  Listening/thinking gestures are **on** (owner, after the 03:54Z step C
-  rerun) and wobble is off. These runtime settings reset to off on an
-  embodiment restart. The owner resumed the daemon from standby at
-  03:52Z, and it was `running` with no error at 04:04Z. Sudo on
+  The owner restarted embodiment at 04:56:52Z to reattach the camera
+  socket (inode 5213). Gestures and wobble are **off**: the owner switched
+  them off at about 05:00Z. The daemon has run since the 06:47 WIB boot
+  (PID 7340); it was resumed from standby at 03:52Z and was `running`
+  with no error at 05:01Z. Sudo on
   the Nano needs a password, so the owner runs `systemctl` steps; this dev
   box has key SSH as `Reachy-Mini-Jetson`. The Nano's system `python3` is
   too old for `voice-timing.py`; use `~/reachy-venv/bin/python`.

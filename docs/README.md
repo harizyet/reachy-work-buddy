@@ -140,7 +140,8 @@ These are dated evidence, not startup instructions or current health checks.
 - [Phase 24f physical run, 2026-09-27](verification/phase-24f-physical-2026-09-27.md):
   first real once-per-boot recovery (motor power off), `b36736d` swap,
   step C stopped by the owner; recorded gestures replaced by silent poses,
-  then the step C rerun with them passed.
+  then the step C rerun with them passed, as did wobble, stops, palm stop
+  and switch-off; a standby wake leaves the camera socket stale.
 
 - [Clock, reply labelling and small.en on the robot](verification/clock-routing-stt-physical-2026-09-27.md):
   clock answers, a public "start the morning" reply and the known
