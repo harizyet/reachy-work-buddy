@@ -41,6 +41,7 @@ from datetime import UTC, datetime
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import Response
+from starlette.requests import ClientDisconnect
 
 from reachy_hub.palm_stop import PalmStop
 from reachy_hub.robot_connection_manager import RobotConnection, RobotConnectionManager
@@ -598,11 +599,16 @@ async def _read_bounded(request: Request, limit: int) -> bytes:
         raise VoiceSessionError(413, "Upload is too large")
     chunks: list[bytes] = []
     size = 0
-    async for chunk in request.stream():
-        size += len(chunk)
-        if size > limit:
-            raise VoiceSessionError(413, "Upload is too large")
-        chunks.append(chunk)
+    try:
+        async for chunk in request.stream():
+            size += len(chunk)
+            if size > limit:
+                raise VoiceSessionError(413, "Upload is too large")
+            chunks.append(chunk)
+    except ClientDisconnect:
+        # The robot cancels an in-flight palm frame when playback ends; the
+        # reply goes nowhere, so this only keeps it out of the error log.
+        raise VoiceSessionError(400, "Upload was interrupted") from None
     return b"".join(chunks)
 
 

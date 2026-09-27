@@ -1,14 +1,15 @@
 [Unit]
 Description=Reachy embodiment container (starts after the daemon's camera socket exists)
 # The container is created by scripts/start-reachy.sh (image, devices,
-# env, --mount of the camera socket, no Docker restart policy); this unit
-# only starts and stops it, so systemd, not Docker, decides when.
+# env, a read-only --mount of the host's /tmp for the camera socket, no
+# Docker restart policy); this unit only starts and stops it, so systemd,
+# not Docker, decides when.
 #
 # BindsTo + After + WantedBy=reachy-mini-daemon.service: the container
 # starts only after the daemon, stops when the daemon stops, and starts
-# again when the daemon starts. The bind of the daemon's socket is fixed
-# to the socket file that existed when the container started, so a daemon
-# restart (which recreates the socket) must restart the container too.
+# again when the daemon starts. A standby resume recreates the socket
+# without any systemd event; the /tmp bind and the embodiment's camera
+# reopen cover that case.
 # Enabling this unit never starts the daemon: a boot or remote resume
 # that starts the daemon brings this container up afterwards.
 Requires=docker.service

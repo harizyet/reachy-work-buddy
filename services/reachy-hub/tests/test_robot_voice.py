@@ -27,6 +27,7 @@ from companion_core.persona.store import InMemoryPersonaStore
 from companion_core.rag.store import InMemoryDocumentStore
 from companion_core.tasks.store import InMemoryTaskStore
 from companion_core.websearch.store import InMemorySearchSettingsStore
+from fastapi import Request
 from fastapi.testclient import TestClient
 from reachy_embodiment.app import create_app as create_embodiment_app
 from reachy_embodiment.robot import SimulatedRobotBackend
@@ -44,6 +45,7 @@ from reachy_hub.robot_voice import (
     RobotVoiceManager,
     VoiceSessionError,
     VoiceTurnPipeline,
+    _read_bounded,
     finalize_turn,
     run_turn,
 )
@@ -1072,3 +1074,20 @@ def test_voice_limits_can_be_tuned_from_the_environment(monkeypatch) -> None:
     monkeypatch.setenv("VOICE_CONTINUATION_WINDOW_MS", "9000")  # above the model's 5000 cap
     with pytest.raises(ValidationError):
         _voice_limits_from_env()
+
+
+def test_an_upload_the_robot_abandons_is_a_session_error_not_a_crash() -> None:
+    # The robot cancels an in-flight palm frame when playback ends
+    # (2026-09-27 physical run): the body stops mid-stream.
+    messages = [
+        {"type": "http.request", "body": b"partial", "more_body": True},
+        {"type": "http.disconnect"},
+    ]
+
+    async def receive() -> dict[str, object]:
+        return messages.pop(0)
+
+    request = Request({"type": "http", "method": "POST", "headers": []}, receive)
+    with pytest.raises(VoiceSessionError) as caught:
+        asyncio.run(_read_bounded(request, 1024))
+    assert caught.value.status_code == 400

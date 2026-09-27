@@ -321,6 +321,10 @@ class RobotBackendError(RuntimeError):
 #
 # Override via ReachyDaemonBackend(behaviour_moves=...) for a different
 # mapping (e.g. once a project-specific recorded-move dataset exists).
+# Palm stop captures every few hundred ms during playback; one reopen per
+# window bounds how often a missing camera stalls a capture for 2 s.
+CAMERA_REOPEN_INTERVAL_S = 10.0
+
 _EMOTIONS_DATASET = "pollen-robotics/reachy-mini-emotions-library"
 _DANCES_DATASET = "pollen-robotics/reachy-mini-dances-library"
 
@@ -376,6 +380,7 @@ class ReachyDaemonBackend:
         behaviour_moves: dict[Behaviour, tuple[str, str]] | None = None,
         transport: httpx.BaseTransport | None = None,
         media_client_factory: Callable[[], object] | None = None,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         # Every reachy-mini-daemon route lives under /api (e.g. /api/daemon/status,
         # /api/move/play/...) — confirmed live against the real daemon's own
@@ -419,6 +424,14 @@ class ReachyDaemonBackend:
         self._media_client_factory = media_client_factory
         self._mini: object | None = None
         self._mini_lock = threading.Lock()
+        # The daemon recreates its camera socket whenever its media restarts
+        # (daemon start, standby resume, a `no_media` client's release), and
+        # 1.8.4's IPC camera never reconnects on its own. `_reopen_camera`
+        # restarts only the camera pipeline, so the microphone on the same
+        # client is untouched; throttled because `open()` blocks up to 2 s.
+        self._clock = clock
+        self._camera_reopen_lock = threading.Lock()
+        self._camera_reopened_at: float | None = None
         # ReachyMini defaults to `host="reachy-mini.local"` (mDNS), which
         # this container has no reason to be able to resolve. Derive the
         # actual daemon host/port from the same base_url used for the HTTP
@@ -610,8 +623,11 @@ class ReachyDaemonBackend:
         """
         import cv2  # local import: only needed by this one real-hardware path
 
+        media = self._media_client().media  # type: ignore[attr-defined]
         try:
-            frame = self._media_client().media.get_frame()  # type: ignore[attr-defined]
+            frame = media.get_frame()
+            if frame is None and self._reopen_camera(media):
+                frame = media.get_frame()
         except Exception as exc:
             raise RobotBackendError(f"get_frame() failed: {exc}") from exc
         if frame is None:
@@ -624,6 +640,25 @@ class ReachyDaemonBackend:
         if not ok:
             raise RobotBackendError("failed to JPEG-encode captured frame")
         return bytes(encoded)
+
+    def _reopen_camera(self, media: object) -> bool:
+        """Reconnects the IPC camera to the daemon's current socket after a
+        frame miss. At most once per `CAMERA_REOPEN_INTERVAL_S`; a caller
+        that finds another thread already reopening skips its retry."""
+        camera = getattr(media, "camera", None)
+        if camera is None or not self._camera_reopen_lock.acquire(blocking=False):
+            return False
+        try:
+            now = self._clock()
+            if self._camera_reopened_at is not None and now - self._camera_reopened_at < CAMERA_REOPEN_INTERVAL_S:
+                return False
+            self._camera_reopened_at = now
+            log.info("no camera frame; reopening the daemon camera socket")
+            camera.close()
+            camera.open()
+            return True
+        finally:
+            self._camera_reopen_lock.release()
 
     def _media_client(self) -> object:
         """Lazily creates the one `ReachyMini` LOCAL media client shared by

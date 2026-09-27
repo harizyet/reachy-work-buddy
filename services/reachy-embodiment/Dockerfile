@@ -52,6 +52,12 @@ COPY services/reachy-embodiment/ services/reachy-embodiment/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --package reachy-embodiment
 
+# The SDK hardcodes the daemon's camera socket at this path. On the Nano,
+# scripts/start-reachy.sh binds the host's /tmp at /host-tmp so the link
+# follows the socket the daemon recreates on every media start; elsewhere
+# it dangles harmlessly.
+RUN ln -s /host-tmp/reachymini_camera_socket /tmp/reachymini_camera_socket
+
 EXPOSE 8000
 # Invoke the venv's uvicorn directly rather than `uv run` — `uv run` would
 # re-check/sync the project (including pulling dev dependencies) on every

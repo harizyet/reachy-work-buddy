@@ -117,6 +117,9 @@ fi
 DAEMON_STATUS_URL="http://127.0.0.1:8000/api/daemon/status"
 
 CAMERA_SOCKET=/tmp/reachymini_camera_socket
+# The container sees the host's /tmp read-only here; the image links
+# $CAMERA_SOCKET to it (services/reachy-embodiment/Dockerfile).
+HOST_TMP_MOUNT=/host-tmp
 EMBODIMENT_SERVICE="reachy-embodiment"
 
 # Prints "yes" if the container was created before the reboot-race fix:
@@ -134,6 +137,20 @@ container_has_reboot_race() {
     fi
 }
 
+# Prints "yes" if the container binds the camera socket file itself rather
+# than the host's /tmp. A file bind pins the socket that existed when the
+# container started, so every daemon media restart (standby resume, a
+# `no_media` client's release) left the camera without frames.
+container_has_socket_file_bind() {
+    local mounts
+    mounts="$(docker inspect -f '{{range .Mounts}}{{.Destination}}{{println}}{{end}}' "$CONTAINER_NAME")"
+    if grep -qx "$HOST_TMP_MOUNT" <<<"$mounts"; then
+        echo no
+    else
+        echo yes
+    fi
+}
+
 # Read-only: the facts behind the Nano reboot race (see
 # deploy/reachy/wait-media-socket.sh).
 report_media_boot_state() {
@@ -145,7 +162,7 @@ report_media_boot_state() {
         log_info "$CAMERA_SOCKET does not exist yet"
     fi
     if docker ps -a --filter "name=^/${CONTAINER_NAME}\$" -q 2>/dev/null | grep -q .; then
-        log_info "$CONTAINER_NAME restart policy: $(docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' "$CONTAINER_NAME"), pre-fix (reboot race) container: $(container_has_reboot_race)"
+        log_info "$CONTAINER_NAME restart policy: $(docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' "$CONTAINER_NAME"), pre-fix (reboot race) container: $(container_has_reboot_race), camera socket file bind (goes stale): $(container_has_socket_file_bind)"
     fi
     if systemd_unit_installed "$EMBODIMENT_SERVICE"; then
         log_info "${EMBODIMENT_SERVICE}.service installed, enabled: $(systemctl is-enabled "$EMBODIMENT_SERVICE" 2>/dev/null || true)"
@@ -244,9 +261,15 @@ fi
 # stops the daemon creating its socket; `--mount` refuses to start instead.
 # The container is only started once the socket exists, and has no Docker
 # restart policy: reachy-embodiment.service starts it after the daemon.
+#
+# The daemon deletes and recreates the socket on every media start,
+# including a standby resume inside the same daemon process, so a bind of
+# the socket file itself goes stale. Binding the host's /tmp (read-only;
+# connecting to a socket needs no write access to the mount) lets the
+# image's link resolve to whichever socket exists now.
 "${REACHY_DIR}/wait-media-socket.sh" 60 \
     || die "the daemon's camera socket is not available (see the message above); not starting $CONTAINER_NAME"
-VOLUME_ARGS=(--mount "type=bind,src=${CAMERA_SOCKET},dst=${CAMERA_SOCKET}")
+VOLUME_ARGS=(--mount "type=bind,src=/tmp,dst=${HOST_TMP_MOUNT},readonly")
 
 # Phase 24c (ADR 0023): robot microphone conversation, opt-in via
 # VOICE_CONVERSATION_ENABLED=true in the env file. The SDK's LOCAL audio
@@ -291,11 +314,16 @@ for grp in dialout video audio; do
 done
 
 # A container created before the reboot-race fix (Docker restart policy,
-# `-v` bind) would recreate the root-owned directory at the next boot, so
-# it is replaced rather than reused. Recreating it moves nothing.
+# `-v` bind) would recreate the root-owned directory at the next boot, and
+# one binding the socket file loses the camera after a daemon media
+# restart, so either is replaced rather than reused. Recreating it moves
+# nothing.
 if docker ps -a --filter "name=^/${CONTAINER_NAME}\$" -q | grep -q .; then
     if [[ "$(container_has_reboot_race)" == "yes" ]]; then
         log_info "replacing $CONTAINER_NAME: it was created with a Docker restart policy or a -v camera-socket bind (reboot race)"
+        docker rm -f "$CONTAINER_NAME" >/dev/null
+    elif [[ "$(container_has_socket_file_bind)" == "yes" ]]; then
+        log_info "replacing $CONTAINER_NAME: it binds the camera socket file, which goes stale when the daemon's media restarts"
         docker rm -f "$CONTAINER_NAME" >/dev/null
     fi
 fi

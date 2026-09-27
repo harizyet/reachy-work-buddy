@@ -281,7 +281,7 @@ as a directory again, not an expected boot step:
 4. Wait for the daemon to recreate the socket (`srw… reachy`), then run
    `scripts/start-reachy.sh` to replace any legacy container. Confirm the
    embodiment unit is enabled, the container has no Docker restart policy,
-   and the socket bind uses `--mount`.
+   and it binds the host's `/tmp` read-only at `/host-tmp` with `--mount`.
 5. Warm the camera with one authenticated `GET /camera/frame`.
 
 ### Production: unattended boot start (owner-accepted risk, 2026-09-23)
@@ -304,11 +304,10 @@ Enabling the daemon unit alone is not the whole unattended-boot story:
   the daemon's media server (24d). The unit is `WantedBy`, `After` and
   `BindsTo` the daemon: it waits for the daemon's socket
   (`deploy/reachy/wait-media-socket.sh`), then runs the container that
-  `start-reachy.sh` created, and restarts it whenever the daemon restarts,
-  because the container's bind is fixed to the socket file that existed
-  when it started. The launcher now creates the container with `--mount`,
-  which refuses to start rather than create a missing path, and with no
-  restart policy. It replaces a container created the old way. Install
+  `start-reachy.sh` created, and restarts it whenever the daemon unit
+  restarts. The launcher creates the container with `--mount`, which
+  refuses to start rather than create a missing path, and with no restart
+  policy. It replaces a container created the old way. Install
   once, from the repository on the Nano:
   `sudo cp deploy/reachy/reachy-embodiment.service /etc/systemd/system/ &&
   sudo systemctl daemon-reload && sudo systemctl enable reachy-embodiment`,
@@ -388,19 +387,26 @@ appends that prefix. Embodiment listens on 8100 by default, not the daemon's
 Device access uses explicit devices and numeric groups independently of
 host networking. Check existing personal `.env` files after updating defaults.
 
-Phase 22b: camera capture (`ReachyDaemonBackend.capture_frame`) uses the
+Camera capture (`ReachyDaemonBackend.capture_frame`) uses the
 `reachy_mini` SDK's LOCAL media backend, which reads frames from the
-daemon's `/tmp/reachymini_camera_socket` — bind-mounted into the container
-by `start-reachy.sh` (`-v` alongside the device args above) only if that
-socket already exists when the script runs, which requires the daemon to
-already be up and healthy (its media server creates the socket on
-successful start, not on install). Because `docker run`'s mounts are set
-at container creation, changing this requires removing and recreating an
-existing container (`docker rm -f reachy-embodiment` before the next
-`--build` run), not just `docker start`. UNVERIFIED against real
-hardware — confirmed only that the image's PyGObject/GStreamer/`unixfdsrc`
-build succeeds (see the Dockerfile's comment), not an actual live capture
-through this path.
+daemon's `/tmp/reachymini_camera_socket`. The SDK hardcodes that path, and
+the daemon deletes and recreates the socket on every media start: a daemon
+start, a standby resume (inside the same daemon process, with no systemd
+event), or a `no_media` client's release. A bind of the socket file
+therefore kept the old inode, and the camera and palm stop got no frames
+until embodiment restarted
+([2026-09-27 record](verification/phase-24f-physical-2026-09-27.md#wobble-stops-palm-stop-and-switch-off-passed)).
+So `start-reachy.sh` binds the host's `/tmp` read-only at `/host-tmp`.
+The image links `/tmp/reachymini_camera_socket` to
+`/host-tmp/reachymini_camera_socket`, and the backend reopens the SDK's
+camera pipeline after a missed frame (at most every 10 s), which
+reconnects to the current socket. The microphone uses ALSA directly and
+is not affected. The launcher only starts once the socket exists, and it
+replaces a container created with the old file bind. Mounts are fixed at
+creation, so apply a mount change by recreating the container, not with
+`docker start`. Run `sudo systemctl stop reachy-embodiment && docker rm
+reachy-embodiment && scripts/start-reachy.sh --no-browser`; this doesn't
+start or restart the daemon.
 
 Current WS connectivity provides authentication, registration, heartbeat,
 generation fencing, and reconnect. Behaviour, camera and speak commands still

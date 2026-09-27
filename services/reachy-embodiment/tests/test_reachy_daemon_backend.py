@@ -20,7 +20,11 @@ import cv2
 import httpx
 import numpy as np
 import pytest
-from reachy_embodiment.robot import ReachyDaemonBackend, RobotBackendError
+from reachy_embodiment.robot import (
+    CAMERA_REOPEN_INTERVAL_S,
+    ReachyDaemonBackend,
+    RobotBackendError,
+)
 
 from shared.models.embodiment import Behaviour
 
@@ -444,6 +448,62 @@ def test_capture_frame_raises_cleanly_if_get_frame_returns_none() -> None:
 
     with pytest.raises(RobotBackendError):
         backend.capture_frame()
+
+
+class _StaleCamera:
+    """1.8.4's IPC camera after the daemon recreated its socket: no frames
+    until the pipeline is restarted, then frames again if `recovers`."""
+
+    def __init__(self, *, recovers: bool = True) -> None:
+        self.recovers = recovers
+        self.connected = False
+        self.reopens = 0
+
+    def close(self) -> None:
+        self.connected = False
+
+    def open(self) -> None:
+        self.reopens += 1
+        self.connected = self.recovers
+
+
+class _StaleCameraMedia:
+    def __init__(self, camera: _StaleCamera) -> None:
+        self.camera = camera
+
+    def get_frame(self) -> np.ndarray | None:
+        return np.zeros((4, 4, 3), dtype=np.uint8) if self.camera.connected else None
+
+
+class _StaleCameraMini:
+    def __init__(self, camera: _StaleCamera) -> None:
+        self.media = _StaleCameraMedia(camera)
+
+
+def test_capture_frame_reopens_the_camera_after_the_daemon_recreates_its_socket() -> None:
+    camera = _StaleCamera()
+    backend = ReachyDaemonBackend("http://daemon.test", media_client_factory=lambda: _StaleCameraMini(camera))
+
+    assert backend.capture_frame()
+    assert camera.reopens == 1
+
+
+def test_camera_reopen_is_throttled() -> None:
+    now = [100.0]
+    camera = _StaleCamera(recovers=False)
+    backend = ReachyDaemonBackend(
+        "http://daemon.test", media_client_factory=lambda: _StaleCameraMini(camera), clock=lambda: now[0]
+    )
+
+    for _ in range(3):
+        with pytest.raises(RobotBackendError):
+            backend.capture_frame()
+    assert camera.reopens == 1
+
+    now[0] += CAMERA_REOPEN_INTERVAL_S
+    camera.recovers = True
+    assert backend.capture_frame()
+    assert camera.reopens == 2
 
 
 def test_capture_frame_uses_explicit_localhost_only_connection(monkeypatch: pytest.MonkeyPatch) -> None:
