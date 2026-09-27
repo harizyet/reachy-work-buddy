@@ -49,9 +49,7 @@ Verified off the robot:
   `--network none` container;
 - the pinned `ADD` lines, built on the Nano's Docker 20.10.7.
 
-Not yet done:
-- **Deploy:** homelab backup, migration and hub rebuild; Nano embodiment
-  image rebuild and container recreate (owner sudo).
+Deployed 2026-09-27 (see machine state below). Not yet done:
 - **Physical run:** arm from the panel and run the 24g scenarios. The
   wake-up move is a full animation with sound, so a development test of it
   needs the owner present.
@@ -102,33 +100,41 @@ this documentation pass. Recheck state before relying on them.
 
 - **Nano:** booted 2026-09-27 06:47 WIB (motor supply was off on the first
   boot; the once-per-boot recovery restarted the daemon once and stopped,
-  as designed). The daemon runs as PID 7340. It was resumed from standby at
-  03:52Z and was `running` with no error at 05:27Z. The checkout is
-  `6f6eb24`. Embodiment runs `reachy-embodiment:local` = `6f6eb24`
-  (`0ab5ebdf`), recreated at 05:26:54Z with the read-only `/tmp` →
-  `/host-tmp` mount. The rollback image `:edb03f5` (`e9df1677`) lacks the
-  `/host-tmp` link, so roll back the checkout with it: the launcher at
-  `edb03f5` recreates the old file bind. Older images are `:b36736d` and
-  `:eb1e92e9`. Gestures and wobble are **off**, and they also reset to
-  off on any embodiment restart. Sudo on the Nano needs a password, so the
-  owner runs `systemctl` steps and container recreates. This dev box has
-  key SSH as `Reachy-Mini-Jetson`. The system `python3` is too old for
-  `voice-timing.py`: use `~/reachy-venv/bin/python`, and pass `--session N`
-  when a log holds several voice sessions. No MediaPipe on the Nano (palm
-  stop is hub-side); voice is enabled. `opencv-python-headless` for the
-  24f tools is in `~/24f-tools` only (use `PYTHONPATH`). Logs are in
-  `~/24f-logs` and `~/24d-logs`. `reachy-embodiment.service` and
-  `reachy-daemon-recovery.service` are enabled, and the container has no
-  Docker restart policy. Embodiment is host-networked on 8100, and the
-  daemon is on loopback 8000. Apply the
-  [deployment boundaries](docs/deployment.md#robot-host-and-jetson-nano)
+  as designed). The daemon runs as PID 7340 and was `running` at 09:33Z.
+  - **Checkout and image:** the checkout is `b77ff6a`, and embodiment
+    runs `reachy-embodiment:local` = `b77ff6a` (`796d65ee`). The container
+    was recreated by the owner at about 09:32Z with voice on and
+    `WAKE_ANIMATION_ENABLED=true`, and registered as generation 4, wake
+    capable. "Hey Reachy" was not armed yet at that point.
+  - **Rollback:** the image is `:6f6eb24` (`0ab5ebdf`); roll the checkout
+    back with it. Older images are `:edb03f5` (`e9df1677`, which lacks the
+    `/host-tmp` link), `:b36736d` and `:eb1e92e9`.
+  - **Motion:** 24f gestures and wobble are **off**, and reset to off on
+    any embodiment restart.
+  - **Access:** sudo on the Nano needs a password, so the owner runs
+    `systemctl` steps and container recreates. This dev box has key SSH
+    as `Reachy-Mini-Jetson`.
+  - **Tools:** the system `python3` is too old for `voice-timing.py`: use
+    `~/reachy-venv/bin/python`, and pass `--session N` when a log holds
+    several voice sessions. There is no MediaPipe on the Nano (palm stop is
+    hub-side). `opencv-python-headless` for the 24f tools is in
+    `~/24f-tools` only (use `PYTHONPATH`).
+  - **Logs:** `~/24f-logs` and `~/24d-logs`; the 24g image build logs are
+    in `~/24g-logs`.
+  - **Units:** `reachy-embodiment.service` and
+    `reachy-daemon-recovery.service` are enabled, and the container has no
+    Docker restart policy.
+  - **Network:** embodiment is host-networked on 8100, and the daemon is on
+    loopback 8000.
+
+  Apply the [deployment boundaries](docs/deployment.md#robot-host-and-jetson-nano)
   before daemon starts or motion; `--check` stays read-only.
-- **Homelab:** the hub was rebuilt at `0ec9c52` (05:10Z). Core is unchanged
-  since `c2db3d2` (2026-09-26 15:09Z). `STT_MODEL=small.en`,
+- **Homelab:** hub, core and migrate were rebuilt at `95cbc0a` (09:18Z,
+  24g). `b77ff6a` changed only the robot side and docs. `STT_MODEL=small.en`,
   `PALM_STOP_ENABLED=true` and `VOICE_CONTINUATION_WINDOW_MS=3000` are in
-  the private `.env`. The schema is `008_assistant_context`. The latest
+  the private `.env`. The schema is `009_wake_arm`. The latest
   pre-deploy backup is
-  `~/reachy-backups/reachy-before-clock-stt-deploy-20260927T041220.dump`
+  `~/reachy-backups/reachy-before-24g-deploy-20260927T091652.dump`
   (backups are 0600). Start only through `scripts/start-homelab.sh`, which
   is allowed in the gitignored `.claude/settings.local.json`, so a session
   can run it. To restart only core, run
