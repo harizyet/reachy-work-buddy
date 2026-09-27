@@ -64,36 +64,28 @@ relevance rules gate candidates.
     10:00Z. Whether those were the owner's attempts or background speech is
     unattributed.
 
-**Next: the owner's open requests (2026-09-27, not implemented).**
-1. When a conversation is admitted, the head should go to **home**, not
-   stay in the alert pose. After the conversation it returns to sleep.
-2. A false positive (rejected or discarded candidate) must return to sleep
-   **silently**. The owner hears the daemon's snore (`go_sleep.wav`) after
-   false wakes.
-   - **Cause, found in the logs:** the presence loop calls
-     `MotionController.request_behaviour(idle=True)` every 3 s. Those idle
-     behaviours map to no move, but `request_behaviour` still clears
-     `_rest_pose`. So the next rest always falls back to the daemon's
-     `goto_sleep` routine, which plays the snore every time.
+**Owner requests 1–2 implemented (`0880b1b`, 2026-09-27), not yet on the
+robot.**
+1. An admitted conversation raises the head to **home**; afterwards it
+   returns to sleep.
+2. False wakes return to sleep **silently**. The snore came from idle
+   presence behaviours (which start no move) clearing the rest pose, so
+   every rest fell back to the daemon's `goto_sleep`. Now `play_behaviour`
+   reports whether a move started, only a started move forgets the pose,
+   and no daemon routine is used: from an unknown pose the head goes home,
+   then down, with silent gotos. ADR 0023, the AGENTS.md exception and the
+   guides are updated. Fast suites pass (808); checked off the robot only.
 
-   A drafted fix is saved as `git stash` "24g WIP: silent home/alert/sleep
-   rest poses …". It is **untested, and its test updates are not written**.
-   It does the following:
-   - `play_behaviour` returns whether a move started;
-   - rest poses become `sleep`/`alert`/`home`, and the monitor sends `home`
-     on admission;
-   - daemon `goto_sleep` is dropped, and from an unknown pose the head goes
-     silently home, then to sleep.
-
-   Finish it, update `test_wake.py`, `test_motion.py` and the fakes whose
-   `play_behaviour` returns None, then redeploy the robot image. The owner
-   runs the recreate.
-
-   A hub rebuild is not needed unless `WakeLimits` changes. Also update the
-   ADR animation bullet and the AGENTS.md exception text: after this change
-   no daemon routine is used.
-3. After that, run the 24g scenarios as acceptance rows. Agree numeric
-   targets first (see the exit criteria).
+**Next:**
+1. The owner recreates the embodiment container on the new image
+   (`sudo systemctl stop reachy-embodiment && docker rm reachy-embodiment
+   && scripts/start-reachy.sh --no-browser`, voice and wake env unchanged).
+   No hub rebuild is needed.
+2. Physically check: a false wake (say "Hey Reachy" then nothing) returns
+   to sleep with no sound; an admitted conversation brings the head home;
+   the first rest after the recreate goes home then down, silently.
+3. Then run the 24g scenarios as acceptance rows. Agree numeric targets
+   first (see the exit criteria).
 
 Scratch on the Nano: `~/24g-bench` (models, clips, wheels) and `~/24g-src`
 (source mounts for the detector check); both are disposable.
@@ -137,14 +129,16 @@ this documentation pass. Recheck state before relying on them.
 - **Nano:** booted 2026-09-27 06:47 WIB (motor supply was off on the first
   boot; the once-per-boot recovery restarted the daemon once and stopped,
   as designed). The daemon runs as PID 7340 and was `running` at 09:33Z.
-  - **Checkout and image:** the checkout is `b62a023`, and embodiment
-    runs `reachy-embodiment:local` = `b62a023` (`ebfffcef`). The container
-    was recreated by the owner at about 10:01Z with voice on and
+  - **Checkout and image:** the checkout is `0880b1b`, and
+    `reachy-embodiment:local` = `0880b1b` (`15ba2797`, built 2026-09-27,
+    log `~/24g-logs/build-0880b1b.log`). The **running container is still
+    on `ebfffcef` (`b62a023`)** until the owner recreates it. It was
+    recreated at about 10:01Z with voice on and
     `WAKE_ANIMATION_ENABLED=true`, and "Hey Reachy" was **armed** (the arm
     is stored in the hub database; disarm from the robot microphone panel).
     `796d65ee` (`b77ff6a`) is untagged.
-  - **Rollback:** the image is `:6f6eb24` (`0ab5ebdf`); roll the checkout
-    back with it. Older images are `:edb03f5` (`e9df1677`, which lacks the
+  - **Rollback:** `:b62a023` (`ebfffcef`) for this change, then `:6f6eb24`
+    (`0ab5ebdf`); roll the checkout back with it. Older images are `:edb03f5` (`e9df1677`, which lacks the
     `/host-tmp` link), `:b36736d` and `:eb1e92e9`.
   - **Motion:** 24f gestures and wobble are **off**, and reset to off on
     any embodiment restart.
