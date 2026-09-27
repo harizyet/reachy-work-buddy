@@ -39,27 +39,25 @@ appending the owner's location (`4a9dd16`), and the hub's INFO logging
 `no_media` SDK client) breaks the embodiment camera until embodiment
 restarts, since the socket bind keeps the old inode.
 
-The owner settled the run's three open decisions on 2026-09-26; the work
-is committed, tested in process, and **not deployed**:
+The owner settled the run's three open decisions on 2026-09-26. Both
+commits have been **deployed since 2026-09-26 15:09Z**: the homelab
+images were built at `c2db3d2`, and a 2026-09-27 `--build` was fully
+cached, with no hub or core changes since.
 - `637fcad`: the local time or date is answered from the clock in the
   owner's timezone, and a time question naming another place searches.
   A generated reply is labelled from the question only, never the model's
   wording, and a work word counts only for the owner's own data ("How do I
   schedule a meeting on Outlook?" is public). See the
   [ADR 0006 amendment](docs/adr/0006-response-routing.md#generated-replies-are-labelled-from-the-question-only-2026-09-26).
-- `c2db3d2`: `STT_MODEL` picks the hub's Whisper model. A synthetic
-  comparison ([record](docs/verification/stt-model-comparison-2026-09-26.md))
-  favours small.en under noise, at about +0.55 s per turn, which likely
-  takes non-search p50 over the 4 s budget. `STT_MODEL=small.en` is in the
-  homelab's private `.env`.
+- `c2db3d2`: `STT_MODEL` picks the hub's Whisper model, and the homelab
+  runs small.en (warmed in 108.8 s on first start). The synthetic
+  [comparison](docs/verification/stt-model-comparison-2026-09-26.md)
+  predicted about +0.55 s per turn. On the robot, the 2026-09-27 step C
+  rerun measured non-search p50 3.75 s, within budget.
 
-**Next:** the owner runs `scripts/start-homelab.sh --build` (this session's
-rebuild was blocked by the permission check). The hub then downloads
-small.en (~480 MB) once and warms it in the background; confirm the
-warm-up log line before a voice turn. Then check on the robot: the time
-questions, "What's a good way to start the morning?" spoken aloud, the
-mishearing phrases, and the timing against the budget. If mishearings
-remain with small.en, suspect the microphone. Unset `STT_MODEL` to revert.
+**Next, on the robot:** the time questions, "What's a good way to start the
+morning?" spoken aloud, and the mishearing phrases. If mishearings remain
+with small.en, suspect the microphone. Unset `STT_MODEL` to revert.
 
 24f physical ([record](docs/verification/phase-24f-physical-2026-09-26.md)):
 the owner's portal toggle reaches the robot. The step B motion-off
@@ -182,10 +180,12 @@ this documentation pass. Recheck state before relying on them.
   is host-networked on 8100, daemon loopback on 8000. Apply the
   [deployment boundaries](docs/deployment.md#robot-host-and-jetson-nano)
   before daemon starts or motion; `--check` stays read-only.
-- **Homelab:** rebuilt 2026-09-26 14:27Z at `7a597e6` (`c2db3d2` not yet
-  deployed; `.env` has `STT_MODEL=small.en` waiting for the rebuild); hub and core
-  healthy, nano-1 online and voice-capable. Latest pre-change backup is
-  `~/reachy-backups/reachy-before-24f-deploy-20260925T131937.dump`; schema
+- **Homelab:** running `c2db3d2` since 2026-09-26 15:09Z, with
+  `STT_MODEL=small.en` active. Hub and core are healthy, and nano-1 is
+  online and voice-capable. The pre-deploy backup from 2026-09-27 is
+  `~/reachy-backups/reachy-before-clock-stt-deploy-20260927T041220.dump`.
+  `scripts/start-homelab.sh` is allowed in the gitignored
+  `.claude/settings.local.json`, so a session can run it. The schema is
   `008_assistant_context`. The private `.env` now sets
   `PALM_STOP_ENABLED=true` and `VOICE_CONTINUATION_WINDOW_MS=3000` (owner
   decisions, 2026-09-26). The hub now logs its own INFO lines (`7a597e6`).

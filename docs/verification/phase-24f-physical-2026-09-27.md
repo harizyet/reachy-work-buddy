@@ -13,7 +13,7 @@ Nano logs are in `~/24f-logs/boot-20260927-no-motors.log`,
 
 | Component | Version |
 |---|---|
-| Hub and core | `7a597e6` (homelab, unchanged; `637fcad`/`c2db3d2` not deployed) |
+| Hub and core | `c2db3d2` (homelab images built and started 2026-09-26 15:08–15:09Z, `STT_MODEL=small.en`; an earlier note here said `7a597e6`, which was stale) |
 | Nano checkout | `1473674` |
 | Nano embodiment | Image `c314d4fa` (`reachy-embodiment:b36736d`, retagged `:local`); the previous `eb1e92e9` is kept as `reachy-embodiment:eb1e92e9` for rollback |
 | Daemon | `reachy-mini` 1.8.4 |
@@ -108,7 +108,8 @@ in `motion.py`.
 ## Step C rerun with silent poses: passed
 
 **Run:** 03:54–04:05Z. **Versions:** Nano checkout and embodiment image `edb03f5` (`e9df1677`),
-recreated at 01:35Z. Hub and core were unchanged at `7a597e6`, and the
+recreated at 01:35Z. Hub and core were at `c2db3d2` with the small.en
+Whisper model, so this is also the first physical timing of small.en. The
 daemon was 1.8.4. The owner resumed the daemon from standby at 03:52:16Z
 and watched the wake-up. It reported `running` with no error. The owner
 switched listening/thinking gestures on in the portal, and the robot
