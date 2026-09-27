@@ -114,7 +114,9 @@ conversation request allows 70 seconds, while health probes retain short
 timeouts.
 
 The in-memory transcript now includes assistant messages and supplies the
-most recent 39 messages, beginning with a user turn. Same-session turns
+most recent messages (`CONTEXT_MESSAGES`, 15 since
+[ADR 0006](0006-response-routing.md#carried-privacy-expires-with-the-models-context-2026-09-26)),
+beginning with a user turn. Same-session turns
 serialize so concurrent channels cannot interleave replies. Generated
 follow-ups preserve the strongest prior privacy label in the conversation
 and classify the current input/output; a private calendar/email reply must

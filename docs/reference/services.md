@@ -77,8 +77,9 @@ here. Free-form text expressing the same intent (e.g. "turn off Reachy")
 is never itself authoritative; `command_suggestion.py`'s separate,
 schema-validated, fail-closed classifier may offer it only as a
 suggestion — see [docs/phase-24b.md](../phase-24b.md).
-Same-session turns serialize; the latest 39 user/assistant messages provide
-bounded context, reset on restart. Work-memory recall queries persistent
+Same-session turns serialize; the latest 15 user/assistant messages
+(`CONTEXT_MESSAGES`, [ADR 0006](adr/0006-response-routing.md#carried-privacy-expires-with-the-models-context-2026-09-26))
+provide bounded context, reset on restart. Work-memory recall queries persistent
 records, never dumps that transcript. Calendar/email replies are
 work-private; generated follow-ups retain the strongest prior context label.
 A generated reply is labelled from the owner's question only, never from

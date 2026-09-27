@@ -16,8 +16,16 @@ from shared.models.response import Privacy
 
 # Messages the model sees per turn. A carried privacy label expires once
 # the message it came from has left this window: nothing private can then
-# be repeated, so it no longer needs to silence the robot.
-CONTEXT_MESSAGES = 39
+# be repeated, so it no longer needs to silence the robot. Odd, so the
+# window always begins on a user turn (messages alternate user/assistant
+# and end on the current user turn — see ADR 0016).
+#
+# Lowered from 39 (owner, 2026-09-27, phase 24g physical run): "what's my
+# next appointment" kept a later, unrelated "tell me a story" muted on
+# Reachy's speaker ~19 filler turns later. Both numbers move together
+# deliberately (ADR 0006): a label may only expire when the model's own
+# context can no longer repeat what caused it.
+CONTEXT_MESSAGES = 15
 
 _RANK = {Privacy.PUBLIC: 0, Privacy.WORK_PRIVATE: 1, Privacy.SENSITIVE: 2}
 

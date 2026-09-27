@@ -128,10 +128,17 @@ in Desk mode until core restarted.
 
 **Decision (owner, 2026-09-26):** a carried label applies only while the
 message it came from is still in the context the model sees
-(`CONTEXT_MESSAGES`, the last 39 messages). After that the model cannot
-repeat it, so later replies are labelled on their own content again. A
-label on the current turn is unaffected, and private content still in
-context keeps the conversation private.
+(`CONTEXT_MESSAGES`). After that the model cannot repeat it, so later
+replies are labelled on their own content again. A label on the current
+turn is unaffected, and private content still in context keeps the
+conversation private.
+
+**Lowered to 15 messages, from 39 (owner, 2026-09-27, phase 24g physical
+run):** a wake-started "what's my next appointment" kept a later,
+unrelated "tell me a story" muted on Reachy's speaker; at 39 messages a
+carried label outlives about 19 filler turns. The two numbers still move
+together — this is a size change, not a departure from the decision
+above.
 
 ## Generated replies are labelled from the question only (2026-09-26)
 
