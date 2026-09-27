@@ -1,6 +1,7 @@
 # Phase 25 — owner recognition and voice access control
 
-Status: planned, not implemented. Depends on
+Status: planned, not implemented; **unblocked on 2026-09-27** (the 24e
+prerequisites passed or were waived by the owner). Depends on
 [Phase 24c](phase-24cd.md#phase-24c--audit-and-implement-the-missing-workflow)
 implementing the baseline Reachy conversation workflow and
 [Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance)
@@ -9,7 +10,9 @@ when the [24e conversation-path prerequisites](phase-24e.md#prerequisites-for-ph
 pass, including adaptive end of turn and physical privacy/auth/cancellation,
 expiry, recovery and sustained-use acceptance, with Normal conversation and
 Timing rerun after the changes. BLOCKED or deferred prerequisites do not
-satisfy this gate. If Phase 24f motion is enabled on the recognition stack, its
+satisfy this gate. The owner waived the 30-minute session and held-turn
+cancellation, and renewed usability acceptance, on 2026-09-27
+([waiver](phase-24e.md#prerequisites-for-phase-25)). If Phase 24f motion is enabled on the recognition stack, its
 [conformance and coexistence dependency](phase-24f.md#order-and-dependencies)
 also applies; expressive animation is not itself a Phase 25 start prerequisite.
 Answer quality, search/STT tuning and Nano diagnostics are

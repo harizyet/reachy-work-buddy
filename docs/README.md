@@ -40,8 +40,9 @@ correct facts or links, not to track each new phase dependency.
 - [Phase 24e](phase-24e.md): conversation hardening (adaptive end of turn,
   search-trigger fixes, a correctness set) and the 24d rows the owner
   deferred, plus Nano diagnostics. Its
-  [24e conversation-path prerequisites](phase-24e.md#prerequisites-for-phase-25) block
-  Phase 25; quality/search/STT tuning and diagnostics do not.
+  [24e conversation-path prerequisites](phase-24e.md#prerequisites-for-phase-25) gated
+  Phase 25; they passed or were waived by the owner on 2026-09-27, and
+  the phase closed by re-scope.
 - [Phase 24f](phase-24f.md): draft motion conformance, startup home and local
   conversational embodiment plan, with supervised acceptance and version gates.
 - [Phase 25](phase-25.md): owner recognition and voice access control.

@@ -7,20 +7,14 @@ own evidence. This snapshot is not a live health check.
 
 ## Current priority and next gates
 
-[Phase 24e](phase-24e.md) and [Phase 24f](phase-24f.md) closed by owner
-re-scope on 2026-09-27. Their work is deployed, and most rows passed on
-the robot. 24e deferred four items:
-- the supervised 30-minute session;
-- cancelling a held turn on the robot;
-- item 4, the Nano diagnostics;
-- renewed owner acceptance of usability.
-24f deferred its remaining motion rows.
-
-Phase 25 remains blocked until the
-[24e conversation-path prerequisites](phase-24e.md#prerequisites-for-phase-25)
-PASS on hardware. The 30-minute session and held-turn cancellation are
-still among them. Phase 25 runs with conversational motion off until
-24f's deferred rows pass. Phases 25–27 remain planned.
+[Phase 25](phase-25.md) is next and unblocked. [Phase 24e](phase-24e.md)
+and [Phase 24f](phase-24f.md) closed by owner re-scope on 2026-09-27. The
+owner then settled the
+[24e prerequisites](phase-24e.md#prerequisites-for-phase-25): they waived
+the 30-minute session and held-turn cancellation, which were never run on
+the robot, and renewed usability acceptance. 24e's Nano diagnostics (item
+4) are deferred. Phase 25 runs with conversational motion off until 24f's
+deferred rows pass. Phases 25–27 remain planned.
 
 ## Deployment and production acceptance
 
@@ -72,9 +66,9 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
   - clock answers and reply labelling;
   - the correctness set.
   Open-ended questions take about 8 s to first audio, which the owner
-  accepted. The phase closed by owner re-scope; the 30-minute session,
-  held-turn cancellation, Nano diagnostics and renewed usability
-  acceptance are deferred
+  accepted, and renewed usability acceptance on 2026-09-27. The phase
+  closed by owner re-scope. The owner waived the 30-minute session and
+  held-turn cancellation, and the Nano diagnostics are deferred
   ([24e record](verification/phase-24e-physical-2026-09-25.md),
   [2026-09-27 record](verification/clock-routing-stt-physical-2026-09-27.md)).
 - **Conversational motion (24f):** silent listening/thinking poses, speech

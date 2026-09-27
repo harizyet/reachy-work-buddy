@@ -13,17 +13,17 @@ deployed, and most rows passed on the robot with the owner:
 The 2026-09-27 step C run of 22 short questions measured p50 3.75 s and
 p95 6.69 s with small.en.
 
-**Deferred** against the [exit criteria](#exit-criteria):
-- the supervised 30-minute session (Coexistence and sustained use);
-- cancelling a held turn on the robot;
-- item 4 (Nano diagnostics), not started;
-- renewed owner acceptance of usability.
+Against the [exit criteria](#exit-criteria):
+- **Waived** as Phase 25 gates, not run: the supervised 30-minute session
+  (Coexistence and sustained use), and cancelling a held turn on the
+  robot.
+- **Deferred:** item 4 (Nano diagnostics), not started.
+- **Accepted:** the owner renewed usability acceptance on 2026-09-27.
 TV speech taken as a turn is a known limit, deferred to Phase 25 by the
 owner.
 
-The first two are [Phase 25 prerequisites](#prerequisites-for-phase-25).
-Deferring them doesn't waive them, so Phase 25 stays blocked until they
-pass on the robot.
+With the waiver and the usability acceptance, every
+[Phase 25 prerequisite](#prerequisites-for-phase-25) is passed or waived.
 It follows [Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance),
 which the owner closed on the conversation workflow on 2026-09-25, and it
 addresses what 24d found or deferred. Evidence for each issue is in the
@@ -45,6 +45,16 @@ real robot**, with evidence in the dated 24e verification record:
   within the existing budgets, with renewed owner acceptance of usability.
 
 BLOCKED, deferred or untested prerequisite rows do not unlock Phase 25.
+
+**Owner waiver, 2026-09-27:** the owner waived two of these rows as Phase 25
+start gates:
+- the supervised 30-minute session (Coexistence and sustained use);
+- cancelling a held turn on the real robot.
+Neither was run on the robot. Held-turn cancellation is covered by
+in-process tests only. Stop and expiry passed physically for ordinary
+turns. The owner renewed usability acceptance the same day, which
+completes the gate: **Phase 25 may start.** TV speech taken as a turn was
+deferred to Phase 25 itself, where owner recognition addresses it.
 The answer-quality benchmark, search heuristics, STT vocabulary tuning,
 and Nano diagnostics may proceed independently and are not prerequisites.
 Session continuity remains required 24e work but is not a Phase 25 start

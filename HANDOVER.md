@@ -17,18 +17,17 @@ the owner:
 - the [correctness set](docs/verification/phase-24e-correctness-2026-09-25.md)
   (94.3%).
 
-Deferred, not passed:
-- **The supervised 30-minute session.** It needs `max_session_seconds` ≥
-  1800 for the run.
-- **Cancelling a held turn** on the robot.
-- **Item 4, Nano diagnostics:** the Nano has no persistent journal, no
-  power logging and no diagnosis procedure. It needs the owner's sudo and
-  approval.
-- **Renewed owner acceptance of usability.**
-The first two are still
-[Phase 25 prerequisites](docs/phase-24e.md#prerequisites-for-phase-25), so
-**Phase 25 stays blocked until they pass on the robot.** They're the next
-physical work before any Phase 25 implementation.
+Owner decisions after closing, 2026-09-27:
+- **Waived** as Phase 25 gates, never run on the robot: the supervised
+  30-minute session, and cancelling a held turn (in-process test only).
+- **Renewed usability acceptance.**
+- **Deferred:** item 4, Nano diagnostics. The Nano has no persistent
+  journal, no power logging and no diagnosis procedure. It needs the
+  owner's sudo and approval.
+
+**[Phase 25](docs/phase-25.md) (owner recognition) is next and
+unblocked.** Run it with conversational motion off until 24f's deferred
+rows pass.
 
 TV speech answered as a turn is a known limit, deferred to Phase 25 by
 the owner. The audio-fault recovery sub-row is in process only, also by
