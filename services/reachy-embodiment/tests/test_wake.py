@@ -127,6 +127,9 @@ class FakeConversation:
         self.primed = utterance
 
 
+HOLD = object()  # an upload the hub answers only after voice_start
+
+
 class ScriptedCandidates:
     def __init__(self, *answers) -> None:
         self.answers = list(answers)
@@ -136,6 +139,8 @@ class ScriptedCandidates:
         # 44-byte WAV header, 16-bit samples.
         self.uploads.append(((len(wav_bytes) - 44) // 2, arm_id, generation))
         answer = self.answers.pop(0)
+        if answer is HOLD:
+            await asyncio.Event().wait()  # as the hub: voice_start comes first
         if isinstance(answer, Exception):
             raise answer
         return answer
@@ -246,9 +251,11 @@ def test_natural_pause_joins_the_phrase_and_the_request_into_one_candidate() -> 
     asyncio.run(scenario())
 
 
-def test_admitted_candidate_is_primed_and_monitoring_waits_for_the_session() -> None:
+def test_admitted_candidate_is_primed_and_the_head_comes_home_for_the_session() -> None:
     async def scenario():
-        uploader = ScriptedCandidates("sid-1")
+        # The hub opens the session, sending voice_start, before it answers
+        # the upload; the control client then suspends monitoring.
+        uploader = ScriptedCandidates(HOLD)
         monitor, mic, motion, _, conversation, arm = make_monitor(uploader)
         await monitor.arm(arm, generation=1)
         await wait_until(lambda: mic.open)
@@ -256,14 +263,45 @@ def test_admitted_candidate_is_primed_and_monitoring_waits_for_the_session() -> 
         await wait_until(lambda: len(uploader.uploads) == 1)
         assert conversation.primed is not None and len(conversation.primed) >= int(2.0 * SR)
 
-        conversation.voice_session_id = "sid-1"  # the hub's voice_start arrived
-        await asyncio.sleep(0.1)
+        conversation.voice_session_id = "sid-1"
+        await monitor.suspend()
         assert mic.starts == 1 and not mic.open  # the microphone is the session's now
-        assert motion.moves == ["sleep", "alert", "home"]  # admitted: head up for the conversation
+        await wait_until(lambda: motion.moves == ["sleep", "alert", "home"])
 
         conversation.voice_session_id = None  # the session ended
+        monitor.resume()
         await wait_until(lambda: mic.starts == 2 and mic.open)
         assert motion.moves == ["sleep", "alert", "home", "sleep"]
+        await monitor.aclose()
+
+    asyncio.run(scenario())
+
+
+def test_an_admission_answered_before_voice_start_still_brings_the_head_home() -> None:
+    async def scenario():
+        uploader = ScriptedCandidates("sid-1")
+        monitor, mic, motion, _, conversation, arm = make_monitor(uploader)
+        await monitor.arm(arm, generation=1)
+        await wait_until(lambda: mic.open)
+        mic.push(np.concatenate([silence(1.0), wake_phrase(), tone(1.5), silence(0.4)]))
+        await wait_until(lambda: len(uploader.uploads) == 1)
+        await asyncio.sleep(0.05)  # the answer is in; monitoring waits for the session
+        conversation.voice_session_id = "sid-1"
+        await monitor.suspend()
+        await wait_until(lambda: motion.moves == ["sleep", "alert", "home"])
+        await monitor.aclose()
+
+    asyncio.run(scenario())
+
+
+def test_a_session_started_without_a_candidate_does_not_move_the_head() -> None:
+    async def scenario():
+        monitor, mic, motion, _, _, arm = make_monitor(ScriptedCandidates())
+        await monitor.arm(arm, generation=1)
+        await wait_until(lambda: mic.open)
+        await monitor.suspend()  # e.g. the owner started a session from the panel
+        await asyncio.sleep(0.05)
+        assert motion.moves == ["sleep"]
         await monitor.aclose()
 
     asyncio.run(scenario())

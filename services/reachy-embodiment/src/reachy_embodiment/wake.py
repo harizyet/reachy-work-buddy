@@ -184,6 +184,9 @@ class WakeMonitor:
         # conversation clears it, so the next listening phase rests again.
         self._resting = False
         self._motion_task: asyncio.Future[bool] | None = None
+        # True from a candidate's upload until its session starts or it is
+        # turned down.
+        self._submitting = False
         self._ready_at: float | None = None
         self._ready = False
 
@@ -213,9 +216,15 @@ class WakeMonitor:
         await self._cancel()
 
     async def suspend(self) -> None:
-        """Releases the microphone before a voice session starts."""
+        """Releases the microphone before a voice session starts. The hub
+        opens an admitted candidate's session before it answers the upload,
+        so a suspend during the upload is the admission."""
+        admitted = self._submitting
         self._resting = False
         await self._cancel()
+        if admitted:
+            log.info("wake candidate admitted")
+            await self._rest_move("home")
 
     def resume(self) -> None:
         """Monitoring again, if armed; the conversation calls this when it
@@ -387,29 +396,32 @@ class WakeMonitor:
         when it was rejected or could not be sent, None when the arm is
         stale."""
         self._conversation.prime(candidate)
+        self._submitting = True
         try:
-            session_id = await self._uploader.wake_candidate(
-                encode_wav(candidate), arm_id=arm_id, generation=generation
-            )
-        except VoiceSessionGone as exc:
-            self._conversation.prime(None)
-            log.warning("wake candidate refused (%s); monitoring pauses until re-armed", exc)
-            return None
-        except httpx.HTTPError as exc:
-            self._conversation.prime(None)
-            log.warning("wake candidate upload failed: %s", exc)
-            return False
-        if session_id is None:
-            self._conversation.prime(None)
-            log.info("wake candidate rejected by the hub")
-            return False
-        log.info("wake candidate admitted")
-        await self._rest_move("home")
-        # The hub's voice_start makes the control client suspend this task.
-        # If it never arrives, drop the candidate and listen again.
-        waited_until = self._clock() + self._admission_wait
-        while self._conversation.voice_session_id != session_id and self._clock() < waited_until:
-            await asyncio.sleep(self._idle_interval)
+            try:
+                session_id = await self._uploader.wake_candidate(
+                    encode_wav(candidate), arm_id=arm_id, generation=generation
+                )
+            except VoiceSessionGone as exc:
+                self._conversation.prime(None)
+                log.warning("wake candidate refused (%s); monitoring pauses until re-armed", exc)
+                return None
+            except httpx.HTTPError as exc:
+                self._conversation.prime(None)
+                log.warning("wake candidate upload failed: %s", exc)
+                return False
+            if session_id is None:
+                self._conversation.prime(None)
+                log.info("wake candidate rejected by the hub")
+                return False
+            # Normally voice_start has already suspended this task (see
+            # `suspend`). If it never arrives, drop the candidate and listen
+            # again.
+            waited_until = self._clock() + self._admission_wait
+            while self._conversation.voice_session_id != session_id and self._clock() < waited_until:
+                await asyncio.sleep(self._idle_interval)
+        finally:
+            self._submitting = False
         if self._conversation.voice_session_id != session_id:
             self._conversation.prime(None)
             log.warning("admitted wake session never started; listening again")
