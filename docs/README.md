@@ -135,7 +135,7 @@ These are dated evidence, not startup instructions or current health checks.
 
 - [Phase 24f physical run](verification/phase-24f-physical-2026-09-26.md):
   motion-off baseline, gestures on (daemon stop 500 reset the next request;
-  fixed), owner-present acceptance rows in progress.
+  fixed); the acceptance rows continued on 2026-09-27.
 
 - [Phase 24f physical run, 2026-09-27](verification/phase-24f-physical-2026-09-27.md):
   first real once-per-boot recovery (motor power off), `b36736d` swap,

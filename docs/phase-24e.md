@@ -1,21 +1,25 @@
 # Phase 24e — Conversation hardening and deferred acceptance
 
-Status: **in progress** (2026-09-25). This page states what 24e must deliver,
-not what already works. Item 1 (adaptive end of turn) is implemented per the
-[ADR 0023 amendment](adr/0023-robot-voice-conversation.md#addendum-adaptive-end-of-turn-2026-09-25-phase-24e),
-with in-process and simulated-audio tests only; it is not deployed or
-physically accepted. Item 2's search-rule fixes and STT vocabulary bias are
-implemented and tested in process (see the
-[note below](#implementation-notes-item-2)). The correctness set and its
-[scoring rules](#correctness-set-scoring-rules) and the owner's threshold
-were recorded first. The local model then passed: 82 of 87 (94.3%), every
-category ≥ 87.5%
-([record](verification/phase-24e-correctness-2026-09-25.md)). Item 5
-(open-palm stop) was added by the owner on 2026-09-25 and is implemented
-behind the hub's `PALM_STOP_ENABLED`, off by default. Detection runs on the
-hub, from frames the robot uploads during playback. It is tested in
-process and in an x86 hub image build only; deployment and the physical
-run are open ([record](verification/phase-24e-palm-stop-2026-09-25.md)). It follows [Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance),
+Status: **in progress; not ready to close** (2026-09-27). Items 1, 2 and
+5 are deployed, and most rows passed on the robot with the owner:
+- the [physical run](verification/phase-24e-physical-2026-09-25.md): normal
+  conversation, timing, turn handling with adaptive end of turn
+  (continuation window 3.0 s), stop and expiry, privacy, consent, session
+  continuity, recovery, and open-palm stop;
+- [clock answers, reply labelling and small.en](verification/clock-routing-stt-physical-2026-09-27.md);
+- the [correctness set](verification/phase-24e-correctness-2026-09-25.md)
+  (94.3%).
+The 2026-09-27 step C run of 22 short questions measured p50 3.75 s and
+p95 6.69 s with small.en.
+
+Open against the [exit criteria](#exit-criteria):
+- the supervised 30-minute session (Coexistence and sustained use);
+- cancelling a held turn on the robot;
+- item 4 (Nano diagnostics), not started;
+- renewed owner acceptance of usability.
+TV speech taken as a turn is a known limit, deferred to Phase 25 by the
+owner.
+It follows [Phase 24d](phase-24cd.md#phase-24d--physical-end-to-end-acceptance),
 which the owner closed on the conversation workflow on 2026-09-25, and it
 addresses what 24d found or deferred. Evidence for each issue is in the
 [24d record](verification/phase-24d-conversation-2026-09-24.md). Scope was

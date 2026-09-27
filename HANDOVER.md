@@ -7,240 +7,116 @@ acceptance. This file holds only session continuation details.
 
 ## Current work
 
-The homelab portal was redeployed 2026-09-25 at 14:32 UTC with chat search
-indicators and per-robot runtime animation controls. Live Chromium verified
-five real search results, expansion, no indicator on a subsequent ordinary
-turn, and disabled animation controls while Reachy is offline. Auth/CSRF
-checks and three fixture browser regressions passed. See the
-[deployment/test record](docs/verification/portal-controls-2026-09-25.md).
-The owner kept Reachy powered off and limited this run to the web UI.
-**Next:** rebuild the Nano embodiment image before live animation settings
-can work; physical animation testing is still open. Runtime settings restore
-environment defaults on restart; see the
-[operator guide](docs/operator-guide.md#conversational-animations).
+**[Phase 24e](docs/phase-24e.md) is in progress and is not ready to
+close.** Everything it built is deployed. Most of its rows passed on the
+robot with the owner:
+- the [24e physical run](docs/verification/phase-24e-physical-2026-09-25.md)
+  (2026-09-25/26);
+- [clock, reply labelling and small.en](docs/verification/clock-routing-stt-physical-2026-09-27.md)
+  (2026-09-27);
+- the [correctness set](docs/verification/phase-24e-correctness-2026-09-25.md)
+  (94.3%).
 
-The [24e physical run](docs/verification/phase-24e-physical-2026-09-25.md)
-ran with the owner on 2026-09-25 and 2026-09-26. Passed: Normal
-conversation; Timing (warm re-run p50 3.63 s, p95 5.22 s); turn handling
-apart from TV speech (known limit, deferred to Phase 25; continuation
-window owner-set at 3.0 s, `da93df9`); stop and expiry (31 ms playback
-stop); privacy by voice after the carry-over fix (`52fefdb`); consent after
-the deterministic email-action refusal (`c383370`); session continuity
-(robot → web → Telegram → robot); recovery from hub, network and
-embodiment restarts (the audio-fault sub-row is in-process only, by owner
-decision, because a daemon media release doesn't affect the ALSA mic or
-speaker); open-palm stop with either hand and no false stops (owner accepts
-1–2 s to silence). **Next for 24e:** the 30-minute session.
+These exit criteria are still open:
+- **Coexistence and sustained use:** the supervised 30-minute session.
+  It's also a [Phase 25 prerequisite](docs/phase-24e.md#prerequisites-for-phase-25).
+  It needs `max_session_seconds` ≥ 1800 for the run.
+- **Adaptive end of turn:** cancelling a *held* turn on the robot. Long
+  utterances with pauses already passed.
+- **Item 4, Nano diagnostics:** not started. The Nano has no persistent
+  journal (`/var/log/journal` is missing, and only the current boot is
+  listed), no power logging, and no diagnosis procedure in the deployment
+  guide. It needs the owner's sudo and approval for system changes.
+- **Renewed owner acceptance of usability,** recorded after the above.
 
-Homelab fixes after the owner ended testing (deployed, not yet exercised
-on the robot): weather search keeps a question's own place instead of
-appending the owner's location (`4a9dd16`), and the hub's INFO logging
-(`7a597e6`). Fixed and deployed 2026-09-27: the embodiment camera now survives the
-daemon recreating its socket (a standby wake, a `no_media` release). The
-container binds host `/tmp` read-only at `/host-tmp`, and the backend
-reopens the camera pipeline (`0ec9c52`, `6f6eb24`, Nano image `0ab5ebdf`).
-This was verified with a no-motion media release/acquire
-([record](docs/verification/phase-24f-physical-2026-09-27.md#camera-socket-fix-on-nano-1));
-a real standby wake has not been retried. The hub now answers an
-abandoned palm-frame upload with a 400 instead of a traceback (homelab,
-05:10Z). A recreated hub container re-downloads small.en (112 s before
-voice works). Not investigated.
+TV speech answered as a turn is a known limit, deferred to Phase 25 by
+the owner. The audio-fault recovery sub-row is in process only, also by
+owner decision.
 
-The owner settled the run's three open decisions on 2026-09-26. Both
-commits have been **deployed since 2026-09-26 15:09Z**: the homelab
-images were built at `c2db3d2`, and a 2026-09-27 `--build` was fully
-cached, with no hub or core changes since.
-- `637fcad`: the local time or date is answered from the clock in the
-  owner's timezone, and a time question naming another place searches.
-  A generated reply is labelled from the question only, never the model's
-  wording, and a work word counts only for the owner's own data ("How do I
-  schedule a meeting on Outlook?" is public). See the
-  [ADR 0006 amendment](docs/adr/0006-response-routing.md#generated-replies-are-labelled-from-the-question-only-2026-09-26).
-- `c2db3d2`: `STT_MODEL` picks the hub's Whisper model, and the homelab
-  runs small.en (warmed in 108.8 s on first start). The synthetic
-  [comparison](docs/verification/stt-model-comparison-2026-09-26.md)
-  predicted about +0.55 s per turn. On the robot, the 2026-09-27 step C
-  rerun measured non-search p50 3.75 s, within budget.
+**Owner decisions on 2026-09-27:**
+- Open-ended spoken questions take about 8 s to first audio, because the
+  local model writes about 60 words at about 21 tokens/s. This is
+  accepted as is: the 4 s budget is measured on short questions.
+- [Phase 24f](docs/phase-24f.md) is **closed by re-scope**. Its passed
+  rows are silent poses, wobble, stops, 409 arbitration, palm stop and
+  switch-off. The rest is deferred to a future phase, so Phase 25 runs
+  with motion off until those pass.
 
-The robot checks passed on 2026-09-27
-([record](docs/verification/clock-routing-stt-physical-2026-09-27.md)).
-The clock answers and the public "start the morning" reply work, and
-"code word" and "cold and the flu" are now heard correctly. "Tokyo" was
-misheard once. The open-ended questions took 7.8–9.9 s, because the local
-model spends 4–5 s on replies of about 60 words. The owner accepted that
-as is (2026-09-27): the 4 s budget is measured on short questions. Unset
-`STT_MODEL` to revert small.en.
+**Fixed and deployed 2026-09-27:**
+- **Camera across daemon media restarts** (`0ec9c52`, `6f6eb24`): a
+  standby wake used to leave the camera and palm stop without frames
+  until embodiment restarted. It is now verified with a no-motion media
+  release/acquire
+  ([record](docs/verification/phase-24f-physical-2026-09-27.md#camera-socket-fix-on-nano-1)).
+  A real standby wake has not been retried: after the next `/reachy wake`,
+  confirm that palm stop still works.
+- **Abandoned palm-frame uploads:** the hub answers them with a 400
+  instead of a traceback.
 
-24f physical ([record](docs/verification/phase-24f-physical-2026-09-26.md)):
-the owner's portal toggle reaches the robot. The step B motion-off
-baseline is recorded. Step C (gestures on) failed on the robot's daemon
-client: stopping an already-finished move made the daemon drop the
-connection, and the next gesture or home move reused it. That's fixed in
-`b36736d` and verified against a mockup only. The robot-side cost of
-gestures was +19.5 ms median.
-
-2026-09-27 ([record](docs/verification/phase-24f-physical-2026-09-27.md)):
-the recorded listening/thinking gestures were too long and made a sound
-each time, so they became silent goto poses (see the
-[ADR 0003 amendment](docs/adr/0003-embodiment-command-api.md#conversation-poses-amendment-2026-09-27)),
-with owner-tuned values. The `edb03f5` image is on the Nano. The
-[second step C rerun](docs/verification/phase-24f-physical-2026-09-27.md#step-c-rerun-with-silent-poses-passed)
-**passed**, with the owner present:
-- 22 turns: p50 3.75 s, p95 6.69 s. Robot-side overhead +17.5 ms median.
-- 0 move failures, resets or 500s, and no false `no_speech` cuts.
-- Stop during thinking passed, and so did the 409 check.
-The owner left gestures **on**. After that,
-[more checks passed](docs/verification/phase-24f-physical-2026-09-27.md#wobble-stops-palm-stop-and-switch-off-passed):
-- speech wobble;
-- Stop during playback (the head holds);
-- palm stop with motion on, 2 of 2;
-- switching motion off between sessions.
-**24f is closed by owner re-scope (2026-09-27).** The 30-minute session,
-mid-reply switch-off, Stop while homing, cancellation and privacy with
-motion on, and the 2–5° shortfall are deferred to a future phase
-([status](docs/phase-24f.md)). Phase 25 runs with motion off until they
-pass.
-
-Background for [Phase 24f](docs/phase-24f.md), now closed. Item 1 is measured on the
-Nano ([record](docs/verification/phase-24f-conformance-2026-09-25.md)).
-REST, the SDK (Testbench) path and Pollen's streaming method send the
-same poses, and the head camera confirms the head moves as far as the
-encoders report. The owner's "no visible motion" was a perception limit.
-The robot stops 2–5° short of commanded poses on every path, only when a
-joint's angle has to grow. The stock proportional-only gains (PID
-300/0/0) predict that, so normal versus a friction or load fault on this
-unit is open. Unattended development testing is allowed (owner,
-2026-09-25, [AGENTS.md](AGENTS.md)), except full animations and the
-daemon wake-up. `motion-conformance.py --camera` measures moves from
-head-camera frames (CLAHE, frame draining and validity gates; see the
-record). The Lite camera is dark by default, and raising its exposure is
-the owner's call. Every item 1 case has now run: the bounded ones unattended, and
-`recorded`/`preempt` with the owner watching. A recorded gesture ends at
-its own final pose, and 1.8.4 starts the next without a blend. So
-conversational gestures need a return home between them before
-`CONVERSATION_MOTION_ENABLED` is tried (see the record).
-Raw logs and frames are in the Nano's `~/24f-logs`. Item 1's outcome table
-is in the record: the paths conform.
-
-The motion owner (`reachy_embodiment/motion.py`, `4f43817`) is implemented,
-with its [ADR 0003 amendment](docs/adr/0003-embodiment-command-api.md#phase-24f-motion-ownership-amendment-2026-09-25):
-`CONVERSATION_MOTION_ENABLED` and `SPEECH_WOBBLE_ENABLED`, both off. It
-was decided not to add a startup home, because 1.8.4's wake-up already
-ends at IDLE_HOME. Tests are fake-backend and in-process only: embodiment
-125 passed, 6 skipped, and ruff passes. The launcher passthrough is
-untested on the Nano. Nothing is deployed: the Nano checkout was pulled to
-`17a8ef9` for the conformance script, but the embodiment image is still
-from 2026-09-24. `deploy/reachy/motion-conformance.py` runs one bounded
-case per `--run`. Its SDK cases now reacquire daemon media: a 1.8.4
-`no_media` SDK client releases the daemon's camera for everyone, which
-blocked the embodiment start once.
-
-The owner added [24e item 5](docs/phase-24e.md#5-open-palm-stop): a held
-open palm stops a spoken reply and Reachy listens again. At the owner's
-direction, detection now runs on the hub (`reachy_hub/palm_stop.py`,
-MediaPipe). The robot (`reachy_embodiment/gesture.py`) only uploads 640 px
-frames during playback when the hub's `PALM_STOP_ENABLED` (off) turns it
-on for the session. Tested in process and in amd64 hub/embodiment image
-builds, not deployed ([record](docs/verification/phase-24e-palm-stop-2026-09-25.md)).
-Next: rebuild the hub on the homelab and the embodiment image on the Nano
-(no motion needed), then the physical rows.
-
-Branch `main`. [Phase 24e](docs/phase-24e.md) item 1 (adaptive end of turn)
-is committed in `6f292be`. This session added item 2's deterministic part:
-search-rule fixes in `companion_core/websearch/policy.py` (closings,
-greetings and self-identity never search, bare "now" is not a freshness
-cue, and follow-ups must refer back to the previous search) and an STT
-`initial_prompt` with "Reachy" plus the persona name. Design choices are in
-[the item 2 notes](docs/phase-24e.md#implementation-notes-item-2). A parallel
-session had started the same policy rewrite and disconnected mid-edit; its
-version was kept and completed. Nothing is deployed: the homelab hub and
-Nano embodiment image still run the pre-24e turn path.
-
-Verification: ruff passed. Core 380 passed, 18 skipped; hub 197 passed,
-9 skipped; `slow` real-speech tests (tiny.en, espeak via
-`/tmp/espeak-extract`) 11 passed, 1 skipped (no Piper model). In-process
-only, not physical acceptance.
-
-The correctness set (`services/companion-core/eval/`), its
-[scoring rules](docs/phase-24e.md#correctness-set-scoring-rules) and the
-owner's threshold (≥90% overall, every category ≥80%) were committed before
-any measurement; plain statements with a freshness word no longer search.
-The local model then passed it: 82/87 (94.3%), every category ≥ 87.5%,
-in the [correctness record](docs/verification/phase-24e-correctness-2026-09-25.md);
-the cloud model was not needed. Next: 24e item 4 (Nano diagnostics, needs
-the owner's approval for system changes), then the physical run.
-Deploy items 1–2 when the owner schedules the physical run. Phase 25
-remains blocked on the
-[hardware prerequisites](docs/phase-24e.md#prerequisites-for-phase-25).
+**Noticed, not investigated:** a recreated hub container downloads small.en
+again (112 s before voice works).
 
 ## Last-reported machine state
 
 These are previous session observations, not health checks performed during
 this documentation pass. Recheck state before relying on them.
 
-- **Nano:** rebooted 2026-09-27 ~06:47 WIB after the first boot found the
-  motor supply off (daemon "No motors detected"; the once-per-boot recovery
-  restarted it once and stopped, as designed). Daemon running, 0 errors;
-  checkout `edb03f5`. Embodiment runs `reachy-embodiment:local` =
-  `edb03f5` (`e9df1677`, silent conversation poses), recreated at 01:35Z;
-  rollback images are tagged `:b36736d` (`c314d4fa`) and `:eb1e92e9`.
-  Embodiment runs `reachy-embodiment:local` = `6f6eb24` (`0ab5ebdf`),
-  recreated at 05:26:54Z with the read-only `/tmp` → `/host-tmp` mount.
-  The rollback image is `:edb03f5` (`e9df1677`). It lacks the
-  `/host-tmp` link, so roll back the checkout with it (the launcher at
-  `edb03f5` recreates the old file bind), not the image alone.
-  The Nano checkout is `6f6eb24`. Gestures and wobble are **off**: the owner switched
-  them off at about 05:00Z. The daemon has run since the 06:47 WIB boot
-  (PID 7340); it was resumed from standby at 03:52Z and was `running`
-  with no error at 05:01Z. Sudo on
-  the Nano needs a password, so the owner runs `systemctl` steps; this dev
-  box has key SSH as `Reachy-Mini-Jetson`. The Nano's system `python3` is
-  too old for `voice-timing.py`; use `~/reachy-venv/bin/python`.
-  No MediaPipe on the Nano (palm stop is hub-side); voice enabled. The 24f
-  tool dependency `opencv-python-headless` 4.11.0.86 is in `~/24f-tools`
-  only (use `PYTHONPATH`). Logs and frames are in `~/24f-logs`.
-  `reachy-embodiment.service` and `reachy-daemon-recovery.service` are
-  enabled; the container uses `--mount` and no restart policy. Embodiment
-  is host-networked on 8100, daemon loopback on 8000. Apply the
+- **Nano:** booted 2026-09-27 06:47 WIB (motor supply was off on the first
+  boot; the once-per-boot recovery restarted the daemon once and stopped,
+  as designed). The daemon runs as PID 7340. It was resumed from standby at
+  03:52Z and was `running` with no error at 05:27Z. The checkout is
+  `6f6eb24`. Embodiment runs `reachy-embodiment:local` = `6f6eb24`
+  (`0ab5ebdf`), recreated at 05:26:54Z with the read-only `/tmp` →
+  `/host-tmp` mount. The rollback image `:edb03f5` (`e9df1677`) lacks the
+  `/host-tmp` link, so roll back the checkout with it: the launcher at
+  `edb03f5` recreates the old file bind. Older images are `:b36736d` and
+  `:eb1e92e9`. Gestures and wobble are **off**, and they also reset to
+  off on any embodiment restart. Sudo on the Nano needs a password, so the
+  owner runs `systemctl` steps and container recreates. This dev box has
+  key SSH as `Reachy-Mini-Jetson`. The system `python3` is too old for
+  `voice-timing.py`: use `~/reachy-venv/bin/python`, and pass `--session N`
+  when a log holds several voice sessions. No MediaPipe on the Nano (palm
+  stop is hub-side); voice is enabled. `opencv-python-headless` for the
+  24f tools is in `~/24f-tools` only (use `PYTHONPATH`). Logs are in
+  `~/24f-logs` and `~/24d-logs`. `reachy-embodiment.service` and
+  `reachy-daemon-recovery.service` are enabled, and the container has no
+  Docker restart policy. Embodiment is host-networked on 8100, and the
+  daemon is on loopback 8000. Apply the
   [deployment boundaries](docs/deployment.md#robot-host-and-jetson-nano)
   before daemon starts or motion; `--check` stays read-only.
-- **Homelab:** running `c2db3d2` since 2026-09-26 15:09Z, with
-  `STT_MODEL=small.en` active. Hub and core are healthy, and nano-1 is
-  online and voice-capable. The pre-deploy backup from 2026-09-27 is
-  `~/reachy-backups/reachy-before-clock-stt-deploy-20260927T041220.dump`.
-  `scripts/start-homelab.sh` is allowed in the gitignored
-  `.claude/settings.local.json`, so a session can run it. The schema is
-  `008_assistant_context`. The private `.env` now sets
-  `PALM_STOP_ENABLED=true` and `VOICE_CONTINUATION_WINDOW_MS=3000` (owner
-  decisions, 2026-09-26). The hub now logs its own INFO lines (`7a597e6`).
-  Restarting only core: `docker restart reachy-homelab-companion-core-1`,
-  since `docker compose restart` without the launcher fails on the
-  generated SearXNG secret.
-  Start only through `scripts/start-homelab.sh`. Piper `en_US-lessac-medium`;
-  search policy Auto, Brave/Exa/Tavily rotation then SearXNG. Backups in
-  `~/reachy-backups/` (0600). Core readiness needs a separate check after
-  launcher hub health succeeds.
-- **Local inference:** an unrelated `ovms` container previously served
-  `OpenVINO/Qwen2.5-1.5B-Instruct-int4-ov` on localhost:8000. Re-query
-  `/v1/models`; leave unrelated services alone.
+- **Homelab:** the hub was rebuilt at `0ec9c52` (05:10Z). Core is unchanged
+  since `c2db3d2` (2026-09-26 15:09Z). `STT_MODEL=small.en`,
+  `PALM_STOP_ENABLED=true` and `VOICE_CONTINUATION_WINDOW_MS=3000` are in
+  the private `.env`. The schema is `008_assistant_context`. The latest
+  pre-deploy backup is
+  `~/reachy-backups/reachy-before-clock-stt-deploy-20260927T041220.dump`
+  (backups are 0600). Start only through `scripts/start-homelab.sh`, which
+  is allowed in the gitignored `.claude/settings.local.json`, so a session
+  can run it. To restart only core, run
+  `docker restart reachy-homelab-companion-core-1`: `docker compose
+  restart` without the launcher fails on the generated SearXNG secret.
+  Core readiness needs a separate check after the launcher's hub health.
+  The hub's in-memory turn records (`GET /hub/robot-voice` with the
+  `REMOTE_UI_TOKEN` bearer) give per-turn STT/LLM/TTS timings. They also
+  contain transcripts, so extract only what a record needs. Piper
+  `en_US-lessac-medium`; search policy Auto, Brave/Exa/Tavily rotation,
+  then SearXNG.
+- **Local inference:** an unrelated `ovms` container serves
+  `OpenVINO/Qwen2.5-1.5B-Instruct-int4-ov` on localhost:8000. Leave
+  unrelated services alone.
 - Hosted credentials are in gitignored `deploy/homelab/.env.local`.
   Check presence and ignore rules without printing values. No Google OAuth
-  client file or live helper run was supplied in the preceding session.
-- Nano Tailscale endpoints to the homelab switched between 10.180.1.23,
-  .54 and .254; a stall caused a watchdog disconnect before its increase
-  to 15 s. Network cleanup remains the owner's call.
-- Robot logs from 24d are in `~/24d-logs/`; `/tmp` is cleared on reboot.
-  Development caches may also be gone; use [development](docs/development.md).
+  client file or live helper run has been supplied.
+- Nano Tailscale endpoints to the homelab have switched between
+  10.180.1.23, .54 and .254. Network cleanup remains the owner's call.
 
 ## Immediate cautions and continuation
 
-The owner reports successful official Testbench zeroing and rotations after
-24d's tracking anomalies; a persistent hardware fault is not established.
-Phase 24f will compare the motion paths; current evidence is recorded below
-in project state.
-The unexplained power loss, RTC problem and daemon recovery verification
-limit are in [project state](docs/project-state.md#known-hardware-and-software-limitations).
-The automatic error restart has one real run (2026-09-27, no motor power); a wake-up error restart is still fake-tested only.
+The unexplained power loss, RTC problem, daemon recovery verification
+limit and the 2–5° motion shortfall are in
+[project state](docs/project-state.md#known-hardware-and-software-limitations).
+The automatic error restart has one real run (2026-09-27, no motor power);
+a wake-up error restart is still fake-tested only.
 
 Inspect `git status`, recent commits and the diff before implementation.
 Hardware work previously involved a separate Nano-side session; verify raw

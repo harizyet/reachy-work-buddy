@@ -22,7 +22,7 @@ the only part that motion can affect.
 ## Step B: motion-off baseline (10:36–10:42Z)
 
 This is the 24e warm timing re-run; see the
-[24e record](phase-24e-physical-2026-09-25.md#timing-again-warm-24f-step-b-1036-1042z).
+[24e record](phase-24e-physical-2026-09-25.md#timing-again-warm-24f-step-b-10361042z).
 The run was 22 fixed short questions, all spoken. Non-search p50 3.63 s,
 p95 5.22 s. Robot-side overhead per turn: median 98 ms, max 454 ms
 (turn 1, the first `play_sound` of the session).

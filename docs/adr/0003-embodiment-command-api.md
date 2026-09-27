@@ -26,8 +26,8 @@ ownership and rejection are Phase 24f item 3 and need their own amendment.
 
 ## Phase 24f motion-ownership amendment (2026-09-25)
 
-Status: accepted for implementation. Enabled behaviour is not physically
-accepted yet.
+Status: accepted for implementation. Physically accepted on 2026-09-27 for
+the rows in the [24f status](../phase-24f.md); the rest are deferred.
 
 One local owner, `MotionController` in `reachy-embodiment`, handles every
 motion path in the service: the robot voice conversation, explicit
@@ -100,8 +100,8 @@ physical acceptance and supervision requirements still apply to playback.
 
 ## Conversation poses amendment (2026-09-27)
 
-Status: accepted by the owner for implementation. Not yet physically
-accepted.
+Status: accepted by the owner, and physically accepted on 2026-09-27
+([step C rerun](../verification/phase-24f-physical-2026-09-27.md#step-c-rerun-with-silent-poses-passed)).
 
 Conversation listening and thinking use short, silent goto poses, not
 recorded moves. In the 2026-09-27 physical run

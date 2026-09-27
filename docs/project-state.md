@@ -7,17 +7,21 @@ own evidence. This snapshot is not a live health check.
 
 ## Current priority and next gates
 
-[Phase 24e](phase-24e.md) is the next priority, with agreed scope but no
-implementation yet. Start with the ADR 0023 amendment in its
-[implementation sequence](phase-24e.md#implementation-sequence).
-Phase 24d closed by owner re-scope: conversation, context, latency and
-usability passed; deferred rows were not passed.
+[Phase 24e](phase-24e.md) is in progress. Its work is deployed, and most
+rows passed on the robot. It is **not ready to close**. Four exit criteria
+are open:
+- the supervised 30-minute session;
+- cancelling a held turn on the robot;
+- item 4, the Nano diagnostics, not started;
+- renewed owner acceptance of usability.
+See the [status](phase-24e.md). [Phase 24f](phase-24f.md) closed by owner
+re-scope on 2026-09-27, with its remaining motion rows deferred.
 
 Phase 25 remains blocked until the
 [24e conversation-path prerequisites](phase-24e.md#prerequisites-for-phase-25)
-PASS on hardware. Quality/search/STT tuning and Nano diagnostics can proceed
-independently. Session continuity is still required 24e work, but is not a
-Phase 25 start gate. Phases 25–27 remain planned.
+PASS on hardware. The 30-minute session and held-turn cancellation are
+among them. Phase 25 runs with conversational motion off until 24f's
+deferred rows pass. Phases 25–27 remain planned.
 
 ## Deployment and production acceptance
 
@@ -58,6 +62,27 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
   The [results matrix](verification/phase-24d-conversation-2026-09-24.md#results)
   distinguishes these from deferred privacy, consent, cancellation, recovery,
   turn handling, continuity and sustained-use checks now owned by 24e.
+- **Conversation hardening (24e):** deployed and run on the robot with the
+  owner. These passed:
+  - normal conversation and timing: 22 short questions, p50 3.75 s with
+    small.en;
+  - turn handling with adaptive end of turn, including long utterances
+    with pauses;
+  - stop and expiry, privacy, consent, session continuity and recovery;
+  - open-palm stop;
+  - clock answers and reply labelling;
+  - the correctness set.
+  Open-ended questions take about 8 s to first audio, which the owner
+  accepted. The 30-minute session, held-turn cancellation, Nano
+  diagnostics and renewed usability acceptance are open
+  ([24e record](verification/phase-24e-physical-2026-09-25.md),
+  [2026-09-27 record](verification/clock-routing-stt-physical-2026-09-27.md)).
+- **Conversational motion (24f):** silent listening/thinking poses, speech
+  wobble, stops, arbitration and switch-off passed physically. The
+  features are off by default and switched on per robot in the portal.
+  The 30-minute run with motion, mid-reply switch-off, stop while homing
+  and the 2–5° shortfall are deferred
+  ([record](verification/phase-24f-physical-2026-09-27.md)).
 
 ## Known hardware and software limitations
 
@@ -99,18 +124,12 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
   release/acquire on nano-1
   ([record](verification/phase-24f-physical-2026-09-27.md#camera-socket-fix-on-nano-1)).
   A real standby wake has not been repeated since.
-- Adaptive end of turn (24e item 1) is implemented and tested in process
-  and with real Silero/Whisper on simulated audio, not yet on the robot; the
-  deployed robot still splits turns at 700 ms pauses until it is rebuilt.
-  The 24e item 2 search-rule fixes and STT name prompt are tested in process
-  only and not deployed. The local model passed the correctness set but
-  still sometimes misreports numbers from search results and answers
-  statements at length ([record](verification/phase-24e-correctness-2026-09-25.md)). Acoustic echo and deliberate
-  silence/noise handling still need physical acceptance.
-- Open-palm stop (24e item 5) is implemented behind the hub's
-  `PALM_STOP_ENABLED` (off). Detection runs on the hub from frames the
-  robot uploads during playback. It is not deployed or physically tested;
-  see the [record](verification/phase-24e-palm-stop-2026-09-25.md).
+- The local model passed the correctness set but still sometimes
+  misreports numbers from search results and answers statements at length
+  ([record](verification/phase-24e-correctness-2026-09-25.md)). small.en
+  fixed the known mishearings, but proper nouns can still fail ("Tokyo" as
+  "2Q"). TV or other speech is taken as a turn; that's a known limit,
+  deferred to Phase 25. Acoustic echo is not addressed.
 - First LOCAL camera frames can take 9–12 s while GStreamer loads plugins.
   Docker 20.10.7 seccomp prevents the external scanner from spawning;
   the documented workaround loads plugins in-process.

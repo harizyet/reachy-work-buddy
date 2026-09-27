@@ -25,8 +25,10 @@ replies. The model indicator means configured, not proven reachable.
 Open **Settings · Accounts → Conversational animations**, select the robot,
 and use the two independent toggles:
 
-- **Listening and thinking gestures** plays the mapped recorded gestures
-  during microphone conversations, returning home between gestures.
+- **Listening and thinking gestures** holds a short, silent pose while
+  Reachy listens (a head tilt with both antennas raised) and while it
+  thinks (a glance up to one side). The head returns home when it speaks
+  and when the conversation ends; a Stop leaves it where it is.
 - **Head movement while speaking** enables speech-reactive head motion.
 
 Stop listening before changing settings, then use **Apply animation
@@ -35,9 +37,12 @@ the new values. **Refresh animation settings** reads the robot's current
 values. Offline or older robots show an error with the controls disabled.
 These are runtime settings: restarting embodiment restores its startup
 defaults (both off unless configured otherwise). They do not control idle
-presence or manually requested behaviours. Animation playback still needs
-its physical acceptance; development playback requires owner supervision
-under the [deployment rules](deployment.md#robot-host-and-jetson-nano).
+presence or manually requested behaviours. While a conversation owns
+motion, a manually requested behaviour is refused (409). Both features
+passed physical acceptance on 2026-09-27; a 30-minute run with motion on is
+still owed ([record](verification/phase-24f-physical-2026-09-27.md)).
+Motion rules for development sessions are in the
+[deployment rules](deployment.md#robot-host-and-jetson-nano).
 
 ## Chat (Phase 20)
 
