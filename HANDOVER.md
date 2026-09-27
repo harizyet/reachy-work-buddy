@@ -79,8 +79,10 @@ The silent goto poses are implemented (see the
 [ADR 0003 amendment](docs/adr/0003-embodiment-command-api.md#conversation-poses-amendment-2026-09-27)):
 embodiment tests pass, and a 1.8.4 mockup-sim daemon reached every pose
 with no move errors. The owner tuned the pose signs and sizes on the robot, and the
-values are the constants in `motion.py`. **Next:** build the embodiment
-image on the Nano and swap it in, then rerun step C
+values are the constants in `motion.py`. The `edb03f5` image is deployed
+on the Nano (01:35Z), healthy, with gestures off. The owner paused
+physical testing there. **Next, with the owner present:** switch gestures
+on in the portal, then rerun step C
 once in full with the
 [question script](docs/verification/phase-24f-physical-2026-09-27.md#question-script-for-the-step-c-rerun),
 a Stop during thinking, and the 409 check.
@@ -165,10 +167,12 @@ this documentation pass. Recheck state before relying on them.
 - **Nano:** rebooted 2026-09-27 ~06:47 WIB after the first boot found the
   motor supply off (daemon "No motors detected"; the once-per-boot recovery
   restarted it once and stopped, as designed). Daemon running, 0 errors;
-  checkout `1473674`. Embodiment runs `reachy-embodiment:local` =
-  `b36736d` (`c314d4fa`); the old image is kept as
-  `reachy-embodiment:eb1e92e9`. The owner asked for portal gestures to be
-  switched off after the run; recheck `GET :8100/settings/motion`. Sudo on
+  checkout `edb03f5`. Embodiment runs `reachy-embodiment:local` =
+  `edb03f5` (`e9df1677`, silent conversation poses), recreated at 01:35Z;
+  rollback images are tagged `:b36736d` (`c314d4fa`) and `:eb1e92e9`.
+  Gestures and wobble are off (the restart reset them). The daemon was
+  put in standby from the hub at 01:09Z and resumed by the owner. It was
+  `running`, head at home, nothing running, at 01:36Z. Sudo on
   the Nano needs a password, so the owner runs `systemctl` steps; this dev
   box has key SSH as `Reachy-Mini-Jetson`. The Nano's system `python3` is
   too old for `voice-timing.py`; use `~/reachy-venv/bin/python`.
