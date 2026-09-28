@@ -13,7 +13,9 @@ operational data policy (encrypted at rest, explicit opt-in, exportable) —
 see [Enrollment portal](#enrollment-portal) below for what it is and, more
 importantly, is not. **Phase 25a.3's wiring (`SpeakerVerifier` protocol,
 `VoiceTrustContext` on `VoiceSession`, concurrent STT+verification in
-`run_turn`) also landed 2026-09-28** — see
+`run_turn`) and 25a.4's input-sensitivity gate (`classify_sensitivity`,
+wired into `_answer`, gated off by `VOICE_SENSITIVITY_GATE_ENABLED`,
+default false) also landed 2026-09-28** — see
 [the implementation sequence](#implementation-sequence) below — with no
 real model behind it yet, so voice trust stays at T0 everywhere. No
 perception code, biometric template, calibration, or production gating
@@ -1040,9 +1042,26 @@ implementation, so voice trust stays at T0 everywhere until a benchmarked
 model (25a.1) is actually integrated behind this protocol. 6 new unit
 tests (`services/reachy-hub/tests/test_speaker_verification.py`).
 
-**Phase 25a.4 — Input sensitivity gate.** Add the transient STT boundary,
-`RequestSensitivity` and `RequestAuthorizer`, and T0/T1 behaviour, enabling
-low-risk public interaction without visual verification.
+**Phase 25a.4 — Input sensitivity gate (wired 2026-09-28, off by
+default).** `RequestSensitivity`/`RequestAuthorizer` existed since 25.0;
+this adds `classify_sensitivity()` (deterministic rules only, no
+LLM-assist layer — an ordinary question that isn't one of the recognized
+public phrasings comes out `UNKNOWN`, which fails upward exactly like a
+personal/consequential one) and wires it into `_answer` in
+`robot_voice.py`: before a transcript reaches Core, classify it, compute
+`effective_trust` from the session's `VoiceTrustContext`, and
+`authorize_request`; anything short of `ALLOW` withholds the turn
+(`VoiceTurnOutcome.WITHHELD`) instead of calling `pipeline.converse`.
+Gated behind `VOICE_SENSITIVITY_GATE_ENABLED` (default `false`) — **not
+enabled anywhere**, deliberately: with no real speaker verifier (still
+`NoSpeakerVerifier` everywhere) and no visual verifier at all, trust can
+never exceed T1, so turning this on today would withhold every
+PERSONAL/CONSEQUENTIAL/UNKNOWN voice request — most everyday questions,
+given the classifier's conservative rules-only stage — not just sensitive
+ones. Enabling it is an explicit owner decision for later, once 25a's
+real speaker model (and ideally 25b's visual one) exist. 11 new tests
+across `test_request_sensitivity.py` (classifier) and
+`test_sensitivity_gate.py` (wiring).
 
 **Phase 25a acceptance.** Run physical owner/non-owner/noise/replay/
 synthetic/overlap/latency/false-accept/reject tests. Do not yet unlock

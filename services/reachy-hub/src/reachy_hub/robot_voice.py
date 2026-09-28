@@ -52,9 +52,15 @@ from fastapi.responses import Response
 from starlette.requests import ClientDisconnect
 
 from reachy_hub.palm_stop import PalmStop
+from reachy_hub.request_sensitivity import (
+    InteractionDecision,
+    authorize_request,
+    classify_sensitivity,
+)
 from reachy_hub.robot_connection_manager import RobotConnection, RobotConnectionManager
 from reachy_hub.robot_credential_store import RobotCredentialStore
 from reachy_hub.speaker.base import NoSpeakerVerifier
+from reachy_hub.trust import effective_trust
 from reachy_hub.turn_completeness import looks_complete
 from reachy_hub.wake_arm_store import (
     InMemoryWakeArmStore,
@@ -100,7 +106,7 @@ from shared.models.robot_ws import (
     WakeArmMessage,
     WSMessageType,
 )
-from shared.models.session import Channel, PrivacyContext
+from shared.models.session import Channel, InteractionMode, PrivacyContext
 from shared.models.trust import SpeakerEvidence, VisualEvidence
 from shared.models.websearch import TurnWebSearch
 from shared.protocols.operator_api import (
@@ -217,6 +223,12 @@ class RobotVoiceManager:
         # One record per robot: the active session, or the most recently
         # stopped one so the owner can still read why it ended.
         self._sessions: dict[str, VoiceSession] = {}
+
+    def now(self) -> float:
+        """The injected clock, for standalone functions (`_answer` below)
+        that need monotonic time to evaluate trust freshness without
+        reaching into a private attribute."""
+        return self._clock()
 
     def status(self, session: VoiceSession) -> VoiceSessionStatus:
         now = self._clock()
@@ -638,6 +650,15 @@ class VoiceTurnPipeline:
     # dependency-rollout guidance), so voice trust stays capped at T0
     # until 25a.3's model integration replaces this default.
     verify_speaker: Callable[..., Awaitable[SpeakerEvidence | None]] = _default_verify_speaker
+    # Phase 25a.4: off by default. Even with a real SpeakerVerifier wired
+    # in (25a.3), there is still no visual verifier (25b), so trust can
+    # never reach T2 — enabling this today would block every
+    # PERSONAL/CONSEQUENTIAL/UNKNOWN voice request (most everyday
+    # questions, since classify_sensitivity has no LLM-assist layer yet)
+    # until visual verification exists. Deliberately left off until the
+    # owner decides that tradeoff is acceptable, matching this file's other
+    # opt-in switches (e.g. PalmStop).
+    sensitivity_gate_enabled: bool = False
 
 
 def validate_utterance(body: bytes, limits: VoiceLimits) -> float:
@@ -764,6 +785,25 @@ async def _answer(
     turn along with the caller's stage timings."""
 
     timings: dict[str, object] = {}
+
+    if pipeline.sensitivity_gate_enabled:
+        sensitivity = classify_sensitivity(transcript)
+        trust = effective_trust(
+            session.trust.speaker, session.trust.visual, authenticated_channel=False, now=manager.now()
+        )
+        # InteractionMode is accepted by authorize_request only for
+        # forward compatibility and has no effect on its decision today
+        # (see request_sensitivity.py) — the session's real mode isn't
+        # threaded into this pipeline, so the placeholder below is inert,
+        # not a shortcut.
+        decision = authorize_request(sensitivity, trust, InteractionMode.DESK)
+        if decision != InteractionDecision.ALLOW:
+            return finish(
+                VoiceTurnOutcome.WITHHELD,
+                transcript=transcript,
+                reason=f"Needs stronger verification ({sensitivity.value}, currently {trust.value})",
+            ), None
+
     started = time.perf_counter()
     try:
         result = await pipeline.converse(session.user_id, transcript)

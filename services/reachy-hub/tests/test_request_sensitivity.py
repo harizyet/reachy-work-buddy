@@ -1,10 +1,12 @@
-"""Phase 25.0 request authorization (docs/phase-25.md, ADR 0024)."""
+"""Phase 25.0/25a.4 request sensitivity classification and authorization
+(docs/phase-25.md, ADR 0024)."""
 
 import pytest
 from reachy_hub.request_sensitivity import (
     InteractionDecision,
     RequestSensitivity,
     authorize_request,
+    classify_sensitivity,
 )
 
 from shared.models.session import InteractionMode
@@ -60,3 +62,58 @@ def test_trusted_interaction_mode_does_not_bypass_identity_or_action_policy(sens
     trusted = authorize_request(sensitivity, trust, InteractionMode.TRUSTED)
     desk = authorize_request(sensitivity, trust, InteractionMode.DESK)
     assert trusted == desk
+
+
+@pytest.mark.parametrize(
+    "transcript",
+    [
+        "What time is it?",
+        "what's the weather today",
+        "What's the weather like tomorrow",
+        "Tell me a joke",
+    ],
+)
+def test_classify_recognizes_obvious_public_phrasings(transcript) -> None:
+    assert classify_sensitivity(transcript) == RequestSensitivity.PUBLIC
+
+
+@pytest.mark.parametrize(
+    "transcript",
+    [
+        "What's my next appointment?",
+        "Read my email",
+        "Check my calendar",
+        "What's in my notes",
+    ],
+)
+def test_classify_recognizes_obvious_personal_phrasings(transcript) -> None:
+    assert classify_sensitivity(transcript) == RequestSensitivity.PERSONAL
+
+
+@pytest.mark.parametrize(
+    "transcript",
+    [
+        "Send this email",
+        "Delete my calendar event",
+        "Cancel my meeting with Alice",
+        "Schedule a meeting for tomorrow",
+    ],
+)
+def test_classify_recognizes_obvious_consequential_phrasings(transcript) -> None:
+    assert classify_sensitivity(transcript) == RequestSensitivity.CONSEQUENTIAL
+
+
+@pytest.mark.parametrize(
+    "transcript",
+    ["", "   ", "How tall is Mount Everest?", "Tell me about the history of Rome", "hmm"],
+)
+def test_classify_fails_upward_to_unknown_for_anything_not_recognized(transcript) -> None:
+    # Deliberately conservative (docs/phase-25.md): no LLM-assist layer
+    # exists yet, so an ordinary open-ended question that isn't one of the
+    # recognized public phrasings is UNKNOWN, not PUBLIC.
+    assert classify_sensitivity(transcript) == RequestSensitivity.UNKNOWN
+
+
+def test_classify_prefers_consequential_over_a_public_looking_prefix() -> None:
+    transcript = "What time is it, then delete my calendar event"
+    assert classify_sensitivity(transcript) == RequestSensitivity.CONSEQUENTIAL

@@ -15,6 +15,7 @@ deliberately.
 
 from __future__ import annotations
 
+import re
 from enum import StrEnum
 
 from shared.models.session import InteractionMode
@@ -26,6 +27,48 @@ class RequestSensitivity(StrEnum):
     PERSONAL = "personal"
     CONSEQUENTIAL = "consequential"
     UNKNOWN = "unknown"
+
+
+# Deterministic, high-confidence rules only (docs/phase-25.md's
+# classification flow: rules -> obvious? yes: use it; no: UNKNOWN, fail
+# upward). No LLM-assist layer exists yet, so this stage is deliberately
+# conservative: an ordinary open-ended question that isn't one of these
+# recognized public phrasings comes out UNKNOWN, not PUBLIC. That is safe
+# by design (UNKNOWN requires the same trust as CONSEQUENTIAL) but means
+# most everyday questions won't be answered at T0/T1 once the sensitivity
+# gate is enabled, until a classifier/LLM-suggestion stage is added.
+_CONSEQUENTIAL_RE = re.compile(
+    r"\b(send|delete|remove|cancel|book|schedule|create|forward|reply to|share)\b.*"
+    r"\b(email|mail|message|event|meeting|appointment|calendar|reminder|task)\b"
+)
+_PERSONAL_RE = re.compile(
+    r"\bmy\s+(email|mail|inbox|calendar|appointment|schedule|note|notes|reminder|reminders|task|tasks)\b"
+    r"|\b(read|check|show|what'?s in)\s+my\b"
+    r"|\bnext\s+appointment\b"
+)
+_PUBLIC_RE = re.compile(
+    r"\bwhat\s+time\s+is\s+it\b|\bwhat\s+day\s+is\s+it\b"
+    r"|\bwhat'?s\s+the\s+weather\b|\bweather\s+(?:like\s+)?(?:today|tomorrow|outside)\b"
+    r"|\btell\s+me\s+a\s+joke\b"
+)
+
+
+def classify_sensitivity(transcript: str) -> RequestSensitivity:
+    """Deterministic rules only; ambiguous input fails upward to UNKNOWN,
+    never down to PUBLIC. Checked in order of consequence: a transcript
+    matching both a consequential and a public-sounding phrase (unlikely,
+    but a crafted "what time is it, then delete my calendar" must not
+    slip through as public) is CONSEQUENTIAL."""
+    normalized = transcript.strip().lower()
+    if not normalized:
+        return RequestSensitivity.UNKNOWN
+    if _CONSEQUENTIAL_RE.search(normalized):
+        return RequestSensitivity.CONSEQUENTIAL
+    if _PERSONAL_RE.search(normalized):
+        return RequestSensitivity.PERSONAL
+    if _PUBLIC_RE.search(normalized):
+        return RequestSensitivity.PUBLIC
+    return RequestSensitivity.UNKNOWN
 
 
 class InteractionDecision(StrEnum):

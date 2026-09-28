@@ -159,6 +159,12 @@ services:
       # reply plays; they are classified here in memory and never stored.
       # Off by default until physically accepted.
       PALM_STOP_ENABLED: ${PALM_STOP_ENABLED:-false}
+      # Phase 25a.4: gates each voice transcript on RequestSensitivity/
+      # effective_trust before it reaches Companion Core. Off by default —
+      # with no real speaker/visual verifier wired in yet, enabling this
+      # would block most everyday PERSONAL/CONSEQUENTIAL/UNKNOWN voice
+      # requests. Do not turn on until that tradeoff is explicitly accepted.
+      VOICE_SENSITIVITY_GATE_ENABLED: ${VOICE_SENSITIVITY_GATE_ENABLED:-false}
       # faster-whisper model for robot and /voice/turn speech; unset keeps
       # base.en. A new model downloads once after a rebuild (the hub warms
       # it at startup).

@@ -7,6 +7,30 @@ acceptance. This file holds only session continuation details.
 
 ## Current work
 
+**Phase 25a.4 (input-sensitivity gate) landed, 2026-09-28 — off by
+default, not deployed with anything different.** `RequestSensitivity`/
+`RequestAuthorizer` existed since 25.0 but were never called; this adds
+`classify_sensitivity()` in `request_sensitivity.py` (deterministic
+regex rules only — recognizes a handful of obvious PUBLIC/PERSONAL/
+CONSEQUENTIAL phrasings, everything else is `UNKNOWN`, which fails
+upward exactly like a sensitive request would, since there's no
+LLM-assist layer yet) and wires it into `robot_voice.py`'s `_answer`:
+before a transcript reaches Core, classify it, compute `effective_trust`
+from the session's `VoiceTrustContext` (25a.3's evidence), and
+`authorize_request`; anything short of `ALLOW` withholds the turn
+(`VoiceTurnOutcome.WITHHELD`, reused rather than adding a new outcome)
+instead of calling Core. Gated behind `VOICE_SENSITIVITY_GATE_ENABLED`
+(new env var, default `false`, added to `.env.example`/compose but
+**deliberately left off** there too) — with no real speaker model (still
+`NoSpeakerVerifier`) and no visual verifier at all, trust can never
+exceed T1, so turning this on today would block most everyday questions,
+not just sensitive ones. This needs an explicit owner decision later,
+not a silent default flip. 11 new tests (`test_request_sensitivity.py`'s
+classifier cases, `test_sensitivity_gate.py`'s wiring cases); full
+`pytest services shared` (925 passed) and Ruff pass. No redeploy done —
+no functional change while the flag stays off, and the compose/env
+additions are just plumbing for whenever the owner does want to try it.
+
 **Phase 25a.3 (speaker-verification wiring) landed, 2026-09-28 — no
 real model yet.** New `reachy_hub/speaker/base.py`: the `SpeakerVerifier`
 protocol (`async verify(wav_bytes, *, owner_id, robot_id,

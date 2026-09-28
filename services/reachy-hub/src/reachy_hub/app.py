@@ -366,6 +366,17 @@ def _default_palm_stop() -> PalmStop | None:
     return PalmStop(lambda: MediaPipePalmDetector(model_path))
 
 
+def _voice_sensitivity_gate_enabled() -> bool:
+    """Phase 25a.4: `VOICE_SENSITIVITY_GATE_ENABLED=true` gates each voice
+    transcript on RequestSensitivity/effective_trust before it reaches
+    Companion Core. Off by default: with no real SpeakerVerifier (25a.3)
+    or visual verifier (25b) wired in yet, and no LLM-assist layer for
+    classify_sensitivity, enabling this today would block most everyday
+    PERSONAL/CONSEQUENTIAL/UNKNOWN voice requests — a real behavior change
+    the owner has not yet accepted."""
+    return os.environ.get("VOICE_SENSITIVITY_GATE_ENABLED", "false").strip().lower() == "true"
+
+
 def create_app(
     *,
     accounts_service_token: str | None = None,
@@ -1368,6 +1379,7 @@ def create_app(
             synthesize=voice_synthesize,
             deliver_private=voice_deliver_private,
             speech_withheld_reason=robot_speech_withheld_reason,
+            sensitivity_gate_enabled=_voice_sensitivity_gate_enabled(),
         ),
         registered_robot_ids,
     )
