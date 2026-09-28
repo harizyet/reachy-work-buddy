@@ -742,7 +742,10 @@ captures use AESGCM encryption and require `SECRET_KEY_FILE`; hub startup
 fails if its key is unavailable. Follow [key provisioning](#key-provisioning).
 The homelab Compose configuration mounts the `owner-recognition-captures`
 volume at `/data/owner-recognition-captures` and the `credential_keys` secret
-into hub. Preserve both capture data and its encryption key for recovery;
+into hub. This is currently the same key material used by core for application
+credentials, not an independent biometric key domain. The planned split is
+tracked in [Phase 26d](phase-26.md#26d-key-domains).
+Preserve both capture data and its encryption key for recovery;
 a database dump does not contain that volume.
 
 This store is for explicitly enabled benchmark data, separate from future

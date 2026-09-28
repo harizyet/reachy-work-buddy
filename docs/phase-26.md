@@ -1,6 +1,8 @@
 # Phase 26 — Security hardening and assurance
 
-Status: planned, not implemented. Inserted into the roadmap 2026-09-28,
+Status: planned assurance phase, with benchmark-storage controls from 26d
+implemented early during Phase 25. See the [26d implementation status](#26d-implementation-status)
+for delivered controls and remaining work. Inserted into the roadmap 2026-09-28,
 between [Phase 25](phase-25.md) (owner verification and progressive trust)
 and meeting transcription, which moved from Phase 26 to
 [Phase 27](phase-27.md) to make room for this phase — see
@@ -135,17 +137,14 @@ camera → bounded frame capture → encrypted transport
 - **Biometric enrollment (production):** capture sample → quality checks
   → derive biometric template → encrypt template at rest → delete raw
   sample.
-- **Benchmark/calibration capture (development):** capture → explicit
-  owner opt-in → encrypted raw sample retained → labelled dataset →
+- **Benchmark/calibration capture (development):** explicit owner opt-in
+  → capture → encrypted raw sample retained → labelled dataset →
   model/calibration evaluation → owner-controlled deletion. See
   [Benchmark vs. operational data policy](#26d-addendum-benchmark-vs-operational-data-policy-owner-decision-2026-09-28)
   below — this is a deliberate, resolved distinction, not an unresolved
-  tension. The current enrollment portal skeleton
-  (`reachy_hub/enrollment_store.py`, added 2026-09-28) implements only
-  the benchmark side of this so far (raw captures retained, unencrypted,
-  no mode separation from a future operational store); 26d brings it into
-  line with the resolved policy rather than treating today's shape as
-  final.
+  tension. The current portal implements encrypted benchmark capture;
+  operational enrollment and its separate template store remain future
+  work. See [26d implementation status](#26d-implementation-status).
 - **Memory inspection:** encrypted transport → decrypt at trusted
   endpoint → plaintext audio/frame in RAM → inference → discard. Minimize
   that plaintext lifetime rather than attempting impractical encrypted
@@ -287,22 +286,56 @@ Production enrollment has no such need once a template exists.
 | Calibration metrics | Retain | Retain |
 | Model/version/hash | Retain | Retain |
 
-26d must implement, not merely document, four requirements against
-today's enrollment-portal skeleton:
+26d must verify these four requirements across the benchmark and future
+operational stores; early benchmark implementation does not close the audit:
 
 - **Purpose limitation.** A benchmark capture cannot silently become a
   conversation recording, and vice versa — the two purposes stay
   distinguishable in the data itself (labelled dataset vs. ordinary
   session audio), not just in UI copy.
 - **Encryption at rest.** Retained benchmark audio/images are encrypted
-  separately from ordinary application data — today's
-  `FilesystemEnrollmentStore` (`reachy_hub/enrollment_store.py`) writes
-  plaintext files and must not be treated as meeting this bar as-is.
+  separately from ordinary application data. Capture payloads now use
+  AES-GCM; separate key material remains planned under
+  [key domains](#26d-key-domains).
 - **Explicit retention control.** The owner can see, export and delete
   the benchmark dataset independently of anything else.
 - **Mode separation.** Disabling benchmark collection must not affect
   normal biometric authentication, and normal authentication must not
   depend on the benchmark store existing.
+
+#### 26d implementation status
+
+Implemented early during Phase 25 on 2026-09-28:
+
+- Purpose-labelled `/owner-recognition/benchmark/...` routes and an explicit
+  collection toggle, with owner-cookie authentication, CSRF and fresh reauth.
+- AES-GCM encryption of persisted raw capture payloads in
+  `FilesystemEnrollmentStore`; metadata sidecars remain plaintext.
+- Owner-visible sizes, export and deletion controls, plus a persistent
+  benchmark volume. The backend's encryption/export/restart behavior has
+  [live verification](verification/phase-25-foundation-2026-09-28.md).
+
+Browser acceptance remains open. The operational enrollment flow, derived-
+template store and `/owner-recognition/enrollment/...` namespace are future
+work; reserving that namespace does not implement it. Independence from
+normal biometric authentication cannot be verified until that path exists.
+The deployed benchmark store shares application credential key material;
+separate storage does not yet mean separate cryptographic key domains.
+
+#### 26d key domains
+
+Planned hardening: use independently generated key material for application
+secrets, retained biometric benchmark media, and operational biometric
+templates. Separate directories or key IDs backed by the same AES key do
+not provide this separation. Separate KMS deployments are not required.
+
+26d must settle the key-file/secret layout, least-privilege mounts, rotation
+and recovery procedures before implementing the split. Preserve existing
+captures through an explicit re-encryption migration; verify wrong-domain
+key rejection, independent rotation, and backup/restore with the matching
+keys. Do not replace the shared key in place and strand existing ciphertext.
+Current mounts and configuration remain documented in
+[deployment](deployment.md#owner-recognition-benchmark-storage).
 
 **Separate stores, not a shared one with a flag.** Benchmark data and
 operational templates (the future `recognition_store.py` from

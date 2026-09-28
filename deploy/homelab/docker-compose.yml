@@ -270,9 +270,9 @@ volumes:
   caddy-data:
   searxng-data:
   # Phase 25a.2/25b.3: raw owner-recognition voice/face captures (see
-  # OWNER_RECOGNITION_CAPTURE_DIR above). Not encrypted at rest — this
-  # volume holds real voice/face recordings, so restrict host access to
-  # it the same way as other credential/data volumes.
+  # OWNER_RECOGNITION_CAPTURE_DIR above). Capture payloads use AES-GCM;
+  # metadata sidecars remain plaintext. Restrict host access. Key-domain
+  # separation remains planned in docs/phase-26.md#26d-key-domains.
   owner-recognition-captures:
 
 secrets:

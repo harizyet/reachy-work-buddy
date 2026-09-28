@@ -6,8 +6,10 @@ The [documentation index](docs/README.md) defines ownership;
 
 ## Current work
 
-Documentation cleanup completed: consolidated repeated status and procedures,
-retained unique evidence in dated records, and corrected superseded snapshots.
+Review follow-up completed: corrected Phase 26's stale plaintext claims,
+recorded early benchmark controls and planned key-domain separation, and
+made classifier acceptance an explicit gate-enablement prerequisite in
+[Phase 25](docs/phase-25.md#request-sensitivity-classification).
 No services, models or robot commands were run during this pass.
 Implementation was previously paused by the owner at `294a1b6` (25a.4).
 See the [phase ledger](docs/plan.md#6-implementation-roadmap) for scope and
@@ -20,14 +22,19 @@ for the backend checks and last homelab deployment.
    opt-in, microphone recording, face capture, sample sizes, delete and
    export. Previous enrollment checks were backend-only; browser tooling
    availability must be rechecked rather than assumed.
-2. Collect real, consenting owner/non-owner audio, then benchmark and
-   calibrate the speaker model before implementing its production adapter.
+2. Collect consenting owner/non-owner audio, including a separate dataset
+   through the real Reachy microphone with noise/distance/orientation variation.
+   Benchmark ECAPA and select thresholds from FAR/FRR before implementing its
+   production adapter; measure concurrent Whisper + ECAPA on the homelab.
    The [existing smoke test](docs/verification/phase-25a1-voice-benchmark-2026-09-28.md)
    used public model-card clips only. Keep the sensitivity gate off pending
    the explicit owner decision described in the [plan](docs/phase-25.md#implementation-sequence).
-3. Phase 25b.1 DoA orientation is the next engineering-only option;
-   visual verification has not started. AASIST benchmarking remains a
-   separate, lower-priority pass.
+3. Implement and evaluate the second-stage sensitivity classifier before
+   enabling the gate; speaker verification alone cannot resolve UNKNOWN.
+   Then proceed to 25b.1 DoA/orientation and face-model comparison. Full
+   production gate prerequisites are in the
+   [implementation sequence](docs/phase-25.md#implementation-sequence).
+   AASIST benchmarking remains a separate pass.
 4. Resume the owner-deferred 24g held-out run when requested: use the
    [scenario list](docs/phase-24g.md#acceptance-requirements) and
    [agreed targets](docs/phase-24g.md#agreed-numeric-targets-owner-2026-09-27),

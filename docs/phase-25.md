@@ -302,6 +302,10 @@ class RequestSensitivity(StrEnum):
     UNKNOWN = "unknown"
 ```
 
+The table below describes target categories, not the coverage of today's
+regex-only implementation. For example, "Why is the sky blue?" and
+"Explain Kubernetes" currently return `UNKNOWN`.
+
 | Request | Sensitivity |
 |---|---|
 | "What time is it?" / "What's the weather?" / "How tall is Mount Everest?" | PUBLIC |
@@ -315,13 +319,30 @@ Classification must resolve deterministically:
 ```text
 transient transcript → deterministic high-confidence rules → obvious?
   yes → use it
-  no  → optional classifier/LLM suggestion → deterministic policy resolves
-        → still ambiguous? → UNKNOWN, fail upward (toward more verification,
-          never less)
+  no  → small local sensitivity classifier proposes one enum value
+        → deterministic validation/policy resolves
+        → ambiguous, invalid, unavailable or timed out? → UNKNOWN
 ```
 
-The LLM may suggest sensitivity but must never lower the required trust
-level; `UNKNOWN` always fails toward requiring more verification.
+The second stage is a required 25a.4 deliverable before production gate
+enablement, not optional polish or an indefinitely growing regex list.
+Prefer a dedicated small local classifier over the main conversational LLM;
+its structured output contains only `PUBLIC`, `PERSONAL`, `CONSEQUENTIAL`
+or `UNKNOWN`. It receives bounded transient input, without tools, retrieval,
+cloud forwarding or durable transcript storage. Preserve deterministic
+consequence/privacy precedence; model output cannot downgrade a rule's
+sensitive result, set trust or authorize a request. The deterministic
+`RequestAuthorizer` remains the authority, per
+[ADR 0024](adr/0024-owner-recognition-trust.md).
+
+`UNKNOWN` returns `REQUIRE_VERIFICATION` at **every trust level**, including
+T2/T3. Better biometrics cannot resolve classification ambiguity. Invalid
+output, model failure and uncertainty must remain `UNKNOWN`; do not default
+them to `PUBLIC`. Evaluate ordinary general questions, personal requests,
+action requests, mixed requests and adversarial phrasing on held-out data,
+reporting confusion counts, sensitive-to-public errors, unknown rates and
+latency alongside concurrent STT/speaker inference on the actual homelab.
+Agree acceptance thresholds before evaluating that held-out set.
 
 ### Request authorizer
 
@@ -985,7 +1006,10 @@ No production biometric gating yet.
 **Phase 25a.1 — Voice model benchmark.** Evaluate SpeechBrain ECAPA, audio
 quality handling and the optional AASIST anti-spoof path against real
 Reachy recordings, across owner/non-owner/replay/synthetic conditions.
-Record model hashes and versions.
+Use consenting owner/non-owner recordings from the real Reachy microphone,
+with noise, distance and orientation variation; browser microphone samples
+alone are insufficient. Select thresholds from measured FAR/FRR rather than
+the model default. Record model hashes and versions.
 
 **Phase 25a.2 — Voice enrollment.** Implement the portal workflow, a secure
 speaker-profile store, enrollment/replace/delete, calibration and held-out
@@ -1009,9 +1033,9 @@ tests (`services/reachy-hub/tests/test_speaker_verification.py`).
 default).** `RequestSensitivity`/`RequestAuthorizer` existed since 25.0;
 this adds `classify_sensitivity()` (deterministic rules only, no
 LLM-assist layer — an ordinary question that isn't one of the recognized
-public phrasings comes out `UNKNOWN`, which fails upward exactly like a
-personal/consequential one) and wires it into `_answer` in
-`robot_voice.py`: before a transcript reaches Core, classify it, compute
+public phrasings comes out `UNKNOWN`, which is withheld even at T2/T3,
+unlike a confidently classified personal/consequential request) and wires it
+into `_answer` in `robot_voice.py`: before a transcript reaches Core, classify it, compute
 `effective_trust` from the session's `VoiceTrustContext`, and
 `authorize_request`; anything short of `ALLOW` withholds the turn
 (`VoiceTurnOutcome.WITHHELD`) instead of calling `pipeline.converse`.
@@ -1021,8 +1045,14 @@ enabled anywhere**, deliberately: with no real speaker verifier (still
 remains T0, so turning this on today would withhold every
 PERSONAL/CONSEQUENTIAL/UNKNOWN voice request — most everyday questions,
 given the classifier's conservative rules-only stage — not just sensitive
-ones. Enabling it is an explicit owner decision for later, once 25a's
-real speaker model (and ideally 25b's visual one) exist. 11 new tests
+ones. A real speaker verifier alone is insufficient: the
+[second-stage classifier](#request-sensitivity-classification) must also be
+implemented and accepted. Full production enablement additionally requires
+25b's live visual verification and output enforcement, with their acceptance
+checks. Keep the gate off until these prerequisites pass and the owner
+explicitly approves enablement. Any earlier T0/T1-only limited-mode trial
+needs separately scoped acceptance and must keep personal requests blocked;
+it is not full production acceptance. 11 new tests
 across `test_request_sensitivity.py` (classifier) and
 `test_sensitivity_gate.py` (wiring).
 
@@ -1095,6 +1125,7 @@ universal biometric error rates from a small private dataset.
 | Portal workflow | Owner completes enrollment, calibration, held-out accuracy testing, report review and activation for both voice and face profiles, entirely in the web portal on direct/proxied mounts and desktop/mobile; correct robot sensors and profile versions are visible |
 | Portal safeguards | Test data cannot invoke tools or unlock production trust; forged results/labels alone cannot bypass trusted capture or activation checks; cancel/logout/failed activation preserve valid state, and incompatible rollback is blocked |
 | Accuracy reporting | Known labelled fixtures yield correct confusion counts/rates and latency summaries per trust level; independent trial counts, untested scenarios, calibration reliability and insufficient evidence are reported honestly; exports contain no raw biometrics |
+| Sensitivity classifier | Accepted second-stage classifier on held-out general/personal/consequential/mixed/adversarial requests; pre-agreed error, unknown-rate and latency thresholds met on the actual homelab; model failure/invalid output remains UNKNOWN at T0–T3; no downgrade of deterministic sensitive rules or action authorization bypass |
 | T1 (25a) usability | At least 100 held-out live owner utterances over three sessions and representative conditions, from multiple independent owner sessions and consenting non-owner speakers using the real Reachy microphone path; >=95% reach T1 within the QoL latency target; report exclusions and false rejects |
 | T2 (25b) usability | At least 100 held-out live owner trials (voice + visual) over three sessions; >=95% reach T2 within its documented acquisition budget once DoA/orientation completes; report exclusions and false rejects |
 | Unknown-owner rejection | At least 300 independent non-owner attempts spanning at least 10 consenting participants and varied conditions, zero unauthorized T1/T2 grants; report participant clustering and a justified uncertainty estimate, not a claimed universal error rate |
