@@ -47,7 +47,9 @@ correct facts or links, not to track each new phase dependency.
   embodiment; closed by re-scope with deferred physical acceptance.
 - [Phase 24g](phase-24g.md): local wake admission and silent false-trigger
   rejection; next planned phase, before owner recognition.
-- [Phase 25](phase-25.md): owner recognition and voice access control.
+- [Phase 25](phase-25.md): tiered owner verification and progressive trust
+  (voice verification, then visual verification, gating voice access by
+  request sensitivity).
 - [Phase 26](phase-26.md): meeting transcription and minutes.
 - [Phase 27](phase-27.md): embodied meeting secretary — owner-present companion, then physical secretary attendance, then bounded delegation; virtual/cloud attendance is deferred.
 - [Jarvis baseline](jarvis-baseline.md): upstream reuse/reference notes.
