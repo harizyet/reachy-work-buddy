@@ -2519,6 +2519,7 @@ version = "0.0.1"
 source = { editable = "services/reachy-hub" }
 dependencies = [
     { name = "aiortc" },
+    { name = "cryptography" },
     { name = "fastapi" },
     { name = "faster-whisper" },
     { name = "httpx" },
@@ -2537,6 +2538,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "aiortc", specifier = ">=1.9" },
+    { name = "cryptography", specifier = ">=45" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "faster-whisper", specifier = ">=1.0" },
     { name = "httpx", specifier = ">=0.27" },

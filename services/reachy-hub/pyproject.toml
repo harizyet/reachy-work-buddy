@@ -26,6 +26,11 @@ dependencies = [
     # MediaPipe imports.
     "mediapipe==1.0.1",
     "opencv-python-headless>=4.9",
+    # Phase 26d: encrypts the owner-recognition benchmark-capture store at
+    # rest (reachy_hub/enrollment_store.py). Same AESGCM keyring pattern as
+    # companion_core.secrets, duplicated here rather than imported because
+    # ADR 0001 forbids sibling-service runtime imports.
+    "cryptography>=45",
 ]
 
 [tool.uv.sources]

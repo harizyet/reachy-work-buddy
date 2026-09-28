@@ -81,26 +81,35 @@
           </details>
         </section>
         <section class="card" aria-labelledby="owner-recognition-title">
-          <h2 id="owner-recognition-title">Owner recognition (in progress)</h2>
-          <p>Phase 25: record voice and face samples toward future owner recognition. These are raw captures only. No recognition model reads them yet, and nothing here changes how Reachy responds to anyone.</p>
-          <p class="muted">Recording or deleting samples needs your password confirmed again, which expires after 5 minutes.</p>
-          <form id="owner-recognition-reauth-form"><label>Password<input id="owner-recognition-password" type="password" required autocomplete="current-password"></label><button>Confirm password</button></form>
+          <h2 id="owner-recognition-title">Owner recognition</h2>
+          <p class="muted">Operational enrollment (a real speaker/face profile Reachy could use) does not exist yet — there is no recognition model in production. Everything below is the benchmark dataset used to build and evaluate that model.</p>
           <p id="owner-recognition-reauth-status" role="status"></p>
-          <h3>Voice samples</h3>
-          <p class="muted">Record a few short samples of your normal speaking voice, in the room and distance you'd usually talk to Reachy from.</p>
-          <button type="button" id="voice-sample-record" disabled>Start recording</button>
-          <p id="voice-sample-status" role="status"></p>
-          <ul id="voice-sample-list" class="sample-list"></ul>
-          <button type="button" id="voice-sample-delete-all" class="secondary" disabled>Delete all voice samples</button>
-          <h3>Face samples</h3>
-          <p class="muted">Capture a few photos at your normal distance from the robot, with different angles and lighting.</p>
-          <video id="face-preview" autoplay playsinline muted hidden></video>
-          <button type="button" id="face-sample-start" disabled>Turn on camera</button>
-          <button type="button" id="face-sample-capture" hidden disabled>Capture photo</button>
-          <button type="button" id="face-sample-stop" class="secondary" hidden disabled>Turn off camera</button>
-          <p id="face-sample-status" role="status"></p>
-          <ul id="face-sample-list" class="sample-list"></ul>
-          <button type="button" id="face-sample-delete-all" class="secondary" disabled>Delete all face samples</button>
+          <form id="owner-recognition-reauth-form"><label>Password<input id="owner-recognition-password" type="password" required autocomplete="current-password"></label><button>Confirm password</button></form>
+          <section aria-labelledby="benchmark-dataset-title">
+            <h3 id="benchmark-dataset-title">Benchmark dataset</h3>
+            <p>Voice and face samples for building and evaluating a real owner/non-owner recognition dataset (Phase 25a.1). Raw captures are kept, encrypted at rest, only while this is explicitly turned on — this is not the eventual production enrollment flow, which will delete raw captures once a template exists.</p>
+            <label class="check"><input type="checkbox" id="benchmark-enabled" disabled> Enable benchmark dataset collection</label>
+            <p id="benchmark-enabled-status" role="status"></p>
+            <h4>Voice samples</h4>
+            <p class="muted">Record a few short samples of your normal speaking voice, in the room and distance you'd usually talk to Reachy from.</p>
+            <button type="button" id="voice-sample-record" disabled>Start recording</button>
+            <p id="voice-sample-status" role="status"></p>
+            <p id="voice-sample-size" class="muted"></p>
+            <ul id="voice-sample-list" class="sample-list"></ul>
+            <button type="button" id="voice-sample-delete-all" class="secondary" disabled>Delete all voice samples</button>
+            <button type="button" id="voice-sample-export" class="secondary" disabled>Export voice dataset</button>
+            <h4>Face samples</h4>
+            <p class="muted">Capture a few photos at your normal distance from the robot, with different angles and lighting.</p>
+            <video id="face-preview" autoplay playsinline muted hidden></video>
+            <button type="button" id="face-sample-start" disabled>Turn on camera</button>
+            <button type="button" id="face-sample-capture" hidden disabled>Capture photo</button>
+            <button type="button" id="face-sample-stop" class="secondary" hidden disabled>Turn off camera</button>
+            <p id="face-sample-status" role="status"></p>
+            <p id="face-sample-size" class="muted"></p>
+            <ul id="face-sample-list" class="sample-list"></ul>
+            <button type="button" id="face-sample-delete-all" class="secondary" disabled>Delete all face samples</button>
+            <button type="button" id="face-sample-export" class="secondary" disabled>Export face dataset</button>
+          </section>
         </section>
       </div>
       <div id="overview-pane">

@@ -618,11 +618,14 @@ git check-ignore deploy/homelab/.env.secret-keys.json
 ```
 
 Set `SECRET_KEY_FILE` in the private Compose env file to its **absolute host
-path**. Compose mounts it at `/run/secrets/credential_keys` for core and
-the migration job only. Native processes use `SECRET_KEY_FILE` directly.
-The reader refuses group/world-accessible files. Do not reuse
-`SESSION_SECRET_KEY`. Back up the key file separately under equivalent access
-restrictions; a database dump alone cannot recover credentials.
+path**. Compose mounts it at `/run/secrets/credential_keys` for core, the
+migration job, and reachy-hub (added Phase 26d, for the owner-recognition
+benchmark-capture store — `reachy_hub/keyring.py`; only used when
+`OWNER_RECOGNITION_CAPTURE_DIR` is also set). Native processes use
+`SECRET_KEY_FILE` directly. The reader refuses group/world-accessible
+files. Do not reuse `SESSION_SECRET_KEY`. Back up the key file separately
+under equivalent access restrictions; a database dump alone cannot
+recover credentials.
 
 ### Existing database cutover
 

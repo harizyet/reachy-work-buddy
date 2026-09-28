@@ -163,6 +163,7 @@ from reachy_hub.interruption_policy import (
     downgrade_for_presence,
     is_occupied,
 )
+from reachy_hub.keyring import Keyring
 from reachy_hub.notification_queue import NotificationQueue, QueuedNotification
 from reachy_hub.operator import install_operator_routes, require_csrf
 from reachy_hub.owner_recognition import install_owner_recognition_routes
@@ -754,15 +755,19 @@ def create_app(
     app.state.robot_credential_store = robot_credential_store
     app.state.robot_connection_manager = robot_connection_manager
     app.state.robot_voice_manager = robot_voice_manager
-    # Phase 25a.2/25b.3 portal skeleton: raw sample capture only, see
+    # Phase 25a.2/25b.3 portal skeleton, Phase 26d benchmark-vs-operational
+    # policy: benchmark-only raw sample capture, see
     # reachy_hub/owner_recognition.py and reachy_hub/enrollment_store.py.
-    # Filesystem storage is opt-in via OWNER_RECOGNITION_CAPTURE_DIR
-    # (needs a persistent volume mount, not yet set up); unset means
-    # samples stay in memory and vanish on restart, matching every other
-    # optional-integration default here (e.g. _default_palm_stop above).
+    # Filesystem storage is opt-in via OWNER_RECOGNITION_CAPTURE_DIR (needs
+    # a persistent volume mount); unset means samples stay in memory and
+    # vanish on restart, matching every other optional-integration default
+    # here (e.g. _default_palm_stop above). Filesystem storage is always
+    # encrypted at rest (Phase 26d), so it also requires SECRET_KEY_FILE —
+    # fail closed (crash at startup) rather than silently falling back to
+    # plaintext if the capture dir is configured but the key file isn't.
     capture_dir = os.environ.get("OWNER_RECOGNITION_CAPTURE_DIR")
     app.state.enrollment_store = enrollment_store or (
-        FilesystemEnrollmentStore(capture_dir) if capture_dir else InMemoryEnrollmentStore()
+        FilesystemEnrollmentStore(capture_dir, Keyring.from_file()) if capture_dir else InMemoryEnrollmentStore()
     )
     install_owner_recognition_routes(app, require_owner_session, app.state.enrollment_store)
 

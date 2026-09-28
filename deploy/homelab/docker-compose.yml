@@ -118,9 +118,16 @@ services:
       context: ../..
       dockerfile: services/reachy-hub/Dockerfile
     restart: unless-stopped
+    secrets:
+      - credential_keys
     environment:
       ACCOUNTS_SERVICE_TOKEN: ${ACCOUNTS_SERVICE_TOKEN:?set ACCOUNTS_SERVICE_TOKEN in .env}
       OWNER_USER_ID: ${OWNER_USER_ID:-default-user}
+      # Phase 26d: encrypts OWNER_RECOGNITION_CAPTURE_DIR's benchmark
+      # captures at rest (reachy_hub/keyring.py). Same key file/secret as
+      # companion-core's SECRET_KEY_FILE below, reused rather than
+      # duplicated — see docs/deployment.md#key-provisioning.
+      SECRET_KEY_FILE: /run/secrets/credential_keys
       DATABASE_URL: postgresql://${POSTGRES_USER:-reachy}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-reachy_hub}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}

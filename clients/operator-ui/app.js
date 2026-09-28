@@ -19,7 +19,7 @@ const chat = createChat({
   },
 });
 const accounts = createAccounts({api, isLoggedIn: () => loggedIn});
-const ownerRecognition = createOwnerRecognition({api, apiUpload, isLoggedIn: () => loggedIn});
+const ownerRecognition = createOwnerRecognition({api, apiUpload, apiDownload, isLoggedIn: () => loggedIn});
 const motionSettings = createMotionSettings();
 const voice = createVoice({api, isLoggedIn: () => loggedIn, chat});
 function showView(view) {
@@ -78,6 +78,25 @@ async function apiUpload(path, blob) {
     throw error;
   }
   return response.json();
+}
+// Phase 26d: downloads the benchmark-dataset export (a zip) and saves it
+// through the browser, rather than returning JSON like api()/apiUpload().
+async function apiDownload(path, filename) {
+  const response = await fetch(base + path, {cache: 'no-store', credentials: 'same-origin'});
+  if (!response.ok) {
+    if (response.status === 401) showLogin();
+    let detail = '';
+    try { detail = (await response.json()).detail; } catch { /* Non-JSON gateway failure. */ }
+    const error = new Error(typeof detail === 'string' && detail ? detail : `Request failed (${response.status})`);
+    error.status = response.status;
+    throw error;
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url; link.download = filename;
+  document.body.append(link); link.click(); link.remove();
+  URL.revokeObjectURL(url);
 }
 function submit(form, action) {
   $(form).addEventListener('submit', async event => {

@@ -813,33 +813,40 @@ enforce activation rules. Browser-supplied scores cannot grant access.
 
 ### Enrollment portal
 
-**Skeleton status (2026-09-28):** Settings · Accounts has a working "Owner
-recognition" card (`clients/operator-ui/owner-recognition.js`,
-`reachy_hub/owner_recognition.py`, `reachy_hub/enrollment_store.py`) that
-records raw voice clips (browser `MediaRecorder`) and face photos
-(`getUserMedia` + canvas snapshot), gated by owner login, fresh password
-reauthentication and CSRF, storing them as a raw sample dataset. In-memory
-by default (lost on restart); the homelab compose file
-(`deploy/homelab/docker-compose.yml`) sets `OWNER_RECOGNITION_CAPTURE_DIR`
-to a named `owner-recognition-captures` volume so samples survive a
-container recreate (owner decision, 2026-09-28) — **deployed to the
-homelab 2026-09-28**, persistence confirmed live (a sample survived a
-`reachy-hub` container restart). Not encrypted at rest, so restrict host
-access to that volume like any other data/credential volume; this is
-explicitly temporary — [Phase 26d](phase-26.md#26d-addendum-benchmark-vs-operational-data-policy-owner-decision-2026-09-28)
-settles the full policy (separate encrypted benchmark-dataset store vs.
-a production store that deletes raw captures after template creation)
-and today's skeleton implements only the benchmark side of it, not yet
-brought into line with that resolved policy. This is **not** the
-Enroll/Calibrate/Test accuracy/Review/Activate flow
-below — there is no speaker/face model wired in, no template, no
-calibration, no accuracy testing, and a captured sample is not identity
-evidence. It exists to (a) let the owner build the real dataset Phase
-25a.1's benchmark needs, and (b) be the capture primitive the real
-enrollment flow below is built on next. Full backend test coverage
+**Status (2026-09-28, hardened to Phase 26d's policy):** Settings ·
+Accounts has a working "Owner recognition" card
+(`clients/operator-ui/owner-recognition.js`,
+`reachy_hub/owner_recognition.py`, `reachy_hub/enrollment_store.py`,
+`reachy_hub/keyring.py`) whose entire surface is explicitly labelled
+"Benchmark dataset" — this is **not** the Enroll/Calibrate/Test
+accuracy/Review/Activate operational flow below, there is no
+speaker/face model wired in, no template, no calibration, no accuracy
+testing, and a captured sample is not identity evidence. It records raw
+voice clips (browser `MediaRecorder`) and face photos (`getUserMedia` +
+canvas snapshot), gated by: owner login; fresh password reauthentication
+plus CSRF for any mutation; and — per
+[Phase 26d](phase-26.md#26d-addendum-benchmark-vs-operational-data-policy-owner-decision-2026-09-28)'s
+"explicitly enabled" requirement — a separate benchmark-mode toggle
+(`PUT /owner-recognition/benchmark/enabled`) that must be turned on
+before any sample can be recorded; turning it off keeps existing samples
+(mode separation, not a hidden delete). Persisted captures are encrypted
+at rest with AESGCM (`reachy_hub/keyring.py`, the same key-file pattern
+as `companion_core.secrets.Keyring`, duplicated rather than imported
+per ADR 0001) whenever `OWNER_RECOGNITION_CAPTURE_DIR` is set; the hub
+then requires `SECRET_KEY_FILE` too and fails closed at startup rather
+than silently falling back to plaintext. In-memory by default (lost on
+restart, no encryption needed since nothing persists). The homelab
+compose file mounts the existing `credential_keys` secret into
+`reachy-hub` and sets `OWNER_RECOGNITION_CAPTURE_DIR` to a named
+`owner-recognition-captures` volume, so samples survive a container
+recreate. The owner can also export a kind's dataset as a zip
+(`GET /owner-recognition/benchmark/{voice,face}/export`, decrypts
+server-side, requires fresh reauth) and sees each kind's sample count
+and total size in the portal. Full backend test coverage
 (`services/reachy-hub/tests/test_owner_recognition.py`,
-`test_enrollment_store.py`); the browser UI itself has not been exercised
-in a real browser (no Chromium available in that session) — verify there
+`test_enrollment_store.py`, including encryption round-trip and wrong-key
+rejection); the browser UI itself has still not been exercised in a real
+browser (no Chromium available in any session so far) — verify there
 before relying on it.
 
 ```text

@@ -7,6 +7,39 @@ acceptance. This file holds only session continuation details.
 
 ## Current work
 
+**Enrollment portal hardened to the Phase 26d policy, 2026-09-28.**
+Implemented the policy decided just below: added
+`reachy_hub/keyring.py` (AESGCM, duplicates `companion_core.secrets.
+Keyring`'s shape per ADR 0001 — no sibling-service import); rewrote
+`FilesystemEnrollmentStore` to encrypt every capture at rest (AAD binds
+ciphertext to kind/sample_id/content_type) and added an
+`is_benchmark_enabled`/`set_benchmark_enabled` gate that `add_sample`
+now enforces (403 if off); routes moved under
+`/owner-recognition/benchmark/...` to leave room for a future,
+separate `/owner-recognition/enrollment/...` operational namespace;
+added `PUT .../benchmark/enabled` and
+`GET .../benchmark/{voice,face}/export` (zip download, fresh-reauth
+gated); `EnrollmentStatus` now reports `benchmark_enabled` and each
+kind's total byte count. `services/reachy-hub/pyproject.toml` gained a
+direct `cryptography` dependency (was only companion-core's before;
+each service builds its own image from its own pyproject, so this was
+required, not redundant) — `uv lock` updated. The homelab compose file
+now mounts the existing `credential_keys` secret into `reachy-hub` too
+(`SECRET_KEY_FILE=/run/secrets/credential_keys`, same key file
+core/migrate already use). Portal UI relabelled "Benchmark dataset"
+throughout, with an explicit enable checkbox gating the record/capture
+buttons, dataset size display, and export buttons
+(`clients/operator-ui/owner-recognition.js`, new `apiDownload` helper
+in `app.js`). 41 backend tests across `test_enrollment_store.py`
+(including an encrypt/decrypt round-trip and a wrong-key-rejection
+case) and `test_owner_recognition.py` (including the enable-gate and
+export flow); full `pytest services shared` (896 passed) and Ruff pass.
+Compose config validated (`docker compose config`) against the real
+`.env`. **Not yet verified in a real browser** — same limitation as
+before, still needs Chromium. The production capture volume was empty
+at the time of this change, so there's no old-format (plaintext) data
+that the new encrypted format would fail to read.
+
 **Benchmark-vs-operational biometric-data policy decided, 2026-09-28
 (owner).** Resolved the tension the new Phase 26 flagged (below): raw
 biometric captures may be retained only for an explicitly enabled
