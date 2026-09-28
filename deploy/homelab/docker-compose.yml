@@ -161,6 +161,16 @@ services:
       VOICE_CONTINUATION_WINDOW_MS: ${VOICE_CONTINUATION_WINDOW_MS:-}
       VOICE_END_OF_SPEECH_SILENCE_MS: ${VOICE_END_OF_SPEECH_SILENCE_MS:-}
       VOICE_MAX_SESSION_SECONDS: ${VOICE_MAX_SESSION_SECONDS:-}
+      # Phase 25a.2/25b.3 (docs/phase-25.md "Enrollment portal"): raw
+      # voice/face sample capture only, no biometric template/model yet
+      # (reachy_hub/enrollment_store.py, reachy_hub/owner_recognition.py).
+      # Unset keeps samples in memory (lost on restart); this compose file
+      # sets it by owner request (2026-09-28) so samples captured through
+      # Settings · Accounts survive a container recreate, backed by the
+      # owner-recognition-captures volume below.
+      OWNER_RECOGNITION_CAPTURE_DIR: ${OWNER_RECOGNITION_CAPTURE_DIR:-/data/owner-recognition-captures}
+    volumes:
+      - owner-recognition-captures:/data/owner-recognition-captures
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -246,6 +256,11 @@ volumes:
   postgres-data:
   caddy-data:
   searxng-data:
+  # Phase 25a.2/25b.3: raw owner-recognition voice/face captures (see
+  # OWNER_RECOGNITION_CAPTURE_DIR above). Not encrypted at rest — this
+  # volume holds real voice/face recordings, so restrict host access to
+  # it the same way as other credential/data volumes.
+  owner-recognition-captures:
 
 secrets:
   credential_keys:

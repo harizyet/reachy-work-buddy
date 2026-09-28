@@ -818,9 +818,14 @@ recognition" card (`clients/operator-ui/owner-recognition.js`,
 `reachy_hub/owner_recognition.py`, `reachy_hub/enrollment_store.py`) that
 records raw voice clips (browser `MediaRecorder`) and face photos
 (`getUserMedia` + canvas snapshot), gated by owner login, fresh password
-reauthentication and CSRF, storing them as a raw sample dataset (in-memory
-by default; `OWNER_RECOGNITION_CAPTURE_DIR` opts into on-disk storage).
-This is **not** the Enroll/Calibrate/Test accuracy/Review/Activate flow
+reauthentication and CSRF, storing them as a raw sample dataset. In-memory
+by default (lost on restart); the homelab compose file
+(`deploy/homelab/docker-compose.yml`) sets `OWNER_RECOGNITION_CAPTURE_DIR`
+to a named `owner-recognition-captures` volume so samples survive a
+container recreate (owner decision, 2026-09-28) — not yet deployed, and
+not encrypted at rest, so restrict host access to that volume like any
+other data/credential volume. This is **not** the Enroll/Calibrate/Test
+accuracy/Review/Activate flow
 below — there is no speaker/face model wired in, no template, no
 calibration, no accuracy testing, and a captured sample is not identity
 evidence. It exists to (a) let the owner build the real dataset Phase

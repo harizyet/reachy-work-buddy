@@ -53,7 +53,7 @@ wiring) records browser-mic voice clips (`MediaRecorder`) and
 browser-camera face photos (`getUserMedia` + canvas snapshot). Backend:
 `shared/models/enrollment.py`, `reachy_hub/enrollment_store.py`
 (`InMemoryEnrollmentStore` default; `FilesystemEnrollmentStore` opt-in via
-`OWNER_RECOGNITION_CAPTURE_DIR`, not yet wired to any volume mount) and
+`OWNER_RECOGNITION_CAPTURE_DIR`, wired to a persistent volume below) and
 `reachy_hub/owner_recognition.py` (new routes under `/owner-recognition/`,
 wired into `app.py`). Every route requires an owner cookie session (no
 REMOTE_UI_TOKEN bearer path); recording/deleting a sample also requires
@@ -71,20 +71,33 @@ in this session (`node --check` syntax-only). A real closure bug in the
 voice-recording stop handler (stale `voiceRecorder` read after
 `stopVoiceStream()` nulled it) was caught and fixed by re-reading the
 code, not by running it — treat this as a stronger reason, not less, to
-actually exercise it in a browser before relying on it. Nothing deployed;
-`OWNER_RECOGNITION_CAPTURE_DIR` is unset everywhere, so captured samples
-would currently vanish on any hub restart if this were deployed today.
+actually exercise it in a browser before relying on it. Nothing deployed
+yet.
+
+**Persistent capture volume wired, 2026-09-28 (owner request).**
+`deploy/homelab/docker-compose.yml` now sets
+`OWNER_RECOGNITION_CAPTURE_DIR=/data/owner-recognition-captures` on
+`reachy-hub` and mounts a new named volume,
+`owner-recognition-captures`, at that path, so `FilesystemEnrollmentStore`
+is used instead of the in-memory default and samples survive a container
+recreate. Documented in `deploy/homelab/.env.example` (override path) and
+`docs/phase-25.md`'s enrollment-portal section (not encrypted at rest —
+restrict host access like any other data/credential volume). Validated
+with `docker compose config` only (`OWNER_RECOGNITION_CAPTURE_DIR` and the
+volume mount render correctly); **not yet deployed to the homelab** — the
+next `up` there will create the new volume automatically, but no
+container has actually written to it yet.
 
 **Next for Phase 25:**
 1. **Verify the new portal in a real browser** (Chromium, per
    docs/development.md) — mic/camera permission prompts, recording,
    upload, delete, reauth expiry — before trusting it.
-2. **Use it to collect real, consenting owner and non-owner audio**
-   (and, later, face photos) — this is the actual 25a.1 benchmark Phase
-   25a.1's smoke test still needs; nothing further on speaker verification
-   can be evaluated meaningfully without it.
-3. Decide on `OWNER_RECOGNITION_CAPTURE_DIR` / a persistent volume before
-   relying on captured samples surviving a restart.
+2. **Redeploy the homelab hub** to pick up the compose/env change, then
+   confirm a recorded sample survives `docker compose restart reachy-hub`.
+3. **Use the portal to collect real, consenting owner and non-owner
+   audio** (and, later, face photos) — this is the actual 25a.1 benchmark
+   Phase 25a.1's smoke test still needs; nothing further on speaker
+   verification can be evaluated meaningfully without it.
 4. AASIST anti-spoof benchmarking (not pip-installable, needs its own
    repo/weights) is a separate later pass.
 
