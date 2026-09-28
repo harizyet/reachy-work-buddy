@@ -7,6 +7,28 @@ acceptance. This file holds only session continuation details.
 
 ## Current work
 
+**Phase 25a.3 (speaker-verification wiring) landed, 2026-09-28 — no
+real model yet.** New `reachy_hub/speaker/base.py`: the `SpeakerVerifier`
+protocol (`async verify(wav_bytes, *, owner_id, robot_id,
+voice_session_id, turn) -> SpeakerEvidence | None`, must never raise) and
+`NoSpeakerVerifier`, the default until a real adapter exists.
+`robot_voice.py`: `VoiceSession` now carries a `VoiceTrustContext`
+(`trust.speaker`, `trust.visual`, both `None` today); `VoiceTurnPipeline`
+gained a `verify_speaker` field (defaults to `NoSpeakerVerifier`, so every
+existing call site and test kept working unchanged); `run_turn` runs
+`pipeline.verify_speaker` concurrently with `pipeline.transcribe` via
+`asyncio.gather` on the same WAV — including the Phase 24g pretranscribed
+wake-admission path, where STT already ran during admission but the audio
+still gets verified here for the first time. A verifier exception is
+caught locally and degrades to `trust.speaker = None`; it never fails the
+turn, matching the documented "speaker-verifier outage caps trust at T0"
+behavior. **Nothing computes or uses `TrustLevel` from this evidence
+yet** — that's 25a.4 (gating the input-sensitivity boundary), deliberately
+not done this pass. 6 new tests
+(`services/reachy-hub/tests/test_speaker_verification.py`); full
+`pytest services shared` (902 passed) and Ruff pass; no docker
+build/redeploy needed (no new runtime dependency, no config change).
+
 **Enrollment portal hardened to the Phase 26d policy, 2026-09-28.**
 Implemented the policy decided just below: added
 `reachy_hub/keyring.py` (AESGCM, duplicates `companion_core.secrets.

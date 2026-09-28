@@ -54,6 +54,7 @@ from starlette.requests import ClientDisconnect
 from reachy_hub.palm_stop import PalmStop
 from reachy_hub.robot_connection_manager import RobotConnection, RobotConnectionManager
 from reachy_hub.robot_credential_store import RobotCredentialStore
+from reachy_hub.speaker.base import NoSpeakerVerifier
 from reachy_hub.turn_completeness import looks_complete
 from reachy_hub.wake_arm_store import (
     InMemoryWakeArmStore,
@@ -100,6 +101,7 @@ from shared.models.robot_ws import (
     WSMessageType,
 )
 from shared.models.session import Channel, PrivacyContext
+from shared.models.trust import SpeakerEvidence, VisualEvidence
 from shared.models.websearch import TurnWebSearch
 from shared.protocols.operator_api import (
     ROBOT_VOICE,
@@ -140,6 +142,18 @@ class HeldTurn:
 
 
 @dataclass
+class VoiceTrustContext:
+    """Phase 25a.3: transient, process-local identity evidence attached to
+    one voice session — never a second biometric-session store
+    (docs/phase-25.md's "Integration into RobotVoiceManager"). Discarded
+    with the session; never persisted to the database as authorization.
+    `visual` stays unused until Phase 25b's face verification lands."""
+
+    speaker: SpeakerEvidence | None = None
+    visual: VisualEvidence | None = None
+
+
+@dataclass
 class VoiceSession:
     voice_session_id: str
     robot_id: str
@@ -164,6 +178,10 @@ class VoiceSession:
     # re-uploaded candidate again.
     pretranscribed: str | None = None
     turns: deque[VoiceTurnRecord] = field(default_factory=lambda: deque(maxlen=MAX_TURN_RECORDS))
+    # Phase 25a.3: latest identity evidence, overwritten each turn.
+    # effective_trust() (reachy_hub/trust.py) re-derives trust from this on
+    # every call rather than reading a cached level — see ADR 0024.
+    trust: VoiceTrustContext = field(default_factory=VoiceTrustContext)
 
     @property
     def active(self) -> bool:
@@ -595,6 +613,14 @@ class ConversationReply:
     web_search: TurnWebSearch | None = None
 
 
+async def _default_verify_speaker(
+    wav_bytes: bytes, *, owner_id: str, robot_id: str, voice_session_id: str, turn: int
+) -> SpeakerEvidence | None:
+    return await NoSpeakerVerifier().verify(
+        wav_bytes, owner_id=owner_id, robot_id=robot_id, voice_session_id=voice_session_id, turn=turn
+    )
+
+
 @dataclass
 class VoiceTurnPipeline:
     """app.py's existing speech and conversation paths, adapted for this
@@ -606,6 +632,12 @@ class VoiceTurnPipeline:
     synthesize: Callable[[str], Awaitable[bytes]]
     deliver_private: Callable[[str, Channel, str], Awaitable[bool]]
     speech_withheld_reason: Callable[..., str | None]
+    # Phase 25a.3: runs concurrently with `transcribe` on the same WAV
+    # (see run_turn below). Defaults to NoSpeakerVerifier — no real
+    # adapter is wired into production yet (docs/phase-25.md's
+    # dependency-rollout guidance), so voice trust stays capped at T0
+    # until 25a.3's model integration replaces this default.
+    verify_speaker: Callable[..., Awaitable[SpeakerEvidence | None]] = _default_verify_speaker
 
 
 def validate_utterance(body: bytes, limits: VoiceLimits) -> float:
@@ -648,15 +680,38 @@ async def run_turn(
         )
         return outcome
 
+    async def verify_speaker() -> SpeakerEvidence | None:
+        # Phase 25a.3: the verifier contract says it must never raise, but
+        # a broken adapter must still never break the turn — an outage
+        # caps trust at T0 (docs/phase-25.md), it doesn't fail the call.
+        try:
+            return await pipeline.verify_speaker(
+                body, owner_id=session.user_id, robot_id=session.robot_id,
+                voice_session_id=session.voice_session_id, turn=turn,
+            )
+        except Exception:
+            log.warning("robot voice turn: speaker verification failed", exc_info=True)
+            return None
+
     started = time.perf_counter()
     transcript = manager.take_pretranscribed(session, turn, segment)
     if transcript is None:
         try:
-            transcript = (await pipeline.transcribe(body)).strip()
+            # Verification runs on the exact admitted utterance, concurrently
+            # with STT on the same WAV, never a separately captured sample.
+            transcript_result, session.trust.speaker = await asyncio.gather(
+                pipeline.transcribe(body), verify_speaker()
+            )
         except Exception:
             log.exception("robot voice turn: transcription failed")
             return finish(VoiceTurnOutcome.FAILED, reason="Speech recognition failed"), None
+        transcript = transcript_result.strip()
         timings["transcription_ms"] = _elapsed_ms(started)
+    else:
+        # Phase 24g pretranscribed wake-admission turn: STT already ran
+        # during admission, but this is still the first time this turn's
+        # audio is available here, so speaker verification still runs on it.
+        session.trust.speaker = await verify_speaker()
     merged = " ".join(part for part in (prior.transcript if prior else "", transcript) if part)
     if not manager.is_current(session, turn):
         return finish(VoiceTurnOutcome.CANCELLED, transcript=merged or None, reason="Stopped"), None

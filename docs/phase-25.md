@@ -8,11 +8,17 @@ SpeechBrain ECAPA-TDNN — see
 [the record](verification/phase-25a1-voice-benchmark-2026-09-28.md) — with
 no owner/non-owner recording, homelab run, or AASIST evaluation yet.
 **An enrollment-portal skeleton for raw sample capture (part of 25a.2/
-25b.3) also landed 2026-09-28** — see
-[Enrollment portal](#enrollment-portal) below for what it is and, more
-importantly, is not. No perception code, biometric template, calibration,
-or production gating exists; 25a.2's model-integration half and all of
-25b beyond that skeleton remain planned. This phase **follows [Phase 24g](phase-24g.md)**
+25b.3) also landed 2026-09-28**, hardened to Phase 26d's benchmark-vs-
+operational data policy (encrypted at rest, explicit opt-in, exportable) —
+see [Enrollment portal](#enrollment-portal) below for what it is and, more
+importantly, is not. **Phase 25a.3's wiring (`SpeakerVerifier` protocol,
+`VoiceTrustContext` on `VoiceSession`, concurrent STT+verification in
+`run_turn`) also landed 2026-09-28** — see
+[the implementation sequence](#implementation-sequence) below — with no
+real model behind it yet, so voice trust stays at T0 everywhere. No
+perception code, biometric template, calibration, or production gating
+exists; 25a.2's model-integration half and all of 25b beyond the portal
+skeleton remain planned. This phase **follows [Phase 24g](phase-24g.md)**
 in the roadmap. The 24e prerequisites passed or were waived on 2026-09-27.
 Compose recognition with 24g wake admission: relevance is interaction routing,
 never identity evidence. Unknown/ambiguous speakers still require rejection
@@ -1019,10 +1025,20 @@ Record model hashes and versions.
 speaker-profile store, enrollment/replace/delete, calibration and held-out
 accuracy testing.
 
-**Phase 25a.3 — Robot voice integration.** Modify the existing
-`RobotVoiceManager` path to run STT and speaker verification concurrently
-on the same WAV, and attach the resulting `SpeakerEvidence` to the current
-turn/session's `VoiceTrustContext`.
+**Phase 25a.3 — Robot voice integration (wiring done 2026-09-28, no real
+model yet).** `reachy_hub/speaker/base.py` defines the `SpeakerVerifier`
+protocol and a `NoSpeakerVerifier` default; `robot_voice.py`'s
+`VoiceSession` now carries a `VoiceTrustContext` (`trust.speaker`,
+`trust.visual`), and `run_turn` runs `pipeline.verify_speaker` concurrently
+with `pipeline.transcribe` on the same WAV (`asyncio.gather`), including
+for pretranscribed Phase 24g wake-admission turns, and never lets a
+broken verifier fail the turn (it degrades to no evidence, matching the
+documented speaker-verifier-outage behavior below). Nothing computes or
+uses `TrustLevel` from this evidence yet — that's 25a.4's job — and no
+real adapter is wired in: `NoSpeakerVerifier` is still the only
+implementation, so voice trust stays at T0 everywhere until a benchmarked
+model (25a.1) is actually integrated behind this protocol. 6 new unit
+tests (`services/reachy-hub/tests/test_speaker_verification.py`).
 
 **Phase 25a.4 — Input sensitivity gate.** Add the transient STT boundary,
 `RequestSensitivity` and `RequestAuthorizer`, and T0/T1 behaviour, enabling
