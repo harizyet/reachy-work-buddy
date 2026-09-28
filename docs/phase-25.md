@@ -822,10 +822,16 @@ reauthentication and CSRF, storing them as a raw sample dataset. In-memory
 by default (lost on restart); the homelab compose file
 (`deploy/homelab/docker-compose.yml`) sets `OWNER_RECOGNITION_CAPTURE_DIR`
 to a named `owner-recognition-captures` volume so samples survive a
-container recreate (owner decision, 2026-09-28) — not yet deployed, and
-not encrypted at rest, so restrict host access to that volume like any
-other data/credential volume. This is **not** the Enroll/Calibrate/Test
-accuracy/Review/Activate flow
+container recreate (owner decision, 2026-09-28) — **deployed to the
+homelab 2026-09-28**, persistence confirmed live (a sample survived a
+`reachy-hub` container restart). Not encrypted at rest, so restrict host
+access to that volume like any other data/credential volume; this is
+explicitly temporary — [Phase 26d](phase-26.md#26d-addendum-benchmark-vs-operational-data-policy-owner-decision-2026-09-28)
+settles the full policy (separate encrypted benchmark-dataset store vs.
+a production store that deletes raw captures after template creation)
+and today's skeleton implements only the benchmark side of it, not yet
+brought into line with that resolved policy. This is **not** the
+Enroll/Calibrate/Test accuracy/Review/Activate flow
 below — there is no speaker/face model wired in, no template, no
 calibration, no accuracy testing, and a captured sample is not identity
 evidence. It exists to (a) let the owner build the real dataset Phase

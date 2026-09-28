@@ -7,6 +7,25 @@ acceptance. This file holds only session continuation details.
 
 ## Current work
 
+**Benchmark-vs-operational biometric-data policy decided, 2026-09-28
+(owner).** Resolved the tension the new Phase 26 flagged (below): raw
+biometric captures may be retained only for an explicitly enabled
+benchmark/calibration purpose (separate encrypted store, owner-visible
+size/export/delete, disabling it never touches normal auth); normal
+operational enrollment stores only derived templates, deleting raw
+captures once a template exists. Recorded as
+[Phase 26d's resolved policy](docs/phase-26.md#26d-addendum-benchmark-vs-operational-data-policy-owner-decision-2026-09-28)
+(the table, the four 26d requirements, and the separate-stores rule) and
+cross-referenced from
+[phase-25.md's enrollment-portal section](docs/phase-25.md#enrollment-portal).
+**Not implemented yet** — today's `reachy_hub/enrollment_store.py`
+(deployed to the homelab this session) is unencrypted and has no
+benchmark/operational split; it implements only the benchmark half of
+the now-decided policy. Bringing it into line (encryption at rest, a
+separate operational template store, the portal's
+Operational-enrollment/Benchmark-dataset split) is real Phase 26/Phase
+25a.2/25b.3 implementation work, not done in this documentation pass.
+
 **New Phase 26 (Security hardening and assurance) inserted into the
 roadmap, 2026-09-28 — documentation only, nothing implemented.** The
 owner supplied a phase spec

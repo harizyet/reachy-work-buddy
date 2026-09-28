@@ -132,15 +132,20 @@ camera → bounded frame capture → encrypted transport
 - **Normal conversation:** raw audio is not normally written to
   persistent storage. Prefer "no audio-at-rest" over "persist every WAV
   and encrypt it."
-- **Biometric enrollment:** capture sample → derive biometric template →
-  encrypt template at rest → delete raw sample. The current enrollment
-  portal skeleton (`reachy_hub/enrollment_store.py`, added 2026-09-28)
-  intentionally violates the "delete raw sample" half of this — it stores
-  raw captures on purpose, by explicit owner request, to build the real
-  dataset Phase 25a.1's benchmark and eventual template training need.
-  26d must decide, deliberately, whether/when that dataset moves to
-  encrypted-template-only storage as Phase 25a.2/25b.3 mature, not leave
-  it as an oversight.
+- **Biometric enrollment (production):** capture sample → quality checks
+  → derive biometric template → encrypt template at rest → delete raw
+  sample.
+- **Benchmark/calibration capture (development):** capture → explicit
+  owner opt-in → encrypted raw sample retained → labelled dataset →
+  model/calibration evaluation → owner-controlled deletion. See
+  [Benchmark vs. operational data policy](#26d-addendum-benchmark-vs-operational-data-policy-owner-decision-2026-09-28)
+  below — this is a deliberate, resolved distinction, not an unresolved
+  tension. The current enrollment portal skeleton
+  (`reachy_hub/enrollment_store.py`, added 2026-09-28) implements only
+  the benchmark side of this so far (raw captures retained, unencrypted,
+  no mode separation from a future operational store); 26d brings it into
+  line with the resolved policy rather than treating today's shape as
+  final.
 - **Memory inspection:** encrypted transport → decrypt at trusted
   endpoint → plaintext audio/frame in RAM → inference → discard. Minimize
   that plaintext lifetime rather than attempting impractical encrypted
@@ -255,8 +260,76 @@ Biometric templates (once Phase 25a.2/25b.3 produce real ones) must be
 encrypted at rest, owner-scoped, versioned, replaceable/deletable, never
 in an LLM prompt, and never logged — per
 [ADR 0024](adr/0024-owner-recognition-trust.md)'s evidence/trust split.
-Also resolve the raw-capture dataset question flagged in
-[Audio and camera privacy model](#audio-and-camera-privacy-model) above.
+
+#### 26d addendum: benchmark vs. operational data policy (owner decision, 2026-09-28)
+
+Resolves the tension flagged in
+[Audio and camera privacy model](#audio-and-camera-privacy-model) above
+between "delete raw enrollment captures" and Phase 25a.1's real need for
+a retained owner/non-owner dataset. **Benchmark-data collection and
+production enrollment are different purposes with different retention
+rules — this is a deliberate distinction, not a compromise on either
+one.** Benchmark mode exists because reproducible calibration, ECAPA/
+SFace/InsightFace candidate comparison, replay/spoof testing and
+re-running a benchmark after a model change all require raw samples;
+deleting them immediately would make that evaluation work impractical.
+Production enrollment has no such need once a template exists.
+
+| Data | Development/benchmark mode | Normal operational mode |
+|---|---|---|
+| Voice enrollment audio | May retain (encrypted) | Delete after template creation |
+| Face enrollment images/video | May retain (encrypted) | Delete after template creation |
+| Speaker embedding | Retain encrypted | Retain encrypted |
+| Face embedding | Retain encrypted | Retain encrypted |
+| Anti-spoof samples | May retain for evaluation (encrypted) | Delete after evaluation |
+| Normal conversation audio | Do not retain by default | Do not retain |
+| Normal camera frames | Do not retain | Do not retain |
+| Calibration metrics | Retain | Retain |
+| Model/version/hash | Retain | Retain |
+
+26d must implement, not merely document, four requirements against
+today's enrollment-portal skeleton:
+
+- **Purpose limitation.** A benchmark capture cannot silently become a
+  conversation recording, and vice versa — the two purposes stay
+  distinguishable in the data itself (labelled dataset vs. ordinary
+  session audio), not just in UI copy.
+- **Encryption at rest.** Retained benchmark audio/images are encrypted
+  separately from ordinary application data — today's
+  `FilesystemEnrollmentStore` (`reachy_hub/enrollment_store.py`) writes
+  plaintext files and must not be treated as meeting this bar as-is.
+- **Explicit retention control.** The owner can see, export and delete
+  the benchmark dataset independently of anything else.
+- **Mode separation.** Disabling benchmark collection must not affect
+  normal biometric authentication, and normal authentication must not
+  depend on the benchmark store existing.
+
+**Separate stores, not a shared one with a flag.** Benchmark data and
+operational templates (the future `recognition_store.py` from
+[Phase 25's proposed code layout](phase-25.md#proposed-code-layout))
+must be distinct stores. Deleting the research dataset must not risk the
+active biometric profile, and re-enrolling the owner must not leave an
+old raw dataset implicitly trusted by anything.
+
+The portal should make the distinction visible rather than presenting
+one undifferentiated "Owner recognition" surface:
+
+```text
+Owner Recognition
+├── Operational enrollment
+│   └── Raw captures deleted after processing
+│
+└── Benchmark dataset
+    ├── Explicitly enabled
+    ├── Raw samples retained encrypted
+    ├── Dataset size / storage shown
+    ├── Export
+    └── Delete dataset
+```
+
+Governing principle: **raw biometric captures may be retained only for
+an explicitly enabled benchmark/calibration purpose; normal operation
+stores derived templates, not raw biometric media.**
 
 ### 26e — Dependency, SBOM and model/AIBOM supply-chain hardening
 
