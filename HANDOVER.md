@@ -1,11 +1,49 @@
 # Handover
 
-Current session snapshot: 2026-09-27. Read [AGENTS.md](AGENTS.md) first.
+Current session snapshot: 2026-09-28. Read [AGENTS.md](AGENTS.md) first.
 The [documentation index](docs/README.md) defines ownership;
 [project state](docs/project-state.md) collects deployment limits and open
 acceptance. This file holds only session continuation details.
 
 ## Current work
+
+**Session paused here by owner request, 2026-09-28.** Everything below
+in this session is committed through `294a1b6` (Phase 25a.4). Summary of
+what landed today, newest first: 25a.4 input-sensitivity gate (off by
+default) → 25a.3 speaker-verification wiring (no real model) →
+enrollment-portal hardened to the Phase 26d policy (encryption,
+explicit opt-in, export) and deployed live → the Phase 26d
+benchmark-vs-operational data policy decision itself → Phase 26
+(Security hardening and assurance) inserted into the roadmap, renumbering
+former 26/27 to 27/28 → Phase 25.0 (contracts/trust engine, ADR 0024) →
+Phase 25a.1's dev-box speaker-verification pipeline smoke test. Full
+detail on each is in its own entry below, newest first.
+
+**Next for Phase 25, in priority order:**
+1. **Verify the owner-recognition portal in a real browser** — open
+   Settings · Accounts, record a voice sample and a face photo, confirm
+   they list, show correct sizes, delete, and export correctly. No
+   session so far has had Chromium available; every check of this
+   feature has been backend-only (curl/pytest). This is the single
+   biggest gap before trusting the capture tool at all.
+2. **Use the portal to collect real, consenting owner and non-owner
+   audio** — this is the actual Phase 25a.1 benchmark; the smoke test so
+   far used the SpeechBrain model card's own public example clips, not
+   real people. Needs the owner's participation (recording sessions),
+   which no agent session can do alone.
+3. Once real audio exists: benchmark SpeechBrain ECAPA against it,
+   select/calibrate a model, then build the real `SpeakerVerifier`
+   adapter behind `reachy_hub/speaker/base.py`'s protocol (25a.3's
+   `NoSpeakerVerifier` is the only implementation today).
+4. Only after a real speaker model exists does turning on
+   `VOICE_SENSITIVITY_GATE_ENABLED` become worth considering — turning
+   it on before that would just block most everyday voice requests (see
+   the 25a.4 entry below for why).
+5. Phase 25b (visual verification) hasn't been started at all — DoA
+   orientation (25b.1) is the first engineering-only piece that doesn't
+   need real face data, similar in shape to 25a.3's wiring.
+6. AASIST anti-spoof benchmarking (not pip-installable, needs its own
+   repo/weights) is a separate later pass, lower priority than the above.
 
 **Phase 25a.4 (input-sensitivity gate) landed, 2026-09-28 — off by
 default, not deployed with anything different.** `RequestSensitivity`/
@@ -253,16 +291,8 @@ proves the backend/volume contract; it says nothing about
 MediaRecorder, canvas capture, DOM wiring) — still needs a real browser
 session, which this one didn't have. **This is the next thing to do.**
 
-**Next for Phase 25:**
-1. **Verify the new portal in a real browser** — open Settings ·
-   Accounts, record a voice sample and a face photo, confirm they show up
-   and delete cleanly.
-2. **Use the portal to collect real, consenting owner and non-owner
-   audio** (and, later, face photos) — this is the actual 25a.1 benchmark
-   Phase 25a.1's smoke test still needs; nothing further on speaker
-   verification can be evaluated meaningfully without it.
-3. AASIST anti-spoof benchmarking (not pip-installable, needs its own
-   repo/weights) is a separate later pass.
+(Superseded by the "Next for Phase 25" list at the top of this section —
+25a.3 and 25a.4's wiring landed after this was written.)
 
 **Settings UI cleanup (2026-09-27):** conversational animations and connected
 accounts now occupy separate cards in Settings · Accounts. Local Chromium
