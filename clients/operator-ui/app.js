@@ -19,6 +19,7 @@ const chat = createChat({
   },
 });
 const accounts = createAccounts({api, isLoggedIn: () => loggedIn});
+const ownerRecognition = createOwnerRecognition({api, apiUpload, isLoggedIn: () => loggedIn});
 const motionSettings = createMotionSettings();
 const voice = createVoice({api, isLoggedIn: () => loggedIn, chat});
 function showView(view) {
@@ -30,7 +31,8 @@ function showView(view) {
     $(name + '-tab').classList.toggle('secondary', name !== view);
   }
   if (isChat) void chat.refreshSession();
-  if (view === "accounts") { void accounts.load(); void motionSettings.load(); }
+  if (view === "accounts") { void accounts.load(); void motionSettings.load(); void ownerRecognition.load(); }
+  else ownerRecognition.stopCapture();
 }
 $('accounts-tab').addEventListener('click', () => showView('accounts'));
 $('chat-tab').addEventListener('click', () => showView('chat'));
@@ -41,12 +43,31 @@ function showLogin() {
   $('login-panel').hidden = false; $('dashboard').hidden = true; $('nav').hidden = true;
   $('api-key').value = ''; $('cloud-api-key').value = ''; $('websearch-api-key').value = ''; for (const name of HOSTED_SEARCH) $(`websearch-${name}-api-key`).value = ''; $('password').value = '';
   $('search-log-dialog').close(); $('search-log-entries').replaceChildren();
-  chat.reset(); accounts.reset(); voice.reset(); motionSettings.reset(); showView('overview');
+  chat.reset(); accounts.reset(); voice.reset(); motionSettings.reset(); ownerRecognition.reset(); showView('overview');
 }
 async function api(path, options = {}) {
   const response = await fetch(base + path, {
     ...options, cache: 'no-store', credentials: 'same-origin',
     headers: {'Content-Type': 'application/json', 'X-Reachy-CSRF': '1', ...options.headers},
+  });
+  if (!response.ok) {
+    if (response.status === 401) showLogin();
+    let detail = '';
+    try { detail = (await response.json()).detail; } catch { /* Non-JSON gateway failure. */ }
+    const error = new Error(typeof detail === 'string' && detail ? detail : `Request failed (${response.status})`);
+    error.status = response.status;
+    throw error;
+  }
+  return response.json();
+}
+// Phase 25a.2/25b.3: owner-recognition sample capture posts a raw
+// audio/image blob, not JSON, so it needs its own Content-Type instead of
+// api()'s fixed 'application/json'.
+async function apiUpload(path, blob) {
+  const response = await fetch(base + path, {
+    method: 'POST', cache: 'no-store', credentials: 'same-origin',
+    headers: {'Content-Type': blob.type || 'application/octet-stream', 'X-Reachy-CSRF': '1'},
+    body: blob,
   });
   if (!response.ok) {
     if (response.status === 401) showLogin();

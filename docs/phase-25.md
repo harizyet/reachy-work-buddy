@@ -6,9 +6,13 @@ unit-tested against fakes only — see
 model benchmark) started 2026-09-28**: a dev-box pipeline smoke test for
 SpeechBrain ECAPA-TDNN — see
 [the record](verification/phase-25a1-voice-benchmark-2026-09-28.md) — with
-no owner/non-owner recording, homelab run, or AASIST evaluation yet. No
-enrollment portal, perception code or production gating exists; 25a.2
-onward and all of 25b remain planned. This phase **follows [Phase 24g](phase-24g.md)**
+no owner/non-owner recording, homelab run, or AASIST evaluation yet.
+**An enrollment-portal skeleton for raw sample capture (part of 25a.2/
+25b.3) also landed 2026-09-28** — see
+[Enrollment portal](#enrollment-portal) below for what it is and, more
+importantly, is not. No perception code, biometric template, calibration,
+or production gating exists; 25a.2's model-integration half and all of
+25b beyond that skeleton remain planned. This phase **follows [Phase 24g](phase-24g.md)**
 in the roadmap. The 24e prerequisites passed or were waived on 2026-09-27.
 Compose recognition with 24g wake admission: relevance is interaction routing,
 never identity evidence. Unknown/ambiguous speakers still require rejection
@@ -808,6 +812,24 @@ capture and displays results; trusted local services compute scores and
 enforce activation rules. Browser-supplied scores cannot grant access.
 
 ### Enrollment portal
+
+**Skeleton status (2026-09-28):** Settings · Accounts has a working "Owner
+recognition" card (`clients/operator-ui/owner-recognition.js`,
+`reachy_hub/owner_recognition.py`, `reachy_hub/enrollment_store.py`) that
+records raw voice clips (browser `MediaRecorder`) and face photos
+(`getUserMedia` + canvas snapshot), gated by owner login, fresh password
+reauthentication and CSRF, storing them as a raw sample dataset (in-memory
+by default; `OWNER_RECOGNITION_CAPTURE_DIR` opts into on-disk storage).
+This is **not** the Enroll/Calibrate/Test accuracy/Review/Activate flow
+below — there is no speaker/face model wired in, no template, no
+calibration, no accuracy testing, and a captured sample is not identity
+evidence. It exists to (a) let the owner build the real dataset Phase
+25a.1's benchmark needs, and (b) be the capture primitive the real
+enrollment flow below is built on next. Full backend test coverage
+(`services/reachy-hub/tests/test_owner_recognition.py`,
+`test_enrollment_store.py`); the browser UI itself has not been exercised
+in a real browser (no Chromium available in that session) — verify there
+before relying on it.
 
 ```text
 Settings

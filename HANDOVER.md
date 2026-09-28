@@ -44,14 +44,49 @@ Noted for later: this torchaudio build's `.load()` needs the optional
 resolve one way or the other before writing the production
 `reachy_hub/speaker/ecapa.py` adapter.
 
-**Next for Phase 25:** collect real, consenting owner and non-owner audio
-(through the actual Reachy microphone/upload path, or at minimum a
-representative recording setup) — this is the actual 25a.1 benchmark and
-needs the owner's participation; nothing further on speaker verification
-can be evaluated meaningfully without it. AASIST anti-spoof benchmarking
-(not pip-installable, needs its own repo/weights) is a separate later
-pass. The enrollment-portal skeleton (25a.2) remains an alternative next
-track if the owner would rather sequence GUI work first.
+**Owner-recognition enrollment-portal skeleton added, 2026-09-28** — the
+owner asked to set up real audio capture and a web UI for voice/face
+enrollment together, so this session built the capture mechanism that
+serves both. New Settings · Accounts card "Owner recognition"
+(`clients/operator-ui/owner-recognition.js` + `index.html`/`app.js`
+wiring) records browser-mic voice clips (`MediaRecorder`) and
+browser-camera face photos (`getUserMedia` + canvas snapshot). Backend:
+`shared/models/enrollment.py`, `reachy_hub/enrollment_store.py`
+(`InMemoryEnrollmentStore` default; `FilesystemEnrollmentStore` opt-in via
+`OWNER_RECOGNITION_CAPTURE_DIR`, not yet wired to any volume mount) and
+`reachy_hub/owner_recognition.py` (new routes under `/owner-recognition/`,
+wired into `app.py`). Every route requires an owner cookie session (no
+REMOTE_UI_TOKEN bearer path); recording/deleting a sample also requires
+same-origin CSRF and a fresh password reauth (`POST
+/owner-recognition/reauth`, 5-minute window). **This is explicitly a raw
+capture tool, not the real enrollment flow** — see
+[phase-25.md's enrollment-portal section](docs/phase-25.md#enrollment-portal)
+for the distinction: no speaker/face model is wired in, no template, no
+calibration, no accuracy testing, and a captured sample is not identity
+evidence (ADR 0024's evidence/trust/authorization split is untouched).
+16 new backend tests pass (`test_owner_recognition.py`,
+`test_enrollment_store.py`); full `pytest services shared` (883 passed)
+and Ruff pass. **Not verified in a real browser** — no Chromium available
+in this session (`node --check` syntax-only). A real closure bug in the
+voice-recording stop handler (stale `voiceRecorder` read after
+`stopVoiceStream()` nulled it) was caught and fixed by re-reading the
+code, not by running it — treat this as a stronger reason, not less, to
+actually exercise it in a browser before relying on it. Nothing deployed;
+`OWNER_RECOGNITION_CAPTURE_DIR` is unset everywhere, so captured samples
+would currently vanish on any hub restart if this were deployed today.
+
+**Next for Phase 25:**
+1. **Verify the new portal in a real browser** (Chromium, per
+   docs/development.md) — mic/camera permission prompts, recording,
+   upload, delete, reauth expiry — before trusting it.
+2. **Use it to collect real, consenting owner and non-owner audio**
+   (and, later, face photos) — this is the actual 25a.1 benchmark Phase
+   25a.1's smoke test still needs; nothing further on speaker verification
+   can be evaluated meaningfully without it.
+3. Decide on `OWNER_RECOGNITION_CAPTURE_DIR` / a persistent volume before
+   relying on captured samples surviving a restart.
+4. AASIST anti-spoof benchmarking (not pip-installable, needs its own
+   repo/weights) is a separate later pass.
 
 **Settings UI cleanup (2026-09-27):** conversational animations and connected
 accounts now occupy separate cards in Settings · Accounts. Local Chromium

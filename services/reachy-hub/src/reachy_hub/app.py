@@ -153,6 +153,11 @@ from starlette.middleware.sessions import SessionMiddleware
 from reachy_hub.audit_log import AuditEntry, AuditLog
 from reachy_hub.companion_core_client import CompanionCoreClient
 from reachy_hub.embodiment_client import EmbodimentClient
+from reachy_hub.enrollment_store import (
+    EnrollmentStore,
+    FilesystemEnrollmentStore,
+    InMemoryEnrollmentStore,
+)
 from reachy_hub.interruption_policy import (
     decide_action,
     downgrade_for_presence,
@@ -160,6 +165,7 @@ from reachy_hub.interruption_policy import (
 )
 from reachy_hub.notification_queue import NotificationQueue, QueuedNotification
 from reachy_hub.operator import install_operator_routes, require_csrf
+from reachy_hub.owner_recognition import install_owner_recognition_routes
 from reachy_hub.palm_stop import (
     DEFAULT_PALM_MODEL_PATH,
     MediaPipePalmDetector,
@@ -396,6 +402,7 @@ def create_app(
     robot_voice_manager: RobotVoiceManager | None = None,
     run_voice_watchdog_task: bool = True,
     wake_arm_store: WakeArmStore | None = None,
+    enrollment_store: EnrollmentStore | None = None,
 ) -> FastAPI:
     # Phase 16/ADR 0013: fail closed. Unset means the whole remote-control
     # surface below 503s rather than silently allowing unauthenticated
@@ -428,6 +435,14 @@ def create_app(
                 require_csrf(request)
             return
         raise HTTPException(401, "Authentication required")
+
+    async def require_owner_session(request: Request) -> None:
+        # Owner-recognition enrollment is sensitive enough to require an
+        # actual logged-in owner browser, unlike require_remote_auth above:
+        # no REMOTE_UI_TOKEN bearer path here.
+        owner = await app.state.user_store.owner() if session_secret_key else None
+        if not owner or request.scope.get("session", {}).get("user") != owner:
+            raise HTTPException(401, "Login required")
 
     client_factory = client_factory or (lambda base_url: EmbodimentClient(base_url))
     clients: dict[str, EmbodimentClient] = {}
@@ -739,6 +754,17 @@ def create_app(
     app.state.robot_credential_store = robot_credential_store
     app.state.robot_connection_manager = robot_connection_manager
     app.state.robot_voice_manager = robot_voice_manager
+    # Phase 25a.2/25b.3 portal skeleton: raw sample capture only, see
+    # reachy_hub/owner_recognition.py and reachy_hub/enrollment_store.py.
+    # Filesystem storage is opt-in via OWNER_RECOGNITION_CAPTURE_DIR
+    # (needs a persistent volume mount, not yet set up); unset means
+    # samples stay in memory and vanish on restart, matching every other
+    # optional-integration default here (e.g. _default_palm_stop above).
+    capture_dir = os.environ.get("OWNER_RECOGNITION_CAPTURE_DIR")
+    app.state.enrollment_store = enrollment_store or (
+        FilesystemEnrollmentStore(capture_dir) if capture_dir else InMemoryEnrollmentStore()
+    )
+    install_owner_recognition_routes(app, require_owner_session, app.state.enrollment_store)
 
     async def stop_voice_on_logout() -> None:
         await robot_voice_manager.stop_all("Owner logged out")

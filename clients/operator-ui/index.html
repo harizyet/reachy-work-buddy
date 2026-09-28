@@ -80,6 +80,28 @@
             </div>
           </details>
         </section>
+        <section class="card" aria-labelledby="owner-recognition-title">
+          <h2 id="owner-recognition-title">Owner recognition (in progress)</h2>
+          <p>Phase 25: record voice and face samples toward future owner recognition. These are raw captures only. No recognition model reads them yet, and nothing here changes how Reachy responds to anyone.</p>
+          <p class="muted">Recording or deleting samples needs your password confirmed again, which expires after 5 minutes.</p>
+          <form id="owner-recognition-reauth-form"><label>Password<input id="owner-recognition-password" type="password" required autocomplete="current-password"></label><button>Confirm password</button></form>
+          <p id="owner-recognition-reauth-status" role="status"></p>
+          <h3>Voice samples</h3>
+          <p class="muted">Record a few short samples of your normal speaking voice, in the room and distance you'd usually talk to Reachy from.</p>
+          <button type="button" id="voice-sample-record" disabled>Start recording</button>
+          <p id="voice-sample-status" role="status"></p>
+          <ul id="voice-sample-list" class="sample-list"></ul>
+          <button type="button" id="voice-sample-delete-all" class="secondary" disabled>Delete all voice samples</button>
+          <h3>Face samples</h3>
+          <p class="muted">Capture a few photos at your normal distance from the robot, with different angles and lighting.</p>
+          <video id="face-preview" autoplay playsinline muted hidden></video>
+          <button type="button" id="face-sample-start" disabled>Turn on camera</button>
+          <button type="button" id="face-sample-capture" hidden disabled>Capture photo</button>
+          <button type="button" id="face-sample-stop" class="secondary" hidden disabled>Turn off camera</button>
+          <p id="face-sample-status" role="status"></p>
+          <ul id="face-sample-list" class="sample-list"></ul>
+          <button type="button" id="face-sample-delete-all" class="secondary" disabled>Delete all face samples</button>
+        </section>
       </div>
       <div id="overview-pane">
       <div class="section-title"><h2>System overview</h2><span id="updated">Checking status…</span></div>
@@ -162,6 +184,6 @@
   </main><footer>Reachy Work Companion · Operator UI</footer><dialog id="search-log-dialog" aria-labelledby="search-log-title"><div class="dialog-head"><h2 id="search-log-title">Recent searches</h2><button type="button" id="refresh-search-log" class="secondary">Refresh</button><button type="button" id="close-search-log" class="secondary">Close</button></div>
   <p class="muted">The last 50 searches, newest first. Companion Core keeps them in memory only; a restart clears them.</p>
   <div id="search-log-entries"></div></dialog>
-  <script src="chat.js" defer></script><script src="voice.js" defer></script><script src="accounts.js" defer></script><script src="app.js" defer></script>
+  <script src="chat.js" defer></script><script src="voice.js" defer></script><script src="accounts.js" defer></script><script src="owner-recognition.js" defer></script><script src="app.js" defer></script>
 </body>
 </html>
