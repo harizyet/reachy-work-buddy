@@ -7,6 +7,31 @@ acceptance. This file holds only session continuation details.
 
 ## Current work
 
+**Phase 25.0 (contracts and trust engine) implemented, 2026-09-28, not
+deployed.** Landed per [phase-25.md](docs/phase-25.md#implementation-sequence)'s
+own sequencing: contracts and the deterministic trust engine before any
+biometric model integration, so expiry/downgrade is unit-tested against
+fakes first. New: `shared/models/trust.py` (`TrustLevel`, `SpeakerEvidence`,
+`VisualEvidence`, `TrustLimits`), `reachy_hub/trust.py` (`effective_trust`),
+`reachy_hub/request_sensitivity.py` (`RequestSensitivity`,
+`InteractionDecision`, `authorize_request`), and
+[ADR 0024](docs/adr/0024-owner-recognition-trust.md) recording the evidence/
+trust/authorization split and service-ownership boundary. 50 new unit tests
+(`test_trust.py`, `test_request_sensitivity.py`) cover T0–T3 boundaries,
+TTL edges, quality/spoof/liveness/frozen-frame/DoA/session/owner mismatches,
+and that `Trusted` interaction mode doesn't change authorization. Full
+`pytest services/reachy-hub services/companion-core` (716 passed, 29
+skipped) and Ruff pass locally. Nothing biometric exists yet: no enrollment
+portal, no speaker/face model, no camera/mic integration, no production
+gating, nothing deployed or touched on the homelab/Nano.
+
+**Next for Phase 25:** 25a.1 voice model benchmark (SpeechBrain ECAPA
+against real Reachy recordings) per
+[phase-25.md](docs/phase-25.md#implementation-sequence), or the owner may
+prefer the enrollment-portal skeleton first — both need the owner's input
+on priority before more code lands, since either involves new runtime
+dependencies (SpeechBrain/torch) or GUI work not yet scoped in detail.
+
 **Settings UI cleanup (2026-09-27):** conversational animations and connected
 accounts now occupy separate cards in Settings · Accounts. Local Chromium
 checks passed at mobile/desktop widths, as did the three existing Accounts/

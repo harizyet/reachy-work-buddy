@@ -1,6 +1,10 @@
 # Phase 25 — tiered owner verification and progressive trust
 
-Status: planned, not implemented; **follows [Phase 24g](phase-24g.md)**
+Status: **Phase 25.0 (contracts and trust engine) implemented 2026-09-28**,
+unit-tested against fakes only — see
+[ADR 0024](adr/0024-owner-recognition-trust.md). No biometric model,
+enrollment portal, perception code or production gating exists yet; 25a/25b
+remain planned. This phase **follows [Phase 24g](phase-24g.md)**
 in the roadmap. The 24e prerequisites passed or were waived on 2026-09-27.
 Compose recognition with 24g wake admission: relevance is interaction routing,
 never identity evidence. Unknown/ambiguous speakers still require rejection
