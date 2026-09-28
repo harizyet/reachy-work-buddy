@@ -74,31 +74,46 @@ code, not by running it — treat this as a stronger reason, not less, to
 actually exercise it in a browser before relying on it. Nothing deployed
 yet.
 
-**Persistent capture volume wired, 2026-09-28 (owner request).**
-`deploy/homelab/docker-compose.yml` now sets
+**Persistent capture volume wired and deployed, 2026-09-28 (owner
+request).** `deploy/homelab/docker-compose.yml` sets
 `OWNER_RECOGNITION_CAPTURE_DIR=/data/owner-recognition-captures` on
 `reachy-hub` and mounts a new named volume,
 `owner-recognition-captures`, at that path, so `FilesystemEnrollmentStore`
 is used instead of the in-memory default and samples survive a container
-recreate. Documented in `deploy/homelab/.env.example` (override path) and
+recreate. Documented in `deploy/homelab/.env.example` and
 `docs/phase-25.md`'s enrollment-portal section (not encrypted at rest —
-restrict host access like any other data/credential volume). Validated
-with `docker compose config` only (`OWNER_RECOGNITION_CAPTURE_DIR` and the
-volume mount render correctly); **not yet deployed to the homelab** — the
-next `up` there will create the new volume automatically, but no
-container has actually written to it yet.
+restrict host access like any other data/credential volume).
+
+**Deployed to the homelab, 2026-09-28 05:29 UTC.** Backup taken first
+(`~/reachy-backups/reachy-before-owner-recognition-deploy-20260928T052840.dump`,
+0600) — no schema change in this deploy, so this was routine caution, not
+a required migration-safety step. `scripts/start-homelab.sh --check` then
+`--build`: image rebuilt, `owner-recognition-captures` volume created,
+`reachy-hub`/`companion-core` recreated, hub health ready at 05:29:39Z.
+Verified end to end with curl against the live stack: logged in as
+`owner`, confirmed password (reauth), uploaded a real voice sample byte
+blob, confirmed it landed under `/data/owner-recognition-captures/voice/`
+inside the container, `docker restart reachy-homelab-reachy-hub-1`, and
+confirmed the sample was still listed in `/owner-recognition/status`
+afterward — the volume mount genuinely persists across a container
+restart. Deleted that test sample and logged out afterward; both hub and
+core health checks pass post-deploy.
+
+**Still not verified: the actual browser UI.** The curl check above
+proves the backend/volume contract; it says nothing about
+`owner-recognition.js` itself (getUserMedia permission prompts,
+MediaRecorder, canvas capture, DOM wiring) — still needs a real browser
+session, which this one didn't have. **This is the next thing to do.**
 
 **Next for Phase 25:**
-1. **Verify the new portal in a real browser** (Chromium, per
-   docs/development.md) — mic/camera permission prompts, recording,
-   upload, delete, reauth expiry — before trusting it.
-2. **Redeploy the homelab hub** to pick up the compose/env change, then
-   confirm a recorded sample survives `docker compose restart reachy-hub`.
-3. **Use the portal to collect real, consenting owner and non-owner
+1. **Verify the new portal in a real browser** — open Settings ·
+   Accounts, record a voice sample and a face photo, confirm they show up
+   and delete cleanly.
+2. **Use the portal to collect real, consenting owner and non-owner
    audio** (and, later, face photos) — this is the actual 25a.1 benchmark
    Phase 25a.1's smoke test still needs; nothing further on speaker
    verification can be evaluated meaningfully without it.
-4. AASIST anti-spoof benchmarking (not pip-installable, needs its own
+3. AASIST anti-spoof benchmarking (not pip-installable, needs its own
    repo/weights) is a separate later pass.
 
 **Settings UI cleanup (2026-09-27):** conversational animations and connected
@@ -356,12 +371,15 @@ this documentation pass. Recheck state before relying on them.
 
   Apply the [deployment boundaries](docs/deployment.md#robot-host-and-jetson-nano)
   before daemon starts or motion; `--check` stays read-only.
-- **Homelab:** hub, core and migrate were rebuilt at `b62a023` (09:54Z).
-  The schema migration ran at 09:18Z (`95cbc0a`). `STT_MODEL=small.en`,
-  `PALM_STOP_ENABLED=true` and `VOICE_CONTINUATION_WINDOW_MS=3000` are in
-  the private `.env`. The schema is `009_wake_arm`. The latest
-  pre-deploy backup is
-  `~/reachy-backups/reachy-before-24g-deploy-20260927T091652.dump`
+- **Homelab:** hub and core were rebuilt at `ef40307` (2026-09-28
+  05:29:39Z) for the owner-recognition portal + persistent capture volume;
+  migrate ran (no new migration in this deploy, still `009_wake_arm`). The
+  new `owner-recognition-captures` volume exists and was confirmed to
+  persist a sample across a `docker restart` of the hub container.
+  `STT_MODEL=small.en`, `PALM_STOP_ENABLED=true` and
+  `VOICE_CONTINUATION_WINDOW_MS=3000` are in the private `.env`. The
+  schema is `009_wake_arm`. The latest pre-deploy backup is
+  `~/reachy-backups/reachy-before-owner-recognition-deploy-20260928T052840.dump`
   (backups are 0600). Start only through `scripts/start-homelab.sh`, which
   is allowed in the gitignored `.claude/settings.local.json`, so a session
   can run it. To restart only core, run
