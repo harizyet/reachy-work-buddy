@@ -49,3 +49,17 @@ endpoint before live toggles can work. Real conversational gesture and
 speech-wobble acceptance remains open. Follow the existing supervision rules
 when that run is scheduled. The UI/runtime behavior is documented in the
 [operator guide](../operator-guide.md#conversational-animations).
+
+## Settings and routing follow-up (2026-09-27)
+
+Consolidated from HANDOVER on 2026-09-28; no checks rerun during the move.
+The animation and connected-account controls were split into separate cards.
+Local Chromium checks passed at mobile/desktop widths, as did the three
+Accounts/animation browser tests and Ruff. After homelab deployment at
+11:03 WIB, hub/core health and a live mobile Chromium render passed.
+This predates the owner-recognition benchmark card and does not verify it.
+
+Trusted interaction mode was separately added with 813 services/shared
+tests and Ruff reported passing locally. At that check it was not deployed;
+no live Trusted-mode UI/robot acceptance was recorded. Its policy is in the
+[ADR 0006 amendment](../adr/0006-response-routing.md#trusted-mode-exempts-the-privacy-veto-2026-09-27).

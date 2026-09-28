@@ -21,8 +21,7 @@ point into this index rather than maintaining parallel instructions.
 The [roadmap](plan.md#6-implementation-roadmap) owns phase order and status.
 Detailed future requirements remain in their dedicated plans; they are not
 claims that those features already work. Paths stay stable: completed phase
-records are historical design/implementation references. Phases 24e–24f
-closed by owner re-scope; 24g and 25–28 remain future plans. The mixed 22–23 document retains open acceptance matrices.
+records are historical design/implementation references. The mixed 22–23 document retains open acceptance matrices.
 Use the ledger for current status, deployment for procedures, and dated
 verification records for empirical results. Historical records change only to
 correct facts or links, not to track each new phase dependency.
@@ -46,7 +45,7 @@ correct facts or links, not to track each new phase dependency.
 - [Phase 24f](phase-24f.md): motion conformance and local conversational
   embodiment; closed by re-scope with deferred physical acceptance.
 - [Phase 24g](phase-24g.md): local wake admission and silent false-trigger
-  rejection; next planned phase, before owner recognition.
+  rejection; requirements and acceptance scenarios.
 - [Phase 25](phase-25.md): tiered owner verification and progressive trust
   (voice verification, then visual verification, gating voice access by
   request sensitivity).
@@ -168,12 +167,16 @@ These are dated evidence, not startup instructions or current health checks.
   with the owner it was selected as the initial detector.
 
 - [Phase 24g first physical run](verification/phase-24g-physical-2026-09-27.md):
-  8 of 8 wake phrases detected, but the full wake-up move's sound and
-  length broke most candidates; replaced by a silent alert pose.
+  first wake/pose runs and later calibration; the held-out attempt found
+  a pause-timeout failure, with fresh acceptance still owed after its fix.
 
 - [Phase 24f motion conformance](verification/phase-24f-conformance-2026-09-25.md):
   Nano versions, predeclared tolerances, supervised REST vs SDK run; paths
   agree; robot stops 2–5° short on both, normal vs fault still open.
+
+- [Phase 25 foundation and benchmark portal](verification/phase-25-foundation-2026-09-28.md):
+  consolidated local checks and encrypted-capture backend deployment; browser
+  and biometric acceptance remain open.
 
 - [Phase 25a.1 speaker-verification pipeline smoke test](verification/phase-25a1-voice-benchmark-2026-09-28.md):
   dev-box only, SpeechBrain ECAPA-TDNN scoring pipeline confirmed sane

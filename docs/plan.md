@@ -384,19 +384,10 @@ baseline reference. [1]
 
 ## 12. Immediate Next Actions
 
-Start [Phase 24g](phase-24g.md): local wake admission and silent false-trigger
-rejection. Its STT boundary and wake-start session contract were resolved on
-2026-09-27 ([ADR 0023 addendum](adr/0023-robot-voice-conversation.md#addendum-wake-started-sessions-2026-09-27-phase-24g));
-measure wake-detector candidates on the Nano before implementation. [Phase 25](phase-25.md) follows for owner recognition; its
-[24e prerequisites](phase-24e.md#prerequisites-for-phase-25) are passed or
-waived: the owner waived the 30-minute session and held-turn cancellation,
-and renewed usability acceptance, on 2026-09-27. The Nano diagnostics (24e
-item 4) are deferred and are not a Phase 25 prerequisite. Outstanding platform and
-Google acceptance can proceed independently. [Phase 24f](phase-24f.md) is
-closed by re-scope; per its
-[dependency rule](phase-24f.md#order-and-dependencies), Phase 25 runs with
-motion off until the deferred rows pass. Use the ledger above and
-[project state](project-state.md) for those gates.
+Use [project state](project-state.md#current-priority-and-next-gates) for
+current priorities and open acceptance, and [HANDOVER](../HANDOVER.md#next-session)
+for the next session's concrete steps. The [ledger](#6-implementation-roadmap)
+above owns phase order and status.
 
 ## 13. Key Engineering Risks
 

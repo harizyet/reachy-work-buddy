@@ -78,7 +78,7 @@ is never itself authoritative; `command_suggestion.py`'s separate,
 schema-validated, fail-closed classifier may offer it only as a
 suggestion — see [docs/phase-24b.md](../phase-24b.md).
 Same-session turns serialize; the latest 15 user/assistant messages
-(`CONTEXT_MESSAGES`, [ADR 0006](adr/0006-response-routing.md#carried-privacy-expires-with-the-models-context-2026-09-26))
+(`CONTEXT_MESSAGES`, [ADR 0006](../adr/0006-response-routing.md#carried-privacy-expires-with-the-models-context-2026-09-26))
 provide bounded context, reset on restart. Work-memory recall queries persistent
 records, never dumps that transcript. Calendar/email replies are
 work-private; generated follow-ups retain the strongest prior context label.
@@ -151,6 +151,32 @@ and historical conversation APIs retain their existing access contract;
 see [deployment](../deployment.md#owner-login) and
 [ADR 0016](../adr/0016-operator-ui.md). `/auth/me` is cookie-only, not a way
 for bearer clients to create a browser login.
+
+### Owner recognition
+
+The benchmark-capture routes in `reachy_hub/owner_recognition.py` use
+`enrollment_store.py` and the hub-local AESGCM `keyring.py`. All require an
+owner cookie session, not the automation bearer. Mutations require CSRF;
+benchmark changes also require fresh password reauthentication. Export
+requires fresh reauthentication.
+
+| Route | Purpose |
+|---|---|
+| `GET /owner-recognition/status` | Enable state, sample lists and byte totals |
+| `POST /owner-recognition/reauth` | Confirm the owner password for five minutes |
+| `PUT /owner-recognition/benchmark/enabled` | Explicit benchmark capture opt-in |
+| `POST /owner-recognition/benchmark/{voice,face}/samples` | Upload a sample while benchmark mode is enabled |
+| `DELETE /owner-recognition/benchmark/{voice,face}/samples/{sample_id}` | Delete a sample |
+| `GET /owner-recognition/benchmark/{voice,face}/export` | Decrypt a dataset into a zip with manifest |
+
+See [storage configuration](../deployment.md#owner-recognition-benchmark-storage)
+and [operator controls](../operator-guide.md#owner-recognition-benchmark-dataset).
+These captures do not supply trust evidence; the separate speaker protocol,
+trust engine and sensitivity authorizer are described in
+[Phase 25](../phase-25.md#implementation-sequence) and
+[ADR 0024](../adr/0024-owner-recognition-trust.md).
+
+### Response routing
 
 Response policy first chooses by mode, then enforces privacy, then records
 an audit. Direct replies are returned on the inbound channel regardless of

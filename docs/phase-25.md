@@ -1,26 +1,14 @@
 # Phase 25 — tiered owner verification and progressive trust
 
-Status: **Phase 25.0 (contracts and trust engine) implemented 2026-09-28**,
-unit-tested against fakes only — see
-[ADR 0024](adr/0024-owner-recognition-trust.md). **Phase 25a.1 (voice
-model benchmark) started 2026-09-28**: a dev-box pipeline smoke test for
-SpeechBrain ECAPA-TDNN — see
-[the record](verification/phase-25a1-voice-benchmark-2026-09-28.md) — with
-no owner/non-owner recording, homelab run, or AASIST evaluation yet.
-**An enrollment-portal skeleton for raw sample capture (part of 25a.2/
-25b.3) also landed 2026-09-28**, hardened to Phase 26d's benchmark-vs-
-operational data policy (encrypted at rest, explicit opt-in, exportable) —
-see [Enrollment portal](#enrollment-portal) below for what it is and, more
-importantly, is not. **Phase 25a.3's wiring (`SpeakerVerifier` protocol,
-`VoiceTrustContext` on `VoiceSession`, concurrent STT+verification in
-`run_turn`) and 25a.4's input-sensitivity gate (`classify_sensitivity`,
-wired into `_answer`, gated off by `VOICE_SENSITIVITY_GATE_ENABLED`,
-default false) also landed 2026-09-28** — see
-[the implementation sequence](#implementation-sequence) below — with no
-real model behind it yet, so voice trust stays at T0 everywhere. No
-perception code, biometric template, calibration, or production gating
-exists; 25a.2's model-integration half and all of 25b beyond the portal
-skeleton remain planned. This phase **follows [Phase 24g](phase-24g.md)**
+Status: **in progress**. The [phase ledger](plan.md#6-implementation-roadmap)
+owns delivery status; the [implementation sequence](#implementation-sequence)
+distinguishes existing wiring from planned model integration. See the
+[foundation/portal verification](verification/phase-25-foundation-2026-09-28.md)
+and [speaker pipeline smoke test](verification/phase-25a1-voice-benchmark-2026-09-28.md)
+for evidence and limitations. No real biometric model, operational template,
+calibration or enabled production sensitivity gate exists yet.
+
+This phase **follows [Phase 24g](phase-24g.md)**
 in the roadmap. The 24e prerequisites passed or were waived on 2026-09-27.
 Compose recognition with 24g wake admission: relevance is interaction routing,
 never identity evidence. Unknown/ambiguous speakers still require rejection
@@ -821,41 +809,17 @@ enforce activation rules. Browser-supplied scores cannot grant access.
 
 ### Enrollment portal
 
-**Status (2026-09-28, hardened to Phase 26d's policy):** Settings ·
-Accounts has a working "Owner recognition" card
-(`clients/operator-ui/owner-recognition.js`,
-`reachy_hub/owner_recognition.py`, `reachy_hub/enrollment_store.py`,
-`reachy_hub/keyring.py`) whose entire surface is explicitly labelled
-"Benchmark dataset" — this is **not** the Enroll/Calibrate/Test
-accuracy/Review/Activate operational flow below, there is no
-speaker/face model wired in, no template, no calibration, no accuracy
-testing, and a captured sample is not identity evidence. It records raw
-voice clips (browser `MediaRecorder`) and face photos (`getUserMedia` +
-canvas snapshot), gated by: owner login; fresh password reauthentication
-plus CSRF for any mutation; and — per
-[Phase 26d](phase-26.md#26d-addendum-benchmark-vs-operational-data-policy-owner-decision-2026-09-28)'s
-"explicitly enabled" requirement — a separate benchmark-mode toggle
-(`PUT /owner-recognition/benchmark/enabled`) that must be turned on
-before any sample can be recorded; turning it off keeps existing samples
-(mode separation, not a hidden delete). Persisted captures are encrypted
-at rest with AESGCM (`reachy_hub/keyring.py`, the same key-file pattern
-as `companion_core.secrets.Keyring`, duplicated rather than imported
-per ADR 0001) whenever `OWNER_RECOGNITION_CAPTURE_DIR` is set; the hub
-then requires `SECRET_KEY_FILE` too and fails closed at startup rather
-than silently falling back to plaintext. In-memory by default (lost on
-restart, no encryption needed since nothing persists). The homelab
-compose file mounts the existing `credential_keys` secret into
-`reachy-hub` and sets `OWNER_RECOGNITION_CAPTURE_DIR` to a named
-`owner-recognition-captures` volume, so samples survive a container
-recreate. The owner can also export a kind's dataset as a zip
-(`GET /owner-recognition/benchmark/{voice,face}/export`, decrypts
-server-side, requires fresh reauth) and sees each kind's sample count
-and total size in the portal. Full backend test coverage
-(`services/reachy-hub/tests/test_owner_recognition.py`,
-`test_enrollment_store.py`, including encryption round-trip and wrong-key
-rejection); the browser UI itself has still not been exercised in a real
-browser (no Chromium available in any session so far) — verify there
-before relying on it.
+The implemented portal captures an explicitly enabled **benchmark dataset**;
+it does not enroll an operational identity or grant trust. See the
+[operator guide](operator-guide.md#owner-recognition-benchmark-dataset) for
+controls, [deployment](deployment.md#owner-recognition-benchmark-storage)
+for storage configuration, and [service reference](reference/services.md#owner-recognition)
+for APIs. Browser acceptance remains open in
+[project state](project-state.md#implemented-but-not-fully-accepted).
+
+The operational enrollment flow below remains planned and must follow the
+[benchmark/operational data policy](phase-26.md#26d-addendum-benchmark-vs-operational-data-policy-owner-decision-2026-09-28),
+using a separate derived-template store.
 
 ```text
 Settings
@@ -1035,9 +999,8 @@ protocol and a `NoSpeakerVerifier` default; `robot_voice.py`'s
 with `pipeline.transcribe` on the same WAV (`asyncio.gather`), including
 for pretranscribed Phase 24g wake-admission turns, and never lets a
 broken verifier fail the turn (it degrades to no evidence, matching the
-documented speaker-verifier-outage behavior below). Nothing computes or
-uses `TrustLevel` from this evidence yet — that's 25a.4's job — and no
-real adapter is wired in: `NoSpeakerVerifier` is still the only
+documented speaker-verifier-outage behavior). 25a.4 consumes this evidence
+when its gate is enabled. No real adapter is wired in: `NoSpeakerVerifier` is still the only
 implementation, so voice trust stays at T0 everywhere until a benchmarked
 model (25a.1) is actually integrated behind this protocol. 6 new unit
 tests (`services/reachy-hub/tests/test_speaker_verification.py`).
@@ -1054,8 +1017,8 @@ personal/consequential one) and wires it into `_answer` in
 (`VoiceTurnOutcome.WITHHELD`) instead of calling `pipeline.converse`.
 Gated behind `VOICE_SENSITIVITY_GATE_ENABLED` (default `false`) — **not
 enabled anywhere**, deliberately: with no real speaker verifier (still
-`NoSpeakerVerifier` everywhere) and no visual verifier at all, trust can
-never exceed T1, so turning this on today would withhold every
+`NoSpeakerVerifier` everywhere) and no visual verifier at all, voice trust
+remains T0, so turning this on today would withhold every
 PERSONAL/CONSEQUENTIAL/UNKNOWN voice request — most everyday questions,
 given the classifier's conservative rules-only stage — not just sensitive
 ones. Enabling it is an explicit owner decision for later, once 25a's

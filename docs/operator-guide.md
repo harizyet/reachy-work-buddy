@@ -44,6 +44,27 @@ still owed ([record](verification/phase-24f-physical-2026-09-27.md)).
 Motion rules for development sessions are in the
 [deployment rules](deployment.md#robot-host-and-jetson-nano).
 
+## Owner recognition benchmark dataset
+
+Settings · Accounts → Owner recognition captures raw voice clips and face
+photos for benchmark/calibration work. This is not operational enrollment:
+samples do not identify the owner or authorize requests. The backend has
+been deployed and checked; the browser capture/export flow still needs
+[acceptance](project-state.md#implemented-but-not-fully-accepted).
+
+Log in as the owner and confirm your password for changes (reauthentication
+lasts five minutes). Explicitly enable **Benchmark dataset** before recording
+voice or capturing a face photo; allow the browser's microphone/camera prompt.
+The card lists samples, counts and total sizes, with delete and zip-export
+controls. Export also requires fresh password confirmation. Disabling
+benchmark mode stops new capture but retains existing samples; delete them
+explicitly when no longer needed.
+
+For persistence and encryption configuration, see
+[benchmark storage](deployment.md#owner-recognition-benchmark-storage).
+Future enrollment/calibration requirements are in
+[Phase 25](phase-25.md#web-portal-calibration-and-accuracy-testing).
+
 ## Chat (Phase 20)
 
 Open Chat after login. Chat uses your owner session automatically, sharing

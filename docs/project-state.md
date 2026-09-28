@@ -1,22 +1,22 @@
 # Project state
 
-Snapshot: 2026-09-27. This page owns current deployment and cross-phase
+Snapshot: 2026-09-28. This page owns current deployment and cross-phase
 acceptance limits. The [phase ledger](plan.md#6-implementation-roadmap)
 owns phase status and scope; dated [verification records](README.md#verification-records)
 own evidence. This snapshot is not a live health check.
 
 ## Current priority and next gates
 
-[Phase 24g](phase-24g.md) is next: local wake admission and silent
-false-trigger rejection, planned but not implemented. [Phase 25](phase-25.md)
-follows for owner recognition; its earlier 24e prerequisites are settled. [Phase 24e](phase-24e.md)
-and [Phase 24f](phase-24f.md) closed by owner re-scope on 2026-09-27. The
-owner then settled the
-[24e prerequisites](phase-24e.md#prerequisites-for-phase-25): they waived
-the 30-minute session and held-turn cancellation, which were never run on
-the robot, and renewed usability acceptance. 24e's Nano diagnostics (item
-4) are deferred. Phase 25 runs with conversational motion off until 24f's
-deferred rows pass. Phases 24g and 25–27 remain planned.
+[Phase 25](phase-25.md) is in progress; the next gates are browser
+verification of benchmark capture, consenting owner/non-owner recordings,
+and a calibrated speaker model. [Phase 24g](phase-24g.md) is deployed but
+not accepted: the fresh held-out run after the 6 s timeout fix was deferred
+by the owner on 2026-09-28. See the [phase ledger](plan.md#6-implementation-roadmap)
+for delivery status and subsequent phases, and [HANDOVER](../HANDOVER.md)
+for concrete next-session steps. Phase 25 runs with conversational motion
+off until 24f's deferred acceptance passes. Its
+[24e prerequisites](phase-24e.md#prerequisites-for-phase-25) passed or were
+waived by the owner; Nano diagnostics remain deferred.
 
 ## Deployment and production acceptance
 
@@ -45,7 +45,7 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
   and [Desktop evidence](verification/phase-23b-desktop-oauth-2026-09-24.md).
 - **Search (24a):** SearXNG and hosted-provider rotation have live evidence;
   this does not establish production acceptance or answer correctness.
-  Search-trigger misfires and the correctness set continue in 24e. See
+  The 24e correctness findings remain limitations below. See
   [search evidence and addenda](verification/phase-24a-search-assisted-2026-09-24.md).
 - **Command authorization (24b):** structured commands, suggestions and UI
   buttons are fixture/browser verified. Live Telegram command and physical
@@ -79,6 +79,25 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
   The 30-minute run with motion, mid-reply switch-off, stop while homing
   and the 2–5° shortfall are deferred
   ([record](verification/phase-24f-physical-2026-09-27.md)).
+
+- **Wake admission (24g):** silent false-wake return and home on admission
+  have physical evidence. Calibration rejected all 25 false-trigger cases;
+  the first held-out attempt admitted only 3/4 genuine attempts. The timeout
+  was increased to 6 s, but a fresh held-out run is still owed
+  ([record](verification/phase-24g-physical-2026-09-27.md#admission-fix-and-calibration-follow-up)).
+- **Owner recognition (25):** encrypted, opt-in benchmark capture is deployed
+  and backend-verified; browser recording/capture, sizes, deletion and export
+  remain unverified. Speaker wiring and the disabled sensitivity gate exist,
+  but there is no real verifier or operational template store. The
+  [foundation record](verification/phase-25-foundation-2026-09-28.md) and
+  [speaker smoke test](verification/phase-25a1-voice-benchmark-2026-09-28.md)
+  do not establish recognition accuracy.
+- **Privacy routing follow-up:** the shorter context window (`56f65dc`)
+  was deployed but still needs a live calendar-question/follow-up check.
+  Trusted mode has [local test evidence](verification/portal-controls-2026-09-25.md#settings-and-routing-follow-up-2026-09-27);
+  live UI/robot acceptance was not recorded.
+  Its scope is defined by the
+  [ADR 0006 amendment](adr/0006-response-routing.md#trusted-mode-exempts-the-privacy-veto-2026-09-27).
 
 ## Known hardware and software limitations
 

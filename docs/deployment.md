@@ -28,8 +28,13 @@ environment file. Re-running uses Compose's existing containers. Check both
 `http://localhost:8080/hub/health` and `/core/health` before integration tests;
 Compose returning does not mean FastAPI has finished starting.
 
-The equivalent manual start is `docker compose up -d --build` from
-`deploy/homelab/`. Production mode does **not** start the simulated robot
+Manual Compose commands also need `SEARXNG_SECRET_KEY` in their environment;
+the launcher loads or generates it from the ignored `.env.searxng-secret`
+file. Prefer the launcher for builds and recreates. To restart only an
+existing core container without reparsing Compose configuration, use
+`docker restart reachy-homelab-companion-core-1`, then check core readiness
+separately. A restart does not apply source or configuration changes.
+Production mode does **not** start the simulated robot
 or Mailpit. All deployment credentials are local files, not committed
 configuration; `.env.*` is ignored while `.env.example` is tracked.
 
@@ -40,7 +45,8 @@ scripts/start-homelab.sh --simulation --build
 ```
 
 The `simulation` Compose profile adds `reachy-embodiment` with its simulated
-backend and Mailpit (`http://localhost:8025`). Manual equivalent:
+backend and Mailpit (`http://localhost:8025`). With the same environment
+as the launcher, the manual equivalent is:
 `docker compose --profile simulation up -d --build` from `deploy/homelab/`.
 Register the simulated robot before robot-control checks:
 
@@ -596,10 +602,9 @@ explicitly disposable project. Leave unrelated services such as OVMS alone.
 
 ## Schema upgrades and credential keys
 
-Core and hub require revision `005_desktop_oauth`, which follows
-`004_persona` (assistant persona configuration) and adds a `client_type`
-column to `google_oauth_states` for the desktop OAuth helper. The ordered
-Alembic history ships
+Core and hub require the revision declared in
+[`shared/database.py`](../shared/database.py) (`009_wake_arm` at this snapshot).
+The ordered Alembic history ships
 in core's image; SQL stores perform compatibility checks, not startup DDL.
 Compose runs `migrate` before hub/core, including through
 `scripts/start-homelab.sh`. Launcher `--check` remains read-only and does not
@@ -728,6 +733,24 @@ fails closed, even when a bootstrap password exists. Authenticated delivery
 requires STARTTLS; implicit-TLS-only relays are not supported by this setting.
 Mailpit/unauthenticated relay behavior remains available when auth is unset.
 Google linking will not configure SMTP or enable sending.
+
+## Owner recognition benchmark storage
+
+`OWNER_RECOGNITION_CAPTURE_DIR` enables the hub's filesystem benchmark store;
+without it, captures stay in memory and are lost on restart. Persistent
+captures use AESGCM encryption and require `SECRET_KEY_FILE`; hub startup
+fails if its key is unavailable. Follow [key provisioning](#key-provisioning).
+The homelab Compose configuration mounts the `owner-recognition-captures`
+volume at `/data/owner-recognition-captures` and the `credential_keys` secret
+into hub. Preserve both capture data and its encryption key for recovery;
+a database dump does not contain that volume.
+
+This store is for explicitly enabled benchmark data, separate from future
+operational templates under the
+[biometric data policy](phase-26.md#26d-addendum-benchmark-vs-operational-data-policy-owner-decision-2026-09-28).
+See the [operator guide](operator-guide.md#owner-recognition-benchmark-dataset)
+for capture/export/delete and the
+[deployment record](verification/phase-25-foundation-2026-09-28.md) for evidence.
 
 ## Google application setup
 

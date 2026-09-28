@@ -94,3 +94,50 @@ Results:
   fake uploader answered first. Fixed in `c579cc8`: a suspend during a
   pending candidate is the admission. That fix is built (`a9baf002`) and
   not yet run on the robot.
+
+## Admission fix and calibration follow-up
+
+The following observations were consolidated from HANDOVER on 2026-09-28;
+no physical checks were rerun during that documentation pass.
+
+**Home on admission: confirmed on the robot, `c579cc8` running since
+10:57:45Z.** The daemon's access log shows a goto right after each
+`wake candidate admitted` (11:05:12.9Z and 11:06:28.7Z), before the later
+sleep return. No further action needed on this item.
+
+**Session 1 (calibration) done, 2026-09-27 13:43-14:46Z — clean, no
+issues found.** 26 wake detections, 24 rejected `no_wake_phrase`, 1
+discarded (no speech followed), 1 admitted. The owner confirms only 1
+deliberate "Hey Reachy" attempt was made and it succeeded first try; the
+other 25 were the scripted false-trigger scenarios, all correctly
+rejected. Isolation checks (no TTS/tools/search/durable transcript,
+robot returns to sleep) pass for all 25. Raw logs in
+`/tmp/.../scratchpad/24g-acceptance/` (session-scoped, not durable).
+
+Added a log line (`bab441e`) so admission latency (upload -> voice_start)
+can actually be measured — the existing logs only gave detected-to-
+admitted, which conflates the caller's own speech duration. Deployed and
+confirmed running (`reachy-embodiment:local`, re-registered as `nano-1`,
+re-armed automatically).
+
+**Session 2 (first held-out attempt), 2026-09-27 15:08-15:16Z — found a
+real bug, not scored as final.** 8 detections: 4 rejected
+`no_wake_phrase`, 1 discarded ("no request followed"), 3 admitted (each a
+clean multi-turn conversation). Isolation checks pass; no stray tool/
+search activity. The discard was a genuine attempt: the owner said "Hey
+Reachy," waited to see the alert-pose cue, then started speaking — by
+then most of the 4 s `speech_start_seconds` budget was gone (the alert
+goto itself dispatches within ~1s of detection, so the shortfall is
+human reaction time to the cue, not code latency). 3/4 genuine acceptance
+(75%) misses the 90% target.
+
+**Fixed (`4b6893b`): `speech_start_seconds` raised 4.0 -> 6.0s** in
+`shared/models/robot_voice.py` (only the hub needs
+rebuilding for this one — the robot always runs whatever `WakeLimits` the
+hub sends at arm time, no Nano image change needed). ADR 0023 and the
+fixture-timing tests updated. Homelab hub/core rebuilt and restarted;
+robot reconnected and re-armed automatically, wake counters reset to
+0/0/{}.
+
+The fresh held-out run was deferred by the owner on 2026-09-28. These
+results do not close the [acceptance gate](../phase-24g.md#verification-and-exit-criteria).
