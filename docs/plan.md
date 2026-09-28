@@ -222,7 +222,7 @@ that every physical deployment scenario has passed.
 
 | Phase 18 — Daily briefing | Combine calendar/tasks/email/reminders/project events into prioritized arrival briefing. | Reachy greets; detailed briefing is privately delivered. |
 
-### Phases 19–27
+### Phases 19–28
 
 | Phase | Status | Delivered / planned scope | Acceptance and remaining limits | Evidence / exit criteria |
 |---|---|---|---|---|
@@ -242,8 +242,9 @@ that every physical deployment scenario has passed.
 | 24f | Closed by owner re-scope | Motion conformance, verified startup home, local conversation animation | Silent poses, wobble, stops, 409 arbitration, palm stop and switch-off PASS on the robot; 30-minute session, mid-reply switch-off, stop while homing and the 2–5° shortfall deferred to a future phase. Run Phase 25 with motion off until they pass | [Status](phase-24f.md), [record](verification/phase-24f-physical-2026-09-27.md) |
 | 24g | Deployed 2026-09-27; physical testing, not accepted | Local wake monitoring, admission and false-trigger rejection | Silent rejection, local buffers, acoustic/relevance gates and physical false-admission metrics; owner-armed, hub candidate STT ([ADR 0023 addendum](adr/0023-robot-voice-conversation.md#addendum-wake-started-sessions-2026-09-27-phase-24g)) | [Requirements](phase-24g.md), [Exit criteria](phase-24g.md#verification-and-exit-criteria) |
 | 25 | In progress: 25.0 contracts/trust engine and a raw-capture enrollment-portal skeleton done 2026-09-28, 25a.1 voice pipeline smoke test started; no biometric model, template, calibration or production gating yet | Tiered owner verification (voice, then visual), progressive trust, enrollment | 24e prerequisites passed or waived (2026-09-27); hardware/adversarial acceptance before ambient voice; motion off until 24f's deferred rows pass | [Acceptance](phase-25.md#acceptance-and-release-gate) |
-| 26 | Planned | Async transcription/minutes, confirmed action items | Real recording and private output acceptance; depends on 23 migration framework | [Exit criteria](phase-26.md#exit-criteria) |
-| 27 | Planned | Staged embodied meeting secretary | Builds on 26 and 22b hardware; separate absence-policy amendments for 27a.2 and 27b; virtual attendance deferred | [Sequence and acceptance](phase-27.md#implementation-sequence-and-acceptance) |
+| 26 | Planned; inserted 2026-09-28 between 25 and meeting transcription | System-wide threat model, auth/authz audit, network/host/container/secrets hardening, supply-chain (SBOM/AIBOM), LLM/RAG adversarial testing, DoS/physical-safety testing, privacy/retention review, residual-risk report | Depends on Phase 25 implemented enough to exercise real biometric trust paths; generic hardening may start earlier | [Acceptance](phase-26.md#acceptance-and-release-gate) |
+| 27 | Planned (formerly Phase 26) | Async transcription/minutes, confirmed action items | Real recording and private output acceptance; depends on 23 migration framework and 26's hardening gate | [Exit criteria](phase-27.md#exit-criteria) |
+| 28 | Planned (formerly Phase 27) | Staged embodied meeting secretary | Builds on 27 and 22b hardware; separate absence-policy amendments for 28a.2 and 28b; virtual attendance deferred | [Sequence and acceptance](phase-28.md#implementation-sequence-and-acceptance) |
 
 ## 7. Release Targets
 
@@ -288,7 +289,9 @@ preserving physical embodiment.
   mode/DND/LLM-provider controls (Phase 19).
 - Web chat as a first-class channel and Telegram-outage fallback (Phase 20).
 - Meeting transcription and minutes: summary, key points, and
-  confirm-before-create action items from a recorded meeting (Phase 26).
+  confirm-before-create action items from a recorded meeting (Phase 27,
+  formerly Phase 26 — renumbered 2026-09-28 to make room for Phase 26
+  security hardening).
 
 ## 8. Deployment Plan
 

@@ -7,6 +7,32 @@ acceptance. This file holds only session continuation details.
 
 ## Current work
 
+**New Phase 26 (Security hardening and assurance) inserted into the
+roadmap, 2026-09-28 — documentation only, nothing implemented.** The
+owner supplied a phase spec
+(`/home/hariz/.claude/uploads/.../phase-26-security-hardening-and-assurance.md`)
+to run after Phase 25 and before meeting transcription. Renumbered:
+former Phase 26 (meeting transcription/minutes) → **`docs/phase-27.md`**;
+former Phase 27 (embodied meeting secretary) → **`docs/phase-28.md`**,
+including their internal stage labels (27a/27a.2/27b/27c →
+28a/28a.2/28b/28c). New **`docs/phase-26.md`** adapts the owner's spec to
+this repo's actual ADRs/files (threat model & attack-surface inventory,
+auth/authz audit, network/host/container hardening, secrets/data-at-rest,
+SBOM/AIBOM supply-chain, LLM/RAG adversarial testing, DoS/physical-safety
+testing, privacy/retention/backup review, security regression suite,
+residual-risk report). It explicitly flags one concrete tension for 26d
+to resolve: the owner-recognition enrollment portal added this session
+(`reachy_hub/enrollment_store.py`) deliberately keeps raw voice/face
+captures rather than deriving-then-deleting, which is the opposite of
+this new phase's stated audio/camera privacy model — that's a real open
+question, not an oversight, and 26d should decide it deliberately.
+Updated `docs/README.md`, `docs/plan.md` (roadmap table + the one V0.3
+mention) and `docs/phase-24a.md` (two stale "Phase 26" mentions that
+meant meeting transcription) for the new numbering. All cross-file
+links/anchors verified to resolve. Depends on Phase 25 being implemented
+enough to exercise real biometric trust paths before Phase 26's own
+acceptance completes (26a–26e generic hardening may start earlier).
+
 **Phase 25.0 (contracts and trust engine) implemented, 2026-09-28, not
 deployed.** Landed per [phase-25.md](docs/phase-25.md#implementation-sequence)'s
 own sequencing: contracts and the deterministic trust engine before any

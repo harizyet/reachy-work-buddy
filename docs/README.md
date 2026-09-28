@@ -22,7 +22,7 @@ The [roadmap](plan.md#6-implementation-roadmap) owns phase order and status.
 Detailed future requirements remain in their dedicated plans; they are not
 claims that those features already work. Paths stay stable: completed phase
 records are historical design/implementation references. Phases 24e–24f
-closed by owner re-scope; 24g and 25–27 remain future plans. The mixed 22–23 document retains open acceptance matrices.
+closed by owner re-scope; 24g and 25–28 remain future plans. The mixed 22–23 document retains open acceptance matrices.
 Use the ledger for current status, deployment for procedures, and dated
 verification records for empirical results. Historical records change only to
 correct facts or links, not to track each new phase dependency.
@@ -50,8 +50,16 @@ correct facts or links, not to track each new phase dependency.
 - [Phase 25](phase-25.md): tiered owner verification and progressive trust
   (voice verification, then visual verification, gating voice access by
   request sensitivity).
-- [Phase 26](phase-26.md): meeting transcription and minutes.
-- [Phase 27](phase-27.md): embodied meeting secretary — owner-present companion, then physical secretary attendance, then bounded delegation; virtual/cloud attendance is deferred.
+- [Phase 26](phase-26.md): security hardening and assurance — inserted
+  2026-09-28 between owner verification and meeting transcription to
+  review and harden the whole system, not just the new biometric surface,
+  before it expands.
+- [Phase 27](phase-27.md): meeting transcription and minutes (formerly
+  Phase 26; renumbered 2026-09-28).
+- [Phase 28](phase-28.md): embodied meeting secretary — owner-present
+  companion, then physical secretary attendance, then bounded delegation;
+  virtual/cloud attendance is deferred. (Formerly Phase 27; renumbered
+  2026-09-28.)
 - [Jarvis baseline](jarvis-baseline.md): upstream reuse/reference notes.
 
 ## Architecture decisions
