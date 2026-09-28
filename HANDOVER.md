@@ -112,15 +112,35 @@ robot returns to sleep) pass for all 25. Raw logs in
 
 Added a log line (`bab441e`) so admission latency (upload -> voice_start)
 can actually be measured — the existing logs only gave detected-to-
-admitted, which conflates the caller's own speech duration. Built on the
-Nano as `reachy-embodiment:local`; **not yet running** (needs the
-owner's sudo: `sudo systemctl stop reachy-embodiment && docker rm
-reachy-embodiment && scripts/start-reachy.sh --no-browser`).
+admitted, which conflates the caller's own speech duration. Deployed and
+confirmed running (`reachy-embodiment:local`, re-registered as `nano-1`,
+re-armed automatically).
 
-**Before Session 2 (the scored held-out run):** make several genuine
-"Hey Reachy" attempts (3-5 each of immediate-question and
-natural-pause), not just one — 1/1 isn't a real sample for the ≥90%
-genuine-acceptance target.
+**Session 2 (first held-out attempt), 2026-09-27 15:08-15:16Z — found a
+real bug, not scored as final.** 8 detections: 4 rejected
+`no_wake_phrase`, 1 discarded ("no request followed"), 3 admitted (each a
+clean multi-turn conversation). Isolation checks pass; no stray tool/
+search activity. The discard was a genuine attempt: the owner said "Hey
+Reachy," waited to see the alert-pose cue, then started speaking — by
+then most of the 4 s `speech_start_seconds` budget was gone (the alert
+goto itself dispatches within ~1s of detection, so the shortfall is
+human reaction time to the cue, not code latency). 3/4 genuine acceptance
+(75%) misses the 90% target.
+
+**Fixed (`4b6893b`): `speech_start_seconds` raised 4.0 -> 6.0s** in
+`shared/models/robot_voice.py` (only the hub needs
+rebuilding for this one — the robot always runs whatever `WakeLimits` the
+hub sends at arm time, no Nano image change needed). ADR 0023 and the
+fixture-timing tests updated. Homelab hub/core rebuilt and restarted;
+robot reconnected and re-armed automatically, wake counters reset to
+0/0/{}.
+
+**Session 3 (fresh held-out run): deferred by the owner, 2026-09-28 —
+not started.** When resumed: full scenario list cold, plus several
+genuine attempts (3-5 each of immediate-question and natural-pause) so
+the acceptance-rate sample is meaningful (Session 1's single genuine
+attempt wasn't). Score against the agreed targets below; if it passes,
+write `docs/verification/phase-24g-<date>.md` per the plan.
 
 **Numeric targets agreed (owner, 2026-09-27)** — see
 [phase-24g.md](docs/phase-24g.md#agreed-numeric-targets-owner-2026-09-27):
