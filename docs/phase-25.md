@@ -2,9 +2,13 @@
 
 Status: **Phase 25.0 (contracts and trust engine) implemented 2026-09-28**,
 unit-tested against fakes only — see
-[ADR 0024](adr/0024-owner-recognition-trust.md). No biometric model,
-enrollment portal, perception code or production gating exists yet; 25a/25b
-remain planned. This phase **follows [Phase 24g](phase-24g.md)**
+[ADR 0024](adr/0024-owner-recognition-trust.md). **Phase 25a.1 (voice
+model benchmark) started 2026-09-28**: a dev-box pipeline smoke test for
+SpeechBrain ECAPA-TDNN — see
+[the record](verification/phase-25a1-voice-benchmark-2026-09-28.md) — with
+no owner/non-owner recording, homelab run, or AASIST evaluation yet. No
+enrollment portal, perception code or production gating exists; 25a.2
+onward and all of 25b remain planned. This phase **follows [Phase 24g](phase-24g.md)**
 in the roadmap. The 24e prerequisites passed or were waived on 2026-09-27.
 Compose recognition with 24g wake admission: relevance is interaction routing,
 never identity evidence. Unknown/ambiguous speakers still require rejection

@@ -167,6 +167,12 @@ These are dated evidence, not startup instructions or current health checks.
   Nano versions, predeclared tolerances, supervised REST vs SDK run; paths
   agree; robot stops 2–5° short on both, normal vs fault still open.
 
+- [Phase 25a.1 speaker-verification pipeline smoke test](verification/phase-25a1-voice-benchmark-2026-09-28.md):
+  dev-box only, SpeechBrain ECAPA-TDNN scoring pipeline confirmed sane
+  (same/different speaker separation) on the model card's own example
+  clips; no owner/non-owner recording, homelab run, or AASIST anti-spoof
+  evaluation yet.
+
 - [Phase 24b command authorization](verification/phase-24b-command-authorization-2026-09-24.md):
   isolated-fixture checks for the retired substring matcher's replacement
   (structured `/reachy` commands, the fail-closed suggestion classifier,

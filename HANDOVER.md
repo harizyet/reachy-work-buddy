@@ -25,12 +25,33 @@ skipped) and Ruff pass locally. Nothing biometric exists yet: no enrollment
 portal, no speaker/face model, no camera/mic integration, no production
 gating, nothing deployed or touched on the homelab/Nano.
 
-**Next for Phase 25:** 25a.1 voice model benchmark (SpeechBrain ECAPA
-against real Reachy recordings) per
-[phase-25.md](docs/phase-25.md#implementation-sequence), or the owner may
-prefer the enrollment-portal skeleton first — both need the owner's input
-on priority before more code lands, since either involves new runtime
-dependencies (SpeechBrain/torch) or GUI work not yet scoped in detail.
+**Phase 25a.1 (voice model benchmark) started, 2026-09-28 — pipeline smoke
+test only, not owner accuracy.** Owner chose this track over the
+enrollment-portal skeleton. Set up an isolated benchmark environment
+(`benchmarks/phase-25a-speaker/`, own `.venv`, kept out of the uv
+workspace per the [dependency-rollout guidance](docs/phase-25.md#recommended-dependency-rollout));
+installed `torch`/`torchaudio` (PyTorch CPU index) and `speechbrain`;
+loaded `speechbrain/spkrec-ecapa-voxceleb` (HF snapshot `0f99f2d0eb...`,
+Apache-2.0). Confirmed the scoring pipeline separates same-speaker
+(0.53, accept) from different-speaker (0.017, reject) pairs using that
+model card's own two example clips — not the owner's voice, not a
+non-owner impostor trial. p50 latency on trimmed 3 s clips was ~0.49 s on
+this dev box (20 CPU); real homelab timing is still unmeasured. Full
+record, versions and limitations in
+[the verification doc](docs/verification/phase-25a1-voice-benchmark-2026-09-28.md).
+Noted for later: this torchaudio build's `.load()` needs the optional
+`torchcodec` package; the smoke test used `soundfile` directly instead —
+resolve one way or the other before writing the production
+`reachy_hub/speaker/ecapa.py` adapter.
+
+**Next for Phase 25:** collect real, consenting owner and non-owner audio
+(through the actual Reachy microphone/upload path, or at minimum a
+representative recording setup) — this is the actual 25a.1 benchmark and
+needs the owner's participation; nothing further on speaker verification
+can be evaluated meaningfully without it. AASIST anti-spoof benchmarking
+(not pip-installable, needs its own repo/weights) is a separate later
+pass. The enrollment-portal skeleton (25a.2) remains an alternative next
+track if the owner would rather sequence GUI work first.
 
 **Settings UI cleanup (2026-09-27):** conversational animations and connected
 accounts now occupy separate cards in Settings · Accounts. Local Chromium
