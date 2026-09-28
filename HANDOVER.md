@@ -35,10 +35,34 @@ in `app.js`). 41 backend tests across `test_enrollment_store.py`
 case) and `test_owner_recognition.py` (including the enable-gate and
 export flow); full `pytest services shared` (896 passed) and Ruff pass.
 Compose config validated (`docker compose config`) against the real
-`.env`. **Not yet verified in a real browser** — same limitation as
-before, still needs Chromium. The production capture volume was empty
-at the time of this change, so there's no old-format (plaintext) data
-that the new encrypted format would fail to read.
+`.env`.
+
+**Deployed to the homelab, 2026-09-28 06:34 UTC (`19c6545`).** Backup
+first (`~/reachy-backups/reachy-before-enrollment-hardening-deploy-20260928T063311.dump`).
+`scripts/start-homelab.sh --check` then `--build`; hub/core health ready
+in 2s. Confirmed the `credential_keys` secret is mounted at
+`/run/secrets/credential_keys` inside `reachy-hub` and
+`SECRET_KEY_FILE` points at it. Full curl smoke test against the live
+stack: logged in, checked status (`benchmark_enabled: false`), confirmed
+an upload attempt 403s before enabling benchmark mode, enabled it,
+uploaded a real sample, read the raw on-disk file directly and confirmed
+it's genuine AESGCM ciphertext (no plaintext bytes visible), checked
+`voice_total_bytes` reported correctly, downloaded the export zip and
+confirmed it decrypts back to the exact original bytes plus a correct
+manifest, restarted the `reachy-hub` container and confirmed both the
+sample and the `benchmark_enabled` flag survived, then deleted the test
+sample, turned benchmark mode back off, and logged out — the deployment
+is back in its default (off, empty) state. The production capture
+volume was empty before this deploy, so there was no old-format
+(plaintext) data for the new encrypted format to fail on; not a concern
+now but would matter for any *future* format change.
+
+**Still not verified: the actual browser UI.** Same limitation as
+before — no Chromium available in any session so far. The curl checks
+above prove the backend/encryption/gating contract; they say nothing
+about `owner-recognition.js` itself (the new benchmark-enable checkbox,
+dataset-size display, export-download button). Open Settings · Accounts
+and try it for real next.
 
 **Benchmark-vs-operational biometric-data policy decided, 2026-09-28
 (owner).** Resolved the tension the new Phase 26 flagged (below): raw
