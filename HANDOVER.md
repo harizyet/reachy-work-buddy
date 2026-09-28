@@ -38,10 +38,19 @@ for the backend checks and last homelab deployment.
 4. Resume the owner-deferred 24g held-out run when requested: use the
    [scenario list](docs/phase-24g.md#acceptance-requirements) and
    [agreed targets](docs/phase-24g.md#agreed-numeric-targets-owner-2026-09-27),
-   with conversational motion off. Include 3–5 immediate-question and
-   3–5 natural-pause attempts. Record fresh evidence; the
+   with conversational motion off. Include 3–5 immediate-question,
+   3–5 natural-pause, and a few wait-for-acknowledgement attempts (user
+   pauses to watch the alert pose, then speaks) — the doc's acceptance
+   requirements were extended 2026-09-28 to cover this third interaction
+   style and to require that speech is never lost to the animation. Record
+   fresh evidence; the
    [previous held-out attempt](docs/verification/phase-24g-physical-2026-09-27.md#admission-fix-and-calibration-follow-up)
    failed before the timeout increased to 6 s.
+   `WakeMonitor._listen_and_capture` (`services/reachy-embodiment/src/reachy_embodiment/wake.py`)
+   already fires the alert-pose goto without awaiting it before starting
+   capture, matching that requirement, but no test currently asserts the
+   timing (only move ordering); consider adding one with a slow fake
+   `rest_move` before relying on it further.
 5. Check the shortened privacy carry-forward window on the robot (calendar
    question, then 7–8 unrelated turns), the Trusted mode UI, and palm stop
    after the next authorized standby/wake. These live checks remain open.

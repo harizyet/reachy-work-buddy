@@ -158,6 +158,15 @@ The general principle is:
 
 Reachy may give a very small local acknowledgement of a sufficiently confident wake event, such as an antenna movement, but should avoid a large animation or audible response until the subsequent turn has been admitted. This prevents false detections from repeatedly drawing attention.
 
+Audio capture readiness and the acknowledgement are decoupled: post-wake
+buffering begins as soon as the candidate is admitted into `WAKE_CANDIDATE`,
+and any acknowledgement animation runs alongside it rather than gating it.
+A user who speaks immediately after the wake phrase must not lose any
+speech to an animation still in progress, and a user who pauses to watch
+for a reaction before speaking must still get one. The principle:
+**capture first, acknowledge in parallel, never require acknowledgement
+before speech.**
+
 Expected state transitions are:
 
 ```text
@@ -192,7 +201,16 @@ Phase 24g testing should explicitly include:
 - a false wake followed by continued unrelated conversation;
 - a wake candidate followed by silence;
 - genuine “Hey Reachy” followed immediately by a question;
-- genuine wake followed by a natural pause before the request.
+- genuine wake followed by a natural pause before the request;
+- genuine wake where the user waits for the visible acknowledgement before speaking;
+- speech is never lost because the acknowledgement animation is still playing.
+
+Post-wake audio buffering must start on candidate entry, independent of the
+acknowledgement animation; the animation runs in parallel and must never gate
+capture, STT/relevance processing or session admission. This covers both
+interaction styles above without penalizing either: a user who continues
+speaking immediately, and a user who naturally pauses to watch for a
+reaction before speaking.
 
 For rejected candidates, verify that:
 
