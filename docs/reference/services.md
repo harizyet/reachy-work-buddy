@@ -324,9 +324,15 @@ protocols) rather than a hardcoded hostname — pointing both clients at a
 future unified service instead of these two sidecars is meant to be a
 constructor-argument change, not a `MeetingWorker` rewrite. Neither
 sidecar's own API is expected to change shape when that consolidation
-happens — only where it's hosted. Neither has been built or run for real
-in this repo yet; see the
-[verification record](../verification/phase-27-foundation-2026-09-30.md).
+happens — only where it's hosted. The deployed short-clip path is recorded
+in [foundation verification](../verification/phase-27-foundation-2026-09-30.md).
+Both updated wrappers also have isolated real-model long-WAV checks in
+[long-audio verification](../verification/phase-27-long-audio-2026-09-30.md).
+
+Both endpoints use spooled upload files and reject busy inference with 503
+before decoding; each model still runs one request at a time. Core uses
+file-backed multipart requests with a configurable response timeout; see
+[long-recording operations](../deployment.md#long-meeting-recordings).
 
 ## Shared contracts and clients
 

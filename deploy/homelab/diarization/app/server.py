@@ -1,5 +1,4 @@
 """HTTP service: Nemotron-3-Diarization with the network step on OpenVINO (Intel GPU by default)."""
-import io
 import os
 import secrets
 import tempfile
@@ -73,19 +72,27 @@ def diarize(file: UploadFile = File(...)):  # noqa: B008
     """Upload wav/flac/ogg audio (any rate/channels). Returns speaker segments in seconds."""
     if S["status"] != "ready":
         raise HTTPException(503, detail=S["status"])
+    if not lock.acquire(blocking=False):
+        raise HTTPException(503, detail="diarization busy", headers={"Retry-After": "5"})
     try:
-        audio, sr = sf.read(io.BytesIO(file.file.read()), dtype="float32", always_2d=True)
-    except Exception as e:  # soundfile raises several exception types for a bad/unreadable file
-        raise HTTPException(400, detail=f"could not decode audio (wav/flac/ogg only): {e}") from e
-    audio = audio.mean(axis=1)
-    if sr != 16000:
-        audio = resample_poly(audio, 16000, sr).astype(np.float32)
-    dur = len(audio) / 16000
-    with tempfile.NamedTemporaryFile(suffix=".wav") as tmp, lock:
-        sf.write(tmp.name, audio, 16000)
-        t = time.perf_counter()
-        raw = S["diarizer"].diarize([tmp.name], batch_size=1)[0]
-        took = time.perf_counter() - t
+        try:
+            audio, sr = sf.read(file.file, dtype="float32", always_2d=True)
+        except Exception as e:
+            raise HTTPException(400, detail=f"could not decode audio (wav/flac/ogg only): {e}") from e
+        audio = audio.mean(axis=1)
+        if not len(audio):
+            raise HTTPException(400, detail="empty audio file")
+        if sr != 16000:
+            audio = resample_poly(audio, 16000, sr).astype(np.float32)
+        dur = len(audio) / 16000
+        with tempfile.NamedTemporaryFile(suffix=".wav") as tmp:
+            sf.write(tmp.name, audio, 16000)
+            del audio  # NeMo loads the normalized file; do not retain a second waveform.
+            t = time.perf_counter()
+            raw = S["diarizer"].diarize([tmp.name], batch_size=1)[0]
+            took = time.perf_counter() - t
+    finally:
+        lock.release()
     segs = sorted(({"start": float(a), "end": float(b), "speaker": s}
                    for a, b, s in (r.split() for r in raw)), key=lambda x: (x["start"], x["speaker"]))
     return {"duration_s": round(dur, 2), "process_s": round(took, 3), "rtf": round(took / dur, 4) if dur else None,

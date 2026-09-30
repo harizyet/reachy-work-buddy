@@ -27,6 +27,7 @@ import contextlib
 import logging
 import wave
 from io import BytesIO
+from typing import BinaryIO
 
 from companion_core.meetings.models import Meeting
 from companion_core.meetings.speech_clients import (
@@ -40,11 +41,11 @@ from companion_core.meetings.store import MeetingStore
 logger = logging.getLogger(__name__)
 
 
-def probe_wav_duration(audio: bytes) -> float | None:
+def probe_wav_duration(audio: bytes | BinaryIO) -> float | None:
     """Real duration for a standard WAV file; None for anything else
     (including a malformed WAV) rather than a guessed value."""
     try:
-        with wave.open(BytesIO(audio)) as wav_file:
+        with wave.open(BytesIO(audio) if isinstance(audio, bytes) else audio) as wav_file:
             frames = wav_file.getnframes()
             rate = wav_file.getframerate()
             if rate <= 0:
@@ -60,14 +61,16 @@ async def preprocess(store: MeetingStore, meeting: Meeting) -> bool:
     that could be transiently unavailable, so there is no "try again
     later" case here."""
     try:
-        audio = await store.load_audio(meeting.id)
+        audio = await store.open_audio(meeting.id)
     except (KeyError, OSError) as exc:
         await store.mark_failed(meeting.id, error_detail=f"could not read uploaded audio: {exc}")
         return True
-    if not audio:
-        await store.mark_failed(meeting.id, error_detail="uploaded audio file is empty")
-        return True
-    duration = await asyncio.to_thread(probe_wav_duration, audio) if meeting.content_type == "audio/wav" else None
+    with audio:
+        if not await asyncio.to_thread(audio.read, 1):
+            await store.mark_failed(meeting.id, error_detail="uploaded audio file is empty")
+            return True
+        audio.seek(0)
+        duration = await asyncio.to_thread(probe_wav_duration, audio) if meeting.content_type == "audio/wav" else None
     await store.mark_preprocessed(meeting.id, normalized_audio_path=None, duration_seconds=duration)
     return True
 
@@ -77,14 +80,15 @@ async def transcribe(store: MeetingStore, meeting: Meeting, client: Transcriptio
     failed) — False means "try again later", matching process_one's
     found/not-found shape so a down sidecar doesn't spin the poll loop."""
     try:
-        audio = await store.load_audio(meeting.id)
+        audio = await store.open_audio(meeting.id)
     except (KeyError, OSError) as exc:
         await store.mark_failed(meeting.id, error_detail=f"could not read audio for transcription: {exc}")
         return True
     try:
-        segments = await client.transcribe(
-            audio, filename=meeting.source_filename, content_type=meeting.content_type
-        )
+        with audio:
+            segments = await client.transcribe(
+                audio, filename=meeting.source_filename, content_type=meeting.content_type
+            )
     except SpeechServiceUnavailable as exc:
         logger.warning("meeting %s: transcription service unavailable, will retry: %s", meeting.id, exc)
         return False
@@ -98,12 +102,13 @@ async def transcribe(store: MeetingStore, meeting: Meeting, client: Transcriptio
 async def diarize(store: MeetingStore, meeting: Meeting, client: DiarizationClient) -> bool:
     """Same shape as transcribe() above."""
     try:
-        audio = await store.load_audio(meeting.id)
+        audio = await store.open_audio(meeting.id)
     except (KeyError, OSError) as exc:
         await store.mark_failed(meeting.id, error_detail=f"could not read audio for diarization: {exc}")
         return True
     try:
-        segments = await client.diarize(audio, filename=meeting.source_filename, content_type=meeting.content_type)
+        with audio:
+            segments = await client.diarize(audio, filename=meeting.source_filename, content_type=meeting.content_type)
     except SpeechServiceUnavailable as exc:
         logger.warning("meeting %s: diarization service unavailable, will retry: %s", meeting.id, exc)
         return False

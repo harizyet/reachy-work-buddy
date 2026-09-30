@@ -6,15 +6,16 @@ The [documentation index](docs/README.md) defines ownership;
 
 ## Current work
 
-Phase 27 documentation reconciled with the recorded 2026-09-30 live smoke
-run: the plan, index and roadmap now distinguish short synthetic speech
-success from real meeting acceptance. Current limits are in
-[project state](docs/project-state.md); the next representative recording,
-word-timing decision and consolidation sequence are in
-[Phase 27](docs/phase-27.md#before-alignment-representative-speech-acceptance).
-This review follow-up changed documentation only; no deployment, token
-activation, inference run or alignment implementation was performed.
-No representative recording was supplied with the review.
+Long-meeting transport fixes implemented: spooled Hub uploads, bounded
+Core disk copies, file-backed worker inference requests, configurable
+six-hour inference response waits and sidecar busy rejection. No schema
+change. Existing live containers remain untouched; verification used a
+separate `reachy-long-meeting-check` Compose project with read-only model
+caches and the updated server source mounted into existing images.
+See [long-audio verification](docs/verification/phase-27-long-audio-2026-09-30.md)
+for exact checks and remaining limits, and
+[operations](docs/deployment.md#long-meeting-recordings) for settings.
+No representative human meeting recording was supplied.
 
 The deployed pipeline stores raw speech results and waits at ALIGNING.
 The live run built transcription and reused the owner's standalone
@@ -25,6 +26,11 @@ meetings remain in the database/audio volume; no delete endpoint exists.
 
 ## Next session
 
+0. Roll out the long-audio changes to Core, Hub and both sidecars, including
+   the standalone diarization server (do not create a competing instance).
+   Coordinate speech-token activation with that restart. Representative
+   human speech/resource acceptance remains open despite synthetic
+   65-minute infrastructure checks.
 1. The pipeline reached ALIGNING with a short synthetic clip
    (upload → transcribe → diarize → wait at ALIGNING, ~2s); alignment
    itself is not implemented. Still owed: open

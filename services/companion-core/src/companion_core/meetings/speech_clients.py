@@ -20,8 +20,9 @@ something companion-core currently persists.
 
 from __future__ import annotations
 
+import math
 import os
-from typing import Any, Protocol
+from typing import Any, BinaryIO, Protocol
 
 import httpx
 
@@ -38,6 +39,15 @@ _SPEECH_SERVICE_TOKEN_HEADER = "X-Reachy-Speech-Token"
 def _auth_headers() -> dict[str, str]:
     token = os.environ.get("SPEECH_SERVICE_TOKEN")
     return {_SPEECH_SERVICE_TOKEN_HEADER: token} if token else {}
+
+
+def _inference_timeout(override: float | None) -> httpx.Timeout:
+    # This is response inactivity, not audio duration. Slow inference can
+    # exceed real time; keep connection failures fast while allowing long jobs.
+    seconds = override if override is not None else float(os.environ.get("MEETING_INFERENCE_TIMEOUT_SECONDS", "21600"))
+    if not math.isfinite(seconds) or seconds <= 0:
+        raise ValueError("MEETING_INFERENCE_TIMEOUT_SECONDS must be finite and positive")
+    return httpx.Timeout(seconds, connect=10.0, write=600.0, pool=10.0)
 
 
 class SpeechServiceError(Exception):
@@ -57,15 +67,15 @@ class SpeechServiceRejected(SpeechServiceError):
 
 
 class TranscriptionClient(Protocol):
-    async def transcribe(self, audio: bytes, *, filename: str, content_type: str) -> list[dict[str, Any]]: ...
+    async def transcribe(self, audio: bytes | BinaryIO, *, filename: str, content_type: str) -> list[dict[str, Any]]: ...
 
 
 class DiarizationClient(Protocol):
-    async def diarize(self, audio: bytes, *, filename: str, content_type: str) -> list[dict[str, Any]]: ...
+    async def diarize(self, audio: bytes | BinaryIO, *, filename: str, content_type: str) -> list[dict[str, Any]]: ...
 
 
 async def _post_audio(
-    client: httpx.AsyncClient, path: str, audio: bytes, *, filename: str, content_type: str
+    client: httpx.AsyncClient, path: str, audio: bytes | BinaryIO, *, filename: str, content_type: str
 ) -> list[dict[str, Any]]:
     try:
         response = await client.post(path, files={"file": (filename, audio, content_type)})
@@ -89,17 +99,15 @@ class HTTPTranscriptionClient:
         base_url: str | None = None,
         *,
         transport: httpx.AsyncBaseTransport | None = None,
-        timeout: float = 1800.0,
+        timeout: float | None = None,
     ) -> None:
-        # Long-form transcription of a real meeting can take minutes; this
-        # timeout is generous on purpose, unlike a conversational-turn call.
         base = base_url or os.environ.get("TRANSCRIPTION_URL") or "http://transcription:8011"
-        self._client = httpx.AsyncClient(base_url=base, transport=transport, timeout=timeout, headers=_auth_headers())
+        self._client = httpx.AsyncClient(base_url=base, transport=transport, timeout=_inference_timeout(timeout), headers=_auth_headers())
 
     async def aclose(self) -> None:
         await self._client.aclose()
 
-    async def transcribe(self, audio: bytes, *, filename: str, content_type: str) -> list[dict[str, Any]]:
+    async def transcribe(self, audio: bytes | BinaryIO, *, filename: str, content_type: str) -> list[dict[str, Any]]:
         return await _post_audio(self._client, "/transcribe", audio, filename=filename, content_type=content_type)
 
 
@@ -109,13 +117,13 @@ class HTTPDiarizationClient:
         base_url: str | None = None,
         *,
         transport: httpx.AsyncBaseTransport | None = None,
-        timeout: float = 1800.0,
+        timeout: float | None = None,
     ) -> None:
         base = base_url or os.environ.get("DIARIZATION_URL") or "http://diarization:8010"
-        self._client = httpx.AsyncClient(base_url=base, transport=transport, timeout=timeout, headers=_auth_headers())
+        self._client = httpx.AsyncClient(base_url=base, transport=transport, timeout=_inference_timeout(timeout), headers=_auth_headers())
 
     async def aclose(self) -> None:
         await self._client.aclose()
 
-    async def diarize(self, audio: bytes, *, filename: str, content_type: str) -> list[dict[str, Any]]:
+    async def diarize(self, audio: bytes | BinaryIO, *, filename: str, content_type: str) -> list[dict[str, Any]]:
         return await _post_audio(self._client, "/diarize", audio, filename=filename, content_type=content_type)

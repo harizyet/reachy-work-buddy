@@ -188,7 +188,16 @@ def test_proxy_masked_settings_and_status_real_chain():
     assert client.get("/ui/").headers["cache-control"] == "no-cache"
 
 
-def test_meetings_proxy_upload_list_get_cancel_require_auth():
+def test_meetings_proxy_upload_list_get_cancel_require_auth(monkeypatch):
+    from starlette.datastructures import UploadFile
+
+    original_read = UploadFile.read
+
+    async def bounded_read(self, size=-1):
+        assert size >= 0, "hub/core must not buffer the complete meeting upload"
+        return await original_read(self, size)
+
+    monkeypatch.setattr(UploadFile, "read", bounded_read)
     client = make_client()
     files = {"audio": ("meeting.wav", b"RIFF....WAVEfmt ", "audio/wav")}
 

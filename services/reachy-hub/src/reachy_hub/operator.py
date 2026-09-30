@@ -149,11 +149,10 @@ def install_operator_routes(
         started_at: str | None = Form(None),
         audio: UploadFile = File(...),  # noqa: B008
     ) -> dict:
-        data = await audio.read()
         try:
             return await core.create_meeting(
                 title=title,
-                audio_bytes=data,
+                audio_bytes=audio.file,
                 filename=audio.filename or "recording",
                 content_type=audio.content_type or "application/octet-stream",
                 project_scope=project_scope,

@@ -7,7 +7,8 @@ why audio lives on disk rather than in a column.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any, Protocol
+from io import BytesIO
+from typing import Any, BinaryIO, Protocol
 
 from companion_core.meetings.models import (
     CANCELLABLE_STATUSES,
@@ -26,7 +27,7 @@ class MeetingStore(Protocol):
         self,
         *,
         title: str,
-        audio: bytes,
+        audio: bytes | BinaryIO,
         source_filename: str,
         content_type: str,
         project_scope: str | None = None,
@@ -38,6 +39,9 @@ class MeetingStore(Protocol):
     async def get_meeting(self, meeting_id: str) -> Meeting | None: ...
     async def list_meetings(self) -> list[Meeting]: ...
     async def load_audio(self, meeting_id: str) -> bytes: ...
+    async def open_audio(self, meeting_id: str) -> BinaryIO:
+        """Return a seekable stream; the caller owns closing it."""
+        ...
 
     async def claim_next_upload(self) -> Meeting | None:
         """Atomically move the oldest UPLOADED job to PREPROCESSING and
@@ -85,7 +89,7 @@ class InMemoryMeetingStore:
         self,
         *,
         title: str,
-        audio: bytes,
+        audio: bytes | BinaryIO,
         source_filename: str,
         content_type: str,
         project_scope: str | None = None,
@@ -104,7 +108,7 @@ class InMemoryMeetingStore:
             started_at=started_at,
         )
         self._meetings[meeting.id] = meeting
-        self._audio[meeting.id] = audio
+        self._audio[meeting.id] = audio if isinstance(audio, bytes) else audio.read()
         return meeting
 
     async def get_meeting(self, meeting_id: str) -> Meeting | None:
@@ -115,6 +119,9 @@ class InMemoryMeetingStore:
 
     async def load_audio(self, meeting_id: str) -> bytes:
         return self._audio[meeting_id]
+
+    async def open_audio(self, meeting_id: str) -> BinaryIO:
+        return BytesIO(self._audio[meeting_id])
 
     def _touch(self, meeting: Meeting, **fields) -> Meeting:
         updated = meeting.model_copy(update={**fields, "updated_at": datetime.now(UTC)})

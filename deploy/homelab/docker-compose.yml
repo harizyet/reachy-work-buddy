@@ -325,6 +325,7 @@ services:
       # meetings volume below is always mounted, not gated behind an unset
       # env var falling back to in-memory.
       MEETING_AUDIO_DIR: ${MEETING_AUDIO_DIR:-/data/meeting-audio}
+      MEETING_INFERENCE_TIMEOUT_SECONDS: ${MEETING_INFERENCE_TIMEOUT_SECONDS:-21600}
       # Phase 27.2/27.3 (ADR 0025): the transcription/diarization sidecars'
       # internal DNS names — matching their service names below, so these
       # defaults work whenever `--transcription`/`--diarization` are used.

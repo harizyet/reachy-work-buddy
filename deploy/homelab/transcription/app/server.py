@@ -17,7 +17,6 @@ process_s, rtf, segments}` plus this service's own `language`.
 """
 import os
 import secrets
-import tempfile
 import threading
 import time
 
@@ -78,20 +77,21 @@ def transcribe(file: UploadFile = File(...)):  # noqa: B008
     segments in seconds."""
     if S["status"] != "ready":
         raise HTTPException(503, detail=S["status"])
-    data = file.file.read()
-    if not data:
-        raise HTTPException(400, detail="empty audio file")
-    suffix = os.path.splitext(file.filename or "")[1] or ".wav"
-    with tempfile.NamedTemporaryFile(suffix=suffix) as tmp, lock:
-        tmp.write(data)
-        tmp.flush()
+    if not lock.acquire(blocking=False):
+        raise HTTPException(503, detail="transcription busy", headers={"Retry-After": "5"})
+    try:
+        if not file.file.read(1):
+            raise HTTPException(400, detail="empty audio file")
+        file.file.seek(0)
         t = time.perf_counter()
         try:
-            segments, info = S["model"].transcribe(tmp.name, vad_filter=True)
+            segments, info = S["model"].transcribe(file.file, vad_filter=True)
             segs = [{"start": float(s.start), "end": float(s.end), "text": s.text.strip()} for s in segments]
         except Exception as e:
             raise HTTPException(400, detail=f"could not decode/transcribe audio: {e}") from e
         took = time.perf_counter() - t
+    finally:
+        lock.release()
     dur = info.duration if info else None
     return {
         "duration_s": round(dur, 2) if dur else None,

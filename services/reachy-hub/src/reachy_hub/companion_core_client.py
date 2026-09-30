@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, BinaryIO
 
 import httpx
 
@@ -145,7 +145,7 @@ class CompanionCoreClient:
         self,
         *,
         title: str,
-        audio_bytes: bytes,
+        audio_bytes: bytes | BinaryIO,
         filename: str,
         content_type: str,
         project_scope: str | None = None,
@@ -153,10 +153,7 @@ class CompanionCoreClient:
         participants: str = "",
         started_at: str | None = None,
     ) -> dict[str, Any]:
-        """27.1 upload passthrough: reachy-hub already read the browser's
-        multipart body into memory (companion-core is closed to the
-        browser, only reachable through this proxy), so it's re-sent as a
-        fresh multipart request rather than streamed."""
+        """Forward the spooled upload without buffering the recording in RAM."""
         data = {"title": title, "project_scope": project_scope or "", "context": context or "", "participants": participants}
         if started_at:
             data["started_at"] = started_at
@@ -164,7 +161,7 @@ class CompanionCoreClient:
             MEETINGS,
             data=data,
             files={"audio": (filename, audio_bytes, content_type)},
-            timeout=120.0,
+            timeout=httpx.Timeout(600.0, connect=10.0, pool=10.0),
         )
         resp.raise_for_status()
         return resp.json()

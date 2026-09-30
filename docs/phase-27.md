@@ -74,6 +74,14 @@ duration/RTF, the browser UI itself). ALIGNING (27.4 onward: canonical
 `TranscriptSegment` alignment, meeting analysis, retrieval) remains
 unimplemented.
 
+**Long-audio transport follow-up 2026-09-30:** file-backed uploads and
+worker transfers, configurable inference response waits (six hours by
+default), and busy-sidecar rejection are implemented. Isolated real-model
+65-minute WAV tests are recorded in
+[verification](verification/phase-27-long-audio-2026-09-30.md); these are
+synthetic infrastructure checks, not representative meeting acceptance
+or a live-stack rollout. See [operations](deployment.md#long-meeting-recordings).
+
 Phase 27 delivers a usable meeting-intelligence workflow independent of the physical Reachy Mini embodiment.
 
 It builds on:

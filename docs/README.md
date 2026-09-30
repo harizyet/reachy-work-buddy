@@ -212,6 +212,10 @@ These are dated evidence, not startup instructions or current health checks.
   restart-recovery and the owner-authenticated proxy, plus a live homelab
   speech smoke test. Real multi-speaker meeting and browser acceptance remain open.
 
+- [Phase 27 long-audio transport](verification/phase-27-long-audio-2026-09-30.md):
+  bounded audio-transfer regressions and isolated real-model 65-minute WAV
+  checks; representative meeting quality and live rollout remain open.
+
 ## Where information belongs
 
 | Information | Canonical home | Elsewhere |

@@ -12,10 +12,11 @@ from __future__ import annotations
 
 import asyncio
 import os
+import shutil
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO
 
 from psycopg.types.json import Json
 from psycopg_pool import AsyncConnectionPool
@@ -87,7 +88,7 @@ class PostgresMeetingStore:
         self,
         *,
         title: str,
-        audio: bytes,
+        audio: bytes | BinaryIO,
         source_filename: str,
         content_type: str,
         project_scope: str | None = None,
@@ -107,7 +108,14 @@ class PostgresMeetingStore:
         )
         target = self._audio_file(meeting.id, meeting.audio_path)
         await asyncio.to_thread(target.parent.mkdir, parents=True, exist_ok=True)
-        await asyncio.to_thread(target.write_bytes, audio)
+        def write_audio():
+            with target.open("wb") as destination:
+                if isinstance(audio, bytes):
+                    destination.write(audio)
+                else:
+                    shutil.copyfileobj(audio, destination, length=1024 * 1024)
+
+        await asyncio.to_thread(write_audio)
         async with self._pool.connection() as conn:
             await conn.execute(
                 f"INSERT INTO meetings ({_COLUMNS}) VALUES "
@@ -139,6 +147,13 @@ class PostgresMeetingStore:
             raise KeyError(meeting_id)
         path = meeting.normalized_audio_path or meeting.audio_path
         return await asyncio.to_thread(self._audio_file(meeting_id, path).read_bytes)
+
+    async def open_audio(self, meeting_id: str) -> BinaryIO:
+        meeting = await self.get_meeting(meeting_id)
+        if meeting is None:
+            raise KeyError(meeting_id)
+        path = meeting.normalized_audio_path or meeting.audio_path
+        return await asyncio.to_thread(self._audio_file(meeting_id, path).open, "rb")
 
     async def claim_next_upload(self) -> Meeting | None:
         async with self._pool.connection() as conn:

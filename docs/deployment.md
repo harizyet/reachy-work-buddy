@@ -85,9 +85,9 @@ and `POST /diarize` (multipart audio, any rate/channels) internally at
 description. companion-core's `MeetingWorker` calls it (`DIARIZATION_URL`,
 already defaulted to the in-network hostname above) whenever a job
 reaches DIARIZING — see [ADR 0025](adr/0025-speech-inference-service.md).
-It has not been built or run for real in this repo yet (no image build,
-no live `/health`/`POST /diarize` call) — see phase-27.md's Status
-section and the [verification record](verification/phase-27-foundation-2026-09-30.md).
+The live deployment reused the owner’s standalone diarization container;
+it did not build this repository image. See the
+[verification record](verification/phase-27-foundation-2026-09-30.md).
 
 ## Meeting transcription
 
@@ -112,6 +112,38 @@ TRANSCRIBING. Neither this nor the diarization service being unreachable
 is a startup failure for companion-core — a meeting job simply rests at
 its current status and retries on the worker's next poll (2 s) until the
 sidecar answers.
+
+### Long meeting recordings
+
+There is no one-hour recording-duration limit. Set
+`MEETING_INFERENCE_TIMEOUT_SECONDS` on companion-core to control the HTTP
+response wait per inference stage (default `21600`, six hours; finite and
+positive). This replaces the former 30-minute wait. Connection/pool waits
+remain 10 seconds, and upload write inactivity is limited to 600 seconds.
+The Hub-to-Core upload timeout is 600 seconds, with a 10-second connection
+and pool timeout. These are inactivity timeouts, not recording lengths.
+
+Hub forwards the spooled upload, Core copies it to `MEETING_AUDIO_DIR` in
+bounded blocks, and the worker reopens a file for each inference attempt.
+Allow disk space for the durable recording and temporary multipart uploads
+in Hub, Core and the sidecar. Decoders/models still allocate waveform and
+feature arrays proportional to duration; this is not constant-memory
+inference. Browser recording still retains the clip until upload.
+
+Each sidecar admits one inference at a time and returns HTTP 503 with
+`Retry-After: 5` when busy, before decoding audio. Core treats this as
+transient and retries on its existing worker poll; it does not currently
+use the Retry-After value. This prevents requests waiting behind a model
+lock after their callers time out. A timed-out active inference can still
+finish without its result being saved; a later retry recomputes it. Durable
+compute handles remain future speech-service work.
+
+These changes require rebuilding/recreating Core, Hub and the sidecars to
+reach the live stack. The owner's existing standalone diarization container
+must also receive the updated server; launching a competing Compose
+instance is not an upgrade. No schema migration is required. The
+[long-audio verification](verification/phase-27-long-audio-2026-09-30.md)
+used isolated containers with mounted updated source, not a live rollout.
 
 ## Owner login
 

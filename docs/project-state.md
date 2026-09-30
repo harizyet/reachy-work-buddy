@@ -36,7 +36,9 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
   browser recording/detail checks and explicit row/audio survival across
   restart remain open. Speech-service token authentication is implemented
   but unset in the reported deployment. Alignment and analysis remain
-  unimplemented. See [evidence](verification/phase-27-foundation-2026-09-30.md)
+  unimplemented. File-backed transfers and longer configurable inference
+  waits have [isolated 65-minute synthetic checks](verification/phase-27-long-audio-2026-09-30.md);
+  these changes have not been rolled out to the live stack. See [evidence](verification/phase-27-foundation-2026-09-30.md)
   and the [next diagnostic run](phase-27.md#before-alignment-representative-speech-acceptance).
 
 - **Physical platform (22b/22c):** named behaviours were owner-accepted despite

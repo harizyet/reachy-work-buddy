@@ -1304,12 +1304,12 @@ def create_app(
         suffix = Path(audio.filename or "").suffix.lower()
         if suffix not in SUPPORTED_AUDIO_EXTENSIONS:
             raise HTTPException(422, f"unsupported audio file type '{suffix or '(none)'}'")
-        data = await audio.read()
-        if not data:
+        if not await audio.read(1):
             raise HTTPException(422, "uploaded audio file is empty")
+        await audio.seek(0)
         return await app.state.meeting_store.create_meeting(
             title=title,
-            audio=data,
+            audio=audio.file,
             source_filename=audio.filename or f"recording{suffix}",
             content_type=audio.content_type or "application/octet-stream",
             project_scope=project_scope,
