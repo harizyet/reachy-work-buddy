@@ -1,21 +1,34 @@
 """HTTP service: Nemotron-3-Diarization with the network step on OpenVINO (Intel GPU by default)."""
 import io
 import os
+import secrets
 import tempfile
 import threading
 import time
 
 import numpy as np
 import soundfile as sf
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
 from scipy.signal import resample_poly
 
 ONNX_PATH = os.environ.get("ONNX_PATH", "/data/sortformer_step.onnx")
 MODEL_ID = os.environ.get("MODEL_ID", "nvidia/Nemotron-3-Diarization")
 OV_DEVICE = os.environ.get("OV_DEVICE", "GPU")
 OV_PRECISION = os.environ.get("OV_PRECISION") or None  # e.g. f32; default lets the plugin pick (fp16 on GPU)
+# ADR 0025's "authenticated service-to-service calls": unset (the default
+# on a homelab with only Docker-internal reachability) means no check, same
+# as before this was added. Set SPEECH_SERVICE_TOKEN to require it — the
+# companion-core clients (meetings/speech_clients.py) send the same value.
+SPEECH_SERVICE_TOKEN = os.environ.get("SPEECH_SERVICE_TOKEN") or None
 
 app = FastAPI(title="nemotron-3-diarization")
+
+
+def require_service_token(x_reachy_speech_token: str | None = Header(default=None)) -> None:
+    if SPEECH_SERVICE_TOKEN and not (
+        x_reachy_speech_token and secrets.compare_digest(x_reachy_speech_token, SPEECH_SERVICE_TOKEN)
+    ):
+        raise HTTPException(401, "Invalid or missing service token")
 S = {"diarizer": None, "status": "loading", "load_seconds": None, "device": None}
 lock = threading.Lock()
 
@@ -55,7 +68,7 @@ def health():
     return body
 
 
-@app.post("/diarize")
+@app.post("/diarize", dependencies=[Depends(require_service_token)])
 def diarize(file: UploadFile = File(...)):  # noqa: B008
     """Upload wav/flac/ogg audio (any rate/channels). Returns speaker segments in seconds."""
     if S["status"] != "ready":

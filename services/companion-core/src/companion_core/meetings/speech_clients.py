@@ -25,6 +25,20 @@ from typing import Any, Protocol
 
 import httpx
 
+# ADR 0025's "authenticated service-to-service calls". Optional on
+# purpose, matching this codebase's other internal-only integrations
+# (REMOTE_UI_TOKEN, ACCOUNTS_SERVICE_TOKEN): unset means no header is
+# sent and the sidecars (which check the same env var) don't require
+# one — fine on a homelab where only the Compose network can reach them.
+# Set SPEECH_SERVICE_TOKEN identically here and on both sidecars to
+# require it.
+_SPEECH_SERVICE_TOKEN_HEADER = "X-Reachy-Speech-Token"
+
+
+def _auth_headers() -> dict[str, str]:
+    token = os.environ.get("SPEECH_SERVICE_TOKEN")
+    return {_SPEECH_SERVICE_TOKEN_HEADER: token} if token else {}
+
 
 class SpeechServiceError(Exception):
     """Base for a speech-inference sidecar call that did not produce segments."""
@@ -80,7 +94,7 @@ class HTTPTranscriptionClient:
         # Long-form transcription of a real meeting can take minutes; this
         # timeout is generous on purpose, unlike a conversational-turn call.
         base = base_url or os.environ.get("TRANSCRIPTION_URL") or "http://transcription:8011"
-        self._client = httpx.AsyncClient(base_url=base, transport=transport, timeout=timeout)
+        self._client = httpx.AsyncClient(base_url=base, transport=transport, timeout=timeout, headers=_auth_headers())
 
     async def aclose(self) -> None:
         await self._client.aclose()
@@ -98,7 +112,7 @@ class HTTPDiarizationClient:
         timeout: float = 1800.0,
     ) -> None:
         base = base_url or os.environ.get("DIARIZATION_URL") or "http://diarization:8010"
-        self._client = httpx.AsyncClient(base_url=base, transport=transport, timeout=timeout)
+        self._client = httpx.AsyncClient(base_url=base, transport=transport, timeout=timeout, headers=_auth_headers())
 
     async def aclose(self) -> None:
         await self._client.aclose()

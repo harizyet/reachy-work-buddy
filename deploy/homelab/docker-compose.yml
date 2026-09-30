@@ -114,6 +114,10 @@ services:
     environment:
       OV_DEVICE: ${DIARIZATION_OV_DEVICE:-GPU}
       OV_PRECISION: ${DIARIZATION_OV_PRECISION:-}
+      # ADR 0025's authenticated-service-to-service-calls target; unset
+      # (default) means no check, same as before this existed — only the
+      # Compose-internal network can reach this port either way.
+      SPEECH_SERVICE_TOKEN: ${SPEECH_SERVICE_TOKEN:-}
     volumes:
       - diarization-data:/data
     healthcheck:
@@ -149,6 +153,8 @@ services:
       MEETING_STT_MODEL: ${MEETING_STT_MODEL:-small.en}
       MEETING_STT_COMPUTE_TYPE: ${MEETING_STT_COMPUTE_TYPE:-int8}
       MEETING_STT_DEVICE: ${MEETING_STT_DEVICE:-cpu}
+      # Same token as the diarization service's, above.
+      SPEECH_SERVICE_TOKEN: ${SPEECH_SERVICE_TOKEN:-}
     volumes:
       - transcription-data:/data
     healthcheck:
@@ -327,6 +333,10 @@ services:
       # either sidecar running; jobs just rest at TRANSCRIBING/DIARIZING.
       TRANSCRIPTION_URL: ${TRANSCRIPTION_URL:-http://transcription:8011}
       DIARIZATION_URL: ${DIARIZATION_URL:-http://diarization:8010}
+      # Same token as the sidecars' own SPEECH_SERVICE_TOKEN — must match
+      # for the clients' calls to authenticate once either sidecar has one
+      # set. Unset on all three (default) means no auth is enforced.
+      SPEECH_SERVICE_TOKEN: ${SPEECH_SERVICE_TOKEN:-}
     volumes:
       - meeting-audio:/data/meeting-audio
     depends_on:

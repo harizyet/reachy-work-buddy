@@ -16,17 +16,30 @@ Response shape deliberately matches the sibling diarization sidecar's
 process_s, rtf, segments}` plus this service's own `language`.
 """
 import os
+import secrets
 import tempfile
 import threading
 import time
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
 
 MODEL_SIZE = os.environ.get("MEETING_STT_MODEL", "small.en")
 COMPUTE_TYPE = os.environ.get("MEETING_STT_COMPUTE_TYPE", "int8")
 DEVICE = os.environ.get("MEETING_STT_DEVICE", "cpu")
+# ADR 0025's "authenticated service-to-service calls": unset (the default
+# on a homelab with only Docker-internal reachability) means no check, same
+# as before this was added. Set SPEECH_SERVICE_TOKEN to require it — the
+# companion-core clients (meetings/speech_clients.py) send the same value.
+SPEECH_SERVICE_TOKEN = os.environ.get("SPEECH_SERVICE_TOKEN") or None
 
 app = FastAPI(title="meeting-transcription")
+
+
+def require_service_token(x_reachy_speech_token: str | None = Header(default=None)) -> None:
+    if SPEECH_SERVICE_TOKEN and not (
+        x_reachy_speech_token and secrets.compare_digest(x_reachy_speech_token, SPEECH_SERVICE_TOKEN)
+    ):
+        raise HTTPException(401, "Invalid or missing service token")
 S = {"model": None, "status": "loading", "load_seconds": None, "device": DEVICE}
 lock = threading.Lock()
 
@@ -58,7 +71,7 @@ def health():
     return body
 
 
-@app.post("/transcribe")
+@app.post("/transcribe", dependencies=[Depends(require_service_token)])
 def transcribe(file: UploadFile = File(...)):  # noqa: B008
     """Upload wav/flac/mp3/m4a/etc audio (faster-whisper decodes via
     bundled PyAV, no system ffmpeg required). Returns timestamped

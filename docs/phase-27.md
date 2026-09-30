@@ -47,18 +47,32 @@ stages, storing each sidecar's raw segment output on the `Meeting` row
 (migration `011_meeting_speech_results`) and advancing
 TRANSCRIBING→DIARIZING→ALIGNING. Migration `011_meeting_speech_results`
 also widened `CANCELLABLE_STATUSES` to any non-terminal stage (previously
-only UPLOADED/PREPROCESSING). See
+only UPLOADED/PREPROCESSING). Both sidecars also gained optional
+`SPEECH_SERVICE_TOKEN` header auth (ADR 0025's "authenticated
+service-to-service calls" — a `X-Reachy-Speech-Token` header, checked
+only when the env var is set on all three of companion-core and both
+sidecars); implemented but not turned on in the live deployment below,
+since enabling it would have required also rebuilding/restarting the
+owner's existing diarization container. See
 [services/companion-core/tests/test_meetings.py](../services/companion-core/tests/test_meetings.py)
 for automated coverage, including a sidecar that's transiently
 unreachable leaving the job untouched for retry rather than failing it,
 and one stuck stage not starving another that's ready to progress.
-**Neither sidecar has been built or run for real** — no image build, no
-live `/health` or a real recording sent through `/transcribe`/`/diarize`
-— so this is proven at the `MeetingWorker`/client-contract level against
-fake clients, not end-to-end. See the
-[verification record](verification/phase-27-foundation-2026-09-30.md).
-ALIGNING (27.4 onward: canonical `TranscriptSegment` alignment, meeting
-analysis, retrieval) remains unimplemented.
+**Built and run for real on the owner's homelab, 2026-09-30**: the
+transcription sidecar was built fresh; the diarization sidecar was the
+owner's own already-running standalone container, reused rather than
+duplicated. A real speech clip (`espeak-ng`-generated) uploaded through
+the real hub proxy produced an accurate transcript and single-speaker
+diarization output, reaching ALIGNING in about 2 seconds. Two real bugs
+were found and fixed in the process (a missing `python-multipart`
+dependency in companion-core; PyAV 19 dropping a kwarg faster-whisper
+needs, pinned to `av==14.0.1`) — see the
+[verification record](verification/phase-27-foundation-2026-09-30.md)'s
+live-deployment addendum for what exactly ran and what's still only
+proven against fakes (multi-speaker separation, real meeting-length
+duration/RTF, the browser UI itself). ALIGNING (27.4 onward: canonical
+`TranscriptSegment` alignment, meeting analysis, retrieval) remains
+unimplemented.
 
 Phase 27 delivers a usable meeting-intelligence workflow independent of the physical Reachy Mini embodiment.
 
@@ -228,11 +242,17 @@ A crashed worker must either resume the job safely or mark it failed with an act
 
 # 27.3 — Long-form STT
 
-**Status 2026-09-30:** [ADR 0025](adr/0025-speech-inference-service.md)
-sets the target shape for this — a dedicated speech-inference sidecar
-(eventually the unified `speech-service`) consumed by companion-core
-through a client-interface seam, not local faster-whisper running inside
-companion-core itself. Not implemented yet.
+**Status 2026-09-30:** implemented, per [ADR 0025](adr/0025-speech-inference-service.md)'s
+target shape — `deploy/homelab/transcription/` is the dedicated
+speech-inference sidecar (eventually folded into a unified
+`speech-service`), consumed by companion-core through
+`meetings/speech_clients.py`'s `HTTPTranscriptionClient`, never local
+faster-whisper running inside companion-core itself. `MeetingWorker`
+calls it for every job reaching TRANSCRIBING. **Not yet live-verified**:
+the sidecar has never been built or run, so nothing below this line
+(segment timing, real RTF/CPU/RAM numbers, the 30-60 minute exit
+criterion) has real evidence yet — see
+[verification](verification/phase-27-foundation-2026-09-30.md).
 
 Use the existing local faster-whisper capability through a meeting-specific long-form path.
 
@@ -274,10 +294,13 @@ Short conversational STT benchmarks are not sufficient evidence for meeting perf
 
 Speaker diarization is a baseline Phase 27 capability.
 
-**Status 2026-09-30:** the local diarization *service* now exists and is
-deployable (`deploy/homelab/diarization/`, `--diarization`; see the
-Status section above), but nothing in companion-core calls it yet. What
-follows is still the target shape, not current behavior. Per
+**Status 2026-09-30:** implemented — the diarization service is
+deployable (`deploy/homelab/diarization/`, `--diarization`) and
+`MeetingWorker` calls it (`meetings/speech_clients.py`'s
+`HTTPDiarizationClient`) for every job reaching DIARIZING. **Not yet
+live-verified**: the sidecar has never been built or run, so the segment
+example and exit criterion below have no real evidence behind them yet —
+see [verification](verification/phase-27-foundation-2026-09-30.md). Per
 [ADR 0025](adr/0025-speech-inference-service.md), diarization remains
 conceptually distinct from speaker identity even once this and STT
 converge behind a unified `speech-service`: a `SPEAKER_00`-style cluster
@@ -968,18 +991,24 @@ hostname scattered through `MeetingWorker`, and must not import
 `reachy_hub.stt` or any other sibling-service implementation (ADR 0001,
 reaffirmed by ADR 0025).
 
-**Implemented 2026-09-30.** `deploy/homelab/transcription/` is the
-standalone sidecar (`--transcription`); `companion_core.meetings.
+**Implemented and live-verified (short clip only) 2026-09-30.**
+`deploy/homelab/transcription/` is the standalone sidecar
+(`--transcription`); `companion_core.meetings.
 speech_clients.HTTPTranscriptionClient` is the client-interface seam;
 `MeetingWorker` calls it for TRANSCRIBING and advances to DIARIZING on
 success, storing raw segments on the `Meeting` row
 (`transcript_segments`, migration `011_meeting_speech_results`). A
 `SpeechServiceUnavailable` (sidecar down/timed out) leaves the job at
-TRANSCRIBING for the next poll rather than failing it. **Not yet
-verified against a real 30–60 minute recording** — see the Status
-section's caveat and the
-[verification record](verification/phase-27-foundation-2026-09-30.md);
-this exit criterion remains open.
+TRANSCRIBING for the next poll rather than failing it. Built and run for
+real on the owner's homelab; a real `espeak-ng`-spoken clip produced an
+accurate, correctly-timestamped transcript through the real pipeline
+(two real bugs found and fixed along the way: a missing
+`python-multipart` dependency, and PyAV 19 dropping a kwarg
+faster-whisper needs — pinned to `av==14.0.1`). **Not yet verified
+against a real 30–60 minute multi-speaker recording** — see the
+[verification record](verification/phase-27-foundation-2026-09-30.md)'s
+live-deployment addendum; this exit criterion's duration/RTF/resource
+measurements remain open.
 
 Exit criterion:
 
@@ -993,16 +1022,20 @@ Exit criterion:
 
 Integrate the existing diarization service.
 
-**Implemented 2026-09-30**, same shape as 27.2:
-`companion_core.meetings.speech_clients.HTTPDiarizationClient` is the
-client seam; `MeetingWorker` calls it for DIARIZING and advances to
-ALIGNING on success, storing raw segments on the `Meeting` row
-(`diarization_segments`). `deploy/homelab/diarization/` itself
-(`--diarization`) is unchanged from when it was deployed alongside 27.1
-— still not built or run for real (see the Status section above). This
-exit criterion, and the "verify with a real recording" steps a prior
-revision of this section listed, remain open until that build/run
-happens.
+**Implemented and live-verified (short clip only) 2026-09-30**, same
+shape as 27.2: `companion_core.meetings.speech_clients.HTTPDiarizationClient`
+is the client seam; `MeetingWorker` calls it for DIARIZING and advances
+to ALIGNING on success, storing raw segments on the `Meeting` row
+(`diarization_segments`). The owner's own existing standalone
+`deploy/homelab/diarization`-equivalent container (already running,
+healthy, on the real Intel iGPU) was reused rather than starting a
+competing second instance — see the
+[verification record](verification/phase-27-foundation-2026-09-30.md)'s
+live-deployment addendum for exactly how. **Not yet verified with a real
+multi-speaker recording** — the one live test used a single-voice
+synthetic clip, so speaker separation itself is unproven; this exit
+criterion's "stable speaker segments" and measured performance at real
+meeting length remain open.
 
 Exit criterion:
 

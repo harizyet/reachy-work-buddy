@@ -6,7 +6,37 @@ The [documentation index](docs/README.md) defines ownership;
 
 ## Current work
 
-Implemented [Phase 27.1 Foundation](docs/phase-27.md#271--foundation)
+**Deployed and live-verified for real, 2026-09-30**, on the owner's
+actual running `reachy-homelab` Compose project (not a disposable test
+stack): backed up the database, built the new transcription sidecar,
+rebuilt/recreated `companion-core`/`reachy-hub` with today's code, ran
+the real migration (`009_wake_arm` → `011_meeting_speech_results`), and
+reused the owner's own already-healthy standalone diarization container
+(gave it the `diarization` network alias via `docker network connect`
+rather than starting a competing second instance). Found and fixed two
+real bugs the test suite couldn't have caught: `python-multipart` was
+missing from companion-core's `pyproject.toml` (crash-looped on startup
+once the real `/meetings` Form()/File() route ran outside the shared dev
+venv that was masking it — `uv.lock` regenerated after adding it), and
+PyAV 19 (unpinned by faster-whisper's `av>=11`) dropped a kwarg
+faster-whisper still passes, breaking every real transcription until
+pinned to `av==14.0.1` in `deploy/homelab/transcription/Dockerfile`.
+After both fixes: uploaded a real `espeak-ng`-generated speech clip
+through the real hub proxy and watched it reach ALIGNING in ~2s with an
+accurate transcript and correct single-speaker diarization; also
+verified cancel/409-on-double-cancel and that the rebuilt hub serves the
+new recording-capable Meetings UI. Full detail, including exactly what's
+still unverified (multi-speaker separation, real meeting-length
+duration, the browser UI itself, `SPEECH_SERVICE_TOKEN` — implemented
+but not turned on since it'd require touching the owner's existing
+diarization container), is in
+[the verification record](docs/verification/phase-27-foundation-2026-09-30.md)'s
+live-deployment addendum. **Four test meetings from this verification
+remain in the real database/audio volume** — there's no delete endpoint,
+only cancel, so they stay visible in the Meetings list until the owner
+decides what to do with them.
+
+Prior to that, implemented [Phase 27.1 Foundation](docs/phase-27.md#271--foundation)
 (owner-authorized ahead of Phase 26's security hardening, which the
 roadmap otherwise lists as a Phase 27 prerequisite — see the roadmap row):
 migration `010_meetings`, `companion_core.meetings` (durable `Meeting`
@@ -88,20 +118,21 @@ for the backend checks and last homelab deployment.
 
 ## Next session
 
-1. Nothing in Phase 27 has been checked live yet. In one pass if
-   possible: build and start both sidecars for real
-   (`scripts/start-homelab.sh --transcription --diarization --build`);
-   confirm `/health` on each reaches `"status": "ready"`; upload a real
-   recording through the operator-ui Meetings tab in an actual browser;
-   separately, record a clip through the browser's microphone
-   (`meeting-record-start`/`-stop` in `meetings.js`) and confirm it
-   uploads and progresses; open the detail view and confirm real
-   `transcript_segments`/`diarization_segments` render; run
-   `010_meetings`/`011_meeting_speech_results` against a real Postgres
-   and confirm a meeting's row/audio file survive
+1. The pipeline is live and proven end-to-end with a short synthetic
+   clip (upload → transcribe → diarize → align, ~2s). Still owed: open
+   the operator-ui Meetings tab in an actual browser (upload, record via
+   `meeting-record-start`/`-stop`, and confirm the detail view renders
+   `transcript_segments`/`diarization_segments` correctly — everything so
+   far was exercised via curl, not a real browser); run a real 30–60
+   minute multi-speaker meeting through it and record duration/RTF/CPU/
+   RAM per the 27.2/27.3 exit criteria; decide what to do with the four
+   leftover test meetings in the real database (no delete endpoint
+   exists yet); decide whether to enable `SPEECH_SERVICE_TOKEN` (would
+   need rebuilding/restarting the existing diarization container — see
+   below); and confirm a meeting's row/audio file survive
    `docker compose restart companion-core`. See
    [the verification record](docs/verification/phase-27-foundation-2026-09-30.md)'s
-   final "Next verification owed" section.
+   live-deployment addendum for exactly what's proven vs. still open.
 2. 27.4 (alignment): once 1 above confirms both sidecars actually work,
    the next real gap is that `transcript_segments` and
    `diarization_segments` sit on the `Meeting` row unmerged — no
@@ -182,13 +213,23 @@ this documentation pass. Recheck state before relying on them.
   - **Network:** embodiment is host-networked on 8100, and the daemon is on
     loopback 8000.
 
-- **Homelab:** latest reported hub/core rebuild was `19c6545` on
-  2026-09-28 06:34 UTC for encrypted benchmark capture. The capture store
-  was left empty with benchmark mode off; schema remains `009_wake_arm`.
-  `STT_MODEL=small.en`, `PALM_STOP_ENABLED=true` and
-  `VOICE_CONTINUATION_WINDOW_MS=3000` are in the private `.env`. The
-  latest pre-deploy backup is
-  `~/reachy-backups/reachy-before-enrollment-hardening-deploy-20260928T063311.dump`
+- **Homelab:** hub/core rebuilt and recreated 2026-09-30 for Phase 27
+  speech inference (this session, real deployment — see Current work);
+  schema is now `011_meeting_speech_results`. The `transcription` profile
+  is running (`reachy-homelab-transcription-1`); `diarization` is
+  **not** a `reachy-homelab`-managed container — it's the owner's
+  pre-existing standalone `diarization` container (separate Compose
+  project, `docker ps` shows it un-prefixed), joined to the
+  `reachy-homelab_default` network by `docker network connect` so the
+  `diarization` hostname resolves for companion-core; don't `docker
+  compose -p reachy-homelab --profile diarization up` without first
+  deciding whether to keep both or replace the standalone one (see the
+  verification record). `STT_MODEL=small.en`, `PALM_STOP_ENABLED=true`
+  and `VOICE_CONTINUATION_WINDOW_MS=3000` are in the private `.env`
+  (unrelated to the new `MEETING_STT_MODEL=small.en` for the
+  transcription sidecar, a separate model instance). The latest
+  pre-deploy backup is
+  `~/reachy-backups/reachy-before-phase27-speech-deploy-20260930T143344.dump`
   (backups are 0600). Use the [homelab launcher](docs/deployment.md#homelab).
   The hub's in-memory turn records (`GET /hub/robot-voice` with the
   `REMOTE_UI_TOKEN` bearer) give per-turn STT/LLM/TTS timings. They also

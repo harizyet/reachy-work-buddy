@@ -142,3 +142,106 @@ server-side.
    Postgres and confirm a meeting's row/audio file survive
    `docker compose restart companion-core`.
 
+## Addendum: real live deployment and end-to-end pipeline run — 2026-09-30
+
+Item 1 above (build/start for real) and item 3 (real Postgres) are now
+done, on the owner's actual running homelab (`reachy-homelab` Compose
+project), not a disposable test stack — this is the first Phase 27 pass
+with real evidence rather than mocks/fakes.
+
+**Two real bugs found and fixed by this live run** (neither was, or
+plausibly could have been, caught by the existing test suite, since it
+never sends real audio through a real faster-whisper/PyAV decode or
+starts the real companion-core container):
+
+1. **`python-multipart` was missing from `services/companion-core/
+   pyproject.toml`.** companion-core's new `/meetings` route uses
+   `Form()`/`File()`, which FastAPI requires it for; the package was only
+   ever present because the shared dev venv installs every workspace
+   member together and reachy-hub already depends on it — exactly the
+   "workspace dependencies can mask a missing direct runtime dependency"
+   trap `docs/development.md`'s testing conventions already warn about.
+   The real container crash-looped with `RuntimeError: Form data
+   requires "python-multipart" to be installed` until this was added and
+   `uv.lock` regenerated.
+2. **PyAV 19 (the unpinned latest, since faster-whisper 1.2.1 only
+   declares `av>=11`) removed `av.open()`'s `metadata_errors` kwarg**,
+   which faster-whisper's `decode_audio()` still passes — every real
+   `/transcribe` call failed with `open() got an unexpected keyword
+   argument 'metadata_errors'` (correctly surfaced to the meeting as a
+   permanent `SpeechServiceRejected` failure, not a silent hang — the
+   error-handling design worked as intended even while finding this).
+   Fixed by pinning `av==14.0.1` (confirmed compatible, live, before
+   changing the Dockerfile) in `deploy/homelab/transcription/Dockerfile`.
+
+**What ran, for real:**
+- `docker compose -p reachy-homelab --env-file deploy/homelab/.env
+  pg_dump` — a fresh backup
+  (`~/reachy-backups/reachy-before-phase27-speech-deploy-*.dump`) before
+  touching schema, per the documented cutover procedure.
+- `scripts/start-homelab.sh --transcription --build` — built and started
+  the transcription sidecar for the first time ever, rebuilt and
+  recreated `companion-core`/`reachy-hub` with all of today's code, and
+  ran the real migration job: `alembic_version` moved from `009_wake_arm`
+  (the prior live revision) straight to `011_meeting_speech_results` on
+  the real database, no `--adopt-legacy` needed (both are ordinary
+  forward migrations).
+- The diarization sidecar was **not** rebuilt/restarted — the owner's
+  existing standalone `diarization` container (from their own prior
+  `~/inferencing/diarization` work, already healthy for 29+ hours, using
+  the real Intel iGPU) was reused instead of starting a competing second
+  instance. `docker network connect reachy-homelab_default diarization`
+  gave it the `diarization` hostname alias companion-core's default
+  `DIARIZATION_URL` already expects, so no code or env override was
+  needed — reversible with `docker network disconnect`.
+- Confirmed both `GET /health` reach `"status": "ready"` from inside the
+  `companion-core` container (`transcription`: faster-whisper small.en on
+  CPU; `diarization`: Nemotron-3/OpenVINO on the real Intel Iris Xe iGPU).
+- Uploaded a real 3-second silent WAV through the real hub proxy
+  (`POST /hub/meetings`, bearer auth) — reached UPLOADED → PREPROCESSING →
+  TRANSCRIBING → DIARIZING → ALIGNING in about 3.5 seconds wall time, with
+  empty `transcript_segments`/`diarization_segments` (correct: no speech,
+  no speakers).
+- Generated a real 5.3-second speech clip with `espeak-ng` ("We should
+  move the migration to next week. I will contact the vendor about
+  compatibility.") and uploaded it the same way. Real faster-whisper
+  transcript came back matching the spoken text almost exactly, correctly
+  segmented into two sentences with real timestamps; real diarization
+  came back with one consistent `speaker_0` across both segments (a
+  single-voice `espeak-ng` clip, so this doesn't exercise multi-speaker
+  separation — see "still open" below). Total pipeline time: about 2
+  seconds for the 5.3-second clip.
+- Exercised `POST /meetings/{id}/cancel` for real: 200 with
+  `status: "cancelled"`, then 409 on a second call.
+- Confirmed the rebuilt `reachy-hub` is serving the new Meetings UI
+  (`curl .../hub/ui/meetings.js` contains `MediaRecorder`;
+  `.../hub/ui/` contains the `meeting-record-start` button).
+- Checked `GET /hub/status`: hub, companion-core, LLM (real usage
+  history) all `ok`; robot `nano-1` reachable-but-`unavailable` (expected
+  — no physical robot connected right now, unrelated to this work) and
+  container logs for `reachy-hub`/`companion-core` clean, no new errors.
+  Local `pytest`/`ruff` re-run after the dependency fix — still 796
+  passed, clean.
+
+**What is still open:**
+- Only a synthetic single-speaker `espeak-ng` clip was tested, not a real
+  30–60 minute multi-speaker meeting — the 27.2/27.3 exit criteria's
+  "real 30–60 minute recording" and measured RTF/CPU/RAM at that duration
+  remain unverified. `espeak-ng` also doesn't exercise real-world
+  acoustic difficulty (noise, overlap, accents).
+- Browser recording (`MediaRecorder`) and the detail view were exercised
+  through curl/the raw API, not an actual browser — still no
+  Playwright/Chromium available this session.
+- `SPEECH_SERVICE_TOKEN` (the service-to-service auth ADR 0025 calls
+  for) was implemented in code this session but deliberately left unset
+  in this deployment: turning it on requires also rebuilding and
+  restarting the owner's existing diarization container, which was
+  intentionally left untouched given it was already healthy and serving
+  real results. Doing that, and deciding whether to keep the standalone
+  container or replace it with a `reachy-homelab`-managed one, is an
+  owner decision, not made unilaterally here.
+- The homelab now has four leftover test meetings ("Test meeting ...",
+  "Speech test ...", "Cancel test") in the real database/audio volume —
+  there is no delete endpoint, only cancel, so these remain visible in
+  the Meetings list until the owner decides whether/how to remove them.
+

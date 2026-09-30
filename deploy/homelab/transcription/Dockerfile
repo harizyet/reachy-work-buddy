@@ -8,7 +8,13 @@
 # Python image. MEETING_STT_DEVICE can be set to "cuda" only if this image
 # is later rebuilt from a CUDA-enabled base; unset/"cpu" always works.
 FROM python:3.12-slim
-RUN pip install --no-cache-dir faster-whisper "fastapi" "uvicorn[standard]" python-multipart
+# av pinned: faster-whisper 1.2.1's decode_audio() calls av.open(...,
+# metadata_errors="ignore"), a kwarg PyAV removed by v19 (the unpinned
+# default pip would otherwise install) — confirmed live 2026-09-30 against
+# a real recording ("open() got an unexpected keyword argument
+# 'metadata_errors'"). 14.0.1 is the newest release with a prebuilt wheel
+# for this image that still accepts it.
+RUN pip install --no-cache-dir "av==14.0.1" faster-whisper "fastapi" "uvicorn[standard]" python-multipart
 COPY app /app
 WORKDIR /app
 # HF_HOME under /data (the transcription-data volume, see
