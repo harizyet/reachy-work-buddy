@@ -116,18 +116,34 @@
       <div id="meetings-pane" hidden>
         <section class="card" aria-labelledby="meetings-title">
           <span class="eyebrow">PHASE 27</span><h2 id="meetings-title">Meetings</h2>
-          <p>Upload a recorded meeting for local transcription. Recordings and transcripts stay in your homelab. This is the 27.1 foundation: recordings are stored and tracked, but transcription and analysis are not implemented yet — an uploaded meeting will wait at "Transcribing" indefinitely.</p>
+          <p>Record or upload a meeting for local transcription and speaker diarization. Recordings and transcripts stay in your homelab. There is no meeting-minutes/decisions/actions summary yet (that's a later phase) — "View" shows the raw transcript and speaker segments as each sidecar produces them.</p>
+          <div id="meeting-record-controls" class="voice-wake">
+            <button type="button" id="meeting-record-start">Start recording</button>
+            <button type="button" id="meeting-record-stop" class="secondary" hidden>Stop recording</button>
+            <button type="button" id="meeting-record-discard" class="secondary" hidden>Discard recording</button>
+            <span id="meeting-record-status" class="muted" role="status"></span>
+          </div>
           <form id="meeting-upload-form">
             <label>Title<input id="meeting-title" required maxlength="256"></label>
             <label>Project (optional)<input id="meeting-project" maxlength="256"></label>
             <label>Participants (optional, comma-separated)<input id="meeting-participants" maxlength="1024" placeholder="Hariz, Alice"></label>
             <label>Context (optional)<textarea id="meeting-context" rows="2" maxlength="4096"></textarea></label>
-            <label>Recording<input id="meeting-audio" type="file" accept="audio/wav,audio/flac,audio/x-flac,audio/mp4,audio/mpeg,audio/opus,audio/webm,.wav,.flac,.m4a,.aac,.mp3,.opus,.webm" required></label>
+            <label>Recording file (skip if you recorded a clip above)<input id="meeting-audio" type="file" accept="audio/wav,audio/flac,audio/x-flac,audio/mp4,audio/mpeg,audio/opus,audio/webm,.wav,.flac,.m4a,.aac,.mp3,.opus,.webm"></label>
             <button>Upload meeting</button>
           </form>
           <p id="meeting-upload-status" role="status"></p>
           <ul id="meeting-list" class="sample-list"></ul>
           <p id="meeting-list-status" role="status"></p>
+          <section id="meeting-detail" hidden aria-labelledby="meeting-detail-title">
+            <div class="section-title"><h3 id="meeting-detail-title"></h3><button type="button" id="meeting-detail-close" class="secondary">Close</button></div>
+            <p id="meeting-detail-meta" class="muted"></p>
+            <p id="meeting-detail-context"></p>
+            <p id="meeting-detail-status" role="status"></p>
+            <h4>Transcript</h4>
+            <div id="meeting-detail-transcript"></div>
+            <h4>Speaker segments</h4>
+            <div id="meeting-detail-diarization"></div>
+          </section>
         </section>
       </div>
       <div id="overview-pane">

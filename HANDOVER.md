@@ -42,7 +42,43 @@ phase-27.md's Status/27.3/27.4 sections). Verified with
 against this dev box's actual `.env`, which does have `/dev/dri`) —
 passed. Not built or run for real (no image build, no `/health` call);
 `companion_core.meetings.worker` still does not call it.
-Prior to this, this session earlier replaced [Phase 27](docs/phase-27.md)'s
+Then documented the owner's speech-processing architecture decision as
+[ADR 0025](docs/adr/0025-speech-inference-service.md): a dedicated
+`speech-service` (STT + diarization + compatible future speech ML) is the
+target, consumed by companion-core through client interfaces rather than
+owned in-process; `reachy-hub`'s conversational STT and the deployed
+diarization sidecar are sanctioned transitional implementations, not a
+violation of the decision. That pass was documentation-only.
+
+Then implemented against that decision: `companion_core/meetings/
+speech_clients.py` (`HTTPTranscriptionClient`/`HTTPDiarizationClient`,
+always constructed — an unreachable sidecar just means a job rests and
+retries, not a startup failure); `MeetingWorker`'s TRANSCRIBING/DIARIZING
+stage handlers, storing each sidecar's raw segments on the `Meeting` row
+(migration `011_meeting_speech_results`); and
+`deploy/homelab/transcription/`, a faster-whisper long-form sidecar (same
+shape as the diarization one, `--transcription` profile). Also widened
+`CANCELLABLE_STATUSES` to any non-terminal stage, and found/fixed a real
+race while doing it: `mark_transcribed`/`mark_diarized`/
+`mark_preprocessed` now guard on the expected prior status, so a cancel
+landing while a stage is in flight can't be silently overwritten by that
+stage's later completion.
+
+Then, on the owner's request mid-session, built the operator-ui side:
+browser recording in the Meetings tab (`MediaRecorder`, uploading through
+the same `POST /meetings` as a file upload — phase-27.md 27.20's "must
+feed exactly the same backend pipeline") and a meeting detail view
+(raw transcript/diarization segments). No structured minutes/decisions/
+actions view — 27.4 (alignment) and 27.6 (analysis) don't exist, and the
+UI says so rather than showing something fabricated.
+
+455 companion-core + 340 reachy-hub tests pass; ruff clean; neither
+sidecar was built/run for real and the new frontend wasn't opened in a
+real browser (no Playwright/Chromium this session) — see
+[the verification record](docs/verification/phase-27-foundation-2026-09-30.md)'s
+two addenda for exactly what ran and what's still owed.
+
+Prior to all of this, this session earlier replaced [Phase 27](docs/phase-27.md)'s
 own document with the owner-supplied Meeting Intelligence plan and updated
 the roadmap/index/Phase 28 cross-reference (a documentation-only pass).
 Implementation before that was paused by the owner at `294a1b6` (25a.4).
@@ -52,32 +88,31 @@ for the backend checks and last homelab deployment.
 
 ## Next session
 
-1. Phase 27.1 foundation is implemented but not live-verified: run
-   `010_meetings` against a real Postgres, redeploy the homelab stack with
-   `MEETING_AUDIO_DIR`, upload a real recording through the operator-ui
-   Meetings tab in an actual browser, and confirm the row/audio file
-   survive `docker compose restart companion-core`. See
-   [the verification record](docs/verification/phase-27-foundation-2026-09-30.md#next-verification-owed).
-2. Phase 27.2 (long-form STT): decide where meeting transcription runs —
-   companion-core doesn't currently own any STT (that's reachy-hub's
-   `stt.py`, a lazy local faster-whisper instance used for conversation
-   transport), and meeting transcription is an offline work-data pipeline,
-   not conversation transport, so it likely needs its own local
-   faster-whisper usage inside companion-core rather than a sibling import
-   of reachy-hub's (disallowed outside tests, ADR 0001) or an HTTP call to
-   a transport-owning service. `MeetingWorker.preprocess` (worker.py) is
-   the natural place to add a TRANSCRIBING-stage handler once that's
-   decided.
-3. Phase 27.3 (diarization): the service dependency is now deployed
-   (`deploy/homelab/diarization/`, `--diarization`) but never built or run
-   — build the image, start it for real, confirm `/health` reaches
-   `"status": "ready"` and `POST /diarize` returns segments for a real
-   recording. Then wire `companion_core.meetings.worker`'s DIARIZING
-   stage to call it (`http://diarization:8010` inside the compose
-   network). Diarization doesn't need a transcript, so it may not have to
-   wait on 27.2 (STT) — worth deciding whether DIARIZING can run before
-   TRANSCRIBING completes, or whether the documented
-   PREPROCESSING→TRANSCRIBING→DIARIZING sequence should stay strict.
+1. Nothing in Phase 27 has been checked live yet. In one pass if
+   possible: build and start both sidecars for real
+   (`scripts/start-homelab.sh --transcription --diarization --build`);
+   confirm `/health` on each reaches `"status": "ready"`; upload a real
+   recording through the operator-ui Meetings tab in an actual browser;
+   separately, record a clip through the browser's microphone
+   (`meeting-record-start`/`-stop` in `meetings.js`) and confirm it
+   uploads and progresses; open the detail view and confirm real
+   `transcript_segments`/`diarization_segments` render; run
+   `010_meetings`/`011_meeting_speech_results` against a real Postgres
+   and confirm a meeting's row/audio file survive
+   `docker compose restart companion-core`. See
+   [the verification record](docs/verification/phase-27-foundation-2026-09-30.md)'s
+   final "Next verification owed" section.
+2. 27.4 (alignment): once 1 above confirms both sidecars actually work,
+   the next real gap is that `transcript_segments` and
+   `diarization_segments` sit on the `Meeting` row unmerged — no
+   canonical speaker-attributed `TranscriptSegment` exists yet, and
+   `MeetingWorker` runs TRANSCRIBING/DIARIZING strictly sequentially
+   rather than concurrently (ADR 0025 allows parallel; not done). Decide
+   whether to tackle the parallelism and the alignment reducer together
+   or separately.
+3. 27.6 (meeting analysis): the Meetings detail view currently shows raw
+   segments and says explicitly that minutes/decisions/actions don't
+   exist — that's the next user-visible gap once 27.4 lands.
 4. Verify Settings · Accounts → Owner recognition in a real browser:
    opt-in, microphone recording, face capture, sample sizes, delete and
    export. Previous enrollment checks were backend-only; browser tooling

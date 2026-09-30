@@ -56,9 +56,11 @@ correct facts or links, not to track each new phase dependency.
 - [Phase 27](phase-27.md): meeting intelligence — upload-first processing,
   speaker-attributed transcripts, evidence-linked notes, reviewed actions
   and searchable meeting history; independent of physical embodiment.
-  27.1 Foundation (durable job store/worker, upload API, basic UI) and the
-  27.3 diarization service dependency both landed 2026-09-30; STT,
-  diarization integration, alignment and analysis not started.
+  27.1–27.3 (durable job store/worker, upload API, transcription and
+  diarization sidecars wired via [ADR 0025](adr/0025-speech-inference-service.md)'s
+  client interfaces, operator-ui recording and detail view) landed
+  2026-09-30; neither sidecar built/run for real yet. Alignment and
+  analysis (27.4 onward) not started.
 - [Phase 28](phase-28.md): embodied meeting secretary — owner-present
   companion, then physical secretary attendance, then bounded delegation;
   virtual/cloud attendance is deferred. (Formerly Phase 27; renumbered
@@ -92,6 +94,7 @@ over the original decision where they explicitly change it.
 | [0022](adr/0022-web-search-grounding.md) | Web-search grounding for the generic conversation branch |
 | [0023](adr/0023-robot-voice-conversation.md) | Robot microphone/speaker conversation transport |
 | [0024](adr/0024-owner-recognition-trust.md) | Owner recognition trust boundary (evidence/trust/authorization split) |
+| [0025](adr/0025-speech-inference-service.md) | Generalized speech inference service (target architecture and migration path) |
 
 ## Verification records
 

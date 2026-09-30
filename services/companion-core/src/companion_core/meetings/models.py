@@ -3,14 +3,18 @@ its job state machine. Meeting lives in companion-core only, not
 shared/models — same precedent as tasks (ADR 0001) and calendar (ADR 0010);
 nothing outside this service needs the wire contract yet.
 
-Only the 27.1 Foundation states are driven automatically: a worker moves a
-job from UPLOADED through PREPROCESSING and leaves it at TRANSCRIBING,
-because no local long-form STT integration exists yet (that's 27.2). A job
-resting at TRANSCRIBING is not stuck or broken — it is correctly waiting
-for a stage this codebase doesn't implement yet, the same
-honesty-about-scope other placeholder pieces here use. DIARIZING, ALIGNING,
-ANALYZING and COMPLETE are declared for the full 27.1-27.9 sequence but are
-not reachable until their phases add a handler.
+27.1 drove UPLOADED->PREPROCESSING->TRANSCRIBING. 27.2/27.3 (ADR 0025) add
+handlers for TRANSCRIBING and DIARIZING themselves, each calling its own
+speech-inference sidecar (companion_core.meetings.speech_clients) — but
+only when that sidecar is configured (worker.py's transcription_client/
+diarization_client). Unlike PREPROCESSING, TRANSCRIBING and DIARIZING are
+self-healing rather than claim-and-transition: the status name already
+means "this stage's work has not yet succeeded," so a crash mid-call, a
+transient sidecar outage, or no client configured at all all look the
+same — the job simply rests there and is retried on the next poll,
+without needing ORPHAN_RESUME. ALIGNING, ANALYZING and COMPLETE remain
+declared for the full 27.1-27.9 sequence but are not reachable until
+their phases add a handler.
 """
 
 from __future__ import annotations
@@ -18,6 +22,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -37,18 +42,29 @@ class MeetingJobStatus(StrEnum):
 # States a worker can still make progress from. Anything else (COMPLETE,
 # FAILED, CANCELLED, or a later stage this codebase doesn't implement yet)
 # is left alone.
-WORKABLE_STATUSES = (MeetingJobStatus.UPLOADED,)
+WORKABLE_STATUSES = (
+    MeetingJobStatus.UPLOADED,
+    MeetingJobStatus.TRANSCRIBING,
+    MeetingJobStatus.DIARIZING,
+)
 
 # A job found in one of these states at startup was mid-stage when the
 # process last stopped, crash or not — no in-memory marker survives a
 # restart to tell the two apart. Reset it to the start of that stage so the
 # worker picks it up again (docs/phase-27.md 27.2: "A crashed worker must
-# either resume the job safely or mark it failed").
+# either resume the job safely or mark it failed"). Only PREPROCESSING
+# needs this: it's the one stage whose status *is* the claim marker (see
+# store.py's claim_next_upload). TRANSCRIBING/DIARIZING don't — see the
+# module docstring.
 ORPHAN_RESUME = {MeetingJobStatus.PREPROCESSING: MeetingJobStatus.UPLOADED}
 
-# A meeting can only be cancelled before real processing work has produced
-# anything worth keeping.
-CANCELLABLE_STATUSES = (MeetingJobStatus.UPLOADED, MeetingJobStatus.PREPROCESSING)
+# A meeting can be cancelled any time before it reaches a terminal state.
+# Once at DIARIZING or later, cancelling does discard a completed
+# transcript — that's an owner-initiated choice (e.g. "wrong recording"),
+# not something this codebase should second-guess by refusing it.
+CANCELLABLE_STATUSES = tuple(
+    status for status in MeetingJobStatus if status not in (MeetingJobStatus.COMPLETE, MeetingJobStatus.FAILED, MeetingJobStatus.CANCELLED)
+)
 
 
 # 27.1 "Supported inputs should include at minimum: WAV; FLAC" plus the
@@ -74,6 +90,13 @@ class Meeting(BaseModel):
     audio_path: str
     normalized_audio_path: str | None = None
     duration_seconds: float | None = None
+    # Raw sidecar output (27.2/27.3, ADR 0025): [{"start": s, "end": s,
+    # "text": ...}] and [{"start": s, "end": s, "speaker": "SPEAKER_00"}]
+    # respectively, exactly as companion_core.meetings.speech_clients
+    # returns them. Not the canonical 27.4/27.5 aligned TranscriptSegment
+    # model yet — that's a future reducer over both of these.
+    transcript_segments: list[dict[str, Any]] | None = None
+    diarization_segments: list[dict[str, Any]] | None = None
     status: MeetingJobStatus = MeetingJobStatus.UPLOADED
     error_detail: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

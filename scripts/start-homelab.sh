@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Start the homelab stack (Postgres, reachy-hub, companion-core, Caddy —
 # plus reachy-embodiment and Mailpit only with --simulation, plus the
-# Phase 27.3 diarization sidecar only with --diarization). See
-# docs/phase-22-23.md's "Bash launcher contract" and AGENTS.md's Dev setup
-# section for the docker compose/buildx prerequisites this assumes.
+# Phase 27.2/27.3 speech sidecars only with --transcription/--diarization).
+# See docs/phase-22-23.md's "Bash launcher contract" and AGENTS.md's Dev
+# setup section for the docker compose/buildx prerequisites this assumes.
 #
 # Usage: scripts/start-homelab.sh [--env-file PATH] [--no-browser] [--check]
 #                                  [--project NAME] [--build] [--simulation]
-#                                  [--diarization] [--help]
+#                                  [--diarization] [--transcription] [--help]
 set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
@@ -20,6 +20,7 @@ PROJECT_NAME="reachy-homelab"
 DO_BUILD=0
 SIMULATION=0
 DIARIZATION=0
+TRANSCRIPTION=0
 
 print_help() {
     cat <<EOF
@@ -37,10 +38,16 @@ Options:
   --simulation      Also start reachy-embodiment (simulated) and Mailpit,
                      for local development without real hardware/SMTP.
   --diarization     Also start the Phase 27.3 diarization service
-                     (docs/phase-27.md). Needs an Intel iGPU passthrough
-                     (/dev/dri) on this host — see deploy/homelab/
-                     docker-compose.yml's "diarization" service comment.
-                     companion-core does not call it yet.
+                     (docs/phase-27.md, ADR 0025). Needs an Intel iGPU
+                     passthrough (/dev/dri) on this host — see
+                     deploy/homelab/docker-compose.yml's "diarization"
+                     service comment. companion-core calls it whenever a
+                     meeting job reaches DIARIZING.
+  --transcription   Also start the Phase 27.2 long-form transcription
+                     service (docs/phase-27.md, ADR 0025). CPU-only,
+                     downloads a real Whisper model on first start.
+                     companion-core calls it whenever a meeting job
+                     reaches TRANSCRIBING.
 EOF
     print_common_help
 }
@@ -68,6 +75,9 @@ while [[ $i -lt ${#REMAINING[@]} ]]; do
             ;;
         --diarization)
             DIARIZATION=1
+            ;;
+        --transcription)
+            TRANSCRIPTION=1
             ;;
         --help)
             print_help
@@ -136,12 +146,15 @@ if [[ "$DIARIZATION" -eq 1 ]]; then
         log_warn "/dev/dri not found — --diarization needs an Intel iGPU passthrough on this host"
     fi
 fi
+if [[ "$TRANSCRIPTION" -eq 1 ]]; then
+    COMPOSE_ARGS+=(--profile transcription)
+fi
 
 cd "$COMPOSE_DIR"
 
 # --- --check: validate only, start nothing --------------------------------
 if [[ "$COMMON_CHECK_ONLY" -eq 1 ]]; then
-    log_info "validating compose configuration (project: $PROJECT_NAME, simulation: $SIMULATION, diarization: $DIARIZATION)"
+    log_info "validating compose configuration (project: $PROJECT_NAME, simulation: $SIMULATION, diarization: $DIARIZATION, transcription: $TRANSCRIPTION)"
     docker compose "${COMPOSE_ARGS[@]}" config --quiet || die "compose config is invalid"
     log_info "compose configuration is valid"
     if [[ "$SIMULATION" -eq 0 ]]; then
@@ -167,7 +180,7 @@ fi
 UP_ARGS=(up -d)
 [[ "$DO_BUILD" -eq 1 ]] && UP_ARGS+=(--build)
 
-log_info "starting homelab stack (project: $PROJECT_NAME, simulation: $SIMULATION, diarization: $DIARIZATION, build: $DO_BUILD)"
+log_info "starting homelab stack (project: $PROJECT_NAME, simulation: $SIMULATION, diarization: $DIARIZATION, transcription: $TRANSCRIPTION, build: $DO_BUILD)"
 docker compose "${COMPOSE_ARGS[@]}" "${UP_ARGS[@]}"
 
 HUB_HEALTH_URL="http://localhost:8080/hub/health"

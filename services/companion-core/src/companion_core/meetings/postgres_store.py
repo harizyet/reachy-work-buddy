@@ -15,7 +15,9 @@ import os
 import uuid
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
+from psycopg.types.json import Json
 from psycopg_pool import AsyncConnectionPool
 
 from companion_core.meetings.models import (
@@ -29,7 +31,8 @@ from shared.database import check_schema
 
 _COLUMNS = (
     "id, title, project_scope, context, participants, started_at, source_filename, content_type, "
-    "audio_path, normalized_audio_path, duration_seconds, status, error_detail, created_at, updated_at"
+    "audio_path, normalized_audio_path, duration_seconds, transcript_segments, diarization_segments, "
+    "status, error_detail, created_at, updated_at"
 )
 
 
@@ -46,10 +49,12 @@ def _from_row(row: tuple) -> Meeting:
         audio_path=row[8],
         normalized_audio_path=row[9],
         duration_seconds=row[10],
-        status=MeetingJobStatus(row[11]),
-        error_detail=row[12],
-        created_at=row[13],
-        updated_at=row[14],
+        transcript_segments=row[11],
+        diarization_segments=row[12],
+        status=MeetingJobStatus(row[13]),
+        error_detail=row[14],
+        created_at=row[15],
+        updated_at=row[16],
     )
 
 
@@ -106,12 +111,12 @@ class PostgresMeetingStore:
         async with self._pool.connection() as conn:
             await conn.execute(
                 f"INSERT INTO meetings ({_COLUMNS}) VALUES "
-                "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     meeting.id, meeting.title, meeting.project_scope, meeting.context, meeting.participants,
                     meeting.started_at, meeting.source_filename, meeting.content_type, meeting.audio_path,
-                    meeting.normalized_audio_path, meeting.duration_seconds, meeting.status.value,
-                    meeting.error_detail, meeting.created_at, meeting.updated_at,
+                    meeting.normalized_audio_path, meeting.duration_seconds, None, None,
+                    meeting.status.value, meeting.error_detail, meeting.created_at, meeting.updated_at,
                 ),
             )
         return meeting
@@ -164,16 +169,69 @@ class PostgresMeetingStore:
     async def mark_preprocessed(
         self, meeting_id: str, *, normalized_audio_path: str | None, duration_seconds: float | None
     ) -> Meeting | None:
+        # A cancel can race a stage already in flight (single bounded
+        # worker, but an owner-initiated cancel is a separate HTTP
+        # request) — the WHERE status guard means a late stage completion
+        # after a cancel/fail is a no-op, not a resurrection.
         async with self._pool.connection() as conn:
             cur = await conn.execute(
                 f"""
                 UPDATE meetings SET status = %s, normalized_audio_path = %s, duration_seconds = %s, updated_at = now()
-                WHERE id = %s RETURNING {_COLUMNS}
+                WHERE id = %s AND status = %s RETURNING {_COLUMNS}
                 """,
-                (MeetingJobStatus.TRANSCRIBING.value, normalized_audio_path, duration_seconds, meeting_id),
+                (
+                    MeetingJobStatus.TRANSCRIBING.value, normalized_audio_path, duration_seconds,
+                    meeting_id, MeetingJobStatus.PREPROCESSING.value,
+                ),
+            )
+            row = await cur.fetchone()
+            return _from_row(row) if row else await self.get_meeting(meeting_id)
+
+    async def claim_next_transcription(self) -> Meeting | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"SELECT {_COLUMNS} FROM meetings WHERE status = %s ORDER BY created_at LIMIT 1",
+                (MeetingJobStatus.TRANSCRIBING.value,),
             )
             row = await cur.fetchone()
             return _from_row(row) if row else None
+
+    async def claim_next_diarization(self) -> Meeting | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"SELECT {_COLUMNS} FROM meetings WHERE status = %s ORDER BY created_at LIMIT 1",
+                (MeetingJobStatus.DIARIZING.value,),
+            )
+            row = await cur.fetchone()
+            return _from_row(row) if row else None
+
+    async def mark_transcribed(
+        self, meeting_id: str, *, transcript_segments: list[dict[str, Any]]
+    ) -> Meeting | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"""
+                UPDATE meetings SET status = %s, transcript_segments = %s, updated_at = now()
+                WHERE id = %s AND status = %s RETURNING {_COLUMNS}
+                """,
+                (MeetingJobStatus.DIARIZING.value, Json(transcript_segments), meeting_id, MeetingJobStatus.TRANSCRIBING.value),
+            )
+            row = await cur.fetchone()
+            return _from_row(row) if row else await self.get_meeting(meeting_id)
+
+    async def mark_diarized(
+        self, meeting_id: str, *, diarization_segments: list[dict[str, Any]]
+    ) -> Meeting | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"""
+                UPDATE meetings SET status = %s, diarization_segments = %s, updated_at = now()
+                WHERE id = %s AND status = %s RETURNING {_COLUMNS}
+                """,
+                (MeetingJobStatus.ALIGNING.value, Json(diarization_segments), meeting_id, MeetingJobStatus.DIARIZING.value),
+            )
+            row = await cur.fetchone()
+            return _from_row(row) if row else await self.get_meeting(meeting_id)
 
     async def mark_failed(self, meeting_id: str, *, error_detail: str) -> Meeting | None:
         async with self._pool.connection() as conn:

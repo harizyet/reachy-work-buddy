@@ -82,9 +82,36 @@ minute), cached in the `diarization-data` volume; losing that volume only
 costs a repeat of that first-start work, not data. It exposes `/health`
 and `POST /diarize` (multipart audio, any rate/channels) internally at
 `http://diarization:8010`, matching the [reference](reference/services.md)
-description. companion-core does not call it yet — see phase-27.md's
-Status section — so today this profile only proves the container builds,
-compiles the model for OpenVINO, and answers `/health`.
+description. companion-core's `MeetingWorker` calls it (`DIARIZATION_URL`,
+already defaulted to the in-network hostname above) whenever a job
+reaches DIARIZING — see [ADR 0025](adr/0025-speech-inference-service.md).
+It has not been built or run for real in this repo yet (no image build,
+no live `/health`/`POST /diarize` call) — see phase-27.md's Status
+section and the [verification record](verification/phase-27-foundation-2026-09-30.md).
+
+## Meeting transcription
+
+```bash
+scripts/start-homelab.sh --transcription --build
+```
+
+The `transcription` Compose profile adds a long-form faster-whisper
+service for [Phase 27.2](phase-27.md), built from
+`deploy/homelab/transcription/` — the same faster-whisper library
+reachy-hub's conversational `stt.py` uses, but a separate deployable
+service per [ADR 0025](adr/0025-speech-inference-service.md), not a
+shared import. CPU-only by default (`MEETING_STT_MODEL=small.en`,
+`MEETING_STT_COMPUTE_TYPE=int8`); no device passthrough is required,
+unlike diarization's Intel iGPU. It downloads a real Whisper model on
+first start, cached in the `transcription-data` volume. It exposes
+`/health` and `POST /transcribe` (multipart audio) internally at
+`http://transcription:8011`, matching the
+[reference](reference/services.md) description. companion-core's
+`MeetingWorker` calls it (`TRANSCRIPTION_URL`) whenever a job reaches
+TRANSCRIBING. Neither this nor the diarization service being unreachable
+is a startup failure for companion-core — a meeting job simply rests at
+its current status and retries on the worker's next poll (2 s) until the
+sidecar answers.
 
 ## Owner login
 

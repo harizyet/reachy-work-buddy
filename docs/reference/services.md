@@ -282,6 +282,24 @@ Physical camera/audio acceptance is still outstanding. Read
 [bring-up evidence](../verification/phase-22-bring-up.md) before treating the
 simulator's successful move lifecycle as validated real motion.
 
+## Meeting transcription (Phase 27.2)
+
+[Source](../../deploy/homelab/transcription/) is a standalone sidecar, not
+a workspace member — faster-whisper (the same library reachy-hub's
+conversational `stt.py` uses, but a separate process; ADR 0001's
+sibling-import ban applies here too). Started only with the
+`transcription` Compose profile (see
+[deployment](../deployment.md#meeting-transcription)); not part of a bare
+`docker compose up`. Internal-only at `http://transcription:8011`:
+`GET /health` reports load status, `POST /transcribe` takes multipart
+audio (wav/flac/mp3/m4a/etc — faster-whisper's bundled PyAV decodes it,
+no system ffmpeg needed) and returns `{duration_s, process_s, rtf,
+language, segments: [{start, end, text}]}` in seconds.
+`companion_core.meetings.speech_clients.HTTPTranscriptionClient` calls
+this whenever a meeting job reaches TRANSCRIBING
+([ADR 0025](../adr/0025-speech-inference-service.md)); companion-core
+never imports `reachy_hub.stt` to get this capability itself.
+
 ## Meeting diarization (Phase 27.3)
 
 [Source](../../deploy/homelab/diarization/) is a standalone sidecar, not a
@@ -293,10 +311,22 @@ Started only with the `diarization` Compose profile (see
 `GET /health` reports load/compile status, `POST /diarize` takes
 multipart wav/flac/ogg audio at any rate/channels and returns
 `{duration_s, process_s, rtf, num_speakers, segments: [{start, end,
-speaker}]}` in seconds. No companion-core code calls it yet; it exists so
-[Phase 27.3](../phase-27.md#274--speaker-diarization) can wire
-`companion_core.meetings.worker`'s DIARIZING stage to it without also
-needing to solve the model download/export step at the same time.
+speaker}]}` in seconds.
+`companion_core.meetings.speech_clients.HTTPDiarizationClient` calls this
+whenever a meeting job reaches DIARIZING (ADR 0025).
+
+Per [ADR 0025](../adr/0025-speech-inference-service.md), both sidecars
+above are transitional: the target is a unified `speech-service` covering
+STT, diarization and compatible future speech inference, consumed by
+companion-core through the same client interfaces
+(`speech_clients.py`'s `TranscriptionClient`/`DiarizationClient`
+protocols) rather than a hardcoded hostname — pointing both clients at a
+future unified service instead of these two sidecars is meant to be a
+constructor-argument change, not a `MeetingWorker` rewrite. Neither
+sidecar's own API is expected to change shape when that consolidation
+happens — only where it's hosted. Neither has been built or run for real
+in this repo yet; see the
+[verification record](../verification/phase-27-foundation-2026-09-30.md).
 
 ## Shared contracts and clients
 

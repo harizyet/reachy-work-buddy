@@ -7,7 +7,7 @@ why audio lives on disk rather than in a column.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Protocol
+from typing import Any, Protocol
 
 from companion_core.meetings.models import (
     CANCELLABLE_STATUSES,
@@ -51,6 +51,25 @@ class MeetingStore(Protocol):
 
     async def mark_preprocessed(
         self, meeting_id: str, *, normalized_audio_path: str | None, duration_seconds: float | None
+    ) -> Meeting | None: ...
+
+    async def claim_next_transcription(self) -> Meeting | None:
+        """The oldest TRANSCRIBING job, or None. Unlike claim_next_upload
+        this does not change status — TRANSCRIBING already means "not
+        transcribed yet"; see models.py's module docstring."""
+        ...
+
+    async def claim_next_diarization(self) -> Meeting | None:
+        """The oldest DIARIZING job, or None. Same non-transitioning shape
+        as claim_next_transcription."""
+        ...
+
+    async def mark_transcribed(
+        self, meeting_id: str, *, transcript_segments: list[dict[str, Any]]
+    ) -> Meeting | None: ...
+
+    async def mark_diarized(
+        self, meeting_id: str, *, diarization_segments: list[dict[str, Any]]
     ) -> Meeting | None: ...
 
     async def mark_failed(self, meeting_id: str, *, error_detail: str) -> Meeting | None: ...
@@ -124,11 +143,49 @@ class InMemoryMeetingStore:
         meeting = self._meetings.get(meeting_id)
         if meeting is None:
             return None
+        # A cancel can race a stage that's already in flight (single
+        # bounded worker, but an owner-initiated cancel is a separate
+        # HTTP request) — once cancelled/failed, a late stage completion
+        # must not resurrect the job. No-op, return the current row.
+        if meeting.status != MeetingJobStatus.PREPROCESSING:
+            return meeting
         return self._touch(
             meeting,
             status=MeetingJobStatus.TRANSCRIBING,
             normalized_audio_path=normalized_audio_path,
             duration_seconds=duration_seconds,
+        )
+
+    async def claim_next_transcription(self) -> Meeting | None:
+        candidates = [m for m in self._meetings.values() if m.status == MeetingJobStatus.TRANSCRIBING]
+        return min(candidates, key=lambda m: m.created_at) if candidates else None
+
+    async def claim_next_diarization(self) -> Meeting | None:
+        candidates = [m for m in self._meetings.values() if m.status == MeetingJobStatus.DIARIZING]
+        return min(candidates, key=lambda m: m.created_at) if candidates else None
+
+    async def mark_transcribed(
+        self, meeting_id: str, *, transcript_segments: list[dict[str, Any]]
+    ) -> Meeting | None:
+        meeting = self._meetings.get(meeting_id)
+        if meeting is None:
+            return None
+        if meeting.status != MeetingJobStatus.TRANSCRIBING:  # see mark_preprocessed's comment
+            return meeting
+        return self._touch(
+            meeting, status=MeetingJobStatus.DIARIZING, transcript_segments=transcript_segments
+        )
+
+    async def mark_diarized(
+        self, meeting_id: str, *, diarization_segments: list[dict[str, Any]]
+    ) -> Meeting | None:
+        meeting = self._meetings.get(meeting_id)
+        if meeting is None:
+            return None
+        if meeting.status != MeetingJobStatus.DIARIZING:  # see mark_preprocessed's comment
+            return meeting
+        return self._touch(
+            meeting, status=MeetingJobStatus.ALIGNING, diarization_segments=diarization_segments
         )
 
     async def mark_failed(self, meeting_id: str, *, error_detail: str) -> Meeting | None:

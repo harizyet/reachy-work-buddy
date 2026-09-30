@@ -16,24 +16,49 @@ and
 [services/reachy-hub/tests/test_operator.py](../services/reachy-hub/tests/test_operator.py)'s
 `test_meetings_proxy_upload_list_get_cancel_require_auth` for automated
 coverage; the browser UI has not been checked in a real browser (no
-Playwright/Chromium available this session). 27.2 onward (long-form STT,
-diarization, alignment, analysis, retrieval) are not implemented — an
-uploaded meeting is preprocessed for real (WAV duration probe) and then
-waits at TRANSCRIBING indefinitely, which is correct given the current
-scope, not a bug. See the 27.1 implementation-sequence entry below for
-what specifically exists.
+Playwright/Chromium available this session). 27.2/27.3 (long-form STT,
+diarization) are now implemented too — see below — but ALIGNING onward
+(alignment, analysis, retrieval) is not; a meeting whose speech sidecars
+are both deployed and reachable will now reach ALIGNING and wait there,
+which is correct given the current scope, not a bug. See the 27.1
+implementation-sequence entry below for what specifically exists.
 
-**Diarization dependency deployed 2026-09-30**, separately from 27.1: the
-owner's own prior local experimentation (previously tested standalone) is
-now `deploy/homelab/diarization/`, an OpenVINO-accelerated
-Nemotron-3-Diarization (NeMo Sortformer) HTTP sidecar, started only with
-`scripts/start-homelab.sh --diarization` (needs an Intel iGPU
-passthrough). See [deployment](deployment.md#meeting-diarization) and the
-[service reference](reference/services.md#meeting-diarization-phase-273).
-This resolves the "no diarization service exists" gap noted when 27.1
-shipped, but `companion_core.meetings.worker` does not call it yet —
-DIARIZING is still unreachable, same as TRANSCRIBING, until
-[27.3](#273--diarization)'s integration work is done.
+**Speech inference architecture decided 2026-09-30:**
+[ADR 0025](adr/0025-speech-inference-service.md) resolves where 27.2's
+long-form STT (and the rest of Phase 27's speech inference) should live —
+a dedicated `speech-service` is the target, `companion-core` consumes it
+over HTTP through client interfaces rather than owning Whisper/OpenVINO
+itself, and `reachy-hub`'s existing conversational STT is an unaffected,
+separately-migrated concern.
+
+**27.2/27.3 implemented 2026-09-30** against that decision, alongside
+both sidecars: `deploy/homelab/diarization/` (an OpenVINO-accelerated
+Nemotron-3-Diarization/NeMo-Sortformer HTTP sidecar, ported from the
+owner's own prior local experimentation) and
+`deploy/homelab/transcription/` (a faster-whisper long-form HTTP
+sidecar), each started only with `scripts/start-homelab.sh
+--diarization`/`--transcription` — see
+[deployment](deployment.md#meeting-diarization) and the
+[service reference](reference/services.md#meeting-transcription-phase-272).
+`companion_core.meetings.speech_clients` (`TranscriptionClient`/
+`DiarizationClient`, one real HTTP implementation each) is the seam ADR
+0025 requires; `MeetingWorker` calls them for the TRANSCRIBING/DIARIZING
+stages, storing each sidecar's raw segment output on the `Meeting` row
+(migration `011_meeting_speech_results`) and advancing
+TRANSCRIBING→DIARIZING→ALIGNING. Migration `011_meeting_speech_results`
+also widened `CANCELLABLE_STATUSES` to any non-terminal stage (previously
+only UPLOADED/PREPROCESSING). See
+[services/companion-core/tests/test_meetings.py](../services/companion-core/tests/test_meetings.py)
+for automated coverage, including a sidecar that's transiently
+unreachable leaving the job untouched for retry rather than failing it,
+and one stuck stage not starving another that's ready to progress.
+**Neither sidecar has been built or run for real** — no image build, no
+live `/health` or a real recording sent through `/transcribe`/`/diarize`
+— so this is proven at the `MeetingWorker`/client-contract level against
+fake clients, not end-to-end. See the
+[verification record](verification/phase-27-foundation-2026-09-30.md).
+ALIGNING (27.4 onward: canonical `TranscriptSegment` alignment, meeting
+analysis, retrieval) remains unimplemented.
 
 Phase 27 delivers a usable meeting-intelligence workflow independent of the physical Reachy Mini embodiment.
 
@@ -203,6 +228,12 @@ A crashed worker must either resume the job safely or mark it failed with an act
 
 # 27.3 — Long-form STT
 
+**Status 2026-09-30:** [ADR 0025](adr/0025-speech-inference-service.md)
+sets the target shape for this — a dedicated speech-inference sidecar
+(eventually the unified `speech-service`) consumed by companion-core
+through a client-interface seam, not local faster-whisper running inside
+companion-core itself. Not implemented yet.
+
 Use the existing local faster-whisper capability through a meeting-specific long-form path.
 
 STT must preserve segment timing:
@@ -246,7 +277,11 @@ Speaker diarization is a baseline Phase 27 capability.
 **Status 2026-09-30:** the local diarization *service* now exists and is
 deployable (`deploy/homelab/diarization/`, `--diarization`; see the
 Status section above), but nothing in companion-core calls it yet. What
-follows is still the target shape, not current behavior.
+follows is still the target shape, not current behavior. Per
+[ADR 0025](adr/0025-speech-inference-service.md), diarization remains
+conceptually distinct from speaker identity even once this and STT
+converge behind a unified `speech-service`: a `SPEAKER_00`-style cluster
+label is still never itself a verified or claimed identity.
 
 Use the existing local diarization pipeline to produce:
 
@@ -285,6 +320,14 @@ or any other known person.
 ---
 
 # 27.5 — STT / diarization alignment
+
+Per [ADR 0025](adr/0025-speech-inference-service.md), STT and diarization
+are not a true inference dependency chain — both consume the same
+normalized audio and may run concurrently rather than strictly
+sequentially. Alignment is not model inference either way, and it stays a
+companion-core responsibility (owning the canonical `TranscriptSegment`
+and its links to `Meeting`/`MeetingSpeaker`/decisions/actions) even after
+STT and diarization themselves move behind a unified `speech-service`.
 
 Merge the independently generated STT and diarization outputs into the canonical meeting transcript.
 
@@ -795,6 +838,16 @@ Failed or cancelled processing must not leave untracked temporary recordings.
 
 # 27.18 — Meeting UI
 
+**Status 2026-09-30:** a first-class Meetings view exists
+(`clients/operator-ui/meetings.js`), but it implements only the meeting
+list and a raw transcript/diarization-segment detail view, not the
+summary/key-points/decisions/actions layout below — those depend on 27.6
+(meeting analysis), which is unimplemented. The detail view says so
+explicitly rather than showing an empty or fabricated minutes section.
+Not checked in a real browser this session (no Playwright/Chromium
+available); see the
+[verification record](verification/phase-27-foundation-2026-09-30.md).
+
 Add a first-class **Meetings** view.
 
 ## Meeting list
@@ -853,6 +906,14 @@ Generated data should never be treated as immutable ground truth.
 
 # 27.20 — Optional live recording
 
+**Status 2026-09-30:** owner-controlled browser recording is implemented
+(`meetings.js`'s `MediaRecorder`-based Start/Stop, feeding the same
+`POST /meetings` upload as a file), ahead of this section's own
+"after upload-based processing is accepted" sequencing — the owner asked
+for it explicitly, the same kind of user-authorized deviation as 27.1/27.3
+landing ahead of Phase 26. Mobile-specific handling and 27.1's real
+browser/live-deployment acceptance are still outstanding.
+
 After upload-based processing is accepted, add owner-controlled browser/mobile recording.
 
 ```text
@@ -895,31 +956,76 @@ verification remains open. `MeetingWorker.run_forever` requeues any job
 left mid-stage by a previous run at startup. Basic Meetings UI exists
 (operator-ui's Meetings tab) but has not been exercised in a real browser.
 
-## 27.2 — Long-form STT
+## 27.2 — Long-form STT and speech-service foundation
 
-Integrate meeting recordings with local STT.
+Per [ADR 0025](adr/0025-speech-inference-service.md): implement long-form
+meeting transcription (faster-whisper-based, timestamped segments,
+persistent model cache, health/readiness reporting, measured processing
+metrics) while keeping the API/data contracts compatible with later
+consolidation into a unified `speech-service`. `companion-core` must
+consume it through a client-interface seam, not a hardcoded container
+hostname scattered through `MeetingWorker`, and must not import
+`reachy_hub.stt` or any other sibling-service implementation (ADR 0001,
+reaffirmed by ADR 0025).
+
+**Implemented 2026-09-30.** `deploy/homelab/transcription/` is the
+standalone sidecar (`--transcription`); `companion_core.meetings.
+speech_clients.HTTPTranscriptionClient` is the client-interface seam;
+`MeetingWorker` calls it for TRANSCRIBING and advances to DIARIZING on
+success, storing raw segments on the `Meeting` row
+(`transcript_segments`, migration `011_meeting_speech_results`). A
+`SpeechServiceUnavailable` (sidecar down/timed out) leaves the job at
+TRANSCRIBING for the next poll rather than failing it. **Not yet
+verified against a real 30–60 minute recording** — see the Status
+section's caveat and the
+[verification record](verification/phase-27-foundation-2026-09-30.md);
+this exit criterion remains open.
 
 Exit criterion:
 
-> A real 30–60 minute recording produces a complete timestamped transcript.
+> A real 30–60 minute recording produces a complete timestamped transcript
+> through the companion-core meeting pipeline, with no Reachy Mini or
+> reachy-hub dependency and no sibling-service imports. Record audio
+> duration, processing time, real-time factor, model startup time, and
+> CPU/RAM/GPU usage.
 
 ## 27.3 — Diarization
 
 Integrate the existing diarization service.
 
-**The service side is deployed** (`deploy/homelab/diarization/`,
-`--diarization` — see the Status section above and
-[27.4](#274--speaker-diarization)). The "integrate" work below —
-`companion_core.meetings.worker` calling it and advancing a job through
-DIARIZING — has not started.
+**Implemented 2026-09-30**, same shape as 27.2:
+`companion_core.meetings.speech_clients.HTTPDiarizationClient` is the
+client seam; `MeetingWorker` calls it for DIARIZING and advances to
+ALIGNING on success, storing raw segments on the `Meeting` row
+(`diarization_segments`). `deploy/homelab/diarization/` itself
+(`--diarization`) is unchanged from when it was deployed alongside 27.1
+— still not built or run for real (see the Status section above). This
+exit criterion, and the "verify with a real recording" steps a prior
+revision of this section listed, remain open until that build/run
+happens.
 
 Exit criterion:
 
 > The same meeting produces stable speaker segments and measured processing performance.
 
-## 27.4 — Alignment
+## 27.4 — Parallel speech processing and alignment
 
-Create canonical speaker-attributed `TranscriptSegment`s.
+Per ADR 0025: `PREPROCESSING → TRANSCRIBING → DIARIZING → ALIGNING`'s
+reading order is an implementation sequence, not a true inference
+dependency — STT and diarization both consume the same normalized audio
+and may run concurrently once both 27.2 and 27.3 exist, with STT-failed/
+diarization-complete (or the reverse) as distinct, legible states rather
+than one ambiguous stage. This step creates the canonical
+speaker-attributed `TranscriptSegment`s from whatever combination of
+completed STT/diarization output is available.
+
+**Not implemented.** `MeetingWorker` currently keeps 27.2/27.3
+sequential (TRANSCRIBING must complete before DIARIZING is attempted,
+matching the documented reading order) rather than running them
+concurrently — that parallelism, and this step's alignment/
+`TranscriptSegment` work, are both still open. A job that clears both
+stages rests at ALIGNING with `transcript_segments` and
+`diarization_segments` populated but not yet merged.
 
 Exit criterion:
 

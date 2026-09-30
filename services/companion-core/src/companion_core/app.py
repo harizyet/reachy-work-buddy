@@ -130,11 +130,21 @@ reusing rag/ or tasks/. `POST /meetings` accepts an uploaded recording plus
 owner metadata and returns immediately with a MeetingJobStatus.UPLOADED
 row; `MeetingWorker` (started in lifespan, same bounded-in-process-task
 shape as the email dispatch loop above) is the only thing that advances a
-job's status. It currently only implements PREPROCESSING (real WAV
-duration probing, no fabricated values for other formats) and then leaves
-the job at TRANSCRIBING — no local long-form STT integration exists in
-this codebase yet, so that stage and everything after it (27.2 onward) are
-correctly unimplemented, not broken.
+job's status. It implements PREPROCESSING (real WAV duration probing, no
+fabricated values for other formats), TRANSCRIBING and DIARIZING.
+
+Phase 27.2/27.3 (ADR 0025, docs/adr/0025-speech-inference-service.md):
+`MeetingWorker`'s TRANSCRIBING/DIARIZING handlers call the standalone
+transcription/diarization sidecars (`deploy/homelab/transcription/`,
+`deploy/homelab/diarization/`) through `meetings/speech_clients.py`'s
+`HTTPTranscriptionClient`/`HTTPDiarizationClient` — never by importing
+`reachy_hub.stt` (ADR 0001's sibling-import ban). Both clients are always
+constructed here, same as `hub_client` above: an undeployed or
+unreachable sidecar is not a startup failure, it just means those jobs
+rest at their current status and retry on the worker's next poll
+(`SpeechServiceUnavailable` in worker.py) rather than failing the
+meeting. ALIGNING and everything after it (27.4 onward) remain correctly
+unimplemented, not broken.
 """
 
 from __future__ import annotations
@@ -211,6 +221,10 @@ from companion_core.llm.router import route_completion
 from companion_core.llm.store import LLMSettingsStore, LLMUsageStore, masked_config
 from companion_core.meetings.models import SUPPORTED_AUDIO_EXTENSIONS, Meeting
 from companion_core.meetings.postgres_store import PostgresMeetingStore
+from companion_core.meetings.speech_clients import (
+    HTTPDiarizationClient,
+    HTTPTranscriptionClient,
+)
 from companion_core.meetings.store import MeetingNotCancellableError, MeetingStore
 from companion_core.meetings.worker import MeetingWorker
 from companion_core.memory.postgres_store import PostgresMemoryStore
@@ -408,6 +422,8 @@ def create_app(
     confirmation_store: ConfirmationStore | None = None,
     meeting_store: MeetingStore | None = None,
     run_meeting_worker_task: bool = True,
+    transcription_transport: httpx.AsyncBaseTransport | None = None,
+    diarization_transport: httpx.AsyncBaseTransport | None = None,
     database_url: str | None = None,
     run_email_dispatch_task: bool = True,
     email_dispatch_interval: float | None = None,
@@ -511,8 +527,21 @@ def create_app(
             if run_email_dispatch_task
             else None
         )
+        # ADR 0025: always constructed, same as hub_client above — an
+        # unreachable/undeployed sidecar is not a startup failure, it just
+        # means TRANSCRIBING/DIARIZING jobs rest until one exists (worker.py's
+        # SpeechServiceUnavailable handling). transport injection is the
+        # same testing seam as llm_transport/websearch_transport.
+        app.state.transcription_client = HTTPTranscriptionClient(transport=transcription_transport)
+        app.state.diarization_client = HTTPDiarizationClient(transport=diarization_transport)
         meeting_worker_task = (
-            asyncio.create_task(MeetingWorker(app.state.meeting_store).run_forever())
+            asyncio.create_task(
+                MeetingWorker(
+                    app.state.meeting_store,
+                    transcription_client=app.state.transcription_client,
+                    diarization_client=app.state.diarization_client,
+                ).run_forever()
+            )
             if run_meeting_worker_task
             else None
         )
@@ -527,6 +556,8 @@ def create_app(
                 meeting_worker_task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await meeting_worker_task
+            await app.state.transcription_client.aclose()
+            await app.state.diarization_client.aclose()
             if owns_accounts:
                 await app.state.accounts.repository.close()
             await app.state.hub_client.aclose()
