@@ -53,8 +53,12 @@ correct facts or links, not to track each new phase dependency.
   2026-09-28 between owner verification and meeting transcription to
   review and harden the whole system, not just the new biometric surface,
   before it expands.
-- [Phase 27](phase-27.md): meeting transcription and minutes (formerly
-  Phase 26; renumbered 2026-09-28).
+- [Phase 27](phase-27.md): meeting intelligence — upload-first processing,
+  speaker-attributed transcripts, evidence-linked notes, reviewed actions
+  and searchable meeting history; independent of physical embodiment.
+  27.1 Foundation (durable job store/worker, upload API, basic UI) and the
+  27.3 diarization service dependency both landed 2026-09-30; STT,
+  diarization integration, alignment and analysis not started.
 - [Phase 28](phase-28.md): embodied meeting secretary — owner-present
   companion, then physical secretary attendance, then bounded delegation;
   virtual/cloud attendance is deferred. (Formerly Phase 27; renumbered
@@ -198,6 +202,11 @@ These are dated evidence, not startup instructions or current health checks.
 - [STT model comparison](verification/stt-model-comparison-2026-09-26.md):
   synthetic noisy-speech comparison of Whisper models on the homelab CPU;
   small.en is more accurate but adds about 0.55 s per turn.
+
+- [Phase 27.1 foundation](verification/phase-27-foundation-2026-09-30.md):
+  automated companion-core/reachy-hub checks for meeting upload/tracking/
+  restart-recovery and the owner-authenticated proxy; no live homelab
+  deployment or real-browser UI check performed.
 
 ## Where information belongs
 

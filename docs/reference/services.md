@@ -282,6 +282,22 @@ Physical camera/audio acceptance is still outstanding. Read
 [bring-up evidence](../verification/phase-22-bring-up.md) before treating the
 simulator's successful move lifecycle as validated real motion.
 
+## Meeting diarization (Phase 27.3)
+
+[Source](../../deploy/homelab/diarization/) is a standalone sidecar, not a
+workspace member — Nemotron-3-Diarization (NeMo Sortformer) with its
+per-chunk network step on OpenVINO, ported from local experimentation.
+Started only with the `diarization` Compose profile (see
+[deployment](../deployment.md#meeting-diarization)); not part of a bare
+`docker compose up`. Internal-only at `http://diarization:8010`:
+`GET /health` reports load/compile status, `POST /diarize` takes
+multipart wav/flac/ogg audio at any rate/channels and returns
+`{duration_s, process_s, rtf, num_speakers, segments: [{start, end,
+speaker}]}` in seconds. No companion-core code calls it yet; it exists so
+[Phase 27.3](../phase-27.md#274--speaker-diarization) can wire
+`companion_core.meetings.worker`'s DIARIZING stage to it without also
+needing to solve the model download/export step at the same time.
+
 ## Shared contracts and clients
 
 Runtime service packages never import one another. Contracts live in

@@ -3,7 +3,7 @@
 import asyncio
 
 import httpx
-from fastapi import Depends, HTTPException, Query, Request
+from fastapi import Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -18,6 +18,9 @@ from shared.protocols.operator_api import (
     AUTH_ME,
     LLM_SETTINGS,
     LLM_USAGE,
+    MEETING,
+    MEETING_CANCEL,
+    MEETINGS,
     PERSONA_SETTINGS,
     STATUS,
     WEBSEARCH_LOG,
@@ -127,6 +130,66 @@ def install_operator_routes(
         since_hours: int = Query(24, ge=1, le=8760),
     ) -> dict:
         return await proxy(core.get_llm_usage, limit=limit, since_hours=since_hours)
+
+    def meeting_error(exc: httpx.HTTPStatusError):
+        # 27.1: companion-core's own 404/409/422 are meaningful to the
+        # owner (no such meeting, past the cancellable stage, bad upload) —
+        # pass those through rather than collapsing them into 502 like the
+        # generic `proxy()` helper above does for settings routes.
+        if exc.response.status_code in (404, 409, 422):
+            raise HTTPException(exc.response.status_code, exc.response.json().get("detail", "Request rejected")) from None
+        raise HTTPException(502, "Companion core request failed") from None
+
+    @app.post(MEETINGS, dependencies=dependencies)
+    async def upload_meeting(
+        title: str = Form(...),
+        project_scope: str | None = Form(None),
+        context: str | None = Form(None),
+        participants: str = Form(""),
+        started_at: str | None = Form(None),
+        audio: UploadFile = File(...),  # noqa: B008
+    ) -> dict:
+        data = await audio.read()
+        try:
+            return await core.create_meeting(
+                title=title,
+                audio_bytes=data,
+                filename=audio.filename or "recording",
+                content_type=audio.content_type or "application/octet-stream",
+                project_scope=project_scope,
+                context=context,
+                participants=participants,
+                started_at=started_at,
+            )
+        except httpx.HTTPStatusError as exc:
+            meeting_error(exc)
+        except httpx.HTTPError:
+            raise HTTPException(502, "Companion core unavailable") from None
+
+    @app.get(MEETINGS, dependencies=dependencies)
+    async def list_meetings() -> list[dict]:
+        try:
+            return await core.list_meetings()
+        except httpx.HTTPError:
+            raise HTTPException(502, "Companion core unavailable") from None
+
+    @app.get(MEETING, dependencies=dependencies)
+    async def get_meeting(meeting_id: str) -> dict:
+        try:
+            return await core.get_meeting(meeting_id)
+        except httpx.HTTPStatusError as exc:
+            meeting_error(exc)
+        except httpx.HTTPError:
+            raise HTTPException(502, "Companion core unavailable") from None
+
+    @app.post(MEETING_CANCEL, dependencies=dependencies)
+    async def cancel_meeting(meeting_id: str) -> dict:
+        try:
+            return await core.cancel_meeting(meeting_id)
+        except httpx.HTTPStatusError as exc:
+            meeting_error(exc)
+        except httpx.HTTPError:
+            raise HTTPException(502, "Companion core unavailable") from None
 
     @app.get(STATUS, dependencies=dependencies)
     async def status() -> dict:

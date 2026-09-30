@@ -303,8 +303,8 @@ replayed, out-of-order and wrongly bound callbacks. Loss of authorization
 stops capture/output and initiates local departure/shutdown of the capture
 mode; reconcile actual state after recovery. Report coverage gaps and
 distinguish attendance failure from minutes-processing failure. By default
-failed/cancelled jobs follow Phase 27's partial-data deletion policy;
-retaining incomplete notes needs an explicit owner choice made before
+failed/cancelled jobs follow [Phase 27's recording cleanup policy](phase-27.md#2717--retention).
+For Phase 28, retaining incomplete notes needs an explicit owner choice made before
 capture, and such notes must be marked incomplete.
 
 ## Implementation sequence and acceptance

@@ -17,6 +17,7 @@
         <button id="overview-tab" aria-pressed="true" aria-controls="overview-pane">Overview</button>
         <button id="accounts-tab" class="secondary" aria-pressed="false" aria-controls="accounts-pane">Settings · Accounts</button>
         <button id="chat-tab" class="secondary" aria-pressed="false" aria-controls="chat-pane">Chat</button>
+        <button id="meetings-tab" class="secondary" aria-pressed="false" aria-controls="meetings-pane">Meetings</button>
       </div>
       <section id="chat-pane" hidden aria-labelledby="chat-title" class="card chat-card">
         <div class="section-title"><div><span class="eyebrow">YOUR COMPANION</span><h2 id="chat-title">Chat with Reachy</h2></div><button id="clear-chat" class="secondary" type="button">Clear view</button></div>
@@ -112,6 +113,23 @@
           </section>
         </section>
       </div>
+      <div id="meetings-pane" hidden>
+        <section class="card" aria-labelledby="meetings-title">
+          <span class="eyebrow">PHASE 27</span><h2 id="meetings-title">Meetings</h2>
+          <p>Upload a recorded meeting for local transcription. Recordings and transcripts stay in your homelab. This is the 27.1 foundation: recordings are stored and tracked, but transcription and analysis are not implemented yet — an uploaded meeting will wait at "Transcribing" indefinitely.</p>
+          <form id="meeting-upload-form">
+            <label>Title<input id="meeting-title" required maxlength="256"></label>
+            <label>Project (optional)<input id="meeting-project" maxlength="256"></label>
+            <label>Participants (optional, comma-separated)<input id="meeting-participants" maxlength="1024" placeholder="Hariz, Alice"></label>
+            <label>Context (optional)<textarea id="meeting-context" rows="2" maxlength="4096"></textarea></label>
+            <label>Recording<input id="meeting-audio" type="file" accept="audio/wav,audio/flac,audio/x-flac,audio/mp4,audio/mpeg,audio/opus,audio/webm,.wav,.flac,.m4a,.aac,.mp3,.opus,.webm" required></label>
+            <button>Upload meeting</button>
+          </form>
+          <p id="meeting-upload-status" role="status"></p>
+          <ul id="meeting-list" class="sample-list"></ul>
+          <p id="meeting-list-status" role="status"></p>
+        </section>
+      </div>
       <div id="overview-pane">
       <div class="section-title"><h2>System overview</h2><span id="updated">Checking status…</span></div>
       <div id="components" class="components"></div>
@@ -193,6 +211,6 @@
   </main><footer>Reachy Work Companion · Operator UI</footer><dialog id="search-log-dialog" aria-labelledby="search-log-title"><div class="dialog-head"><h2 id="search-log-title">Recent searches</h2><button type="button" id="refresh-search-log" class="secondary">Refresh</button><button type="button" id="close-search-log" class="secondary">Close</button></div>
   <p class="muted">The last 50 searches, newest first. Companion Core keeps them in memory only; a restart clears them.</p>
   <div id="search-log-entries"></div></dialog>
-  <script src="chat.js" defer></script><script src="voice.js" defer></script><script src="accounts.js" defer></script><script src="owner-recognition.js" defer></script><script src="app.js" defer></script>
+  <script src="chat.js" defer></script><script src="voice.js" defer></script><script src="accounts.js" defer></script><script src="owner-recognition.js" defer></script><script src="meetings.js" defer></script><script src="app.js" defer></script>
 </body>
 </html>

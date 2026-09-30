@@ -22,28 +22,32 @@ const accounts = createAccounts({api, isLoggedIn: () => loggedIn});
 const ownerRecognition = createOwnerRecognition({api, apiUpload, apiDownload, isLoggedIn: () => loggedIn});
 const motionSettings = createMotionSettings();
 const voice = createVoice({api, isLoggedIn: () => loggedIn, chat});
+const meetings = createMeetings({api, apiUploadForm, isLoggedIn: () => loggedIn});
 function showView(view) {
   const isChat = view === 'chat';
   $('chat-pane').hidden = !isChat; $('overview-pane').hidden = view !== 'overview';
   $('accounts-pane').hidden = view !== 'accounts';
-  for (const name of ['chat', 'overview', 'accounts']) {
+  $('meetings-pane').hidden = view !== 'meetings';
+  for (const name of ['chat', 'overview', 'accounts', 'meetings']) {
     $(name + '-tab').setAttribute('aria-pressed', String(name === view));
     $(name + '-tab').classList.toggle('secondary', name !== view);
   }
   if (isChat) void chat.refreshSession();
   if (view === "accounts") { void accounts.load(); void motionSettings.load(); void ownerRecognition.load(); }
   else ownerRecognition.stopCapture();
+  if (view === "meetings") void meetings.load();
 }
 $('accounts-tab').addEventListener('click', () => showView('accounts'));
 $('chat-tab').addEventListener('click', () => showView('chat'));
 $('overview-tab').addEventListener('click', () => showView('overview'));
+$('meetings-tab').addEventListener('click', () => showView('meetings'));
 function notice(text) { $('notice').textContent = text; }
 function showLogin() {
   loggedIn = false; selectedUser = null;
   $('login-panel').hidden = false; $('dashboard').hidden = true; $('nav').hidden = true;
   $('api-key').value = ''; $('cloud-api-key').value = ''; $('websearch-api-key').value = ''; for (const name of HOSTED_SEARCH) $(`websearch-${name}-api-key`).value = ''; $('password').value = '';
   $('search-log-dialog').close(); $('search-log-entries').replaceChildren();
-  chat.reset(); accounts.reset(); voice.reset(); motionSettings.reset(); ownerRecognition.reset(); showView('overview');
+  chat.reset(); accounts.reset(); voice.reset(); motionSettings.reset(); ownerRecognition.reset(); meetings.reset(); showView('overview');
 }
 async function api(path, options = {}) {
   const response = await fetch(base + path, {
@@ -68,6 +72,26 @@ async function apiUpload(path, blob) {
     method: 'POST', cache: 'no-store', credentials: 'same-origin',
     headers: {'Content-Type': blob.type || 'application/octet-stream', 'X-Reachy-CSRF': '1'},
     body: blob,
+  });
+  if (!response.ok) {
+    if (response.status === 401) showLogin();
+    let detail = '';
+    try { detail = (await response.json()).detail; } catch { /* Non-JSON gateway failure. */ }
+    const error = new Error(typeof detail === 'string' && detail ? detail : `Request failed (${response.status})`);
+    error.status = response.status;
+    throw error;
+  }
+  return response.json();
+}
+// Phase 27.1: meeting upload is multipart/form-data (title/metadata fields
+// plus the audio file), not a single raw blob like apiUpload() above — the
+// browser sets its own multipart Content-Type/boundary, so this must not
+// set one itself.
+async function apiUploadForm(path, formData) {
+  const response = await fetch(base + path, {
+    method: 'POST', cache: 'no-store', credentials: 'same-origin',
+    headers: {'X-Reachy-CSRF': '1'},
+    body: formData,
   });
   if (!response.ok) {
     if (response.status === 401) showLogin();

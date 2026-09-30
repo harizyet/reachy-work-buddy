@@ -18,6 +18,7 @@ from companion_core.consent.store import InMemoryConfirmationStore
 from companion_core.email.models import EmailDraft
 from companion_core.email.store import InMemoryEmailStore
 from companion_core.llm.store import InMemoryLLMSettingsStore, InMemoryLLMUsageStore
+from companion_core.meetings.store import InMemoryMeetingStore
 from companion_core.memory.store import InMemoryMemoryStore
 from companion_core.persona.store import InMemoryPersonaStore
 from companion_core.rag.store import InMemoryDocumentStore
@@ -82,6 +83,8 @@ def make_chain(*, registered_robots: Sequence[Robot] = ()) -> TestClient:
         transport=httpx.ASGITransport(app=hub_app),
         calendar_store=InMemoryCalendarStore(),
         task_store=InMemoryTaskStore(),
+        meeting_store=InMemoryMeetingStore(),
+        run_meeting_worker_task=False,
         memory_store=InMemoryMemoryStore(),
         rag_store=InMemoryDocumentStore(embed_fn=_fake_embed),
         email_store=email_store,
@@ -806,6 +809,8 @@ def _make_bare_core_app() -> FastAPI:
         transport=httpx.ASGITransport(app=create_hub_app(run_heartbeat_task=False)),
         calendar_store=InMemoryCalendarStore(),
         task_store=InMemoryTaskStore(),
+        meeting_store=InMemoryMeetingStore(),
+        run_meeting_worker_task=False,
         memory_store=InMemoryMemoryStore(),
         rag_store=InMemoryDocumentStore(embed_fn=_fake_embed),
         email_store=InMemoryEmailStore(),

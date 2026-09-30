@@ -38,3 +38,10 @@ OWNER_RECOGNITION_BENCHMARK_FACE_SAMPLES = "/owner-recognition/benchmark/face/sa
 OWNER_RECOGNITION_BENCHMARK_FACE_SAMPLE = "/owner-recognition/benchmark/face/samples/{sample_id}"
 OWNER_RECOGNITION_BENCHMARK_VOICE_EXPORT = "/owner-recognition/benchmark/voice/export"
 OWNER_RECOGNITION_BENCHMARK_FACE_EXPORT = "/owner-recognition/benchmark/face/export"
+
+# Phase 27.1 (docs/phase-27.md): meeting intelligence foundation. Owner-only
+# proxies to companion-core's /meetings — core itself is closed to the
+# browser (only /core/health is exposed through Caddy).
+MEETINGS = "/meetings"
+MEETING = "/meetings/{meeting_id}"
+MEETING_CANCEL = "/meetings/{meeting_id}/cancel"

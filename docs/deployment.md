@@ -60,6 +60,32 @@ Use [workflow examples](reference/workflow-examples.md) for conversation,
 calendar, task, memory, document, and email smoke checks. Those examples
 mutate test data and are intended for a disposable simulation stack.
 
+## Meeting diarization
+
+```bash
+scripts/start-homelab.sh --diarization --build
+```
+
+The `diarization` Compose profile (deploy/homelab/docker-compose.yml)
+adds a Nemotron-3-Diarization (NeMo Sortformer) service for
+[Phase 27.3](phase-27.md), built from `deploy/homelab/diarization/` —
+ported from local experimentation (previously tested standalone, not
+part of this repo). It needs an Intel iGPU passthrough (`/dev/dri`) on
+the host; `--check --diarization` warns if that device is missing without
+starting anything, but a real start still fails clearly if it's absent.
+Find the render-node group with `stat -c %g /dev/dri/renderD128` and set
+`DIARIZATION_RENDER_GID` in `.env` if it isn't 990. `DIARIZATION_OV_DEVICE`
+can be set to `CPU` instead of `GPU` on a host with no Intel iGPU at all,
+at a real performance cost this hasn't been benchmarked. The service
+downloads model weights and exports an ONNX graph on first start (~1
+minute), cached in the `diarization-data` volume; losing that volume only
+costs a repeat of that first-start work, not data. It exposes `/health`
+and `POST /diarize` (multipart audio, any rate/channels) internally at
+`http://diarization:8010`, matching the [reference](reference/services.md)
+description. companion-core does not call it yet — see phase-27.md's
+Status section — so today this profile only proves the container builds,
+compiles the model for OpenVINO, and answers `/health`.
+
 ## Owner login
 
 Set `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and an independent random

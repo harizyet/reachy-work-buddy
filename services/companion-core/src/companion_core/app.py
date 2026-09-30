@@ -122,6 +122,19 @@ titles/snippets/URLs in their own, clearly-delimited, lower-authority
 message, and a failed search on a search-warranted turn still discloses
 that failure to the model rather than silently answering from stale
 knowledge.
+
+Phase 27.1: meeting intelligence foundation, per docs/phase-27.md — see
+meetings/. Meetings are a separate durable work artifact, not conversation
+turns or documents, so they get their own store/worker/routes rather than
+reusing rag/ or tasks/. `POST /meetings` accepts an uploaded recording plus
+owner metadata and returns immediately with a MeetingJobStatus.UPLOADED
+row; `MeetingWorker` (started in lifespan, same bounded-in-process-task
+shape as the email dispatch loop above) is the only thing that advances a
+job's status. It currently only implements PREPROCESSING (real WAV
+duration probing, no fabricated values for other formats) and then leaves
+the job at TRANSCRIBING — no local long-form STT integration exists in
+this codebase yet, so that stage and everything after it (27.2 onward) are
+correctly unimplemented, not broken.
 """
 
 from __future__ import annotations
@@ -134,9 +147,10 @@ import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import httpx
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -195,6 +209,10 @@ from companion_core.llm.postgres_store import (
 )
 from companion_core.llm.router import route_completion
 from companion_core.llm.store import LLMSettingsStore, LLMUsageStore, masked_config
+from companion_core.meetings.models import SUPPORTED_AUDIO_EXTENSIONS, Meeting
+from companion_core.meetings.postgres_store import PostgresMeetingStore
+from companion_core.meetings.store import MeetingNotCancellableError, MeetingStore
+from companion_core.meetings.worker import MeetingWorker
 from companion_core.memory.postgres_store import PostgresMemoryStore
 from companion_core.memory.store import MemoryStore
 from companion_core.persona.context import context_message
@@ -388,6 +406,8 @@ def create_app(
     email_send_fn: SendFn = smtp_send,
     email_send_delay_seconds: int | None = None,
     confirmation_store: ConfirmationStore | None = None,
+    meeting_store: MeetingStore | None = None,
+    run_meeting_worker_task: bool = True,
     database_url: str | None = None,
     run_email_dispatch_task: bool = True,
     email_dispatch_interval: float | None = None,
@@ -430,6 +450,7 @@ def create_app(
     owns_rag_store = rag_store is None
     owns_email_store = email_store is None
     owns_confirmation_store = confirmation_store is None
+    owns_meeting_store = meeting_store is None
 
     # Phase 16/ADR 0013: reachy-hub's REMOTE_UI_TOKEN, shared with this
     # internal caller — see hub_client.py's constructor comment. `or None`
@@ -468,6 +489,9 @@ def create_app(
         if owns_confirmation_store:
             dsn = database_url or os.environ["DATABASE_URL"]
             app.state.confirmation_store = await PostgresConfirmationStore.connect(dsn)
+        if owns_meeting_store:
+            dsn = database_url or os.environ["DATABASE_URL"]
+            app.state.meeting_store = await PostgresMeetingStore.connect(dsn)
 
         if owns_accounts:
             app.state.accounts = AccountService(await PostgresAccountRepository.connect(
@@ -487,6 +511,11 @@ def create_app(
             if run_email_dispatch_task
             else None
         )
+        meeting_worker_task = (
+            asyncio.create_task(MeetingWorker(app.state.meeting_store).run_forever())
+            if run_meeting_worker_task
+            else None
+        )
         try:
             yield
         finally:
@@ -494,6 +523,10 @@ def create_app(
                 dispatch_task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await dispatch_task
+            if meeting_worker_task is not None:
+                meeting_worker_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await meeting_worker_task
             if owns_accounts:
                 await app.state.accounts.repository.close()
             await app.state.hub_client.aclose()
@@ -517,6 +550,8 @@ def create_app(
                 await app.state.email_store.close()
             if owns_confirmation_store:
                 await app.state.confirmation_store.close()
+            if owns_meeting_store:
+                await app.state.meeting_store.close()
 
     app = FastAPI(title="companion-core", lifespan=lifespan)
 
@@ -631,6 +666,8 @@ def create_app(
         app.state.email_store = email_store
     if not owns_confirmation_store:
         app.state.confirmation_store = confirmation_store
+    if not owns_meeting_store:
+        app.state.meeting_store = meeting_store
 
     if account_service is not None and calendar_store is not None and email_store is not None:
         app.state.calendar_store = AccountCalendar(calendar_store, account_service)
@@ -1218,6 +1255,58 @@ def create_app(
     @app.get("/tasks/search")
     async def search_tasks_endpoint(q: str) -> list[Task]:
         return await app.state.task_store.search_tasks(q)
+
+    @app.post("/meetings")
+    async def upload_meeting(
+        title: str = Form(...),
+        project_scope: str | None = Form(None),
+        context: str | None = Form(None),
+        # Comma-separated rather than a repeated form field: simpler for
+        # both the multipart client below and a future browser <form>.
+        participants: str = Form(""),
+        started_at: datetime | None = Form(None),  # noqa: B008
+        audio: UploadFile = File(...),  # noqa: B008
+    ) -> Meeting:
+        """27.1 intake (docs/phase-27.md): upload creates the durable job
+        row immediately and returns it at UPLOADED — MeetingWorker (started
+        in lifespan) is what picks it up next, not this handler."""
+        suffix = Path(audio.filename or "").suffix.lower()
+        if suffix not in SUPPORTED_AUDIO_EXTENSIONS:
+            raise HTTPException(422, f"unsupported audio file type '{suffix or '(none)'}'")
+        data = await audio.read()
+        if not data:
+            raise HTTPException(422, "uploaded audio file is empty")
+        return await app.state.meeting_store.create_meeting(
+            title=title,
+            audio=data,
+            source_filename=audio.filename or f"recording{suffix}",
+            content_type=audio.content_type or "application/octet-stream",
+            project_scope=project_scope,
+            context=context,
+            participants=[p.strip() for p in participants.split(",") if p.strip()],
+            started_at=started_at,
+        )
+
+    @app.get("/meetings")
+    async def list_meetings() -> list[Meeting]:
+        return await app.state.meeting_store.list_meetings()
+
+    @app.get("/meetings/{meeting_id}")
+    async def get_meeting(meeting_id: str) -> Meeting:
+        meeting = await app.state.meeting_store.get_meeting(meeting_id)
+        if meeting is None:
+            raise HTTPException(status_code=404, detail=f"no meeting '{meeting_id}'")
+        return meeting
+
+    @app.post("/meetings/{meeting_id}/cancel")
+    async def cancel_meeting(meeting_id: str) -> Meeting:
+        try:
+            meeting = await app.state.meeting_store.cancel_meeting(meeting_id)
+        except MeetingNotCancellableError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        if meeting is None:
+            raise HTTPException(status_code=404, detail=f"no meeting '{meeting_id}'")
+        return meeting
 
     @app.get("/debug/robots/{robot_id}/state")
     async def debug_robot_state(robot_id: str) -> dict:

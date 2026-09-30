@@ -10,6 +10,7 @@ from companion_core.consent.store import InMemoryConfirmationStore
 from companion_core.email.store import InMemoryEmailStore
 from companion_core.llm.client import OpenAICompatibleChatProvider, ProviderUnavailable
 from companion_core.llm.store import InMemoryLLMSettingsStore, InMemoryLLMUsageStore
+from companion_core.meetings.store import InMemoryMeetingStore
 from companion_core.memory.store import InMemoryMemoryStore
 from companion_core.persona.store import InMemoryPersonaStore
 from companion_core.rag.store import InMemoryDocumentStore
@@ -24,6 +25,8 @@ def core_app(**kwargs):
     return create_app(
         calendar_store=InMemoryCalendarStore(),
         task_store=InMemoryTaskStore(),
+        meeting_store=InMemoryMeetingStore(),
+        run_meeting_worker_task=False,
         memory_store=InMemoryMemoryStore(),
         rag_store=InMemoryDocumentStore(),
         email_store=InMemoryEmailStore(),

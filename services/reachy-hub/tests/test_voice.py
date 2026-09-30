@@ -20,6 +20,7 @@ from companion_core.calendar.store import InMemoryCalendarStore
 from companion_core.consent.store import InMemoryConfirmationStore
 from companion_core.email.store import InMemoryEmailStore
 from companion_core.llm.store import InMemoryLLMSettingsStore, InMemoryLLMUsageStore
+from companion_core.meetings.store import InMemoryMeetingStore
 from companion_core.memory.store import InMemoryMemoryStore
 from companion_core.persona.store import InMemoryPersonaStore
 from companion_core.rag.store import InMemoryDocumentStore
@@ -44,6 +45,8 @@ espeak_binary = shutil.which("espeak-ng")
 def create_core_app(**kwargs):
     kwargs.setdefault("calendar_store", InMemoryCalendarStore())
     kwargs.setdefault("task_store", InMemoryTaskStore())
+    kwargs.setdefault("meeting_store", InMemoryMeetingStore())
+    kwargs.setdefault("run_meeting_worker_task", False)
     kwargs.setdefault("memory_store", InMemoryMemoryStore())
     kwargs.setdefault("rag_store", InMemoryDocumentStore())
     kwargs.setdefault("email_store", InMemoryEmailStore())

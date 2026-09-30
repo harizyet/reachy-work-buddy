@@ -22,6 +22,9 @@ from shared.protocols.accounts import SERVICE_HEADER
 from shared.protocols.operator_api import (
     LLM_SETTINGS,
     LLM_USAGE,
+    MEETING,
+    MEETING_CANCEL,
+    MEETINGS,
     PERSONA_SETTINGS,
     WEBSEARCH_LOG,
     WEBSEARCH_SETTINGS,
@@ -137,6 +140,49 @@ class CompanionCoreClient:
         response = await self._client.put(WEBSEARCH_SETTINGS, json=patch)
         response.raise_for_status()
         return response.json()
+
+    async def create_meeting(
+        self,
+        *,
+        title: str,
+        audio_bytes: bytes,
+        filename: str,
+        content_type: str,
+        project_scope: str | None = None,
+        context: str | None = None,
+        participants: str = "",
+        started_at: str | None = None,
+    ) -> dict[str, Any]:
+        """27.1 upload passthrough: reachy-hub already read the browser's
+        multipart body into memory (companion-core is closed to the
+        browser, only reachable through this proxy), so it's re-sent as a
+        fresh multipart request rather than streamed."""
+        data = {"title": title, "project_scope": project_scope or "", "context": context or "", "participants": participants}
+        if started_at:
+            data["started_at"] = started_at
+        resp = await self._client.post(
+            MEETINGS,
+            data=data,
+            files={"audio": (filename, audio_bytes, content_type)},
+            timeout=120.0,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    async def list_meetings(self) -> list[dict[str, Any]]:
+        resp = await self._client.get(MEETINGS, timeout=30.0)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get_meeting(self, meeting_id: str) -> dict[str, Any]:
+        resp = await self._client.get(MEETING.format(meeting_id=meeting_id), timeout=10.0)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def cancel_meeting(self, meeting_id: str) -> dict[str, Any]:
+        resp = await self._client.post(MEETING_CANCEL.format(meeting_id=meeting_id), timeout=10.0)
+        resp.raise_for_status()
+        return resp.json()
 
     async def accounts_request(self, method, path, *, data=None, params=None):
         response = await self._client.request(method, path, json=data, params=params, timeout=65)

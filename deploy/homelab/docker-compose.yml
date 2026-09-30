@@ -84,6 +84,45 @@ services:
     expose:
       - "8080"
 
+  diarization:
+    # Phase 27.3 (docs/phase-27.md): Nemotron-3-Diarization (NeMo
+    # Sortformer) with its per-chunk network step on OpenVINO. Ported from
+    # local experimentation (previously tested standalone, not part of
+    # this repo) into deploy/homelab/diarization/ — see that Dockerfile's
+    # header comment. companion-core does not call this service yet; it's
+    # deployed ahead of that wiring so the model download/export (~1 min,
+    # cached in the diarization-data volume below) doesn't gate it.
+    #
+    # Gated behind the "diarization" profile, unlike searxng above: it
+    # needs an Intel iGPU passthrough (/dev/dri) that not every homelab
+    # host has, and would hard-fail `docker compose up` on one that
+    # doesn't. `scripts/start-homelab.sh --diarization` enables it.
+    build: ./diarization
+    image: reachy-diarization:latest
+    restart: unless-stopped
+    profiles: ["diarization"]
+    user: "${DIARIZATION_UID:-1000}:${DIARIZATION_GID:-1000}"
+    group_add:
+      # The group owning /dev/dri/renderD* on the host — find it with
+      # `stat -c %g /dev/dri/renderD128`. Left at a common default (990)
+      # since it varies by distro/driver version.
+      - "${DIARIZATION_RENDER_GID:-990}"
+    devices:
+      - /dev/dri:/dev/dri
+    environment:
+      OV_DEVICE: ${DIARIZATION_OV_DEVICE:-GPU}
+      OV_PRECISION: ${DIARIZATION_OV_PRECISION:-}
+    volumes:
+      - diarization-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8010/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 300s
+    expose:
+      - "8010"
+
   reachy-embodiment:
     # Phase 22: gated behind the "simulation" profile, matching the
     # module docstring above this file — production reachy-embodiment
@@ -236,6 +275,15 @@ services:
       # core's HubClient sends it as a bearer token to reach reachy-hub's
       # now-gated /robots/{id}/... routes from /debug/robots/....
       REMOTE_UI_TOKEN: ${REMOTE_UI_TOKEN:-}
+      # Phase 27.1: uploaded meeting recordings, same "large binaries don't
+      # belong in Postgres rows" reasoning as OWNER_RECOGNITION_CAPTURE_DIR
+      # above, except this one is not optional — 27.1's exit criterion is
+      # that an uploaded recording survives a service restart, so the
+      # meetings volume below is always mounted, not gated behind an unset
+      # env var falling back to in-memory.
+      MEETING_AUDIO_DIR: ${MEETING_AUDIO_DIR:-/data/meeting-audio}
+    volumes:
+      - meeting-audio:/data/meeting-audio
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -274,6 +322,16 @@ volumes:
   # metadata sidecars remain plaintext. Restrict host access. Key-domain
   # separation remains planned in docs/phase-26.md#26d-key-domains.
   owner-recognition-captures:
+  # Phase 27.1: uploaded meeting recordings (see MEETING_AUDIO_DIR above).
+  # Unlike owner-recognition-captures this is not encrypted at rest —
+  # meeting audio isn't biometric capture data, and 27.16's local-first
+  # privacy control is about outbound processing (never leaving the
+  # homelab by default), not encryption of this volume.
+  meeting-audio:
+  # Phase 27.3: the diarization service's downloaded HF weights and
+  # exported ONNX graph (see its own service comment above). Losing this
+  # volume just costs a re-download/re-export on next start, not data.
+  diarization-data:
 
 secrets:
   credential_keys:

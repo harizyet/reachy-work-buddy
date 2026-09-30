@@ -7,6 +7,7 @@ from companion_core.calendar.store import InMemoryCalendarStore
 from companion_core.consent.store import InMemoryConfirmationStore
 from companion_core.email.store import InMemoryEmailStore
 from companion_core.llm.store import InMemoryLLMSettingsStore, InMemoryLLMUsageStore
+from companion_core.meetings.store import InMemoryMeetingStore
 from companion_core.memory.store import InMemoryMemoryStore
 from companion_core.persona.store import InMemoryPersonaStore
 from companion_core.rag.store import InMemoryDocumentStore
@@ -31,6 +32,8 @@ def make_client(**kwargs):
     core = create_core_app(
         calendar_store=InMemoryCalendarStore(),
         task_store=InMemoryTaskStore(),
+        meeting_store=InMemoryMeetingStore(),
+        run_meeting_worker_task=False,
         memory_store=InMemoryMemoryStore(),
         rag_store=InMemoryDocumentStore(),
         email_store=InMemoryEmailStore(),
@@ -183,6 +186,30 @@ def test_proxy_masked_settings_and_status_real_chain():
     # A UI deploy must not leave browsers running a stale app.js.
     assert client.get("/ui/app.js").headers["cache-control"] == "no-cache"
     assert client.get("/ui/").headers["cache-control"] == "no-cache"
+
+
+def test_meetings_proxy_upload_list_get_cancel_require_auth():
+    client = make_client()
+    files = {"audio": ("meeting.wav", b"RIFF....WAVEfmt ", "audio/wav")}
+
+    unauthenticated = client.post("/meetings", data={"title": "Weekly sync"}, files=files)
+    assert unauthenticated.status_code == 401
+
+    login(client)
+    uploaded = client.post("/meetings", data={"title": "Weekly sync", "participants": "Hariz, Alice"}, files=files, headers=CSRF)
+    assert uploaded.status_code == 200, uploaded.text
+    body = uploaded.json()
+    assert body["title"] == "Weekly sync"
+    assert body["participants"] == ["Hariz", "Alice"]
+    meeting_id = body["id"]
+
+    assert [m["id"] for m in client.get("/meetings").json()] == [meeting_id]
+    assert client.get(f"/meetings/{meeting_id}").json()["id"] == meeting_id
+    assert client.get("/meetings/does-not-exist").status_code == 404
+
+    cancelled = client.post(f"/meetings/{meeting_id}/cancel", headers=CSRF)
+    assert cancelled.status_code == 200 and cancelled.json()["status"] == "cancelled"
+    assert client.post(f"/meetings/{meeting_id}/cancel", headers=CSRF).status_code == 409
 
 
 def test_websearch_settings_proxy_masks_key_and_redacts_validation_errors():
