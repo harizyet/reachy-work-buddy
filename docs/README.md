@@ -59,7 +59,8 @@ correct facts or links, not to track each new phase dependency.
   27.1–27.3 (durable job store/worker, upload API, transcription and
   diarization sidecars wired via [ADR 0025](adr/0025-speech-inference-service.md)'s
   client interfaces, operator-ui recording and detail view) landed
-  2026-09-30; neither sidecar built/run for real yet. Alignment and
+  2026-09-30; the live service path passed a short single-speaker smoke test.
+  Real meeting acceptance remains open. Alignment and
   analysis (27.4 onward) not started.
 - [Phase 28](phase-28.md): embodied meeting secretary — owner-present
   companion, then physical secretary attendance, then bounded delegation;
@@ -208,8 +209,8 @@ These are dated evidence, not startup instructions or current health checks.
 
 - [Phase 27.1 foundation](verification/phase-27-foundation-2026-09-30.md):
   automated companion-core/reachy-hub checks for meeting upload/tracking/
-  restart-recovery and the owner-authenticated proxy; no live homelab
-  deployment or real-browser UI check performed.
+  restart-recovery and the owner-authenticated proxy, plus a live homelab
+  speech smoke test. Real multi-speaker meeting and browser acceptance remain open.
 
 ## Where information belongs
 

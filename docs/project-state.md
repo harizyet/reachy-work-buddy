@@ -1,6 +1,6 @@
 # Project state
 
-Snapshot: 2026-09-28. This page owns current deployment and cross-phase
+Snapshot: 2026-09-30. This page owns current deployment and cross-phase
 acceptance limits. The [phase ledger](plan.md#6-implementation-roadmap)
 owns phase status and scope; dated [verification records](README.md#verification-records)
 own evidence. This snapshot is not a live health check.
@@ -29,6 +29,15 @@ the homelab or the full system production-accepted. See the exact
 Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVER.md).
 
 ## Implemented but not fully accepted
+
+- **Meeting intelligence (27):** upload, transcription and diarization reached
+  ALIGNING in the real homelab with a short synthetic single-speaker clip.
+  Real multi-speaker/30–60 minute acceptance, resource measurements,
+  browser recording/detail checks and explicit row/audio survival across
+  restart remain open. Speech-service token authentication is implemented
+  but unset in the reported deployment. Alignment and analysis remain
+  unimplemented. See [evidence](verification/phase-27-foundation-2026-09-30.md)
+  and the [next diagnostic run](phase-27.md#before-alignment-representative-speech-acceptance).
 
 - **Physical platform (22b/22c):** named behaviours were owner-accepted despite
   tracking imprecision; audio and camera have run on hardware. LOCAL-backend

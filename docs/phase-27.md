@@ -248,10 +248,9 @@ speech-inference sidecar (eventually folded into a unified
 `speech-service`), consumed by companion-core through
 `meetings/speech_clients.py`'s `HTTPTranscriptionClient`, never local
 faster-whisper running inside companion-core itself. `MeetingWorker`
-calls it for every job reaching TRANSCRIBING. **Not yet live-verified**:
-the sidecar has never been built or run, so nothing below this line
-(segment timing, real RTF/CPU/RAM numbers, the 30-60 minute exit
-criterion) has real evidence yet — see
+calls it for every job reaching TRANSCRIBING. **Live smoke-tested** with
+a short synthetic single-speaker clip on 2026-09-30. Real 30–60 minute
+meeting acceptance and RTF/CPU/RAM measurements remain open — see
 [verification](verification/phase-27-foundation-2026-09-30.md).
 
 Use the existing local faster-whisper capability through a meeting-specific long-form path.
@@ -297,10 +296,11 @@ Speaker diarization is a baseline Phase 27 capability.
 **Status 2026-09-30:** implemented — the diarization service is
 deployable (`deploy/homelab/diarization/`, `--diarization`) and
 `MeetingWorker` calls it (`meetings/speech_clients.py`'s
-`HTTPDiarizationClient`) for every job reaching DIARIZING. **Not yet
-live-verified**: the sidecar has never been built or run, so the segment
-example and exit criterion below have no real evidence behind them yet —
-see [verification](verification/phase-27-foundation-2026-09-30.md). Per
+`HTTPDiarizationClient`) for every job reaching DIARIZING. **Live service
+path smoke-tested** with a short synthetic single-speaker clip, reusing
+the owner’s existing standalone container. The repository image was not
+built in that run; multi-speaker separation and real meeting-length
+acceptance remain open — see [verification](verification/phase-27-foundation-2026-09-30.md). Per
 [ADR 0025](adr/0025-speech-inference-service.md), diarization remains
 conceptually distinct from speaker identity even once this and STT
 converge behind a unified `speech-service`: a `SPEAKER_00`-style cluster
@@ -365,7 +365,9 @@ TranscriptSegment
 ├── end_ms
 ├── speaker_id
 ├── text
-└── quality metadata
+├── speaker_confidence
+├── attribution_state
+└── provenance (source segments and alignment policy/version)
 ```
 
 Example:
@@ -935,7 +937,8 @@ Generated data should never be treated as immutable ground truth.
 "after upload-based processing is accepted" sequencing — the owner asked
 for it explicitly, the same kind of user-authorized deviation as 27.1/27.3
 landing ahead of Phase 26. Mobile-specific handling and 27.1's real
-browser/live-deployment acceptance are still outstanding.
+real-browser acceptance remains outstanding; the deployed UI assets
+were checked through HTTP only.
 
 After upload-based processing is accepted, add owner-controlled browser/mobile recording.
 
@@ -974,8 +977,9 @@ Exit criterion:
 Postgres and raw audio under `MEETING_AUDIO_DIR` (a required, always-on
 volume — see `docs/deployment.md`); `test_meeting_survives_service_restart_with_same_backing_store`
 in `test_meetings.py` and the docker-compose `meeting-audio` volume are the
-mechanics behind that claim, not a live homelab redeploy — that
-verification remains open. `MeetingWorker.run_forever` requeues any job
+automated evidence for recovery. A live homelab deployment has since
+run, but explicit row/audio survival across a companion-core restart
+remains unverified. `MeetingWorker.run_forever` requeues any job
 left mid-stage by a previous run at startup. Basic Meetings UI exists
 (operator-ui's Meetings tab) but has not been exercised in a real browser.
 
@@ -1041,6 +1045,28 @@ Exit criterion:
 
 > The same meeting produces stable speaker segments and measured processing performance.
 
+## Before alignment: representative speech acceptance
+
+Use a consenting, real 10–20 minute recording with 2–3 human speakers,
+normal room distance, interruptions and technical vocabulary. This is an
+initial diagnostic run; it does not replace the 30–60 minute exit criteria.
+Record audio duration, separate STT/diarization durations and real-time
+factors (processing time / audio duration), peak RAM, CPU/iGPU utilization,
+and coexistence with the deployed LLM workload. Inspect speaker count,
+speaker changes, overlap and raw STT versus diarization boundaries manually.
+Keep private recordings and transcripts out of repository evidence.
+
+At the next coordinated sidecar restart, enable `SPEECH_SERVICE_TOKEN`
+on Core and both sidecars and verify authorized requests succeed while
+missing/incorrect tokens fail. The current deployment remains unauthenticated
+at this boundary; see [deployment](deployment.md#meeting-diarization).
+
+Use the observed boundary mismatches to decide whether meeting STT should
+return word timestamps before finalizing alignment. Do not invent word
+boundaries by dividing sentence duration. Without reliable word timing,
+retain uncertain attribution with `speaker_id = null`; split text across
+speakers only when timing evidence supports it.
+
 ## 27.4 — Parallel speech processing and alignment
 
 Per ADR 0025: `PREPROCESSING → TRANSCRIBING → DIARIZING → ALIGNING`'s
@@ -1060,9 +1086,23 @@ concurrently — that parallelism, and this step's alignment/
 stages rests at ALIGNING with `transcript_segments` and
 `diarization_segments` populated but not yet merged.
 
+Persist independent transcription/diarization completion and errors so a
+successful result survives a retry of the other operation. Expose completed
+raw output while the other operation is unavailable, and preserve cancellation
+when in-flight work finishes. Downstream analysis must consume canonical
+`TranscriptSegment` IDs with source provenance, rather than raw sidecar output.
+
 Exit criterion:
 
 > Transcript UI displays speaker + timestamp + text consistently.
+
+After alignment and real STT/diarization workload acceptance, consolidate
+the two sidecars into the generalized `speech-service` before adding another
+speech model there. Preserve [ADR 0025](adr/0025-speech-inference-service.md)'s
+ownership and client seams. Measure buffering and long HTTP requests during
+acceptance before changing transport; inference-job handles and explicit
+resource scheduling are future consolidation design work, not prerequisites
+for the first representative recording.
 
 ## 27.5 — Speaker management
 
