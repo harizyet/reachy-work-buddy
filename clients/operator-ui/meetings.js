@@ -16,11 +16,18 @@ function createMeetings({api, apiUploadForm, isLoggedIn}) {
   const el = id => document.getElementById(id);
 
   const STATUS_LABELS = {
-    uploaded: 'Queued', preprocessing: 'Preprocessing', transcribing: 'Transcribing',
-    diarizing: 'Diarizing', aligning: 'Aligning (waiting on 27.4)', analyzing: 'Analyzing',
+    uploaded: 'Queued', preprocessing: 'Preparing audio', transcribing: 'Transcribing',
+    diarizing: 'Identifying speakers', aligning: 'Processing paused', analyzing: 'Analyzing',
     complete: 'Complete', failed: 'Failed', cancelled: 'Cancelled',
   };
   function statusLabel(status) { return STATUS_LABELS[status] || status; }
+
+  function statusDescription(meeting) {
+    if (meeting.status === 'aligning') return 'Transcription and speaker detection finished. Combining them into a speaker-labelled transcript is not available yet.';
+    if (meeting.status === 'failed') return 'Processing failed. Open details for the technical error.';
+    if (meeting.status === 'cancelled') return 'Processing was cancelled.';
+    return '';
+  }
 
   function formatTimestamp(seconds) {
     if (seconds === null || seconds === undefined) return '--:--';
@@ -132,25 +139,39 @@ function createMeetings({api, apiUploadForm, isLoggedIn}) {
     list.replaceChildren();
     for (const meeting of meetingList) {
       const item = document.createElement('li');
-      const uploaded = new Date(meeting.created_at).toLocaleString();
-      item.append(document.createTextNode(`${meeting.title} — ${statusLabel(meeting.status)} · uploaded ${uploaded} `));
-      if (meeting.error_detail) {
-        const detail = document.createElement('span');
-        detail.className = 'muted';
-        detail.textContent = `(${meeting.error_detail}) `;
-        item.append(detail);
+      item.className = 'meeting-item';
+      const heading = document.createElement('div');
+      heading.className = 'meeting-heading';
+      const title = document.createElement('strong');
+      title.textContent = meeting.title;
+      const status = document.createElement('span');
+      status.className = 'meeting-status';
+      status.textContent = statusLabel(meeting.status);
+      heading.append(title, status);
+      const uploaded = document.createElement('p');
+      uploaded.className = 'muted';
+      uploaded.textContent = `Uploaded ${new Date(meeting.created_at).toLocaleString()}`;
+      item.append(heading, uploaded);
+      const description = statusDescription(meeting);
+      if (description) {
+        const note = document.createElement('p');
+        note.textContent = description;
+        item.append(note);
       }
+      const actions = document.createElement('div');
+      actions.className = 'meeting-actions';
       const view = document.createElement('button');
-      view.type = 'button'; view.className = 'secondary'; view.textContent = 'View';
+      view.type = 'button'; view.className = 'secondary'; view.textContent = 'View details';
       view.addEventListener('click', () => void showDetail(meeting.id));
-      item.append(view);
+      actions.append(view);
       const terminal = ['complete', 'failed', 'cancelled'];
       if (!terminal.includes(meeting.status)) {
         const cancel = document.createElement('button');
-        cancel.type = 'button'; cancel.className = 'secondary'; cancel.textContent = 'Cancel';
+        cancel.type = 'button'; cancel.className = 'secondary'; cancel.textContent = 'Cancel processing';
         cancel.addEventListener('click', () => void doCancel(meeting.id));
-        item.append(cancel);
+        actions.append(cancel);
       }
+      item.append(actions);
       list.append(item);
     }
   }
@@ -179,6 +200,14 @@ function createMeetings({api, apiUploadForm, isLoggedIn}) {
 
   async function showDetail(meetingId) {
     el('meeting-detail').hidden = false;
+    el('meeting-detail-title').textContent = '';
+    el('meeting-detail-meta').textContent = '';
+    el('meeting-detail-context').textContent = '';
+    el('meeting-detail-transcript').replaceChildren();
+    el('meeting-detail-diarization').replaceChildren();
+    el('meeting-detail-error').hidden = true;
+    el('meeting-detail-error').open = false;
+    el('meeting-detail-error-text').textContent = '';
     el('meeting-detail-status').textContent = 'Loading…';
     try {
       const meeting = await api(`/meetings/${meetingId}`);
@@ -190,7 +219,9 @@ function createMeetings({api, apiUploadForm, isLoggedIn}) {
       if (meeting.duration_seconds) parts.push(`Duration: ${formatTimestamp(meeting.duration_seconds)}`);
       el('meeting-detail-meta').textContent = parts.join(' · ');
       el('meeting-detail-context').textContent = meeting.context || '';
-      el('meeting-detail-status').textContent = meeting.error_detail ? `Error: ${meeting.error_detail}` : '';
+      el('meeting-detail-status').textContent = statusDescription(meeting);
+      el('meeting-detail-error').hidden = !meeting.error_detail;
+      el('meeting-detail-error-text').textContent = meeting.error_detail || '';
       renderSegments(el('meeting-detail-transcript'), meeting.transcript_segments, {kind: 'transcript'});
       renderSegments(el('meeting-detail-diarization'), meeting.diarization_segments, {kind: 'diarization'});
     } catch (error) {

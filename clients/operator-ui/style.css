@@ -224,6 +224,7 @@ footer {
 }
 .view-switch {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin: 0 0 24px;
 }
@@ -439,3 +440,12 @@ textarea:focus {
 .chat-search li { margin: .8rem 0; overflow-wrap: anywhere; }
 .chat-search li small { display: block; color: #aebed0; }
 .chat-search .chat-search-query { color: #aebed0; }
+
+.meeting-list { list-style: none; padding: 0; }
+.meeting-item { border-top: 1px solid #42536b; padding: 1rem 0; overflow-wrap: anywhere; }
+.meeting-heading, .meeting-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+.meeting-heading { justify-content: space-between; }
+.meeting-status { border: 1px solid #42536b; border-radius: 1rem; padding: .2rem .65rem; font-size: .9rem; }
+.meeting-item p { margin: .5rem 0; }
+.meeting-actions { margin-top: .75rem; }
+#meeting-detail-error-text { white-space: pre-wrap; overflow-wrap: anywhere; }

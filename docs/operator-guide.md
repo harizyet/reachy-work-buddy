@@ -20,6 +20,17 @@ outbound delivery or inference health: successful polls clear errors, and
 also make polling stale. DND suppresses proactive interruptions, not direct
 replies. The model indicator means configured, not proven reachable.
 
+## Meeting recordings
+
+Open **Meetings** to record or upload audio, then choose **View details**
+for the transcript and separate speaker timings. **Processing paused** means
+transcription and speaker detection finished, but combining them into a
+speaker-labelled transcript is not implemented yet. Meeting summaries are
+also unavailable. **Cancel processing** stops a pending job; it does not
+delete the recording. Failed jobs keep their diagnostic message under
+**Technical error** in the detail view. An old failed job remains failed
+even after its underlying service problem has been fixed.
+
 ## Conversational animations
 
 Open **Settings · Accounts → Conversational animations**, select the robot,

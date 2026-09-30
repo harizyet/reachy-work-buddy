@@ -1,10 +1,21 @@
 # Handover
 
-Current session snapshot: 2026-09-30. Read [AGENTS.md](AGENTS.md) first.
+Current session snapshot: 2026-10-01. Read [AGENTS.md](AGENTS.md) first.
 The [documentation index](docs/README.md) defines ownership;
 [project state](docs/project-state.md) owns deployment limits and open acceptance.
 
 ## Current work
+
+Meeting UI wording/layout cleanup is implemented locally, not deployed.
+Rows separate title/status/date/actions; ALIGNING displays “Processing
+paused” with the missing speaker-alignment feature explained. Raw errors
+are collapsed in detail, and phase numbers are removed from user copy.
+The reported metadata_errors row is the historical failure documented in
+foundation verification; its dependency fix already exists. No records
+were deleted or retried. Chromium with fixture data passed mobile layout,
+literal text, paused wording, collapsed errors, detail reset and cancel
+routing; JS syntax and Ruff passed. This is not live pipeline acceptance.
+See [operator guide](docs/operator-guide.md#meeting-recordings).
 
 Long-meeting transport fixes implemented: spooled Hub uploads, bounded
 Core disk copies, file-backed worker inference requests, configurable
