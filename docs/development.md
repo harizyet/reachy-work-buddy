@@ -94,9 +94,7 @@ checks also use real models separately from deterministic injected embeddings.
 With Playwright and Chromium available externally:
 
 ```bash
-node --test clients/operator-ui/tests/chat.test.cjs
-node --test clients/operator-ui/tests/voice.test.cjs
-node --test clients/operator-ui/tests/motion.test.cjs
+node --test clients/operator-ui/tests/*.test.cjs
 node --check clients/operator-ui/app.js
 node --check clients/operator-ui/chat.js
 ```
@@ -105,7 +103,10 @@ Set `NODE_PATH` to the external installation's `node_modules` if necessary.
 No frontend build dependency is required. The committed browser regression
 uses a local HTTP fixture: direct/proxied mounts, literal text, duplicate
 send prevention, failed drafts, user switches, expired login, late replies,
-fresh tabs, frontier override/reset, and mobile layout. Complement it with
+fresh tabs, frontier override/reset, settings navigation, saved chat records,
+meeting selection races, and desktop/mobile layout. Saved-record browser checks
+use fixture storage; the opt-in database migration suite separately verifies
+actual Postgres persistence across store reconnects. Complement it with
 real Compose/model checks before claiming live inference worked.
 
 ## Dependency management

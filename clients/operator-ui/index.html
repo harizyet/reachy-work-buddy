@@ -15,154 +15,28 @@
     <div id="dashboard" hidden>
       <div class="view-switch" role="group" aria-label="Dashboard view">
         <button id="overview-tab" aria-pressed="true" aria-controls="overview-pane">Overview</button>
-        <button id="accounts-tab" class="secondary" aria-pressed="false" aria-controls="accounts-pane">Settings · Accounts</button>
+
         <button id="chat-tab" class="secondary" aria-pressed="false" aria-controls="chat-pane">Chat</button>
         <button id="meetings-tab" class="secondary" aria-pressed="false" aria-controls="meetings-pane">Meetings</button>
+        <button id="settings-tab" class="secondary" aria-pressed="false" aria-controls="settings-pane">Settings</button>
       </div>
-      <section id="chat-pane" hidden aria-labelledby="chat-title" class="card chat-card">
-        <div class="section-title"><div><span class="eyebrow">YOUR COMPANION</span><h2 id="chat-title">Chat with Reachy</h2></div><button id="clear-chat" class="secondary" type="button">Clear view</button></div>
+      <section id="chat-pane" hidden aria-labelledby="chat-title" class="workspace chat-workspace">
+<aside class="record-sidebar" aria-label="Chat history"><button id="new-chat" type="button">＋ New chat record</button><h3>Previous chats</h3><label class="search-label">Find a chat<input id="chat-history-search" type="search" placeholder="Search titles…"></label><p id="chat-history-status" role="status"></p><ul id="chat-history" class="record-list"></ul><p class="muted sidebar-note">Typed web messages are saved on your homelab. Chat records share your assistant’s context across channels.</p></aside><div class="chat-main">
+        <div class="section-title"><div><span class="eyebrow">YOUR COMPANION</span><h2 id="chat-title">Chat with Reachy</h2></div><button id="clear-chat" class="secondary" type="button">Hide messages</button></div>
         <form id="chat-user-form" class="chat-user-form"><label for="chat-user">User ID<input id="chat-user" required autocomplete="off" placeholder="Loading default user…"></label><button id="chat-use-user" class="secondary">Use this user</button></form>
         <p id="chat-session" role="status">Loading session…</p>
         <p id="chat-telegram" class="channel-notice" role="status">Checking Telegram…</p>
-        <p class="muted">Messages shown here stay in this tab and disappear on refresh. Your companion session continues across channels.</p>
-        <section id="voice-panel" class="voice-panel" aria-labelledby="voice-title">
-          <div class="section-title"><div><span class="eyebrow">SPEAK TO REACHY</span><h3 id="voice-title">Robot microphone</h3></div><span id="voice-state" class="voice-state" role="status">Off</span></div>
-          <p class="channel-notice warn">Reachy does not recognise who is speaking. While listening is on, anyone near the robot can talk to it, so use it only in a private room. Replies that shouldn't be said aloud appear here instead of on the speaker. “Hey Reachy” keeps the microphone listening for its name until you turn it off, even after a restart, and anyone who says it can start a conversation.</p>
-          <form id="voice-form" class="voice-form"><label for="voice-robot">Robot<select id="voice-robot" disabled><option value="">Checking robots…</option></select></label><button id="voice-start" disabled>Start listening</button><button id="voice-stop" type="button" class="secondary" disabled>Stop</button></form>
-          <div class="voice-wake"><button id="voice-wake" type="button" class="secondary" disabled>Turn on “Hey Reachy”</button><span id="voice-wake-detail" class="muted" role="status"></span></div>
-          <p id="voice-detail" class="muted" role="status"></p>
-        </section>
+        <p class="muted">Select a saved chat or start a new record. Live robot voice turns appear here but are not saved in chat history.</p>
+
         <div id="chat-transcript" class="chat-transcript" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions text"><p id="chat-empty">Send a message to start or continue your conversation.</p></div>
         <form id="chat-form"><label for="chat-text">Message<textarea id="chat-text" rows="3" placeholder="Ask Reachy something… (try /reachy standby)" required disabled></textarea></label><div id="chat-command-hints" hidden></div><label class="check"><input id="force-frontier" type="checkbox"> Use frontier model for this message (sends conversation context to cloud)</label><div class="chat-compose-footer"><span id="chat-status" role="status"></span><button id="chat-send" disabled>Send</button></div></form>
-      </section>
-      <div id="accounts-pane" hidden>
-        <section class="card" aria-labelledby="motion-title">
-          <span class="eyebrow">SETTINGS</span><h2 id="motion-title">Conversational animations</h2>
-          <p>Choose how Reachy moves during robot microphone conversations. Stop listening before changing these settings.</p>
-          <label>Robot<select id="motion-robot" disabled></select></label>
-          <button type="button" id="motion-refresh" class="secondary">Refresh animation settings</button>
-          <form id="motion-form"><fieldset id="motion-fields" disabled>
-            <label class="check"><input type="checkbox" id="motion-gestures"> Listening and thinking gestures</label>
-            <p class="muted">Recorded gestures while listening and thinking, with returns to the home pose between gestures.</p>
-            <label class="check"><input type="checkbox" id="motion-wobble"> Head movement while speaking</label>
-            <p class="muted">Small head movements that follow Reachy's speech.</p>
-            <button>Apply animation settings</button>
-          </fieldset></form>
-          <p id="motion-status" role="status"></p>
-          <p class="muted">Applies to the next conversation. Restarting the robot's embodiment service restores its startup defaults.</p>
-        </section>
-        <section class="card" aria-labelledby="connected-accounts-title">
-          <h2 id="connected-accounts-title">Connected accounts</h2>
-          <p>Connect Google to let Reachy read your mail and calendar. You sign in and choose permissions on Google's website. Reachy never sees your Google password.</p>
-          <p class="muted">Read-only access: Reachy cannot send, delete or mark mail as read, or change your Google calendar. When cloud inference is enabled, earlier account replies may be included in conversation context sent to that provider.</p>
-          <p id="accounts-status" role="status"></p><p id="google-identity"></p>
-          <div class="grid" id="account-cards"></div>
-          <section id="calendar-selection" hidden><h3>Calendars Reachy may read</h3><form id="calendar-choice"><div id="calendar-options"></div><button>Save calendar choices</button></form><button id="calendar-preview" class="secondary">Show upcoming events</button><button id="calendar-busy" class="secondary">Show busy times</button><p class="muted">Events and busy times include only your selected calendars.</p></section>
-          <section id="mail-preview" hidden><h3>Read Gmail</h3><p>Shows up to 60 messages. Search to narrow the results. Attachments are not downloaded; long messages use a limited text preview.</p><form id="gmail-search"><label>Search your mail<input id="gmail-query" maxlength="512" placeholder="Leave blank for recent messages"></label><button>Show messages</button></form></section>
-          <div id="account-results" aria-live="polite"></div>
-          <details id="google-setup"><summary>One-time Google connection setup</summary>
-            <p id="google-setup-state"></p>
-            <p>This connects your own Google application to Reachy. Once it is set up, everyday use only needs the Connect buttons above.</p>
-            <ol><li>Open <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer">Google Cloud</a> and create a project. Enable the Gmail API and Google Calendar API.</li>
-            <li>In Google Auth Platform, set up the consent screen for your use. For a personal test, add your Google email as a test user.</li>
-            <li>Create a <strong>Desktop app</strong> OAuth client and download its JSON file (recommended: works without a public domain or HTTPS certificate). If this Reachy already has a stable HTTPS hostname, you may instead create a <strong>Web application</strong> client with the return address shown below as its authorized redirect URI.</li>
-            <li>Choose that file here and select Save connection setup. Then use Connect to sign in and approve read-only permissions. For a Desktop client, Connect shows a command to run on the computer whose browser you're using.</li></ol>
-            <p>Testing-mode permissions may expire after seven days. Personal/internal use and public apps have different Google verification requirements; see the deployment guide before relying on this for ongoing use.</p>
-            <form id="google-client-setup"><label id="google-callback-label">Return address<input id="google-callback" readonly></label>
-            <label>Google connection file<input id="google-client-file" type="file" accept=".json,application/json" required></label>
-            <label class="check"><input id="google-replace" type="checkbox"> Disconnect my existing Google connection before replacing this setup</label>
-            <button>Save connection setup</button></form>
-            <div id="google-desktop-connect" hidden aria-live="polite">
-              <h3>Run the sign-in helper</h3>
-              <p>Run this on the computer whose browser you use to reach Reachy. It opens Google sign-in, then hands the result back to Reachy. It never sees your Google client secret.</p>
-              <pre id="google-desktop-command"></pre>
-              <button type="button" id="google-desktop-copy" class="secondary">Copy command</button>
-              <p id="google-desktop-waiting" role="status"></p>
-            </div>
-          </details>
-        </section>
-        <section class="card" aria-labelledby="coding-agents-title">
-          <span class="eyebrow">DEVELOPMENT</span><h2 id="coding-agents-title">Coding agent credentials</h2>
-          <p class="muted">Phase 29 (planned): credentials a coding agent container needs to run, kept separate from Reachy's own application credentials. Reachy never sees or stores the agent's conversation itself here — only the secret it uses to authenticate.</p>
-          <p id="coding-agents-status" role="status"></p>
-          <div id="coding-agent-cards" class="grid"></div>
-        </section>
-        <section class="card" aria-labelledby="owner-recognition-title">
-          <h2 id="owner-recognition-title">Owner recognition</h2>
-          <p class="muted">Operational enrollment (a real speaker/face profile Reachy could use) does not exist yet — there is no recognition model in production. Everything below is the benchmark dataset used to build and evaluate that model.</p>
-          <p id="owner-recognition-reauth-status" role="status"></p>
-          <form id="owner-recognition-reauth-form"><label>Password<input id="owner-recognition-password" type="password" required autocomplete="current-password"></label><button>Confirm password</button></form>
-          <section aria-labelledby="benchmark-dataset-title">
-            <h3 id="benchmark-dataset-title">Benchmark dataset</h3>
-            <p>Voice and face samples for building and evaluating a real owner/non-owner recognition dataset (Phase 25a.1). Raw captures are kept, encrypted at rest, only while this is explicitly turned on — this is not the eventual production enrollment flow, which will delete raw captures once a template exists.</p>
-            <label class="check"><input type="checkbox" id="benchmark-enabled" disabled> Enable benchmark dataset collection</label>
-            <p id="benchmark-enabled-status" role="status"></p>
-            <h4>Voice samples</h4>
-            <p class="muted">Record a few short samples of your normal speaking voice, in the room and distance you'd usually talk to Reachy from.</p>
-            <button type="button" id="voice-sample-record" disabled>Start recording</button>
-            <p id="voice-sample-status" role="status"></p>
-            <p id="voice-sample-size" class="muted"></p>
-            <ul id="voice-sample-list" class="sample-list"></ul>
-            <button type="button" id="voice-sample-delete-all" class="secondary" disabled>Delete all voice samples</button>
-            <button type="button" id="voice-sample-export" class="secondary" disabled>Export voice dataset</button>
-            <h4>Face samples</h4>
-            <p class="muted">Capture a few photos at your normal distance from the robot, with different angles and lighting.</p>
-            <video id="face-preview" autoplay playsinline muted hidden></video>
-            <button type="button" id="face-sample-start" disabled>Turn on camera</button>
-            <button type="button" id="face-sample-capture" hidden disabled>Capture photo</button>
-            <button type="button" id="face-sample-stop" class="secondary" hidden disabled>Turn off camera</button>
-            <p id="face-sample-status" role="status"></p>
-            <p id="face-sample-size" class="muted"></p>
-            <ul id="face-sample-list" class="sample-list"></ul>
-            <button type="button" id="face-sample-delete-all" class="secondary" disabled>Delete all face samples</button>
-            <button type="button" id="face-sample-export" class="secondary" disabled>Export face dataset</button>
-          </section>
-        </section>
-      </div>
-      <div id="meetings-pane" hidden>
-        <section class="card" aria-labelledby="meetings-title">
-          <span class="eyebrow">RECORDINGS</span><h2 id="meetings-title">Meetings</h2>
-          <p>Record or upload a meeting to transcribe it and detect speakers locally. Recordings and transcripts stay in your homelab. You can view the transcript and speaker timings separately. Speaker-labelled transcripts and meeting summaries are not available yet.</p>
-          <div id="meeting-record-controls" class="voice-wake">
-            <button type="button" id="meeting-record-start">Start recording</button>
-            <button type="button" id="meeting-record-stop" class="secondary" hidden>Stop recording</button>
-            <button type="button" id="meeting-record-discard" class="secondary" hidden>Discard recording</button>
-            <span id="meeting-record-status" class="muted" role="status"></span>
-          </div>
-          <form id="meeting-upload-form">
-            <label>Title<input id="meeting-title" required maxlength="256"></label>
-            <label>Project (optional)<input id="meeting-project" maxlength="256"></label>
-            <label>Participants (optional, comma-separated)<input id="meeting-participants" maxlength="1024" placeholder="Hariz, Alice"></label>
-            <label>Context (optional)<textarea id="meeting-context" rows="2" maxlength="4096"></textarea></label>
-            <label>Recording file (skip if you recorded a clip above)<input id="meeting-audio" type="file" accept="audio/wav,audio/flac,audio/x-flac,audio/mp4,audio/mpeg,audio/opus,audio/webm,.wav,.flac,.m4a,.aac,.mp3,.opus,.webm"></label>
-            <button>Upload meeting</button>
-          </form>
-          <p id="meeting-upload-status" role="status"></p>
-          <ul id="meeting-list" class="meeting-list"></ul>
-          <p id="meeting-list-status" role="status"></p>
-          <section id="meeting-detail" hidden aria-labelledby="meeting-detail-title">
-            <div class="section-title"><h3 id="meeting-detail-title"></h3><button type="button" id="meeting-detail-close" class="secondary">Close</button></div>
-            <p id="meeting-detail-meta" class="muted"></p>
-            <p id="meeting-detail-context"></p>
-            <p id="meeting-detail-status" role="status"></p>
-            <details id="meeting-detail-error" hidden><summary>Technical error</summary><pre id="meeting-detail-error-text"></pre></details>
-            <h4>Transcript</h4>
-            <div id="meeting-detail-transcript"></div>
-            <h4>Speaker segments</h4>
-            <div id="meeting-detail-diarization"></div>
-          </section>
-        </section>
-      </div>
-      <div id="overview-pane">
-      <div class="section-title"><h2>System overview</h2><span id="updated">Checking status…</span></div>
-      <div id="components" class="components"></div>
-      <div class="grid">
-        <section class="card"><span class="eyebrow">YOUR WORKDAY</span><h2>Session controls</h2>
+      </div></section>
+      <section id="settings-pane" hidden aria-labelledby="settings-title"><div class="page-heading"><span class="eyebrow">PREFERENCES &amp; CONNECTIONS</span><h2 id="settings-title">Settings</h2><p>Configure your assistant and its connected features.</p></div>
+<div class="settings-tabs" role="tablist" aria-label="Feature settings"><button id="settings-assistant-tab" role="tab" aria-selected="true" aria-controls="settings-assistant" tabindex="0">Assistant</button><button id="settings-models-tab" role="tab" aria-selected="false" aria-controls="settings-models" tabindex="-1">Models</button><button id="settings-search-tab" role="tab" aria-selected="false" aria-controls="settings-search" tabindex="-1">Web search</button><button id="settings-voice-tab" role="tab" aria-selected="false" aria-controls="settings-voice" tabindex="-1">Voice &amp; motion</button><button id="settings-accounts-tab" role="tab" aria-selected="false" aria-controls="settings-accounts" tabindex="-1">Accounts</button><button id="settings-recognition-tab" role="tab" aria-selected="false" aria-controls="settings-recognition" tabindex="-1">Owner recognition</button></div><div id="settings-assistant" class="settings-panel" role="tabpanel" aria-labelledby="settings-assistant-tab" ><section class="card"><span class="eyebrow">YOUR WORKDAY</span><h2>Session controls</h2>
           <form id="session-select"><label>User ID<input id="user-id" value="default-user" required></label><button class="secondary">Load session</button></form>
           <p id="session-state">Load a session to change its settings.</p>
           <form id="session-controls"><fieldset id="session-fields" disabled><label>Mode<select id="mode"><option value="desk">Desk</option><option value="office">Office</option><option value="silent">Silent</option><option value="remote">Remote</option><option value="trusted">Trusted</option></select></label><label class="check"><input type="checkbox" id="dnd"> Do not disturb</label><button>Save session</button></fieldset></form>
-        </section>
-        <section class="card"><span class="eyebrow">IDENTITY</span><h2>Assistant persona</h2>
+        </section><section class="card"><span class="eyebrow">IDENTITY</span><h2>Assistant persona</h2>
           <p>Controls how the assistant introduces and describes itself in conversation. Applies to the next conversation turn.</p>
           <form id="persona"><fieldset id="persona-fields" disabled><label>Name<input id="persona-name" required maxlength="64" placeholder="Reachy"></label>
           <label>System prompt<textarea id="persona-prompt" rows="5" required maxlength="4000" placeholder="You are Reachy, an embodied work assistant..."></textarea></label>
@@ -172,8 +46,7 @@
           <button type="button" id="persona-browser-timezone" class="secondary">Use this browser's time zone</button>
           <p class="muted">Every conversation turn tells the model the local date, time and location. A weather question that names no place is searched for this location, so the search provider receives it too.</p>
           <button>Save persona</button><button type="button" id="reset-persona" class="secondary">Reset to default</button></fieldset></form>
-        </section>
-        <section class="card"><span class="eyebrow">INFERENCE</span><h2>Language model</h2>
+        </section></div><div id="settings-models" class="settings-panel" role="tabpanel" aria-labelledby="settings-models-tab" hidden><section class="card"><span class="eyebrow">INFERENCE</span><h2>Language model</h2>
           <p>Connect a local server or a hosted compatible endpoint. Changes apply to the next conversation turn.</p>
           <form id="llm"><fieldset id="llm-fields" disabled><label>Base URL<input id="base-url" type="url" placeholder="http://ovms-host:8000/v1"></label>
           <label>Model name<input id="model" placeholder="Model name configured on your server"></label><small>For OpenVINO Model Server, use its exact configured model name.</small>
@@ -186,8 +59,7 @@
           <label>Routing<select id="llm-routing"><option value="local_only">Local only</option><option value="local_with_cloud_fallback">Local, then cloud on failure</option><option value="cloud_only">Cloud only</option></select></label>
           <p class="muted">Cloud routing sends the conversation context to that provider. Blank URL and model remove a provider; blank keys retain saved credentials.</p>
           <button>Save model</button><button type="button" id="disable-llm" class="secondary">Disable all models</button></fieldset></form>
-        </section>
-        <section class="card"><span class="eyebrow">GROUNDING</span><h2>Web search</h2>
+        </section></div><div id="settings-search" class="settings-panel" role="tabpanel" aria-labelledby="settings-search-tab" hidden><section class="card"><span class="eyebrow">GROUNDING</span><h2>Web search</h2>
           <p>Lets the model check a live search when a question needs current or external information instead of guessing from training data. Off by default.</p>
           <p class="muted">Hosted providers (Brave, Exa, Tavily) receive each query directly. Each search goes to whichever enabled one has used the smallest share of its monthly limit. Reachy stops calling a provider when it reaches its limit, so keep limits below each free tier (Brave bills the card on file after its monthly credit). SearXNG runs only after every hosted provider failed or hit its limit. A self-hosted SearXNG instance still forwards your query to whichever upstream search engines it's configured to use, so this isn't full network confinement.</p>
           <form id="websearch"><fieldset id="websearch-fields" disabled><label>Policy<select id="websearch-policy"><option value="off">Off — never search</option><option value="auto">Auto — only when a question looks like it needs current info</option><option value="always">Always — every message</option></select></label>
@@ -219,15 +91,139 @@
           </div>
           <label>Results per search<input id="websearch-result-count" type="number" min="1" max="10"></label>
           <button>Save web search</button><button type="button" id="disable-websearch" class="secondary">Turn off web search</button></fieldset></form>
+        </section></div><div id="settings-voice" class="settings-panel" role="tabpanel" aria-labelledby="settings-voice-tab" hidden><section id="voice-panel" class="voice-panel" aria-labelledby="voice-title">
+          <div class="section-title"><div><span class="eyebrow">SPEAK TO REACHY</span><h3 id="voice-title">Robot microphone</h3></div><span id="voice-state" class="voice-state" role="status">Off</span></div>
+          <p class="channel-notice warn">Reachy does not recognise who is speaking. While listening is on, anyone near the robot can talk to it, so use it only in a private room. Replies that shouldn't be said aloud appear here instead of on the speaker. “Hey Reachy” keeps the microphone listening for its name until you turn it off, even after a restart, and anyone who says it can start a conversation.</p>
+          <form id="voice-form" class="voice-form"><label for="voice-robot">Robot<select id="voice-robot" disabled><option value="">Checking robots…</option></select></label><button id="voice-start" disabled>Start listening</button><button id="voice-stop" type="button" class="secondary" disabled>Stop</button></form>
+          <div class="voice-wake"><button id="voice-wake" type="button" class="secondary" disabled>Turn on “Hey Reachy”</button><span id="voice-wake-detail" class="muted" role="status"></span></div>
+          <p id="voice-detail" class="muted" role="status"></p>
+        </section><section class="card" aria-labelledby="motion-title">
+          <span class="eyebrow">SETTINGS</span><h2 id="motion-title">Conversational animations</h2>
+          <p>Choose how Reachy moves during robot microphone conversations. Stop listening before changing these settings.</p>
+          <label>Robot<select id="motion-robot" disabled></select></label>
+          <button type="button" id="motion-refresh" class="secondary">Refresh animation settings</button>
+          <form id="motion-form"><fieldset id="motion-fields" disabled>
+            <label class="check"><input type="checkbox" id="motion-gestures"> Listening and thinking gestures</label>
+            <p class="muted">Recorded gestures while listening and thinking, with returns to the home pose between gestures.</p>
+            <label class="check"><input type="checkbox" id="motion-wobble"> Head movement while speaking</label>
+            <p class="muted">Small head movements that follow Reachy's speech.</p>
+            <button>Apply animation settings</button>
+          </fieldset></form>
+          <p id="motion-status" role="status"></p>
+          <p class="muted">Applies to the next conversation. Restarting the robot's embodiment service restores its startup defaults.</p>
+        </section></div><div id="settings-accounts" class="settings-panel" role="tabpanel" aria-labelledby="settings-accounts-tab" hidden><section class="card" aria-labelledby="connected-accounts-title">
+          <h2 id="connected-accounts-title">Connected accounts</h2>
+          <p>Connect Google to let Reachy read your mail and calendar. You sign in and choose permissions on Google's website. Reachy never sees your Google password.</p>
+          <p class="muted">Read-only access: Reachy cannot send, delete or mark mail as read, or change your Google calendar. When cloud inference is enabled, earlier account replies may be included in conversation context sent to that provider.</p>
+          <p id="accounts-status" role="status"></p><p id="google-identity"></p>
+          <div class="grid" id="account-cards"></div>
+          <section id="calendar-selection" hidden><h3>Calendars Reachy may read</h3><form id="calendar-choice"><div id="calendar-options"></div><button>Save calendar choices</button></form><button id="calendar-preview" class="secondary">Show upcoming events</button><button id="calendar-busy" class="secondary">Show busy times</button><p class="muted">Events and busy times include only your selected calendars.</p></section>
+          <section id="mail-preview" hidden><h3>Read Gmail</h3><p>Shows up to 60 messages. Search to narrow the results. Attachments are not downloaded; long messages use a limited text preview.</p><form id="gmail-search"><label>Search your mail<input id="gmail-query" maxlength="512" placeholder="Leave blank for recent messages"></label><button>Show messages</button></form></section>
+          <div id="account-results" aria-live="polite"></div>
+          <details id="google-setup"><summary>One-time Google connection setup</summary>
+            <p id="google-setup-state"></p>
+            <p>This connects your own Google application to Reachy. Once it is set up, everyday use only needs the Connect buttons above.</p>
+            <ol><li>Open <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer">Google Cloud</a> and create a project. Enable the Gmail API and Google Calendar API.</li>
+            <li>In Google Auth Platform, set up the consent screen for your use. For a personal test, add your Google email as a test user.</li>
+            <li>Create a <strong>Desktop app</strong> OAuth client and download its JSON file (recommended: works without a public domain or HTTPS certificate). If this Reachy already has a stable HTTPS hostname, you may instead create a <strong>Web application</strong> client with the return address shown below as its authorized redirect URI.</li>
+            <li>Choose that file here and select Save connection setup. Then use Connect to sign in and approve read-only permissions. For a Desktop client, Connect shows a command to run on the computer whose browser you're using.</li></ol>
+            <p>Testing-mode permissions may expire after seven days. Personal/internal use and public apps have different Google verification requirements; see the deployment guide before relying on this for ongoing use.</p>
+            <form id="google-client-setup"><label id="google-callback-label">Return address<input id="google-callback" readonly></label>
+            <label>Google connection file<input id="google-client-file" type="file" accept=".json,application/json" required></label>
+            <label class="check"><input id="google-replace" type="checkbox"> Disconnect my existing Google connection before replacing this setup</label>
+            <button>Save connection setup</button></form>
+            <div id="google-desktop-connect" hidden aria-live="polite">
+              <h3>Run the sign-in helper</h3>
+              <p>Run this on the computer whose browser you use to reach Reachy. It opens Google sign-in, then hands the result back to Reachy. It never sees your Google client secret.</p>
+              <pre id="google-desktop-command"></pre>
+              <button type="button" id="google-desktop-copy" class="secondary">Copy command</button>
+              <p id="google-desktop-waiting" role="status"></p>
+            </div>
+          </details>
+        </section><section class="card" aria-labelledby="coding-agents-title">
+          <span class="eyebrow">DEVELOPMENT</span><h2 id="coding-agents-title">Coding agent credentials</h2>
+          <p class="muted">Credentials a coding agent container needs to run, kept separate from Reachy's own application credentials. Reachy never sees or stores the agent's conversation itself here — only the secret it uses to authenticate.</p>
+          <p id="coding-agents-status" role="status"></p>
+          <div id="coding-agent-cards" class="grid"></div>
+        </section></div><div id="settings-recognition" class="settings-panel" role="tabpanel" aria-labelledby="settings-recognition-tab" hidden><section class="card" aria-labelledby="owner-recognition-title">
+          <h2 id="owner-recognition-title">Owner recognition</h2>
+          <p class="muted">Operational enrollment (a real speaker/face profile Reachy could use) does not exist yet — there is no recognition model in production. Everything below is the benchmark dataset used to build and evaluate that model.</p>
+          <p id="owner-recognition-reauth-status" role="status"></p>
+          <form id="owner-recognition-reauth-form"><label>Password<input id="owner-recognition-password" type="password" required autocomplete="current-password"></label><button>Confirm password</button></form>
+          <section aria-labelledby="benchmark-dataset-title">
+            <h3 id="benchmark-dataset-title">Benchmark dataset</h3>
+            <p>Voice and face samples for building and evaluating a real owner/non-owner recognition dataset (Phase 25a.1). Raw captures are kept, encrypted at rest, only while this is explicitly turned on — this is not the eventual production enrollment flow, which will delete raw captures once a template exists.</p>
+            <label class="check"><input type="checkbox" id="benchmark-enabled" disabled> Enable benchmark dataset collection</label>
+            <p id="benchmark-enabled-status" role="status"></p>
+            <h4>Voice samples</h4>
+            <p class="muted">Record a few short samples of your normal speaking voice, in the room and distance you'd usually talk to Reachy from.</p>
+            <button type="button" id="voice-sample-record" disabled>Start recording</button>
+            <p id="voice-sample-status" role="status"></p>
+            <p id="voice-sample-size" class="muted"></p>
+            <ul id="voice-sample-list" class="sample-list"></ul>
+            <button type="button" id="voice-sample-delete-all" class="secondary" disabled>Delete all voice samples</button>
+            <button type="button" id="voice-sample-export" class="secondary" disabled>Export voice dataset</button>
+            <h4>Face samples</h4>
+            <p class="muted">Capture a few photos at your normal distance from the robot, with different angles and lighting.</p>
+            <video id="face-preview" autoplay playsinline muted hidden></video>
+            <button type="button" id="face-sample-start" disabled>Turn on camera</button>
+            <button type="button" id="face-sample-capture" hidden disabled>Capture photo</button>
+            <button type="button" id="face-sample-stop" class="secondary" hidden disabled>Turn off camera</button>
+            <p id="face-sample-status" role="status"></p>
+            <p id="face-sample-size" class="muted"></p>
+            <ul id="face-sample-list" class="sample-list"></ul>
+            <button type="button" id="face-sample-delete-all" class="secondary" disabled>Delete all face samples</button>
+            <button type="button" id="face-sample-export" class="secondary" disabled>Export face dataset</button>
+          </section>
+        </section></div></section>
+      <div id="meetings-pane" class="workspace meeting-workspace" hidden>
+<aside class="record-sidebar" aria-label="Meeting records"><button id="meeting-new" type="button">＋ Add meeting</button><div class="section-title"><h3>Meeting records</h3><button id="meeting-refresh" class="secondary" type="button" aria-label="Refresh meeting records">↻</button></div><label class="search-label">Find a meeting<input id="meeting-search" type="search" placeholder="Search titles…"></label><ul id="meeting-list" class="meeting-list"></ul><p id="meeting-list-status" role="status"></p></aside><div class="meeting-main">
+        <section id="meeting-create" class="card" aria-labelledby="meetings-title">
+          <span class="eyebrow">RECORDINGS</span><h2 id="meetings-title">Add a meeting</h2>
+          <p>Record or upload a meeting to transcribe it and detect speakers locally. Recordings and transcripts stay in your homelab. You can view the transcript and speaker timings separately. Speaker-labelled transcripts and meeting summaries are not available yet.</p>
+          <div id="meeting-record-controls" class="voice-wake">
+            <button type="button" id="meeting-record-start">Start recording</button>
+            <button type="button" id="meeting-record-stop" class="secondary" hidden>Stop recording</button>
+            <button type="button" id="meeting-record-discard" class="secondary" hidden>Discard recording</button>
+            <span id="meeting-record-status" class="muted" role="status"></span>
+          </div>
+          <form id="meeting-upload-form">
+            <label>Title<input id="meeting-title" required maxlength="256"></label>
+            <label>Project (optional)<input id="meeting-project" maxlength="256"></label>
+            <label>Participants (optional, comma-separated)<input id="meeting-participants" maxlength="1024" placeholder="Hariz, Alice"></label>
+            <label>Context (optional)<textarea id="meeting-context" rows="2" maxlength="4096"></textarea></label>
+            <label>Recording file (skip if you recorded a clip above)<input id="meeting-audio" type="file" accept="audio/wav,audio/flac,audio/x-flac,audio/mp4,audio/mpeg,audio/opus,audio/webm,.wav,.flac,.m4a,.aac,.mp3,.opus,.webm"></label>
+            <button>Upload meeting</button>
+          </form>
+          <p id="meeting-upload-status" role="status"></p>
         </section>
+          <section id="meeting-detail" class="card" hidden aria-labelledby="meeting-detail-title">
+            <div class="section-title"><h3 id="meeting-detail-title"></h3><button type="button" id="meeting-detail-close" class="secondary">Close</button></div>
+            <p id="meeting-detail-meta" class="muted"></p>
+            <p id="meeting-detail-context"></p>
+            <p id="meeting-detail-status" role="status"></p>
+            <details id="meeting-detail-error" hidden><summary>Technical error</summary><pre id="meeting-detail-error-text"></pre></details>
+            <h4>Transcript</h4>
+            <div id="meeting-detail-transcript"></div>
+            <h4>Speaker segments</h4>
+            <div id="meeting-detail-diarization"></div>
+          </section>
+        </div>
+      </div>
+      <div id="overview-pane">
+      <div class="section-title"><div><span class="eyebrow">ASSISTANT DASHBOARD</span><h2>Overview</h2></div><span id="updated">Checking status…</span></div>
+      <div id="components" class="components"></div>
+      <div class="grid">
+
         <section class="card"><span class="eyebrow">GROUNDING</span><h2>Search API usage</h2>
           <p class="muted" id="search-usage-period">Loading…</p>
           <div id="search-usage"></div>
           <button type="button" id="open-search-log" class="secondary">Open search debug log</button>
         </section>
-        <section class="card wide"><span class="eyebrow">LAST 24 HOURS</span><h2>LLM utilization</h2><p id="usage-summary">Loading…</p><p id="role-usage"></p><p id="latest-escalation"></p><div class="table-wrap"><table><thead><tr><th>Time</th><th>Role / model</th><th>Result</th><th>Input / output tokens</th><th>Latency</th></tr></thead><tbody id="usage-rows"></tbody></table></div></section>
+
         <section class="card"><h2>Recent activity</h2><ul id="audit"><li>Load a session to view activity.</li></ul></section>
         <section class="card"><h2>Queued notifications</h2><ul id="notifications"><li>Load a session to view notifications.</li></ul></section>
+        <section class="card wide"><span class="eyebrow">LAST 24 HOURS</span><h2>LLM utilization</h2><p id="usage-summary">Loading…</p><p id="role-usage"></p><p id="latest-escalation"></p><div class="table-wrap"><table><thead><tr><th>Time</th><th>Role / model</th><th>Result</th><th>Input / output tokens</th><th>Latency</th></tr></thead><tbody id="usage-rows"></tbody></table></div></section>
       </div>
       </div>
     </div>

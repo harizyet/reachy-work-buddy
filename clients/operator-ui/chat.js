@@ -1,4 +1,4 @@
-// Tab-local presentation only. All conversation/session behavior stays in hub.
+// Saved web records live in hub; assistant context remains shared across channels.
 function telegramLabel(telegram) {
   if (!telegram.configured) return 'Not configured';
   if (telegram.last_poll_error) return telegram.last_poll_error;
@@ -70,15 +70,101 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
   let generation = 0;
   let pending = false;
   let requestController = null;
+  let activeChat = null;
+  let history = [];
+  let historyInitialized = false;
+  let reading = false;
+  let readVersion = 0;
+
+  function renderHistory() {
+    const query = el('chat-history-search').value.trim().toLowerCase();
+    const records = history.filter(record => record.title.toLowerCase().includes(query));
+    el('chat-history').replaceChildren();
+    for (const record of records) {
+      const item = document.createElement('li');
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'history-button';
+      button.setAttribute('aria-pressed', String(record.id === activeChat));
+      button.disabled = pending || reading;
+      const title = document.createElement('span'); title.textContent = record.title;
+      const date = document.createElement('small'); date.textContent = new Date(record.updated_at).toLocaleDateString();
+      button.append(title, date);
+      button.addEventListener('click', () => void openChat(record.id));
+      item.append(button); el('chat-history').append(item);
+    }
+    if (!records.length) {
+      const item = document.createElement('li'); item.className = 'muted';
+      item.textContent = query ? 'No matching chats.' : 'Your chats will appear here.';
+      el('chat-history').append(item);
+    }
+  }
+
+  async function openChat(id) {
+    if (pending || !user || !isLoggedIn()) return;
+    const version = generation, read = ++readVersion;
+    reading = true; controls();
+    el('chat-history-status').textContent = 'Loading chat…';
+    try {
+      const record = await api(`/chats/${encodeURIComponent(id)}?user_id=${encodeURIComponent(user)}`);
+      if (generation !== version || read !== readVersion || !isLoggedIn()) return;
+      activeChat = record.id;
+      clearView();
+      el('chat-title').textContent = record.title;
+      for (const turn of record.turns) {
+        const item = appendMessage('You', turn.text);
+        if (turn.status !== 'complete') {
+          const note = document.createElement('small');
+          note.textContent = 'Reply not recorded. This message may have been processed; check before sending again.';
+          item.append(note);
+        }
+        if (turn.reply !== null) appendMessage('Reachy', turn.reply, {webSearch: turn.web_search});
+      }
+      el('chat-history-status').textContent = '';
+      el('chat-status').textContent = '';
+    } catch (error) {
+      if (generation === version && read === readVersion) el('chat-history-status').textContent = `Could not load chat: ${error.message}`;
+    } finally {
+      if (generation === version && read === readVersion) { reading = false; controls(); }
+    }
+  }
+
+  async function loadHistory() {
+    if (!user || !isLoggedIn()) return;
+    const version = generation;
+    try {
+      const records = await api(`/chats?user_id=${encodeURIComponent(user)}`);
+      if (generation !== version || !isLoggedIn()) return;
+      history = records;
+      el('chat-history-status').textContent = '';
+      renderHistory();
+      if (!historyInitialized) {
+        historyInitialized = true;
+        if (records.length && !pending && !activeChat) await openChat(records[0].id);
+      }
+    } catch (error) {
+      if (generation === version) el('chat-history-status').textContent = `Chat history unavailable: ${error.message}`;
+    }
+  }
+
+  el('chat-history-search').addEventListener('input', renderHistory);
+  el('new-chat').addEventListener('click', () => {
+    if (pending || reading) return;
+    activeChat = null; historyInitialized = true; clearView();
+    el('chat-title').textContent = 'Chat with Reachy';
+    el('chat-text').value = ''; el('chat-status').textContent = '';
+    renderHistory(); el('chat-text').focus();
+  });
 
   function controls() {
-    el('chat-send').disabled = pending || !user || !isLoggedIn() || el('chat-user').value.trim() !== user;
-    el('chat-text').disabled = !user || !isLoggedIn();
+    el('chat-send').disabled = pending || reading || !user || !isLoggedIn() || el('chat-user').value.trim() !== user;
+    el('chat-text').disabled = reading || !user || !isLoggedIn();
     el('force-frontier').disabled = pending || !isLoggedIn();
     el('chat-user').disabled = pending;
     el('chat-use-user').disabled = pending;
     el('clear-chat').disabled = pending;
-    onBusyChange(pending);
+    el('new-chat').disabled = pending || reading || !user;
+    renderHistory();
+    onBusyChange(pending || reading);
     updateCommandHints();
   }
 
@@ -164,6 +250,9 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
     if (next !== user) {
       generation += 1;
       user = next;
+      activeChat = null; history = []; historyInitialized = false; reading = false; readVersion += 1;
+      el('chat-title').textContent = 'Chat with Reachy';
+      el('chat-history-search').value = '';
       clearView();
       el('chat-text').value = '';
       el('force-frontier').checked = false;
@@ -174,6 +263,7 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
     onUserChange(user);
     controls();
     void refreshSession();
+    void loadHistory();
     return true;
   }
 
@@ -184,7 +274,7 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
   });
   el('clear-chat').addEventListener('click', () => {
     clearView();
-    el('chat-status').textContent = 'Visible messages cleared. The companion session is unchanged.';
+    el('chat-status').textContent = 'Messages hidden. Select the chat in history to show its saved messages again.';
   });
   el('chat-text').addEventListener('keydown', event => {
     if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
@@ -195,7 +285,7 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
   el('chat-form').addEventListener('submit', async event => {
     event.preventDefault();
     const text = el('chat-text').value.trim();
-    if (!isLoggedIn() || !user || pending || !text || el('chat-user').value.trim() !== user) return;
+    if (!isLoggedIn() || !user || pending || reading || !text || el('chat-user').value.trim() !== user) return;
     const version = generation;
     const recipient = user;
     const forceFrontier = el('force-frontier').checked;
@@ -212,13 +302,21 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
     try {
       await api('/auth/me', {signal});
       if (generation !== version || !isLoggedIn()) return;
+      if (!activeChat) {
+        const record = await api('/chats', {method: 'POST', signal,
+          body: JSON.stringify({user_id: recipient, title: text.slice(0, 120)})});
+        if (generation !== version || !isLoggedIn()) return;
+        activeChat = record.id;
+        el('chat-title').textContent = record.title;
+        historyInitialized = true;
+      }
       item = appendMessage('You', text);
       el('chat-text').value = '';
       el('force-frontier').checked = false;
       sent = true;
       const result = await api('/messages', {
         method: 'POST', signal,
-        body: JSON.stringify({user_id: recipient, channel: 'web', text, input_modality: 'text', ...(forceFrontier ? {force_frontier: true} : {})}),
+        body: JSON.stringify({user_id: recipient, channel: 'web', text, input_modality: 'text', chat_id: activeChat, ...(forceFrontier ? {force_frontier: true} : {})}),
       });
       if (generation !== version || !isLoggedIn()) return;
       appendMessage('Reachy', result.reply, {webSearch: result.web_search});
@@ -233,7 +331,7 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
       }
       el('chat-status').textContent = sent
         ? 'No reply received. This message may have been processed; check before sending it again.'
-        : 'Could not verify your login. Your message was not sent.';
+        : 'Could not prepare this chat. Your message was not sent.';
       if (!el('chat-text').value) el('chat-text').value = text;
     } finally {
       clearTimeout(timeout);
@@ -241,6 +339,7 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
         pending = false;
         requestController = null;
         controls();
+        void loadHistory();
         el('chat-text').focus();
       }
     }
@@ -262,7 +361,7 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
   }
 
   return {
-    setUser, refreshSession, appendVoiceTurn,
+    setUser, refreshSession, appendVoiceTurn, loadHistory,
     currentUser() { return user; },
     initializeUser(defaultUser) { if (!user) setUser(defaultUser); },
     updateTelegram(telegram) {
@@ -276,6 +375,9 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
       generation += 1;
       requestController?.abort(); requestController = null;
       user = null; pending = false;
+      activeChat = null; history = []; historyInitialized = false; reading = false; readVersion += 1;
+      el('chat-history-search').value = ''; el('chat-history-status').textContent = '';
+      el('chat-title').textContent = 'Chat with Reachy';
       clearView();
       el('chat-user').value = ''; el('chat-text').value = ''; el('force-frontier').checked = false;
       el('chat-session').textContent = 'Loading session…';

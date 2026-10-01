@@ -23,7 +23,7 @@ test('web search settings card configures hosted rotation and the SearXNG fallba
     const json = (status, body) => { res.writeHead(status, {'Content-Type': 'application/json'}); res.end(JSON.stringify(body)); };
     if (url.pathname.startsWith('/hub/ui/')) {
       const name = url.pathname.substring('/hub/ui/'.length) || 'index.html';
-      if (!['index.html', 'app.js', 'chat.js', 'voice.js', 'accounts.js', 'style.css'].includes(name)) return json(404, {});
+      if (!['index.html', 'app.js', 'chat.js', 'voice.js', 'accounts.js', 'owner-recognition.js', 'meetings.js', 'coding_agents.js', 'style.css'].includes(name)) return json(404, {});
       res.writeHead(200, {'Content-Type': name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : 'text/html'});
       return res.end(fs.readFileSync(path.join(__dirname, '..', name)));
     }
@@ -75,6 +75,8 @@ test('web search settings card configures hosted rotation and the SearXNG fallba
     const page = await browser.newPage({viewport: {width: 390, height: 844}, timezoneId: 'Asia/Singapore'});
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await page.goto(`http://127.0.0.1:${server.address().port}/hub/ui/`);
+    await page.locator('#settings-tab').click();
+    await page.locator('#settings-search-tab').click();
     await page.waitForFunction(() => !document.getElementById('websearch-fields').disabled);
 
     const save = () => Promise.all([
@@ -130,6 +132,7 @@ test('web search settings card configures hosted rotation and the SearXNG fallba
     assert.equal(await page.locator('#search-usage-period').textContent(), 'This month (2026-09, UTC)');
     assert.equal(await page.locator('.search-usage-row').nth(1).textContent(), 'exa (off)0 / 900');
     assert.equal(await page.locator('.search-usage-row meter').first().evaluate(m => [m.value, m.max].join('/')), '12/900');
+    await page.locator('#overview-tab').click();
     await page.locator('#open-search-log').click();
     await page.locator('#search-log-dialog .search-entry').waitFor();
     assert.equal(await page.locator('#search-log-dialog').evaluate(d => d.open), true);
@@ -145,6 +148,8 @@ test('web search settings card configures hosted rotation and the SearXNG fallba
 
     // Owner location and time zone (Phase 24a follow-up) for the model's context.
     assert.equal(await page.locator('#persona-timezone').inputValue(), 'UTC');
+    await page.locator('#settings-tab').click();
+    await page.locator('#settings-assistant-tab').click();
     await page.locator('#persona-location').fill('Singapore');
     await page.locator('#persona-browser-timezone').click();
     assert.equal(await page.locator('#persona-timezone').inputValue(), 'Asia/Singapore');

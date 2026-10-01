@@ -19,7 +19,7 @@ test('robot microphone controls start, show turns literally, and stop', async ()
     const json = (status, body) => { res.writeHead(status, {'Content-Type': 'application/json'}); res.end(JSON.stringify(body)); };
     if (url.pathname.startsWith('/hub/ui/')) {
       const name = url.pathname.substring('/hub/ui/'.length) || 'index.html';
-      if (!['index.html', 'app.js', 'chat.js', 'voice.js', 'accounts.js', 'style.css'].includes(name)) return json(404, {});
+      if (!['index.html', 'app.js', 'chat.js', 'voice.js', 'accounts.js', 'owner-recognition.js', 'meetings.js', 'coding_agents.js', 'style.css'].includes(name)) return json(404, {});
       res.writeHead(200, {'Content-Type': name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : 'text/html'});
       return res.end(fs.readFileSync(path.join(__dirname, '..', name)));
     }
@@ -48,6 +48,7 @@ test('robot microphone controls start, show turns literally, and stop', async ()
     }
     if (url.pathname.startsWith('/hub/sessions/')) return json(200, {interaction_mode: 'desk', dnd: false, active_channel: 'reachy'});
     if (url.pathname === '/hub/settings/llm') return json(200, {local: null});
+    if (url.pathname === '/hub/chats') return json(200, []);
     return json(200, {});
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -56,7 +57,8 @@ test('robot microphone controls start, show turns literally, and stop', async ()
     const page = await browser.newPage({viewport: {width: 390, height: 844}});
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await page.goto(`http://127.0.0.1:${server.address().port}/hub/ui/`);
-    await page.locator('#chat-tab').click();
+    await page.locator('#settings-tab').click();
+    await page.locator('#settings-voice-tab').click();
     await page.waitForFunction(() => !document.getElementById('voice-start').disabled);
     assert.match(await page.locator('#voice-panel').textContent(), /does not recognise who is speaking/);
     assert.equal(await page.locator('#voice-state').textContent(), 'Off');
@@ -97,7 +99,8 @@ test('robot microphone controls start, show turns literally, and stop', async ()
     // A robot that hasn't opted in cannot be started.
     capable = false;
     await page.evaluate(() => document.getElementById('overview-tab').click());
-    await page.locator('#chat-tab').click();
+    await page.locator('#settings-tab').click();
+    await page.locator('#settings-voice-tab').click();
     await page.waitForFunction(() => document.getElementById('voice-robot').textContent.includes('voice not enabled'), null, {timeout: 15000});
     assert.equal(await page.locator('#voice-start').isDisabled(), true);
 
@@ -131,7 +134,7 @@ test('"Hey Reachy" toggle arms the robot and shows voice-woken sessions', async 
     const json = (status, body) => { res.writeHead(status, {'Content-Type': 'application/json'}); res.end(JSON.stringify(body)); };
     if (url.pathname.startsWith('/hub/ui/')) {
       const name = url.pathname.substring('/hub/ui/'.length) || 'index.html';
-      if (!['index.html', 'app.js', 'chat.js', 'voice.js', 'accounts.js', 'style.css'].includes(name)) return json(404, {});
+      if (!['index.html', 'app.js', 'chat.js', 'voice.js', 'accounts.js', 'owner-recognition.js', 'meetings.js', 'coding_agents.js', 'style.css'].includes(name)) return json(404, {});
       res.writeHead(200, {'Content-Type': name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : 'text/html'});
       return res.end(fs.readFileSync(path.join(__dirname, '..', name)));
     }
@@ -154,6 +157,7 @@ test('"Hey Reachy" toggle arms the robot and shows voice-woken sessions', async 
     if (url.pathname === '/hub/robot-voice/renew') return json(200, session);
     if (url.pathname.startsWith('/hub/sessions/')) return json(200, {interaction_mode: 'desk', dnd: false, active_channel: 'reachy'});
     if (url.pathname === '/hub/settings/llm') return json(200, {local: null});
+    if (url.pathname === '/hub/chats') return json(200, []);
     return json(200, {});
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -162,7 +166,8 @@ test('"Hey Reachy" toggle arms the robot and shows voice-woken sessions', async 
     const page = await browser.newPage({viewport: {width: 390, height: 844}});
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await page.goto(`http://127.0.0.1:${server.address().port}/hub/ui/`);
-    await page.locator('#chat-tab').click();
+    await page.locator('#settings-tab').click();
+    await page.locator('#settings-voice-tab').click();
     await page.waitForFunction(() => !document.getElementById('voice-wake').disabled);
     assert.equal(await page.locator('#voice-wake').textContent(), 'Turn on “Hey Reachy”');
 

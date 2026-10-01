@@ -48,7 +48,8 @@ test('Coding agent credentials: shows configured state, saves without echoing th
     const page = await browser.newPage({viewport:{width:390,height:844}});
     const errors = []; page.on('pageerror', e => errors.push(e.message));
     await page.goto('http://127.0.0.1:' + server.address().port + '/ui/');
-    await page.locator('#accounts-tab').click();
+    await page.locator('#settings-tab').click();
+      await page.locator('#settings-accounts-tab').click();
     await page.waitForFunction(() => document.getElementById('coding-agent-cards').children.length > 0);
     assert.match(await page.locator('#coding-agent-cards').textContent(), /No credential configured yet/);
 

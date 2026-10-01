@@ -688,12 +688,19 @@ explicitly disposable project. Leave unrelated services such as OVMS alone.
 ## Schema upgrades and credential keys
 
 Core and hub require the revision declared in
-[`shared/database.py`](../shared/database.py) (`009_wake_arm` at this snapshot).
+[`shared/database.py`](../shared/database.py) (`012_web_chats` at this snapshot).
 The ordered Alembic history ships
 in core's image; SQL stores perform compatibility checks, not startup DDL.
 Compose runs `migrate` before hub/core, including through
 `scripts/start-homelab.sh`. Launcher `--check` remains read-only and does not
 run migrations. Do not use `--no-deps` to bypass the migration gate.
+
+The web chat archive adds hub-owned `web_chats` and `web_chat_turns` in revision
+`012_web_chats`. Use the normal backup/stop-writers/migrate/rebuild procedure
+below when deploying this UI change; copying static assets alone is insufficient.
+The migration is additive and preserves existing sessions, meetings and work
+records. Chat transcripts and search evidence become durable database contents,
+so database backups include them. There is no archive backfill or deletion API.
 
 ### Key provisioning
 

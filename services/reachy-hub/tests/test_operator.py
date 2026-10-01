@@ -393,3 +393,64 @@ def test_motion_settings_proxy_requires_owner_and_csrf_and_updates_robot():
     assert client.get(ROBOT_MOTION_SETTINGS.format(robot_id="missing")).status_code == 404
     client.post("/auth/logout", headers=CSRF)
     assert client.get(path, headers={"Authorization": "Bearer test-token"}).status_code == 200
+
+
+def test_web_chat_archive_auth_roundtrip_and_shared_session():
+    client = make_client()
+    assert client.get('/chats?user_id=default-user').status_code == 401
+    login(client)
+    assert client.post('/chats', json={'user_id': 'default-user', 'title': 'First'}).status_code == 403
+    records = []
+    responses = []
+    for title in ['First <script>', 'Second']:
+        record = client.post('/chats', json={'user_id': 'default-user', 'title': title}, headers=CSRF).json()
+        records.append(record)
+        response = client.post('/messages', json={
+            'user_id': 'default-user', 'channel': 'web', 'text': 'hello', 'chat_id': record['id'],
+        }, headers=CSRF)
+        assert response.status_code == 200
+        responses.append(response.json())
+    assert responses[0]['session_id'] == responses[1]['session_id']
+    assert responses[0]['conversation_id'] == responses[1]['conversation_id']
+    listing = client.get('/chats?user_id=default-user')
+    assert listing.headers['cache-control'] == 'no-store'
+    assert len(listing.json()) == 2
+    detail = client.get(f"/chats/{records[0]['id']}?user_id=default-user").json()
+    assert detail['title'] == 'First <script>'
+    assert detail['turns'][0]['text'] == 'hello'
+    assert detail['turns'][0]['reply'] == responses[0]['reply']
+    assert detail['turns'][0]['status'] == 'complete'
+    assert client.get(f"/chats/{records[0]['id']}?user_id=other").status_code == 404
+    assert client.post('/messages', json={
+        'user_id': 'other', 'channel': 'web', 'text': 'hello', 'chat_id': records[0]['id'],
+    }, headers=CSRF).status_code == 404
+    assert client.post('/messages', json={
+        'user_id': 'default-user', 'channel': 'reachy', 'text': 'hello', 'chat_id': records[0]['id'],
+    }, headers=CSRF).status_code == 422
+    client.post('/auth/logout', headers=CSRF)
+    assert client.get(f"/chats/{records[0]['id']}?user_id=default-user").status_code == 401
+    assert client.post('/messages', json={
+        'user_id': 'default-user', 'channel': 'web', 'text': 'hello', 'chat_id': records[0]['id'],
+    }, headers=CSRF).status_code == 401
+    login(client)
+    assert len(client.get('/chats?user_id=default-user').json()) == 2
+
+
+def test_chat_owner_binding_bearer_and_ambiguous_failure():
+    async def fail(request):
+        raise httpx.ConnectError('fixture unavailable', request=request)
+
+    core = CompanionCoreClient('http://core', transport=httpx.MockTransport(fail))
+    client = make_client(accounts_service_token='fixture-service', companion_core_client=core)
+    bearer = {'Authorization': 'Bearer test-token'}
+    assert client.get('/chats?user_id=other', headers=bearer).status_code == 403
+    assert client.post('/chats', json={'user_id': 'other', 'title': 'no'}, headers=bearer).status_code == 403
+    record = client.post('/chats', json={'user_id': 'default-user', 'title': 'Failure'}, headers=bearer).json()
+    response = client.post('/messages', json={
+        'user_id': 'default-user', 'channel': 'web', 'text': 'hello', 'chat_id': record['id'],
+    }, headers=bearer)
+    assert response.status_code == 502
+    detail = client.get(f"/chats/{record['id']}?user_id=default-user", headers=bearer).json()
+    assert len(detail['turns']) == 1
+    assert detail['turns'][0]['status'] == 'unknown'
+    assert detail['turns'][0]['reply'] is None

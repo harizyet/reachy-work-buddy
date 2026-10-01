@@ -151,6 +151,7 @@ from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
 from reachy_hub.audit_log import AuditEntry, AuditLog
+from reachy_hub.chat_store import ChatStore, InMemoryChatStore, PostgresChatStore
 from reachy_hub.coding_agent_client import CodingAgentServiceClient
 from reachy_hub.companion_core_client import CompanionCoreClient
 from reachy_hub.embodiment_client import EmbodimentClient
@@ -219,9 +220,12 @@ from shared.models.session import (
     InteractionMode,
     PrivacyContext,
 )
+from shared.models.web_chat import ChatCreate, ChatRecord, ChatTurn
 from shared.models.websearch import TurnWebSearch
 from shared.protocols.commands import TELEGRAM_COMMANDS
 from shared.protocols.operator_api import (
+    CHAT,
+    CHATS,
     ROBOT_MOTION_SETTINGS,
     ROBOT_VOICE,
     ROBOTS,
@@ -248,6 +252,7 @@ class InboundMessage(BaseModel):
     # all: it's always refused.
     input_modality: InputModality = InputModality.TEXT
     force_frontier: bool = False
+    chat_id: str | None = None
 
 
 class MessageResponse(BaseModel):
@@ -384,6 +389,7 @@ def create_app(
     accounts_service_token: str | None = None,
     registry: RobotRegistry | None = None,
     session_store: SessionStore | None = None,
+    chat_store: ChatStore | None = None,
     database_url: str | None = None,
     client_factory: Callable[[str], EmbodimentClient] | None = None,
     companion_core_client: CompanionCoreClient | None = None,
@@ -438,6 +444,7 @@ def create_app(
     admin_password = admin_password or os.environ.get("ADMIN_PASSWORD") or None
     if session_cookie_secure is None:
         session_cookie_secure = os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true"
+    owns_chat_store = chat_store is None and session_store is None
     owns_user_store = user_store is None and session_secret_key is not None
 
     async def require_remote_auth(request: Request, authorization: str | None = Header(default=None)) -> None:
@@ -640,6 +647,8 @@ def create_app(
         if owns_registry:
             dsn = database_url or os.environ["DATABASE_URL"]
             app.state.registry = await PostgresRobotRegistry.connect(dsn)
+        if owns_chat_store:
+            app.state.chat_store = await PostgresChatStore.connect(database_url or os.environ["DATABASE_URL"])
         if owns_session_store:
             dsn = database_url or os.environ["DATABASE_URL"]
             app.state.session_store = await PostgresSessionStore.connect(dsn)
@@ -718,6 +727,8 @@ def create_app(
                 await app.state.user_store.close()
             if owns_registry:
                 await app.state.registry.close()
+            if owns_chat_store:
+                await app.state.chat_store.close()
             if owns_session_store:
                 await app.state.session_store.close()
             if owns_telegram_chat_registry:
@@ -732,6 +743,7 @@ def create_app(
     app = FastAPI(title="reachy-hub", lifespan=lifespan)
     app.state.telegram_poll_health = TelegramPollHealth()
     app.state.user_store = user_store
+    app.state.chat_store = chat_store or (None if owns_chat_store else InMemoryChatStore())
     from reachy_hub.accounts import install_accounts
     from shared.protocols.accounts import ACCOUNTS_CALLBACK
 
@@ -771,7 +783,7 @@ def create_app(
             except (ValueError, KeyError):
                 return JSONResponse(status_code=422, content={"detail": "Invalid request"})
         response = await call_next(request)
-        if work_path or path.startswith(("/settings/accounts/", ROBOT_VOICE)):
+        if work_path or path.startswith((CHATS, "/settings/accounts/", ROBOT_VOICE)):
             response.headers["Cache-Control"] = "no-store"
             response.headers["Referrer-Policy"] = "no-referrer"
         if path == ACCOUNTS_CALLBACK:
@@ -1324,9 +1336,54 @@ def create_app(
             web_search=result.get("web_search"),
         )
 
+    def check_chat_user(user_id: str):
+        if accounts_service_token and user_id != owner_user_id:
+            raise HTTPException(403, "This account belongs to the signed-in owner")
+
+    @app.get(CHATS, dependencies=[Depends(require_remote_auth)])
+    async def list_chats(user_id: str):
+        check_chat_user(user_id)
+        return await app.state.chat_store.list(user_id)
+
+    @app.post(CHATS, dependencies=[Depends(require_remote_auth)])
+    async def create_chat(body: ChatCreate):
+        check_chat_user(body.user_id)
+        return await app.state.chat_store.create(ChatRecord(user_id=body.user_id, title=body.title))
+
+    @app.get(CHAT, dependencies=[Depends(require_remote_auth)])
+    async def get_chat(chat_id: str, user_id: str):
+        check_chat_user(user_id)
+        record = await app.state.chat_store.get(user_id, chat_id)
+        if record is None:
+            raise HTTPException(404, "Chat not found")
+        return record
+
     @app.post("/messages")
-    async def post_message(message: InboundMessage) -> MessageResponse:
-        return await handle_inbound_message(message)
+    async def post_message(message: InboundMessage, request: Request) -> MessageResponse:
+        if not message.chat_id:
+            return await handle_inbound_message(message)
+        # Even an injected-store development app requires auth for the archive.
+        await require_remote_auth(request, request.headers.get("Authorization"))
+        check_chat_user(message.user_id)
+        if message.channel != Channel.WEB or message.input_modality != InputModality.TEXT:
+            raise HTTPException(422, "Chat records accept typed web messages only")
+        record = await app.state.chat_store.get(message.user_id, message.chat_id)
+        if record is None:
+            raise HTTPException(404, "Chat not found")
+        turn = ChatTurn(text=message.text)
+        # Persist before invoking: a lost response must never look safe to retry.
+        await app.state.chat_store.append(record.id, turn)
+        try:
+            result = await handle_inbound_message(message)
+        except Exception:
+            turn.status = "unknown"
+            await app.state.chat_store.finish(record.id, turn)
+            raise
+        turn.reply = result.reply
+        turn.web_search = result.web_search
+        turn.status = "complete"
+        await app.state.chat_store.finish(record.id, turn)
+        return result
 
     # Caller-upload diagnostic, not the robot workflow (robot_voice.py).
     # Owner auth and the OWNER_USER_ID binding come from private_work_routes

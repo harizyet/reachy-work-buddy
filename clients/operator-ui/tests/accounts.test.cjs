@@ -22,7 +22,7 @@ test('Accounts works at direct/proxied mounts, explains Google login, and render
     const json = (body, code = 200) => {res.writeHead(code, {'Content-Type': 'application/json'}); res.end(JSON.stringify(body));};
     if (route.startsWith('/ui/')) {
       const file = route.slice(4) || 'index.html';
-      if (!['index.html','app.js','chat.js','voice.js','accounts.js','style.css'].includes(file)) return json({}, 404);
+      if (!['index.html','app.js','chat.js','voice.js','accounts.js','owner-recognition.js','meetings.js','coding_agents.js','style.css'].includes(file)) return json({}, 404);
       res.writeHead(200, {'Content-Type': file.endsWith('.js') ? 'application/javascript' : file.endsWith('.css') ? 'text/css' : 'text/html'});
       return res.end(fs.readFileSync(path.join(__dirname, '..', file)));
     }
@@ -53,9 +53,9 @@ test('Accounts works at direct/proxied mounts, explains Google login, and render
       const page = await browser.newPage({viewport:{width:390,height:844}});
       const errors = []; page.on('pageerror', e => errors.push(e.message));
       await page.goto('http://127.0.0.1:' + server.address().port + prefix + '/ui/?google=return');
-      await page.waitForFunction(() => document.querySelector('#accounts-pane').hidden === false);
+      await page.waitForFunction(() => document.querySelector('#settings-accounts').hidden === false);
       await page.waitForFunction(() => document.querySelector('#google-identity').textContent.includes('owner@example.org'));
-      assert.match(await page.locator('#accounts-pane').textContent(), /never sees your Google password/);
+      assert.match(await page.locator('#settings-accounts').textContent(), /never sees your Google password/);
       assert.equal(await page.locator('#google-callback').inputValue(),
         'http://127.0.0.1:' + server.address().port + prefix + '/settings/accounts/google/callback');
       await page.locator('#gmail-search button').click();
@@ -65,7 +65,7 @@ test('Accounts works at direct/proxied mounts, explains Google login, and render
       assert.equal(await page.evaluate(() => localStorage.length),0);
       await page.locator('#calendar-busy').click();
       await page.waitForFunction(() => document.getElementById('account-results').textContent.includes('Busy'));
-      assert.equal(await page.locator('#accounts-pane input[type=password]').count(),0);
+      assert.equal(await page.locator('[aria-labelledby=connected-accounts-title] input[type=password]').count(),0);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),true);
       assert.equal(new URL(page.url()).search,'');
       await page.locator('#logout').click();
@@ -92,7 +92,7 @@ test('Desktop OAuth mode hides the return address and shows a helper command wit
     const json = (body, code = 200) => {res.writeHead(code, {'Content-Type': 'application/json'}); res.end(JSON.stringify(body));};
     if (route.startsWith('/ui/')) {
       const file = route.slice(4) || 'index.html';
-      if (!['index.html','app.js','chat.js','voice.js','accounts.js','style.css'].includes(file)) return json({}, 404);
+      if (!['index.html','app.js','chat.js','voice.js','accounts.js','owner-recognition.js','meetings.js','coding_agents.js','style.css'].includes(file)) return json({}, 404);
       res.writeHead(200, {'Content-Type': file.endsWith('.js') ? 'application/javascript' : file.endsWith('.css') ? 'text/css' : 'text/html'});
       return res.end(fs.readFileSync(path.join(__dirname, '..', file)));
     }
@@ -119,7 +119,7 @@ test('Desktop OAuth mode hides the return address and shows a helper command wit
     const page = await browser.newPage({viewport:{width:390,height:844}});
     const errors = []; page.on('pageerror', e => errors.push(e.message));
     await page.goto('http://127.0.0.1:' + server.address().port + '/ui/?google=return');
-    await page.waitForFunction(() => document.querySelector('#accounts-pane').hidden === false);
+    await page.waitForFunction(() => document.querySelector('#settings-accounts').hidden === false);
     await page.waitForFunction(() => document.querySelector('#google-setup-state').textContent.includes('saved'));
     assert.equal(await page.locator('#google-callback-label').isVisible(), false);
     await page.locator('#account-cards button:has-text("Connect")').first().click();

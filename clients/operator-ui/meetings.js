@@ -132,14 +132,18 @@ function createMeetings({api, apiUploadForm, isLoggedIn}) {
   // --- list + detail ----------------------------------------------------
 
   let meetingsById = new Map();
+  let selectedMeeting = null;
+  let detailVersion = 0;
 
   function renderList(meetingList) {
     meetingsById = new Map(meetingList.map(meeting => [meeting.id, meeting]));
     const list = el('meeting-list');
     list.replaceChildren();
-    for (const meeting of meetingList) {
+    const query = el('meeting-search').value.trim().toLowerCase();
+    for (const meeting of meetingList.filter(m => m.title.toLowerCase().includes(query))) {
       const item = document.createElement('li');
       item.className = 'meeting-item';
+      item.classList.toggle('selected', meeting.id === selectedMeeting);
       const heading = document.createElement('div');
       heading.className = 'meeting-heading';
       const title = document.createElement('strong');
@@ -152,15 +156,10 @@ function createMeetings({api, apiUploadForm, isLoggedIn}) {
       uploaded.className = 'muted';
       uploaded.textContent = `Uploaded ${new Date(meeting.created_at).toLocaleString()}`;
       item.append(heading, uploaded);
-      const description = statusDescription(meeting);
-      if (description) {
-        const note = document.createElement('p');
-        note.textContent = description;
-        item.append(note);
-      }
       const actions = document.createElement('div');
       actions.className = 'meeting-actions';
       const view = document.createElement('button');
+      view.setAttribute('aria-pressed', String(meeting.id === selectedMeeting));
       view.type = 'button'; view.className = 'secondary'; view.textContent = 'View details';
       view.addEventListener('click', () => void showDetail(meeting.id));
       actions.append(view);
@@ -199,6 +198,11 @@ function createMeetings({api, apiUploadForm, isLoggedIn}) {
   }
 
   async function showDetail(meetingId) {
+    if (recorder?.state === 'recording') stopRecording();
+    const version = ++detailVersion;
+    selectedMeeting = meetingId;
+    renderList([...meetingsById.values()]);
+    el('meeting-create').hidden = true;
     el('meeting-detail').hidden = false;
     el('meeting-detail-title').textContent = '';
     el('meeting-detail-meta').textContent = '';
@@ -211,6 +215,7 @@ function createMeetings({api, apiUploadForm, isLoggedIn}) {
     el('meeting-detail-status').textContent = 'Loading…';
     try {
       const meeting = await api(`/meetings/${meetingId}`);
+      if (version !== detailVersion || !isLoggedIn()) return;
       meetingsById.set(meetingId, meeting);
       el('meeting-detail-title').textContent = meeting.title;
       const parts = [`Status: ${statusLabel(meeting.status)}`];
@@ -225,16 +230,28 @@ function createMeetings({api, apiUploadForm, isLoggedIn}) {
       renderSegments(el('meeting-detail-transcript'), meeting.transcript_segments, {kind: 'transcript'});
       renderSegments(el('meeting-detail-diarization'), meeting.diarization_segments, {kind: 'diarization'});
     } catch (error) {
-      el('meeting-detail-status').textContent = error.message;
+      if (version === detailVersion) el('meeting-detail-status').textContent = error.message;
     }
   }
 
-  el('meeting-detail-close').addEventListener('click', () => { el('meeting-detail').hidden = true; });
+  function newMeeting() {
+    detailVersion += 1; selectedMeeting = null;
+    el('meeting-detail').hidden = true; el('meeting-create').hidden = false;
+    renderList([...meetingsById.values()]);
+  }
+  el('meeting-detail-close').addEventListener('click', newMeeting);
+  el('meeting-new').addEventListener('click', newMeeting);
+  el('meeting-refresh').addEventListener('click', async () => {
+    await load();
+    if (selectedMeeting) await showDetail(selectedMeeting);
+  });
+  el('meeting-search').addEventListener('input', () => renderList([...meetingsById.values()]));
 
   async function load() {
     if (!isLoggedIn()) return;
     try {
       const meetingList = await api('/meetings');
+      if (!isLoggedIn()) return;
       el('meeting-list-status').textContent = meetingList.length ? '' : 'No meetings uploaded yet.';
       renderList(meetingList);
     } catch (error) {
@@ -246,6 +263,7 @@ function createMeetings({api, apiUploadForm, isLoggedIn}) {
     try {
       await api(`/meetings/${meetingId}/cancel`, {method: 'POST'});
       await load();
+      if (selectedMeeting === meetingId) await showDetail(meetingId);
     } catch (error) {
       el('meeting-list-status').textContent = error.message;
     }
@@ -284,8 +302,8 @@ function createMeetings({api, apiUploadForm, isLoggedIn}) {
     el('meeting-upload-form').reset();
     el('meeting-upload-status').textContent = '';
     el('meeting-list-status').textContent = '';
-    el('meeting-list').replaceChildren();
-    el('meeting-detail').hidden = true;
+    meetingsById.clear(); el('meeting-search').value = '';
+    newMeeting();
   }
 
   return {load, reset};

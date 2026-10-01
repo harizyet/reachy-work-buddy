@@ -2,15 +2,15 @@
 
 Open `/hub/ui/` through Caddy (direct hub: `/ui/`) after following
 [deployment setup](deployment.md#owner-login). The dashboard provides
-Overview, Chat, and Settings · Accounts; the navigation links to telepresence. Both frontends
+Overview, Chat, Meetings, and Settings; the navigation links to telepresence. Both frontends
 are plain HTML/JS/CSS served by hub, with no build step or external assets.
 
 ## Overview and session controls
 
-Overview loads your session automatically so you can change mode/DND and
-inspect activity or queued notifications. A session must exist to edit it;
-sending the first chat message creates one. The installation binds your login
-to its configured owner identity.
+Overview shows component health, search usage and its debug log, recent activity,
+queued notifications, and model utilization. It loads your session automatically
+for activity reads. Configuration lives in Settings. The installation binds
+your login to its configured owner identity.
 
 Health and usage refresh every ten seconds without overwriting edited model
 fields. Core/robot failures are shown separately; a failed component does
@@ -20,10 +20,29 @@ outbound delivery or inference health: successful polls clear errors, and
 also make polling stale. DND suppresses proactive interruptions, not direct
 replies. The model indicator means configured, not proven reachable.
 
+## Settings
+
+All persistent configuration and robot listening controls are grouped by feature:
+
+- **Assistant:** session mode/DND, assistant persona, location and time zone.
+- **Models:** local/cloud endpoints, credentials and routing.
+- **Web search:** policy, providers, quotas and fallback.
+- **Voice & motion:** robot microphone, “Hey Reachy” and conversational animations.
+- **Accounts:** Google connections and coding agent credentials.
+- **Owner recognition:** benchmark collection and sample management.
+
+Use the tab buttons, or arrow keys/Home/End while a tab has focus. Switching
+between Assistant, Models and Web search preserves unsaved form edits. A session must exist to edit mode/DND;
+sending the first chat message creates one. The cloud override in Chat remains
+a per-message choice rather than a persistent setting.
+
 ## Meeting recordings
 
-Open **Meetings** to record or upload audio, then choose **View details**
-for the transcript and separate speaker timings. **Processing paused** means
+Open **Meetings** to record or upload audio with **Add meeting**. The left
+sidebar lists saved meetings with title search, status and refresh. **View details**
+opens a record beside that list, showing the transcript and separate speaker
+timings. On narrow screens the list sits above the detail. Selecting a record
+stops any active browser recording and keeps the clip available under Add meeting. **Processing paused** means
 transcription and speaker detection finished, but combining them into a
 speaker-labelled transcript is not implemented yet. Meeting summaries are
 also unavailable. **Cancel processing** stops a pending job; it does not
@@ -33,7 +52,7 @@ even after its underlying service problem has been fixed.
 
 ## Conversational animations
 
-Open **Settings · Accounts → Conversational animations**, select the robot,
+Open **Settings → Voice & motion**, select the robot,
 and use the two independent toggles:
 
 - **Listening and thinking gestures** holds a short, silent pose while
@@ -57,7 +76,7 @@ Motion rules for development sessions are in the
 
 ## Owner recognition benchmark dataset
 
-Settings · Accounts → Owner recognition captures raw voice clips and face
+Settings → Owner recognition captures raw voice clips and face
 photos for benchmark/calibration work. This is not operational enrollment:
 samples do not identify the owner or authorize requests. The backend has
 been deployed and checked; the browser capture/export flow still needs
@@ -129,11 +148,24 @@ order. Empty results and failed searches are labeled explicitly. This also
 applies to robot microphone replies displayed in Chat; ordinary turns have
 no search indicator. Search details clear with the visible transcript.
 
-The transcript is only the current tab's view: refresh, logout, user
-switch, or “Clear view” removes displayed messages. This does not erase
-work memory or reset the companion session. There is no chat-history API
-or localStorage archive. Telegram failures do not disable chat. Poll health
-is not a guarantee that outbound Telegram messages or inference work.
+The left sidebar lists saved typed web chats, newest first, with title search.
+**New chat record** begins a separate saved transcript; its first message becomes
+the title. Select a record to read it and append another message. Records share
+the existing companion session and recent context across channels; selecting one
+does not replay its old messages into the model or restore old model context.
+Core's recent reasoning context still resets on core restart.
+
+Typed web turns, replies and search evidence are stored in homelab Postgres and
+survive refresh, logout and service restart. **Hide messages** only clears the
+visible transcript; select the record to show it again. Logout clears browser
+memory, and no transcripts or keys are written to browser storage. Older chats
+from before this archive existed cannot be recovered. Live robot voice turns
+still appear in the current view but are not saved in these web records.
+
+A turn without a recorded reply remains visibly uncertain, including after a
+refresh; check its outcome before sending again. There is no automatic replay
+or retry. Telegram failures do not disable chat. Poll health is not a guarantee
+that outbound Telegram messages or inference work.
 
 Work-data and conversation APIs require owner authentication. Accounts
 settings specifically require the browser owner session. See
@@ -141,7 +173,7 @@ settings specifically require the browser owner session. See
 
 ## Talk through Reachy's microphone (Phase 24c)
 
-The Chat view has a **Robot microphone** panel. It works only when the
+**Settings → Voice & motion** has a **Robot microphone** panel. It works only when the
 robot's deployment has enabled it
 ([deployment](deployment.md#robot-voice-conversation)). Otherwise the robot is
 listed as "voice not enabled" or "offline". The conversation workflow passed
@@ -179,7 +211,7 @@ room until owner recognition ([Phase 25](phase-25.md)) exists.
 
 ## Hybrid inference (Phase 21)
 
-Overview → Language model configures separate local/cloud endpoints and
+Settings → Models configures separate local/cloud endpoints and
 selects Local only, Cloud only, or Local then cloud on failure. Both must
 speak the compatible chat-completion HTTP protocol. First cloud setup
 suggests fallback when local is configured; an explicit selection wins.
@@ -224,7 +256,7 @@ and [ADR 0012](adr/0012-call-reachy-webrtc.md) /
 
 ## Connect Gmail and Google Calendar
 
-Open **Settings · Accounts** in the operator dashboard.
+Open **Settings → Accounts** in the operator dashboard.
 
 1. Select **Connect** on Gmail or Google Calendar.
 2. If this installation uses a Desktop OAuth client (the recommended setup

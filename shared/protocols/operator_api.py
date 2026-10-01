@@ -45,3 +45,7 @@ OWNER_RECOGNITION_BENCHMARK_FACE_EXPORT = "/owner-recognition/benchmark/face/exp
 MEETINGS = "/meetings"
 MEETING = "/meetings/{meeting_id}"
 MEETING_CANCEL = "/meetings/{meeting_id}/cancel"
+
+# Hub-owned web transcript records.
+CHATS = "/chats"
+CHAT = "/chats/{chat_id}"

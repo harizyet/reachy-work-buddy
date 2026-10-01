@@ -607,3 +607,36 @@ def test_wake_arm_persists_across_store_reconnects(database, keys):
         assert await store.get("nano-1") is None
         await store.close()
     asyncio.run(check())
+
+
+def test_web_chat_records_survive_reconnect(database, keys):
+    from reachy_hub.chat_store import PostgresChatStore
+
+    from shared.models.web_chat import ChatRecord, ChatTurn
+
+    upgrade(database, keys)
+
+    async def check():
+        store = await PostgresChatStore.connect(database)
+        record = await store.create(ChatRecord(user_id='owner', title='Planning <b>literal</b>'))
+        turn = ChatTurn(text='Hello')
+        await store.append(record.id, turn)
+        turn.reply = 'Hello back'
+        turn.status = 'complete'
+        await store.finish(record.id, turn)
+        await store.close()
+        store = await PostgresChatStore.connect(database)
+        try:
+            assert (await store.list('owner'))[0].id == record.id
+            assert await store.get('other', record.id) is None
+            detail = await store.get('owner', record.id)
+            assert detail.title == record.title
+            assert detail.turns == [turn]
+            # Saving another turn must not overwrite the previous response.
+            next_turn = ChatTurn(text='Uncertain result')
+            await store.append(record.id, next_turn)
+            assert len((await store.get('owner', record.id)).turns) == 2
+            assert (await store.get('owner', record.id)).turns[1].status == 'pending'
+        finally:
+            await store.close()
+    asyncio.run(check())

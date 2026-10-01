@@ -6,6 +6,20 @@ The [documentation index](docs/README.md) defines ownership;
 
 ## Current work
 
+Operator UI reorganization is implemented locally, not deployed (2026-10-01).
+Overview now contains monitoring; Settings consolidates configuration into six
+feature tabs; Meetings has a searchable records sidebar; Chat has durable typed
+web records and a conversation workspace. Records preserve the existing shared
+assistant session rather than creating independent model contexts. Deployment
+requires additive migration `012_web_chats` plus rebuilt images, not just a
+static-file copy. See the [operator guide](docs/operator-guide.md#settings) and
+[verification](docs/verification/operator-ui-2026-10-01.md). Browser, operator API,
+real disposable-Postgres persistence and Ruff checks passed. The broader hub
+suite has one pre-existing scripted voice-reply assertion failure, reproduced
+against the original hub app. The disposable project was removed; production
+services, databases and robot were untouched.
+
+
 Telegram query shortcuts are implemented locally, not deployed (2026-10-01).
 The [operator command list](docs/operator-guide.md#telegram-query-commands)
 contains the new reads and `/help`. Core dispatches structured commands to

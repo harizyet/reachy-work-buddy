@@ -3,6 +3,33 @@
 - Status: Accepted
 - Date: 2026-09-22
 
+## Saved web records amendment (2026-10-01)
+
+The owner's UI reorganization request adds durable web chat records and a
+history sidebar, superseding the tab-only transcript decision below. Hub owns
+`web_chats` and `web_chat_turns`, migrated by the shared Alembic history
+(`012_web_chats`). Owner-cookie/CSRF and bearer authentication protect archive
+reads and writes; production user IDs remain bound to `OWNER_USER_ID`. Nothing
+is persisted in localStorage or sessionStorage.
+
+A record groups typed web turns for display. New records and record selection
+do not replace the shared AgentSession, reset its context, or replay archived
+text into core. This preserves ADR 0002's cross-channel session and ADR 0006's
+privacy carry-forward. Core's reasoning context remains bounded and in memory.
+Only web messages explicitly associated with a record are archived; legacy
+clients, Telegram and live robot voice keep their existing behavior. Historical
+messages from before this feature cannot be backfilled.
+
+Persist each user turn before invoking core, then store its reply and search
+evidence. Pending/uncertain turns are never automatically retried, including
+after a restart. Archive reads are side-effect free. Logout clears the browser
+view and rejects late results while retaining the authenticated server archive.
+The UI's “Hide messages” action affects presentation only.
+
+Settings are consolidated into feature tabs; Overview contains monitoring,
+Chat contains conversation/history, and Meetings contains a record sidebar and
+a main upload/detail area. See the [operator guide](../operator-guide.md).
+
 ## Phase 21 amendment
 
 [ADR 0018](0018-hybrid-llm-routing.md) enables the cloud role and role-based

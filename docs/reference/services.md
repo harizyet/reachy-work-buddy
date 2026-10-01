@@ -141,6 +141,7 @@ WebRTC, and static UI. It does not own reasoning policy or motor control.
 | Surface | Purpose |
 |---|---|
 | `POST /messages`; `GET /sessions/{user_id}` | Shared session across text channels; one active session per user |
+| `GET`, `POST /chats`; `GET /chats/{chat_id}?user_id=…` | Authenticated durable web chat records; `POST /messages` accepts optional `chat_id` to archive a typed web turn. Shared session/context remains unchanged |
 | `POST /voice/turn` | Caller-upload diagnostic: multipart WAV `audio` and owner `user_id`; STT → shared conversation → WAV TTS. Owner-gated by the work-route middleware before STT; not the robot workflow and no speaker-routing check |
 | `POST /webrtc/offer` | Conversational push-to-talk call; voice modality cannot confirm actions |
 | `PATCH /sessions/{user_id}/mode`, `/dnd`, `/privacy-context` | Authenticated updates to existing sessions |
@@ -172,6 +173,13 @@ and historical conversation APIs retain their existing access contract;
 see [deployment](../deployment.md#owner-login) and
 [ADR 0016](../adr/0016-operator-ui.md). `/auth/me` is cookie-only, not a way
 for bearer clients to create a browser login.
+
+`chat_store.py` owns `web_chats`/`web_chat_turns` (migration `012_web_chats`),
+with a Postgres implementation in production and an injectable in-memory store
+for tests. It records text before invocation and reply/search evidence afterward;
+failed or interrupted requests remain uncertain rather than being replayed.
+These records are presentation history, not restored reasoning context. See
+[ADR 0017](../adr/0017-web-chat-channel.md#saved-web-records-amendment-2026-10-01).
 
 ### Owner recognition
 
@@ -519,7 +527,7 @@ Runtime service packages never import one another. Contracts live in
 `shared/models`, route constants in `shared/protocols`. Workspace members
 are independent images even though development installs them together.
 
-[operator-ui](../../clients/operator-ui/) serves owner Overview/Chat at
+[operator-ui](../../clients/operator-ui/) serves Overview, Chat, Meetings and Settings at
 `/ui/`; [web-pwa](../../clients/web-pwa/) serves Call Reachy/telepresence at
 `/app/`. Both mount under `/hub/` through Caddy. Browser API paths must stay
 relative so direct and proxied deployments work. User workflows are in the

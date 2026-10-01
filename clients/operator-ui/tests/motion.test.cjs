@@ -17,7 +17,7 @@ test('animation settings load, apply, reject stale active sessions and reset on 
     const json = (status, body) => { res.writeHead(status, {'Content-Type': 'application/json'}); res.end(JSON.stringify(body)); };
     if (route.startsWith('/ui/')) {
       const name = route.slice(4) || 'index.html';
-      if (!['index.html', 'app.js', 'chat.js', 'voice.js', 'accounts.js', 'style.css'].includes(name)) return json(404, {});
+      if (!['index.html', 'app.js', 'chat.js', 'voice.js', 'accounts.js', 'owner-recognition.js', 'meetings.js', 'coding_agents.js', 'style.css'].includes(name)) return json(404, {});
       res.writeHead(200, {'Content-Type': name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : 'text/html'});
       return res.end(fs.readFileSync(path.join(__dirname, '..', name)));
     }
@@ -46,7 +46,8 @@ test('animation settings load, apply, reject stale active sessions and reset on 
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     for (const mount of ['/hub/ui/', '/ui/']) {
       await page.goto(`http://127.0.0.1:${server.address().port}${mount}`);
-      await page.locator('#accounts-tab').click();
+      await page.locator('#settings-tab').click();
+      await page.locator('#settings-voice-tab').click();
       await page.waitForFunction(() => !document.getElementById('motion-fields').disabled);
       assert.equal(await page.locator('#motion-wobble').isChecked(), settings.speech_wobble);
       await page.locator('#motion-gestures').check();

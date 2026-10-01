@@ -103,9 +103,6 @@ fieldset {
   border-radius:12px;
   padding:24px
 }
-#accounts-pane > .card + .card {
-  margin-top:24px
-}
 .login {
   max-width:430px;
   margin:60px auto
@@ -227,10 +224,6 @@ footer {
   flex-wrap: wrap;
   gap: 10px;
   margin: 0 0 24px;
-}
-.chat-card {
-  max-width: 850px;
-  margin: 0 auto;
 }
 .chat-user-form {
   display: flex;
@@ -449,3 +442,77 @@ textarea:focus {
 .meeting-item p { margin: .5rem 0; }
 .meeting-actions { margin-top: .75rem; }
 #meeting-detail-error-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Page navigation stays separate from feature configuration. */
+body { max-width: 1600px; padding: 24px 32px; }
+header { margin-bottom: 8px; }
+.view-switch { padding-bottom: 16px; border-bottom: 1px solid #2a3d45; }
+.view-switch button { margin: 0; }
+.page-heading { margin-bottom: 24px; }
+.page-heading h2 { margin-bottom: 4px; font-size: 28px; }
+.settings-tabs { display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid #30474f; margin-bottom: 24px; padding-bottom: 12px; }
+.settings-tabs button { background: transparent; color: #a5b5bc; margin: 0; }
+.settings-tabs button[aria-selected="true"] { background: #294a48; color: #d8f6ee; }
+.settings-panel { max-width: 1000px; }
+.settings-panel > .card + .card { margin-top: 20px; }
+.settings-panel .voice-panel { background: #17262c; padding: 24px; }
+.workspace { display: grid; grid-template-columns: 290px minmax(0, 1fr); border: 1px solid #2a3d45; border-radius: 14px; overflow: hidden; min-height: 650px; }
+.record-sidebar { background: #111e24; border-right: 1px solid #2a3d45; padding: 20px; min-width: 0; }
+.record-sidebar > button { width: 100%; margin: 0 0 20px; }
+.record-sidebar h3 { font-size: 14px; color: #a5b5bc; }
+.search-label { font-size: 12px; color: #a5b5bc; }
+.search-label input { margin-top: 6px; }
+.record-list { list-style: none; padding: 0; }
+.record-list li { margin: 4px 0; }
+.history-button { width: 100%; text-align: left; background: transparent; color: #d5e1e6; margin: 0; padding: 12px; border: 1px solid transparent; }
+.history-button span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-button small { display: block; margin-top: 5px; font-size: 11px; }
+.history-button:hover, .history-button[aria-pressed="true"] { background: #20363e; border-color: #3b595e; }
+.sidebar-note { font-size: 12px; margin-top: 24px; }
+.chat-main { display: flex; flex-direction: column; padding: 24px 32px; min-width: 0; background: #142229; }
+.chat-main > .section-title h2 { overflow-wrap: anywhere; font-size: 22px; }
+.chat-main > .section-title { align-items: start; }
+.chat-main > .section-title button { flex-shrink: 0; font-size: 12px; }
+#chat-session { font-size: 12px; margin: 0 0 8px; }
+#chat-telegram { font-size: 12px; padding: 6px 10px; margin: 0; }
+.chat-main > .muted { font-size: 12px; }
+.chat-transcript { flex: 1; height: 46vh; min-height: 280px; max-height: 60vh; border: 0; padding: 20px 0; }
+#chat-empty { text-align: center; padding: 65px 20px; }
+.chat-message { max-width: 85%; }
+.chat-message.from-reachy { background: transparent; padding-left: 0; }
+#chat-form { padding-top: 12px; border-top: 1px solid #2a3d45; }
+#chat-form > label:first-child { margin-top: 0; font-size: 12px; }
+#chat-form textarea { border-radius: 12px; margin-top: 8px; }
+#chat-form .check { font-size: 12px; }
+.meeting-main { min-width: 0; padding: 24px; }
+.meeting-main > .card { border: 0; background: transparent; padding: 0; }
+.meeting-list { max-height: 65vh; overflow-y: auto; }
+.meeting-item { padding: 16px 10px; border-radius: 8px; }
+.meeting-item.selected { background: #20363e; }
+.meeting-item .meeting-heading { align-items: start; flex-direction: column; gap: 6px; }
+.meeting-item .meeting-status { font-size: 11px; }
+.meeting-item p { font-size: 12px; }
+.meeting-actions { gap: 6px; }
+.meeting-actions button { font-size: 11px; padding: 8px 10px; margin: 0; }
+#meeting-detail-title { font-size: 24px; overflow-wrap: anywhere; }
+#meeting-detail-context { white-space: pre-wrap; overflow-wrap: anywhere; }
+#meeting-detail-transcript { line-height: 1.8; }
+#overview-pane .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (min-width: 1100px) {
+  .record-sidebar { max-height: calc(100vh - 220px); min-height: 650px; overflow-y: auto; }
+}
+@media (max-width: 800px) {
+  body { padding: 18px 14px; }
+  .workspace { grid-template-columns: 1fr; min-height: 0; }
+  .record-sidebar { border-right: 0; border-bottom: 1px solid #2a3d45; padding: 16px; }
+  .record-sidebar > button { width: auto; margin-bottom: 6px; }
+  .record-list, .meeting-list { max-height: 190px; overflow-y: auto; }
+  .sidebar-note { margin-bottom: 0; }
+  .chat-main, .meeting-main { padding: 20px 16px; }
+  .chat-transcript { max-height: 55vh; }
+  .settings-tabs { gap: 4px; }
+  .settings-tabs button { padding: 10px 12px; }
+  #overview-pane .grid { grid-template-columns: 1fr; }
+  header h1 { font-size: 23px; }
+  .search-usage-row { grid-template-columns: 5em 1fr auto; }
+}

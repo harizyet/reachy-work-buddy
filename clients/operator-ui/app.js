@@ -24,24 +24,49 @@ const motionSettings = createMotionSettings();
 const voice = createVoice({api, isLoggedIn: () => loggedIn, chat});
 const meetings = createMeetings({api, apiUploadForm, isLoggedIn: () => loggedIn});
 const codingAgents = createCodingAgents({api, isLoggedIn: () => loggedIn});
+let settingsFeature = 'assistant';
+function showSettings(feature, focus = false) {
+  settingsFeature = feature;
+  for (const tab of document.querySelectorAll('.settings-tabs [role="tab"]')) {
+    const active = tab.id === `settings-${feature}-tab`;
+    tab.setAttribute('aria-selected', String(active));
+    tab.tabIndex = active ? 0 : -1;
+    $(tab.getAttribute('aria-controls')).hidden = !active;
+    if (active && focus) tab.focus();
+  }
+  if (feature === 'accounts') { void accounts.load(); void codingAgents.load(); }
+  if (feature === 'voice') void motionSettings.load();
+  if (feature === 'recognition') void ownerRecognition.load();
+  else ownerRecognition.stopCapture();
+}
+for (const tab of document.querySelectorAll('.settings-tabs [role="tab"]')) {
+  tab.addEventListener('click', () => showSettings(tab.id.replace('settings-', '').replace('-tab', '')));
+  tab.addEventListener('keydown', event => {
+    const tabs = [...document.querySelectorAll('.settings-tabs [role="tab"]')];
+    let index = tabs.indexOf(tab);
+    if (event.key === 'ArrowRight') index = (index + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft') index = (index + tabs.length - 1) % tabs.length;
+    else if (event.key === 'Home') index = 0;
+    else if (event.key === 'End') index = tabs.length - 1;
+    else return;
+    event.preventDefault();
+    showSettings(tabs[index].id.replace('settings-', '').replace('-tab', ''), true);
+  });
+}
 function showView(view) {
-  const isChat = view === 'chat';
-  $('chat-pane').hidden = !isChat; $('overview-pane').hidden = view !== 'overview';
-  $('accounts-pane').hidden = view !== 'accounts';
-  $('meetings-pane').hidden = view !== 'meetings';
-  for (const name of ['chat', 'overview', 'accounts', 'meetings']) {
+  for (const name of ['chat', 'overview', 'settings', 'meetings']) {
+    $(name + '-pane').hidden = name !== view;
     $(name + '-tab').setAttribute('aria-pressed', String(name === view));
     $(name + '-tab').classList.toggle('secondary', name !== view);
   }
-  if (isChat) void chat.refreshSession();
-  if (view === "accounts") { void accounts.load(); void motionSettings.load(); void ownerRecognition.load(); void codingAgents.load(); }
+  if (view === 'chat') { void chat.refreshSession(); void chat.loadHistory(); }
+  if (view === 'settings') showSettings(settingsFeature);
   else ownerRecognition.stopCapture();
-  if (view === "meetings") void meetings.load();
+  if (view === 'meetings') void meetings.load();
 }
-$('accounts-tab').addEventListener('click', () => showView('accounts'));
-$('chat-tab').addEventListener('click', () => showView('chat'));
-$('overview-tab').addEventListener('click', () => showView('overview'));
-$('meetings-tab').addEventListener('click', () => showView('meetings'));
+for (const view of ['chat', 'overview', 'settings', 'meetings']) {
+  $(view + '-tab').addEventListener('click', () => showView(view));
+}
 function notice(text) { $('notice').textContent = text; }
 function showLogin() {
   loggedIn = false; selectedUser = null;
@@ -252,7 +277,7 @@ async function refresh() {
     chat.initializeUser(status.default_user_id);
     $('chat-user-form').hidden = Boolean(status.owner_bound);
     $('session-select').hidden = Boolean(status.owner_bound);
-    if (status.owner_bound && !selectedUser) {
+    if (!selectedUser) {
       try { await loadSession(); } catch (error) { if (error.status !== 404) throw error; }
     }
     chat.updateTelegram(status.telegram);
@@ -322,7 +347,7 @@ async function enter() {
   await refresh();
   if (new URLSearchParams(location.search).get('google') === 'return') {
     history.replaceState(null, '', location.pathname);
-    showView('accounts'); await accounts.complete();
+    showView('settings'); showSettings('accounts'); await accounts.complete();
   }
 }
 submit('login', async () => {

@@ -27,7 +27,7 @@ test('web chat handles identities, replies, failures, login expiry, and fresh ta
     const json = (status, body) => { res.writeHead(status, {'Content-Type': 'application/json'}); res.end(JSON.stringify(body)); };
     if (url.pathname.startsWith('/hub/ui/')) {
       const name = url.pathname.substring('/hub/ui/'.length) || 'index.html';
-      if (!['index.html', 'app.js', 'chat.js', 'voice.js', 'accounts.js', 'style.css'].includes(name)) return json(404, {});
+      if (!['index.html', 'app.js', 'chat.js', 'voice.js', 'accounts.js', 'owner-recognition.js', 'meetings.js', 'coding_agents.js', 'style.css'].includes(name)) return json(404, {});
       res.writeHead(200, {'Content-Type': name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : 'text/html'});
       return res.end(fs.readFileSync(path.join(__dirname, '..', name)));
     }
@@ -43,6 +43,11 @@ test('web chat handles identities, replies, failures, login expiry, and fresh ta
     if (url.pathname.startsWith('/hub/sessions/')) {
       const user = decodeURIComponent(url.pathname.split('/').at(-1));
       return json(sessions.has(user) ? 200 : 404, sessions.get(user) || {detail: 'No session'});
+    }
+    if (url.pathname === '/hub/chats' && req.method === 'POST') {
+      const chunks = []; for await (const chunk of req) chunks.push(chunk);
+      const body = JSON.parse(Buffer.concat(chunks));
+      return json(200, {id: 'fixture-chat', ...body});
     }
     if (url.pathname === '/hub/messages') {
       const chunks = []; for await (const chunk of req) chunks.push(chunk);
@@ -78,7 +83,7 @@ test('web chat handles identities, replies, failures, login expiry, and fresh ta
     // Wait for the actual POST fixture; UI may render before fetch reaches us.
     await waitForPendingReply();
     assert.equal(messages.length, 1);
-    assert.deepEqual(messages[0], {user_id: 'telegram-owner', channel: 'web', text: '<script>alert(1)</script>', input_modality: 'text'});
+    assert.deepEqual(messages[0], {user_id: 'telegram-owner', channel: 'web', text: '<script>alert(1)</script>', input_modality: 'text', chat_id: 'fixture-chat'});
     pendingReply(); delayReply = false;
     await page.waitForFunction(() => document.querySelectorAll('.from-reachy').length === 1);
     assert.equal(await page.locator('#chat-transcript script, #chat-transcript img').count(), 0);
@@ -192,7 +197,7 @@ test('web chat renders command autocomplete and dispatches suggested-command but
     const json = (status, body) => { res.writeHead(status, {'Content-Type': 'application/json'}); res.end(JSON.stringify(body)); };
     if (url.pathname.startsWith('/hub/ui/')) {
       const name = url.pathname.substring('/hub/ui/'.length) || 'index.html';
-      if (!['index.html', 'app.js', 'chat.js', 'voice.js', 'accounts.js', 'style.css'].includes(name)) return json(404, {});
+      if (!['index.html', 'app.js', 'chat.js', 'voice.js', 'accounts.js', 'owner-recognition.js', 'meetings.js', 'coding_agents.js', 'style.css'].includes(name)) return json(404, {});
       res.writeHead(200, {'Content-Type': name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : 'text/html'});
       return res.end(fs.readFileSync(path.join(__dirname, '..', name)));
     }
@@ -204,6 +209,11 @@ test('web chat renders command autocomplete and dispatches suggested-command but
     });
     if (url.pathname === '/hub/settings/llm') return json(200, {local: null});
     if (url.pathname.startsWith('/hub/sessions/')) return json(404, {detail: 'No session'});
+    if (url.pathname === '/hub/chats' && req.method === 'POST') {
+      const chunks = []; for await (const chunk of req) chunks.push(chunk);
+      const body = JSON.parse(Buffer.concat(chunks));
+      return json(200, {id: 'fixture-chat', ...body});
+    }
     if (url.pathname === '/hub/messages') {
       const chunks = []; for await (const chunk of req) chunks.push(chunk);
       const body = JSON.parse(Buffer.concat(chunks)); messages.push(body);

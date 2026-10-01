@@ -111,6 +111,11 @@ over the original decision where they explicitly change it.
 
 These are dated evidence, not startup instructions or current health checks.
 
+- [Operator UI reorganization](verification/operator-ui-2026-10-01.md): feature
+  settings tabs, dashboard, meeting sidebar and durable web records; Chromium
+  fixtures, in-process API and isolated real-Postgres checks, with one existing
+  hub voice-test failure recorded. Not deployed.
+
 - [Implementation history](verification/history.md): phase-level verification,
   including the real hosted-cloud follow-up.
 - [Phase 22a bring-up](verification/phase-22-bring-up.md): consolidated backend,
