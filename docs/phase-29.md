@@ -1,7 +1,11 @@
 # Phase 29 — Coding Agent Supervisor
 
-Status: 29.1 (contracts and session store) implemented 2026-10-01; everything
-else below is still planned. See [service reference](reference/services.md#coding-agent-service-phase-29-planned)
+Status: 29.1 (contracts and session store) and 29.2 (container runner)
+implemented 2026-10-01, plus 29.19's credential storage/owner-UI pulled
+forward early; everything else below is still planned, including the real
+Claude Code provider (29.3) that would actually use the container runner
+and a stored credential. See
+[service reference](reference/services.md#coding-agent-service-phase-29-planned)
 for exactly what exists.
 
 Phase 29 adds supervised development-agent sessions to Reachy Work Buddy.
@@ -397,6 +401,23 @@ development secrets from Reachy application credentials. The container
 receives only the credentials required by its provider/project. Do not
 expose Companion Core's SecretStore wholesale to the coding agent.
 
+**Implemented 2026-10-01** (ahead of 29.3, so the owner has a real place to
+put a provider credential as soon as a real provider needs one):
+`coding-agent-service` keeps its own encrypted-at-rest credential store
+(`EncryptedFileCredentialStore`, AESGCM with a key from
+`CODING_AGENT_SECRET_KEY_FILE` — a separate key file from companion-core's,
+never that service's keyring) behind `PUT`/`GET`/`DELETE
+/providers/{provider}/credential`. `reachy-hub` proxies these under owner
+cookie+CSRF auth (`reachy_hub/coding_agent.py`, same shape as
+`reachy_hub/accounts.py`) and the operator UI's Settings · Accounts tab has
+a "Coding agent credentials" card (`clients/operator-ui/coding_agents.js`)
+to set/replace/remove the Claude Code or Codex credential. The secret value
+is never echoed back once saved — only provider/kind/last four
+characters/`updated_at`. No provider actually consumes a stored credential
+yet (that starts with the real Claude Code adapter in 29.3); this only
+guarantees the credential has somewhere real to live before that lands,
+rather than being bolted on as an env-file afterthought.
+
 ## 29.20 — Git safety
 
 Record Git state when starting a session (branch, HEAD, dirty state) and
@@ -509,7 +530,7 @@ speculative endpoints or later-phase functionality (AGENTS.md).
 | Stage | Scope | Exit criterion |
 |---|---|---|
 | 29.1 — Contracts and session store (**implemented** 2026-10-01) | `CodingProject`, `CodingAgentSession`, `CodingAgentEvent`, `ProviderCapabilities`, `UsageSnapshot` | A simulated provider can create and transition a durable coding session — met: `services/coding-agent-service`'s `CodingAgentSupervisor` + in-memory store + `SimulatedProvider`, exercised in `tests/test_service.py` and `tests/test_app.py`. Store is in-memory only; restart durability is still 29.27's job |
-| 29.2 — Container runner | Container image, project mounts, resource limits, session labels, start/stop/reconcile | A dummy command can run inside a project-specific container and survive supervisor restart reconciliation |
+| 29.2 — Container runner (**implemented** 2026-10-01) | Container image, project mounts, resource limits, session labels, start/stop/reconcile | A dummy command can run inside a project-specific container and survive supervisor restart reconciliation — met: `DockerCLIContainerRuntime` (no image build yet, runs a plain image like `busybox`) starts a labeled, resource-limited, non-root, no-socket container and a *second, freshly constructed* runtime instance rediscovers and inspects it purely from Docker's own labeled state; verified against a real local Docker daemon (`CODING_AGENT_DOCKER_TEST=1`), not just `SimulatedContainerRuntime`. `reconcile_sessions` marks a session LOST (never COMPLETED) when its container is no longer running. Not yet wired into `CodingAgentSupervisor.start_session` — that integration is 29.3's job, once there is a real provider that needs a container at all |
 | 29.3 — Claude Code provider | Containerize Claude Code; start, resume, session ID capture, structured output/event capture | Reachy launches a real Claude Code task against a test repository and tracks the provider session ID |
 | 29.4 — Claude hooks | Wire `SessionStart`, `Stop`, `StopFailure`, `PermissionRequest`/`Notification`, `SessionEnd` into the event bridge | The supervisor correctly distinguishes running, returned-control, permission-needed and failed/rate-limited states |
 | 29.5 — Usage telemetry | Capability-detected Claude usage collection | Available context/cost/rate-limit telemetry is captured without scraping terminal text, and unavailable dimensions remain explicitly unknown |

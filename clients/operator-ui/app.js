@@ -23,6 +23,7 @@ const ownerRecognition = createOwnerRecognition({api, apiUpload, apiDownload, is
 const motionSettings = createMotionSettings();
 const voice = createVoice({api, isLoggedIn: () => loggedIn, chat});
 const meetings = createMeetings({api, apiUploadForm, isLoggedIn: () => loggedIn});
+const codingAgents = createCodingAgents({api, isLoggedIn: () => loggedIn});
 function showView(view) {
   const isChat = view === 'chat';
   $('chat-pane').hidden = !isChat; $('overview-pane').hidden = view !== 'overview';
@@ -33,7 +34,7 @@ function showView(view) {
     $(name + '-tab').classList.toggle('secondary', name !== view);
   }
   if (isChat) void chat.refreshSession();
-  if (view === "accounts") { void accounts.load(); void motionSettings.load(); void ownerRecognition.load(); }
+  if (view === "accounts") { void accounts.load(); void motionSettings.load(); void ownerRecognition.load(); void codingAgents.load(); }
   else ownerRecognition.stopCapture();
   if (view === "meetings") void meetings.load();
 }
@@ -47,7 +48,7 @@ function showLogin() {
   $('login-panel').hidden = false; $('dashboard').hidden = true; $('nav').hidden = true;
   $('api-key').value = ''; $('cloud-api-key').value = ''; $('websearch-api-key').value = ''; for (const name of HOSTED_SEARCH) $(`websearch-${name}-api-key`).value = ''; $('password').value = '';
   $('search-log-dialog').close(); $('search-log-entries').replaceChildren();
-  chat.reset(); accounts.reset(); voice.reset(); motionSettings.reset(); ownerRecognition.reset(); meetings.reset(); showView('overview');
+  chat.reset(); accounts.reset(); voice.reset(); motionSettings.reset(); ownerRecognition.reset(); meetings.reset(); codingAgents.reset(); showView('overview');
 }
 async function api(path, options = {}) {
   const response = await fetch(base + path, {

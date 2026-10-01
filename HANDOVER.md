@@ -21,13 +21,49 @@ and Postgres durability (29.27), both still planned. Wire models
 an accidental `--package`-scoped sync pruned the shared dev venv mid-session
 (no production impact — dev venv only).
 
-Nothing wires this service into companion-core or reachy-hub yet (29.6/29.7),
-there is no container runtime (29.2) or real Claude Code adapter (29.3), and
-it is not in `deploy/homelab/docker-compose.yml` — all deliberately deferred
-to their own stages per [docs/phase-29.md](docs/phase-29.md#2929--implementation-sequence).
-12 new unit/HTTP tests pass (`uv run pytest services/coding-agent-service/tests`);
-full `services shared` suite (965 passed) and `ruff check .` both still
-pass after the change. See
+29.2 (container runner) is now implemented too: `runtime.py`'s
+`DockerCLIContainerRuntime` shells out to the real `docker` CLI to start a
+labeled, resource-limited, non-root, no-socket container, and
+`reconcile.py`'s `reconcile_sessions` marks a session `LOST` (never
+`COMPLETED`) when its container is no longer running. This was verified
+against this machine's **real, live Docker daemon** — the same one running
+the actual `reachy-homelab-*` production containers — using disposable
+`busybox` containers labeled distinctly and always cleaned up
+(`CODING_AGENT_DOCKER_TEST=1 uv run pytest services/coding-agent-service/tests/test_runtime.py`);
+no `reachy-homelab-*` container was touched, started, stopped or
+restarted. The container runtime is not yet wired into
+`CodingAgentSupervisor.start_session` — no provider launches a real
+container yet; that starts with the real Claude Code adapter (29.3).
+
+29.19 (credentials) was pulled forward out of sequence, per explicit
+instruction this session to make sure any real keys/login credentials this
+phase needs are reachable from the web UI rather than left to env files:
+`credentials.py`'s `EncryptedFileCredentialStore` (AESGCM, own key file via
+`CODING_AGENT_SECRET_KEY_FILE`, separate from companion-core's keyring)
+backs `PUT`/`GET`/`DELETE /providers/{provider}/credential` in
+coding-agent-service; `reachy_hub/coding_agent.py` +
+`reachy_hub/coding_agent_client.py` proxy those under owner cookie+CSRF
+auth (same shape as `reachy_hub/accounts.py`); and the operator UI's
+Settings · Accounts tab has a new "Coding agent credentials" card
+(`clients/operator-ui/coding_agents.js`) to set/replace/remove the Claude
+Code or Codex credential — the secret is never echoed back once saved,
+only `last_four`. No provider actually consumes a stored credential yet
+(nothing needs one until 29.3's real Claude Code adapter exists); this
+only guarantees there's a real, owner-visible place to put one before that
+lands.
+
+Nothing wires coding-agent-service into companion-core yet (29.6/29.7),
+there is no real Claude Code/Codex adapter (29.3), and it is not in
+`deploy/homelab/docker-compose.yml` — all deliberately deferred to their
+own stages per
+[docs/phase-29.md](docs/phase-29.md#2929--implementation-sequence).
+37 coding-agent-service tests pass (`uv run pytest services/coding-agent-service/tests`,
+including the opt-in real-Docker one), plus 4 new reachy-hub tests
+(`test_coding_agent_credentials.py`) and one new Playwright test
+(`coding_agents.test.cjs`, run externally — Playwright/Chromium is not
+installed in a default dev shell). Full `services shared` suite (978
+passed; one unrelated `test_wake.py` flake reproduced as a pass on rerun,
+not a regression) and `ruff check .` both still pass. See
 [service reference](docs/reference/services.md#coding-agent-service-phase-29-planned)
 for the exact route/behavior surface.
 
@@ -62,15 +98,21 @@ meetings remain in the database/audio volume; no delete endpoint exists.
 
 ## Next session
 
-0. Phase 29.2 — container runner: a real Docker image, project-specific
-   mounts, resource limits, session labels
-   (`reachy.project_id`/`session_id`/`provider`) and start/stop/reconcile,
-   so a dummy command can run inside a project-specific container and
-   survive a supervisor restart. Decide then whether a
+0. Phase 29.3 — the real Claude Code provider: a real container image
+   (Claude Code CLI, git, tooling), wiring `ClaudeCodeProvider` to actually
+   call `DockerCLIContainerRuntime.start()` with the stored
+   `claude-code` credential from `EncryptedFileCredentialStore` as an env
+   var, session ID capture, and structured output/event capture. This is
+   the first stage that makes the already-built container runner (29.2)
+   and credential store (29.19) do anything real — both currently sit
+   unused by `CodingAgentSupervisor.start_session`. Decide then whether a
    `Postgres*CodingAgentStore` is worth adding, or whether staying
    in-memory until restart durability actually matters (29.27) is fine a
    while longer. No `docker-compose.yml` entry yet; add one once there's a
-   real container runtime to supervise, not before.
+   real container runtime to supervise, not before. Set
+   `CODING_AGENT_SECRET_KEY_FILE` (and chmod 0600) in any environment where
+   the owner actually wants the Claude Code credential they enter in the
+   operator UI to survive a restart — it's in-memory-only until that's set.
 1. Roll out the long-audio changes to Core, Hub and both sidecars, including
    the standalone diarization server (do not create a competing instance).
    Coordinate speech-token activation with that restart. Representative

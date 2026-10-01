@@ -151,6 +151,7 @@ from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
 from reachy_hub.audit_log import AuditEntry, AuditLog
+from reachy_hub.coding_agent_client import CodingAgentServiceClient
 from reachy_hub.companion_core_client import CompanionCoreClient
 from reachy_hub.embodiment_client import EmbodimentClient
 from reachy_hub.enrollment_store import (
@@ -386,6 +387,9 @@ def create_app(
     client_factory: Callable[[str], EmbodimentClient] | None = None,
     companion_core_client: CompanionCoreClient | None = None,
     companion_core_base_url: str | None = None,
+    coding_agent_client: CodingAgentServiceClient | None = None,
+    coding_agent_base_url: str | None = None,
+    coding_agent_service_token: str | None = None,
     run_heartbeat_task: bool = True,
     heartbeat_interval: float = 2.0,
     telegram_client: TelegramClient | None = None,
@@ -461,6 +465,11 @@ def create_app(
     companion_core_client = companion_core_client or CompanionCoreClient(
         companion_core_base_url or os.environ.get("COMPANION_CORE_URL", "http://companion-core:8000"),
         service_token=accounts_service_token
+    )
+    coding_agent_service_token = coding_agent_service_token or os.environ.get("CODING_AGENT_SERVICE_TOKEN")
+    coding_agent_client = coding_agent_client or CodingAgentServiceClient(
+        coding_agent_base_url or os.environ.get("CODING_AGENT_SERVICE_URL", "http://coding-agent-service:8000"),
+        service_token=coding_agent_service_token,
     )
 
     # STT/TTS are constructed lazily, on first use — loading a Whisper
@@ -684,6 +693,7 @@ def create_app(
             for client in clients.values():
                 await client.aclose()
             await companion_core_client.aclose()
+            await coding_agent_client.aclose()
             if owns_telegram_client and telegram_client is not None:
                 await telegram_client.aclose()
             if owns_user_store:
@@ -708,6 +718,10 @@ def create_app(
     from shared.protocols.accounts import ACCOUNTS_CALLBACK
 
     install_accounts(app, companion_core_client, enabled=bool(accounts_service_token))
+
+    from reachy_hub.coding_agent import install_coding_agent_credentials
+
+    install_coding_agent_credentials(app, coding_agent_client, enabled=bool(coding_agent_service_token))
 
     @app.middleware("http")
     async def private_work_routes(request, call_next):

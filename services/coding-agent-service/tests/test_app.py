@@ -106,3 +106,40 @@ def test_resume_a_running_session_returns_409() -> None:
         json={"instruction": "keep going"},
     )
     assert response.status_code == 409
+
+
+def test_credential_set_describe_and_clear_never_echo_the_secret() -> None:
+    client = _client()
+    headers = _headers()
+
+    assert client.get(paths.PROVIDER_CREDENTIAL.format(provider="claude-code"), headers=headers).status_code == 404
+
+    set_response = client.put(
+        paths.PROVIDER_CREDENTIAL.format(provider="claude-code"),
+        headers=headers,
+        json={"kind": "api_key", "value": "sk-ant-abcd1234"},
+    )
+    assert set_response.status_code == 200
+    body = set_response.json()
+    assert body["last_four"] == "1234"
+    assert "sk-ant-abcd1234" not in set_response.text
+
+    describe_response = client.get(paths.PROVIDER_CREDENTIAL.format(provider="claude-code"), headers=headers)
+    assert describe_response.status_code == 200
+    assert describe_response.json()["last_four"] == "1234"
+
+    list_response = client.get(paths.PROVIDER_CREDENTIALS, headers=headers)
+    assert list_response.status_code == 200
+    assert [r["provider"] for r in list_response.json()] == ["claude-code"]
+
+    delete_response = client.delete(paths.PROVIDER_CREDENTIAL.format(provider="claude-code"), headers=headers)
+    assert delete_response.status_code == 200
+    assert client.get(paths.PROVIDER_CREDENTIAL.format(provider="claude-code"), headers=headers).status_code == 404
+
+
+def test_credential_routes_require_service_token() -> None:
+    client = _client()
+    assert client.get(paths.PROVIDER_CREDENTIALS).status_code == 401
+    assert client.put(
+        paths.PROVIDER_CREDENTIAL.format(provider="claude-code"), json={"kind": "api_key", "value": "x"}
+    ).status_code == 401

@@ -9,6 +9,7 @@ import secrets
 
 from fastapi import Depends, HTTPException, Request
 
+from coding_agent_service.credentials import CredentialStore
 from coding_agent_service.service import (
     CodingAgentSupervisor,
     SessionNotResumableError,
@@ -21,6 +22,7 @@ from shared.models.coding_agent import (
     CreateProjectRequest,
     ResumeSessionRequest,
     SendInputRequest,
+    SetCredentialRequest,
     StartSessionRequest,
 )
 from shared.protocols import coding_agent as paths
@@ -36,6 +38,9 @@ def install_coding_agent_routes(app, service_token: str | None) -> None:
 
     def supervisor() -> CodingAgentSupervisor:
         return app.state.supervisor
+
+    def credentials() -> CredentialStore:
+        return app.state.credentials
 
     @app.post(paths.PROJECTS, dependencies=dependencies)
     async def create_project(body: CreateProjectRequest):
@@ -123,3 +128,23 @@ def install_coding_agent_routes(app, service_token: str | None) -> None:
             return supervisor().provider_capabilities(provider)
         except UnknownProviderError:
             raise HTTPException(404, "Unknown provider") from None
+
+    @app.get(paths.PROVIDER_CREDENTIALS, dependencies=dependencies)
+    async def list_credentials():
+        return await credentials().list_records()
+
+    @app.get(paths.PROVIDER_CREDENTIAL, dependencies=dependencies)
+    async def get_credential(provider: str):
+        record = await credentials().describe(provider)
+        if record is None:
+            raise HTTPException(404, "No credential configured for this provider")
+        return record
+
+    @app.put(paths.PROVIDER_CREDENTIAL, dependencies=dependencies)
+    async def set_credential(provider: str, body: SetCredentialRequest):
+        return await credentials().set_credential(provider, body.kind, body.value)
+
+    @app.delete(paths.PROVIDER_CREDENTIAL, dependencies=dependencies)
+    async def delete_credential(provider: str):
+        await credentials().clear_credential(provider)
+        return {"status": "cleared"}

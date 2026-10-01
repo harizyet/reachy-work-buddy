@@ -7,6 +7,10 @@ dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
     "reachy-work-companion",
+    # 29.19: encrypts provider credentials (Claude Code API key, etc.) at
+    # rest. Same AESGCM-file approach as companion_core.secrets.Keyring,
+    # duplicated per ADR 0001 rather than imported across services.
+    "cryptography>=45",
 ]
 
 [tool.uv.sources]

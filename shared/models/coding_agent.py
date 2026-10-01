@@ -186,6 +186,38 @@ class SendInputRequest(BaseModel):
     text: str = Field(min_length=1, max_length=4000)
 
 
+class CredentialKind(StrEnum):
+    """29.19: the two shapes a provider credential takes. Never a password —
+    this is a machine credential for a CLI, not an owner login."""
+
+    API_KEY = "api_key"
+    OAUTH_TOKEN = "oauth_token"
+
+
+class ProviderCredentialRecord(BaseModel):
+    """29.19/29.22: what the operator UI is allowed to see about a stored
+    provider credential — never the secret value itself, only enough to
+    confirm one is configured and let the owner recognize which one."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    provider: str
+    kind: CredentialKind
+    last_four: str = Field(max_length=4)
+    updated_at: datetime
+
+
+class SetCredentialRequest(BaseModel):
+    """29.19: the owner-entered secret value, carried once over an
+    authenticated connection and never echoed back. `repr=False` keeps it
+    out of any accidental model repr/log."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: CredentialKind
+    value: str = Field(min_length=1, max_length=8192, repr=False)
+
+
 class UsageSnapshot(BaseModel):
     """29.26: usage is not a universal contract — a provider only reports
     the dimensions it can actually measure; an absent dimension is unknown,

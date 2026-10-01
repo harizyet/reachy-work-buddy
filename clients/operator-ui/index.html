@@ -81,6 +81,12 @@
             </div>
           </details>
         </section>
+        <section class="card" aria-labelledby="coding-agents-title">
+          <span class="eyebrow">DEVELOPMENT</span><h2 id="coding-agents-title">Coding agent credentials</h2>
+          <p class="muted">Phase 29 (planned): credentials a coding agent container needs to run, kept separate from Reachy's own application credentials. Reachy never sees or stores the agent's conversation itself here — only the secret it uses to authenticate.</p>
+          <p id="coding-agents-status" role="status"></p>
+          <div id="coding-agent-cards" class="grid"></div>
+        </section>
         <section class="card" aria-labelledby="owner-recognition-title">
           <h2 id="owner-recognition-title">Owner recognition</h2>
           <p class="muted">Operational enrollment (a real speaker/face profile Reachy could use) does not exist yet — there is no recognition model in production. Everything below is the benchmark dataset used to build and evaluate that model.</p>
@@ -228,6 +234,6 @@
   </main><footer>Reachy Work Companion · Operator UI</footer><dialog id="search-log-dialog" aria-labelledby="search-log-title"><div class="dialog-head"><h2 id="search-log-title">Recent searches</h2><button type="button" id="refresh-search-log" class="secondary">Refresh</button><button type="button" id="close-search-log" class="secondary">Close</button></div>
   <p class="muted">The last 50 searches, newest first. Companion Core keeps them in memory only; a restart clears them.</p>
   <div id="search-log-entries"></div></dialog>
-  <script src="chat.js" defer></script><script src="voice.js" defer></script><script src="accounts.js" defer></script><script src="owner-recognition.js" defer></script><script src="meetings.js" defer></script><script src="app.js" defer></script>
+  <script src="chat.js" defer></script><script src="voice.js" defer></script><script src="accounts.js" defer></script><script src="owner-recognition.js" defer></script><script src="meetings.js" defer></script><script src="coding_agents.js" defer></script><script src="app.js" defer></script>
 </body>
 </html>

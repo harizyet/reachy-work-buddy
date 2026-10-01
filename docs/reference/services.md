@@ -293,10 +293,38 @@ reasons about owner intent itself.
 
 29.1 (contracts and session store) is implemented: `CodingAgentSupervisor`
 creates a `CodingProject`, starts/resumes/stops a `CodingAgentSession`
-against a provider registry, and records normalized `CodingAgentEvent`s.
-Only an in-memory store and a `SimulatedProvider` exist so far — no
-container runtime (29.2), no real Claude Code adapter (29.3), and no
-companion-core HTTP client yet. Not deployed; no `docker-compose.yml` entry.
+against a provider registry, and records normalized `CodingAgentEvent`s,
+against an in-memory store and a `SimulatedProvider`.
+
+29.2 (container runner) is also implemented: `runtime.py`'s
+`DockerCLIContainerRuntime` shells out to the `docker` CLI to start a
+labeled, resource-limited, non-root container with no Docker-socket mount
+and no `--privileged` (29.18's defaults are baked into how a
+`ContainerSpec` becomes a `docker run` invocation, not left to each
+caller), and can list/inspect containers purely from their
+`reachy.project_id`/`reachy.session_id`/`reachy.provider` labels — verified
+against a real local Docker daemon with a fresh runtime instance
+rediscovering a container a previous instance started (opt-in
+`CODING_AGENT_DOCKER_TEST=1`, same pattern as companion-core's real-Postgres
+tests). `reconcile.py`'s `reconcile_sessions` marks a session `LOST` (never
+`COMPLETED`) when its container is no longer running. The runtime is not
+yet wired into `CodingAgentSupervisor.start_session` — no provider actually
+launches a container yet; that starts with the real Claude Code adapter
+(29.3).
+
+29.19 (credentials) was also pulled forward: `credentials.py`'s
+`EncryptedFileCredentialStore` keeps provider credentials (e.g. a future
+Claude Code API key) AESGCM-encrypted at rest under a key from
+`CODING_AGENT_SECRET_KEY_FILE` (own key material, separate from
+companion-core's keyring), behind `PUT`/`GET`/`DELETE
+/providers/{provider}/credential`; the secret value is never returned once
+set, only `provider`/`kind`/`last_four`/`updated_at`. No provider consumes
+a stored credential yet — this only guarantees it has somewhere real to
+live ahead of 29.3, reachable from the operator UI (see reachy-hub and
+operator-ui below), not an env-file afterthought.
+
+No real Claude Code adapter (29.3) and no companion-core HTTP client yet.
+Not deployed; no `docker-compose.yml` entry.
 
 | Surface | Purpose |
 |---|---|
@@ -309,6 +337,7 @@ companion-core HTTP client yet. Not deployed; no `docker-compose.yml` entry.
 | `GET /sessions/{session_id}/events` | Normalized event log for that session |
 | `GET /sessions/{session_id}/usage` | Capability-gated `UsageSnapshot`; absent dimensions are unknown, never assumed zero |
 | `GET /providers/{provider}/capabilities` | `ProviderCapabilities` so a caller never assumes a metric a provider doesn't expose |
+| `GET /providers/credentials`; `GET`, `PUT`, `DELETE /providers/{provider}/credential` | Owner-entered provider credentials (29.19); `PUT`/`GET` never return the secret value, only `last_four` |
 
 All routes but `/health` require the `X-Reachy-Coding-Agent-Service-Token`
 header (`shared/protocols/coding_agent.py`'s `SERVICE_HEADER`), checked with
@@ -317,6 +346,15 @@ header (`shared/protocols/coding_agent.py`'s `SERVICE_HEADER`), checked with
 must not fall back to another service's secret). Wire models live in
 `shared/models/coding_agent.py` since, unlike meetings, companion-core will
 need the same shapes for its own HTTP client once 29.6 wires it in.
+
+`reachy-hub` already proxies the credential routes under owner cookie+CSRF
+auth (`reachy_hub/coding_agent.py`, `reachy_hub/coding_agent_client.py` —
+same shape as `reachy_hub/accounts.py`), gated on `CODING_AGENT_SERVICE_TOKEN`
+being configured; the operator UI's Settings · Accounts tab has a "Coding
+agent credentials" card (`clients/operator-ui/coding_agents.js`) to
+set/replace/remove the Claude Code or Codex credential. This is the only
+part of Phase 29 wired end to end to the browser so far — session
+management itself still has no hub/companion-core path (29.6/29.7).
 
 ## Meeting transcription (Phase 27.2)
 

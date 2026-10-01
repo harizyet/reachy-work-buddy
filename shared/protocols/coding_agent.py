@@ -18,3 +18,9 @@ SESSION_EVENTS = "/sessions/{session_id}/events"
 SESSION_USAGE = "/sessions/{session_id}/usage"
 
 PROVIDER_CAPABILITIES = "/providers/{provider}/capabilities"
+
+# 29.19: owner-entered provider credentials (e.g. a Claude Code API key).
+# Reachy-hub proxies these under owner cookie+CSRF auth; this service only
+# ever sees the shared-secret service token, never an owner session.
+PROVIDER_CREDENTIALS = "/providers/credentials"
+PROVIDER_CREDENTIAL = "/providers/{provider}/credential"
