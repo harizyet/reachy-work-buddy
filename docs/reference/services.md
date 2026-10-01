@@ -40,7 +40,13 @@ Phase 29.6: `coding_agent_intent.py` adds two more deterministic branches —
 live `GET /sessions`/`GET /sessions/{id}/usage` call to coding-agent-service
 (`coding_agent_client.py`), never the LLM; an unreachable service reports
 that plainly rather than guessing. Usage only ever reports dimensions a
-provider actually measured (29.26).
+provider actually measured (29.26), across recorded sessions including terminal
+sessions. Natural session questions such as "are any of my Claude Code sessions
+still running?" use the same deterministic status branch; usage takes precedence
+when a question also mentions sessions. Replies label status as last recorded
+and limit visibility to Reachy-managed sessions. Usage is not account-wide
+subscription usage or remaining allowance; the current in-memory session history
+is lost on coding-agent-service restart.
 
 The generic conversation branch uses the configured LLM after deterministic
 intent/consent handlers. It has no model tool executor. The configured

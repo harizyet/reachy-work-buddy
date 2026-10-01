@@ -7,6 +7,7 @@ production companion-core images do not include its code.
 """
 
 import httpx
+import pytest
 from coding_agent_service.app import create_app as create_coding_agent_app
 from coding_agent_service.providers import SimulatedProvider
 from coding_agent_service.store import InMemoryCodingAgentStore
@@ -23,13 +24,15 @@ from companion_core.tasks.store import InMemoryTaskStore
 from companion_core.websearch.store import InMemorySearchSettingsStore
 from fastapi.testclient import TestClient
 
+from shared.models.coding_agent import UsageDimension, UsageSnapshot
+
 SERVICE_TOKEN = "fixture-coding-agent-token"
 
 
-def _coding_agent_app():
+def _coding_agent_app(provider=None):
     return create_coding_agent_app(
         store=InMemoryCodingAgentStore(),
-        providers={"simulated": SimulatedProvider()},
+        providers={"simulated": provider or SimulatedProvider()},
         service_token=SERVICE_TOKEN,
     )
 
@@ -59,7 +62,8 @@ def _turn(client: TestClient, text: str) -> dict:
     }).json()
 
 
-def test_status_question_reports_a_real_session_without_the_model() -> None:
+@pytest.mark.parametrize("question", ["is my coding session done", "Hi are any of my Claude code sessions still running?"])
+def test_status_question_reports_a_real_session_without_the_model(question) -> None:
     coding_agent_app = _coding_agent_app()
     coding_agent_client = TestClient(coding_agent_app)
     headers = {"X-Reachy-Coding-Agent-Service-Token": SERVICE_TOKEN}
@@ -73,7 +77,7 @@ def test_status_question_reports_a_real_session_without_the_model() -> None:
     )
 
     with TestClient(_core_app(coding_agent_app)) as client:
-        body = _turn(client, "is my coding session done")
+        body = _turn(client, question)
     assert "Refactor module X" in body["reply"]
     assert "finished" in body["reply"]
     assert body["privacy"] == "work-private"
@@ -82,10 +86,11 @@ def test_status_question_reports_a_real_session_without_the_model() -> None:
 def test_status_question_with_no_sessions() -> None:
     with TestClient(_core_app(_coding_agent_app())) as client:
         body = _turn(client, "is my claude session done")
-    assert body["reply"] == "You have no coding-agent sessions."
+    assert "no recorded coding-agent sessions managed by Reachy" in body["reply"]
 
 
-def test_usage_question_reports_only_active_sessions() -> None:
+@pytest.mark.parametrize("summary", ["ask: pick one", "Completed task"])
+def test_usage_question_includes_finished_sessions(summary) -> None:
     coding_agent_app = _coding_agent_app()
     coding_agent_client = TestClient(coding_agent_app)
     headers = {"X-Reachy-Coding-Agent-Service-Token": SERVICE_TOKEN}
@@ -95,11 +100,11 @@ def test_usage_question_reports_only_active_sessions() -> None:
     ).json()
     coding_agent_client.post(
         "/sessions", headers=headers,
-        json={"project_id": project["id"], "task_summary": "ask: pick one", "owner_user_id": "owner-1"},
+        json={"project_id": project["id"], "task_summary": summary, "owner_user_id": "owner-1"},
     )
 
     with TestClient(_core_app(coding_agent_app)) as client:
-        body = _turn(client, "what's my claude usage")
+        body = _turn(client, "What is my Claude code usage so far?")
     # SimulatedProvider reports no usage dimensions — a real provider's
     # absence of a dimension must never be reported as zero (29.26).
     assert "no usage information available yet" in body["reply"]
@@ -143,3 +148,28 @@ def test_completions_due_skips_sessions_still_running() -> None:
     with TestClient(_core_app(coding_agent_app)) as client:
         due = client.get("/coding-agents/completions/due").json()
     assert due == []
+
+
+def test_completed_session_usage_is_fetched_from_service():
+    class MeasuredProvider(SimulatedProvider):
+        async def collect_usage(self, session):
+            return UsageSnapshot(
+                session_id=session.id, provider="simulated",
+                dimensions=[UsageDimension(name="input_tokens", value=1581, unit="tokens")],
+            )
+
+    coding_app = _coding_agent_app(MeasuredProvider())
+    with TestClient(coding_app) as service:
+        headers = {"X-Reachy-Coding-Agent-Service-Token": SERVICE_TOKEN}
+        project = service.post("/projects", headers=headers, json={
+            "name": "X", "repository_path": "/x", "provider": "simulated",
+        }).json()
+        session = service.post("/sessions", headers=headers, json={
+            "project_id": project["id"], "task_summary": "Finished task", "owner_user_id": "owner-1",
+        }).json()
+        assert session["status"] == "completed"
+        with TestClient(_core_app(coding_app)) as client:
+            body = _turn(client, "What is my Claude code usage so far?")
+    assert "input tokens 1581tokens" in body["reply"]
+    assert "not account-wide" in body["reply"]
+    assert body["privacy"] == "work-private"

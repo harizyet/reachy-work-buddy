@@ -7,6 +7,7 @@ question-understanding be sophisticated.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 _STATUS_PHRASES = (
@@ -22,6 +23,13 @@ _USAGE_PHRASES = (
     "check my coding usage", "how much usage", "usage limit", "claude credits",
 )
 
+_STATUS_SCOPE = "I can only see sessions managed by Reachy, not other terminal sessions."
+_USAGE_SCOPE = (
+    "This covers only sessions recorded by Reachy, not account-wide Claude usage "
+    "or remaining subscription allowance. Session history is currently lost when "
+    "the coding-agent service restarts."
+)
+
 # 29.5: never claimed COMPLETED/FAILED without a real provider result
 # (29.8); these are exactly the terminal statuses worth reporting distinctly.
 _TERMINAL_LABELS = {
@@ -34,7 +42,12 @@ _TERMINAL_LABELS = {
 
 def is_status_query(text: str) -> bool:
     lowered = text.lower()
-    return any(phrase in lowered for phrase in _STATUS_PHRASES)
+    # Usage questions can also mention session status; usage takes precedence.
+    if is_usage_query(text):
+        return False
+    subject = re.search(r"\b(?:claude(?:[ -]code)?|codex|coding[ -](?:agent|session)s?)\b", lowered)
+    status = re.search(r"\b(?:sessions?|running|active|done|finished|completed|status)\b", lowered)
+    return any(phrase in lowered for phrase in _STATUS_PHRASES) or bool(subject and status)
 
 
 def is_usage_query(text: str) -> bool:
@@ -51,10 +64,10 @@ def format_status_reply(sessions: list[dict[str, Any]] | None) -> str:
     if sessions is None:
         return "I can't reach the coding-agent service right now."
     if not sessions:
-        return "You have no coding-agent sessions."
+        return "I have no recorded coding-agent sessions managed by Reachy. " + _STATUS_SCOPE
     ordered = sorted(sessions, key=lambda s: s["started_at"], reverse=True)
     lines = [f"{s['task_summary']} ({s['provider']}): {_label(s)}" for s in ordered]
-    return "Coding-agent sessions:\n" + "\n".join(lines)
+    return "Coding-agent sessions (last recorded status):\n" + "\n".join(lines) + "\n" + _STATUS_SCOPE
 
 
 def format_usage_reply(sessions: list[dict[str, Any]] | None, usage_by_session_id: dict[str, dict[str, Any]]) -> str:
@@ -63,11 +76,10 @@ def format_usage_reply(sessions: list[dict[str, Any]] | None, usage_by_session_i
     didn't."""
     if sessions is None:
         return "I can't reach the coding-agent service right now."
-    active = [s for s in sessions if s["status"] not in _TERMINAL_LABELS]
-    if not active:
-        return "You have no active coding-agent sessions."
+    if not sessions:
+        return "I have no recorded coding-agent usage for sessions managed by Reachy. " + _USAGE_SCOPE
     lines = []
-    for session in active:
+    for session in sorted(sessions, key=lambda s: s["started_at"], reverse=True):
         usage = usage_by_session_id.get(session["id"])
         dimensions = usage.get("dimensions", []) if usage else []
         if not dimensions:
@@ -78,7 +90,7 @@ def format_usage_reply(sessions: list[dict[str, Any]] | None, usage_by_session_i
             value = f"{dim['value']:.2f}" if dim["unit"] in ("usd", "%") else f"{dim['value']:.0f}"
             parts.append(f"{dim['name'].replace('_', ' ')} {value}{dim['unit']}")
         lines.append(f"{session['task_summary']} ({session['provider']}): " + ", ".join(parts))
-    return "Coding-agent usage:\n" + "\n".join(lines)
+    return "Recorded coding-agent usage (including finished sessions):\n" + "\n".join(lines) + "\n" + _USAGE_SCOPE
 
 
 def format_completion_notification(session: dict[str, Any]) -> str:

@@ -996,10 +996,9 @@ def create_app(
                 usage_by_session_id = {}
                 if sessions is not None:
                     for session in sessions:
-                        if not coding_agent_intent.is_terminal(session["status"]):
-                            usage_by_session_id[session["id"]] = await app.state.coding_agent_client.get_usage(
-                                session["id"]
-                            )
+                        usage_by_session_id[session["id"]] = await app.state.coding_agent_client.get_usage(
+                            session["id"]
+                        )
             except httpx.HTTPError:
                 sessions = None
                 usage_by_session_id = {}

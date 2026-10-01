@@ -1,3 +1,4 @@
+import pytest
 from companion_core.coding_agent_intent import (
     format_completion_notification,
     format_status_reply,
@@ -38,7 +39,7 @@ def _session(**overrides):
 
 
 def test_format_status_reply_with_no_sessions() -> None:
-    assert format_status_reply([]) == "You have no coding-agent sessions."
+    assert "no recorded coding-agent sessions managed by Reachy" in format_status_reply([])
 
 
 def test_format_status_reply_when_unreachable() -> None:
@@ -52,9 +53,9 @@ def test_format_status_reply_lists_sessions_with_readable_labels() -> None:
     assert "Refactor module X" in reply
 
 
-def test_format_usage_reply_only_covers_active_sessions() -> None:
+def test_format_usage_reply_includes_finished_sessions() -> None:
     sessions = [_session(status="completed")]
-    assert format_usage_reply(sessions, {}) == "You have no active coding-agent sessions."
+    assert "Refactor module X" in format_usage_reply(sessions, {})
 
 
 def test_format_usage_reply_reports_known_dimensions_only() -> None:
@@ -87,3 +88,36 @@ def test_is_terminal() -> None:
     assert is_terminal("stopped")
     assert not is_terminal("running")
     assert not is_terminal("waiting_for_input")
+
+
+@pytest.mark.parametrize("text", [
+    "Hi are any of my Claude code sessions still running?",
+    "Are my Claude Code sessions active?",
+    "Is Claude Code still running?",
+    "List my coding-agent sessions",
+    "Has my Claude Code session completed?",
+])
+def test_natural_status_questions(text):
+    assert is_status_query(text)
+    assert not is_usage_query(text)
+
+
+@pytest.mark.parametrize("text", [
+    "What is my Claude code usage so far?",
+    "What is the Claude code usage for my completed sessions?",
+])
+def test_usage_wins_over_session_status(text):
+    assert is_usage_query(text)
+    assert not is_status_query(text)
+
+
+@pytest.mark.parametrize("text", ["Is my download running?", "What is Claude Code?", "Write code for a session manager"])
+def test_unrelated_questions_are_not_session_queries(text):
+    assert not is_status_query(text)
+
+
+def test_empty_usage_is_not_a_claim_of_zero_account_usage():
+    reply = format_usage_reply([], {})
+    assert "no recorded coding-agent usage" in reply
+    assert "not account-wide" in reply
+    assert "restarts" in reply

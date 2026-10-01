@@ -6,6 +6,17 @@ The [documentation index](docs/README.md) defines ownership;
 
 ## Current work
 
+The reported Telegram session/usage reply bugs are fixed locally (2026-10-01),
+not deployed: natural Claude Code session questions now reach the deterministic
+handler, and usage reads include finished sessions. Replies explain the managed
+session scope and in-memory history limitation; status is labelled last recorded.
+See [service reference](docs/reference/services.md) for the behavior. Regression
+coverage uses the exact reported questions and an in-process service chain with
+a simulated provider returning measured usage for a completed session. All 74
+focused intent/service/conversation tests and Ruff passed. No live
+Telegram message, model invocation, deployment or robot action was performed.
+
+
 **First real Claude Code completion, live, with the owner's real
 subscription (2026-10-01).** The owner registered a real Claude Pro/Max
 subscription (`CLAUDE_CODE_OAUTH_TOKEN`) credential through the operator
