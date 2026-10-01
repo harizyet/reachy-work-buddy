@@ -99,6 +99,78 @@ def test_start_session_sends_an_api_key_credential_as_anthropic_api_key() -> Non
         event = await provider.start_session(session)
         spec = runtime.specs[event.metadata["container_id"]]
         assert spec.env == {"ANTHROPIC_API_KEY": "sk-ant-fixture-key"}
+        # The hard read-only guardrail is specific to a subscription
+        # credential — an API key session is unaffected.
+        assert spec.read_only_mount is False
+        assert "--permission-mode" in spec.command
+        assert spec.command[spec.command.index("--permission-mode") + 1] == "default"
+        assert "--allowedTools" not in spec.command
+        assert "--disallowedTools" not in spec.command
+
+    asyncio.run(run())
+
+
+def test_oauth_token_credential_forces_the_hard_read_only_guardrail() -> None:
+    async def run() -> None:
+        store = InMemoryCodingAgentStore()
+        runtime = SimulatedContainerRuntime()
+        credentials = InMemoryCredentialStore()
+        await credentials.set_credential("claude-code", CredentialKind.OAUTH_TOKEN, "sk-ant-oat01-fixture")
+        provider = ClaudeCodeProvider(runtime, credentials, store)
+        project = await store.add_project(
+            CodingProject(name="X", repository_path="/x", provider="claude-code")
+        )
+        session = CodingAgentSession(
+            project_id=project.id, provider="claude-code", task_summary="Refactor module X",
+            owner_user_id="owner-1",
+        )
+
+        event = await provider.start_session(session)
+        spec = runtime.specs[event.metadata["container_id"]]
+
+        # Layer 1: the Docker-enforced read-only mount — holds even if the
+        # other two layers below somehow failed.
+        assert spec.read_only_mount is True
+        # Layer 2: Claude Code's own no-execution research mode.
+        assert spec.command[spec.command.index("--permission-mode") + 1] == "plan"
+        # Layer 3: an explicit allow/deny pair, independent of plan mode.
+        allowed_index = spec.command.index("--allowedTools")
+        disallowed_index = spec.command.index("--disallowedTools")
+        allowed = spec.command[allowed_index + 1:disallowed_index]
+        disallowed = spec.command[disallowed_index + 1:]
+        assert set(allowed) == {"Read", "Grep", "Glob", "WebSearch", "WebFetch"}
+        # The comprehensive deny list (every other tool claude-code 2.1.197
+        # is known to advertise) is what actually restricts the active
+        # toolset — confirmed live; --allowedTools alone did not.
+        assert {
+            "Task", "Bash", "Edit", "Write", "NotebookEdit", "EnterWorktree", "ExitWorktree",
+            "CronCreate", "CronDelete", "SendMessage", "DesignSync", "Workflow",
+        } <= set(disallowed)
+        # The summary tells the owner why, rather than silently restricting.
+        assert "read-only" in event.summary
+
+    asyncio.run(run())
+
+
+def test_resume_session_also_applies_the_guardrail_for_an_oauth_token_credential() -> None:
+    async def run() -> None:
+        store = InMemoryCodingAgentStore()
+        runtime = SimulatedContainerRuntime()
+        credentials = InMemoryCredentialStore()
+        await credentials.set_credential("claude-code", CredentialKind.OAUTH_TOKEN, "sk-ant-oat01-fixture")
+        provider = ClaudeCodeProvider(runtime, credentials, store)
+        project = await store.add_project(
+            CodingProject(name="X", repository_path="/x", provider="claude-code")
+        )
+        session = CodingAgentSession(
+            project_id=project.id, provider="claude-code", task_summary="ask: which approach?",
+            owner_user_id="owner-1", provider_session_id="existing-session-id",
+        )
+
+        event = await provider.resume_session(session, "Use approach B.")
+        spec = runtime.specs[event.metadata["container_id"]]
+        assert spec.read_only_mount is True
+        assert spec.command[spec.command.index("--permission-mode") + 1] == "plan"
 
     asyncio.run(run())
 

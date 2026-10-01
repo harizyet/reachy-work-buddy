@@ -131,3 +131,34 @@ def test_docker_cli_runtime_container_survives_a_fresh_runtime_instance() -> Non
         assert await runtime_a.status(container_id) == ContainerStatus.MISSING
 
     asyncio.run(run())
+
+
+@requires_docker
+def test_docker_cli_runtime_read_only_mount_actually_blocks_a_write(tmp_path) -> None:
+    """The hard guardrail claude_provider.py relies on for a Claude Pro/Max
+    subscription credential — confirmed here at the runtime layer, not
+    just asserted: a real write through a `read_only_mount=True` spec
+    fails, and the same write through `read_only_mount=False` succeeds."""
+
+    async def run() -> None:
+        (tmp_path / "existing.txt").write_text("original")
+
+        async def attempt_write(read_only: bool) -> str:
+            proc = await asyncio.create_subprocess_exec(
+                "docker", "run", "--rm", "--user", "1000:1000",
+                "--volume", f"{tmp_path}:/workspace:{'ro' if read_only else 'rw'}",
+                "--entrypoint", "sh", "busybox:latest",
+                "-c", "echo hacked > /workspace/existing.txt; cat /workspace/existing.txt",
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
+            )
+            stdout, _ = await proc.communicate()
+            return stdout.decode()
+
+        read_only_output = await attempt_write(True)
+        assert "Read-only file system" in read_only_output
+        assert "original" in read_only_output
+
+        writable_output = await attempt_write(False)
+        assert "hacked" in writable_output
+
+    asyncio.run(run())

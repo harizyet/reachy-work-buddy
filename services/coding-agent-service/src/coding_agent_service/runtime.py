@@ -53,6 +53,12 @@ class ContainerSpec:
     cpu_limit: str = "2"
     memory_limit: str = "2g"
     user: str = "1000:1000"
+    # 29.3: a filesystem-enforced guardrail, independent of whatever the
+    # process inside the container does or claims — set True and the mount
+    # is `:ro`, so even a shell escape or a CLI policy bug cannot write to
+    # the real project. See claude_provider.py's forced use of this for a
+    # Claude Pro/Max subscription credential.
+    read_only_mount: bool = False
 
 
 class ContainerRuntime(Protocol):
@@ -161,7 +167,7 @@ class DockerCLIContainerRuntime:
             "--security-opt",
             "no-new-privileges",
             "--volume",
-            f"{spec.host_mount_path}:{spec.container_mount_path}:rw",
+            f"{spec.host_mount_path}:{spec.container_mount_path}:{'ro' if spec.read_only_mount else 'rw'}",
             *network_args,
             "--label",
             f"{LABEL_PROJECT_ID}={spec.project_id}",

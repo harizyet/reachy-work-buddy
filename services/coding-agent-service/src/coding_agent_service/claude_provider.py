@@ -25,6 +25,42 @@ approval under --permission-mode default simply has nothing to approve it
 headlessly; 29.4 (hook-based permission-request detection) is what
 eventually surfaces that to the owner instead of it just failing silently
 in the transcript.
+
+**Hard read-only guardrail for a real Claude Pro/Max subscription (owner
+request, 2026-10-01):** this integration is new and has never completed a
+real task against the real Anthropic API — nothing in it has been proven
+against a real credential yet. Until that changes, a session authenticated
+with a CLAUDE_CODE_OAUTH_TOKEN (a subscription, not a disposable API key)
+is forced into layered restrictions in `_build`, verified live rather than
+assumed:
+
+1. A Docker-enforced read-only bind mount (`ContainerSpec.read_only_mount`
+   -> `docker run -v host:/workspace:ro`) — confirmed by actually trying to
+   write a file through exactly this mount and getting "Read-only file
+   system". This is the real guarantee: it holds regardless of anything
+   the `claude` process does, including a shell, and does not depend on
+   trusting the CLI's own tool policy at all.
+2. `--disallowedTools` naming every tool except a small read-only set
+   (Read, Grep, Glob, WebSearch, WebFetch) — confirmed live that this is
+   the flag that actually removes tools from the session's active set
+   (they disappear from the init event's `"tools"` array). **`--allowedTools`
+   was tested live alongside it and did *not* restrict anything by
+   itself** — tools absent from that list but also not explicitly
+   disallowed (Task, the Cron*/Schedule* family, SendMessage, DesignSync,
+   Workflow, Skill, ReportFindings, TaskCreate/Update/Stop, ...) stayed
+   available. It is still passed, but only as an unverified secondary
+   signal, never as the thing actually doing the restricting — read
+   `_READ_ONLY_DISALLOWED_TOOLS`'s own comment before trusting an allowlist
+   here. A tool name Anthropic adds later that this list doesn't know
+   about is a gap in this layer specifically, which is exactly why layer 1
+   above exists and does not have that problem.
+3. `--permission-mode plan`, the product's own no-execution research mode
+   — a behavioral instruction to the model, not independently confirmed to
+   remove tools from the active set on its own in this test.
+
+This is not a runtime toggle; lifting it for a subscription credential is
+a deliberate future code change, once the integration has actually been
+exercised successfully. A pay-per-use API key is unaffected by this.
 """
 
 from __future__ import annotations
@@ -51,10 +87,22 @@ from shared.models.coding_agent import (
 
 DEFAULT_IMAGE = "reachy-coding-agent-claude:latest"
 
-# 29.8: a task that hits this limit without a final result event is
-# reported LOST, never COMPLETED — silence from the container is not
-# completion evidence.
-_PRINT_FLAGS = ["--output-format", "stream-json", "--verbose", "--permission-mode", "default"]
+# Hard read-only guardrail (see module docstring point 2 for how this was
+# actually tested, not assumed). _READ_ONLY_DISALLOWED_TOOLS is every tool
+# name claude-code 2.1.197 has been observed to advertise in a live init
+# event, minus the small set below — confirmed to work by diffing a real
+# container's "tools" array with and without --disallowedTools set.
+# --allowedTools is passed too but is NOT what does the restricting (see
+# the docstring); treat this module's actual guarantee as layer 1 (the
+# read-only mount), with this list as best-effort hardening that a new
+# tool name Anthropic ships later could fall outside of.
+_READ_ONLY_ALLOWED_TOOLS = ["Read", "Grep", "Glob", "WebSearch", "WebFetch"]
+_READ_ONLY_DISALLOWED_TOOLS = [
+    "Task", "Bash", "CronCreate", "CronDelete", "CronList", "DesignSync", "Edit",
+    "EnterWorktree", "ExitWorktree", "Monitor", "NotebookEdit", "PushNotification",
+    "ReportFindings", "ScheduleWakeup", "SendMessage", "Skill", "TaskCreate", "TaskGet",
+    "TaskList", "TaskOutput", "TaskStop", "TaskUpdate", "ToolSearch", "Workflow", "Write",
+]
 
 
 def _parse_stream_json(logs: str) -> list[dict]:
@@ -140,7 +188,7 @@ class ClaudeCodeProvider:
             structured_stream=True,
         )
 
-    async def _credential_env(self) -> dict[str, str]:
+    async def _credential(self) -> tuple[CredentialKind, str]:
         """Claude Code reads two different env vars depending on how the
         owner authenticates (confirmed live by grepping the real
         claude.exe binary for its env-var names, not guessed): a
@@ -149,7 +197,8 @@ class ClaudeCodeProvider:
         `claude setup-token` — not something this headless container can
         do itself) is CLAUDE_CODE_OAUTH_TOKEN. Using the wrong variable
         for the stored CredentialKind would silently try to bill the
-        subscription token as an API key and fail authentication."""
+        subscription token as an API key and fail authentication. The
+        returned kind also drives the read-only guardrail below."""
         record = await self._credentials.describe("claude-code")
         secret = await self._credentials.get_secret("claude-code")
         if not record or not secret:
@@ -157,33 +206,52 @@ class ClaudeCodeProvider:
                 "No claude-code credential configured; set one in the operator UI's "
                 "Settings · Accounts · Coding agent credentials card first"
             )
-        env_var = "ANTHROPIC_API_KEY" if record.kind == CredentialKind.API_KEY else "CLAUDE_CODE_OAUTH_TOKEN"
-        return {env_var: secret}
+        return record.kind, secret
 
-    async def _spec(self, session: CodingAgentSession, command: list[str]) -> ContainerSpec:
+    async def _build(self, session: CodingAgentSession, *, prompt: str, resume: bool) -> tuple[ContainerSpec, str]:
         project = await self._projects.get_project(session.project_id)
         if project is None:
             raise ProviderError(f"Unknown project {session.project_id}")
-        credential_env = await self._credential_env()
-        return ContainerSpec(
+        kind, secret = await self._credential()
+        env_var = "ANTHROPIC_API_KEY" if kind == CredentialKind.API_KEY else "CLAUDE_CODE_OAUTH_TOKEN"
+
+        provider_session_id = session.provider_session_id if resume else str(uuid.uuid4())
+        command = ["-p", prompt, "--output-format", "stream-json", "--verbose"]
+        command += ["--resume", provider_session_id] if resume else ["--session-id", provider_session_id]
+
+        read_only = kind == CredentialKind.OAUTH_TOKEN
+        if read_only:
+            # Hard guardrail — see module docstring. Three independent
+            # layers: plan mode, an explicit tool allow/deny pair, and
+            # (below) a Docker-enforced read-only mount.
+            command += [
+                "--permission-mode", "plan",
+                "--allowedTools", *_READ_ONLY_ALLOWED_TOOLS,
+                "--disallowedTools", *_READ_ONLY_DISALLOWED_TOOLS,
+            ]
+        else:
+            command += ["--permission-mode", "default"]
+
+        spec = ContainerSpec(
             image=self._image,
             project_id=session.project_id,
             session_id=session.id,
             provider="claude-code",
             host_mount_path=project.repository_path,
             command=command,
-            env=credential_env,
+            env={env_var: secret},
             network_profile=project.allowed_network_profile,
+            read_only_mount=read_only,
         )
+        return spec, provider_session_id
 
     async def start_session(self, session: CodingAgentSession) -> ProviderEvent:
-        provider_session_id = str(uuid.uuid4())
-        command = ["-p", session.task_summary, "--session-id", provider_session_id, *_PRINT_FLAGS]
-        spec = await self._spec(session, command)
+        spec, provider_session_id = await self._build(session, prompt=session.task_summary, resume=False)
         container_id = await self._runtime.start(spec)
+        read_only_note = " (read-only: a Claude Pro/Max subscription credential cannot write yet)" if spec.read_only_mount else ""
         return ProviderEvent(
             status=CodingAgentStatus.RUNNING,
-            summary="Claude Code started",
+            summary=f"Claude Code started{read_only_note}",
             provider_session_id=provider_session_id,
             metadata={"container_id": container_id},
         )
@@ -191,13 +259,13 @@ class ClaudeCodeProvider:
     async def resume_session(self, session: CodingAgentSession, instruction: str) -> ProviderEvent:
         if not session.provider_session_id:
             raise ProviderError("No provider session id to resume")
-        command = ["-p", instruction, "--resume", session.provider_session_id, *_PRINT_FLAGS]
-        spec = await self._spec(session, command)
+        spec, provider_session_id = await self._build(session, prompt=instruction, resume=True)
         container_id = await self._runtime.start(spec)
+        read_only_note = " (read-only: a Claude Pro/Max subscription credential cannot write yet)" if spec.read_only_mount else ""
         return ProviderEvent(
             status=CodingAgentStatus.RUNNING,
-            summary=f"Claude Code resumed with owner instruction: {instruction!r}",
-            provider_session_id=session.provider_session_id,
+            summary=f"Claude Code resumed with owner instruction{read_only_note}: {instruction!r}",
+            provider_session_id=provider_session_id,
             metadata={"container_id": container_id},
         )
 

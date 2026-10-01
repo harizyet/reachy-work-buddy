@@ -80,6 +80,40 @@ owner's own `claude-code` credential entered in the operator UI — that has
 not happened and was not exercised by any automated test**, since it would
 cost real money.
 
+Two follow-up fixes/additions after 29.3 landed, both same-session:
+
+1. **Bug found and fixed:** `ClaudeCodeProvider` originally sent every
+   stored credential as `ANTHROPIC_API_KEY` regardless of its
+   `CredentialKind` — an owner who picked "OAuth token" (a Claude Pro/Max
+   subscription) in the operator UI would have had it silently fail to
+   authenticate. Confirmed by grepping the real installed `claude.exe`
+   binary for its actual env-var names: a subscription's long-lived token
+   (from `claude setup-token`, run interactively elsewhere — this
+   container cannot do that sign-in itself) belongs in
+   `CLAUDE_CODE_OAUTH_TOKEN`, a different variable. `_credential` now
+   reads the stored kind and routes to the right one; the operator UI card
+   got an explanatory note on how to get a subscription token.
+2. **Hard read-only guardrail for a real subscription credential (owner
+   request, 2026-10-01):** this integration has never completed a real
+   task against the real API, so a `CLAUDE_CODE_OAUTH_TOKEN` session is
+   now forced read-only. The real, trusted layer is
+   `ContainerSpec.read_only_mount` → a Docker `:ro` bind mount — **confirmed
+   by an actual blocked write**, twice: once directly with `docker run`
+   against a `:ro` volume, once with `docker exec` into a live, real
+   `claude` container running with a subscription credential, both getting
+   "Read-only file system". A tool-level restriction (`--disallowedTools`
+   naming every tool claude-code 2.1.197 is known to advertise except
+   `Read`/`Grep`/`Glob`/`WebSearch`/`WebFetch`, plus `--permission-mode
+   plan`) is layered on top, but **is best-effort, not the guarantee** —
+   live testing found `--allowedTools` alone does *not* restrict the
+   active toolset the way its help text implies; only `--disallowedTools`
+   measurably removed tools from a real init event's `tools` array. This
+   is not a runtime toggle; lifting it for a subscription credential needs
+   a deliberate future code change once the integration has actually
+   completed a real task successfully. A pay-per-use API key session is
+   unaffected. See `claude_provider.py`'s module docstring for the full
+   reasoning and exactly what was tested vs. assumed.
+
 Nothing wires coding-agent-service's *session* lifecycle into
 companion-core or reachy-hub yet (29.6/29.7 — only the credential routes
 reach the browser so far), there is no hook-based mid-task
@@ -87,14 +121,14 @@ reach the browser so far), there is no hook-based mid-task
 not in `deploy/homelab/docker-compose.yml` — all deliberately deferred to
 their own stages per
 [docs/phase-29.md](docs/phase-29.md#2929--implementation-sequence).
-35 coding-agent-service tests exist (33 pass by default; the 2 real-Docker
-ones are opt-in via `CODING_AGENT_DOCKER_TEST=1` and both pass given the
-built image), plus 4 reachy-hub tests (`test_coding_agent_credentials.py`)
-and one Playwright test (`coding_agents.test.cjs`, run externally —
-Playwright/Chromium is not installed in a default dev shell). Full
-`services shared` suite (990 passed; one unrelated `test_wake.py` flake
-reproduced as a pass on rerun, not a regression) and `ruff check .` both
-still pass. See
+41 coding-agent-service tests exist (37 pass by default; the 4 real-Docker
+ones are opt-in via `CODING_AGENT_DOCKER_TEST=1` and all pass given the
+built image, including the two guardrail checks above), plus 4 reachy-hub
+tests (`test_coding_agent_credentials.py`) and one Playwright test
+(`coding_agents.test.cjs`, run externally — Playwright/Chromium is not
+installed in a default dev shell). Full `services shared` suite (994
+passed; one unrelated `test_wake.py` flake reproduced as a pass on rerun,
+not a regression) and `ruff check .` both still pass. See
 [service reference](docs/reference/services.md#coding-agent-service-phase-29-planned)
 for the exact route/behavior surface.
 

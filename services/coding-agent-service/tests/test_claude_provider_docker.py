@@ -19,12 +19,19 @@ here.
 """
 
 import asyncio
+import json
 import os
 import subprocess
 import tempfile
+from pathlib import Path
 
 import pytest
-from coding_agent_service.claude_provider import DEFAULT_IMAGE, ClaudeCodeProvider
+from coding_agent_service.claude_provider import (
+    _READ_ONLY_ALLOWED_TOOLS,
+    _READ_ONLY_DISALLOWED_TOOLS,
+    DEFAULT_IMAGE,
+    ClaudeCodeProvider,
+)
 from coding_agent_service.credentials import InMemoryCredentialStore
 from coding_agent_service.runtime import ContainerStatus, DockerCLIContainerRuntime
 from coding_agent_service.store import InMemoryCodingAgentStore
@@ -99,6 +106,76 @@ def test_real_claude_container_starts_tracks_session_id_and_stops() -> None:
             finally:
                 await provider.stop_session(session)
                 assert await runtime.status(session.container_id) == ContainerStatus.EXITED
+                rm_proc = await asyncio.create_subprocess_exec(
+                    "docker", "rm", session.container_id,
+                    stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
+                )
+                await rm_proc.wait()
+
+    asyncio.run(run())
+
+
+@requires_docker_and_image
+def test_real_oauth_token_session_actually_has_a_restricted_toolset_and_read_only_mount() -> None:
+    """The hard read-only guardrail (owner request, 2026-10-01), verified
+    against the real container rather than only asserted against a spec
+    object: a subscription-credentialed session's real init event (the
+    first line of real `claude` stdout) must not list any of the tools
+    this module disallows, and the project directory it was given must
+    actually be unwritable from inside the real container."""
+
+    async def run() -> None:
+        with tempfile.TemporaryDirectory(prefix="reachy-claude-provider-oauth-test-") as repo_path:
+            existing_file = Path(repo_path) / "existing.txt"
+            existing_file.write_text("original")
+
+            store = InMemoryCodingAgentStore()
+            credentials = InMemoryCredentialStore()
+            await credentials.set_credential("claude-code", CredentialKind.OAUTH_TOKEN, "invalid-test-oauth-token")
+            runtime = DockerCLIContainerRuntime()
+            provider = ClaudeCodeProvider(runtime, credentials, store)
+
+            project = await store.add_project(
+                CodingProject(
+                    name="test-repo", repository_path=repo_path, provider="claude-code",
+                    allowed_network_profile="bridge",
+                )
+            )
+            session = CodingAgentSession(
+                project_id=project.id, provider="claude-code", task_summary="say hi", owner_user_id="owner-1",
+            )
+
+            start_event = await provider.start_session(session)
+            session.container_id = start_event.metadata["container_id"]
+            try:
+                assert "read-only" in start_event.summary
+
+                # The real init event (first JSONL line) lists the session's
+                # actual active tools — wait for at least that line to land.
+                init_event = None
+                for _ in range(10):
+                    lines = (await runtime.logs(session.container_id)).splitlines()
+                    if lines:
+                        init_event = json.loads(lines[0])
+                        break
+                    await asyncio.sleep(0.5)
+                assert init_event is not None and init_event["type"] == "system" and init_event["subtype"] == "init"
+                active_tools = set(init_event["tools"])
+                assert active_tools.isdisjoint(_READ_ONLY_DISALLOWED_TOOLS)
+                assert set(_READ_ONLY_ALLOWED_TOOLS) <= active_tools
+
+                # The mount is real and actually read-only, independent of
+                # anything the claude process itself does or doesn't do.
+                write_attempt = await asyncio.create_subprocess_exec(
+                    "docker", "exec", "--user", "1000:1000", session.container_id,
+                    "sh", "-c", "echo hacked > /workspace/existing.txt",
+                    stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
+                )
+                stdout, _ = await write_attempt.communicate()
+                assert "Read-only file system" in stdout.decode()
+                assert existing_file.read_text() == "original"
+            finally:
+                await provider.stop_session(session)
                 rm_proc = await asyncio.create_subprocess_exec(
                     "docker", "rm", session.container_id,
                     stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
