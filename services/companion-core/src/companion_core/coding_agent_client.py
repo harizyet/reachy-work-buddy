@@ -1,0 +1,46 @@
+"""HTTP client for coding-agent-service (Phase 29). ADR 0001 allows a
+direct sibling-service HTTP call like this one — same shape as
+hub_client.py (companion-core -> reachy-hub) and meetings/speech_clients.py
+(companion-core -> the speech sidecars). companion-core only ever reads
+session/usage state through this client; it never starts, resumes or stops
+a session (that stays owner-initiated via reachy-hub/the operator UI,
+29.6/29.7 — not built yet).
+"""
+
+from __future__ import annotations
+
+import os
+from typing import Any
+
+import httpx
+
+from shared.protocols.coding_agent import SERVICE_HEADER, SESSION_USAGE, SESSIONS
+
+
+class CodingAgentServiceClient:
+    def __init__(
+        self,
+        base_url: str,
+        *,
+        transport: httpx.AsyncBaseTransport | None = None,
+        timeout: float = 10.0,
+        service_token: str | None = None,
+    ) -> None:
+        token = service_token or os.environ.get("CODING_AGENT_SERVICE_TOKEN")
+        self._client = httpx.AsyncClient(
+            base_url=base_url, transport=transport, timeout=timeout,
+            headers={SERVICE_HEADER: token} if token else {},
+        )
+
+    async def aclose(self) -> None:
+        await self._client.aclose()
+
+    async def list_sessions(self) -> list[dict[str, Any]]:
+        resp = await self._client.get(SESSIONS)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get_usage(self, session_id: str) -> dict[str, Any]:
+        resp = await self._client.get(SESSION_USAGE.format(session_id=session_id))
+        resp.raise_for_status()
+        return resp.json()

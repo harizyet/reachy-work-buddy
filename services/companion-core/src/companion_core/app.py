@@ -167,6 +167,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ValidationError
 
 from companion_core import (
+    coding_agent_intent,
     command_suggestion,
     commands,
     email_intent,
@@ -186,6 +187,11 @@ from companion_core.calendar_intent import (
     today_window,
 )
 from companion_core.clock_intent import format_clock_reply, match_local_clock
+from companion_core.coding_agent_client import CodingAgentServiceClient
+from companion_core.coding_agent_notifications import (
+    CodingAgentNotificationStore,
+    InMemoryCodingAgentNotificationStore,
+)
 from companion_core.consent.gate import (
     ConfirmationExpiredError,
     ConfirmationNotFoundError,
@@ -428,8 +434,17 @@ def create_app(
     run_email_dispatch_task: bool = True,
     email_dispatch_interval: float | None = None,
     hub_bearer_token: str | None = None,
+    coding_agent_base_url: str | None = None,
+    coding_agent_transport: httpx.AsyncBaseTransport | None = None,
+    coding_agent_service_token: str | None = None,
+    coding_agent_notification_store: CodingAgentNotificationStore | None = None,
 ) -> FastAPI:
     hub_base_url = hub_base_url or os.environ.get("REACHY_HUB_URL", "http://reachy-hub:8000")
+    coding_agent_base_url = coding_agent_base_url or os.environ.get(
+        "CODING_AGENT_SERVICE_URL", "http://coding-agent-service:8000"
+    )
+    coding_agent_service_token = coding_agent_service_token or os.environ.get("CODING_AGENT_SERVICE_TOKEN")
+    coding_agent_notification_store = coding_agent_notification_store or InMemoryCodingAgentNotificationStore()
     # Both env-overridable, same pattern as hub_base_url above — default
     # stays the real ~10 minutes (ADR 0011), but a deployment (e.g. a
     # staging/test compose override) can shorten both the delay and how
@@ -479,6 +494,10 @@ def create_app(
         if owns_llm_settings and not accounts_service_token:
             raise RuntimeError("ACCOUNTS_SERVICE_TOKEN is required for production data access")
         app.state.hub_client = HubClient(hub_base_url, transport=transport, bearer_token=hub_bearer_token)
+        app.state.coding_agent_client = CodingAgentServiceClient(
+            coding_agent_base_url, transport=coding_agent_transport, service_token=coding_agent_service_token
+        )
+        app.state.coding_agent_notification_store = coding_agent_notification_store
         if owns_llm_settings:
             app.state.llm_settings_store = await PostgresLLMSettingsStore.connect(database_url or os.environ["DATABASE_URL"])
         if owns_llm_usage:
@@ -561,6 +580,7 @@ def create_app(
             if owns_accounts:
                 await app.state.accounts.repository.close()
             await app.state.hub_client.aclose()
+            await app.state.coding_agent_client.aclose()
             if owns_llm_settings:
                 await app.state.llm_settings_store.close()
             if owns_llm_usage:
@@ -731,6 +751,8 @@ def create_app(
         approve_query = email_intent.match_approve(turn.text)
         cancel_send_query = email_intent.match_cancel_send(turn.text)
         send_query = email_intent.match_send(turn.text)
+        coding_agent_status_query = coding_agent_intent.is_status_query(turn.text)
+        coding_agent_usage_query = coding_agent_intent.is_usage_query(turn.text)
         # Phase 24b: only an explicit, unambiguously-parsed command may
         # reach these actions — free-form text (however phrase-matched)
         # no longer can. See companion_core/commands/parser.py and
@@ -961,6 +983,28 @@ def create_app(
             persona = await app.state.persona_store.get()
             reply = format_clock_reply(clock_kind, datetime.now(UTC), persona.timezone)
             privacy = Privacy.PUBLIC
+        elif coding_agent_status_query:
+            try:
+                sessions = await app.state.coding_agent_client.list_sessions()
+            except httpx.HTTPError:
+                sessions = None
+            reply = coding_agent_intent.format_status_reply(sessions)
+            privacy = Privacy.WORK_PRIVATE
+        elif coding_agent_usage_query:
+            try:
+                sessions = await app.state.coding_agent_client.list_sessions()
+                usage_by_session_id = {}
+                if sessions is not None:
+                    for session in sessions:
+                        if not coding_agent_intent.is_terminal(session["status"]):
+                            usage_by_session_id[session["id"]] = await app.state.coding_agent_client.get_usage(
+                                session["id"]
+                            )
+            except httpx.HTTPError:
+                sessions = None
+                usage_by_session_id = {}
+            reply = coding_agent_intent.format_usage_reply(sessions, usage_by_session_id)
+            privacy = Privacy.WORK_PRIVATE
         else:
             config = await app.state.llm_settings_store.get()
             if config.local is None and config.cloud is None and not turn.force_frontier:
@@ -1102,6 +1146,30 @@ def create_app(
             )
             for event in events
         ]
+
+    @app.get("/coding-agents/completions/due")
+    async def coding_agent_completions_due() -> list[dict[str, str]]:
+        """Phase 29: reachy-hub polls this to push a Telegram notification
+        when a coding-agent session finishes — same "pure query, claim once"
+        shape as /calendar/reminders/due above, not a background poller
+        living in this service. A session is reported at most once: the
+        notification store (in-memory, 29's own documented restart
+        limitation) claims each session_id before it's returned."""
+        try:
+            sessions = await app.state.coding_agent_client.list_sessions()
+        except httpx.HTTPError:
+            return []
+        due = []
+        for session in sessions:
+            if not coding_agent_intent.is_terminal(session["status"]):
+                continue
+            if await app.state.coding_agent_notification_store.claim(session["id"]):
+                due.append({
+                    "session_id": session["id"],
+                    "owner_user_id": session["owner_user_id"],
+                    "text": coding_agent_intent.format_completion_notification(session),
+                })
+        return due
 
     @app.get("/briefing")
     async def get_briefing() -> list[BriefingItem]:

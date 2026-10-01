@@ -344,6 +344,15 @@ services:
       # for the clients' calls to authenticate once either sidecar has one
       # set. Unset on all three (default) means no auth is enforced.
       SPEECH_SERVICE_TOKEN: ${SPEECH_SERVICE_TOKEN:-}
+      # Phase 29: companion-core answers owner status/usage questions and
+      # exposes GET /coding-agents/completions/due (reachy-hub polls it to
+      # push Telegram notifications) by calling coding-agent-service
+      # directly — ADR 0001 allows a sibling-service HTTP call, same as
+      # TRANSCRIPTION_URL/DIARIZATION_URL above. Required: coding-agent-
+      # service itself requires this same token (see its own service
+      # block), so an unset value here just means every call 401s.
+      CODING_AGENT_SERVICE_URL: http://coding-agent-service:8000
+      CODING_AGENT_SERVICE_TOKEN: ${CODING_AGENT_SERVICE_TOKEN:?set CODING_AGENT_SERVICE_TOKEN in .env}
     volumes:
       - meeting-audio:/data/meeting-audio
     depends_on:
