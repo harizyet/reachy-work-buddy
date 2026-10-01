@@ -8,7 +8,7 @@ function createCodingAgents({api, isLoggedIn}) {
   const PROVIDERS = [
     {
       id: 'claude-code', title: 'Claude Code',
-      hint: 'API key: pay-per-use billing from your Anthropic Console account. OAuth token: if you have a Claude Pro or Max subscription, run "claude setup-token" on a computer where you can sign in, then paste the token it prints here — usage counts against your subscription instead of API billing. Reachy cannot run that sign-in step itself.',
+      hint: 'API key: pay-per-use billing from your Anthropic Console account. OAuth token: if you have a Claude Pro or Max subscription, run "claude setup-token" on a computer where you can sign in, then paste the token it prints here — usage counts against your subscription instead of API billing. Reachy cannot run that sign-in step itself. Starting a session with an OAuth token is disabled for now, so your subscription cannot be spent by this feature yet; only an API key can actually run a task at this stage.',
     },
     {id: 'codex', title: 'OpenAI Codex CLI'},
   ];

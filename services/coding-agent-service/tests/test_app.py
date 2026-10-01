@@ -2,11 +2,17 @@
 the service-token gate, and request validation — the state-machine logic
 itself is covered directly in test_service.py."""
 
+import asyncio
+
 from coding_agent_service.app import create_app
+from coding_agent_service.claude_provider import ClaudeCodeProvider
+from coding_agent_service.credentials import InMemoryCredentialStore
 from coding_agent_service.providers import SimulatedProvider
+from coding_agent_service.runtime import SimulatedContainerRuntime
 from coding_agent_service.store import InMemoryCodingAgentStore
 from fastapi.testclient import TestClient
 
+from shared.models.coding_agent import CredentialKind
 from shared.protocols import coding_agent as paths
 
 SERVICE_TOKEN = "fixture-service-token"
@@ -163,3 +169,31 @@ def test_credential_routes_require_service_token() -> None:
     assert client.put(
         paths.PROVIDER_CREDENTIAL.format(provider="claude-code"), json={"kind": "api_key", "value": "x"}
     ).status_code == 401
+
+
+def test_starting_a_claude_code_session_with_an_oauth_credential_returns_403() -> None:
+    """29.3 hard guardrail (owner request, 2026-10-01), confirmed at the
+    HTTP layer: ProviderInvocationBlockedError maps to 403, distinct from
+    the generic 409 a plain ProviderError gets."""
+
+    store = InMemoryCodingAgentStore()
+    credentials = InMemoryCredentialStore()
+    asyncio.run(credentials.set_credential("claude-code", CredentialKind.OAUTH_TOKEN, "sk-ant-oat01-fixture"))
+    app = create_app(
+        store=store,
+        providers={"claude-code": ClaudeCodeProvider(SimulatedContainerRuntime(), credentials, store)},
+        service_token=SERVICE_TOKEN,
+        credential_store=credentials,
+    )
+    client = TestClient(app)
+    headers = _headers()
+
+    project = client.post(
+        paths.PROJECTS, headers=headers,
+        json={"name": "X", "repository_path": "/x", "provider": "claude-code"},
+    ).json()
+    response = client.post(
+        paths.SESSIONS, headers=headers,
+        json={"project_id": project["id"], "task_summary": "say hi", "owner_user_id": "owner-1"},
+    )
+    assert response.status_code == 403

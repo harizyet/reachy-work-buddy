@@ -10,7 +10,7 @@ import secrets
 from fastapi import Depends, HTTPException, Request
 
 from coding_agent_service.credentials import CredentialStore
-from coding_agent_service.providers import ProviderError
+from coding_agent_service.providers import ProviderError, ProviderInvocationBlockedError
 from coding_agent_service.service import (
     CodingAgentSupervisor,
     SessionNotResumableError,
@@ -72,6 +72,8 @@ def install_coding_agent_routes(app, service_token: str | None) -> None:
             raise HTTPException(404, "Unknown project") from None
         except UnknownProviderError as exc:
             raise HTTPException(400, f"Unknown provider: {exc}") from None
+        except ProviderInvocationBlockedError as exc:
+            raise HTTPException(403, str(exc)) from None
         except ProviderError as exc:
             raise HTTPException(409, str(exc)) from None
 
@@ -94,6 +96,8 @@ def install_coding_agent_routes(app, service_token: str | None) -> None:
             raise HTTPException(404, "Unknown session") from None
         except SessionNotResumableError as exc:
             raise HTTPException(409, str(exc)) from None
+        except ProviderInvocationBlockedError as exc:
+            raise HTTPException(403, str(exc)) from None
         except ProviderError as exc:
             raise HTTPException(409, str(exc)) from None
 
@@ -105,6 +109,8 @@ def install_coding_agent_routes(app, service_token: str | None) -> None:
             raise HTTPException(404, "Unknown session") from None
         except SessionNotResumableError as exc:
             raise HTTPException(409, str(exc)) from None
+        except ProviderInvocationBlockedError as exc:
+            raise HTTPException(403, str(exc)) from None
         except ProviderError as exc:
             raise HTTPException(409, str(exc)) from None
 

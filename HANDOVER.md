@@ -93,26 +93,37 @@ Two follow-up fixes/additions after 29.3 landed, both same-session:
    `CLAUDE_CODE_OAUTH_TOKEN`, a different variable. `_credential` now
    reads the stored kind and routes to the right one; the operator UI card
    got an explanatory note on how to get a subscription token.
-2. **Hard read-only guardrail for a real subscription credential (owner
-   request, 2026-10-01):** this integration has never completed a real
-   task against the real API, so a `CLAUDE_CODE_OAUTH_TOKEN` session is
-   now forced read-only. The real, trusted layer is
-   `ContainerSpec.read_only_mount` → a Docker `:ro` bind mount — **confirmed
-   by an actual blocked write**, twice: once directly with `docker run`
-   against a `:ro` volume, once with `docker exec` into a live, real
-   `claude` container running with a subscription credential, both getting
-   "Read-only file system". A tool-level restriction (`--disallowedTools`
-   naming every tool claude-code 2.1.197 is known to advertise except
-   `Read`/`Grep`/`Glob`/`WebSearch`/`WebFetch`, plus `--permission-mode
-   plan`) is layered on top, but **is best-effort, not the guarantee** —
-   live testing found `--allowedTools` alone does *not* restrict the
-   active toolset the way its help text implies; only `--disallowedTools`
-   measurably removed tools from a real init event's `tools` array. This
-   is not a runtime toggle; lifting it for a subscription credential needs
-   a deliberate future code change once the integration has actually
-   completed a real task successfully. A pay-per-use API key session is
-   unaffected. See `claude_provider.py`'s module docstring for the full
-   reasoning and exactly what was tested vs. assumed.
+2. **Hard guardrail for a real subscription credential, owner request
+   2026-10-01, revised same day.** First pass restricted the real
+   container to read-only/limited tools; the owner clarified the actual
+   intent was narrower and more direct: don't let a real Claude Pro/Max
+   subscription spend credits at all yet, regardless of file/tool access —
+   only allow reading existing projects/session status. Rebuilt
+   accordingly: `start_session`/`resume_session`/`send_input` now raise
+   `ProviderInvocationBlockedError` (routes.py maps it to HTTP 403) before
+   touching Docker, the project store, or even decrypting the secret, for
+   any `CLAUDE_CODE_OAUTH_TOKEN` credential. No container is created at
+   all — confirmed via `runtime.list_by_session()` returning empty after a
+   blocked call, both in the fixture suite and against the real Docker
+   daemon. Listing/reading projects, sessions, events and usage is
+   completely unaffected, since those never call this adapter's invoking
+   methods. The original read-only layer (`ContainerSpec.read_only_mount`
+   → a real `:ro` bind mount, confirmed twice by an actual blocked write
+   including via `docker exec` into a live `claude` container; a
+   `--disallowedTools` list — confirmed live to be what actually restricts
+   tools, since `--allowedTools` alone did **not** restrict anything in the
+   same test, despite its help text implying it should; `--permission-mode
+   plan`) is kept in `_build`, not deleted, as dormant defense-in-depth for
+   whenever the invocation block is deliberately lifted — it is currently
+   unreachable in practice since the block above stops a subscription
+   credential before `_build` ever runs, and a dedicated test exercises it
+   directly against a real container so that dormant path stays proven.
+   None of this is a runtime toggle; lifting the invocation block needs a
+   deliberate future code change once the integration has actually
+   completed a real task successfully with an API key. A pay-per-use API
+   key session is unaffected throughout. See `claude_provider.py`'s module
+   docstring for the full reasoning and exactly what was tested vs.
+   assumed.
 
 Nothing wires coding-agent-service's *session* lifecycle into
 companion-core or reachy-hub yet (29.6/29.7 — only the credential routes
@@ -121,12 +132,12 @@ reach the browser so far), there is no hook-based mid-task
 not in `deploy/homelab/docker-compose.yml` — all deliberately deferred to
 their own stages per
 [docs/phase-29.md](docs/phase-29.md#2929--implementation-sequence).
-41 coding-agent-service tests exist (37 pass by default; the 4 real-Docker
+44 coding-agent-service tests exist (39 pass by default; the 5 real-Docker
 ones are opt-in via `CODING_AGENT_DOCKER_TEST=1` and all pass given the
-built image, including the two guardrail checks above), plus 4 reachy-hub
+built image, including the guardrail checks above), plus 4 reachy-hub
 tests (`test_coding_agent_credentials.py`) and one Playwright test
 (`coding_agents.test.cjs`, run externally — Playwright/Chromium is not
-installed in a default dev shell). Full `services shared` suite (994
+installed in a default dev shell). Full `services shared` suite (996
 passed; one unrelated `test_wake.py` flake reproduced as a pass on rerun,
 not a regression) and `ruff check .` both still pass. See
 [service reference](docs/reference/services.md#coding-agent-service-phase-29-planned)

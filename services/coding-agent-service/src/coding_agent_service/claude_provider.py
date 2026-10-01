@@ -26,20 +26,38 @@ headlessly; 29.4 (hook-based permission-request detection) is what
 eventually surfaces that to the owner instead of it just failing silently
 in the transcript.
 
-**Hard read-only guardrail for a real Claude Pro/Max subscription (owner
-request, 2026-10-01):** this integration is new and has never completed a
-real task against the real Anthropic API — nothing in it has been proven
-against a real credential yet. Until that changes, a session authenticated
-with a CLAUDE_CODE_OAUTH_TOKEN (a subscription, not a disposable API key)
-is forced into layered restrictions in `_build`, verified live rather than
-assumed:
+**Hard no-invocation guardrail for a real Claude Pro/Max subscription
+(owner request, 2026-10-01):** this integration has never completed a
+real task against the real Anthropic API. The owner's actual concern is
+not file access — it's that starting or resuming *any* real `claude`
+invocation spends real subscription usage the instant the model answers,
+regardless of what tools it is or isn't allowed to touch. So for a
+CLAUDE_CODE_OAUTH_TOKEN credential (a subscription, not a disposable API
+key), `start_session`/`resume_session`/`send_input` refuse outright —
+`_ensure_can_invoke` raises `ProviderInvocationBlockedError` before any
+container, Docker call, or project lookup happens at all. Listing and
+reading existing projects, sessions, events and (already-known) usage is
+entirely unaffected — those never call this adapter's invoking methods —
+only *starting new model usage* is blocked. This is not a runtime toggle;
+lifting it for a subscription credential is a deliberate future code
+change, once the integration has actually completed a real task
+successfully with an API key. A pay-per-use API key is unaffected by this
+block (though see below for what still applies to it).
+
+`_build` additionally carries layered restrictions that apply to whichever
+credential kind is actually allowed to invoke `claude` at a given time —
+right now that is only an API key, since the block above stops the
+subscription path before `_build` is ever reached for it; this is kept in
+place, not deleted, for whenever the invocation block is deliberately
+lifted for a subscription credential. Verified live, not assumed:
 
 1. A Docker-enforced read-only bind mount (`ContainerSpec.read_only_mount`
    -> `docker run -v host:/workspace:ro`) — confirmed by actually trying to
    write a file through exactly this mount and getting "Read-only file
-   system". This is the real guarantee: it holds regardless of anything
-   the `claude` process does, including a shell, and does not depend on
-   trusting the CLI's own tool policy at all.
+   system", including via `docker exec` into a live `claude` process. This
+   is the one layer that holds regardless of anything the process does,
+   including a shell, and does not depend on trusting the CLI's own tool
+   policy at all.
 2. `--disallowedTools` naming every tool except a small read-only set
    (Read, Grep, Glob, WebSearch, WebFetch) — confirmed live that this is
    the flag that actually removes tools from the session's active set
@@ -57,10 +75,6 @@ assumed:
 3. `--permission-mode plan`, the product's own no-execution research mode
    — a behavioral instruction to the model, not independently confirmed to
    remove tools from the active set on its own in this test.
-
-This is not a runtime toggle; lifting it for a subscription credential is
-a deliberate future code change, once the integration has actually been
-exercised successfully. A pay-per-use API key is unaffected by this.
 """
 
 from __future__ import annotations
@@ -69,7 +83,11 @@ import json
 import uuid
 
 from coding_agent_service.credentials import CredentialStore
-from coding_agent_service.providers import ProviderError, ProviderEvent
+from coding_agent_service.providers import (
+    ProviderError,
+    ProviderEvent,
+    ProviderInvocationBlockedError,
+)
 from coding_agent_service.runtime import (
     ContainerRuntime,
     ContainerSpec,
@@ -208,6 +226,29 @@ class ClaudeCodeProvider:
             )
         return record.kind, secret
 
+    async def _ensure_can_invoke(self) -> None:
+        """29.3 hard guardrail (owner request, 2026-10-01): refuses before
+        touching Docker, the project store, or even decrypting the secret
+        value — a subscription credential cannot spend usage through this
+        adapter at all right now. See the module docstring for exactly
+        what was tested vs. assumed, and what remains unaffected (reading
+        existing projects/sessions/events/usage)."""
+        record = await self._credentials.describe("claude-code")
+        if record is None:
+            raise ProviderError(
+                "No claude-code credential configured; set one in the operator UI's "
+                "Settings · Accounts · Coding agent credentials card first"
+            )
+        if record.kind == CredentialKind.OAUTH_TOKEN:
+            raise ProviderInvocationBlockedError(
+                "Starting or resuming a Claude Code session with a Claude Pro/Max subscription "
+                "credential is disabled at this stage to avoid spending real subscription usage "
+                "before this integration has proven itself. Project and session status remain "
+                "fully readable; only starting new model usage is blocked. Use an API key "
+                "credential to actually run a task, or see claude_provider.py to lift this "
+                "deliberately once the integration has been exercised successfully."
+            )
+
     async def _build(self, session: CodingAgentSession, *, prompt: str, resume: bool) -> tuple[ContainerSpec, str]:
         project = await self._projects.get_project(session.project_id)
         if project is None:
@@ -246,6 +287,7 @@ class ClaudeCodeProvider:
         return spec, provider_session_id
 
     async def start_session(self, session: CodingAgentSession) -> ProviderEvent:
+        await self._ensure_can_invoke()
         spec, provider_session_id = await self._build(session, prompt=session.task_summary, resume=False)
         container_id = await self._runtime.start(spec)
         read_only_note = " (read-only: a Claude Pro/Max subscription credential cannot write yet)" if spec.read_only_mount else ""
@@ -259,6 +301,7 @@ class ClaudeCodeProvider:
     async def resume_session(self, session: CodingAgentSession, instruction: str) -> ProviderEvent:
         if not session.provider_session_id:
             raise ProviderError("No provider session id to resume")
+        await self._ensure_can_invoke()
         spec, provider_session_id = await self._build(session, prompt=instruction, resume=True)
         container_id = await self._runtime.start(spec)
         read_only_note = " (read-only: a Claude Pro/Max subscription credential cannot write yet)" if spec.read_only_mount else ""

@@ -12,7 +12,7 @@ import json
 import pytest
 from coding_agent_service.claude_provider import ClaudeCodeProvider
 from coding_agent_service.credentials import InMemoryCredentialStore
-from coding_agent_service.providers import ProviderError
+from coding_agent_service.providers import ProviderError, ProviderInvocationBlockedError
 from coding_agent_service.runtime import ContainerStatus, SimulatedContainerRuntime
 from coding_agent_service.store import InMemoryCodingAgentStore
 
@@ -110,7 +110,11 @@ def test_start_session_sends_an_api_key_credential_as_anthropic_api_key() -> Non
     asyncio.run(run())
 
 
-def test_oauth_token_credential_forces_the_hard_read_only_guardrail() -> None:
+def test_start_session_with_an_oauth_token_credential_is_blocked_before_touching_docker() -> None:
+    """29.3 hard guardrail (owner request, 2026-10-01): a Claude Pro/Max
+    subscription credential may not start real model usage at this stage.
+    No container is created at all — not a restricted one."""
+
     async def run() -> None:
         store = InMemoryCodingAgentStore()
         runtime = SimulatedContainerRuntime()
@@ -125,34 +129,14 @@ def test_oauth_token_credential_forces_the_hard_read_only_guardrail() -> None:
             owner_user_id="owner-1",
         )
 
-        event = await provider.start_session(session)
-        spec = runtime.specs[event.metadata["container_id"]]
-
-        # Layer 1: the Docker-enforced read-only mount — holds even if the
-        # other two layers below somehow failed.
-        assert spec.read_only_mount is True
-        # Layer 2: Claude Code's own no-execution research mode.
-        assert spec.command[spec.command.index("--permission-mode") + 1] == "plan"
-        # Layer 3: an explicit allow/deny pair, independent of plan mode.
-        allowed_index = spec.command.index("--allowedTools")
-        disallowed_index = spec.command.index("--disallowedTools")
-        allowed = spec.command[allowed_index + 1:disallowed_index]
-        disallowed = spec.command[disallowed_index + 1:]
-        assert set(allowed) == {"Read", "Grep", "Glob", "WebSearch", "WebFetch"}
-        # The comprehensive deny list (every other tool claude-code 2.1.197
-        # is known to advertise) is what actually restricts the active
-        # toolset — confirmed live; --allowedTools alone did not.
-        assert {
-            "Task", "Bash", "Edit", "Write", "NotebookEdit", "EnterWorktree", "ExitWorktree",
-            "CronCreate", "CronDelete", "SendMessage", "DesignSync", "Workflow",
-        } <= set(disallowed)
-        # The summary tells the owner why, rather than silently restricting.
-        assert "read-only" in event.summary
+        with pytest.raises(ProviderInvocationBlockedError):
+            await provider.start_session(session)
+        assert runtime.specs == {}  # no container was ever asked for
 
     asyncio.run(run())
 
 
-def test_resume_session_also_applies_the_guardrail_for_an_oauth_token_credential() -> None:
+def test_resume_session_with_an_oauth_token_credential_is_also_blocked() -> None:
     async def run() -> None:
         store = InMemoryCodingAgentStore()
         runtime = SimulatedContainerRuntime()
@@ -167,24 +151,46 @@ def test_resume_session_also_applies_the_guardrail_for_an_oauth_token_credential
             owner_user_id="owner-1", provider_session_id="existing-session-id",
         )
 
-        event = await provider.resume_session(session, "Use approach B.")
-        spec = runtime.specs[event.metadata["container_id"]]
-        assert spec.read_only_mount is True
-        assert spec.command[spec.command.index("--permission-mode") + 1] == "plan"
+        with pytest.raises(ProviderInvocationBlockedError):
+            await provider.resume_session(session, "Use approach B.")
+        assert runtime.specs == {}
 
     asyncio.run(run())
 
 
-def test_start_session_sends_an_oauth_token_credential_as_claude_code_oauth_token() -> None:
+def test_send_input_with_an_oauth_token_credential_is_also_blocked() -> None:
     async def run() -> None:
         store = InMemoryCodingAgentStore()
         runtime = SimulatedContainerRuntime()
         credentials = InMemoryCredentialStore()
-        # A Claude Pro/Max subscription's long-lived token (from `claude
-        # setup-token`, run interactively elsewhere) must go in a
-        # different env var than a pay-per-use API key — confirmed live by
-        # grepping the real claude.exe binary (claude_provider.py's module
-        # docstring); using the wrong one would silently fail to auth.
+        await credentials.set_credential("claude-code", CredentialKind.OAUTH_TOKEN, "sk-ant-oat01-fixture")
+        provider = ClaudeCodeProvider(runtime, credentials, store)
+        project = await store.add_project(
+            CodingProject(name="X", repository_path="/x", provider="claude-code")
+        )
+        session = CodingAgentSession(
+            project_id=project.id, provider="claude-code", task_summary="ask: which approach?",
+            owner_user_id="owner-1", provider_session_id="existing-session-id",
+        )
+
+        with pytest.raises(ProviderInvocationBlockedError):
+            await provider.send_input(session, "Use approach B.")
+
+    asyncio.run(run())
+
+
+def test_dormant_defense_in_depth_layers_still_apply_if_build_is_ever_reached_directly() -> None:
+    """_build's read-only layers (Docker mount, tool deny-list, plan mode)
+    are currently unreachable in practice for an OAuth-token credential —
+    _ensure_can_invoke blocks start_session/resume_session before _build
+    runs. This exercises _build directly so that dormant code is still
+    proven correct, in case the invocation block above is ever lifted
+    without someone also re-checking this half."""
+
+    async def run() -> None:
+        store = InMemoryCodingAgentStore()
+        runtime = SimulatedContainerRuntime()
+        credentials = InMemoryCredentialStore()
         await credentials.set_credential("claude-code", CredentialKind.OAUTH_TOKEN, "sk-ant-oat01-fixture")
         provider = ClaudeCodeProvider(runtime, credentials, store)
         project = await store.add_project(
@@ -194,9 +200,25 @@ def test_start_session_sends_an_oauth_token_credential_as_claude_code_oauth_toke
             project_id=project.id, provider="claude-code", task_summary="x", owner_user_id="owner-1",
         )
 
-        event = await provider.start_session(session)
-        spec = runtime.specs[event.metadata["container_id"]]
+        spec, _ = await provider._build(session, prompt="x", resume=False)
+
         assert spec.env == {"CLAUDE_CODE_OAUTH_TOKEN": "sk-ant-oat01-fixture"}
+        # Layer 1: the Docker-enforced read-only mount — holds even if the
+        # other layers below somehow failed.
+        assert spec.read_only_mount is True
+        # Layer 2 (unverified on its own, see module docstring): plan mode.
+        assert spec.command[spec.command.index("--permission-mode") + 1] == "plan"
+        # Layer 3: the comprehensive deny list — confirmed live to be what
+        # actually restricts the active toolset, unlike --allowedTools.
+        allowed_index = spec.command.index("--allowedTools")
+        disallowed_index = spec.command.index("--disallowedTools")
+        allowed = spec.command[allowed_index + 1:disallowed_index]
+        disallowed = spec.command[disallowed_index + 1:]
+        assert set(allowed) == {"Read", "Grep", "Glob", "WebSearch", "WebFetch"}
+        assert {
+            "Task", "Bash", "Edit", "Write", "NotebookEdit", "EnterWorktree", "ExitWorktree",
+            "CronCreate", "CronDelete", "SendMessage", "DesignSync", "Workflow",
+        } <= set(disallowed)
 
     asyncio.run(run())
 

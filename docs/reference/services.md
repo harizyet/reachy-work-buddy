@@ -352,26 +352,34 @@ local Docker daemon with an intentionally invalid API key
 completing a real task against the real Anthropic API needs the owner's
 own credential and has not been exercised by any automated test.
 
-**Hard read-only guardrail for a `CLAUDE_CODE_OAUTH_TOKEN` (real Claude
-Pro/Max subscription) credential, owner-requested 2026-10-01:** this
-integration has never completed a real task against the real API, so a
-subscription-authenticated session is forced read-only until that changes.
-Confirmed live, not assumed: a real container's `--disallowedTools` flag
-is what actually removes tools from the session's active set (diffed a
-real init event's `tools` array with and without it); `--allowedTools`
-alone did **not** restrict anything in the same test — `_READ_ONLY_DISALLOWED_TOOLS`
-is therefore every tool name claude-code 2.1.197 has been observed to
-advertise except `Read`/`Grep`/`Glob`/`WebSearch`/`WebFetch`, not a short
-guess. The actual, trusted guarantee is independent of all of that,
-though: `ContainerSpec.read_only_mount` mounts the project `:ro`, and a
-real write attempt through that exact mount (both via `docker run` directly
-and via `docker exec` into a live `claude` container) was confirmed to
-fail with "Read-only file system" — this layer holds even if a future
-Claude Code tool this list doesn't know about shows up, or if a tool
-somehow ran a shell despite the restrictions above. Lifting this for a
-subscription credential is a deliberate future code change once the
-integration has actually been exercised successfully, not a runtime flag.
-A pay-per-use API key session is unaffected.
+**Hard no-invocation guardrail for a `CLAUDE_CODE_OAUTH_TOKEN` (real Claude
+Pro/Max subscription) credential, owner-requested 2026-10-01:** the
+owner's concern is not file access — it's that starting or resuming any
+real `claude` invocation spends real subscription usage the instant the
+model answers, independent of what tools it can touch. This integration
+has never completed a real task against the real API, so
+`start_session`/`resume_session`/`send_input` now refuse outright for a
+subscription credential: `_ensure_can_invoke` raises
+`ProviderInvocationBlockedError` (mapped to HTTP 403) before any Docker
+call, project lookup, or secret decryption happens. Listing and reading
+existing projects, sessions, events and usage is entirely unaffected —
+only starting new model usage is blocked. Lifting this is a deliberate
+future code change, once the integration has actually completed a real
+task successfully with an API key; it is not a runtime flag. A pay-per-use
+API key session is unaffected by this block.
+
+`_build` still carries a dormant, previously-tested read-only layer for
+whichever credential is actually allowed to invoke `claude` at a given
+time (today, only an API key — the block above means `_build` is never
+reached for a subscription credential in practice, but the layer is kept
+rather than deleted for when that changes): `--disallowedTools` naming
+every tool claude-code 2.1.197 is known to advertise except
+`Read`/`Grep`/`Glob`/`WebSearch`/`WebFetch` (confirmed live to be what
+actually removes tools from a real init event's `tools` array —
+`--allowedTools` alone did **not** restrict anything in the same test),
+`--permission-mode plan`, and `ContainerSpec.read_only_mount` → a real
+`:ro` bind mount, confirmed by an actual blocked write both via `docker
+run` and via `docker exec` into a live `claude` container.
 
 No hook-based mid-task `WAITING_FOR_INPUT`/`WAITING_FOR_PERMISSION`
 detection (29.4) and no companion-core HTTP client yet. Not deployed; no

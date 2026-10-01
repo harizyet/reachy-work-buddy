@@ -39,6 +39,16 @@ class ProviderError(Exception):
     exception)."""
 
 
+class ProviderInvocationBlockedError(ProviderError):
+    """A provider refuses to start or resume real model usage as a matter
+    of deliberate policy — not a transient failure, and not specific to
+    one provider's CLI. ClaudeCodeProvider raises this for a real
+    subscription credential (29.3's hard guardrail), but the condition
+    itself ("this would spend real usage and that's blocked right now")
+    is provider-neutral, so routes.py can map it to a distinct HTTP status
+    (403) without importing anything Claude-specific."""
+
+
 class CodingAgentProvider(Protocol):
     def capabilities(self) -> ProviderCapabilities: ...
 
