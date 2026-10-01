@@ -1031,7 +1031,13 @@ def create_app(
                 sessions = await app.state.coding_agent_client.list_sessions()
             except httpx.HTTPError:
                 sessions = None
-            reply = coding_agent_intent.format_status_reply(sessions)
+            terminal_sessions = []
+            if sessions is not None:
+                try:
+                    terminal_sessions = await app.state.coding_agent_client.list_terminal_sessions()
+                except httpx.HTTPError:
+                    pass
+            reply = coding_agent_intent.format_status_reply(sessions, terminal_sessions)
             privacy = Privacy.WORK_PRIVATE
         elif coding_agent_usage_query:
             allowances: list[dict] = []

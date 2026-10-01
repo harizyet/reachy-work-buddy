@@ -258,3 +258,18 @@ def test_usage_reply_survives_an_allowance_endpoint_failure():
             body = _turn(client, "What is my Claude code usage so far?")
     assert "Finished task" in body["reply"]
     assert "has not reported your allowance" in body["reply"]
+
+
+def test_status_question_includes_terminal_sessions(tmp_path) -> None:
+    folder = tmp_path / "-home-me-proj"
+    folder.mkdir()
+    (folder / "abc.jsonl").write_text(
+        '{"type":"user","cwd":"/home/me/proj","message":{"content":"Tidy the parser"}}\n'
+    )
+    coding_agent_app = create_coding_agent_app(
+        store=InMemoryCodingAgentStore(), providers={"simulated": SimulatedProvider()},
+        service_token=SERVICE_TOKEN, terminal_sessions_dir=tmp_path,
+    )
+    with TestClient(_core_app(coding_agent_app)) as client:
+        body = _turn(client, "is my claude session done")
+    assert "Tidy the parser (proj)" in body["reply"]

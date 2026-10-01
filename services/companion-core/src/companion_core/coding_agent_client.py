@@ -19,6 +19,7 @@ from shared.protocols.coding_agent import (
     SERVICE_HEADER,
     SESSION_USAGE,
     SESSIONS,
+    TERMINAL_SESSIONS,
 )
 
 
@@ -42,6 +43,11 @@ class CodingAgentServiceClient:
 
     async def list_sessions(self) -> list[dict[str, Any]]:
         resp = await self._client.get(SESSIONS)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def list_terminal_sessions(self) -> list[dict[str, Any]]:
+        resp = await self._client.get(TERMINAL_SESSIONS)
         resp.raise_for_status()
         return resp.json()
 

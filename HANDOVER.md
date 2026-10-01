@@ -6,6 +6,14 @@ The [documentation index](docs/README.md) defines ownership;
 
 ## Current work
 
+**Reachy sees terminal sessions (2026-10-02, built, not deployed):** the status
+reply (`/coding_sessions`, "is my claude session done") now adds a read-only
+"Terminal sessions" section via companion-core's new
+`list_terminal_sessions` client call. Control (resume/send instruction, or
+adopting a terminal session as a managed one) was offered and deliberately not
+built. Rebuild core to activate; it needs `CLAUDE_PROJECTS_DIR` already
+mounted in coding-agent-service.
+
 **Durable coding-agent sessions and Claude allowance are deployed to the
 homelab (2026-10-01, Phase 29.27/29.26).** Migration `013_coding_agent` applied
 (pre-upgrade dump: `~/reachy-backups/reachy-before-013-20261001-223839.dump`);

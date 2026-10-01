@@ -139,8 +139,11 @@ hint. Unknown commands return help guidance instead of going to the model.
 Work-data answers retain private routing; these shortcuts do not send emails,
 modify tasks, or confirm destructive actions.
 
-Coding reads cover only sessions recorded by Reachy, not other terminal
-sessions, and show the newest five. Session history is stored in Postgres and
+Coding status reads list sessions recorded by Reachy, plus a read-only
+"Terminal sessions" section (title, folder, active/idle) for Claude Code
+sessions you ran yourself when `CLAUDE_PROJECTS_DIR` is mounted; Reachy cannot
+control those. Each list shows the newest three. Usage reads cover only Reachy-recorded
+sessions. Session history is stored in Postgres and
 survives a coding-agent-service restart (once migration `013_coding_agent` is
 deployed). `/coding_usage` also lists Claude's 5-hour and weekly allowance when
 Claude Code has reported it during a recorded session, with the reset time in

@@ -134,15 +134,15 @@ def _numbered_session(index: int, provider: str = "claude-code") -> dict:
     }
 
 
-def test_status_and_usage_replies_show_the_five_newest_and_count_the_rest():
+def test_status_and_usage_replies_show_the_three_newest_and_count_the_rest():
     sessions = [_numbered_session(i) for i in range(8)]
     status = format_status_reply(sessions)
-    assert "task 7" in status and "task 3" in status
-    assert "task 2" not in status
-    assert "3 older sessions" in status
+    assert "task 7" in status and "task 5" in status
+    assert "task 4" not in status
+    assert "5 older sessions" in status
     usage = format_usage_reply(sessions, {})
-    assert "task 3" in usage and "task 2" not in usage
-    assert "3 older sessions" in usage
+    assert "task 5" in usage and "task 4" not in usage
+    assert "5 older sessions" in usage
 
 
 def test_allowance_lines_use_the_persona_timezone_and_skip_unknown_windows():
@@ -182,3 +182,15 @@ def test_usage_reply_with_live_allowance_and_no_sessions() -> None:
     assert lines[0] in reply
     assert "live reading" in reply
     assert "no recorded coding-agent sessions" in reply
+
+
+def test_format_status_reply_lists_terminal_sessions_active_first() -> None:
+    terminal = [
+        {"session_id": "a", "title": "Old chore", "project_path": "/home/me/old", "active": False,
+         "last_activity_at": "2026-10-02T09:00:00Z"},
+        {"session_id": "b", "title": "Fix hub proxy", "project_path": "/home/me/reachy/", "active": True,
+         "last_activity_at": "2026-10-02T08:00:00Z"},
+    ]
+    reply = format_status_reply([], terminal)
+    assert reply.index("Fix hub proxy (reachy): active now") < reply.index("Old chore (old): idle")
+    assert "read-only" in reply
