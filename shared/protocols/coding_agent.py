@@ -14,6 +14,10 @@ SESSION = "/sessions/{session_id}"
 SESSION_RESUME = "/sessions/{session_id}/resume"
 SESSION_INPUT = "/sessions/{session_id}/input"
 SESSION_STOP = "/sessions/{session_id}/stop"
+# 29.3: re-checks a non-terminal session against its provider/container
+# right now, rather than waiting for a future 29.4 hook event or a 29.14
+# background poller — neither exists yet.
+SESSION_REFRESH = "/sessions/{session_id}/refresh"
 SESSION_EVENTS = "/sessions/{session_id}/events"
 SESSION_USAGE = "/sessions/{session_id}/usage"
 

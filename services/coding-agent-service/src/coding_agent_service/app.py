@@ -11,6 +11,7 @@ import os
 
 from fastapi import FastAPI
 
+from coding_agent_service.claude_provider import ClaudeCodeProvider
 from coding_agent_service.credentials import (
     CredentialKeyring,
     CredentialStore,
@@ -19,6 +20,7 @@ from coding_agent_service.credentials import (
 )
 from coding_agent_service.providers import CodingAgentProvider, SimulatedProvider
 from coding_agent_service.routes import install_coding_agent_routes
+from coding_agent_service.runtime import ContainerRuntime, DockerCLIContainerRuntime
 from coding_agent_service.service import CodingAgentSupervisor
 from coding_agent_service.store import CodingAgentStore, InMemoryCodingAgentStore
 
@@ -41,17 +43,28 @@ def create_app(
     providers: dict[str, CodingAgentProvider] | None = None,
     service_token: str | None = None,
     credential_store: CredentialStore | None = None,
+    container_runtime: ContainerRuntime | None = None,
 ) -> FastAPI:
     app = FastAPI(title="coding-agent-service")
 
     resolved_store = store if store is not None else InMemoryCodingAgentStore()
-    # 29.3's real ClaudeCodeProvider isn't built yet; "simulated" lets a
-    # CodingProject be registered and exercised end to end ahead of that
-    # stage without a container. A deployment that enables a real provider
-    # registers it under its own name ("claude-code") separately.
-    resolved_providers = providers if providers is not None else {"simulated": SimulatedProvider()}
     resolved_token = service_token if service_token is not None else os.environ.get("CODING_AGENT_SERVICE_TOKEN")
     resolved_credentials = credential_store if credential_store is not None else _default_credential_store()
+    resolved_runtime = container_runtime if container_runtime is not None else DockerCLIContainerRuntime()
+    # "simulated" always exists so a CodingProject can be registered and
+    # exercised without a container (29.1). "claude-code" is the real
+    # adapter (29.3) — constructing it here doesn't touch Docker or the
+    # credential store; those calls only happen once a session actually
+    # starts, at which point a missing credential or image is reported
+    # through the ordinary ProviderError path, not an import-time failure.
+    resolved_providers = (
+        providers
+        if providers is not None
+        else {
+            "simulated": SimulatedProvider(),
+            "claude-code": ClaudeCodeProvider(resolved_runtime, resolved_credentials, resolved_store),
+        }
+    )
 
     app.state.supervisor = CodingAgentSupervisor(resolved_store, resolved_providers)
     app.state.credentials = resolved_credentials

@@ -168,6 +168,14 @@ class CodingAgentSupervisor:
         session.last_event = event.summary
         if event.provider_session_id is not None:
             session.provider_session_id = event.provider_session_id
+        # 29.3: a provider that actually runs a container (unlike
+        # SimulatedProvider) reports it back via metadata rather than a
+        # dedicated ProviderEvent field — this is the one place that reads
+        # it, so inspect_session/stop_session can find the container again
+        # on a later call without the provider having to re-derive it.
+        container_id = event.metadata.get("container_id")
+        if container_id is not None:
+            session.container_id = container_id
         if event.status in TERMINAL_STATUSES and session.completed_at is None:
             session.completed_at = session.last_activity_at
         if event.status == CodingAgentStatus.FAILED:

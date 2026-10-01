@@ -318,13 +318,35 @@ Claude Code API key) AESGCM-encrypted at rest under a key from
 `CODING_AGENT_SECRET_KEY_FILE` (own key material, separate from
 companion-core's keyring), behind `PUT`/`GET`/`DELETE
 /providers/{provider}/credential`; the secret value is never returned once
-set, only `provider`/`kind`/`last_four`/`updated_at`. No provider consumes
-a stored credential yet — this only guarantees it has somewhere real to
-live ahead of 29.3, reachable from the operator UI (see reachy-hub and
-operator-ui below), not an env-file afterthought.
+set, only `provider`/`kind`/`last_four`/`updated_at`. Reachable from the
+operator UI (see reachy-hub and operator-ui below), not an env-file
+afterthought.
 
-No real Claude Code adapter (29.3) and no companion-core HTTP client yet.
-Not deployed; no `docker-compose.yml` entry.
+29.3 (Claude Code provider) is implemented: `claude_provider.py`'s
+`ClaudeCodeProvider` consumes exactly that stored `claude-code` credential.
+`docker/claude-code/Dockerfile` builds a real image (`node:20-slim` +
+`npm install -g @anthropic-ai/claude-code`, confirmed live at claude-code
+2.1.197; the `node` user is uid/gid 1000, matching
+`DockerCLIContainerRuntime`'s default `--user`). `start_session` assigns a
+UUID via `claude`'s own `--session-id` flag and starts the container
+through the 29.2 runtime, so the provider session id is known immediately
+rather than parsed out of output. `inspect_session` parses the container's
+real `stream-json` stdout: a `{"type":"result",...}` line's `is_error`
+decides `COMPLETED` vs `FAILED`, its `usage`/`total_cost_usd` feed
+`collect_usage`, and a container that stopped without ever producing a
+result line is `LOST`, never `COMPLETED` (29.8). It also opportunistically
+reports `RATE_LIMITED` when the log shows a `429` `api_retry` line, ahead
+of 29.12's full handling. `--dangerously-skip-permissions` is never passed
+— a tool call needing approval simply has nothing to approve it headlessly
+until 29.4 (hooks) exists. Verified against the real image and a real
+local Docker daemon with an intentionally invalid API key
+(`CODING_AGENT_DOCKER_TEST=1`, `tests/test_claude_provider_docker.py`);
+completing a real task against the real Anthropic API needs the owner's
+own credential and has not been exercised by any automated test.
+
+No hook-based mid-task `WAITING_FOR_INPUT`/`WAITING_FOR_PERMISSION`
+detection (29.4) and no companion-core HTTP client yet. Not deployed; no
+`docker-compose.yml` entry.
 
 | Surface | Purpose |
 |---|---|
@@ -334,6 +356,7 @@ Not deployed; no `docker-compose.yml` entry.
 | `GET /sessions`; `GET /sessions/{session_id}` | List/inspect durable session records |
 | `POST /sessions/{session_id}/resume`, `/input` | Owner-instruction relay into a `WAITING_FOR_INPUT`/`WAITING_FOR_PERMISSION`/`RATE_LIMITED` session only; rejected with 409 otherwise |
 | `POST /sessions/{session_id}/stop` | Idempotent terminal stop |
+| `POST /sessions/{session_id}/refresh` | Re-checks a non-terminal session against its provider/container right now (29.3); no background poller or hook bridge exists yet to do this automatically |
 | `GET /sessions/{session_id}/events` | Normalized event log for that session |
 | `GET /sessions/{session_id}/usage` | Capability-gated `UsageSnapshot`; absent dimensions are unknown, never assumed zero |
 | `GET /providers/{provider}/capabilities` | `ProviderCapabilities` so a caller never assumes a metric a provider doesn't expose |

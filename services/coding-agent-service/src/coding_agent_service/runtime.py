@@ -59,6 +59,12 @@ class ContainerRuntime(Protocol):
     async def start(self, spec: ContainerSpec) -> str: ...
     async def stop(self, container_id: str, *, timeout: int = 10) -> None: ...
     async def status(self, container_id: str) -> ContainerStatus: ...
+    async def logs(self, container_id: str) -> str:
+        """29.3: a provider adapter's own way of reading what its CLI
+        printed — never parsed by anything outside the provider, same
+        boundary as the rest of this module keeping Docker specifics out
+        of service.py/providers.py."""
+        ...
     async def list_by_session(self, session_id: str) -> list[str]: ...
     async def list_labeled(self) -> dict[str, dict[str, str]]:
         """29.27 reconciliation: every container this runtime labeled,
@@ -75,6 +81,7 @@ class SimulatedContainerRuntime:
     def __init__(self) -> None:
         self._containers: dict[str, dict[str, str]] = {}
         self._status: dict[str, ContainerStatus] = {}
+        self._logs: dict[str, str] = {}
         self._next_id = 0
 
     async def start(self, spec: ContainerSpec) -> str:
@@ -86,6 +93,7 @@ class SimulatedContainerRuntime:
             LABEL_PROVIDER: spec.provider,
         }
         self._status[container_id] = ContainerStatus.RUNNING
+        self._logs[container_id] = ""
         return container_id
 
     async def stop(self, container_id: str, *, timeout: int = 10) -> None:
@@ -94,6 +102,14 @@ class SimulatedContainerRuntime:
 
     async def status(self, container_id: str) -> ContainerStatus:
         return self._status.get(container_id, ContainerStatus.MISSING)
+
+    async def logs(self, container_id: str) -> str:
+        return self._logs.get(container_id, "")
+
+    def set_logs(self, container_id: str, logs: str) -> None:
+        """Test-only hook: seed a container's stdout so a provider's
+        log-parsing logic can be exercised without a real `claude` process."""
+        self._logs[container_id] = logs
 
     async def list_by_session(self, session_id: str) -> list[str]:
         return [cid for cid, labels in self._containers.items() if labels[LABEL_SESSION_ID] == session_id]
@@ -167,6 +183,12 @@ class DockerCLIContainerRuntime:
             return ContainerStatus.MISSING
         state = output.strip()
         return ContainerStatus.RUNNING if state == "running" else ContainerStatus.EXITED
+
+    async def logs(self, container_id: str) -> str:
+        try:
+            return await self._run("logs", container_id)
+        except ContainerRuntimeError:
+            return ""
 
     async def list_by_session(self, session_id: str) -> list[str]:
         # --no-trunc: `docker run`'s own stdout (used as the id returned

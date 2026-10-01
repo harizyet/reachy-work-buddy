@@ -21,19 +21,15 @@ and Postgres durability (29.27), both still planned. Wire models
 an accidental `--package`-scoped sync pruned the shared dev venv mid-session
 (no production impact — dev venv only).
 
-29.2 (container runner) is now implemented too: `runtime.py`'s
+29.2 (container runner) is implemented too: `runtime.py`'s
 `DockerCLIContainerRuntime` shells out to the real `docker` CLI to start a
 labeled, resource-limited, non-root, no-socket container, and
 `reconcile.py`'s `reconcile_sessions` marks a session `LOST` (never
-`COMPLETED`) when its container is no longer running. This was verified
-against this machine's **real, live Docker daemon** — the same one running
-the actual `reachy-homelab-*` production containers — using disposable
-`busybox` containers labeled distinctly and always cleaned up
-(`CODING_AGENT_DOCKER_TEST=1 uv run pytest services/coding-agent-service/tests/test_runtime.py`);
-no `reachy-homelab-*` container was touched, started, stopped or
-restarted. The container runtime is not yet wired into
-`CodingAgentSupervisor.start_session` — no provider launches a real
-container yet; that starts with the real Claude Code adapter (29.3).
+`COMPLETED`) when its container is no longer running. Verified against
+this machine's **real, live Docker daemon** — the same one running the
+actual `reachy-homelab-*` production containers — using disposable
+`busybox` containers labeled distinctly and always cleaned up; no
+`reachy-homelab-*` container was touched, started, stopped or restarted.
 
 29.19 (credentials) was pulled forward out of sequence, per explicit
 instruction this session to make sure any real keys/login credentials this
@@ -44,26 +40,61 @@ backs `PUT`/`GET`/`DELETE /providers/{provider}/credential` in
 coding-agent-service; `reachy_hub/coding_agent.py` +
 `reachy_hub/coding_agent_client.py` proxy those under owner cookie+CSRF
 auth (same shape as `reachy_hub/accounts.py`); and the operator UI's
-Settings · Accounts tab has a new "Coding agent credentials" card
+Settings · Accounts tab has a "Coding agent credentials" card
 (`clients/operator-ui/coding_agents.js`) to set/replace/remove the Claude
 Code or Codex credential — the secret is never echoed back once saved,
-only `last_four`. No provider actually consumes a stored credential yet
-(nothing needs one until 29.3's real Claude Code adapter exists); this
-only guarantees there's a real, owner-visible place to put one before that
-lands.
+only `last_four`.
 
-Nothing wires coding-agent-service into companion-core yet (29.6/29.7),
-there is no real Claude Code/Codex adapter (29.3), and it is not in
-`deploy/homelab/docker-compose.yml` — all deliberately deferred to their
-own stages per
+29.3 (Claude Code provider) is also now implemented, making the 29.2
+runtime and 29.19 credential both actually used for the first time:
+`claude_provider.py`'s `ClaudeCodeProvider` is wired into
+`create_app()`'s default provider registry under `"claude-code"`, alongside
+`"simulated"`. `services/coding-agent-service/docker/claude-code/Dockerfile`
+builds a real image (`node:20-slim` + `npm install -g
+@anthropic-ai/claude-code`) — **this was actually built and run on this
+machine's real Docker daemon** (`docker build ...`, then `docker run
+reachy-coding-agent-claude:latest --help`/`--version`/a real `-p "say hi"
+--output-format stream-json` call with a deliberately invalid API key, no
+real cost incurred) to confirm the exact CLI flags and JSONL output shape
+rather than guessing from documentation. Confirmed live at claude-code
+2.1.197: `claude`'s own `--session-id <uuid>` flag lets the provider assign
+and know the session id immediately at start, instead of parsing it out of
+output; `--output-format stream-json` prints one JSON object per line,
+ending in a `{"type":"result",...}` line whose `is_error`/`usage`/
+`total_cost_usd` drive completion/failure/usage; and a bad credential
+produces repeated `{"type":"system","subtype":"api_retry",...}` lines
+while the CLI retries for minutes rather than failing fast, which is why
+`start_session` only starts the container and assigns the session id — it
+does not block waiting for completion. `inspect_session` (exposed as the
+new `POST /sessions/{id}/refresh` route) is what a caller polls later.
+`--dangerously-skip-permissions` is never passed, matching AGENTS.md's
+stance that the LLM has no authority to bypass its own action gate either.
+A `collect_usage` using the parsed `usage`/`total_cost_usd` and an
+opportunistic `RATE_LIMITED` status on a `429` retry line are also wired.
+Verified end to end against the real image and real Docker daemon with an
+intentionally invalid key (`services/coding-agent-service/tests/
+test_claude_provider_docker.py`, opt-in via `CODING_AGENT_DOCKER_TEST=1`):
+real container starts, real session id tracked, real stdout parsed, real
+stop. **Completing an actual task against the real Anthropic API needs the
+owner's own `claude-code` credential entered in the operator UI — that has
+not happened and was not exercised by any automated test**, since it would
+cost real money.
+
+Nothing wires coding-agent-service's *session* lifecycle into
+companion-core or reachy-hub yet (29.6/29.7 — only the credential routes
+reach the browser so far), there is no hook-based mid-task
+`WAITING_FOR_INPUT`/`WAITING_FOR_PERMISSION` detection (29.4), and it is
+not in `deploy/homelab/docker-compose.yml` — all deliberately deferred to
+their own stages per
 [docs/phase-29.md](docs/phase-29.md#2929--implementation-sequence).
-37 coding-agent-service tests pass (`uv run pytest services/coding-agent-service/tests`,
-including the opt-in real-Docker one), plus 4 new reachy-hub tests
-(`test_coding_agent_credentials.py`) and one new Playwright test
-(`coding_agents.test.cjs`, run externally — Playwright/Chromium is not
-installed in a default dev shell). Full `services shared` suite (978
-passed; one unrelated `test_wake.py` flake reproduced as a pass on rerun,
-not a regression) and `ruff check .` both still pass. See
+35 coding-agent-service tests exist (33 pass by default; the 2 real-Docker
+ones are opt-in via `CODING_AGENT_DOCKER_TEST=1` and both pass given the
+built image), plus 4 reachy-hub tests (`test_coding_agent_credentials.py`)
+and one Playwright test (`coding_agents.test.cjs`, run externally —
+Playwright/Chromium is not installed in a default dev shell). Full
+`services shared` suite (990 passed; one unrelated `test_wake.py` flake
+reproduced as a pass on rerun, not a regression) and `ruff check .` both
+still pass. See
 [service reference](docs/reference/services.md#coding-agent-service-phase-29-planned)
 for the exact route/behavior surface.
 
@@ -98,21 +129,22 @@ meetings remain in the database/audio volume; no delete endpoint exists.
 
 ## Next session
 
-0. Phase 29.3 — the real Claude Code provider: a real container image
-   (Claude Code CLI, git, tooling), wiring `ClaudeCodeProvider` to actually
-   call `DockerCLIContainerRuntime.start()` with the stored
-   `claude-code` credential from `EncryptedFileCredentialStore` as an env
-   var, session ID capture, and structured output/event capture. This is
-   the first stage that makes the already-built container runner (29.2)
-   and credential store (29.19) do anything real — both currently sit
-   unused by `CodingAgentSupervisor.start_session`. Decide then whether a
+0. Phase 29 next: either a **real owner-authorized end-to-end run** (set a
+   real `claude-code` credential in the operator UI — needs
+   `CODING_AGENT_SECRET_KEY_FILE` set first, chmod 0600, or it won't survive
+   a restart — then `POST /sessions` against a real test repository and
+   poll `POST /sessions/{id}/refresh` to watch it actually complete and
+   report real cost/usage; this costs real money and hasn't been done by
+   any session yet), **or** keep building: 29.4 (Claude hooks) would wire
+   `SessionStart`/`Stop`/`StopFailure`/`PermissionRequest`/`Notification`
+   into the event bridge so a mid-task permission or input wait becomes
+   `WAITING_FOR_PERMISSION`/`WAITING_FOR_INPUT` instead of just sitting in
+   `RUNNING` until the container exits. Either way, decide whether a
    `Postgres*CodingAgentStore` is worth adding, or whether staying
    in-memory until restart durability actually matters (29.27) is fine a
-   while longer. No `docker-compose.yml` entry yet; add one once there's a
-   real container runtime to supervise, not before. Set
-   `CODING_AGENT_SECRET_KEY_FILE` (and chmod 0600) in any environment where
-   the owner actually wants the Claude Code credential they enter in the
-   operator UI to survive a restart — it's in-memory-only until that's set.
+   while longer. No `docker-compose.yml` entry yet; add one once there's
+   real session-lifecycle wiring to companion-core/hub to supervise
+   (29.6/29.7), not before.
 1. Roll out the long-audio changes to Core, Hub and both sidecars, including
    the standalone diarization server (do not create a competing instance).
    Coordinate speech-token activation with that restart. Representative

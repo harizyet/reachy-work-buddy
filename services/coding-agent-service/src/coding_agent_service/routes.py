@@ -10,6 +10,7 @@ import secrets
 from fastapi import Depends, HTTPException, Request
 
 from coding_agent_service.credentials import CredentialStore
+from coding_agent_service.providers import ProviderError
 from coding_agent_service.service import (
     CodingAgentSupervisor,
     SessionNotResumableError,
@@ -71,6 +72,8 @@ def install_coding_agent_routes(app, service_token: str | None) -> None:
             raise HTTPException(404, "Unknown project") from None
         except UnknownProviderError as exc:
             raise HTTPException(400, f"Unknown provider: {exc}") from None
+        except ProviderError as exc:
+            raise HTTPException(409, str(exc)) from None
 
     @app.get(paths.SESSIONS, dependencies=dependencies)
     async def list_sessions():
@@ -91,6 +94,8 @@ def install_coding_agent_routes(app, service_token: str | None) -> None:
             raise HTTPException(404, "Unknown session") from None
         except SessionNotResumableError as exc:
             raise HTTPException(409, str(exc)) from None
+        except ProviderError as exc:
+            raise HTTPException(409, str(exc)) from None
 
     @app.post(paths.SESSION_INPUT, dependencies=dependencies)
     async def send_input(session_id: str, body: SendInputRequest):
@@ -100,6 +105,8 @@ def install_coding_agent_routes(app, service_token: str | None) -> None:
             raise HTTPException(404, "Unknown session") from None
         except SessionNotResumableError as exc:
             raise HTTPException(409, str(exc)) from None
+        except ProviderError as exc:
+            raise HTTPException(409, str(exc)) from None
 
     @app.post(paths.SESSION_STOP, dependencies=dependencies)
     async def stop_session(session_id: str):
@@ -107,6 +114,17 @@ def install_coding_agent_routes(app, service_token: str | None) -> None:
             return await supervisor().stop_session(session_id)
         except UnknownSessionError:
             raise HTTPException(404, "Unknown session") from None
+        except ProviderError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @app.post(paths.SESSION_REFRESH, dependencies=dependencies)
+    async def refresh_session(session_id: str):
+        try:
+            return await supervisor().inspect_session(session_id)
+        except UnknownSessionError:
+            raise HTTPException(404, "Unknown session") from None
+        except ProviderError as exc:
+            raise HTTPException(409, str(exc)) from None
 
     @app.get(paths.SESSION_EVENTS, dependencies=dependencies)
     async def list_events(session_id: str):

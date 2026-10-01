@@ -137,6 +137,26 @@ def test_credential_set_describe_and_clear_never_echo_the_secret() -> None:
     assert client.get(paths.PROVIDER_CREDENTIAL.format(provider="claude-code"), headers=headers).status_code == 404
 
 
+def test_refresh_session_calls_the_provider_and_returns_the_updated_session() -> None:
+    client = _client()
+    headers = _headers()
+    project = client.post(
+        paths.PROJECTS, headers=headers,
+        json={"name": "X", "repository_path": "/x", "provider": "simulated"},
+    ).json()
+    session = client.post(
+        paths.SESSIONS, headers=headers,
+        json={"project_id": project["id"], "task_summary": "ask: pick one", "owner_user_id": "owner-1"},
+    ).json()
+    assert session["status"] == "waiting_for_input"
+
+    refreshed = client.post(paths.SESSION_REFRESH.format(session_id=session["id"]), headers=headers)
+    assert refreshed.status_code == 200
+    assert refreshed.json()["status"] == "waiting_for_input"
+
+    assert client.post(paths.SESSION_REFRESH.format(session_id="missing"), headers=headers).status_code == 404
+
+
 def test_credential_routes_require_service_token() -> None:
     client = _client()
     assert client.get(paths.PROVIDER_CREDENTIALS).status_code == 401
