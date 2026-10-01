@@ -220,6 +220,7 @@ from shared.models.session import (
     PrivacyContext,
 )
 from shared.models.websearch import TurnWebSearch
+from shared.protocols.commands import TELEGRAM_COMMANDS
 from shared.protocols.operator_api import (
     ROBOT_MOTION_SETTINGS,
     ROBOT_VOICE,
@@ -682,11 +683,7 @@ def create_app(
             # Best-effort: a registration failure shouldn't block hub
             # startup, same as heartbeat_loop's tolerance below.
             with contextlib.suppress(httpx.HTTPError):
-                await telegram_client.set_my_commands([
-                    {"command": "standby", "description": "Put Reachy into standby"},
-                    {"command": "wake", "description": "Wake Reachy up"},
-                    {"command": "reachy_status", "description": "Check Reachy's status"},
-                ])
+                await telegram_client.set_my_commands(TELEGRAM_COMMANDS)
         telegram_task = (
             asyncio.create_task(
                 telegram_poll_loop(telegram_client, app.state.telegram_chat_registry, telegram_default_user_id)

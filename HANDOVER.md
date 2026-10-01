@@ -6,6 +6,16 @@ The [documentation index](docs/README.md) defines ownership;
 
 ## Current work
 
+Telegram query shortcuts are implemented locally, not deployed (2026-10-01).
+The [operator command list](docs/operator-guide.md#telegram-query-commands)
+contains the new reads and `/help`. Core dispatches structured commands to
+existing handlers; shared metadata supplies hub's startup menu registration.
+96 command/conversation/Telegram fixture tests passed, including argument
+isolation, private routing, and Telegram bot suffixes. No real Telegram messages,
+model invocation, deployment, or robot actions were performed. Rebuild core and
+hub to activate the shortcuts and menu on the running bot.
+
+
 The reported Telegram session/usage reply bugs are fixed locally (2026-10-01),
 not deployed: natural Claude Code session questions now reach the deterministic
 handler, and usage reads include finished sessions. Replies explain the managed

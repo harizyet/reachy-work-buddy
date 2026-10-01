@@ -173,3 +173,32 @@ def test_completed_session_usage_is_fetched_from_service():
     assert "input tokens 1581tokens" in body["reply"]
     assert "not account-wide" in body["reply"]
     assert body["privacy"] == "work-private"
+
+
+@pytest.mark.parametrize("command, expected, privacy", [
+    ("/coding_sessions", "no recorded coding-agent sessions", "work-private"),
+    ("/coding_usage", "no recorded coding-agent usage", "work-private"),
+    ("/today", "nothing on your calendar today", "work-private"),
+    ("/next_event", "nothing else on your calendar", "work-private"),
+    ("/tasks", "no open tasks", "work-private"),
+    ("/find_tasks my tasks", "No tasks found matching 'my tasks'", "work-private"),
+    ("/inbox", "inbox is empty", "work-private"),
+    ("/recall next meeting", "anything stored about 'next meeting'", "work-private"),
+    ("/docs my tasks", "anything in the docs about 'my tasks'", "work-private"),
+    ("/time", "It's ", "public"),
+    ("/date", "It's ", "public"),
+    ("/help", "/coding_usage", "public"),
+    ("/docs", "Usage: /docs <topic>", "public"),
+    ("/tasks next meeting", "Usage: /tasks", "public"),
+    ("/unknown my tasks", "Unknown or unavailable command", "public"),
+])
+@pytest.mark.parametrize("channel", ["telegram", "web"])
+def test_query_commands_bypass_model_and_preserve_privacy(command, expected, privacy, channel):
+    with TestClient(_core_app(_coding_agent_app())) as client:
+        response = client.post("/conversation", json={
+            "session_id": "query", "conversation_id": "query", "channel": channel,
+            "input_modality": "text", "text": command, "force_frontier": True,
+        })
+    assert response.status_code == 200
+    assert expected in response.json()["reply"]
+    assert response.json()["privacy"] == privacy

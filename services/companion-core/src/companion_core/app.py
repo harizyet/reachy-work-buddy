@@ -192,6 +192,7 @@ from companion_core.coding_agent_notifications import (
     CodingAgentNotificationStore,
     InMemoryCodingAgentNotificationStore,
 )
+from companion_core.commands.parser import format_help, query_usage_error
 from companion_core.consent.gate import (
     ConfirmationExpiredError,
     ConfirmationNotFoundError,
@@ -738,21 +739,6 @@ def create_app(
         generation = conversation_store.generation
         history = conversation_store.append(turn.session_id, turn.channel, turn.text)
 
-        capture_text = match_capture(turn.text)
-        complete_query = match_complete(turn.text)
-        search_query = match_search(turn.text)
-        memory_capture_text = memory_intent.match_capture(turn.text)
-        memory_recall_query = memory_intent.match_recall(turn.text)
-        confirm_forget_query = memory_intent.match_confirm_forget(turn.text)
-        forget_query = memory_intent.match_forget(turn.text)
-        restore_query = memory_intent.match_restore(turn.text)
-        rag_query = rag_intent.match_query(turn.text)
-        draft_request = email_intent.match_draft(turn.text)
-        approve_query = email_intent.match_approve(turn.text)
-        cancel_send_query = email_intent.match_cancel_send(turn.text)
-        send_query = email_intent.match_send(turn.text)
-        coding_agent_status_query = coding_agent_intent.is_status_query(turn.text)
-        coding_agent_usage_query = coding_agent_intent.is_usage_query(turn.text)
         # Phase 24b: only an explicit, unambiguously-parsed command may
         # reach these actions — free-form text (however phrase-matched)
         # no longer can. See companion_core/commands/parser.py and
@@ -765,10 +751,49 @@ def create_app(
         parsed_command = commands.parse(turn.text) if turn.input_modality == InputModality.TEXT else None
         reachy_command = parsed_command.action if parsed_command and parsed_command.namespace == "reachy" else None
 
+        # Slash arguments are data, never natural-language instructions. This
+        # prevents /docs "my tasks" from dispatching the task-list handler.
+        slash_input = turn.text.lstrip().startswith("/")
+        intent_text = "" if slash_input else turn.text
+        capture_text = match_capture(intent_text)
+        complete_query = match_complete(intent_text)
+        search_query = match_search(intent_text)
+        memory_capture_text = memory_intent.match_capture(intent_text)
+        memory_recall_query = memory_intent.match_recall(intent_text)
+        confirm_forget_query = memory_intent.match_confirm_forget(intent_text)
+        forget_query = memory_intent.match_forget(intent_text)
+        restore_query = memory_intent.match_restore(intent_text)
+        rag_query = rag_intent.match_query(intent_text)
+        draft_request = email_intent.match_draft(intent_text)
+        approve_query = email_intent.match_approve(intent_text)
+        cancel_send_query = email_intent.match_cancel_send(intent_text)
+        send_query = email_intent.match_send(intent_text)
+        coding_agent_status_query = coding_agent_intent.is_status_query(intent_text)
+        coding_agent_usage_query = coding_agent_intent.is_usage_query(intent_text)
+        if parsed_command:
+            if reachy_command == "find_tasks":
+                search_query = parsed_command.argument
+            elif reachy_command == "recall":
+                memory_recall_query = parsed_command.argument
+            elif reachy_command == "docs":
+                rag_query = parsed_command.argument
+        coding_agent_status_query |= reachy_command == "coding_sessions"
+        coding_agent_usage_query |= reachy_command == "coding_usage"
+        command_error = query_usage_error(parsed_command) if parsed_command else None
+
         # None: later replies inherit this reply's own label (private tool
         # and memory results). Only the generated-reply branch narrows it.
         carried: Privacy | None = None
-        if reachy_command == "standby":
+        if slash_input and parsed_command is None:
+            reply = "Unknown or unavailable command. Type /help for available commands."
+            privacy = Privacy.PUBLIC
+        elif command_error:
+            reply = command_error
+            privacy = Privacy.PUBLIC
+        elif reachy_command == "help":
+            reply = format_help()
+            privacy = Privacy.PUBLIC
+        elif reachy_command == "standby":
             try:
                 results = await app.state.hub_client.standby_robots()
                 reply = commands.format_standby_reply(results)
@@ -799,7 +824,7 @@ def create_app(
             except httpx.HTTPError as exc:
                 reply = f"Couldn't reach reachy-hub to check Reachy's status: {exc}"
             privacy = Privacy.PUBLIC
-        elif is_next_event_query(turn.text):
+        elif reachy_command == "next_event" or is_next_event_query(intent_text):
             event = await app.state.calendar_store.next_event(datetime.now(UTC))
             reply = format_next_event_reply(event)
             # Calendar content is inherently work-private (docs/plan.md §4's
@@ -808,7 +833,7 @@ def create_app(
             # this reply reveals schedule details, so this isn't inferred
             # from turn.text the way the generic placeholder reply is.
             privacy = Privacy.WORK_PRIVATE
-        elif is_today_schedule_query(turn.text):
+        elif reachy_command == "today" or is_today_schedule_query(intent_text):
             start, end = today_window(datetime.now(UTC))
             events = await app.state.calendar_store.list_events(start, end)
             reply = format_today_schedule_reply(events)
@@ -826,11 +851,11 @@ def create_app(
         elif search_query:
             found = await app.state.task_store.search_tasks(search_query)
             reply = format_search_reply(found, search_query)
-            privacy = classify_privacy(turn.text)
-        elif is_list_query(turn.text):
+            privacy = Privacy.WORK_PRIVATE if parsed_command else classify_privacy(turn.text)
+        elif reachy_command == "tasks" or is_list_query(intent_text):
             open_tasks = await app.state.task_store.list_tasks(TaskStatus.OPEN)
             reply = format_list_reply(open_tasks)
-            privacy = classify_privacy(turn.text)
+            privacy = Privacy.WORK_PRIVATE if parsed_command else classify_privacy(turn.text)
         elif memory_capture_text:
             record = await app.state.memory_store.add_memory(
                 content=memory_capture_text,
@@ -846,6 +871,8 @@ def create_app(
             found = await app.state.memory_store.recall(memory_recall_query)
             reply = memory_intent.format_recall_reply(found, memory_recall_query)
             privacy = memory_intent.most_restrictive_privacy(found, default=classify_privacy(turn.text))
+            if parsed_command and privacy == Privacy.PUBLIC:
+                privacy = Privacy.WORK_PRIVATE
         elif confirm_forget_query:
             # docs/adr/0011: the only place memory.forget is actually
             # invoked, and only after confirm_action has verified this
@@ -902,7 +929,9 @@ def create_app(
             results = await app.state.rag_store.search(rag_query)
             reply = rag_intent.format_answer(results, rag_query)
             privacy = classify_privacy(reply)
-        elif email_intent.match_list_inbox(turn.text):
+            if parsed_command and privacy == Privacy.PUBLIC:
+                privacy = Privacy.WORK_PRIVATE
+        elif reachy_command == "inbox" or email_intent.match_list_inbox(intent_text):
             messages = await app.state.email_store.list_received()
             reply = email_intent.format_inbox_reply(messages)
             privacy = Privacy.WORK_PRIVATE
@@ -972,14 +1001,14 @@ def create_app(
                     f"{m['id']} — {m['sender']}: {m['subject']}" for m in result["messages"]
                 ) or "No matching Gmail messages."
             privacy = Privacy.WORK_PRIVATE
-        elif email_intent.match_unsupported_email_action(turn.text):
+        elif email_intent.match_unsupported_email_action(intent_text):
             reply = email_intent.format_unsupported_email_action_reply(
                 spoken=turn.input_modality == InputModality.VOICE
             )
             # Fixed text revealing nothing, so it is spoken even when the
             # request mentions email; carried labels are not applied here.
             privacy = Privacy.PUBLIC
-        elif clock_kind := match_local_clock(turn.text):
+        elif clock_kind := (reachy_command if reachy_command in {"time", "date"} else match_local_clock(intent_text)):
             persona = await app.state.persona_store.get()
             reply = format_clock_reply(clock_kind, datetime.now(UTC), persona.timezone)
             privacy = Privacy.PUBLIC

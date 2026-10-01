@@ -48,6 +48,12 @@ and limit visibility to Reachy-managed sessions. Usage is not account-wide
 subscription usage or remaining allowance; the current in-memory session history
 is lost on coding-agent-service restart.
 
+Typed query shortcuts are parsed into structured commands before phrase matching
+and dispatch directly to the same data handlers. Shared menu/action metadata
+lives in `shared/protocols/commands.py`; core owns parsing and validation, and
+hub registers that menu at Telegram polling startup. Search arguments are never
+reinterpreted as other intents. See the [command list](../operator-guide.md#telegram-query-commands).
+
 The generic conversation branch uses the configured LLM after deterministic
 intent/consent handlers. It has no model tool executor. The configured
 persona's system prompt is prepended ahead of that turn's history only on

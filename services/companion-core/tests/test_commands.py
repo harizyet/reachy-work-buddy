@@ -28,3 +28,21 @@ def test_plain_text_never_parses_even_when_it_mentions_a_command_word():
 
 def test_leading_whitespace_is_tolerated():
     assert parse("  /reachy standby  ") == Command(namespace="reachy", action="standby")
+
+
+def test_all_menu_commands_parse_and_query_arguments_are_validated():
+    from companion_core.commands.parser import query_usage_error
+
+    from shared.protocols.commands import COMMANDS, QUERY_COMMANDS
+
+    for alias, action, _, argument in COMMANDS:
+        suffix = " My Topic" if argument else ""
+        expected = Command("reachy", action, "My Topic" if argument else None)
+        assert parse(f"/{alias}{suffix}") == expected
+        assert parse(f"/{alias}@reachy_bot{suffix}") == expected
+        assert parse(f"/reachy {action}{suffix}") == expected
+    for alias, action, _, argument in QUERY_COMMANDS:
+        valid = parse(f"/{alias}" + (" topic" if argument else ""))
+        assert query_usage_error(valid) is None
+        invalid = parse(f"/{alias}" + ("" if argument else " unexpected"))
+        assert query_usage_error(invalid).startswith("Usage:")

@@ -76,6 +76,38 @@ For persistence and encryption configuration, see
 Future enrollment/calibration requirements are in
 [Phase 25](phase-25.md#web-portal-calibration-and-accuracy-testing).
 
+## Telegram query commands
+
+Use the bot's command menu or type `/help` for quick answers from the existing
+data handlers, without a conversational LLM query. These typed commands also
+work in web chat; `/reachy <action>` is the canonical form (for example,
+`/reachy coding_usage`). Telegram's `/command@bot_username` form is accepted.
+
+| Command | Answer |
+|---|---|
+| `/coding_sessions` | Last recorded status of Reachy-managed coding sessions |
+| `/coding_usage` | Recorded coding usage, including finished sessions |
+| `/today` | Today's calendar (the calendar handler currently uses UTC day boundaries) |
+| `/next_event` | Next calendar event |
+| `/tasks` | Open tasks |
+| `/find_tasks <words>` | Tasks matching the supplied words |
+| `/inbox` | Received email list |
+| `/recall <topic>` | Saved memories matching the topic |
+| `/docs <topic>` | Matching stored document content with its source |
+| `/time`, `/date` | Time or date in the configured owner timezone |
+| `/help` | All commands and argument hints |
+
+Existing `/standby`, `/wake`, and `/reachy_status` controls remain available.
+Missing search arguments or extra arguments on fixed queries return a usage
+hint. Unknown commands return help guidance instead of going to the model.
+Work-data answers retain private routing; these shortcuts do not send emails,
+modify tasks, or confirm destructive actions.
+
+Coding reads cover only sessions recorded by Reachy, not other terminal
+sessions or account-wide subscription allowance. That history is currently
+in memory and is lost on coding-agent-service restart. Hub registers the
+command menu at startup when Telegram polling is enabled.
+
 ## Chat (Phase 20)
 
 Open Chat after login. Chat uses your owner session automatically, sharing

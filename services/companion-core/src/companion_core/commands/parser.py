@@ -15,23 +15,28 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-# Only actions actually wired to a hub call in app.py — docs/phase-24b.md's
-# `/reachy gesture <name>` is illustrative syntax for a later extension, not
-# something this phase implements; parsing an action this codebase can't yet
-# execute would be a dangling command, not a real one.
-_KNOWN_ACTIONS = {"standby", "wake", "status"}
+from shared.protocols.commands import COMMANDS, QUERY_COMMANDS
 
-# Telegram's BotCommand.command field cannot contain a space, so
-# `/reachy standby` cannot itself be registered as a single Telegram menu
-# entry. These flat aliases are registered there instead (see
-# companion_core/telegram_commands.py); every channel accepts both forms
-# as input text, and both parse to the identical Command below
-# (docs/phase-24b.md "Channel handling").
-TELEGRAM_ALIASES: dict[str, tuple[str, str]] = {
-    "standby": ("reachy", "standby"),
-    "wake": ("reachy", "wake"),
-    "reachy_status": ("reachy", "status"),
-}
+_KNOWN_ACTIONS = {action for _, action, _, _ in COMMANDS}
+_QUERY_ARGUMENTS = {action: argument for _, action, _, argument in QUERY_COMMANDS}
+TELEGRAM_ALIASES = {alias: ("reachy", action) for alias, action, _, _ in COMMANDS}
+
+
+def format_help() -> str:
+    return "Available commands:\n" + "\n".join(
+        f"/{alias}" + (f" <{argument}>" if argument else "") + f" — {description}"
+        for alias, _, description, argument in COMMANDS
+    )
+
+
+def query_usage_error(command: Command) -> str | None:
+    if command.action not in _QUERY_ARGUMENTS:
+        return None
+    argument = _QUERY_ARGUMENTS[command.action]
+    if bool(command.argument) != bool(argument):
+        suffix = f" <{argument}>" if argument else ""
+        return f"Usage: /{command.action}{suffix}"
+    return None
 
 
 @dataclass(frozen=True)
@@ -49,7 +54,8 @@ def parse(text: str) -> Command | None:
     if not body:
         return None
     parts = body.split()
-    head = parts[0].lower()
+    # Telegram may append @bot_username when selecting a command.
+    head = parts[0].lower().split("@", 1)[0]
 
     if head == "reachy":
         if len(parts) < 2:

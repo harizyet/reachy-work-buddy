@@ -9,6 +9,7 @@ import json
 import time
 
 import httpx
+import pytest
 from companion_core.app import create_app as _create_core_app
 from companion_core.calendar.store import InMemoryCalendarStore
 from companion_core.consent.store import InMemoryConfirmationStore
@@ -132,12 +133,22 @@ def test_telegram_startup_registers_flat_command_aliases() -> None:
     with TestClient(hub_app):
         pass
     assert fake_api.registered_commands is not None
-    assert {c["command"] for c in fake_api.registered_commands} == {"standby", "wake", "reachy_status"}
+    from shared.protocols.commands import TELEGRAM_COMMANDS
+
+    assert fake_api.registered_commands == TELEGRAM_COMMANDS
+    assert {"coding_sessions", "coding_usage", "today", "tasks", "inbox", "help"} <= {
+        c["command"] for c in fake_api.registered_commands
+    }
 
 
-def test_inbound_telegram_message_reaches_companion_core_and_gets_a_reply() -> None:
+@pytest.mark.parametrize("message, expected", [
+    ("hello from telegram", "hello from telegram"),
+    ("/tasks@reachy_bot", "You have no open tasks."),
+    ("/help", "/coding_sessions"),
+])
+def test_inbound_telegram_message_reaches_companion_core_and_gets_a_reply(message, expected) -> None:
     fake_api = FakeTelegramBotAPI()
-    fake_api.enqueue_text_message(chat_id=555, text="hello from telegram")
+    fake_api.enqueue_text_message(chat_id=555, text=message)
     hub_app = make_hub_app(fake_api, run_telegram_poll_task=True)
 
     with TestClient(hub_app):  # starts the telegram poll loop via lifespan
@@ -150,7 +161,7 @@ def test_inbound_telegram_message_reaches_companion_core_and_gets_a_reply() -> N
     assert fake_api.sent_messages, "expected a reply to be sent back over Telegram"
     chat_id, text = fake_api.sent_messages[0]
     assert chat_id == 555
-    assert "hello from telegram" in text
+    assert expected in text
 
 
 def test_start_on_reachy_continue_in_telegram() -> None:
