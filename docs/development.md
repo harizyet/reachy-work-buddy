@@ -208,6 +208,11 @@ settings, serialized patches, owner login, context binding, tampering, wrong
 keys, resumable rotation, backup recovery and SMTP resolution without sending.
 The ordinary in-memory application tests require neither a key file nor a DB.
 
+`services/companion-core/tests/test_coding_agent_durability.py` uses the same
+opt-in variable for Phase 29.27: migration 013, the coding-agent Postgres store
+across reconnects, service-restart reconciliation, atomic notification claims,
+and core not re-notifying after a restart.
+
 
 Account fixtures live in `services/companion-core/tests/test_google_accounts.py`.
 They exercise actual hub/core ASGI validation and the real HTTP adapter against

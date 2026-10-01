@@ -7,7 +7,9 @@ testing conventions).
 
 from __future__ import annotations
 
+import logging
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
@@ -18,11 +20,25 @@ from coding_agent_service.credentials import (
     EncryptedFileCredentialStore,
     InMemoryCredentialStore,
 )
+from coding_agent_service.postgres_store import PostgresCodingAgentStore
 from coding_agent_service.providers import CodingAgentProvider, SimulatedProvider
+from coding_agent_service.reconcile import recover_sessions
 from coding_agent_service.routes import install_coding_agent_routes
 from coding_agent_service.runtime import ContainerRuntime, DockerCLIContainerRuntime
 from coding_agent_service.service import CodingAgentSupervisor
 from coding_agent_service.store import CodingAgentStore, InMemoryCodingAgentStore
+
+logger = logging.getLogger(__name__)
+
+
+def _default_store() -> CodingAgentStore:
+    dsn = os.environ.get("DATABASE_URL")
+    if dsn:
+        return PostgresCodingAgentStore(dsn)
+    logger.warning(
+        "DATABASE_URL is not set; coding-agent sessions are kept in memory and are lost when this service restarts"
+    )
+    return InMemoryCodingAgentStore()
 
 
 def _default_credential_store() -> CredentialStore:
@@ -45,9 +61,7 @@ def create_app(
     credential_store: CredentialStore | None = None,
     container_runtime: ContainerRuntime | None = None,
 ) -> FastAPI:
-    app = FastAPI(title="coding-agent-service")
-
-    resolved_store = store if store is not None else InMemoryCodingAgentStore()
+    resolved_store = store if store is not None else _default_store()
     resolved_token = service_token if service_token is not None else os.environ.get("CODING_AGENT_SERVICE_TOKEN")
     resolved_credentials = credential_store if credential_store is not None else _default_credential_store()
     resolved_runtime = container_runtime if container_runtime is not None else DockerCLIContainerRuntime()
@@ -66,7 +80,34 @@ def create_app(
         }
     )
 
-    app.state.supervisor = CodingAgentSupervisor(resolved_store, resolved_providers)
+    supervisor = CodingAgentSupervisor(resolved_store, resolved_providers)
+
+    # ASGITransport-driven tests skip lifespan and inject stores directly;
+    # the production-owned Postgres pool opens and closes here (see
+    # docs/development.md testing conventions).
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        opener = getattr(resolved_store, "open", None)
+        if opener is not None:
+            await opener()
+        try:
+            if resolved_store.durable:
+                report = await recover_sessions(supervisor, resolved_store, resolved_runtime)
+                _app.state.recovery_report = report
+                logger.info(
+                    "Session recovery: %d changed, %d unchanged, %d unresolved, %d orphan containers%s",
+                    len(report.changed), len(report.unchanged), len(report.unresolved),
+                    len(report.orphan_container_ids),
+                    f" (skipped: {report.skipped_reason})" if report.skipped_reason else "",
+                )
+            yield
+        finally:
+            closer = getattr(resolved_store, "close", None)
+            if closer is not None:
+                await closer()
+
+    app = FastAPI(title="coding-agent-service", lifespan=lifespan)
+    app.state.supervisor = supervisor
     app.state.credentials = resolved_credentials
 
     @app.get("/health")

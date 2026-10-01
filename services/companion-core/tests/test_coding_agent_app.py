@@ -6,6 +6,8 @@ only because uv installs every workspace member into one shared dev venv;
 production companion-core images do not include its code.
 """
 
+from datetime import UTC, datetime, timedelta
+
 import httpx
 import pytest
 from coding_agent_service.app import create_app as create_coding_agent_app
@@ -202,3 +204,57 @@ def test_query_commands_bypass_model_and_preserve_privacy(command, expected, pri
     assert response.status_code == 200
     assert expected in response.json()["reply"]
     assert response.json()["privacy"] == privacy
+
+
+def test_usage_reply_includes_account_allowance_reported_by_the_provider():
+    resets_at = datetime.now(UTC) + timedelta(hours=2)
+
+    class AllowanceProvider(SimulatedProvider):
+        async def collect_usage(self, session):
+            return UsageSnapshot(
+                session_id=session.id, provider="simulated",
+                dimensions=[
+                    UsageDimension(name="input_tokens", value=10, unit="tokens"),
+                    UsageDimension(name="five_hour_window", value=87.0, unit="%", resets_at=resets_at),
+                ],
+            )
+
+    coding_app = _coding_agent_app(AllowanceProvider())
+    with TestClient(coding_app) as service:
+        headers = {"X-Reachy-Coding-Agent-Service-Token": SERVICE_TOKEN}
+        project = service.post("/projects", headers=headers, json={
+            "name": "X", "repository_path": "/x", "provider": "simulated",
+        }).json()
+        service.post("/sessions", headers=headers, json={
+            "project_id": project["id"], "task_summary": "Finished task", "owner_user_id": "owner-1",
+        })
+        with TestClient(_core_app(coding_app)) as client:
+            body = _turn(client, "What is my Claude code usage so far?")
+    assert "Claude 5-hour window: 87% used, resets" in body["reply"]
+    assert "input tokens 10tokens" in body["reply"]
+    assert "five hour window" not in body["reply"]
+
+
+def test_usage_reply_survives_an_allowance_endpoint_failure():
+    class NoAllowanceApp:
+        def __init__(self, app):
+            self.app = app
+
+        async def __call__(self, scope, receive, send):
+            if scope["type"] == "http" and scope["path"].endswith("/allowance"):
+                scope = {**scope, "path": "/nonexistent"}
+            await self.app(scope, receive, send)
+
+    coding_app = _coding_agent_app()
+    with TestClient(coding_app) as service:
+        headers = {"X-Reachy-Coding-Agent-Service-Token": SERVICE_TOKEN}
+        project = service.post("/projects", headers=headers, json={
+            "name": "X", "repository_path": "/x", "provider": "simulated",
+        }).json()
+        service.post("/sessions", headers=headers, json={
+            "project_id": project["id"], "task_summary": "Finished task", "owner_user_id": "owner-1",
+        })
+        with TestClient(_core_app(NoAllowanceApp(coding_app))) as client:
+            body = _turn(client, "What is my Claude code usage so far?")
+    assert "Finished task" in body["reply"]
+    assert "has not reported your allowance" in body["reply"]

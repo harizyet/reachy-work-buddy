@@ -521,6 +521,22 @@ UsageSnapshot
   measured_at
 ```
 
+**Account allowance (implemented 2026-10-01, not yet deployed).** For
+Claude Code, the CLI's `rate_limit_event` stream lines report the
+subscription windows (`five_hour`, `seven_day`, `seven_day_opus`,
+`seven_day_sonnet`) as `utilization` plus `resetsAt`. The adapter turns
+those into `five_hour_window`/`weekly_window`/`weekly_opus_window`/
+`weekly_sonnet_window` percentage dimensions with `resets_at`, they are
+persisted with the session's usage snapshot, and
+`GET /providers/{provider}/allowance` returns the newest reading per window
+that has not yet reset. companion-core's usage reply shows them with the
+reset time in the persona timezone. Caveats: the CLI only includes
+`utilization` as a limit nears (an unreported window is shown as
+unreported, never 0%); the figures are what Claude last said during a
+recorded session, not a live account query; and the field names were read
+from the installed binary — **no live event has been captured yet**, so
+confirm on the first real session that approaches a limit.
+
 Example dimensions: `context_window 72%`, `five_hour_window 81%`,
 `weekly_window 34%`, `session_cost $1.26`, `tokens ...`. A provider
 advertises what it can reliably measure; Reachy only warns on configured
@@ -533,6 +549,41 @@ session, check whether the container exists, whether the process is
 alive, whether the provider session is resumable, and the last event.
 Reconcile to `RUNNING`, `WAITING_...`, `STOPPED` or `LOST`. Do not
 automatically claim that an unknown process state is complete.
+
+**Implemented 2026-10-01 (not yet deployed).** Projects, sessions, events
+and usage snapshots are stored in Postgres (migration `013_coding_agent`,
+`postgres_store.py`) whenever `DATABASE_URL` is set; without it the service
+falls back to the in-memory store and logs that history is lost on restart.
+At startup `reconcile.py`'s `recover_sessions` first asks Docker for its
+labeled containers, then for each non-terminal session adopts a labeled
+container if the record never stored one, has the provider inspect it, and
+applies the result only if it changed:
+
+| Stored | Docker / provider says | Result |
+|---|---|---|
+| `RUNNING` | container running | stays `RUNNING` |
+| `RUNNING` | container exited with a final result | `COMPLETED` / `FAILED` |
+| `RUNNING` | container exited or gone, no final result | `LOST` |
+| `RUNNING` | no container found, provider cannot inspect | `LOST` |
+| waiting / provider has no container (simulated) | provider reports no change | untouched |
+| any | Docker daemon unreachable | **nothing changes**, warning logged |
+| any | provider not registered, or inspection raises | left as recorded, reported |
+
+Containers labeled for a session the database does not know are logged,
+never adopted or removed. Terminal sessions are never revisited.
+Final usage is persisted when a session turns terminal, so it outlives the
+container's logs.
+
+Deviation from the "`STOPPED`/resumable" mapping: a Claude Code
+`--resume` needs the transcript inside the old container, which is gone
+with it, so a vanished container is `LOST`, not a resumable `STOPPED`.
+Known gap: nothing yet polls running Claude sessions to `COMPLETED` while
+the service is up (29.14); recovery and the owner's `refresh` call are the
+only places that notice a finished container.
+
+Core's claim-once completion ledger is durable too
+(`coding_agent_notifications`), so a core restart does not re-notify
+every finished session now that history persists.
 
 Container labels should include `reachy.project_id`, `reachy.session_id`
 and `reachy.provider` so sessions can be rediscovered deterministically.
@@ -550,8 +601,8 @@ speculative endpoints or later-phase functionality (AGENTS.md).
 
 | Stage | Scope | Exit criterion |
 |---|---|---|
-| 29.1 — Contracts and session store (**implemented** 2026-10-01) | `CodingProject`, `CodingAgentSession`, `CodingAgentEvent`, `ProviderCapabilities`, `UsageSnapshot` | A simulated provider can create and transition a durable coding session — met: `services/coding-agent-service`'s `CodingAgentSupervisor` + in-memory store + `SimulatedProvider`, exercised in `tests/test_service.py` and `tests/test_app.py`. Store is in-memory only; restart durability is still 29.27's job |
-| 29.2 — Container runner (**implemented** 2026-10-01) | Container image, project mounts, resource limits, session labels, start/stop/reconcile | A dummy command can run inside a project-specific container and survive supervisor restart reconciliation — met: `DockerCLIContainerRuntime` (no image build yet, runs a plain image like `busybox`) starts a labeled, resource-limited, non-root, no-socket container and a *second, freshly constructed* runtime instance rediscovers and inspects it purely from Docker's own labeled state; verified against a real local Docker daemon (`CODING_AGENT_DOCKER_TEST=1`), not just `SimulatedContainerRuntime`. `reconcile_sessions` marks a session LOST (never COMPLETED) when its container is no longer running. Not yet wired into `CodingAgentSupervisor.start_session` — that integration is 29.3's job, once there is a real provider that needs a container at all |
+| 29.1 — Contracts and session store (**implemented** 2026-10-01) | `CodingProject`, `CodingAgentSession`, `CodingAgentEvent`, `ProviderCapabilities`, `UsageSnapshot` | A simulated provider can create and transition a durable coding session — met: `services/coding-agent-service`'s `CodingAgentSupervisor` + in-memory store + `SimulatedProvider`, exercised in `tests/test_service.py` and `tests/test_app.py`. The original store was in-memory only; restart durability arrived with 29.27 (Postgres, see below) |
+| 29.2 — Container runner (**implemented** 2026-10-01) | Container image, project mounts, resource limits, session labels, start/stop/reconcile | A dummy command can run inside a project-specific container and survive supervisor restart reconciliation — met: `DockerCLIContainerRuntime` (no image build yet, runs a plain image like `busybox`) starts a labeled, resource-limited, non-root, no-socket container and a *second, freshly constructed* runtime instance rediscovers and inspects it purely from Docker's own labeled state; verified against a real local Docker daemon (`CODING_AGENT_DOCKER_TEST=1`), not just `SimulatedContainerRuntime`. Restart reconciliation (`recover_sessions`, 29.27) marks a session LOST (never COMPLETED) when its container is gone without a final result. Not yet wired into `CodingAgentSupervisor.start_session` — that integration is 29.3's job, once there is a real provider that needs a container at all |
 | 29.3 — Claude Code provider (**implemented** 2026-10-01) | Containerize Claude Code; start, resume, session ID capture, structured output/event capture | Reachy launches a real Claude Code task against a test repository and tracks the provider session ID — met: `ClaudeCodeProvider` + `docker/claude-code/Dockerfile` (real image, `claude-code` 2.1.197 confirmed), `--session-id` assigns the provider session id immediately at start (no log-parsing needed for that part), and `inspect_session` parses real `stream-json` output for completion/failure/usage. Verified against the real image and a real local Docker daemon, first with an intentionally invalid key, then — once the owner registered a real Claude Pro/Max subscription credential and asked to test it (2026-10-01) — against the real Anthropic API: a real session completed successfully, the first this integration has produced. The subscription credential's no-invocation block (added and lifted the same day) left behind the protection that now actually matters for it: `--permission-mode plan`, a `--disallowedTools` list confirmed live to be what actually restricts the toolset (unlike `--allowedTools` alone), and a Docker-enforced `:ro` mount, confirmed by an actual blocked write — a subscription session runs for real but stays read-only; an API-key session keeps full permissions. Getting this far live also exposed and fixed three real deployment gaps: coding-agent-service's own container had no `docker` CLI and no access to the host's Docker daemon (now has both — `docker-cli` package plus a mounted `/var/run/docker.sock`, an explicit exception to 29.18 for this orchestrator container specifically), and `restricted-network` (the default `CodingProject.allowed_network_profile`) was never actually provisioned as a Docker network (now is, with its name pinned so Compose's project-prefixing doesn't break the literal `--network` flag). No hook-based mid-task `WAITING_FOR_INPUT`/`WAITING_FOR_PERMISSION` detection yet (29.4) |
 | 29.4 — Claude hooks | Wire `SessionStart`, `Stop`, `StopFailure`, `PermissionRequest`/`Notification`, `SessionEnd` into the event bridge | The supervisor correctly distinguishes running, returned-control, permission-needed and failed/rate-limited states |
 | 29.5 — Usage telemetry | Capability-detected Claude usage collection | Available context/cost/rate-limit telemetry is captured without scraping terminal text, and unavailable dimensions remain explicitly unknown |

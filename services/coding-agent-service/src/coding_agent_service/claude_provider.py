@@ -77,6 +77,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import UTC, datetime
 
 from coding_agent_service.credentials import CredentialStore
 from coding_agent_service.providers import ProviderError, ProviderEvent
@@ -148,6 +149,48 @@ def _latest_retry_error_status(events: list[dict]) -> int | None:
     return status
 
 
+# 29.26: claude-code 2.1.197 emits {"type":"rate_limit_event",
+# "rate_limit_info":{"status","resetsAt","rateLimitType","utilization",...}}
+# when its account rate-limit state changes. Field names, the epoch-seconds
+# resetsAt and the 0..1 utilization fraction were read from the installed
+# binary; no live event has been captured yet. `utilization` is only
+# present once usage nears a threshold ("allowed_warning"), so a plain
+# "allowed" event yields no percentage and must not be reported as 0%.
+_ALLOWANCE_WINDOW_BY_RATE_LIMIT_TYPE = {
+    "five_hour": "five_hour_window",
+    "seven_day": "weekly_window",
+    "seven_day_opus": "weekly_opus_window",
+    "seven_day_sonnet": "weekly_sonnet_window",
+}
+
+
+def _allowance_dimensions(events: list[dict]) -> list[UsageDimension]:
+    latest: dict[str, UsageDimension] = {}
+    for event in events:
+        if event.get("type") != "rate_limit_event":
+            continue
+        info = event.get("rate_limit_info")
+        if not isinstance(info, dict):
+            continue
+        name = _ALLOWANCE_WINDOW_BY_RATE_LIMIT_TYPE.get(info.get("rateLimitType"))
+        utilization = info.get("utilization")
+        resets_at = info.get("resetsAt")
+        if (
+            name is None
+            or isinstance(utilization, bool)
+            or not isinstance(utilization, (int, float))
+            or isinstance(resets_at, bool)
+            or not isinstance(resets_at, (int, float))
+        ):
+            continue
+        try:
+            reset = datetime.fromtimestamp(resets_at, UTC)
+        except (OverflowError, OSError, ValueError):
+            continue
+        latest[name] = UsageDimension(name=name, value=round(utilization * 100, 1), unit="%", resets_at=reset)
+    return list(latest.values())
+
+
 def _usage_dimensions(result: dict) -> list[UsageDimension]:
     dimensions = []
     usage = result.get("usage") or {}
@@ -191,7 +234,9 @@ class ClaudeCodeProvider:
             # task's final result, so it cannot report these yet.
             needs_input_events=False,
             permission_events=False,
-            usage_percentages=False,
+            # Allowance percentages exist only when the CLI reports them,
+            # i.e. once a limit window nears a warning threshold.
+            usage_percentages=True,
             token_usage=True,
             monetary_cost=True,
             context_usage=False,
@@ -335,9 +380,14 @@ class ClaudeCodeProvider:
                 )
             # 29.8: the container is gone with no final result line — this
             # is not evidence of success, so it is never reported COMPLETED.
+            gone = container_status == ContainerStatus.MISSING
             return ProviderEvent(
                 status=CodingAgentStatus.LOST,
-                summary="Claude Code's container stopped without producing a final result",
+                summary=(
+                    "Claude Code's container no longer exists and no final result was recorded"
+                    if gone
+                    else "Claude Code's container stopped without producing a final result"
+                ),
                 provider_session_id=session.provider_session_id,
                 metadata={"container_id": session.container_id},
             )
@@ -364,4 +414,5 @@ class ClaudeCodeProvider:
             result = _extract_result(events)
             if result is not None:
                 dimensions = _usage_dimensions(result)
+            dimensions += _allowance_dimensions(events)
         return UsageSnapshot(session_id=session.id, provider="claude-code", dimensions=dimensions)

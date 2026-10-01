@@ -22,6 +22,9 @@ SESSION_EVENTS = "/sessions/{session_id}/events"
 SESSION_USAGE = "/sessions/{session_id}/usage"
 
 PROVIDER_CAPABILITIES = "/providers/{provider}/capabilities"
+# 29.26: account allowance windows last reported by that provider's CLI
+# through a managed session (not a live quota query).
+PROVIDER_ALLOWANCE = "/providers/{provider}/allowance"
 
 # 29.19: owner-entered provider credentials (e.g. a Claude Code API key).
 # Reachy-hub proxies these under owner cookie+CSRF auth; this service only

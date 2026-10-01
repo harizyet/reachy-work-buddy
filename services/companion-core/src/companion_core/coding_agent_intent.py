@@ -8,7 +8,11 @@ question-understanding be sophisticated.
 from __future__ import annotations
 
 import re
+from datetime import datetime
 from typing import Any
+from zoneinfo import ZoneInfo
+
+from shared.models.coding_agent import ALLOWANCE_WINDOW_NAMES
 
 _STATUS_PHRASES = (
     "is my coding session done", "is my code session done", "is my claude session done",
@@ -25,10 +29,24 @@ _USAGE_PHRASES = (
 
 _STATUS_SCOPE = "I can only see sessions managed by Reachy, not other terminal sessions."
 _USAGE_SCOPE = (
-    "This covers only sessions recorded by Reachy, not account-wide Claude usage "
-    "or remaining subscription allowance. Session history is currently lost when "
-    "the coding-agent service restarts."
+    "Session figures cover only sessions recorded by Reachy, not account-wide usage. Allowance figures are "
+    "what Claude Code last reported during those sessions, not a live reading of "
+    "your account quota."
 )
+_NO_ALLOWANCE = (
+    "Claude Code has not reported your allowance windows to Reachy; it only does "
+    "so as you approach a limit."
+)
+
+# A phone reply stays readable; the full history remains in the service.
+DISPLAY_LIMIT = 5
+
+_ALLOWANCE_LABELS = {
+    "five_hour_window": "5-hour window",
+    "weekly_window": "weekly window",
+    "weekly_opus_window": "weekly Opus window",
+    "weekly_sonnet_window": "weekly Sonnet window",
+}
 
 # 29.5: never claimed COMPLETED/FAILED without a real provider result
 # (29.8); these are exactly the terminal statuses worth reporting distinctly.
@@ -60,17 +78,60 @@ def _label(session: dict[str, Any]) -> str:
     return _TERMINAL_LABELS.get(status, status.replace("_", " "))
 
 
+def recent_sessions(sessions: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
+    """The newest DISPLAY_LIMIT sessions, and how many older ones were left out."""
+    ordered = sorted(sessions, key=lambda s: s["started_at"], reverse=True)
+    return ordered[:DISPLAY_LIMIT], max(0, len(ordered) - DISPLAY_LIMIT)
+
+
+def _older_line(omitted: int) -> str:
+    return f"...and {omitted} older session{'s' if omitted != 1 else ''}.\n" if omitted else ""
+
+
 def format_status_reply(sessions: list[dict[str, Any]] | None) -> str:
     if sessions is None:
         return "I can't reach the coding-agent service right now."
     if not sessions:
         return "I have no recorded coding-agent sessions managed by Reachy. " + _STATUS_SCOPE
-    ordered = sorted(sessions, key=lambda s: s["started_at"], reverse=True)
-    lines = [f"{s['task_summary']} ({s['provider']}): {_label(s)}" for s in ordered]
-    return "Coding-agent sessions (last recorded status):\n" + "\n".join(lines) + "\n" + _STATUS_SCOPE
+    shown, omitted = recent_sessions(sessions)
+    lines = [f"{s['task_summary']} ({s['provider']}): {_label(s)}" for s in shown]
+    return (
+        "Coding-agent sessions (last recorded status):\n" + "\n".join(lines) + "\n"
+        + _older_line(omitted) + _STATUS_SCOPE
+    )
 
 
-def format_usage_reply(sessions: list[dict[str, Any]] | None, usage_by_session_id: dict[str, dict[str, Any]]) -> str:
+def _reset_text(resets_at: str, now: datetime, timezone: str) -> str:
+    zone = ZoneInfo(timezone)
+    local = datetime.fromisoformat(resets_at).astimezone(zone)
+    clock = local.strftime("%I:%M %p").lstrip("0")
+    if local.date() == now.astimezone(zone).date():
+        return f"today {clock}"
+    return f"{local.strftime('%a')} {clock}"
+
+
+def format_allowance_lines(
+    allowances: list[dict[str, Any]], now: datetime, timezone: str
+) -> list[str]:
+    """One line per still-open window. An empty allowance is never rendered
+    as 0% used — the CLI reports utilization only near a limit."""
+    lines = []
+    for allowance in allowances:
+        for window in allowance.get("windows", []):
+            if window["name"] not in ALLOWANCE_WINDOW_NAMES or not window.get("resets_at"):
+                continue
+            label = _ALLOWANCE_LABELS.get(window["name"], window["name"].replace("_", " "))
+            lines.append(
+                f"Claude {label}: {window['value']:.0f}% used, resets {_reset_text(window['resets_at'], now, timezone)}"
+            )
+    return lines
+
+
+def format_usage_reply(
+    sessions: list[dict[str, Any]] | None,
+    usage_by_session_id: dict[str, dict[str, Any]],
+    allowance_lines: list[str] | None = None,
+) -> str:
     """29.26: usage is not a universal contract — only report dimensions a
     provider actually measured, never a guessed/zero value for one it
     didn't."""
@@ -78,10 +139,14 @@ def format_usage_reply(sessions: list[dict[str, Any]] | None, usage_by_session_i
         return "I can't reach the coding-agent service right now."
     if not sessions:
         return "I have no recorded coding-agent usage for sessions managed by Reachy. " + _USAGE_SCOPE
+    shown, omitted = recent_sessions(sessions)
     lines = []
-    for session in sorted(sessions, key=lambda s: s["started_at"], reverse=True):
+    for session in shown:
         usage = usage_by_session_id.get(session["id"])
-        dimensions = usage.get("dimensions", []) if usage else []
+        dimensions = [
+            dim for dim in (usage.get("dimensions", []) if usage else [])
+            if dim["name"] not in ALLOWANCE_WINDOW_NAMES
+        ]
         if not dimensions:
             lines.append(f"{session['task_summary']} ({session['provider']}): no usage information available yet.")
             continue
@@ -90,7 +155,11 @@ def format_usage_reply(sessions: list[dict[str, Any]] | None, usage_by_session_i
             value = f"{dim['value']:.2f}" if dim["unit"] in ("usd", "%") else f"{dim['value']:.0f}"
             parts.append(f"{dim['name'].replace('_', ' ')} {value}{dim['unit']}")
         lines.append(f"{session['task_summary']} ({session['provider']}): " + ", ".join(parts))
-    return "Recorded coding-agent usage (including finished sessions):\n" + "\n".join(lines) + "\n" + _USAGE_SCOPE
+    allowance = "\n".join(allowance_lines) if allowance_lines else _NO_ALLOWANCE
+    return (
+        "Recorded coding-agent usage (including finished sessions):\n" + "\n".join(lines) + "\n"
+        + _older_line(omitted) + allowance + "\n" + _USAGE_SCOPE
+    )
 
 
 def format_completion_notification(session: dict[str, Any]) -> str:

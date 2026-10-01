@@ -153,6 +153,13 @@ def install_coding_agent_routes(app, service_token: str | None) -> None:
         except UnknownProviderError:
             raise HTTPException(404, "Unknown provider") from None
 
+    @app.get(paths.PROVIDER_ALLOWANCE, dependencies=dependencies)
+    async def provider_allowance(provider: str):
+        try:
+            return await supervisor().provider_allowance(provider)
+        except UnknownProviderError:
+            raise HTTPException(404, "Unknown provider") from None
+
     @app.get(paths.PROVIDER_CREDENTIALS, dependencies=dependencies)
     async def list_credentials():
         return await credentials().list_records()

@@ -191,6 +191,7 @@ from companion_core.coding_agent_client import CodingAgentServiceClient
 from companion_core.coding_agent_notifications import (
     CodingAgentNotificationStore,
     InMemoryCodingAgentNotificationStore,
+    PostgresCodingAgentNotificationStore,
 )
 from companion_core.commands.parser import format_help, query_usage_error
 from companion_core.consent.gate import (
@@ -445,7 +446,13 @@ def create_app(
         "CODING_AGENT_SERVICE_URL", "http://coding-agent-service:8000"
     )
     coding_agent_service_token = coding_agent_service_token or os.environ.get("CODING_AGENT_SERVICE_TOKEN")
-    coding_agent_notification_store = coding_agent_notification_store or InMemoryCodingAgentNotificationStore()
+    # Durable claims whenever a database is configured (production); tests
+    # that inject nothing and configure no database keep the in-memory ledger.
+    owns_coding_agent_notifications = (
+        coding_agent_notification_store is None and bool(database_url or os.environ.get("DATABASE_URL"))
+    )
+    if coding_agent_notification_store is None and not owns_coding_agent_notifications:
+        coding_agent_notification_store = InMemoryCodingAgentNotificationStore()
     # Both env-overridable, same pattern as hub_base_url above — default
     # stays the real ~10 minutes (ADR 0011), but a deployment (e.g. a
     # staging/test compose override) can shorten both the delay and how
@@ -498,7 +505,12 @@ def create_app(
         app.state.coding_agent_client = CodingAgentServiceClient(
             coding_agent_base_url, transport=coding_agent_transport, service_token=coding_agent_service_token
         )
-        app.state.coding_agent_notification_store = coding_agent_notification_store
+        if owns_coding_agent_notifications:
+            app.state.coding_agent_notification_store = await PostgresCodingAgentNotificationStore.connect(
+                database_url or os.environ["DATABASE_URL"]
+            )
+        else:
+            app.state.coding_agent_notification_store = coding_agent_notification_store
         if owns_llm_settings:
             app.state.llm_settings_store = await PostgresLLMSettingsStore.connect(database_url or os.environ["DATABASE_URL"])
         if owns_llm_usage:
@@ -582,6 +594,8 @@ def create_app(
                 await app.state.accounts.repository.close()
             await app.state.hub_client.aclose()
             await app.state.coding_agent_client.aclose()
+            if owns_coding_agent_notifications:
+                await app.state.coding_agent_notification_store.close()
             if owns_llm_settings:
                 await app.state.llm_settings_store.close()
             if owns_llm_usage:
@@ -1020,18 +1034,29 @@ def create_app(
             reply = coding_agent_intent.format_status_reply(sessions)
             privacy = Privacy.WORK_PRIVATE
         elif coding_agent_usage_query:
+            allowances: list[dict] = []
             try:
                 sessions = await app.state.coding_agent_client.list_sessions()
                 usage_by_session_id = {}
                 if sessions is not None:
-                    for session in sessions:
+                    shown, _ = coding_agent_intent.recent_sessions(sessions)
+                    for session in shown:
                         usage_by_session_id[session["id"]] = await app.state.coding_agent_client.get_usage(
                             session["id"]
                         )
+                    for provider in dict.fromkeys(session["provider"] for session in shown):
+                        # Allowance is a bonus line; a provider that cannot
+                        # report one must not fail the whole usage answer.
+                        with contextlib.suppress(httpx.HTTPError):
+                            allowances.append(await app.state.coding_agent_client.get_allowance(provider))
             except httpx.HTTPError:
                 sessions = None
                 usage_by_session_id = {}
-            reply = coding_agent_intent.format_usage_reply(sessions, usage_by_session_id)
+            persona = await app.state.persona_store.get()
+            allowance_lines = coding_agent_intent.format_allowance_lines(
+                allowances, datetime.now(UTC), persona.timezone
+            )
+            reply = coding_agent_intent.format_usage_reply(sessions, usage_by_session_id, allowance_lines)
             privacy = Privacy.WORK_PRIVATE
         else:
             config = await app.state.llm_settings_store.get()

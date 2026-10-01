@@ -11,6 +11,8 @@ dependencies = [
     # rest. Same AESGCM-file approach as companion_core.secrets.Keyring,
     # duplicated per ADR 0001 rather than imported across services.
     "cryptography>=45",
+    # 29.27: the durable session store (postgres_store.py).
+    "psycopg[binary,pool]>=3.2",
 ]
 
 [tool.uv.sources]

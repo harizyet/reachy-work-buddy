@@ -481,6 +481,7 @@ source = { editable = "services/coding-agent-service" }
 dependencies = [
     { name = "cryptography" },
     { name = "fastapi" },
+    { name = "psycopg", extra = ["binary", "pool"] },
     { name = "reachy-work-companion" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -489,6 +490,7 @@ dependencies = [
 requires-dist = [
     { name = "cryptography", specifier = ">=45" },
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.2" },
     { name = "reachy-work-companion", editable = "." },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
 ]

@@ -688,12 +688,23 @@ explicitly disposable project. Leave unrelated services such as OVMS alone.
 ## Schema upgrades and credential keys
 
 Core and hub require the revision declared in
-[`shared/database.py`](../shared/database.py) (`012_web_chats` at this snapshot).
+[`shared/database.py`](../shared/database.py) (`013_coding_agent` at this snapshot).
 The ordered Alembic history ships
 in core's image; SQL stores perform compatibility checks, not startup DDL.
 Compose runs `migrate` before hub/core, including through
 `scripts/start-homelab.sh`. Launcher `--check` remains read-only and does not
 run migrations. Do not use `--no-deps` to bypass the migration gate.
+
+Revision `013_coding_agent` adds the coding-agent session tables and core's
+completion-notification ledger. coding-agent-service is now a database client:
+it needs `DATABASE_URL`, waits for `migrate`, and must be **stopped with core
+and hub** before migrating (the migration job refuses to run while other
+clients are connected). Rebuild `migrate`, `companion-core`, `reachy-hub` and
+`coding-agent-service` together; the revision check refuses a mismatched
+image. Without `DATABASE_URL` the service still starts but keeps sessions in
+memory and logs that they are lost on restart. The migration is additive.
+Session containers are not touched by the upgrade; after the service comes
+back it reconciles any non-terminal sessions against Docker.
 
 The web chat archive adds hub-owned `web_chats` and `web_chat_turns` in revision
 `012_web_chats`. Use the normal backup/stop-writers/migrate/rebuild procedure
@@ -765,8 +776,8 @@ example project/env path with the actual deployment:
 umask 077
 docker compose -p reachy-homelab --env-file .env exec -T postgres \
   pg_dump -U reachy -d reachy_hub -Fc > /secure/backup/reachy-before-phase23.dump
-docker compose -p reachy-homelab --env-file .env stop companion-core reachy-hub
-docker compose -p reachy-homelab --env-file .env build migrate companion-core reachy-hub
+docker compose -p reachy-homelab --env-file .env stop companion-core reachy-hub coding-agent-service
+docker compose -p reachy-homelab --env-file .env build migrate companion-core reachy-hub coding-agent-service
 docker compose -p reachy-homelab --env-file .env run --rm migrate \
   /app/.venv/bin/python -m companion_core.migrations upgrade --adopt-legacy
 docker compose -p reachy-homelab --env-file .env up -d

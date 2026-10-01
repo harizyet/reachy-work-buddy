@@ -1,5 +1,8 @@
+from datetime import UTC, datetime
+
 import pytest
 from companion_core.coding_agent_intent import (
+    format_allowance_lines,
     format_completion_notification,
     format_status_reply,
     format_usage_reply,
@@ -120,4 +123,53 @@ def test_empty_usage_is_not_a_claim_of_zero_account_usage():
     reply = format_usage_reply([], {})
     assert "no recorded coding-agent usage" in reply
     assert "not account-wide" in reply
-    assert "restarts" in reply
+    assert "restarts" not in reply
+    assert "not a live reading" in reply
+
+
+def _numbered_session(index: int, provider: str = "claude-code") -> dict:
+    return {
+        "id": f"s{index}", "task_summary": f"task {index}", "provider": provider,
+        "status": "completed", "started_at": f"2026-10-01T10:{index:02d}:00+00:00",
+    }
+
+
+def test_status_and_usage_replies_show_the_five_newest_and_count_the_rest():
+    sessions = [_numbered_session(i) for i in range(8)]
+    status = format_status_reply(sessions)
+    assert "task 7" in status and "task 3" in status
+    assert "task 2" not in status
+    assert "3 older sessions" in status
+    usage = format_usage_reply(sessions, {})
+    assert "task 3" in usage and "task 2" not in usage
+    assert "3 older sessions" in usage
+
+
+def test_allowance_lines_use_the_persona_timezone_and_skip_unknown_windows():
+    now = datetime(2026, 10, 1, 12, 0, tzinfo=UTC)
+    lines = format_allowance_lines([{"provider": "claude-code", "windows": [
+        {"name": "five_hour_window", "value": 87.0, "unit": "%", "resets_at": "2026-10-01T15:40:00Z"},
+        {"name": "weekly_window", "value": 41.5, "unit": "%", "resets_at": "2026-10-04T09:00:00Z"},
+        {"name": "invented_window", "value": 5, "unit": "%", "resets_at": "2026-10-04T09:00:00Z"},
+    ]}], now, "Asia/Kuala_Lumpur")
+    assert lines == [
+        "Claude 5-hour window: 87% used, resets today 11:40 PM",
+        "Claude weekly window: 42% used, resets Sun 5:00 PM",
+    ]
+
+
+def test_usage_reply_without_allowance_says_it_is_unreported_not_zero():
+    reply = format_usage_reply([_numbered_session(1)], {}, [])
+    assert "has not reported your allowance" in reply
+    assert "0%" not in reply
+
+
+def test_usage_reply_hides_allowance_windows_from_per_session_lines():
+    usage = {"s1": {"dimensions": [
+        {"name": "input_tokens", "value": 12, "unit": "tokens"},
+        {"name": "five_hour_window", "value": 87.0, "unit": "%"},
+    ]}}
+    reply = format_usage_reply([_numbered_session(1)], usage, ["Claude 5-hour window: 87% used, resets today 3:40 PM"])
+    assert "input tokens 12tokens" in reply
+    assert "five hour window" not in reply
+    assert "Claude 5-hour window: 87% used" in reply

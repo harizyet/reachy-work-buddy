@@ -123,9 +123,13 @@ Work-data answers retain private routing; these shortcuts do not send emails,
 modify tasks, or confirm destructive actions.
 
 Coding reads cover only sessions recorded by Reachy, not other terminal
-sessions or account-wide subscription allowance. That history is currently
-in memory and is lost on coding-agent-service restart. Hub registers the
-command menu at startup when Telegram polling is enabled.
+sessions, and show the newest five. Session history is stored in Postgres and
+survives a coding-agent-service restart (once migration `013_coding_agent` is
+deployed). `/coding_usage` also lists Claude's 5-hour and weekly allowance when
+Claude Code has reported it during a recorded session, with the reset time in
+your persona timezone; these are the last reported figures, not a live account
+reading, and Claude only reports them as you approach a limit. Hub registers
+the command menu at startup when Telegram polling is enabled.
 
 ## Chat (Phase 20)
 

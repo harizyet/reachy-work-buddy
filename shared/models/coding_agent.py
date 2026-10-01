@@ -229,3 +229,26 @@ class UsageSnapshot(BaseModel):
     provider: str
     dimensions: list[UsageDimension] = Field(default_factory=list)
     measured_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+# 29.26: account-level allowance windows, as opposed to per-session
+# metrics such as token counts or `context_window`. A provider reports one
+# only when its CLI actually exposes the percentage; the unit is always "%".
+ALLOWANCE_WINDOW_NAMES = frozenset(
+    {"five_hour_window", "weekly_window", "weekly_opus_window", "weekly_sonnet_window"}
+)
+
+
+class ProviderAllowance(BaseModel):
+    """29.26: the most recent account allowance windows a provider has
+    reported through any Reachy-managed session. This is an observation
+    from the last time that CLI talked to the provider, never a live quota
+    read, and a window whose `resets_at` has passed is dropped rather than
+    reported as current. No timestamp is carried: a CLI's rate-limit events
+    are not timestamped, so the only honest validity bound is `resets_at`."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    provider: str
+    windows: list[UsageDimension] = Field(default_factory=list)
+

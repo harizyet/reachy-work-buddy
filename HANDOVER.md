@@ -6,6 +6,37 @@ The [documentation index](docs/README.md) defines ownership;
 
 ## Current work
 
+**Durable coding-agent sessions and Claude allowance are deployed to the
+homelab (2026-10-01, Phase 29.27/29.26).** Migration `013_coding_agent` applied
+(pre-upgrade dump: `~/reachy-backups/reachy-before-013-20261001-223839.dump`);
+migrate, core, hub and coding-agent-service rebuilt and running, health OK, the
+allowance route enforces auth. No non-terminal sessions existed at startup, so
+no live recovery was exercised. The rest of this entry predates the deploy. Sessions, projects, events and
+usage snapshots now live in Postgres (migration `013_coding_agent`;
+coding-agent-service needs `DATABASE_URL` and is now a database client), and on
+startup the service reconciles non-terminal sessions against Docker and the
+provider (`reconcile.py` `recover_sessions`; table and rules in
+[phase-29](docs/phase-29.md#2927--reliability-and-restart-recovery)). Core's
+completion-notification claims are durable too. Claude's `rate_limit_event`
+windows are persisted and exposed at `GET /providers/{provider}/allowance`; core
+usage replies show them with reset times. **Deploying needs** the migration plus
+rebuilt `migrate`, `companion-core`, `reachy-hub` and `coding-agent-service`
+images, with all DB clients stopped first
+([deployment](docs/deployment.md#schema-upgrades-and-credential-keys)). Verified:
+service/core unit and ASGI tests, real disposable-Postgres tests
+(`services/companion-core/tests/test_coding_agent_durability.py`: migration,
+store round trip across reconnect, service "restart" reconciliation, atomic
+claim-once), a real-Docker label-adoption/LOST check with a busybox container
+(`CODING_AGENT_DOCKER_TEST=1`), compose config parse, Ruff. **Not verified:** a
+restart with a live Claude session, and the allowance field names/units — they were read
+from the CLI binary, **no live `rate_limit_event` has been captured**; check the
+first real session that nears a limit. Known gaps: nothing polls running Claude
+sessions to `COMPLETED` while the service is up (29.14); a vanished container is
+`LOST`, not resumable `STOPPED`, because the transcript dies with it.
+`reachy-hub/tests/test_robot_voice.py::test_spoken_command_text_does_not_actuate_the_robot`
+fails on HEAD: unknown `/commands` now reach core's "Unknown or unavailable
+command" reply (commit b599b04), so its expected spoken text is stale.
+
 Operator UI reorganization is implemented locally, not deployed (2026-10-01).
 Overview now contains monitoring; Settings consolidates configuration into six
 feature tabs; Meetings has a searchable records sidebar; Chat has durable typed
@@ -33,7 +64,8 @@ hub to activate the shortcuts and menu on the running bot.
 The reported Telegram session/usage reply bugs are fixed locally (2026-10-01),
 not deployed: natural Claude Code session questions now reach the deterministic
 handler, and usage reads include finished sessions. Replies explain the managed
-session scope and in-memory history limitation; status is labelled last recorded.
+session scope; status is labelled last recorded. (The in-memory history limitation
+mentioned at the time is superseded by the durable store above.)
 See [service reference](docs/reference/services.md) for the behavior. Regression
 coverage uses the exact reported questions and an in-process service chain with
 a simulated provider returning measured usage for a completed session. All 74
@@ -107,9 +139,8 @@ above, same session:
   call to coding-agent-service, same pattern as `hub_client.py`).
 - `GET /coding-agents/completions/due` on companion-core — a pure,
   claim-once query (same shape as `/calendar/reminders/due`;
-  `companion_core/coding_agent_notifications.py`'s in-memory store does
-  the claiming, so a restart can re-notify a session that finished just
-  before it — same documented gap as 29.1's own in-memory store).
+  `companion_core/coding_agent_notifications.py` does the claiming — in memory
+  when this was written, now Postgres-backed under migration 013).
 - A genuine new background loop in reachy-hub, `coding_agent_notify_loop`
   (60s interval), polls that and pushes a Telegram message via the
   existing `push_to_telegram` for anything due. Deliberately skips the
@@ -347,8 +378,8 @@ meetings remain in the database/audio volume; no delete endpoint exists.
    proxy for project/session management exists, just credentials). That
    gap — an operator-UI or at least a documented curl path to register a
    project and start/poll a session — is probably the most useful next
-   build step, ahead of 29.4 (Claude hooks) or a `Postgres*CodingAgentStore`
-   for restart durability (29.27); none of those are started.
+   build step, ahead of 29.4 (Claude hooks) or a 29.14 poller. The Postgres store (29.27)
+   is built but needs deploying with migration 013 (see Current work).
 1. Roll out the long-audio changes to Core, Hub and both sidecars, including
    the standalone diarization server (do not create a competing instance).
    Coordinate speech-token activation with that restart. Representative

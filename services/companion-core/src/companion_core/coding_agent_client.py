@@ -14,7 +14,12 @@ from typing import Any
 
 import httpx
 
-from shared.protocols.coding_agent import SERVICE_HEADER, SESSION_USAGE, SESSIONS
+from shared.protocols.coding_agent import (
+    PROVIDER_ALLOWANCE,
+    SERVICE_HEADER,
+    SESSION_USAGE,
+    SESSIONS,
+)
 
 
 class CodingAgentServiceClient:
@@ -42,5 +47,10 @@ class CodingAgentServiceClient:
 
     async def get_usage(self, session_id: str) -> dict[str, Any]:
         resp = await self._client.get(SESSION_USAGE.format(session_id=session_id))
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get_allowance(self, provider: str) -> dict[str, Any]:
+        resp = await self._client.get(PROVIDER_ALLOWANCE.format(provider=provider))
         resp.raise_for_status()
         return resp.json()

@@ -11,16 +11,12 @@ import os
 import uuid
 
 import pytest
-from coding_agent_service.reconcile import reconcile_sessions
 from coding_agent_service.runtime import (
     ContainerSpec,
     ContainerStatus,
     DockerCLIContainerRuntime,
     SimulatedContainerRuntime,
 )
-from coding_agent_service.store import InMemoryCodingAgentStore
-
-from shared.models.coding_agent import CodingAgentSession, CodingAgentStatus
 
 
 def _spec(**overrides) -> ContainerSpec:
@@ -45,43 +41,6 @@ def test_simulated_runtime_starts_stops_and_lists_by_label() -> None:
 
         await runtime.stop(container_id)
         assert await runtime.status(container_id) == ContainerStatus.EXITED
-
-    asyncio.run(run())
-
-
-def test_reconcile_marks_sessions_lost_when_container_is_gone() -> None:
-    async def run() -> None:
-        store = InMemoryCodingAgentStore()
-        runtime = SimulatedContainerRuntime()
-
-        running_container = await runtime.start(_spec(session_id="sess-running"))
-        gone_container = await runtime.start(_spec(session_id="sess-gone"))
-        await runtime.stop(gone_container)
-
-        running_session = CodingAgentSession(
-            project_id="proj-1", provider="simulated", status=CodingAgentStatus.RUNNING,
-            task_summary="still going", owner_user_id="owner-1", container_id=running_container,
-        )
-        lost_session = CodingAgentSession(
-            project_id="proj-1", provider="simulated", status=CodingAgentStatus.RUNNING,
-            task_summary="container died", owner_user_id="owner-1", container_id=gone_container,
-        )
-        completed_session = CodingAgentSession(
-            project_id="proj-1", provider="simulated", status=CodingAgentStatus.COMPLETED,
-            task_summary="already done", owner_user_id="owner-1", container_id="unrelated",
-        )
-        for session in (running_session, lost_session, completed_session):
-            await store.add_session(session)
-
-        changed = await reconcile_sessions(store, runtime)
-
-        assert changed == [lost_session.id]
-        assert (await store.get_session(running_session.id)).status == CodingAgentStatus.RUNNING
-        assert (await store.get_session(lost_session.id)).status == CodingAgentStatus.LOST
-        # A terminal session is left alone even though its container_id
-        # was never a real one — reconciliation never revisits a session
-        # that already has a final, provider-reported outcome.
-        assert (await store.get_session(completed_session.id)).status == CodingAgentStatus.COMPLETED
 
     asyncio.run(run())
 

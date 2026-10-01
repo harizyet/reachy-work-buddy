@@ -1,8 +1,9 @@
-"""29.1: session/event store. In-memory only for now — Postgres durability
-across a process restart is 29.27's reconciliation stage, not this one; see
-docs/phase-29.md's implementation sequence. A Postgres-backed store can be
-added later behind the same Protocol, same precedent as companion-core's
-tasks/calendar/meetings stores.
+"""29.1/29.27: project/session/event/usage store interface plus the
+in-memory implementation used by tests and by a deployment with no
+DATABASE_URL. postgres_store.py is the durable implementation behind the
+same Protocol (same precedent as companion-core's tasks/calendar/meetings
+stores). `durable` tells the app whether there is previous-process state to
+recover at startup.
 """
 
 from __future__ import annotations
@@ -13,10 +14,13 @@ from shared.models.coding_agent import (
     CodingAgentEvent,
     CodingAgentSession,
     CodingProject,
+    UsageSnapshot,
 )
 
 
 class CodingAgentStore(Protocol):
+    durable: bool
+
     async def add_project(self, project: CodingProject) -> CodingProject: ...
     async def get_project(self, project_id: str) -> CodingProject | None: ...
     async def list_projects(self) -> list[CodingProject]: ...
@@ -29,12 +33,21 @@ class CodingAgentStore(Protocol):
     async def add_event(self, event: CodingAgentEvent) -> CodingAgentEvent: ...
     async def list_events(self, session_id: str) -> list[CodingAgentEvent]: ...
 
+    async def add_usage_snapshot(self, snapshot: UsageSnapshot) -> None: ...
+    async def latest_usage_snapshot(self, session_id: str) -> UsageSnapshot | None: ...
+    async def recent_usage_snapshots(self, provider: str, limit: int) -> list[UsageSnapshot]:
+        """Newest first, across every session of one provider."""
+        ...
+
 
 class InMemoryCodingAgentStore:
+    durable = False
+
     def __init__(self) -> None:
         self._projects: dict[str, CodingProject] = {}
         self._sessions: dict[str, CodingAgentSession] = {}
         self._events: dict[str, list[CodingAgentEvent]] = {}
+        self._usage: list[UsageSnapshot] = []
 
     async def add_project(self, project: CodingProject) -> CodingProject:
         self._projects[project.id] = project
@@ -67,3 +80,15 @@ class InMemoryCodingAgentStore:
 
     async def list_events(self, session_id: str) -> list[CodingAgentEvent]:
         return list(self._events.get(session_id, []))
+
+    async def add_usage_snapshot(self, snapshot: UsageSnapshot) -> None:
+        self._usage.append(snapshot)
+
+    async def latest_usage_snapshot(self, session_id: str) -> UsageSnapshot | None:
+        for snapshot in reversed(self._usage):
+            if snapshot.session_id == session_id:
+                return snapshot
+        return None
+
+    async def recent_usage_snapshots(self, provider: str, limit: int) -> list[UsageSnapshot]:
+        return [s for s in reversed(self._usage) if s.provider == provider][:limit]

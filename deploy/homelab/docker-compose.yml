@@ -372,11 +372,12 @@ services:
     expose:
       - "8000"
 
-  # Phase 29.1-29.3 (docs/phase-29.md): coding-agent session supervisor.
-  # Owns project/session/credential state for coding-agent providers
-  # (currently simulated + Claude Code); companion-core does not yet call
-  # this service (29.6/29.7 still planned) — only reachy-hub's owner-facing
-  # credential proxy (reachy_hub/coding_agent.py) reaches it so far.
+  # Phase 29 (docs/phase-29.md): coding-agent session supervisor. Owns
+  # project/session/event/usage records (Postgres, migration 013, 29.27) and
+  # provider credentials. companion-core reads sessions/usage/allowance from
+  # it; reachy-hub proxies owner credential and session actions. It is a
+  # database client like hub/core, so it waits for `migrate` and a database
+  # upgrade must stop it too (docs/deployment.md).
   coding-agent-service:
     build:
       context: ../..
@@ -386,6 +387,7 @@ services:
       - coding_agent_credential_key
     environment:
       CODING_AGENT_SERVICE_TOKEN: ${CODING_AGENT_SERVICE_TOKEN:?set CODING_AGENT_SERVICE_TOKEN in .env}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-reachy}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-reachy_hub}
       # 29.19: a separate key file from companion-core/hub's credential_keys
       # secret above — a leaked coding-agent key must not also decrypt
       # Google account credentials, and this service's own
@@ -404,6 +406,11 @@ services:
       # rule is about the containers *this service spawns* for a session,
       # never this service itself.
       - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
     expose:
       - "8000"
     # Attaching this service to `restricted-network` is what makes Compose

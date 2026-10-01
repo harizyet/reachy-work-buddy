@@ -1,6 +1,6 @@
 """Schema compatibility contract shared by SQL stores; no startup DDL."""
 
-SCHEMA_REVISION = "012_web_chats"
+SCHEMA_REVISION = "013_coding_agent"
 
 
 async def check_schema(conn) -> None:

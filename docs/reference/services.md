@@ -45,8 +45,10 @@ sessions. Natural session questions such as "are any of my Claude Code sessions
 still running?" use the same deterministic status branch; usage takes precedence
 when a question also mentions sessions. Replies label status as last recorded
 and limit visibility to Reachy-managed sessions. Usage is not account-wide
-subscription usage or remaining allowance; the current in-memory session history
-is lost on coding-agent-service restart.
+subscription usage. Replies show the five newest sessions plus a count of older
+ones, and add the Claude allowance windows (percent used, reset time in the
+persona timezone) only when Claude Code has reported them; otherwise they say
+allowance is unreported. Session history is durable (Postgres, 29.27).
 
 Typed query shortcuts are parsed into structured commands before phrase matching
 and dispatch directly to the same data handlers. Shared menu/action metadata
@@ -335,8 +337,13 @@ caller), and can list/inspect containers purely from their
 against a real local Docker daemon with a fresh runtime instance
 rediscovering a container a previous instance started (opt-in
 `CODING_AGENT_DOCKER_TEST=1`, same pattern as companion-core's real-Postgres
-tests). `reconcile.py`'s `reconcile_sessions` marks a session `LOST` (never
-`COMPLETED`) when its container is no longer running. The runtime is not
+tests). `reconcile.py`'s `recover_sessions` runs at startup (when the store is
+durable) and reconciles each non-terminal session against Docker and its
+provider; a session whose container is gone with no final result becomes
+`LOST` (never `COMPLETED`), and nothing changes if Docker is unreachable.
+`postgres_store.py` stores records as JSONB beside a few query columns; the
+schema is core's migration `013_coding_agent`, and the service needs
+`DATABASE_URL`. The runtime is not
 yet wired into `CodingAgentSupervisor.start_session` — no provider actually
 launches a container yet; that starts with the real Claude Code adapter
 (29.3).
@@ -440,6 +447,7 @@ exercised on the owner's homelab — not just health-checked.
 | `POST /sessions/{session_id}/refresh` | Re-checks a non-terminal session against its provider/container right now (29.3); no background poller or hook bridge exists yet to do this automatically |
 | `GET /sessions/{session_id}/events` | Normalized event log for that session |
 | `GET /sessions/{session_id}/usage` | Capability-gated `UsageSnapshot`; absent dimensions are unknown, never assumed zero |
+| `GET /providers/{provider}/allowance` | Account allowance windows (5-hour/weekly) last reported by that provider and not yet reset (29.26); empty when none reported |
 | `GET /providers/{provider}/capabilities` | `ProviderCapabilities` so a caller never assumes a metric a provider doesn't expose |
 | `GET /providers/credentials`; `GET`, `PUT`, `DELETE /providers/{provider}/credential` | Owner-entered provider credentials (29.19); `PUT`/`GET` never return the secret value, only `last_four` |
 
@@ -463,7 +471,7 @@ meeting speech sidecars, per ADR 0001): a deterministic (non-LLM) intent
 (`companion_core/coding_agent_intent.py`) answers an owner's "is my coding
 session done"/"what's my claude usage" question from any channel, and
 `GET /coding-agents/completions/due` (companion-core's own route, a pure
-claim-once query like `/calendar/reminders/due`) is what lets reachy-hub
+claim-once query like `/calendar/reminders/due`, claims kept in Postgres) is what lets reachy-hub
 push a Telegram message when a session finishes — see reachy-hub's section
 below for that loop. Session *management* — registering a project,
 starting/resuming/stopping a session — still has no hub/companion-core
