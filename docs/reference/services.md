@@ -29,10 +29,18 @@ browser/channel transport. Debug robot calls go through hub.
 | `GET`, `POST /emails/received`; `GET`, `POST /emails/drafts` | Seeded inbox and deterministic drafts, no production mailbox sync yet |
 | `POST /emails/drafts/{id}/approve`, `/send`, `/cancel-send` | Text approval/send, delayed dispatch, cancellation |
 | `GET /briefing` | Prioritized briefing items for hub's delivery engine |
+| `GET /coding-agents/completions/due` | Phase 29.6: newly-terminal coding-agent sessions, claimed once each so reachy-hub's poll loop never double-notifies; same pure-query shape as `/calendar/reminders/due` |
 | `GET`, `PUT /settings/llm`; `GET /llm/usage` | Internal settings/usage; operator callers use authenticated hub proxies |
 | `GET`, `PUT /settings/persona` | Assistant name/system prompt (`persona_config` table); prepended as a system message on the generic LLM branch only |
 | `GET`, `PUT /settings/websearch` | Web-search grounding policy/provider (`search_config` table); Phase 24a, see below |
 | `/debug/robots/...` | Debug integration plumbing, not a stable agent-tool API |
+
+Phase 29.6: `coding_agent_intent.py` adds two more deterministic branches —
+"is my coding session done"/"what's my claude usage" — answered from a
+live `GET /sessions`/`GET /sessions/{id}/usage` call to coding-agent-service
+(`coding_agent_client.py`), never the LLM; an unreachable service reports
+that plainly rather than guessing. Usage only ever reports dimensions a
+provider actually measured (29.26).
 
 The generic conversation branch uses the configured LLM after deterministic
 intent/consent handlers. It has no model tool executor. The configured
@@ -126,6 +134,7 @@ WebRTC, and static UI. It does not own reasoning policy or motor control.
 | `PATCH /sessions/{user_id}/mode`, `/dnd`, `/privacy-context` | Authenticated updates to existing sessions |
 | `GET /audit/{user_id}`, `/notifications/{user_id}`; `POST /notifications/{user_id}/flush` | Routing decisions, queued notifications, controlled flush |
 | `POST /calendar/check-reminders/{user_id}`, `/briefing/{user_id}` | On-demand proactive routing, not an automatic schedule |
+| *(internal, no route — a background task)* `coding_agent_notify_loop` | Phase 29.6: polls companion-core's `/coding-agents/completions/due` every `coding_agent_notify_interval` seconds (default 60) and pushes a Telegram message via the existing `push_to_telegram` helper for anything due. Unlike the calendar reminder row above, this is a genuine always-on loop, not on-demand — and deliberately skips `interruption_policy`'s occupied/DND/urgency routing, pushing immediately every time; revisit if routine completions start interrupting something they shouldn't |
 | `POST`, `GET /robots` | HTTP robot registry |
 | `GET /robots/{id}/state`, `/behaviours`; `POST /robots/{id}/behaviour/{name}`, `/speak` | Authenticated robot proxies and direct speak-through control |
 | `GET`, `PUT /robots/{robot_id}/settings/motion` | Owner-authenticated proxy for robot-local conversational animation switches; changes only between conversations |
@@ -346,53 +355,59 @@ result line is `LOST`, never `COMPLETED` (29.8). It also opportunistically
 reports `RATE_LIMITED` when the log shows a `429` `api_retry` line, ahead
 of 29.12's full handling. `--dangerously-skip-permissions` is never passed
 — a tool call needing approval simply has nothing to approve it headlessly
-until 29.4 (hooks) exists. Verified against the real image and a real
-local Docker daemon with an intentionally invalid API key
-(`CODING_AGENT_DOCKER_TEST=1`, `tests/test_claude_provider_docker.py`);
-completing a real task against the real Anthropic API needs the owner's
-own credential and has not been exercised by any automated test.
+until 29.4 (hooks) exists. Verified end to end on the live homelab,
+2026-10-01: first against the real image with an intentionally invalid
+key, then — once the owner registered a real Claude Pro/Max subscription
+credential through the operator UI and asked to test it — a real session
+against the real Anthropic API completed successfully. That is the first
+real completion this integration has produced.
 
-**Hard no-invocation guardrail for a `CLAUDE_CODE_OAUTH_TOKEN` (real Claude
-Pro/Max subscription) credential, owner-requested 2026-10-01:** the
-owner's concern is not file access — it's that starting or resuming any
-real `claude` invocation spends real subscription usage the instant the
-model answers, independent of what tools it can touch. This integration
-has never completed a real task against the real API, so
-`start_session`/`resume_session`/`send_input` now refuse outright for a
-subscription credential: `_ensure_can_invoke` raises
-`ProviderInvocationBlockedError` (mapped to HTTP 403) before any Docker
-call, project lookup, or secret decryption happens. Listing and reading
-existing projects, sessions, events and usage is entirely unaffected —
-only starting new model usage is blocked. Lifting this is a deliberate
-future code change, once the integration has actually completed a real
-task successfully with an API key; it is not a runtime flag. A pay-per-use
-API key session is unaffected by this block.
+**Read-only restriction for a `CLAUDE_CODE_OAUTH_TOKEN` (real Claude
+Pro/Max subscription) credential:** a no-invocation block was added
+2026-10-01 (the owner's concern: starting any real `claude` invocation
+spends real subscription usage the instant the model answers, and this
+integration had never completed a real task) and lifted the same day once
+the owner had registered a real credential and asked to test it —
+`_ensure_can_invoke` now only refuses when no credential is configured at
+all, for either kind. What a subscription session keeps instead, live and
+confirmed rather than dormant: `--permission-mode plan`, a
+`--disallowedTools` list naming every tool claude-code 2.1.197 is known to
+advertise except `Read`/`Grep`/`Glob`/`WebSearch`/`WebFetch` (confirmed
+live to be what actually removes tools from a real init event's `tools`
+array — `--allowedTools` alone did **not** restrict anything in the same
+test), and `ContainerSpec.read_only_mount` → a real `:ro` bind mount,
+confirmed by an actual blocked write both via `docker run` and via `docker
+exec` into a live `claude` container. An API-key session is unaffected and
+keeps full default permissions — the split is deliberate: a brand-new,
+just-proven subscription path stays read-only, an already-established
+pay-per-use path doesn't.
 
-`_build` still carries a dormant, previously-tested read-only layer for
-whichever credential is actually allowed to invoke `claude` at a given
-time (today, only an API key — the block above means `_build` is never
-reached for a subscription credential in practice, but the layer is kept
-rather than deleted for when that changes): `--disallowedTools` naming
-every tool claude-code 2.1.197 is known to advertise except
-`Read`/`Grep`/`Glob`/`WebSearch`/`WebFetch` (confirmed live to be what
-actually removes tools from a real init event's `tools` array —
-`--allowedTools` alone did **not** restrict anything in the same test),
-`--permission-mode plan`, and `ContainerSpec.read_only_mount` → a real
-`:ro` bind mount, confirmed by an actual blocked write both via `docker
-run` and via `docker exec` into a live `claude` container.
+Getting the first real session running live also exposed three real
+deployment gaps, now fixed: coding-agent-service's own container had
+neither the `docker` CLI nor access to the host's Docker daemon (now has
+both — the `docker-cli` package, client-only, and a mounted
+`/var/run/docker.sock`; an explicit, owner-approved exception to 29.18's
+"no socket" rule, which is about the containers *this service spawns* for
+a session, not this orchestrator container itself, whose whole job is
+controlling the host's Docker daemon), and `restricted-network` (the
+default `CodingProject.allowed_network_profile`) was never actually
+provisioned as a Docker network (now is, in
+`deploy/homelab/docker-compose.yml`, with its name pinned so Compose's
+`reachy-homelab_` project-prefixing doesn't break the literal `--network`
+flag `DockerCLIContainerRuntime` passes).
 
 No hook-based mid-task `WAITING_FOR_INPUT`/`WAITING_FOR_PERMISSION`
-detection (29.4) and no companion-core HTTP client yet — only reachy-hub's
-owner-facing credential proxy reaches this service so far, not session
-start/resume/stop/etc.
+detection (29.4), and no companion-core/hub path to *start* a session from
+the browser — see companion-core's and reachy-hub's own sections below for
+what they do reach (status/usage questions and completion notifications,
+not session management).
 
 Deployed in `deploy/homelab/docker-compose.yml` (2026-10-01): its own
-container, `CODING_AGENT_SERVICE_TOKEN` shared secret, and
+container, `CODING_AGENT_SERVICE_TOKEN` shared secret,
 `CODING_AGENT_SECRET_KEY_FILE` for credential persistence across a
-restart (see [deployment](../deployment.md#key-provisioning)). Live on the
-owner's homelab; verified `/hub/health`/`/core/health` and that
-`/hub/providers/credentials` reaches it (401, login required — not
-404/502/503). No real session has been started against it yet.
+restart (see [deployment](../deployment.md#key-provisioning)), Docker CLI
+plus host socket access, and a provisioned `restricted-network`. Live and
+exercised on the owner's homelab — not just health-checked.
 
 | Surface | Purpose |
 |---|---|
@@ -413,17 +428,26 @@ header (`shared/protocols/coding_agent.py`'s `SERVICE_HEADER`), checked with
 `secrets.compare_digest` — the same shared-secret pattern as accounts'
 `SERVICE_HEADER`, deliberately a separate token (29.19: agent credentials
 must not fall back to another service's secret). Wire models live in
-`shared/models/coding_agent.py` since, unlike meetings, companion-core will
-need the same shapes for its own HTTP client once 29.6 wires it in.
+`shared/models/coding_agent.py`, used directly by companion-core's own
+client (below) as well as reachy-hub's.
 
-`reachy-hub` already proxies the credential routes under owner cookie+CSRF
-auth (`reachy_hub/coding_agent.py`, `reachy_hub/coding_agent_client.py` —
-same shape as `reachy_hub/accounts.py`), gated on `CODING_AGENT_SERVICE_TOKEN`
+`reachy-hub` proxies the credential routes under owner cookie+CSRF auth
+(`reachy_hub/coding_agent.py`, `reachy_hub/coding_agent_client.py` — same
+shape as `reachy_hub/accounts.py`), gated on `CODING_AGENT_SERVICE_TOKEN`
 being configured; the operator UI's Settings · Accounts tab has a "Coding
 agent credentials" card (`clients/operator-ui/coding_agents.js`) to
-set/replace/remove the Claude Code or Codex credential. This is the only
-part of Phase 29 wired end to end to the browser so far — session
-management itself still has no hub/companion-core path (29.6/29.7).
+set/replace/remove the Claude Code or Codex credential. **companion-core**
+also calls this service directly (`companion_core/coding_agent_client.py`
+— the same direct-sibling-HTTP-call pattern as `hub_client.py` and the
+meeting speech sidecars, per ADR 0001): a deterministic (non-LLM) intent
+(`companion_core/coding_agent_intent.py`) answers an owner's "is my coding
+session done"/"what's my claude usage" question from any channel, and
+`GET /coding-agents/completions/due` (companion-core's own route, a pure
+claim-once query like `/calendar/reminders/due`) is what lets reachy-hub
+push a Telegram message when a session finishes — see reachy-hub's section
+below for that loop. Session *management* — registering a project,
+starting/resuming/stopping a session — still has no hub/companion-core
+path; only status/usage reads and completion notifications do.
 
 ## Meeting transcription (Phase 27.2)
 

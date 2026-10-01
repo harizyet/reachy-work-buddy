@@ -2,20 +2,31 @@
 
 Status: 29.1 (contracts/session store), 29.2 (container runner) and 29.3
 (Claude Code provider) implemented 2026-10-01, plus 29.19's credential
-storage/owner-UI pulled forward early. A project configured with
-`provider: "claude-code"` can start a real session in a real container
-with an API key credential; a Claude Pro/Max subscription credential
-cannot invoke anything yet (deliberate, see 29.19 below). Completion
-detection, usage and stop/resume are implemented, but there is still no
-hook-based mid-task input/permission detection (29.4), and no
-companion-core/hub *session* wiring (29.6/29.7 — only credentials reach
-the browser so far).
+storage/owner-UI pulled forward early, and a first slice of 29.6/29.13
+(deterministic status/usage intent in companion-core, a due-completions
+endpoint, and a real reachy-hub background loop pushing Telegram
+notifications). A project configured with `provider: "claude-code"` can
+start a real session in a real container with either an API-key or a
+Claude Pro/Max subscription credential — the subscription path stays
+read-only (a deliberate, dated choice, see 29.19 below), the API-key path
+gets full permissions. Completion detection, usage and stop/resume are
+implemented, but there is still no hook-based mid-task input/permission
+detection (29.4), and no companion-core/hub path to *register a project or
+start a session* from the browser — only status/usage questions and
+completion notifications are wired to the owner-facing side so far; a
+curl-level recipe is still what starts anything.
 
-Deployed to the owner's homelab (`deploy/homelab/docker-compose.yml`,
-2026-10-01): its own container, service token and credential-encryption
-key, live and health-checked. Owner user testing (entering a real
-credential and starting a real session) has not happened yet. See
-[service reference](reference/services.md#coding-agent-service-phase-29-planned)
+**Deployed and exercised live on the owner's homelab, 2026-10-01**: own
+container, service token, credential-encryption key, Docker CLI + host
+socket access (an explicit, owner-approved exception to 29.18's "no
+socket" rule for the containers *this service spawns* — see
+`deploy/homelab/docker-compose.yml`'s comment), and a provisioned
+`restricted-network` Docker network. A real session, using the owner's own
+registered Claude Pro/Max subscription credential, completed successfully
+against the real Anthropic API — the first real completion this
+integration has produced. The owner's Telegram bot was also confirmed, via
+the completions-due endpoint, to be able to report that completion back.
+See [service reference](reference/services.md#coding-agent-service-phase-29-planned)
 for exactly what exists.
 
 Phase 29 adds supervised development-agent sessions to Reachy Work Buddy.
@@ -541,10 +552,10 @@ speculative endpoints or later-phase functionality (AGENTS.md).
 |---|---|---|
 | 29.1 — Contracts and session store (**implemented** 2026-10-01) | `CodingProject`, `CodingAgentSession`, `CodingAgentEvent`, `ProviderCapabilities`, `UsageSnapshot` | A simulated provider can create and transition a durable coding session — met: `services/coding-agent-service`'s `CodingAgentSupervisor` + in-memory store + `SimulatedProvider`, exercised in `tests/test_service.py` and `tests/test_app.py`. Store is in-memory only; restart durability is still 29.27's job |
 | 29.2 — Container runner (**implemented** 2026-10-01) | Container image, project mounts, resource limits, session labels, start/stop/reconcile | A dummy command can run inside a project-specific container and survive supervisor restart reconciliation — met: `DockerCLIContainerRuntime` (no image build yet, runs a plain image like `busybox`) starts a labeled, resource-limited, non-root, no-socket container and a *second, freshly constructed* runtime instance rediscovers and inspects it purely from Docker's own labeled state; verified against a real local Docker daemon (`CODING_AGENT_DOCKER_TEST=1`), not just `SimulatedContainerRuntime`. `reconcile_sessions` marks a session LOST (never COMPLETED) when its container is no longer running. Not yet wired into `CodingAgentSupervisor.start_session` — that integration is 29.3's job, once there is a real provider that needs a container at all |
-| 29.3 — Claude Code provider (**implemented** 2026-10-01) | Containerize Claude Code; start, resume, session ID capture, structured output/event capture | Reachy launches a real Claude Code task against a test repository and tracks the provider session ID — met: `ClaudeCodeProvider` + `docker/claude-code/Dockerfile` (real image, `claude-code` 2.1.197 confirmed), `--session-id` assigns the provider session id immediately at start (no log-parsing needed for that part), and `inspect_session` parses real `stream-json` output for completion/failure/usage. Verified against the real image and a real local Docker daemon with an intentionally invalid key (`CODING_AGENT_DOCKER_TEST=1`) — completing a real task with real API access still needs the owner's own credential, not exercised by any automated test. A `CLAUDE_CODE_OAUTH_TOKEN` (real subscription) session cannot start or resume at all right now (owner request, 2026-10-01, revised same day): `start_session`/`resume_session`/`send_input` refuse before touching Docker, since the concern is spending real subscription usage, not file access — reading existing projects/sessions/events/usage is unaffected. A dormant read-only layer (Docker-enforced `:ro` mount, confirmed by an actual blocked write; `--disallowedTools`, confirmed live to be what actually restricts the toolset, unlike `--allowedTools` alone; `--permission-mode plan`) still exists in `_build` for whenever the invocation block is deliberately lifted. No hook-based mid-task `WAITING_FOR_INPUT`/`WAITING_FOR_PERMISSION` detection yet (29.4) |
+| 29.3 — Claude Code provider (**implemented** 2026-10-01) | Containerize Claude Code; start, resume, session ID capture, structured output/event capture | Reachy launches a real Claude Code task against a test repository and tracks the provider session ID — met: `ClaudeCodeProvider` + `docker/claude-code/Dockerfile` (real image, `claude-code` 2.1.197 confirmed), `--session-id` assigns the provider session id immediately at start (no log-parsing needed for that part), and `inspect_session` parses real `stream-json` output for completion/failure/usage. Verified against the real image and a real local Docker daemon, first with an intentionally invalid key, then — once the owner registered a real Claude Pro/Max subscription credential and asked to test it (2026-10-01) — against the real Anthropic API: a real session completed successfully, the first this integration has produced. The subscription credential's no-invocation block (added and lifted the same day) left behind the protection that now actually matters for it: `--permission-mode plan`, a `--disallowedTools` list confirmed live to be what actually restricts the toolset (unlike `--allowedTools` alone), and a Docker-enforced `:ro` mount, confirmed by an actual blocked write — a subscription session runs for real but stays read-only; an API-key session keeps full permissions. Getting this far live also exposed and fixed three real deployment gaps: coding-agent-service's own container had no `docker` CLI and no access to the host's Docker daemon (now has both — `docker-cli` package plus a mounted `/var/run/docker.sock`, an explicit exception to 29.18 for this orchestrator container specifically), and `restricted-network` (the default `CodingProject.allowed_network_profile`) was never actually provisioned as a Docker network (now is, with its name pinned so Compose's project-prefixing doesn't break the literal `--network` flag). No hook-based mid-task `WAITING_FOR_INPUT`/`WAITING_FOR_PERMISSION` detection yet (29.4) |
 | 29.4 — Claude hooks | Wire `SessionStart`, `Stop`, `StopFailure`, `PermissionRequest`/`Notification`, `SessionEnd` into the event bridge | The supervisor correctly distinguishes running, returned-control, permission-needed and failed/rate-limited states |
 | 29.5 — Usage telemetry | Capability-detected Claude usage collection | Available context/cost/rate-limit telemetry is captured without scraping terminal text, and unavailable dimensions remain explicitly unknown |
-| 29.6 — Notifications | Connect normalized coding events to Reachy's existing interruption/notification pipeline | Owner receives private notifications for input-needed, rate-limit and completion conditions |
+| 29.6 — Notifications (**partial**, 2026-10-01) | Connect normalized coding events to Reachy's existing interruption/notification pipeline | Owner receives private notifications for input-needed, rate-limit and completion conditions — met for completion only: companion-core's `GET /coding-agents/completions/due` (a pure, claim-once query, same shape as `/calendar/reminders/due`) plus a real reachy-hub background loop (`coding_agent_notify_loop`, 60s interval) push a Telegram message when a session reaches a terminal status. Deliberately skips the full interruption-policy occupied/urgency/DND routing calendar reminders use — it always pushes immediately. Input-needed and rate-limit conditions aren't surfaced yet (depends on 29.4's hooks for the former). Also ahead of schedule: a deterministic (non-LLM) intent in companion-core answers "is my coding session done"/"what's my claude usage" in any channel, including Telegram |
 | 29.7 — Owner input relay | Add web/Telegram input to resume the exact Claude session | Owner can receive a blocking question remotely and answer it without opening the original terminal |
 | 29.8 — Operator UI | Add coding-session dashboard | Owner can inspect projects, running sessions, state, usage and recent events |
 | 29.9 — Git observations | Deterministic Git before/after state and changed-file reporting | Reachy can summarize repository state without trusting the coding agent's own report |

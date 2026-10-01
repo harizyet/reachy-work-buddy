@@ -6,6 +6,95 @@ The [documentation index](docs/README.md) defines ownership;
 
 ## Current work
 
+**First real Claude Code completion, live, with the owner's real
+subscription (2026-10-01).** The owner registered a real Claude Pro/Max
+subscription (`CLAUDE_CODE_OAUTH_TOKEN`) credential through the operator
+UI and asked to actually test it. That required deliberately lifting the
+no-invocation block added earlier the same session (see further down) —
+`_ensure_can_invoke` now only refuses when no credential is configured at
+all; a subscription session starts for real but stays read-only
+(`--permission-mode plan`, a comprehensive `--disallowedTools` list, and a
+real Docker `:ro` mount — previously dormant protection, now the live
+protection); an API-key session is unaffected and keeps full permissions.
+
+Turning the owner's "let's test it" into an actual successful run surfaced
+three real infrastructure gaps, all found and fixed live, none related to
+the guardrail itself:
+
+1. **coding-agent-service's own container had no `docker` CLI at all** —
+   every real container launch failed with `FileNotFoundError`. Fixed by
+   installing the `docker-cli` package (client-only, no `dockerd`) in
+   `services/coding-agent-service/Dockerfile`.
+2. **No access to the host's Docker daemon even with the CLI installed** —
+   fixed by mounting `/var/run/docker.sock` into the container. **This is
+   a real, owner-approved security decision, not a casual default**: a
+   container with that socket has host-root-equivalent reach. It's scoped
+   to this one orchestrator container, not the session containers it
+   spawns — 29.18's "no socket" rule is about those, not this service
+   itself, whose entire job is controlling the host's Docker daemon.
+3. **`restricted-network` (the default `CodingProject.allowed_network_profile`)
+   was never actually provisioned** — `docker run --network
+   restricted-network` failed with "network not found" even after the
+   socket fix. Fixed by declaring it in
+   `deploy/homelab/docker-compose.yml`'s top-level `networks:` with an
+   explicit `name:` (Compose would otherwise silently prefix it to
+   `reachy-homelab_restricted-network`, which the runtime's literal
+   `--network` flag would never match).
+
+With all three fixed, a real session — real `claude` CLI, real Anthropic
+API, the owner's real subscription — **completed successfully**: "Hi!
+There's nothing to plan here — just let me know what you'd like help
+with." This is the first real completion this integration has ever
+produced. Confirmed via `/sessions/{id}/usage` too (1581 input / 35 output
+tokens, ~$0.08 equivalent — informational for a subscription, not a
+charge). Test files updated to match (a subscription session now starts
+200/read-only instead of being refused 403); two real-Docker tests re-run
+against the actual fixed container. Redeployed live; `ruff` and the full
+`services shared` suite (1013 passed) both still green afterward.
+
+**Known follow-up, not yet done:** `DockerCLIContainerRuntime.start()`
+doesn't clean up a container Docker creates-but-fails-to-fully-start
+(e.g. the network-not-found failures above left a few `Created`-state
+containers behind — manually `docker rm`'d this session, but nothing
+automatic does this yet).
+
+---
+
+**Telegram status/usage questions and completion notifications
+(2026-10-01, owner request: "the flow that needs to be working is that i
+can use the telegram bot to ask or be informed if a session is complete or
+to check the current usage").** Built before the OAuth-credential work
+above, same session:
+
+- `companion_core/coding_agent_intent.py` (deterministic, no LLM) answers
+  "is my coding session done"/"what's my claude usage" in any channel,
+  via a new `companion_core/coding_agent_client.py` (direct sibling HTTP
+  call to coding-agent-service, same pattern as `hub_client.py`).
+- `GET /coding-agents/completions/due` on companion-core — a pure,
+  claim-once query (same shape as `/calendar/reminders/due`;
+  `companion_core/coding_agent_notifications.py`'s in-memory store does
+  the claiming, so a restart can re-notify a session that finished just
+  before it — same documented gap as 29.1's own in-memory store).
+- A genuine new background loop in reachy-hub, `coding_agent_notify_loop`
+  (60s interval), polls that and pushes a Telegram message via the
+  existing `push_to_telegram` for anything due. Deliberately skips the
+  full `interruption_policy` DND/occupied/urgency routing calendar
+  reminders use — always pushes immediately, since "tell me when it's
+  done" was the actual ask.
+- Verified with a real asyncio task on a short interval against a fake
+  Telegram API (not just the pieces in isolation) — see
+  `services/reachy-hub/tests/test_coding_agent_notify.py`. Also verified
+  live: created a real test session, confirmed reachy-hub's actual running
+  loop claimed it via `/coding-agents/completions/due` (empty on
+  re-query) without me triggering it manually.
+
+See [docs/phase-29.md](docs/phase-29.md) (29.6/29.13 row) and
+[service reference](docs/reference/services.md) for where this sits
+relative to the rest of the phase. Still missing: input-needed/rate-limit
+notifications (needs 29.4's hooks), and no DND-aware routing.
+
+---
+
 **coding-agent-service is now deployed and running live on this homelab**
 (2026-10-01, by owner request "let's run the latest so we can start user
 testing"): added to `deploy/homelab/docker-compose.yml` with its own
