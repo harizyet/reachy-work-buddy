@@ -74,7 +74,9 @@ class CodingAgentSupervisor:
     transition a durable coding session" — this class is what does both,
     against whichever store/provider registry it is constructed with."""
 
-    def __init__(self, store: CodingAgentStore, providers: dict[str, CodingAgentProvider]) -> None:
+    def __init__(
+        self, store: CodingAgentStore, providers: dict[str, CodingAgentProvider]
+    ) -> None:
         self._store = store
         self._providers = providers
 
@@ -118,7 +120,11 @@ class CodingAgentSupervisor:
             owner_user_id=owner_user_id,
         )
         await self._store.add_session(session)
-        await self._record_event(session, CodingAgentEventType.AGENT_STARTED, f"Starting task: {task_summary}")
+        await self._record_event(
+            session,
+            CodingAgentEventType.AGENT_STARTED,
+            f"Starting task: {task_summary}",
+        )
         try:
             event = await provider.start_session(session)
         except Exception as exc:
@@ -126,7 +132,11 @@ class CodingAgentSupervisor:
             # that never began; restart recovery would later misreport it
             # as a lost running session.
             await self.apply_provider_event(
-                session, ProviderEvent(status=CodingAgentStatus.FAILED, summary=f"Start failed: {exc}"[:2000])
+                session,
+                ProviderEvent(
+                    status=CodingAgentStatus.FAILED,
+                    summary=f"Start failed: {exc}"[:2000],
+                ),
             )
             raise
         return await self.apply_provider_event(session, event)
@@ -144,7 +154,9 @@ class CodingAgentSupervisor:
         await self.get_session(session_id)
         return await self._store.list_events(session_id)
 
-    async def resume_session(self, session_id: str, instruction: str) -> CodingAgentSession:
+    async def resume_session(
+        self, session_id: str, instruction: str
+    ) -> CodingAgentSession:
         """29.9/29.16: the owner's input relay path. Refuses a session that
         isn't actually waiting for anything — resuming a RUNNING or
         terminal session would silently fabricate owner intent the agent
@@ -156,7 +168,9 @@ class CodingAgentSupervisor:
             CodingAgentStatus.STARTING,
             CodingAgentStatus.RUNNING,
         ):
-            raise SessionNotResumableError(f"Session {session_id} is not waiting for input (status={session.status})")
+            raise SessionNotResumableError(
+                f"Session {session_id} is not waiting for input (status={session.status})"
+            )
         provider = self._provider_for(session.provider)
         event = await provider.resume_session(session, instruction)
         return await self.apply_provider_event(session, event)
@@ -180,7 +194,9 @@ class CodingAgentSupervisor:
         event = await provider.inspect_session(session)
         return await self.apply_provider_event(session, event)
 
-    async def recover_session(self, session: CodingAgentSession, adopted_container_id: str | None = None) -> bool:
+    async def recover_session(
+        self, session: CodingAgentSession, adopted_container_id: str | None = None
+    ) -> bool:
         """29.27: re-derive one non-terminal session's state from its
         provider after a restart. `adopted_container_id` is a container
         rediscovered by label for a session whose record never got to store
@@ -219,14 +235,23 @@ class CodingAgentSupervisor:
             try:
                 live = await live_reader()
             except ProviderError as exc:
-                logger.warning("Live allowance unavailable for %s: %s", provider_name, exc)
+                logger.warning(
+                    "Live allowance unavailable for %s: %s", provider_name, exc
+                )
             else:
-                if live is not None:
-                    return ProviderAllowance(provider=provider_name, windows=live, source="live")
+                if live:
+                    return ProviderAllowance(
+                        provider=provider_name, windows=live, source="live"
+                    )
         windows = {}
-        for snapshot in await self._store.recent_usage_snapshots(provider_name, _ALLOWANCE_SCAN_LIMIT):
+        for snapshot in await self._store.recent_usage_snapshots(
+            provider_name, _ALLOWANCE_SCAN_LIMIT
+        ):
             for dimension in snapshot.dimensions:
-                if dimension.name not in ALLOWANCE_WINDOW_NAMES or dimension.name in windows:
+                if (
+                    dimension.name not in ALLOWANCE_WINDOW_NAMES
+                    or dimension.name in windows
+                ):
                     continue
                 if dimension.resets_at is not None and dimension.resets_at > now:
                     windows[dimension.name] = dimension
@@ -244,7 +269,9 @@ class CodingAgentSupervisor:
             await self._store.add_usage_snapshot(snapshot)
         return snapshot
 
-    async def apply_provider_event(self, session: CodingAgentSession, event: ProviderEvent) -> CodingAgentSession:
+    async def apply_provider_event(
+        self, session: CodingAgentSession, event: ProviderEvent
+    ) -> CodingAgentSession:
         session.status = event.status
         session.last_activity_at = datetime.now(UTC)
         session.last_event = event.summary
@@ -265,7 +292,9 @@ class CodingAgentSupervisor:
         await self._store.update_session(session)
         if event.status in TERMINAL_STATUSES:
             await self._capture_final_usage(session)
-        event_type = _EVENT_TYPE_BY_STATUS.get(event.status, CodingAgentEventType.AGENT_STILL_RUNNING)
+        event_type = _EVENT_TYPE_BY_STATUS.get(
+            event.status, CodingAgentEventType.AGENT_STILL_RUNNING
+        )
         await self._record_event(session, event_type, event.summary, event.metadata)
         return session
 
@@ -276,7 +305,11 @@ class CodingAgentSupervisor:
             provider = self._provider_for(session.provider)
             await self._remember_usage(await provider.collect_usage(session))
         except Exception:
-            logger.warning("Could not capture final usage for session %s", session.id, exc_info=True)
+            logger.warning(
+                "Could not capture final usage for session %s",
+                session.id,
+                exc_info=True,
+            )
 
     async def _record_event(
         self,

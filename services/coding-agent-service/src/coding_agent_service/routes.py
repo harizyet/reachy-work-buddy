@@ -5,6 +5,7 @@ plus one handler per route, no business logic here.
 
 from __future__ import annotations
 
+import asyncio
 import secrets
 
 from fastapi import Depends, HTTPException, Request
@@ -18,6 +19,7 @@ from coding_agent_service.service import (
     UnknownProviderError,
     UnknownSessionError,
 )
+from coding_agent_service.terminal_sessions import list_terminal_sessions
 from shared.models.coding_agent import (
     CodingProject,
     CreateProjectRequest,
@@ -159,6 +161,12 @@ def install_coding_agent_routes(app, service_token: str | None) -> None:
             return await supervisor().provider_allowance(provider)
         except UnknownProviderError:
             raise HTTPException(404, "Unknown provider") from None
+
+    @app.get(paths.TERMINAL_SESSIONS, dependencies=dependencies)
+    async def terminal_sessions():
+        return await asyncio.to_thread(
+            list_terminal_sessions, app.state.terminal_sessions_dir
+        )
 
     @app.get(paths.PROVIDER_CREDENTIALS, dependencies=dependencies)
     async def list_credentials():

@@ -396,8 +396,14 @@ services:
       # companion_core.secrets.Keyring).
       CODING_AGENT_SECRET_KEY_FILE: /run/secrets/coding_agent_credential_key
       CODING_AGENT_CREDENTIALS_PATH: /data/coding-agent-credentials.json
+      TERMINAL_SESSIONS_DIR: /terminal-sessions
     volumes:
       - coding-agent-credentials:/data
+      # Read-only view of Claude Code's session history so the dashboard can
+      # list terminal sessions Reachy did not start. Set CLAUDE_PROJECTS_DIR
+      # (e.g. /home/<you>/.claude/projects) in .env; unset, it mounts an empty
+      # directory and the list is simply empty.
+      - ${CLAUDE_PROJECTS_DIR:-/var/empty}:/terminal-sessions:ro
       # Owner-approved exception (2026-10-01): this is the orchestrator
       # container, not a sandboxed session one — runtime.py's
       # DockerCLIContainerRuntime needs this to actually start/stop/inspect

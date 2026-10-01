@@ -474,6 +474,14 @@ provider, status (e.g. RUNNING, WAITING FOR INPUT, COMPLETED), last
 activity, usage, and actions such as View / Send instruction / Stop /
 View summary / Respond.
 
+Implemented (2026-10-01) as a top-level **Coding agents** tab after Meetings
+(`clients/operator-ui/coding_monitor.js`), backed by owner-gated hub proxy
+routes under `/coding-agents/` (projects, sessions, stop, refresh, events,
+usage, allowance). It shows the live allowance, lists/adds projects, starts
+sessions (with a confirmation, because that spends Claude usage) and lists
+sessions with Refresh/Stop/Events/Usage, polling every 15 s while visible.
+Send instruction / Respond are not in the tab yet. A read-only "Terminal sessions" list (`GET /coding-agents/terminal-sessions`) shows Claude Code sessions run outside Reachy, read from a read-only mount of the host `~/.claude/projects` (`CLAUDE_PROJECTS_DIR`).
+
 ## 29.23 — Telegram / Reachy UX
 
 Examples:

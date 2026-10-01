@@ -77,11 +77,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import urllib.error
 import urllib.request
 import uuid
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from coding_agent_service.credentials import CredentialStore
 from coding_agent_service.providers import ProviderError, ProviderEvent
@@ -100,6 +101,8 @@ from shared.models.coding_agent import (
     UsageSnapshot,
 )
 
+logger = logging.getLogger(__name__)
+
 DEFAULT_IMAGE = "reachy-coding-agent-claude:latest"
 
 # Hard read-only guardrail (see module docstring point 2 for how this was
@@ -113,10 +116,31 @@ DEFAULT_IMAGE = "reachy-coding-agent-claude:latest"
 # tool name Anthropic ships later could fall outside of.
 _READ_ONLY_ALLOWED_TOOLS = ["Read", "Grep", "Glob", "WebSearch", "WebFetch"]
 _READ_ONLY_DISALLOWED_TOOLS = [
-    "Task", "Bash", "CronCreate", "CronDelete", "CronList", "DesignSync", "Edit",
-    "EnterWorktree", "ExitWorktree", "Monitor", "NotebookEdit", "PushNotification",
-    "ReportFindings", "ScheduleWakeup", "SendMessage", "Skill", "TaskCreate", "TaskGet",
-    "TaskList", "TaskOutput", "TaskStop", "TaskUpdate", "ToolSearch", "Workflow", "Write",
+    "Task",
+    "Bash",
+    "CronCreate",
+    "CronDelete",
+    "CronList",
+    "DesignSync",
+    "Edit",
+    "EnterWorktree",
+    "ExitWorktree",
+    "Monitor",
+    "NotebookEdit",
+    "PushNotification",
+    "ReportFindings",
+    "ScheduleWakeup",
+    "SendMessage",
+    "Skill",
+    "TaskCreate",
+    "TaskGet",
+    "TaskList",
+    "TaskOutput",
+    "TaskStop",
+    "TaskUpdate",
+    "ToolSearch",
+    "Workflow",
+    "Write",
 ]
 
 
@@ -191,14 +215,24 @@ def _allowance_dimensions(events: list[dict]) -> list[UsageDimension]:
             reset = datetime.fromtimestamp(resets_at, UTC)
         except (OverflowError, OSError, ValueError):
             continue
-        latest[name] = UsageDimension(name=name, value=round(utilization * 100, 1), unit="%", resets_at=reset)
+        latest[name] = UsageDimension(
+            name=name, value=round(utilization * 100, 1), unit="%", resets_at=reset
+        )
     return list(latest.values())
 
 
-# The same endpoint Claude Code's own /usage screen reads. Undocumented, so
+# The same endpoints Claude Code's own /usage screen and token refresh use
+# (URLs and client id read from the pinned CLI binary). Undocumented, so
 # every failure is surfaced as ProviderError and callers fall back to the
 # last CLI-reported figures rather than guessing.
 _OAUTH_USAGE_URL = "https://api.anthropic.com/api/oauth/usage"
+_OAUTH_TOKEN_URL = "https://platform.claude.com/v1/oauth/token"
+_OAUTH_CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
+# The owner-pasted full-login credential, kept apart from the session
+# credential: a `claude setup-token` token is inference-only and the usage
+# endpoint refuses it (HTTP 403).
+ACCOUNT_CREDENTIAL = "claude-code-account"
+_REFRESH_MARGIN = timedelta(minutes=5)
 _LIVE_WINDOW_KEYS = {
     "five_hour": "five_hour_window",
     "seven_day": "weekly_window",
@@ -207,26 +241,79 @@ _LIVE_WINDOW_KEYS = {
 }
 
 
-def _fetch_oauth_usage(token: str) -> dict:
-    request = urllib.request.Request(
-        _OAUTH_USAGE_URL,
-        headers={
-            "Authorization": f"Bearer {token}",
-            "anthropic-beta": "oauth-2025-04-20",
-            "User-Agent": "reachy-coding-agent",
-        },
-    )
+def _http_json(request: urllib.request.Request, what: str) -> dict:
     try:
-        with urllib.request.urlopen(request, timeout=10) as response:
+        with urllib.request.urlopen(request, timeout=15) as response:
             body = json.loads(response.read())
     except urllib.error.HTTPError as exc:
-        # Never include the response body or request: keep the token out of logs.
-        raise ProviderError(f"Claude usage endpoint refused the request (HTTP {exc.code})") from None
+        # Never include the response body or request: keep tokens out of logs.
+        raise ProviderError(
+            f"Claude {what} refused the request (HTTP {exc.code})"
+        ) from None
     except (urllib.error.URLError, TimeoutError, OSError, ValueError):
-        raise ProviderError("Claude usage endpoint could not be reached or returned unreadable data") from None
+        raise ProviderError(
+            f"Claude {what} could not be reached or returned unreadable data"
+        ) from None
     if not isinstance(body, dict):
-        raise ProviderError("Claude usage endpoint returned an unexpected shape")
+        raise ProviderError(f"Claude {what} returned an unexpected shape")
     return body
+
+
+def _fetch_oauth_usage(token: str) -> dict:
+    return _http_json(
+        urllib.request.Request(
+            _OAUTH_USAGE_URL,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "anthropic-beta": "oauth-2025-04-20",
+                "User-Agent": "reachy-coding-agent",
+            },
+        ),
+        "usage endpoint",
+    )
+
+
+def _refresh_oauth_token(refresh_token: str) -> dict:
+    return _http_json(
+        urllib.request.Request(
+            _OAUTH_TOKEN_URL,
+            data=json.dumps(
+                {
+                    "grant_type": "refresh_token",
+                    "refresh_token": refresh_token,
+                    "client_id": _OAUTH_CLIENT_ID,
+                }
+            ).encode(),
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": "reachy-coding-agent",
+            },
+            method="POST",
+        ),
+        "token refresh",
+    )
+
+
+def _parse_account_credential(raw: str) -> dict:
+    """Accepts the whole ~/.claude/.credentials.json or just its
+    `claudeAiOauth` object."""
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        raise ProviderError(
+            "The stored Claude account credential is not valid JSON"
+        ) from None
+    if isinstance(data, dict) and isinstance(data.get("claudeAiOauth"), dict):
+        data = data["claudeAiOauth"]
+    if (
+        not isinstance(data, dict)
+        or not isinstance(data.get("accessToken"), str)
+        or not isinstance(data.get("refreshToken"), str)
+    ):
+        raise ProviderError(
+            "The stored Claude account credential has no accessToken/refreshToken"
+        )
+    return data
 
 
 def _live_allowance_dimensions(body: dict) -> list[UsageDimension]:
@@ -238,7 +325,11 @@ def _live_allowance_dimensions(body: dict) -> list[UsageDimension]:
             continue
         utilization = window.get("utilization")
         resets_at = window.get("resets_at")
-        if isinstance(utilization, bool) or not isinstance(utilization, (int, float)) or not isinstance(resets_at, str):
+        if (
+            isinstance(utilization, bool)
+            or not isinstance(utilization, (int, float))
+            or not isinstance(resets_at, str)
+        ):
             continue
         try:
             reset = datetime.fromisoformat(resets_at)
@@ -246,20 +337,31 @@ def _live_allowance_dimensions(body: dict) -> list[UsageDimension]:
             continue
         if reset.tzinfo is None:
             reset = reset.replace(tzinfo=UTC)
-        dimensions.append(UsageDimension(name=name, value=round(float(utilization), 1), unit="%", resets_at=reset))
+        dimensions.append(
+            UsageDimension(
+                name=name, value=round(float(utilization), 1), unit="%", resets_at=reset
+            )
+        )
     return dimensions
 
 
 def _usage_dimensions(result: dict) -> list[UsageDimension]:
     dimensions = []
     usage = result.get("usage") or {}
-    for key, name in (("input_tokens", "input_tokens"), ("output_tokens", "output_tokens")):
+    for key, name in (
+        ("input_tokens", "input_tokens"),
+        ("output_tokens", "output_tokens"),
+    ):
         value = usage.get(key)
         if isinstance(value, (int, float)):
-            dimensions.append(UsageDimension(name=name, value=float(value), unit="tokens"))
+            dimensions.append(
+                UsageDimension(name=name, value=float(value), unit="tokens")
+            )
     cost = result.get("total_cost_usd")
     if isinstance(cost, (int, float)):
-        dimensions.append(UsageDimension(name="session_cost", value=float(cost), unit="usd"))
+        dimensions.append(
+            UsageDimension(name="session_cost", value=float(cost), unit="usd")
+        )
     return dimensions
 
 
@@ -278,7 +380,10 @@ class ClaudeCodeProvider:
         *,
         image: str = DEFAULT_IMAGE,
         usage_fetch: Callable[[str], dict] = _fetch_oauth_usage,
+        token_refresh: Callable[[str], dict] = _refresh_oauth_token,
     ) -> None:
+        self._token_refresh = token_refresh
+        self._account_lock = asyncio.Lock()
         self._usage_fetch = usage_fetch
         self._runtime = runtime
         self._credentials = credentials
@@ -324,18 +429,73 @@ class ClaudeCodeProvider:
             )
         return record.kind, secret
 
+    async def _account_access_token(self, *, force_refresh: bool = False) -> str | None:
+        """The owner-pasted full-login token, refreshed when near expiry.
+        The refresh token rotates, so the new pair is persisted before the
+        new access token is used, under a lock so two readers never spend
+        the same refresh token."""
+        async with self._account_lock:
+            raw = await self._credentials.get_secret(ACCOUNT_CREDENTIAL)
+            if not raw:
+                return None
+            data = _parse_account_credential(raw)
+            expires_ms = data.get("expiresAt")
+            expired = (
+                not isinstance(expires_ms, (int, float))
+                or datetime.fromtimestamp(expires_ms / 1000, UTC) - datetime.now(UTC)
+                < _REFRESH_MARGIN
+            )
+            if not (expired or force_refresh):
+                return data["accessToken"]
+            body = await asyncio.to_thread(self._token_refresh, data["refreshToken"])
+            access, refresh, lifetime = (
+                body.get("access_token"),
+                body.get("refresh_token"),
+                body.get("expires_in"),
+            )
+            if (
+                not isinstance(access, str)
+                or not isinstance(refresh, str)
+                or not isinstance(lifetime, (int, float))
+            ):
+                raise ProviderError("Claude token refresh returned an unexpected shape")
+            data = {
+                **data,
+                "accessToken": access,
+                "refreshToken": refresh,
+                "expiresAt": int(
+                    (datetime.now(UTC) + timedelta(seconds=lifetime)).timestamp() * 1000
+                ),
+            }
+            await self._credentials.set_credential(
+                ACCOUNT_CREDENTIAL,
+                CredentialKind.OAUTH_TOKEN,
+                json.dumps({"claudeAiOauth": data}),
+            )
+            return access
+
     async def live_allowance(self) -> list[UsageDimension] | None:
-        """29.26: current account windows straight from Anthropic. Only a
-        subscription token has an allowance; an API-key credential returns
-        None. Raises ProviderError when the reading cannot be obtained."""
-        record = await self._credentials.describe("claude-code")
-        if record is None or record.kind != CredentialKind.OAUTH_TOKEN:
+        """29.26: current account windows straight from Anthropic, using the
+        owner's full-login credential (the session credential cannot read
+        usage). None when no account credential is configured; raises
+        ProviderError when the reading cannot be obtained."""
+        token = await self._account_access_token()
+        if token is None:
             return None
-        secret = await self._credentials.get_secret("claude-code")
-        if not secret:
-            return None
-        body = await asyncio.to_thread(self._usage_fetch, secret)
-        return _live_allowance_dimensions(body)
+        try:
+            body = await asyncio.to_thread(self._usage_fetch, token)
+        except ProviderError as exc:
+            if "HTTP 401" not in str(exc):
+                raise
+            token = await self._account_access_token(force_refresh=True)
+            body = await asyncio.to_thread(self._usage_fetch, token)
+        dimensions = _live_allowance_dimensions(body)
+        if not dimensions:
+            logger.warning(
+                "Claude usage response had no recognised windows; keys: %s",
+                sorted(body)[:20],
+            )
+        return dimensions
 
     async def _ensure_can_invoke(self) -> None:
         """29.3: refuses only when no credential is configured at all.
@@ -354,16 +514,28 @@ class ClaudeCodeProvider:
                 "Settings · Accounts · Coding agent credentials card first"
             )
 
-    async def _build(self, session: CodingAgentSession, *, prompt: str, resume: bool) -> tuple[ContainerSpec, str]:
+    async def _build(
+        self, session: CodingAgentSession, *, prompt: str, resume: bool
+    ) -> tuple[ContainerSpec, str]:
         project = await self._projects.get_project(session.project_id)
         if project is None:
             raise ProviderError(f"Unknown project {session.project_id}")
         kind, secret = await self._credential()
-        env_var = "ANTHROPIC_API_KEY" if kind == CredentialKind.API_KEY else "CLAUDE_CODE_OAUTH_TOKEN"
+        env_var = (
+            "ANTHROPIC_API_KEY"
+            if kind == CredentialKind.API_KEY
+            else "CLAUDE_CODE_OAUTH_TOKEN"
+        )
 
-        provider_session_id = session.provider_session_id if resume else str(uuid.uuid4())
+        provider_session_id = (
+            session.provider_session_id if resume else str(uuid.uuid4())
+        )
         command = ["-p", prompt, "--output-format", "stream-json", "--verbose"]
-        command += ["--resume", provider_session_id] if resume else ["--session-id", provider_session_id]
+        command += (
+            ["--resume", provider_session_id]
+            if resume
+            else ["--session-id", provider_session_id]
+        )
 
         read_only = kind == CredentialKind.OAUTH_TOKEN
         if read_only:
@@ -371,9 +543,12 @@ class ClaudeCodeProvider:
             # layers: plan mode, an explicit tool allow/deny pair, and
             # (below) a Docker-enforced read-only mount.
             command += [
-                "--permission-mode", "plan",
-                "--allowedTools", *_READ_ONLY_ALLOWED_TOOLS,
-                "--disallowedTools", *_READ_ONLY_DISALLOWED_TOOLS,
+                "--permission-mode",
+                "plan",
+                "--allowedTools",
+                *_READ_ONLY_ALLOWED_TOOLS,
+                "--disallowedTools",
+                *_READ_ONLY_DISALLOWED_TOOLS,
             ]
         else:
             command += ["--permission-mode", "default"]
@@ -393,9 +568,15 @@ class ClaudeCodeProvider:
 
     async def start_session(self, session: CodingAgentSession) -> ProviderEvent:
         await self._ensure_can_invoke()
-        spec, provider_session_id = await self._build(session, prompt=session.task_summary, resume=False)
+        spec, provider_session_id = await self._build(
+            session, prompt=session.task_summary, resume=False
+        )
         container_id = await self._runtime.start(spec)
-        read_only_note = " (read-only: a Claude Pro/Max subscription credential cannot write yet)" if spec.read_only_mount else ""
+        read_only_note = (
+            " (read-only: a Claude Pro/Max subscription credential cannot write yet)"
+            if spec.read_only_mount
+            else ""
+        )
         return ProviderEvent(
             status=CodingAgentStatus.RUNNING,
             summary=f"Claude Code started{read_only_note}",
@@ -403,13 +584,21 @@ class ClaudeCodeProvider:
             metadata={"container_id": container_id},
         )
 
-    async def resume_session(self, session: CodingAgentSession, instruction: str) -> ProviderEvent:
+    async def resume_session(
+        self, session: CodingAgentSession, instruction: str
+    ) -> ProviderEvent:
         if not session.provider_session_id:
             raise ProviderError("No provider session id to resume")
         await self._ensure_can_invoke()
-        spec, provider_session_id = await self._build(session, prompt=instruction, resume=True)
+        spec, provider_session_id = await self._build(
+            session, prompt=instruction, resume=True
+        )
         container_id = await self._runtime.start(spec)
-        read_only_note = " (read-only: a Claude Pro/Max subscription credential cannot write yet)" if spec.read_only_mount else ""
+        read_only_note = (
+            " (read-only: a Claude Pro/Max subscription credential cannot write yet)"
+            if spec.read_only_mount
+            else ""
+        )
         return ProviderEvent(
             status=CodingAgentStatus.RUNNING,
             summary=f"Claude Code resumed with owner instruction{read_only_note}: {instruction!r}",
@@ -466,11 +655,17 @@ class ClaudeCodeProvider:
                 metadata={"container_id": session.container_id},
             )
 
-        metadata = {"container_id": session.container_id, "usage": result.get("usage"), "total_cost_usd": result.get("total_cost_usd")}
+        metadata = {
+            "container_id": session.container_id,
+            "usage": result.get("usage"),
+            "total_cost_usd": result.get("total_cost_usd"),
+        }
         if result.get("is_error"):
             return ProviderEvent(
                 status=CodingAgentStatus.FAILED,
-                summary=(result.get("result") or "Claude Code reported an error")[:2000],
+                summary=(result.get("result") or "Claude Code reported an error")[
+                    :2000
+                ],
                 provider_session_id=session.provider_session_id,
                 metadata=metadata,
             )
@@ -489,4 +684,6 @@ class ClaudeCodeProvider:
             if result is not None:
                 dimensions = _usage_dimensions(result)
             dimensions += _allowance_dimensions(events)
-        return UsageSnapshot(session_id=session.id, provider="claude-code", dimensions=dimensions)
+        return UsageSnapshot(
+            session_id=session.id, provider="claude-code", dimensions=dimensions
+        )

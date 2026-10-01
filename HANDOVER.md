@@ -12,39 +12,18 @@ homelab (2026-10-01, Phase 29.27/29.26).** Migration `013_coding_agent` applied
 migrate, core, hub and coding-agent-service rebuilt and running, health OK, the
 allowance route enforces auth. No non-terminal sessions existed at startup, so
 no live recovery was exercised. The rest of this entry predates the deploy.
-**Live allowance (same day, deployed):** `ClaudeCodeProvider.live_allowance`
-reads Anthropic's undocumented `api.anthropic.com/api/oauth/usage` with the
-stored subscription token; `GET /providers/{p}/allowance` prefers it
-(`source: "live"`) and falls back to CLI-reported windows on any error, and
-`/coding_usage` now asks for it even with no sessions. **Not verified live:**
-the endpoint's shape and whether a `claude setup-token` token has the scope for
-it (parser was written from community knowledge, unit-tested with a fake fetch).
-If `/coding_usage` shows no allowance, check coding-agent-service logs for
-"Live allowance unavailable" (carries the HTTP status). Sessions, projects, events and
-usage snapshots now live in Postgres (migration `013_coding_agent`;
-coding-agent-service needs `DATABASE_URL` and is now a database client), and on
-startup the service reconciles non-terminal sessions against Docker and the
-provider (`reconcile.py` `recover_sessions`; table and rules in
-[phase-29](docs/phase-29.md#2927--reliability-and-restart-recovery)). Core's
-completion-notification claims are durable too. Claude's `rate_limit_event`
-windows are persisted and exposed at `GET /providers/{provider}/allowance`; core
-usage replies show them with reset times. **Deploying needs** the migration plus
-rebuilt `migrate`, `companion-core`, `reachy-hub` and `coding-agent-service`
-images, with all DB clients stopped first
-([deployment](docs/deployment.md#schema-upgrades-and-credential-keys)). Verified:
-service/core unit and ASGI tests, real disposable-Postgres tests
-(`services/companion-core/tests/test_coding_agent_durability.py`: migration,
-store round trip across reconnect, service "restart" reconciliation, atomic
-claim-once), a real-Docker label-adoption/LOST check with a busybox container
-(`CODING_AGENT_DOCKER_TEST=1`), compose config parse, Ruff. **Not verified:** a
-restart with a live Claude session, and the allowance field names/units — they were read
-from the CLI binary, **no live `rate_limit_event` has been captured**; check the
-first real session that nears a limit. Known gaps: nothing polls running Claude
-sessions to `COMPLETED` while the service is up (29.14); a vanished container is
-`LOST`, not resumable `STOPPED`, because the transcript dies with it.
-`reachy-hub/tests/test_robot_voice.py::test_spoken_command_text_does_not_actuate_the_robot`
-fails on HEAD: unknown `/commands` now reach core's "Unknown or unavailable
-command" reply (commit b599b04), so its expected spoken text is stale.
+**Coding agents tab (2026-10-01, built, not yet deployed/browser-tested):** new operator-UI tab after Meetings (`coding_monitor.js`) with owner-gated hub proxy routes `/coding-agents/*`; creates projects and sessions, shows allowance, sessions, events and usage. Tests/ruff pass; `node --test` cannot run here (no playwright). Needs a hub rebuild and a browser check. Send instruction/Respond are not in the tab. Deployed to reachy-homelab, with a read-only terminal-sessions list (needs CLAUDE_PROJECTS_DIR, set in .env). CAUTION: always pass `-p reachy-homelab --env-file .env` to docker compose; a bare run created a stray `homelab` project once. An accidental `ruff format` reformatted several coding-agent-service files (whitespace only); the repo does not enforce ruff format.
+**Live allowance (2026-10-01, deployed, owner-tested via Telegram):** the
+`claude setup-token` token is refused by `api.anthropic.com/api/oauth/usage`
+(HTTP 403, inference-only scope), so the owner pastes a full-login
+`.credentials.json` (from a separate `CLAUDE_CONFIG_DIR` login) into the
+operator UI's "Claude account usage" card (credential name
+`claude-code-account`, allowed in `reachy_hub.coding_agent`).
+`ClaudeCodeProvider.live_allowance` refreshes it (rotating refresh token,
+persisted before use, lock-guarded) and `GET /providers/{p}/allowance` prefers
+it (`source: "live"`), falling back to CLI-reported windows on any error.
+Refresh URL/client id were read from the pinned CLI binary. If the figures
+vanish, check coding-agent-service logs for "Live allowance unavailable".
 
 Operator UI reorganization is implemented locally, not deployed (2026-10-01).
 Overview now contains monitoring; Settings consolidates configuration into six

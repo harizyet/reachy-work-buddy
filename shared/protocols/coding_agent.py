@@ -21,6 +21,10 @@ SESSION_REFRESH = "/sessions/{session_id}/refresh"
 SESSION_EVENTS = "/sessions/{session_id}/events"
 SESSION_USAGE = "/sessions/{session_id}/usage"
 
+# Read-only listing of Claude Code sessions run outside Reachy, found in a
+# mounted copy of the host's ~/.claude/projects history.
+TERMINAL_SESSIONS = "/terminal-sessions"
+
 PROVIDER_CAPABILITIES = "/providers/{provider}/capabilities"
 # 29.26: account allowance windows last reported by that provider's CLI
 # through a managed session (not a live quota query).

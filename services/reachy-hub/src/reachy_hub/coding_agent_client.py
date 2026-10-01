@@ -13,9 +13,17 @@ from typing import Any
 import httpx
 
 from shared.protocols.coding_agent import (
+    PROJECTS,
+    PROVIDER_ALLOWANCE,
     PROVIDER_CREDENTIAL,
     PROVIDER_CREDENTIALS,
     SERVICE_HEADER,
+    SESSION_EVENTS,
+    SESSION_REFRESH,
+    SESSION_STOP,
+    SESSION_USAGE,
+    SESSIONS,
+    TERMINAL_SESSIONS,
 )
 
 
@@ -60,3 +68,45 @@ class CodingAgentServiceClient:
         resp = await self._client.delete(PROVIDER_CREDENTIAL.format(provider=provider))
         resp.raise_for_status()
         return resp.json()
+
+    async def _get(self, path: str) -> Any:
+        resp = await self._client.get(path)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def _post(self, path: str, body: dict[str, Any] | None = None) -> Any:
+        # Starting a session builds and launches a container; allow it longer
+        # than the quick reads.
+        resp = await self._client.post(path, json=body, timeout=60)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def list_projects(self) -> list[dict[str, Any]]:
+        return await self._get(PROJECTS)
+
+    async def create_project(self, body: dict[str, Any]) -> dict[str, Any]:
+        return await self._post(PROJECTS, body)
+
+    async def list_sessions(self) -> list[dict[str, Any]]:
+        return await self._get(SESSIONS)
+
+    async def start_session(self, body: dict[str, Any]) -> dict[str, Any]:
+        return await self._post(SESSIONS, body)
+
+    async def stop_session(self, session_id: str) -> dict[str, Any]:
+        return await self._post(SESSION_STOP.format(session_id=session_id))
+
+    async def refresh_session(self, session_id: str) -> dict[str, Any]:
+        return await self._post(SESSION_REFRESH.format(session_id=session_id))
+
+    async def session_events(self, session_id: str) -> list[dict[str, Any]]:
+        return await self._get(SESSION_EVENTS.format(session_id=session_id))
+
+    async def session_usage(self, session_id: str) -> dict[str, Any]:
+        return await self._get(SESSION_USAGE.format(session_id=session_id))
+
+    async def terminal_sessions(self) -> list[dict[str, Any]]:
+        return await self._get(TERMINAL_SESSIONS)
+
+    async def provider_allowance(self, provider: str) -> dict[str, Any]:
+        return await self._get(PROVIDER_ALLOWANCE.format(provider=provider))

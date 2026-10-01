@@ -256,3 +256,15 @@ class ProviderAllowance(BaseModel):
     # "last_reported" is what a CLI session last observed.
     source: Literal["live", "last_reported"] = "last_reported"
 
+
+class TerminalSession(BaseModel):
+    """A Claude Code session Reachy did not start, read from the host's
+    session history. Informational only: Reachy cannot control it."""
+
+    session_id: str
+    project_path: str | None = None
+    git_branch: str | None = None
+    title: str | None = None
+    last_prompt: str | None = None
+    last_activity_at: datetime
+    active: bool = False

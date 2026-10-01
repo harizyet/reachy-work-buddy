@@ -751,7 +751,9 @@ def create_app(
 
     from reachy_hub.coding_agent import install_coding_agent_credentials
 
-    install_coding_agent_credentials(app, coding_agent_client, enabled=bool(coding_agent_service_token))
+    install_coding_agent_credentials(
+        app, coding_agent_client, enabled=bool(coding_agent_service_token), owner_user_id=owner_user_id
+    )
 
     @app.middleware("http")
     async def private_work_routes(request, call_next):

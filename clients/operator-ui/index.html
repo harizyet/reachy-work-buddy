@@ -18,6 +18,7 @@
 
         <button id="chat-tab" class="secondary" aria-pressed="false" aria-controls="chat-pane">Chat</button>
         <button id="meetings-tab" class="secondary" aria-pressed="false" aria-controls="meetings-pane">Meetings</button>
+        <button id="coding-tab" class="secondary" aria-pressed="false" aria-controls="coding-pane">Coding agents</button>
         <button id="settings-tab" class="secondary" aria-pressed="false" aria-controls="settings-pane">Settings</button>
       </div>
       <section id="chat-pane" hidden aria-labelledby="chat-title" class="workspace chat-workspace">
@@ -176,6 +177,28 @@
             <button type="button" id="face-sample-export" class="secondary" disabled>Export face dataset</button>
           </section>
         </section></div></section>
+      <section id="coding-pane" hidden aria-labelledby="coding-title">
+        <div class="page-heading"><h2 id="coding-title">Coding agents</h2><p class="muted">Projects and sessions managed by Reachy. Sessions started with a subscription login run read-only; an API key can write to the repository. Terminal sessions you start yourself are not visible here.</p></div>
+        <p id="coding-status" role="status"></p>
+        <section class="card"><h3>Claude allowance</h3><p id="coding-allowance" class="muted">Loading…</p></section>
+        <section class="card"><h3>Projects</h3><ul id="coding-projects"></ul>
+          <form id="coding-project-form">
+            <label>Name<input id="coding-project-name" required maxlength="200"></label>
+            <label>Repository path (on the robot host)<input id="coding-project-path" required maxlength="4096"></label>
+            <label>Default branch<input id="coding-project-branch" value="main" maxlength="200"></label>
+            <label>Provider<select id="coding-project-provider"><option value="claude-code">Claude Code</option><option value="simulated">Simulated (no real work)</option></select></label>
+            <button type="submit">Add project</button>
+          </form></section>
+        <section class="card"><h3>Start a session</h3>
+          <form id="coding-session-form">
+            <label>Project<select id="coding-session-project" required></select></label>
+            <label>Task<textarea id="coding-session-task" required maxlength="4000" rows="3"></textarea></label>
+            <label>Branch (optional)<input id="coding-session-branch" maxlength="200"></label>
+            <button type="submit">Start session</button>
+          </form></section>
+        <section class="card"><div class="section-title"><h3>Terminal sessions</h3></div><p class="muted">Claude Code sessions you ran yourself, read from the host's session history. These are shown for monitoring only; Reachy cannot control them.</p><div id="coding-terminal-sessions"></div></section>
+        <section class="card"><div class="section-title"><h3>Sessions</h3><button id="coding-refresh" type="button" class="secondary">Refresh</button></div><div id="coding-sessions"></div></section>
+      </section>
       <div id="meetings-pane" class="workspace meeting-workspace" hidden>
 <aside class="record-sidebar" aria-label="Meeting records"><button id="meeting-new" type="button">＋ Add meeting</button><div class="section-title"><h3>Meeting records</h3><button id="meeting-refresh" class="secondary" type="button" aria-label="Refresh meeting records">↻</button></div><label class="search-label">Find a meeting<input id="meeting-search" type="search" placeholder="Search titles…"></label><ul id="meeting-list" class="meeting-list"></ul><p id="meeting-list-status" role="status"></p></aside><div class="meeting-main">
         <section id="meeting-create" class="card" aria-labelledby="meetings-title">
@@ -230,6 +253,6 @@
   </main><footer>Reachy Work Companion · Operator UI</footer><dialog id="search-log-dialog" aria-labelledby="search-log-title"><div class="dialog-head"><h2 id="search-log-title">Recent searches</h2><button type="button" id="refresh-search-log" class="secondary">Refresh</button><button type="button" id="close-search-log" class="secondary">Close</button></div>
   <p class="muted">The last 50 searches, newest first. Companion Core keeps them in memory only; a restart clears them.</p>
   <div id="search-log-entries"></div></dialog>
-  <script src="chat.js" defer></script><script src="voice.js" defer></script><script src="accounts.js" defer></script><script src="owner-recognition.js" defer></script><script src="meetings.js" defer></script><script src="coding_agents.js" defer></script><script src="app.js" defer></script>
+  <script src="chat.js" defer></script><script src="voice.js" defer></script><script src="accounts.js" defer></script><script src="owner-recognition.js" defer></script><script src="meetings.js" defer></script><script src="coding_agents.js" defer></script><script src="coding_monitor.js" defer></script><script src="app.js" defer></script>
 </body>
 </html>

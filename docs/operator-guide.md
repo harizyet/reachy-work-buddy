@@ -2,7 +2,7 @@
 
 Open `/hub/ui/` through Caddy (direct hub: `/ui/`) after following
 [deployment setup](deployment.md#owner-login). The dashboard provides
-Overview, Chat, Meetings, and Settings; the navigation links to telepresence. Both frontends
+Overview, Chat, Meetings, Coding agents, and Settings; the navigation links to telepresence. Both frontends
 are plain HTML/JS/CSS served by hub, with no build step or external assets.
 
 ## Overview and session controls
@@ -35,6 +35,23 @@ Use the tab buttons, or arrow keys/Home/End while a tab has focus. Switching
 between Assistant, Models and Web search preserves unsaved form edits. A session must exist to edit mode/DND;
 sending the first chat message creates one. The cloud override in Chat remains
 a per-message choice rather than a persistent setting.
+
+## Coding agents
+
+Open **Coding agents** to set up and watch coding sessions Reachy manages. It
+shows your Claude 5-hour and weekly allowance (live once an account usage
+credential is saved in Settings · Accounts), lists projects, and lets you add a
+project (a repository path on the robot host plus a provider) and start a
+session on it with a task description. Starting a session asks for
+confirmation because it spends Claude usage; sessions started with a
+subscription login are read-only, while an API key can change files. Each
+session shows its status and last event, with Events and Usage details, and
+Refresh status and Stop while it is active. The list refreshes every 15 seconds
+while the tab is open. **Terminal sessions** lists Claude Code sessions you ran yourself (title, folder,
+branch, last prompt, and an Active marker when touched in the last two
+minutes). This is read-only monitoring; Reachy cannot control them. It needs
+`CLAUDE_PROJECTS_DIR` in `deploy/homelab/.env` pointing at the host's
+`~/.claude/projects`, which is mounted read-only into coding-agent-service.
 
 ## Meeting recordings
 

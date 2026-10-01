@@ -24,6 +24,7 @@ const motionSettings = createMotionSettings();
 const voice = createVoice({api, isLoggedIn: () => loggedIn, chat});
 const meetings = createMeetings({api, apiUploadForm, isLoggedIn: () => loggedIn});
 const codingAgents = createCodingAgents({api, isLoggedIn: () => loggedIn});
+const codingMonitor = createCodingMonitor({api, isLoggedIn: () => loggedIn});
 let settingsFeature = 'assistant';
 function showSettings(feature, focus = false) {
   settingsFeature = feature;
@@ -54,7 +55,7 @@ for (const tab of document.querySelectorAll('.settings-tabs [role="tab"]')) {
   });
 }
 function showView(view) {
-  for (const name of ['chat', 'overview', 'settings', 'meetings']) {
+  for (const name of ['chat', 'overview', 'settings', 'meetings', 'coding']) {
     $(name + '-pane').hidden = name !== view;
     $(name + '-tab').setAttribute('aria-pressed', String(name === view));
     $(name + '-tab').classList.toggle('secondary', name !== view);
@@ -63,8 +64,9 @@ function showView(view) {
   if (view === 'settings') showSettings(settingsFeature);
   else ownerRecognition.stopCapture();
   if (view === 'meetings') void meetings.load();
+  if (view === 'coding') codingMonitor.start(); else codingMonitor.stop();
 }
-for (const view of ['chat', 'overview', 'settings', 'meetings']) {
+for (const view of ['chat', 'overview', 'settings', 'meetings', 'coding']) {
   $(view + '-tab').addEventListener('click', () => showView(view));
 }
 function notice(text) { $('notice').textContent = text; }
@@ -73,7 +75,7 @@ function showLogin() {
   $('login-panel').hidden = false; $('dashboard').hidden = true; $('nav').hidden = true;
   $('api-key').value = ''; $('cloud-api-key').value = ''; $('websearch-api-key').value = ''; for (const name of HOSTED_SEARCH) $(`websearch-${name}-api-key`).value = ''; $('password').value = '';
   $('search-log-dialog').close(); $('search-log-entries').replaceChildren();
-  chat.reset(); accounts.reset(); voice.reset(); motionSettings.reset(); ownerRecognition.reset(); meetings.reset(); codingAgents.reset(); showView('overview');
+  chat.reset(); accounts.reset(); voice.reset(); motionSettings.reset(); ownerRecognition.reset(); meetings.reset(); codingAgents.reset(); codingMonitor.reset(); showView('overview');
 }
 async function api(path, options = {}) {
   const response = await fetch(base + path, {

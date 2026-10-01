@@ -10,6 +10,10 @@ function createCodingAgents({api, isLoggedIn}) {
       id: 'claude-code', title: 'Claude Code',
       hint: 'API key: pay-per-use billing from your Anthropic Console account. OAuth token: if you have a Claude Pro or Max subscription, run "claude setup-token" on a computer where you can sign in, then paste the token it prints here — usage counts against your subscription instead of API billing. Reachy cannot run that sign-in step itself. Starting a session with an OAuth token is disabled for now, so your subscription cannot be spent by this feature yet; only an API key can actually run a task at this stage.',
     },
+    {
+      id: 'claude-code-account', title: 'Claude account usage', fixedKind: 'oauth_token',
+      hint: 'Optional, read-only: lets Reachy show your live 5-hour and weekly Claude allowance. The session token above cannot do this. Paste the contents of the .credentials.json file that "claude login" creates (or its claudeAiOauth object). Use a separate login so it does not share a refresh token with your own computer: run CLAUDE_CONFIG_DIR=/tmp/reachy-login claude login, then paste /tmp/reachy-login/.credentials.json. Reachy refreshes and re-saves this credential itself, and only ever uses it to read usage.',
+    },
     {id: 'codex', title: 'OpenAI Codex CLI'},
   ];
   function say(text) { el('coding-agents-status').textContent = text; }
@@ -20,7 +24,7 @@ function createCodingAgents({api, isLoggedIn}) {
     if (!isLoggedIn()) return;
     const byProvider = Object.fromEntries(records.map(r => [r.provider, r]));
     el('coding-agent-cards').replaceChildren();
-    for (const {id, title, hint} of PROVIDERS) {
+    for (const {id, title, hint, fixedKind} of PROVIDERS) {
       const record = byProvider[id];
       const card = document.createElement('section'); card.className = 'card';
       const heading = document.createElement('h3'); heading.textContent = title;
@@ -39,6 +43,7 @@ function createCodingAgents({api, isLoggedIn}) {
         kindSelect.append(option);
       }
       kindLabel.append(kindSelect);
+      if (fixedKind) { kindSelect.value = fixedKind; kindLabel.hidden = true; }
       const valueLabel = document.createElement('label'); valueLabel.textContent = title + ' credential value';
       const valueInput = document.createElement('input');
       valueInput.type = 'password'; valueInput.autocomplete = 'off'; valueInput.required = true; valueInput.maxLength = 8192;

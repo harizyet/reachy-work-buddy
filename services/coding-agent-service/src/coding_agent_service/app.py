@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 
@@ -49,7 +50,9 @@ def _default_credential_store() -> CredentialStore:
         # restart must set CODING_AGENT_SECRET_KEY_FILE — see
         # credentials.CredentialKeyring.from_file.
         return InMemoryCredentialStore()
-    path = os.environ.get("CODING_AGENT_CREDENTIALS_PATH", "/data/coding-agent-credentials.json")
+    path = os.environ.get(
+        "CODING_AGENT_CREDENTIALS_PATH", "/data/coding-agent-credentials.json"
+    )
     return EncryptedFileCredentialStore(path, CredentialKeyring.from_file(key_file))
 
 
@@ -60,11 +63,24 @@ def create_app(
     service_token: str | None = None,
     credential_store: CredentialStore | None = None,
     container_runtime: ContainerRuntime | None = None,
+    terminal_sessions_dir: str | Path | None = None,
 ) -> FastAPI:
     resolved_store = store if store is not None else _default_store()
-    resolved_token = service_token if service_token is not None else os.environ.get("CODING_AGENT_SERVICE_TOKEN")
-    resolved_credentials = credential_store if credential_store is not None else _default_credential_store()
-    resolved_runtime = container_runtime if container_runtime is not None else DockerCLIContainerRuntime()
+    resolved_token = (
+        service_token
+        if service_token is not None
+        else os.environ.get("CODING_AGENT_SERVICE_TOKEN")
+    )
+    resolved_credentials = (
+        credential_store
+        if credential_store is not None
+        else _default_credential_store()
+    )
+    resolved_runtime = (
+        container_runtime
+        if container_runtime is not None
+        else DockerCLIContainerRuntime()
+    )
     # "simulated" always exists so a CodingProject can be registered and
     # exercised without a container (29.1). "claude-code" is the real
     # adapter (29.3) — constructing it here doesn't touch Docker or the
@@ -76,7 +92,9 @@ def create_app(
         if providers is not None
         else {
             "simulated": SimulatedProvider(),
-            "claude-code": ClaudeCodeProvider(resolved_runtime, resolved_credentials, resolved_store),
+            "claude-code": ClaudeCodeProvider(
+                resolved_runtime, resolved_credentials, resolved_store
+            ),
         }
     )
 
@@ -92,13 +110,19 @@ def create_app(
             await opener()
         try:
             if resolved_store.durable:
-                report = await recover_sessions(supervisor, resolved_store, resolved_runtime)
+                report = await recover_sessions(
+                    supervisor, resolved_store, resolved_runtime
+                )
                 _app.state.recovery_report = report
                 logger.info(
                     "Session recovery: %d changed, %d unchanged, %d unresolved, %d orphan containers%s",
-                    len(report.changed), len(report.unchanged), len(report.unresolved),
+                    len(report.changed),
+                    len(report.unchanged),
+                    len(report.unresolved),
                     len(report.orphan_container_ids),
-                    f" (skipped: {report.skipped_reason})" if report.skipped_reason else "",
+                    f" (skipped: {report.skipped_reason})"
+                    if report.skipped_reason
+                    else "",
                 )
             yield
         finally:
@@ -109,6 +133,12 @@ def create_app(
     app = FastAPI(title="coding-agent-service", lifespan=lifespan)
     app.state.supervisor = supervisor
     app.state.credentials = resolved_credentials
+    history_dir = (
+        terminal_sessions_dir
+        if terminal_sessions_dir is not None
+        else os.environ.get("TERMINAL_SESSIONS_DIR")
+    )
+    app.state.terminal_sessions_dir = Path(history_dir) if history_dir else None
 
     @app.get("/health")
     async def health():
