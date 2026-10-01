@@ -6,6 +6,14 @@ The [documentation index](docs/README.md) defines ownership;
 
 ## Current work
 
+Added [Phase 29](docs/phase-29.md) to the roadmap: a planned coding-agent
+supervisor (`coding-agent-service`) that runs Claude Code, then Codex,
+inside dedicated containers behind a provider-neutral contract, feeding
+lifecycle/usage events into Reachy's existing notification pipeline.
+Documentation only — no code changes, nothing to deploy. Linked from the
+[roadmap](docs/plan.md#6-implementation-roadmap) and
+[documentation index](docs/README.md).
+
 Meeting UI wording/layout cleanup is implemented locally, not deployed.
 Rows separate title/status/date/actions; ALIGNING displays “Processing
 paused” with the missing speaker-alignment feature explained. Raw errors

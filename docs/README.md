@@ -66,6 +66,11 @@ correct facts or links, not to track each new phase dependency.
   companion, then physical secretary attendance, then bounded delegation;
   virtual/cloud attendance is deferred. (Formerly Phase 27; renumbered
   2026-09-28.)
+- [Phase 29](phase-29.md): coding agent supervisor — a `coding-agent-service`
+  runs and observes containerized Claude Code (then Codex) sessions behind a
+  provider-neutral contract, feeding lifecycle/usage events into Reachy's
+  existing notification pipeline; observation and relay only, no automatic
+  permission approval or push/merge.
 - [Jarvis baseline](jarvis-baseline.md): upstream reuse/reference notes.
 
 ## Architecture decisions
