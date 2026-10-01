@@ -4,11 +4,17 @@ Status: 29.1 (contracts/session store), 29.2 (container runner) and 29.3
 (Claude Code provider) implemented 2026-10-01, plus 29.19's credential
 storage/owner-UI pulled forward early. A project configured with
 `provider: "claude-code"` can start a real session in a real container
-today, given an owner-entered credential; completion detection, usage and
-stop/resume are implemented, but there is still no hook-based mid-task
-input/permission detection (29.4), no companion-core/hub session wiring
-(29.6/29.7 — only credentials are wired to the browser so far), and no
-`docker-compose.yml` entry. See
+with an API key credential; a Claude Pro/Max subscription credential
+cannot invoke anything yet (deliberate, see 29.19 below). Completion
+detection, usage and stop/resume are implemented, but there is still no
+hook-based mid-task input/permission detection (29.4), and no
+companion-core/hub *session* wiring (29.6/29.7 — only credentials reach
+the browser so far).
+
+Deployed to the owner's homelab (`deploy/homelab/docker-compose.yml`,
+2026-10-01): its own container, service token and credential-encryption
+key, live and health-checked. Owner user testing (entering a real
+credential and starting a real session) has not happened yet. See
 [service reference](reference/services.md#coding-agent-service-phase-29-planned)
 for exactly what exists.
 

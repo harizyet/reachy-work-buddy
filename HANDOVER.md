@@ -6,8 +6,45 @@ The [documentation index](docs/README.md) defines ownership;
 
 ## Current work
 
-[Phase 29](docs/phase-29.md) (coding agent supervisor) added to the
-roadmap, and its first stage, 29.1 (contracts and session store), is now
+**coding-agent-service is now deployed and running live on this homelab**
+(2026-10-01, by owner request "let's run the latest so we can start user
+testing"): added to `deploy/homelab/docker-compose.yml` with its own
+`CODING_AGENT_SERVICE_TOKEN` and `CODING_AGENT_SECRET_KEY_FILE` (a real
+key generated this session at
+`deploy/homelab/.env.coding-agent-secret-key.json`, 0600, gitignored, not
+backed up elsewhere yet — do that before relying on any credential
+surviving a lost volume), both appended to the real `deploy/homelab/.env`.
+Built and started via `scripts/start-homelab.sh --build --no-browser`;
+`reachy-hub` and `companion-core` were recreated to pick up the new env
+vars (expected — not an error), everything else (postgres, caddy,
+searxng, transcription, diarization) was left alone and confirmed
+untouched. Verified: `/hub/health` and `/core/health` both `ok`, and
+`/hub/providers/credentials` returns 401 (login required), confirming the
+route actually reaches a real, token-configured coding-agent-service
+through hub rather than 404/502/503. Also smoke-tested the full
+project/session lifecycle directly against the live container (zero cost
+— `provider: "simulated"`, not Claude): `POST /projects`, `POST
+/sessions`, `GET /sessions/{id}/events` all worked exactly as the test
+suite predicts, confirming the live deployment isn't just "built", it
+actually runs. That data is in-memory only and is already gone on any
+restart — no cleanup needed.
+
+**What the owner can test right now:** log in to the operator UI and use
+Settings · Accounts · Coding agent credentials — that's wired to the
+browser and live. **What they cannot test yet:** starting a real Claude
+Code session from the browser — there is no operator-UI or hub-proxied
+path to register a `CodingProject` or start/poll a session, only raw
+routes on coding-agent-service's own internal port (same `expose`-only,
+no `ports:`, pattern every other homelab service uses — reachable from
+the host only via `docker exec <container> ... /usr/local/bin/python3`
+inside the Docker network, not a stable localhost URL). That gap (a
+project/session UI, or at minimum a hub proxy plus a documented curl
+recipe) is real follow-up work, not something this session built. See
+[deployment](docs/deployment.md#key-provisioning) for the key-provisioning
+procedure now documented there.
+
+Phase 29 (coding agent supervisor) was added to the roadmap this session,
+and its first stage, 29.1 (contracts and session store), is now
 implemented at `services/coding-agent-service`: `CodingAgentSupervisor`
 creates/resumes/stops a durable `CodingAgentSession` against a provider
 registry and records normalized `CodingAgentEvent`s; a `SimulatedProvider`
@@ -174,22 +211,20 @@ meetings remain in the database/audio volume; no delete endpoint exists.
 
 ## Next session
 
-0. Phase 29 next: either a **real owner-authorized end-to-end run** (set a
-   real `claude-code` credential in the operator UI — needs
-   `CODING_AGENT_SECRET_KEY_FILE` set first, chmod 0600, or it won't survive
-   a restart — then `POST /sessions` against a real test repository and
-   poll `POST /sessions/{id}/refresh` to watch it actually complete and
-   report real cost/usage; this costs real money and hasn't been done by
-   any session yet), **or** keep building: 29.4 (Claude hooks) would wire
-   `SessionStart`/`Stop`/`StopFailure`/`PermissionRequest`/`Notification`
-   into the event bridge so a mid-task permission or input wait becomes
-   `WAITING_FOR_PERMISSION`/`WAITING_FOR_INPUT` instead of just sitting in
-   `RUNNING` until the container exits. Either way, decide whether a
-   `Postgres*CodingAgentStore` is worth adding, or whether staying
-   in-memory until restart durability actually matters (29.27) is fine a
-   while longer. No `docker-compose.yml` entry yet; add one once there's
-   real session-lifecycle wiring to companion-core/hub to supervise
-   (29.6/29.7), not before.
+0. Phase 29 is now live on the homelab (see Current work) —
+   `CODING_AGENT_SECRET_KEY_FILE` is already set, so a credential entered
+   through the operator UI now survives a restart. The actual next step is
+   the owner logging in and using the Settings · Accounts · Coding agent
+   credentials card for real: entering a real API key (an OAuth/
+   subscription token cannot invoke anything yet, by design) and
+   registering a project against a real test repository, since nothing in
+   this codebase has a route to create a `CodingProject` from the operator
+   UI yet — only `POST /projects` on coding-agent-service directly (no hub
+   proxy for project/session management exists, just credentials). That
+   gap — an operator-UI or at least a documented curl path to register a
+   project and start/poll a session — is probably the most useful next
+   build step, ahead of 29.4 (Claude hooks) or a `Postgres*CodingAgentStore`
+   for restart durability (29.27); none of those are started.
 1. Roll out the long-audio changes to Core, Hub and both sidecars, including
    the standalone diarization server (do not create a competing instance).
    Coordinate speech-token activation with that restart. Representative

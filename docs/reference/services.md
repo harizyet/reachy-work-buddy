@@ -382,8 +382,17 @@ actually removes tools from a real init event's `tools` array —
 run` and via `docker exec` into a live `claude` container.
 
 No hook-based mid-task `WAITING_FOR_INPUT`/`WAITING_FOR_PERMISSION`
-detection (29.4) and no companion-core HTTP client yet. Not deployed; no
-`docker-compose.yml` entry.
+detection (29.4) and no companion-core HTTP client yet — only reachy-hub's
+owner-facing credential proxy reaches this service so far, not session
+start/resume/stop/etc.
+
+Deployed in `deploy/homelab/docker-compose.yml` (2026-10-01): its own
+container, `CODING_AGENT_SERVICE_TOKEN` shared secret, and
+`CODING_AGENT_SECRET_KEY_FILE` for credential persistence across a
+restart (see [deployment](../deployment.md#key-provisioning)). Live on the
+owner's homelab; verified `/hub/health`/`/core/health` and that
+`/hub/providers/credentials` reaches it (401, login required — not
+404/502/503). No real session has been started against it yet.
 
 | Surface | Purpose |
 |---|---|

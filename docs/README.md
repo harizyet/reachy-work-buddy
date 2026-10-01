@@ -73,7 +73,8 @@ correct facts or links, not to track each new phase dependency.
   permission approval or push/merge. 29.1–29.3 (contracts/session store,
   real-Docker container runner, real Claude Code provider) implemented
   2026-10-01, plus an early encrypted-credential store and operator-UI card
-  for provider credentials (29.19); see
+  for provider credentials (29.19); deployed to the homelab the same day.
+  See
   [service reference](reference/services.md#coding-agent-service-phase-29-planned).
 - [Jarvis baseline](jarvis-baseline.md): upstream reuse/reference notes.
 
