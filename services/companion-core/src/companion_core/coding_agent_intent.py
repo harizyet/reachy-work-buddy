@@ -33,6 +33,7 @@ _USAGE_SCOPE = (
     "what Claude Code last reported during those sessions, not a live reading of "
     "your account quota."
 )
+_LIVE_ALLOWANCE_SCOPE = "Allowance figures are a live reading of your Claude account."
 _NO_ALLOWANCE = (
     "Claude Code has not reported your allowance windows to Reachy; it only does "
     "so as you approach a limit."
@@ -131,6 +132,7 @@ def format_usage_reply(
     sessions: list[dict[str, Any]] | None,
     usage_by_session_id: dict[str, dict[str, Any]],
     allowance_lines: list[str] | None = None,
+    allowance_live: bool = False,
 ) -> str:
     """29.26: usage is not a universal contract — only report dimensions a
     provider actually measured, never a guessed/zero value for one it
@@ -138,6 +140,11 @@ def format_usage_reply(
     if sessions is None:
         return "I can't reach the coding-agent service right now."
     if not sessions:
+        if allowance_lines:
+            return (
+                "\n".join(allowance_lines) + "\nI have no recorded coding-agent sessions managed by Reachy. "
+                + (_LIVE_ALLOWANCE_SCOPE if allowance_live else _USAGE_SCOPE)
+            )
         return "I have no recorded coding-agent usage for sessions managed by Reachy. " + _USAGE_SCOPE
     shown, omitted = recent_sessions(sessions)
     lines = []
@@ -158,7 +165,8 @@ def format_usage_reply(
     allowance = "\n".join(allowance_lines) if allowance_lines else _NO_ALLOWANCE
     return (
         "Recorded coding-agent usage (including finished sessions):\n" + "\n".join(lines) + "\n"
-        + _older_line(omitted) + allowance + "\n" + _USAGE_SCOPE
+        + _older_line(omitted) + allowance + "\n"
+        + (_USAGE_SCOPE + " " + _LIVE_ALLOWANCE_SCOPE if allowance_live and allowance_lines else _USAGE_SCOPE)
     )
 
 

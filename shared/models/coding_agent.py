@@ -10,6 +10,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -240,15 +241,18 @@ ALLOWANCE_WINDOW_NAMES = frozenset(
 
 
 class ProviderAllowance(BaseModel):
-    """29.26: the most recent account allowance windows a provider has
-    reported through any Reachy-managed session. This is an observation
-    from the last time that CLI talked to the provider, never a live quota
-    read, and a window whose `resets_at` has passed is dropped rather than
-    reported as current. No timestamp is carried: a CLI's rate-limit events
+    """29.26: account allowance windows. `source="live"` is a current
+    reading from the provider's account endpoint; `"last_reported"` is an
+    observation from the last time a Reachy-managed CLI session talked to
+    the provider, and a window whose `resets_at` has passed is dropped
+    rather than reported as current. No timestamp is carried: a CLI's rate-limit events
     are not timestamped, so the only honest validity bound is `resets_at`."""
 
     model_config = ConfigDict(extra="forbid")
 
     provider: str
     windows: list[UsageDimension] = Field(default_factory=list)
+    # "live" is a current reading from the provider's account endpoint;
+    # "last_reported" is what a CLI session last observed.
+    source: Literal["live", "last_reported"] = "last_reported"
 

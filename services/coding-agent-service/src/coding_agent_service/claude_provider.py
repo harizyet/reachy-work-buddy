@@ -75,8 +75,12 @@ path gets to prove itself read-only first. Verified live, not assumed:
 
 from __future__ import annotations
 
+import asyncio
 import json
+import urllib.error
+import urllib.request
 import uuid
+from collections.abc import Callable
 from datetime import UTC, datetime
 
 from coding_agent_service.credentials import CredentialStore
@@ -191,6 +195,61 @@ def _allowance_dimensions(events: list[dict]) -> list[UsageDimension]:
     return list(latest.values())
 
 
+# The same endpoint Claude Code's own /usage screen reads. Undocumented, so
+# every failure is surfaced as ProviderError and callers fall back to the
+# last CLI-reported figures rather than guessing.
+_OAUTH_USAGE_URL = "https://api.anthropic.com/api/oauth/usage"
+_LIVE_WINDOW_KEYS = {
+    "five_hour": "five_hour_window",
+    "seven_day": "weekly_window",
+    "seven_day_opus": "weekly_opus_window",
+    "seven_day_sonnet": "weekly_sonnet_window",
+}
+
+
+def _fetch_oauth_usage(token: str) -> dict:
+    request = urllib.request.Request(
+        _OAUTH_USAGE_URL,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "anthropic-beta": "oauth-2025-04-20",
+            "User-Agent": "reachy-coding-agent",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            body = json.loads(response.read())
+    except urllib.error.HTTPError as exc:
+        # Never include the response body or request: keep the token out of logs.
+        raise ProviderError(f"Claude usage endpoint refused the request (HTTP {exc.code})") from None
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError):
+        raise ProviderError("Claude usage endpoint could not be reached or returned unreadable data") from None
+    if not isinstance(body, dict):
+        raise ProviderError("Claude usage endpoint returned an unexpected shape")
+    return body
+
+
+def _live_allowance_dimensions(body: dict) -> list[UsageDimension]:
+    """A null/absent window is simply not reported; utilization is 0..100."""
+    dimensions = []
+    for key, name in _LIVE_WINDOW_KEYS.items():
+        window = body.get(key)
+        if not isinstance(window, dict):
+            continue
+        utilization = window.get("utilization")
+        resets_at = window.get("resets_at")
+        if isinstance(utilization, bool) or not isinstance(utilization, (int, float)) or not isinstance(resets_at, str):
+            continue
+        try:
+            reset = datetime.fromisoformat(resets_at)
+        except ValueError:
+            continue
+        if reset.tzinfo is None:
+            reset = reset.replace(tzinfo=UTC)
+        dimensions.append(UsageDimension(name=name, value=round(float(utilization), 1), unit="%", resets_at=reset))
+    return dimensions
+
+
 def _usage_dimensions(result: dict) -> list[UsageDimension]:
     dimensions = []
     usage = result.get("usage") or {}
@@ -218,7 +277,9 @@ class ClaudeCodeProvider:
         projects: CodingAgentStore,
         *,
         image: str = DEFAULT_IMAGE,
+        usage_fetch: Callable[[str], dict] = _fetch_oauth_usage,
     ) -> None:
+        self._usage_fetch = usage_fetch
         self._runtime = runtime
         self._credentials = credentials
         self._projects = projects
@@ -262,6 +323,19 @@ class ClaudeCodeProvider:
                 "Settings · Accounts · Coding agent credentials card first"
             )
         return record.kind, secret
+
+    async def live_allowance(self) -> list[UsageDimension] | None:
+        """29.26: current account windows straight from Anthropic. Only a
+        subscription token has an allowance; an API-key credential returns
+        None. Raises ProviderError when the reading cannot be obtained."""
+        record = await self._credentials.describe("claude-code")
+        if record is None or record.kind != CredentialKind.OAUTH_TOKEN:
+            return None
+        secret = await self._credentials.get_secret("claude-code")
+        if not secret:
+            return None
+        body = await asyncio.to_thread(self._usage_fetch, secret)
+        return _live_allowance_dimensions(body)
 
     async def _ensure_can_invoke(self) -> None:
         """29.3: refuses only when no credential is configured at all.

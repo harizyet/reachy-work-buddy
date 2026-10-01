@@ -11,7 +11,16 @@ homelab (2026-10-01, Phase 29.27/29.26).** Migration `013_coding_agent` applied
 (pre-upgrade dump: `~/reachy-backups/reachy-before-013-20261001-223839.dump`);
 migrate, core, hub and coding-agent-service rebuilt and running, health OK, the
 allowance route enforces auth. No non-terminal sessions existed at startup, so
-no live recovery was exercised. The rest of this entry predates the deploy. Sessions, projects, events and
+no live recovery was exercised. The rest of this entry predates the deploy.
+**Live allowance (same day, deployed):** `ClaudeCodeProvider.live_allowance`
+reads Anthropic's undocumented `api.anthropic.com/api/oauth/usage` with the
+stored subscription token; `GET /providers/{p}/allowance` prefers it
+(`source: "live"`) and falls back to CLI-reported windows on any error, and
+`/coding_usage` now asks for it even with no sessions. **Not verified live:**
+the endpoint's shape and whether a `claude setup-token` token has the scope for
+it (parser was written from community knowledge, unit-tested with a fake fetch).
+If `/coding_usage` shows no allowance, check coding-agent-service logs for
+"Live allowance unavailable" (carries the HTTP status). Sessions, projects, events and
 usage snapshots now live in Postgres (migration `013_coding_agent`;
 coding-agent-service needs `DATABASE_URL` and is now a database client), and on
 startup the service reconciles non-terminal sessions against Docker and the

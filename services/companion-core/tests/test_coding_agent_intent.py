@@ -173,3 +173,12 @@ def test_usage_reply_hides_allowance_windows_from_per_session_lines():
     assert "input tokens 12tokens" in reply
     assert "five hour window" not in reply
     assert "Claude 5-hour window: 87% used" in reply
+
+
+def test_usage_reply_with_live_allowance_and_no_sessions() -> None:
+
+    lines = ["Claude 5-hour window: 42% used, resets today 3:00 PM"]
+    reply = format_usage_reply([], {}, lines, allowance_live=True)
+    assert lines[0] in reply
+    assert "live reading" in reply
+    assert "no recorded coding-agent sessions" in reply

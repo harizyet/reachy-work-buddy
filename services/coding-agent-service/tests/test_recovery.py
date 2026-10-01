@@ -343,7 +343,7 @@ def test_allowance_route_and_unknown_provider() -> None:
     with TestClient(app) as client:
         ok = client.get("/providers/simulated/allowance", headers=HEADERS)
         assert ok.status_code == 200
-        assert ok.json() == {"provider": "simulated", "windows": []}
+        assert ok.json() == {"provider": "simulated", "windows": [], "source": "last_reported"}
         assert client.get("/providers/nope/allowance", headers=HEADERS).status_code == 404
         assert client.get("/providers/simulated/allowance").status_code in (401, 403)
 

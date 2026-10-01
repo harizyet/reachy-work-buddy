@@ -212,8 +212,17 @@ class CodingAgentSupervisor:
     async def provider_allowance(self, provider_name: str) -> ProviderAllowance:
         """29.26: account allowance windows still open, newest reading per
         window, drawn from persisted usage snapshots of any session."""
-        self._provider_for(provider_name)
+        provider = self._provider_for(provider_name)
         now = datetime.now(UTC)
+        live_reader = getattr(provider, "live_allowance", None)
+        if live_reader is not None:
+            try:
+                live = await live_reader()
+            except ProviderError as exc:
+                logger.warning("Live allowance unavailable for %s: %s", provider_name, exc)
+            else:
+                if live is not None:
+                    return ProviderAllowance(provider=provider_name, windows=live, source="live")
         windows = {}
         for snapshot in await self._store.recent_usage_snapshots(provider_name, _ALLOWANCE_SCAN_LIMIT):
             for dimension in snapshot.dimensions:

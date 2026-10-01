@@ -1038,25 +1038,32 @@ def create_app(
             try:
                 sessions = await app.state.coding_agent_client.list_sessions()
                 usage_by_session_id = {}
+                shown = []
                 if sessions is not None:
                     shown, _ = coding_agent_intent.recent_sessions(sessions)
                     for session in shown:
                         usage_by_session_id[session["id"]] = await app.state.coding_agent_client.get_usage(
                             session["id"]
                         )
-                    for provider in dict.fromkeys(session["provider"] for session in shown):
-                        # Allowance is a bonus line; a provider that cannot
-                        # report one must not fail the whole usage answer.
-                        with contextlib.suppress(httpx.HTTPError):
-                            allowances.append(await app.state.coding_agent_client.get_allowance(provider))
             except httpx.HTTPError:
                 sessions = None
                 usage_by_session_id = {}
+                shown = []
+            if sessions is not None:
+                # The account allowance does not depend on any session, so
+                # claude-code is always asked. It is a bonus line; a provider
+                # that cannot report one must not fail the whole usage answer.
+                for provider in dict.fromkeys(["claude-code", *(session["provider"] for session in shown)]):
+                    with contextlib.suppress(httpx.HTTPError):
+                        allowances.append(await app.state.coding_agent_client.get_allowance(provider))
             persona = await app.state.persona_store.get()
             allowance_lines = coding_agent_intent.format_allowance_lines(
                 allowances, datetime.now(UTC), persona.timezone
             )
-            reply = coding_agent_intent.format_usage_reply(sessions, usage_by_session_id, allowance_lines)
+            allowance_live = bool(allowances) and all(a.get("source") == "live" for a in allowances)
+            reply = coding_agent_intent.format_usage_reply(
+                sessions, usage_by_session_id, allowance_lines, allowance_live
+            )
             privacy = Privacy.WORK_PRIVATE
         else:
             config = await app.state.llm_settings_store.get()
