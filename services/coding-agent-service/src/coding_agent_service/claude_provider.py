@@ -26,30 +26,26 @@ headlessly; 29.4 (hook-based permission-request detection) is what
 eventually surfaces that to the owner instead of it just failing silently
 in the transcript.
 
-**Hard no-invocation guardrail for a real Claude Pro/Max subscription
-(owner request, 2026-10-01):** this integration has never completed a
-real task against the real Anthropic API. The owner's actual concern is
-not file access — it's that starting or resuming *any* real `claude`
-invocation spends real subscription usage the instant the model answers,
-regardless of what tools it is or isn't allowed to touch. So for a
-CLAUDE_CODE_OAUTH_TOKEN credential (a subscription, not a disposable API
-key), `start_session`/`resume_session`/`send_input` refuse outright —
-`_ensure_can_invoke` raises `ProviderInvocationBlockedError` before any
-container, Docker call, or project lookup happens at all. Listing and
-reading existing projects, sessions, events and (already-known) usage is
-entirely unaffected — those never call this adapter's invoking methods —
-only *starting new model usage* is blocked. This is not a runtime toggle;
-lifting it for a subscription credential is a deliberate future code
-change, once the integration has actually completed a real task
-successfully with an API key. A pay-per-use API key is unaffected by this
-block (though see below for what still applies to it).
+**No-invocation guardrail for a real Claude Pro/Max subscription — added
+2026-10-01, lifted the same day (owner request):** this integration had
+never completed a real task against the real Anthropic API, so
+`start_session`/`resume_session`/`send_input` initially refused outright
+for a CLAUDE_CODE_OAUTH_TOKEN credential, before any container, Docker
+call or project lookup happened. Once the owner had actually registered a
+subscription credential through the operator UI and asked to test it for
+real, that block was removed from `_ensure_can_invoke` — it now only
+refuses when no credential is configured at all, for either kind. The
+read-only layers below (previously dormant for a subscription credential,
+since the block stopped execution before `_build` ran) are now the live
+protection for a real subscription session, not a theoretical one for
+later. Lifting the block was a deliberate code change with its own dated
+reasoning, same as the guardrail it replaced — not a quiet revert.
 
-`_build` additionally carries layered restrictions that apply to whichever
-credential kind is actually allowed to invoke `claude` at a given time —
-right now that is only an API key, since the block above stops the
-subscription path before `_build` is ever reached for it; this is kept in
-place, not deleted, for whenever the invocation block is deliberately
-lifted for a subscription credential. Verified live, not assumed:
+`_build` still restricts a subscription-credentialed session to read-only
+— it can now actually run, but not write files or execute shell commands —
+while an API-key session keeps full default permissions. That split is
+deliberate, not a leftover: a brand-new, never-yet-proven subscription
+path gets to prove itself read-only first. Verified live, not assumed:
 
 1. A Docker-enforced read-only bind mount (`ContainerSpec.read_only_mount`
    -> `docker run -v host:/workspace:ro`) — confirmed by actually trying to
@@ -83,11 +79,7 @@ import json
 import uuid
 
 from coding_agent_service.credentials import CredentialStore
-from coding_agent_service.providers import (
-    ProviderError,
-    ProviderEvent,
-    ProviderInvocationBlockedError,
-)
+from coding_agent_service.providers import ProviderError, ProviderEvent
 from coding_agent_service.runtime import (
     ContainerRuntime,
     ContainerSpec,
@@ -227,26 +219,20 @@ class ClaudeCodeProvider:
         return record.kind, secret
 
     async def _ensure_can_invoke(self) -> None:
-        """29.3 hard guardrail (owner request, 2026-10-01): refuses before
-        touching Docker, the project store, or even decrypting the secret
-        value — a subscription credential cannot spend usage through this
-        adapter at all right now. See the module docstring for exactly
-        what was tested vs. assumed, and what remains unaffected (reading
-        existing projects/sessions/events/usage)."""
+        """29.3: refuses only when no credential is configured at all.
+        The OAuth-token invocation block that lived here (owner request,
+        2026-10-01) was deliberately lifted the same day, once the owner
+        had actually registered a subscription credential and asked to
+        test it for real — see the module docstring's "Lifting the
+        no-invocation guardrail" note for exactly what still protects a
+        subscription session (the read-only layers in `_build`, now live
+        rather than dormant) and what doesn't (there is still no hook-based
+        permission/input detection, 29.4)."""
         record = await self._credentials.describe("claude-code")
         if record is None:
             raise ProviderError(
                 "No claude-code credential configured; set one in the operator UI's "
                 "Settings · Accounts · Coding agent credentials card first"
-            )
-        if record.kind == CredentialKind.OAUTH_TOKEN:
-            raise ProviderInvocationBlockedError(
-                "Starting or resuming a Claude Code session with a Claude Pro/Max subscription "
-                "credential is disabled at this stage to avoid spending real subscription usage "
-                "before this integration has proven itself. Project and session status remain "
-                "fully readable; only starting new model usage is blocked. Use an API key "
-                "credential to actually run a task, or see claude_provider.py to lift this "
-                "deliberately once the integration has been exercised successfully."
             )
 
     async def _build(self, session: CodingAgentSession, *, prompt: str, resume: bool) -> tuple[ContainerSpec, str]:

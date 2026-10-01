@@ -396,8 +396,29 @@ services:
       CODING_AGENT_CREDENTIALS_PATH: /data/coding-agent-credentials.json
     volumes:
       - coding-agent-credentials:/data
+      # Owner-approved exception (2026-10-01): this is the orchestrator
+      # container, not a sandboxed session one — runtime.py's
+      # DockerCLIContainerRuntime needs this to actually start/stop/inspect
+      # session containers on the host. A container with access to this
+      # socket has host-root-equivalent reach; 29.18's "no Docker socket"
+      # rule is about the containers *this service spawns* for a session,
+      # never this service itself.
+      - /var/run/docker.sock:/var/run/docker.sock
     expose:
       - "8000"
+    # Attaching this service to `restricted-network` is what makes Compose
+    # actually create that named network on the host — without it, nothing
+    # existed for a session container's `--network restricted-network` to
+    # join (found live, 2026-10-01: the first real session attempt failed
+    # with "network restricted-network not found"). coding-agent-service
+    # itself still reaches every other service over the default network
+    # too (Compose attaches a service to all networks it lists, plus the
+    # project's own default unless told otherwise — see the top-level
+    # `networks:` block below for what `restricted-network` actually is
+    # and isn't).
+    networks:
+      - default
+      - restricted-network
 
   caddy:
     image: caddy:2-alpine
@@ -443,3 +464,19 @@ secrets:
     file: ${SECRET_KEY_FILE:-./.env.secret-keys.json}
   coding_agent_credential_key:
     file: ${CODING_AGENT_SECRET_KEY_FILE:-./.env.coding-agent-secret-key.json}
+
+networks:
+  default: {}
+  # Phase 29.18's default CodingProject.allowed_network_profile. Today
+  # this is only a plain, separate bridge network — real isolation from
+  # the hub/core/postgres network a session container has no business
+  # reaching, and from the host's other Docker networks, but NOT yet
+  # egress-filtered/allowlisted the way "restricted" implies in
+  # docs/phase-29.md; it still has ordinary NAT internet access (needed
+  # for Claude's own API calls). Tightening egress is still open work.
+  # `name:` pins the literal on-host network name — without it Compose
+  # prefixes it to "reachy-homelab_restricted-network", which does not
+  # match the literal "restricted-network" DockerCLIContainerRuntime
+  # passes to `docker run --network` (found live, 2026-10-01).
+  restricted-network:
+    name: restricted-network

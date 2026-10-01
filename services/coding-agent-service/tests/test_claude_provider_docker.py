@@ -17,13 +17,13 @@ actually stops the real process. Completing a real task and parsing a
 real "result" line needs the owner's own credential and is not exercised
 here.
 
-Two more tests cover claude_provider.py's hard no-invocation guardrail for
-a Claude Pro/Max subscription (`CLAUDE_CODE_OAUTH_TOKEN`) credential: that
-`start_session` creates no real container at all for one, and that the
-dormant defense-in-depth layers (read-only mount, tool deny-list) still
-work correctly against a real container if that path is ever reached
-directly, in case the guardrail is lifted later without someone
-re-verifying this half.
+A third test covers a Claude Pro/Max subscription (`CLAUDE_CODE_OAUTH_TOKEN`)
+credential against a real container: the no-invocation block that
+originally stopped it from starting at all (owner request, 2026-10-01) was
+lifted the same day once the owner registered one and asked to test it —
+see claude_provider.py's module docstring — so this now confirms what
+still protects that session instead: the real init event must not list a
+disallowed tool, and the project directory must actually be unwritable.
 """
 
 import asyncio
@@ -41,7 +41,6 @@ from coding_agent_service.claude_provider import (
     ClaudeCodeProvider,
 )
 from coding_agent_service.credentials import InMemoryCredentialStore
-from coding_agent_service.providers import ProviderInvocationBlockedError
 from coding_agent_service.runtime import ContainerStatus, DockerCLIContainerRuntime
 from coding_agent_service.store import InMemoryCodingAgentStore
 
@@ -125,50 +124,18 @@ def test_real_claude_container_starts_tracks_session_id_and_stops() -> None:
 
 
 @requires_docker_and_image
-def test_real_oauth_token_session_is_blocked_before_any_docker_call() -> None:
-    """The hard no-invocation guardrail (owner request, 2026-10-01),
-    verified against the real runtime rather than only a fixture: starting
-    a session with a subscription credential must not create any real
-    container at all — confirmed by checking `docker ps` for this
-    session's label after the blocked call."""
+def test_real_oauth_token_session_starts_read_only_against_a_real_container() -> None:
+    """The original hard no-invocation guardrail for a subscription
+    credential (owner request, 2026-10-01) was lifted the same day once the
+    owner registered a real one and asked to test it — see
+    claude_provider.py's module docstring. This confirms, against a real
+    container rather than only a fixture, what still protects that session:
+    the real init event must not list any disallowed tool, and the project
+    directory it was given must actually be unwritable from inside the
+    real container."""
 
     async def run() -> None:
-        with tempfile.TemporaryDirectory(prefix="reachy-claude-provider-oauth-block-test-") as repo_path:
-            store = InMemoryCodingAgentStore()
-            credentials = InMemoryCredentialStore()
-            await credentials.set_credential("claude-code", CredentialKind.OAUTH_TOKEN, "invalid-test-oauth-token")
-            runtime = DockerCLIContainerRuntime()
-            provider = ClaudeCodeProvider(runtime, credentials, store)
-
-            project = await store.add_project(
-                CodingProject(
-                    name="test-repo", repository_path=repo_path, provider="claude-code",
-                    allowed_network_profile="bridge",
-                )
-            )
-            session = CodingAgentSession(
-                project_id=project.id, provider="claude-code", task_summary="say hi", owner_user_id="owner-1",
-            )
-
-            with pytest.raises(ProviderInvocationBlockedError):
-                await provider.start_session(session)
-
-            assert await runtime.list_by_session(session.id) == []
-
-    asyncio.run(run())
-
-
-@requires_docker_and_image
-def test_real_build_still_produces_a_restricted_read_only_container_if_ever_reached() -> None:
-    """_build's layered restrictions (dormant in practice — see
-    claude_provider.py's module docstring — because the guardrail above
-    stops a subscription credential before _build ever runs) are exercised
-    directly here against a real container, so that dormant code path is
-    still proven correct against the real `claude` binary, not just a
-    fixture, in case it is ever reached again."""
-
-    async def run() -> None:
-        with tempfile.TemporaryDirectory(prefix="reachy-claude-provider-oauth-build-test-") as repo_path:
+        with tempfile.TemporaryDirectory(prefix="reachy-claude-provider-oauth-test-") as repo_path:
             existing_file = Path(repo_path) / "existing.txt"
             existing_file.write_text("original")
 
@@ -188,9 +155,10 @@ def test_real_build_still_produces_a_restricted_read_only_container_if_ever_reac
                 project_id=project.id, provider="claude-code", task_summary="say hi", owner_user_id="owner-1",
             )
 
-            spec, _ = await provider._build(session, prompt=session.task_summary, resume=False)
-            assert spec.read_only_mount is True
-            container_id = await runtime.start(spec)
+            start_event = await provider.start_session(session)
+            assert start_event.status == CodingAgentStatus.RUNNING
+            assert "read-only" in start_event.summary
+            container_id = start_event.metadata["container_id"]
             try:
                 # The real init event (first JSONL line) lists the session's
                 # actual active tools — wait for at least that line to land.

@@ -171,10 +171,11 @@ def test_credential_routes_require_service_token() -> None:
     ).status_code == 401
 
 
-def test_starting_a_claude_code_session_with_an_oauth_credential_returns_403() -> None:
-    """29.3 hard guardrail (owner request, 2026-10-01), confirmed at the
-    HTTP layer: ProviderInvocationBlockedError maps to 403, distinct from
-    the generic 409 a plain ProviderError gets."""
+def test_starting_a_claude_code_session_with_an_oauth_credential_starts_read_only() -> None:
+    """The original hard no-invocation block for a subscription credential
+    (owner request, 2026-10-01) was lifted the same day once the owner
+    registered a real one and asked to test it — see claude_provider.py's
+    module docstring. It now starts (HTTP 200), restricted to read-only."""
 
     store = InMemoryCodingAgentStore()
     credentials = InMemoryCredentialStore()
@@ -196,4 +197,5 @@ def test_starting_a_claude_code_session_with_an_oauth_credential_returns_403() -
         paths.SESSIONS, headers=headers,
         json={"project_id": project["id"], "task_summary": "say hi", "owner_user_id": "owner-1"},
     )
-    assert response.status_code == 403
+    assert response.status_code == 200
+    assert response.json()["status"] == "running"
