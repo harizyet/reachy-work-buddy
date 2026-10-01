@@ -1,6 +1,8 @@
 # Phase 29 — Coding Agent Supervisor
 
-Status: planned, not implemented.
+Status: 29.1 (contracts and session store) implemented 2026-10-01; everything
+else below is still planned. See [service reference](reference/services.md#coding-agent-service-phase-29-planned)
+for exactly what exists.
 
 Phase 29 adds supervised development-agent sessions to Reachy Work Buddy.
 The initial provider is Claude Code; the architecture must support
@@ -506,7 +508,7 @@ speculative endpoints or later-phase functionality (AGENTS.md).
 
 | Stage | Scope | Exit criterion |
 |---|---|---|
-| 29.1 — Contracts and session store | `CodingProject`, `CodingAgentSession`, `CodingAgentEvent`, `ProviderCapabilities`, `UsageSnapshot` | A simulated provider can create and transition a durable coding session |
+| 29.1 — Contracts and session store (**implemented** 2026-10-01) | `CodingProject`, `CodingAgentSession`, `CodingAgentEvent`, `ProviderCapabilities`, `UsageSnapshot` | A simulated provider can create and transition a durable coding session — met: `services/coding-agent-service`'s `CodingAgentSupervisor` + in-memory store + `SimulatedProvider`, exercised in `tests/test_service.py` and `tests/test_app.py`. Store is in-memory only; restart durability is still 29.27's job |
 | 29.2 — Container runner | Container image, project mounts, resource limits, session labels, start/stop/reconcile | A dummy command can run inside a project-specific container and survive supervisor restart reconciliation |
 | 29.3 — Claude Code provider | Containerize Claude Code; start, resume, session ID capture, structured output/event capture | Reachy launches a real Claude Code task against a test repository and tracks the provider session ID |
 | 29.4 — Claude hooks | Wire `SessionStart`, `Stop`, `StopFailure`, `PermissionRequest`/`Notification`, `SessionEnd` into the event bridge | The supervisor correctly distinguishes running, returned-control, permission-needed and failed/rate-limited states |

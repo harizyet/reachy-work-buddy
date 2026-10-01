@@ -23,7 +23,7 @@ dev = [
 override-dependencies = ["opencv-contrib-python; sys_platform == 'never'"]
 
 [tool.uv.workspace]
-members = ["services/reachy-embodiment", "services/reachy-hub", "services/companion-core"]
+members = ["services/reachy-embodiment", "services/reachy-hub", "services/companion-core", "services/coding-agent-service"]
 
 # CPU-only torch: this machine (and the Reachy Mini) has no GPU, and the
 # default PyPI torch/torchaudio wheels pull several GB of CUDA/cuDNN

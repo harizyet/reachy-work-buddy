@@ -1,3 +1,17 @@
+from shared.models.coding_agent import (
+    CodingAgentEvent,
+    CodingAgentEventType,
+    CodingAgentSession,
+    CodingAgentStatus,
+    CodingProject,
+    CreateProjectRequest,
+    ProviderCapabilities,
+    ResumeSessionRequest,
+    SendInputRequest,
+    StartSessionRequest,
+    UsageDimension,
+    UsageSnapshot,
+)
 from shared.models.embodiment import Behaviour, EmbodimentCommand, EmbodimentState
 from shared.models.memory import MemoryRecord, MemoryType
 from shared.models.rag import DocumentChunk, RetrievedChunk
@@ -13,6 +27,12 @@ __all__ = [
     "AgentResponse",
     "AgentSession",
     "Behaviour",
+    "CodingAgentEvent",
+    "CodingAgentEventType",
+    "CodingAgentSession",
+    "CodingAgentStatus",
+    "CodingProject",
+    "CreateProjectRequest",
     "DocumentChunk",
     "EmbodimentCommand",
     "EmbodimentState",
@@ -23,6 +43,12 @@ __all__ = [
     "PreferredChannel",
     "Privacy",
     "PrivacyContext",
+    "ProviderCapabilities",
+    "ResumeSessionRequest",
     "RetrievedChunk",
+    "SendInputRequest",
+    "StartSessionRequest",
     "Urgency",
+    "UsageDimension",
+    "UsageSnapshot",
 ]

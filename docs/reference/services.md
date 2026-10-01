@@ -282,6 +282,42 @@ Physical camera/audio acceptance is still outstanding. Read
 [bring-up evidence](../verification/phase-22-bring-up.md) before treating the
 simulator's successful move lifecycle as validated real motion.
 
+## coding-agent-service (Phase 29, planned)
+
+[Source](../../services/coding-agent-service/src/coding_agent_service/) owns
+coding-agent process/container lifecycle, provider adapters, session state,
+agent events and usage observations, behind the provider-neutral contract in
+[docs/phase-29.md](../phase-29.md). companion-core (not yet wired) would own
+the calling intent/authorization/notification policy; this service never
+reasons about owner intent itself.
+
+29.1 (contracts and session store) is implemented: `CodingAgentSupervisor`
+creates a `CodingProject`, starts/resumes/stops a `CodingAgentSession`
+against a provider registry, and records normalized `CodingAgentEvent`s.
+Only an in-memory store and a `SimulatedProvider` exist so far — no
+container runtime (29.2), no real Claude Code adapter (29.3), and no
+companion-core HTTP client yet. Not deployed; no `docker-compose.yml` entry.
+
+| Surface | Purpose |
+|---|---|
+| `GET /health` | Unauthenticated liveness check |
+| `POST`, `GET /projects`; `GET /projects/{project_id}` | The explicit registry of projects a coding agent may touch; paths are never accepted free-form from a session request |
+| `POST /sessions` | Start a session against a project's configured provider |
+| `GET /sessions`; `GET /sessions/{session_id}` | List/inspect durable session records |
+| `POST /sessions/{session_id}/resume`, `/input` | Owner-instruction relay into a `WAITING_FOR_INPUT`/`WAITING_FOR_PERMISSION`/`RATE_LIMITED` session only; rejected with 409 otherwise |
+| `POST /sessions/{session_id}/stop` | Idempotent terminal stop |
+| `GET /sessions/{session_id}/events` | Normalized event log for that session |
+| `GET /sessions/{session_id}/usage` | Capability-gated `UsageSnapshot`; absent dimensions are unknown, never assumed zero |
+| `GET /providers/{provider}/capabilities` | `ProviderCapabilities` so a caller never assumes a metric a provider doesn't expose |
+
+All routes but `/health` require the `X-Reachy-Coding-Agent-Service-Token`
+header (`shared/protocols/coding_agent.py`'s `SERVICE_HEADER`), checked with
+`secrets.compare_digest` — the same shared-secret pattern as accounts'
+`SERVICE_HEADER`, deliberately a separate token (29.19: agent credentials
+must not fall back to another service's secret). Wire models live in
+`shared/models/coding_agent.py` since, unlike meetings, companion-core will
+need the same shapes for its own HTTP client once 29.6 wires it in.
+
 ## Meeting transcription (Phase 27.2)
 
 [Source](../../deploy/homelab/transcription/) is a standalone sidecar, not

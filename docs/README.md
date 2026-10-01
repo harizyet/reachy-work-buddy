@@ -70,7 +70,9 @@ correct facts or links, not to track each new phase dependency.
   runs and observes containerized Claude Code (then Codex) sessions behind a
   provider-neutral contract, feeding lifecycle/usage events into Reachy's
   existing notification pipeline; observation and relay only, no automatic
-  permission approval or push/merge.
+  permission approval or push/merge. 29.1 (contracts/session store, in-memory,
+  simulated provider) implemented 2026-10-01; see
+  [service reference](reference/services.md#coding-agent-service-phase-29-planned).
 - [Jarvis baseline](jarvis-baseline.md): upstream reuse/reference notes.
 
 ## Architecture decisions

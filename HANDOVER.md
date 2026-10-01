@@ -6,13 +6,30 @@ The [documentation index](docs/README.md) defines ownership;
 
 ## Current work
 
-Added [Phase 29](docs/phase-29.md) to the roadmap: a planned coding-agent
-supervisor (`coding-agent-service`) that runs Claude Code, then Codex,
-inside dedicated containers behind a provider-neutral contract, feeding
-lifecycle/usage events into Reachy's existing notification pipeline.
-Documentation only — no code changes, nothing to deploy. Linked from the
-[roadmap](docs/plan.md#6-implementation-roadmap) and
-[documentation index](docs/README.md).
+[Phase 29](docs/phase-29.md) (coding agent supervisor) added to the
+roadmap, and its first stage, 29.1 (contracts and session store), is now
+implemented at `services/coding-agent-service`: `CodingAgentSupervisor`
+creates/resumes/stops a durable `CodingAgentSession` against a provider
+registry and records normalized `CodingAgentEvent`s; a `SimulatedProvider`
+and an in-memory store stand in for the real Claude Code adapter (29.3)
+and Postgres durability (29.27), both still planned. Wire models
+(`CodingProject`, `CodingAgentSession`, `CodingAgentEvent`,
+`ProviderCapabilities`, `UsageSnapshot`, request schemas) live in
+`shared/models/coding_agent.py`; routes/service-token constant in
+`shared/protocols/coding_agent.py`. Added to the uv workspace
+(`services/coding-agent-service`); `uv sync --all-packages` restored after
+an accidental `--package`-scoped sync pruned the shared dev venv mid-session
+(no production impact — dev venv only).
+
+Nothing wires this service into companion-core or reachy-hub yet (29.6/29.7),
+there is no container runtime (29.2) or real Claude Code adapter (29.3), and
+it is not in `deploy/homelab/docker-compose.yml` — all deliberately deferred
+to their own stages per [docs/phase-29.md](docs/phase-29.md#2929--implementation-sequence).
+12 new unit/HTTP tests pass (`uv run pytest services/coding-agent-service/tests`);
+full `services shared` suite (965 passed) and `ruff check .` both still
+pass after the change. See
+[service reference](docs/reference/services.md#coding-agent-service-phase-29-planned)
+for the exact route/behavior surface.
 
 Meeting UI wording/layout cleanup is implemented locally, not deployed.
 Rows separate title/status/date/actions; ALIGNING displays “Processing
@@ -45,7 +62,16 @@ meetings remain in the database/audio volume; no delete endpoint exists.
 
 ## Next session
 
-0. Roll out the long-audio changes to Core, Hub and both sidecars, including
+0. Phase 29.2 — container runner: a real Docker image, project-specific
+   mounts, resource limits, session labels
+   (`reachy.project_id`/`session_id`/`provider`) and start/stop/reconcile,
+   so a dummy command can run inside a project-specific container and
+   survive a supervisor restart. Decide then whether a
+   `Postgres*CodingAgentStore` is worth adding, or whether staying
+   in-memory until restart durability actually matters (29.27) is fine a
+   while longer. No `docker-compose.yml` entry yet; add one once there's a
+   real container runtime to supervise, not before.
+1. Roll out the long-audio changes to Core, Hub and both sidecars, including
    the standalone diarization server (do not create a competing instance).
    Coordinate speech-token activation with that restart. Representative
    human speech/resource acceptance remains open despite synthetic
