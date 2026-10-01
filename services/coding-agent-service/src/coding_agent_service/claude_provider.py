@@ -10,6 +10,13 @@ init line for the session id, though: `--session-id <uuid>` lets it assign
 one itself up front, so start_session knows the provider_session_id
 immediately rather than waiting on container output.
 
+Confirmed live by grepping the installed claude.exe binary for its env-var
+names: a Claude Pro/Max subscription is supported, not just pay-per-use API
+billing, via a long-lived token (`claude setup-token`, run interactively
+on a machine where the owner can log in — this container cannot do that
+itself) read from CLAUDE_CODE_OAUTH_TOKEN, distinct from ANTHROPIC_API_KEY.
+_credential_env picks the right variable from the stored CredentialKind.
+
 This module never passes --dangerously-skip-permissions or
 --allow-dangerously-skip-permissions — AGENTS.md's stance that "the LLM
 has no authority to bypass an action gate" applies to this CLI's own tool
@@ -36,6 +43,7 @@ from coding_agent_service.store import CodingAgentStore
 from shared.models.coding_agent import (
     CodingAgentSession,
     CodingAgentStatus,
+    CredentialKind,
     ProviderCapabilities,
     UsageDimension,
     UsageSnapshot,
@@ -132,20 +140,31 @@ class ClaudeCodeProvider:
             structured_stream=True,
         )
 
-    async def _credential(self) -> str:
+    async def _credential_env(self) -> dict[str, str]:
+        """Claude Code reads two different env vars depending on how the
+        owner authenticates (confirmed live by grepping the real
+        claude.exe binary for its env-var names, not guessed): a
+        pay-per-use API key is ANTHROPIC_API_KEY, but a Claude Pro/Max
+        subscription's long-lived token (generated interactively with
+        `claude setup-token` — not something this headless container can
+        do itself) is CLAUDE_CODE_OAUTH_TOKEN. Using the wrong variable
+        for the stored CredentialKind would silently try to bill the
+        subscription token as an API key and fail authentication."""
+        record = await self._credentials.describe("claude-code")
         secret = await self._credentials.get_secret("claude-code")
-        if not secret:
+        if not record or not secret:
             raise ProviderError(
                 "No claude-code credential configured; set one in the operator UI's "
                 "Settings · Accounts · Coding agent credentials card first"
             )
-        return secret
+        env_var = "ANTHROPIC_API_KEY" if record.kind == CredentialKind.API_KEY else "CLAUDE_CODE_OAUTH_TOKEN"
+        return {env_var: secret}
 
     async def _spec(self, session: CodingAgentSession, command: list[str]) -> ContainerSpec:
         project = await self._projects.get_project(session.project_id)
         if project is None:
             raise ProviderError(f"Unknown project {session.project_id}")
-        secret = await self._credential()
+        credential_env = await self._credential_env()
         return ContainerSpec(
             image=self._image,
             project_id=session.project_id,
@@ -153,7 +172,7 @@ class ClaudeCodeProvider:
             provider="claude-code",
             host_mount_path=project.repository_path,
             command=command,
-            env={"ANTHROPIC_API_KEY": secret},
+            env=credential_env,
             network_profile=project.allowed_network_profile,
         )
 

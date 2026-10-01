@@ -82,6 +82,10 @@ class SimulatedContainerRuntime:
         self._containers: dict[str, dict[str, str]] = {}
         self._status: dict[str, ContainerStatus] = {}
         self._logs: dict[str, str] = {}
+        # Test-only introspection, same spirit as set_logs below — a
+        # provider test can assert on exactly what spec (env, mounts,
+        # network profile) its provider asked the runtime to start.
+        self.specs: dict[str, ContainerSpec] = {}
         self._next_id = 0
 
     async def start(self, spec: ContainerSpec) -> str:
@@ -94,6 +98,7 @@ class SimulatedContainerRuntime:
         }
         self._status[container_id] = ContainerStatus.RUNNING
         self._logs[container_id] = ""
+        self.specs[container_id] = spec
         return container_id
 
     async def stop(self, container_id: str, *, timeout: int = 10) -> None:

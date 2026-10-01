@@ -90,6 +90,45 @@ def test_start_session_assigns_a_session_id_without_waiting_for_output() -> None
     asyncio.run(run())
 
 
+def test_start_session_sends_an_api_key_credential_as_anthropic_api_key() -> None:
+    async def run() -> None:
+        _, runtime, _, provider, project = await _setup(credential="sk-ant-fixture-key")
+        session = CodingAgentSession(
+            project_id=project.id, provider="claude-code", task_summary="x", owner_user_id="owner-1",
+        )
+        event = await provider.start_session(session)
+        spec = runtime.specs[event.metadata["container_id"]]
+        assert spec.env == {"ANTHROPIC_API_KEY": "sk-ant-fixture-key"}
+
+    asyncio.run(run())
+
+
+def test_start_session_sends_an_oauth_token_credential_as_claude_code_oauth_token() -> None:
+    async def run() -> None:
+        store = InMemoryCodingAgentStore()
+        runtime = SimulatedContainerRuntime()
+        credentials = InMemoryCredentialStore()
+        # A Claude Pro/Max subscription's long-lived token (from `claude
+        # setup-token`, run interactively elsewhere) must go in a
+        # different env var than a pay-per-use API key — confirmed live by
+        # grepping the real claude.exe binary (claude_provider.py's module
+        # docstring); using the wrong one would silently fail to auth.
+        await credentials.set_credential("claude-code", CredentialKind.OAUTH_TOKEN, "sk-ant-oat01-fixture")
+        provider = ClaudeCodeProvider(runtime, credentials, store)
+        project = await store.add_project(
+            CodingProject(name="X", repository_path="/x", provider="claude-code")
+        )
+        session = CodingAgentSession(
+            project_id=project.id, provider="claude-code", task_summary="x", owner_user_id="owner-1",
+        )
+
+        event = await provider.start_session(session)
+        spec = runtime.specs[event.metadata["container_id"]]
+        assert spec.env == {"CLAUDE_CODE_OAUTH_TOKEN": "sk-ant-oat01-fixture"}
+
+    asyncio.run(run())
+
+
 def test_start_session_without_a_credential_raises_provider_error() -> None:
     async def run() -> None:
         _, _, _, provider, project = await _setup(credential=None)

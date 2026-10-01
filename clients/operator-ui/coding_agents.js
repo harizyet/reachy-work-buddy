@@ -6,7 +6,10 @@ function createCodingAgents({api, isLoggedIn}) {
   const el = id => document.getElementById(id);
   const root = '/providers';
   const PROVIDERS = [
-    {id: 'claude-code', title: 'Claude Code'},
+    {
+      id: 'claude-code', title: 'Claude Code',
+      hint: 'API key: pay-per-use billing from your Anthropic Console account. OAuth token: if you have a Claude Pro or Max subscription, run "claude setup-token" on a computer where you can sign in, then paste the token it prints here — usage counts against your subscription instead of API billing. Reachy cannot run that sign-in step itself.',
+    },
     {id: 'codex', title: 'OpenAI Codex CLI'},
   ];
   function say(text) { el('coding-agents-status').textContent = text; }
@@ -17,7 +20,7 @@ function createCodingAgents({api, isLoggedIn}) {
     if (!isLoggedIn()) return;
     const byProvider = Object.fromEntries(records.map(r => [r.provider, r]));
     el('coding-agent-cards').replaceChildren();
-    for (const {id, title} of PROVIDERS) {
+    for (const {id, title, hint} of PROVIDERS) {
       const record = byProvider[id];
       const card = document.createElement('section'); card.className = 'card';
       const heading = document.createElement('h3'); heading.textContent = title;
@@ -26,6 +29,7 @@ function createCodingAgents({api, isLoggedIn}) {
         ? 'Credential configured (ending ' + record.last_four + '). Saved ' + new Date(record.updated_at).toLocaleString() + '.'
         : 'No credential configured yet.';
       card.append(heading, status);
+      if (hint) { const hintPara = document.createElement('p'); hintPara.className = 'muted'; hintPara.textContent = hint; card.append(hintPara); }
 
       const form = document.createElement('form');
       const kindLabel = document.createElement('label'); kindLabel.textContent = 'Credential type';

@@ -323,7 +323,15 @@ operator UI (see reachy-hub and operator-ui below), not an env-file
 afterthought.
 
 29.3 (Claude Code provider) is implemented: `claude_provider.py`'s
-`ClaudeCodeProvider` consumes exactly that stored `claude-code` credential.
+`ClaudeCodeProvider` consumes exactly that stored `claude-code` credential,
+and picks the env var Claude Code actually reads based on its
+`CredentialKind` (confirmed by grepping the real installed `claude.exe`
+binary, not guessed): `api_key` → `ANTHROPIC_API_KEY` (pay-per-use), or
+`oauth_token` → `CLAUDE_CODE_OAUTH_TOKEN` — a Claude Pro/Max subscription's
+long-lived token, generated interactively with `claude setup-token` on a
+machine where the owner can sign in (this container cannot do that
+itself), then pasted into the operator UI's credential card. Using the
+wrong variable for the stored kind would silently fail to authenticate.
 `docker/claude-code/Dockerfile` builds a real image (`node:20-slim` +
 `npm install -g @anthropic-ai/claude-code`, confirmed live at claude-code
 2.1.197; the `node` user is uid/gid 1000, matching
