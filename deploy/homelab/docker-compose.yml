@@ -264,6 +264,12 @@ services:
       # Settings · Accounts survive a container recreate, backed by the
       # owner-recognition-captures volume below.
       OWNER_RECOGNITION_CAPTURE_DIR: ${OWNER_RECOGNITION_CAPTURE_DIR:-/data/owner-recognition-captures}
+      # Phase 29.19: owner-facing coding-agent credential proxy
+      # (reachy_hub/coding_agent.py). Unset means 503, same fail-closed
+      # pattern as REMOTE_UI_TOKEN above — matches coding-agent-service's
+      # own required CODING_AGENT_SERVICE_TOKEN below.
+      CODING_AGENT_SERVICE_URL: http://coding-agent-service:8000
+      CODING_AGENT_SERVICE_TOKEN: ${CODING_AGENT_SERVICE_TOKEN:-}
     volumes:
       - owner-recognition-captures:/data/owner-recognition-captures
     depends_on:
@@ -357,6 +363,33 @@ services:
     expose:
       - "8000"
 
+  # Phase 29.1-29.3 (docs/phase-29.md): coding-agent session supervisor.
+  # Owns project/session/credential state for coding-agent providers
+  # (currently simulated + Claude Code); companion-core does not yet call
+  # this service (29.6/29.7 still planned) — only reachy-hub's owner-facing
+  # credential proxy (reachy_hub/coding_agent.py) reaches it so far.
+  coding-agent-service:
+    build:
+      context: ../..
+      dockerfile: services/coding-agent-service/Dockerfile
+    restart: unless-stopped
+    secrets:
+      - coding_agent_credential_key
+    environment:
+      CODING_AGENT_SERVICE_TOKEN: ${CODING_AGENT_SERVICE_TOKEN:?set CODING_AGENT_SERVICE_TOKEN in .env}
+      # 29.19: a separate key file from companion-core/hub's credential_keys
+      # secret above — a leaked coding-agent key must not also decrypt
+      # Google account credentials, and this service's own
+      # EncryptedFileCredentialStore uses a different, simpler format
+      # (coding_agent_service/credentials.py's CredentialKeyring, not
+      # companion_core.secrets.Keyring).
+      CODING_AGENT_SECRET_KEY_FILE: /run/secrets/coding_agent_credential_key
+      CODING_AGENT_CREDENTIALS_PATH: /data/coding-agent-credentials.json
+    volumes:
+      - coding-agent-credentials:/data
+    expose:
+      - "8000"
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
@@ -391,7 +424,13 @@ volumes:
   # Phase 27.2: the transcription service's downloaded Whisper model.
   # Same re-download-not-data-loss reasoning as diarization-data above.
   transcription-data:
+  # Phase 29.19: coding-agent-service's encrypted provider credentials
+  # (e.g. a Claude Code API key/subscription token). Losing this volume
+  # loses the stored credential, not anything recoverable from Postgres.
+  coding-agent-credentials:
 
 secrets:
   credential_keys:
     file: ${SECRET_KEY_FILE:-./.env.secret-keys.json}
+  coding_agent_credential_key:
+    file: ${CODING_AGENT_SECRET_KEY_FILE:-./.env.coding-agent-secret-key.json}

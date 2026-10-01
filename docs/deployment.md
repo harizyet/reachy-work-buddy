@@ -724,6 +724,29 @@ files. Do not reuse `SESSION_SECRET_KEY`. Back up the key file separately
 under equivalent access restrictions; a database dump alone cannot
 recover credentials.
 
+coding-agent-service (Phase 29.19) uses a separate key file with a
+different, simpler shape (`coding_agent_service/credentials.py`'s
+`CredentialKeyring`, not `companion_core.secrets.Keyring`) — do not point
+`CODING_AGENT_SECRET_KEY_FILE` at the same file as `SECRET_KEY_FILE`, and
+do not reuse this one for it:
+
+```bash
+python3 - <<'PYKEY'
+import base64, json, os
+path = "deploy/homelab/.env.coding-agent-secret-key.json"
+fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+with os.fdopen(fd, "w") as stream:
+    json.dump({"key": base64.b64encode(os.urandom(32)).decode()}, stream)
+PYKEY
+git check-ignore deploy/homelab/.env.coding-agent-secret-key.json
+```
+
+Set `CODING_AGENT_SECRET_KEY_FILE` to its absolute host path; Compose mounts
+it at `/run/secrets/coding_agent_credential_key` for coding-agent-service
+only. Without it, that service falls back to an in-memory credential store
+that does not survive a restart (`coding_agent_service/app.py`'s
+`_default_credential_store`).
+
 ### Existing database cutover
 
 Use your existing named project, private env file and Compose overrides for
