@@ -241,6 +241,10 @@ services:
       # reply plays; they are classified here in memory and never stored.
       # Off by default until physically accepted.
       PALM_STOP_ENABLED: ${PALM_STOP_ENABLED:-false}
+      # Temporary Phase 30 calibration aid: true logs the first 8 words of each
+      # rejected wake candidate's transcript. Ambient speech reaches the log;
+      # leave off except for a calibration session.
+      WAKE_DEBUG_LOG_REJECTED_TRANSCRIPTS: ${WAKE_DEBUG_LOG_REJECTED_TRANSCRIPTS:-false}
       # Phase 25a.4: gates each voice transcript on RequestSensitivity/
       # effective_trust before it reaches Companion Core. Off by default —
       # with no real speaker/visual verifier wired in yet, enabling this

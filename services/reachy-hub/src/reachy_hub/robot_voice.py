@@ -39,6 +39,7 @@ from __future__ import annotations
 import asyncio
 import io
 import logging
+import os
 import secrets
 import time
 import wave
@@ -1043,6 +1044,9 @@ async def _assess_candidate(arm: WakeArm, body: bytes, pipeline: VoiceTurnPipeli
         log.exception("robot %s: wake candidate transcription failed", arm.robot_id)
         return "stt_failed", ""
     relevance = assess(transcript)
+    if not relevance.admitted and os.environ.get("WAKE_DEBUG_LOG_REJECTED_TRANSCRIPTS", "").lower() == "true":
+        # Temporary calibration aid (Phase 30): ambient speech reaches the log.
+        log.info("wake debug: rejected (%s) transcript starts: %r", relevance.reason, " ".join(transcript.split()[:8]))
     return relevance.reason, relevance.request
 
 
