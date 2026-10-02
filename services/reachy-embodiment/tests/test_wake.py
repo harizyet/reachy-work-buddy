@@ -170,12 +170,12 @@ async def wait_until(predicate, timeout: float = 5.0):
         await asyncio.sleep(0.005)
 
 
-def make_monitor(uploader, *, conversation=None, limits: WakeLimits | None = None):
+def make_monitor(uploader, *, conversation=None, limits: WakeLimits | None = None, detector=None, alert_threshold=None):
     mic, motion, clock = ChunkMic(), RecordingMotion(), Clock()
     conversation = conversation or FakeConversation()
     monitor = WakeMonitor(
         lambda: mic,
-        LoudDetector,
+        detector or LoudDetector,
         lambda limits: EnergyVAD(),
         uploader,
         conversation,
@@ -183,6 +183,7 @@ def make_monitor(uploader, *, conversation=None, limits: WakeLimits | None = Non
         poll_interval=0.001,
         idle_interval=0.005,
         admission_wait=5.0,
+        alert_threshold=alert_threshold,
         clock=clock,
     )
     arm = WakeArmMessage(arm_id="arm-1", limits=limits or WakeLimits())
@@ -209,6 +210,39 @@ def test_rejected_candidate_uploads_phrase_and_request_then_rests_and_listens_ag
         assert conversation.primed is None
         await monitor.aclose()
         assert not mic.open
+
+    asyncio.run(scenario())
+
+
+class MediumDetector(LoudDetector):
+    def score(self, samples: np.ndarray) -> float:
+        return 0.8 if super().score(samples) else 0.0
+
+
+def test_a_detection_below_the_alert_threshold_is_captured_without_raising_the_head() -> None:
+    async def scenario():
+        uploader = ScriptedCandidates(None)
+        monitor, mic, motion, _, _, arm = make_monitor(uploader, detector=MediumDetector, alert_threshold=0.9)
+        await monitor.arm(arm, generation=3)
+        await wait_until(lambda: mic.open)
+        mic.push(np.concatenate([silence(1.0), wake_phrase(), tone(1.5), silence(0.4)]))
+        await wait_until(lambda: len(uploader.uploads) == 1)
+        await wait_until(lambda: mic.starts == 2 and mic.open)
+        assert motion.moves == ["sleep"]
+        await monitor.aclose()
+
+    asyncio.run(scenario())
+
+
+def test_a_detection_at_or_above_the_alert_threshold_raises_the_head() -> None:
+    async def scenario():
+        uploader = ScriptedCandidates(None)
+        monitor, mic, motion, _, _, arm = make_monitor(uploader, detector=MediumDetector, alert_threshold=0.8)
+        await monitor.arm(arm, generation=3)
+        await wait_until(lambda: mic.open)
+        mic.push(np.concatenate([silence(1.0), wake_phrase(), tone(1.5), silence(0.4)]))
+        await wait_until(lambda: motion.moves[:2] == ["sleep", "alert"])
+        await monitor.aclose()
 
     asyncio.run(scenario())
 

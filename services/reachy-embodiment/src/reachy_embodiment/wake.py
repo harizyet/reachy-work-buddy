@@ -162,6 +162,7 @@ class WakeMonitor:
         idle_interval: float = 0.2,
         ready_interval: float = 5.0,
         admission_wait: float = 5.0,
+        alert_threshold: float | None = None,
         clock: Callable[[], float] | None = None,
     ) -> None:
         self._microphone_factory = microphone_factory
@@ -175,6 +176,9 @@ class WakeMonitor:
         self._idle_interval = idle_interval
         self._ready_interval = ready_interval
         self._admission_wait = admission_wait
+        # Detections below this score still become candidates but do not
+        # raise the head; None raises it on every detection.
+        self._alert_threshold = alert_threshold
         self._clock = clock or (lambda: asyncio.get_running_loop().time())
         self._arm: WakeArmMessage | None = None
         self._generation: int | None = None
@@ -311,11 +315,15 @@ class WakeMonitor:
         on return, before anything is uploaded."""
         await start_microphone(microphone)
         try:
-            ring = await self._listen(microphone, detector, limits)
-            if ring is None:
+            heard = await self._listen(microphone, detector, limits)
+            if heard is None:
                 return None
-            self._resting = False
-            await self._rest_move("alert")
+            ring, score = heard
+            alert = self._alert_threshold is None or score >= self._alert_threshold
+            log.info("wake detection (score %.2f): %s", score, "alert raise" if alert else "silent capture")
+            if alert:
+                self._resting = False
+                await self._rest_move("alert")
             candidate = await self._capture_candidate(microphone, ring, vad, limits)
             if candidate is None:
                 log.info("wake candidate discarded on the robot: no request followed")
@@ -323,7 +331,9 @@ class WakeMonitor:
         finally:
             await asyncio.to_thread(microphone.stop)
 
-    async def _listen(self, microphone: MicSource, detector: WakeDetector, limits: WakeLimits) -> np.ndarray | None:
+    async def _listen(
+        self, microphone: MicSource, detector: WakeDetector, limits: WakeLimits
+    ) -> tuple[np.ndarray, float] | None:
         window = round(detector.window_seconds * SAMPLE_RATE)
         step = max(1, window // 4)  # as the Edge Impulse SDK steps its audio windows
         ring = np.empty(0, dtype=np.float32)
@@ -344,7 +354,7 @@ class WakeMonitor:
             score = await asyncio.to_thread(detector.score, ring[-window:])
             if score >= limits.detection_threshold:
                 log.info("wake phrase detected (score %.2f)", score)
-                return ring
+                return ring, score
 
     async def _capture_candidate(
         self, microphone: MicSource, ring: np.ndarray, vad: ChunkVAD, limits: WakeLimits

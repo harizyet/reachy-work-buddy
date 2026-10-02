@@ -308,6 +308,16 @@ if [[ "${VOICE_CONVERSATION_ENABLED:-false}" == "true" ]]; then
         else
             VOICE_ARGS+=(-e WAKE_ANIMATION_ENABLED=true)
         fi
+        # Optional stricter score for the head raise (docs/phase-30.md);
+        # unset means every detection raises it. Numbers only.
+        if [[ -n "${WAKE_ALERT_THRESHOLD:-}" ]]; then
+            if [[ "${WAKE_ALERT_THRESHOLD}" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+                VOICE_ARGS+=(-e "WAKE_ALERT_THRESHOLD=${WAKE_ALERT_THRESHOLD}")
+                log_info "WAKE_ALERT_THRESHOLD=${WAKE_ALERT_THRESHOLD}"
+            else
+                log_warn "WAKE_ALERT_THRESHOLD is not a number; ignoring it"
+            fi
+        fi
     else
         log_warn "VOICE_CONVERSATION_ENABLED=true but ${DAEMON_HOME:-<no home for $DAEMON_USER>}/.asoundrc is not readable here — voice stays disabled for this container"
     fi

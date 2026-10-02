@@ -6,16 +6,18 @@ The [documentation index](docs/README.md) defines ownership;
 
 ## Current work
 
-**Wake alert pose restored (2026-10-02, owner request):** `2bf82e4` removed the
-head lift on a raw wake hit; live testing the same day showed no visible
-feedback that "Hey Reachy" was heard (5 detections at score 0.76-1.00, four of
-them rejected/discarded, so nothing moved), so the owner asked for the small
-alert head raise back. The revert is committed; the Nano container was
-recreated from `:2bf82e4` during testing and still runs that image until the
-revert is pushed, pulled, rebuilt and recreated. The hub-rejected-candidate
-visible-pop-up annoyance that motivated `2bf82e4` returns, so
-`visible_false_activations_per_hour` in [phase-30](docs/phase-30.md) now counts the alert pose.
-Not done: that metric, and detector-threshold tuning.
+**Confidence-gated wake alert (2026-10-02, built and committed, not deployed):**
+`2bf82e4` (no head motion on a raw hit) gave no feedback in live testing, so it
+was reverted (cb66bb5, pushed; the owner rebuilt the Nano on it). The owner then
+asked for a design where all detections still go to capture/admission but the
+small head raise needs a stricter score. Built: `WAKE_ALERT_THRESHOLD` (robot env
+file, read in `reachy_embodiment/app.py`; unset = raise on every detection, as
+now), a log line `wake detection (score X): alert raise|silent capture`, and
+tests. Not chosen: the number. First live scores were 0.76–1.00, too few; collect
+genuine and false scores per [phase-30](docs/phase-30.md) 30.1b. Not built: two-window
+temporal confirmation (30.1c). Deploy needs a pull, rebuild and container recreate
+on the Nano.
+Not done: the metric tooling.
 
 **Phase 29 is closed for the subscription-first scope (2026-10-02, deployed
 to the homelab, uncommitted).** Characterization found that the agent's
@@ -405,8 +407,8 @@ Phases 0–29 are the historical ledger and keep their IDs. The numbered list
 below is older and maps as: items 7–8 and the wake check → Phase 30; items 1–3
 → Phase 31; items 4–6 → Phase 32; Phase 29 is closed and its leftovers are
 Phase 35 (optional). Immediate order: (a) the owner recreates
-`reachy-embodiment` on the Nano from the alert-pose-restored build and checks
-detected wake = small raise, admitted wake = home; (b) occupied-room wake check and the
+`reachy-embodiment` on the Nano from the confidence-gated build and collects wake
+scores for calibration; (b) occupied-room wake check and the
 visible-false-activations/hour metric; (c) then Phase 31 meeting acceptance.
 [docs/phase-30.md](docs/phase-30.md) (written 2026-10-02) holds the Phase 30
 sequence, the metric definition and the closure triage; no Phase 30 code or

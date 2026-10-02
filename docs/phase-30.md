@@ -16,31 +16,47 @@ start/restart/resume need the owner present.
 
 | Step | Work | Needs the owner |
 |---|---|---|
-| 30.1 | Deploy the restored alert pose (revert of `2bf82e4`, owner request 2026-10-02) to the Nano and verify: a detected wake phrase lifts the head slightly within a second or so, a rejected candidate returns to sleep silently, hub admission brings the head to home | Yes: sudo/container recreate on the Nano |
+| 30.1 | Confidence-gated wake acknowledgement (owner, 2026-10-02): every detection at `detection_threshold` continues through capture and hub admission; the small alert raise happens only when the score also reaches a separate, stricter alert threshold (`WAKE_ALERT_THRESHOLD` in the robot env file; unset raises on every detection, the current behaviour). Deploy, then verify on the Nano | Yes: sudo/container recreate on the Nano |
+| 30.1b | Calibration data: from the log line carrying each detection's score and whether it raised the head, plus the existing admitted/rejected/discarded lines, record genuine and false scores; choose the two thresholds from those distributions, never from a few hits | Yes: speaking |
+| 30.1c | Only if single-window spikes still cause false raises after 30.1b: require two high-score windows within about 300–500 ms before the raise. Not built; needs the calibration data first | Decision |
 | 30.2 | Define and record `visible_false_activations_per_hour` ([below](#visible_false_activations_per_hour)) in the [24g acceptance](phase-24g.md#acceptance-requirements) | No |
 | 30.3 | Calibration session, then cold held-out run to the [agreed targets](phase-24g.md#agreed-numeric-targets-owner-2026-09-27), covering immediate-request and pause-before-request; occupied-room exposure | Yes: speaking and scoring |
 | 30.4 | Decide whether detector threshold/model tuning is needed, from calibration data only (never from the held-out run) | Decision |
 | 30.5 | Selective closure of the [triage list](#closure-triage) | Per row |
 
-30.1 gates 30.3: the held-out run must use the deployed behaviour.
+30.1/30.1b gate 30.3: the held-out run must use the calibrated, deployed behaviour. No numeric alert threshold is chosen yet: the first live hits (0.76–1.00, 2026-10-02) are too few.
 
-## visible_false_activations_per_hour
+## Metrics
+
+Report, beside the [24g targets](phase-24g.md#agreed-numeric-targets-owner-2026-09-27):
+
+| Metric | What it tells us |
+|---|---|
+| wake candidates/hour | detector noisiness |
+| alert raises/hour | the visible detector behaviour |
+| `visible_false_activations_per_hour` | actual annoyance |
+| false conversations admitted/hour | end-to-end admission safety |
+| genuine wake acceptance | usability |
+| genuine immediate-alert rate | whether the gated acknowledgement is useful |
+
+### visible_false_activations_per_hour
 
 A **visible false activation** is any robot reaction an observer in the room
 can see or hear that was not caused by a genuine, intended "Hey Reachy". The
-alert head raise is deliberate feedback on a genuine hit, but on a false hit it
-is exactly such a reaction, so the count is, per scored exposure period:
+alert raise is deliberate feedback on a genuine hit, but on a false hit it is
+exactly such a reaction, so the count is, per scored exposure period:
 
-- every alert raise on a non-genuine detection (counted separately from the
-  rest, so the cost of the feedback is visible), plus
+- every alert raise on a non-genuine detection (counted separately, so the
+  cost of the feedback is visible), plus
 - every false conversation admitted (head to home, session opens), plus
 - any other visible or audible cue on a non-genuine hit: unprompted motion, a
   sound, a spoken reply, or a head position that fails to return to rest.
 
 It is reported beside, not instead of, wake candidates/hour and false
-conversations admitted/hour. If the alert raise on false detections proves too
-visible, the options are detector tuning or a gentler cue; removing the cue was
-tried on 2026-10-02 and reverted because nothing showed the phrase was heard.
+conversations admitted/hour. History: removing the raise entirely
+(`2bf82e4`) was tried and reverted on 2026-10-02 because nothing showed the
+phrase was heard; raising on every hit is what annoyed. The gate separates
+"was it detected" from "should the robot visibly react".
 
 Method: the owner or observer logs each visible reaction with a timestamp
 during the exposure window; embodiment log lines (`wake phrase detected`,

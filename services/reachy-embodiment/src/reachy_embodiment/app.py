@@ -143,6 +143,18 @@ def _default_robot_ws_client(
     return RobotWSClient(hub_ws_url, robot_id, robot_token, sim=backend.sim, voice=voice, wake=wake)
 
 
+def _alert_threshold() -> float | None:
+    raw = os.environ.get("WAKE_ALERT_THRESHOLD", "").strip()
+    if not raw:
+        return None
+    try:
+        value = float(raw)
+    except ValueError:
+        log.warning("ignoring WAKE_ALERT_THRESHOLD=%r: not a number", raw)
+        return None
+    return value
+
+
 def _default_wake_monitor(
     backend: RobotBackend, voice: VoiceConversation, uploader: VoiceTurnClient, motion: MotionController
 ) -> WakeMonitor | None:
@@ -159,6 +171,7 @@ def _default_wake_monitor(
         voice,
         motion=motion,
         daemon_ready=lambda: backend.connected,
+        alert_threshold=_alert_threshold(),
     )
     voice.on_idle = monitor.resume
     return monitor
