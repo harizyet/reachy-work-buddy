@@ -91,8 +91,14 @@ Nano. [`tools/wake_metrics.py`](../tools/wake_metrics.py) (30.2) computes the
 metrics above from `docker logs -t reachy-embodiment` and the owner's list of
 genuine attempt times; it reads logs only and adds no runtime endpoint. It
 matches a detection to an attempt within 2 s before to 15 s after, and counts
-the other candidates as false. Checked on synthetic log lines only; its first
-real use is the next scored run.
+the other candidates as false. First real use, 2026-10-02: on the false-trigger
+window (11:53-12:31Z, 0.6 h, no genuine attempts) it reported 16 candidates,
+16 raises, 16 rejected, so `visible_false_activations_per_hour` 26.7 and 0
+false conversations admitted. Over the whole retained log (09:51-13:27Z, about
+3.6 h) it reported 65 candidates (18.1/h) and 5 admitted; those 5 are the
+genuine calibration attempts at 09:52-10:01Z, not false conversations, so the
+all-false figure of 19.4/h is an upper bound for that span. Scores of false
+candidates there span 0.70-0.99. No per-hour target is set yet.
 
 ## Exit
 

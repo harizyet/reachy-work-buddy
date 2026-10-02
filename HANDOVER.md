@@ -26,7 +26,9 @@ separates them; no `WAKE_ALERT_THRESHOLD` is set and the Nano keeps raising on
 every detection. Owner decision (2026-10-02): detector comparison (30.1d,
 `wake-bench.py --record`, 0429566) is deprioritized; continue the rest of Phase 30.
 Open: early-hub-verdict design (needs owner go-ahead), 30.2 metric tooling
-(`tools/wake_metrics.py`, built, synthetic-checked only), removal of the debug transcript log after calibration, 30.3-30.5.
+(`tools/wake_metrics.py`, run on real Nano logs 2026-10-02: 26.7 visible false
+activations/h on the 0.6 h false-trigger window, see
+[phase-30](docs/phase-30.md#code-changes); no per-hour target agreed), removal of the debug transcript log after calibration, 30.3-30.5.
 
 **Phase 29 is closed for the subscription-first scope (2026-10-02, deployed
 to the homelab, uncommitted).** Characterization found that the agent's
