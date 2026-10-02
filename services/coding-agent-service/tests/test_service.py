@@ -161,3 +161,36 @@ def test_resume_session_rejects_wrong_status_in_provider() -> None:
             await provider.resume_session(session, "too late")
 
     asyncio.run(run())
+
+
+def test_resume_increments_turn_and_a_suspected_completion_is_resumable() -> None:
+    from coding_agent_service.providers import ProviderEvent
+
+    from shared.models.coding_agent import InterventionState
+
+    async def run() -> None:
+        supervisor = _supervisor()
+        project = await supervisor.add_project(
+            CodingProject(name="P", repository_path="/p", provider="simulated")
+        )
+        session = await supervisor.start_session(
+            project_id=project.id, task_summary="plain", owner_user_id="owner-1"
+        )
+        assert session.turn == 1
+        with pytest.raises(SessionNotResumableError):
+            await supervisor.resume_session(session.id, "more")
+
+        await supervisor.apply_provider_event(
+            session,
+            ProviderEvent(
+                status=CodingAgentStatus.COMPLETED,
+                summary="Shall I proceed?",
+                intervention_state=InterventionState.SUSPECTED,
+                intervention_source="final_message_question",
+            ),
+        )
+        resumed = await supervisor.resume_session(session.id, "yes")
+        assert resumed.turn == 2
+        assert resumed.intervention_state == InterventionState.NONE
+
+    asyncio.run(run())

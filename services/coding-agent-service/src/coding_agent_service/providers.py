@@ -15,8 +15,10 @@ from typing import Protocol
 from shared.models.coding_agent import (
     CodingAgentSession,
     CodingAgentStatus,
+    InterventionState,
     ProviderCapabilities,
     UsageSnapshot,
+    awaiting_owner,
 )
 
 
@@ -31,6 +33,9 @@ class ProviderEvent:
     summary: str
     provider_session_id: str | None = None
     metadata: dict = field(default_factory=dict)
+    intervention_state: InterventionState = InterventionState.NONE
+    intervention_source: str | None = None
+    intervention_detail: str | None = None
 
 
 class ProviderError(Exception):
@@ -116,11 +121,7 @@ class SimulatedProvider:
         )
 
     async def resume_session(self, session: CodingAgentSession, instruction: str) -> ProviderEvent:
-        if session.status not in (
-            CodingAgentStatus.WAITING_FOR_INPUT,
-            CodingAgentStatus.WAITING_FOR_PERMISSION,
-            CodingAgentStatus.RATE_LIMITED,
-        ):
+        if session.status != CodingAgentStatus.RATE_LIMITED and not awaiting_owner(session):
             raise ProviderError(f"Cannot resume a session in status {session.status}")
         return ProviderEvent(
             status=CodingAgentStatus.COMPLETED,

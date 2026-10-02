@@ -45,6 +45,29 @@ TERMINAL_STATUSES = frozenset(
 )
 
 
+class InterventionState(StrEnum):
+    """Whether the owner appears to be needed. `confirmed` rests on an
+    explicit provider signal (e.g. the agent's own ask-the-user tool call);
+    `suspected` on a heuristic over the final message. Terminal success
+    alone is neither: a headless run that asks the owner a question still
+    ends `success`."""
+
+    NONE = "none"
+    SUSPECTED = "suspected"
+    CONFIRMED = "confirmed"
+
+
+class GitState(BaseModel):
+    """Deterministic repository observation (29.20), never agent narration."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    head: str | None = None
+    branch: str | None = None
+    dirty: bool = False
+    changed_files: list[str] = Field(default_factory=list)
+
+
 class CodingAgentEventType(StrEnum):
     """29.13: normalized proactive-notification events, distinct from the
     session status enum — one status can be reached by more than one event
@@ -99,6 +122,30 @@ class CodingAgentSession(BaseModel):
     owner_user_id: str
     last_event: str | None = None
     error_detail: str | None = None
+    # Incremented each time the owner resumes the session, so a later
+    # completion is a new notifiable episode.
+    turn: int = 1
+    intervention_state: InterventionState = InterventionState.NONE
+    intervention_source: str | None = Field(default=None, max_length=200)
+    intervention_detail: str | None = Field(default=None, max_length=2000)
+    git_start: GitState | None = None
+    git_end: GitState | None = None
+
+
+def awaiting_owner(session: CodingAgentSession | dict) -> bool:
+    """True when the owner's reply can continue this session: it is waiting
+    on them, or it ended with an intervention flag. Takes the wire dict too,
+    for clients that never build the model."""
+    get = session.get if isinstance(session, dict) else lambda k, d=None: getattr(session, k, d)
+    status = str(get("status"))
+    if status in (
+        CodingAgentStatus.WAITING_FOR_INPUT.value,
+        CodingAgentStatus.WAITING_FOR_PERMISSION.value,
+    ):
+        return True
+    return status == CodingAgentStatus.COMPLETED.value and str(
+        get("intervention_state", InterventionState.NONE.value)
+    ) in (InterventionState.SUSPECTED.value, InterventionState.CONFIRMED.value)
 
 
 class CodingAgentEvent(BaseModel):

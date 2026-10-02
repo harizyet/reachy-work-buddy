@@ -21,6 +21,7 @@ from shared.models.coding_agent import (
     CodingAgentStatus,
     CodingProject,
     CredentialKind,
+    InterventionState,
 )
 
 INIT_LINE = {
@@ -360,7 +361,68 @@ def test_capabilities_reflect_what_this_adapter_can_actually_report() -> None:
     assert caps.completion_events is True
     assert caps.token_usage is True
     assert caps.monetary_cost is True
-    # 29.4 (hooks) hasn't landed yet — this adapter cannot see a mid-task
-    # permission/input wait, only a task's final result.
-    assert caps.needs_input_events is False
-    assert caps.permission_events is False
+    assert caps.needs_input_events is True
+    assert caps.permission_events is True
+
+
+def _ask_line(question: str) -> dict:
+    return {
+        "type": "assistant",
+        "message": {
+            "content": [
+                {
+                    "type": "tool_use",
+                    "name": "AskUserQuestion",
+                    "input": {"questions": [{"question": question}]},
+                }
+            ]
+        },
+    }
+
+
+async def _finished(result_line: dict, *extra: dict):
+    _, runtime, _, provider, project = await _setup()
+    session = CodingAgentSession(
+        project_id=project.id, provider="claude-code", task_summary="t", owner_user_id="owner-1",
+    )
+    event = await provider.start_session(session)
+    session.container_id = event.metadata["container_id"]
+    session.provider_session_id = event.provider_session_id
+    runtime.set_logs(session.container_id, _jsonl(INIT_LINE, *extra, result_line))
+    await runtime.stop(session.container_id)
+    return await provider.inspect_session(session)
+
+
+def test_ask_user_question_tool_call_is_a_confirmed_input_wait() -> None:
+    event = asyncio.run(_finished(SUCCESS_RESULT_LINE, _ask_line("Which database?")))
+    assert event.status == CodingAgentStatus.WAITING_FOR_INPUT
+    assert event.intervention_state == InterventionState.CONFIRMED
+    assert event.intervention_detail == "Which database?"
+
+
+def test_question_list_delivered_as_a_json_string_is_still_read() -> None:
+    line = _ask_line("x")
+    line["message"]["content"][0]["input"]["questions"] = json.dumps([{"question": "Red or blue?"}])
+    event = asyncio.run(_finished(SUCCESS_RESULT_LINE, line))
+    assert event.intervention_detail == "Red or blue?"
+
+
+def test_permission_denials_are_a_confirmed_permission_wait() -> None:
+    result = {**SUCCESS_RESULT_LINE, "permission_denials": [{"tool_name": "Bash"}]}
+    event = asyncio.run(_finished(result))
+    assert event.status == CodingAgentStatus.WAITING_FOR_PERMISSION
+    assert event.intervention_state == InterventionState.CONFIRMED
+    assert "Bash" in event.intervention_detail
+
+
+def test_final_message_ending_in_a_question_is_only_suspected() -> None:
+    result = {**SUCCESS_RESULT_LINE, "result": "Shall I proceed?"}
+    event = asyncio.run(_finished(result))
+    assert event.status == CodingAgentStatus.COMPLETED
+    assert event.intervention_state == InterventionState.SUSPECTED
+
+
+def test_plain_success_has_no_intervention() -> None:
+    event = asyncio.run(_finished(SUCCESS_RESULT_LINE))
+    assert event.status == CodingAgentStatus.COMPLETED
+    assert event.intervention_state == InterventionState.NONE

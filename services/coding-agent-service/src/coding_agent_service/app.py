@@ -15,13 +15,14 @@ from pathlib import Path
 
 from fastapi import FastAPI
 
-from coding_agent_service.claude_provider import ClaudeCodeProvider
+from coding_agent_service.claude_provider import DEFAULT_IMAGE, ClaudeCodeProvider
 from coding_agent_service.credentials import (
     CredentialKeyring,
     CredentialStore,
     EncryptedFileCredentialStore,
     InMemoryCredentialStore,
 )
+from coding_agent_service.git_observer import GitObserver
 from coding_agent_service.postgres_store import PostgresCodingAgentStore
 from coding_agent_service.providers import CodingAgentProvider, SimulatedProvider
 from coding_agent_service.reconcile import recover_sessions
@@ -101,7 +102,11 @@ def create_app(
         }
     )
 
-    supervisor = CodingAgentSupervisor(resolved_store, resolved_providers)
+    supervisor = CodingAgentSupervisor(
+        resolved_store,
+        resolved_providers,
+        GitObserver(resolved_runtime, DEFAULT_IMAGE),
+    )
     # 0 disables background polling; /refresh still works on demand.
     poll_interval = (
         poll_interval_seconds

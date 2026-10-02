@@ -96,6 +96,7 @@ from shared.models.coding_agent import (
     CodingAgentSession,
     CodingAgentStatus,
     CredentialKind,
+    InterventionState,
     ProviderCapabilities,
     UsageDimension,
     UsageSnapshot,
@@ -162,6 +163,72 @@ def _extract_result(events: list[dict]) -> dict | None:
         if event.get("type") == "result":
             return event
     return None
+
+
+_QUESTION_TOOL = "AskUserQuestion"
+
+
+def _tool_uses(events: list[dict]) -> list[dict]:
+    uses = []
+    for event in events:
+        if event.get("type") != "assistant":
+            continue
+        content = (event.get("message") or {}).get("content")
+        if not isinstance(content, list):
+            continue
+        uses += [b for b in content if isinstance(b, dict) and b.get("type") == "tool_use"]
+    return uses
+
+
+def _question_text(tool_use: dict) -> str | None:
+    """Text of the agent's own ask-the-owner tool call, if it has any."""
+    questions = (tool_use.get("input") or {}).get("questions")
+    if isinstance(questions, str):
+        # Observed live: the CLI delivers the list JSON-encoded as a string.
+        try:
+            questions = json.loads(questions)
+        except json.JSONDecodeError:
+            return questions[:2000] or None
+    if not isinstance(questions, list):
+        return None
+    texts = [q.get("question") for q in questions if isinstance(q, dict) and q.get("question")]
+    return "\n".join(texts)[:2000] or None
+
+
+def _classify_intervention(
+    events: list[dict], result: dict
+) -> tuple[CodingAgentStatus, InterventionState, str | None, str | None]:
+    """Only signals observed in live characterization (docs/phase-29.md):
+    a headless run that needs the owner still ends `subtype: success`, so
+    the result line alone says nothing. A `permission_denials` entry or the
+    agent's AskUserQuestion tool call are explicit (confirmed); a final
+    message ending in a question mark is only a heuristic (suspected)."""
+    denials = result.get("permission_denials")
+    if isinstance(denials, list) and denials:
+        names = sorted({str(d.get("tool_name")) for d in denials if isinstance(d, dict)})
+        return (
+            CodingAgentStatus.WAITING_FOR_PERMISSION,
+            InterventionState.CONFIRMED,
+            "result.permission_denials",
+            f"Permission needed for: {', '.join(names)}",
+        )
+    for use in reversed(_tool_uses(events)):
+        if use.get("name") == _QUESTION_TOOL:
+            return (
+                CodingAgentStatus.WAITING_FOR_INPUT,
+                InterventionState.CONFIRMED,
+                f"tool_use.{_QUESTION_TOOL}",
+                _question_text(use),
+            )
+    text = (result.get("result") or "").rstrip()
+    if text.endswith("?"):
+        return (
+            CodingAgentStatus.COMPLETED,
+            InterventionState.SUSPECTED,
+            "final_message_question",
+            text[-500:],
+        )
+    return CodingAgentStatus.COMPLETED, InterventionState.NONE, None, None
 
 
 def _latest_retry_error_status(events: list[dict]) -> int | None:
@@ -398,8 +465,8 @@ class ClaudeCodeProvider:
             # 29.4 (hooks) is what turns a mid-task permission/input wait
             # into its own normalized event; this adapter only sees a
             # task's final result, so it cannot report these yet.
-            needs_input_events=False,
-            permission_events=False,
+            needs_input_events=True,
+            permission_events=True,
             # Allowance percentages exist only when the CLI reports them,
             # i.e. once a limit window nears a warning threshold.
             usage_percentages=True,
@@ -563,6 +630,7 @@ class ClaudeCodeProvider:
             env={env_var: secret},
             network_profile=project.allowed_network_profile,
             read_only_mount=read_only,
+            state_volume=f"reachy-claude-state-{session.id}",
         )
         return spec, provider_session_id
 
@@ -587,6 +655,7 @@ class ClaudeCodeProvider:
     async def resume_session(
         self, session: CodingAgentSession, instruction: str
     ) -> ProviderEvent:
+        # The owner's words go to the CLI verbatim as the next user turn.
         if not session.provider_session_id:
             raise ProviderError("No provider session id to resume")
         await self._ensure_can_invoke()
@@ -669,11 +738,15 @@ class ClaudeCodeProvider:
                 provider_session_id=session.provider_session_id,
                 metadata=metadata,
             )
+        status, intervention, source, detail = _classify_intervention(events, result)
         return ProviderEvent(
-            status=CodingAgentStatus.COMPLETED,
+            status=status,
             summary=(result.get("result") or "Claude Code finished")[:2000],
             provider_session_id=session.provider_session_id,
             metadata=metadata,
+            intervention_state=intervention,
+            intervention_source=source,
+            intervention_detail=detail,
         )
 
     async def collect_usage(self, session: CodingAgentSession) -> UsageSnapshot:

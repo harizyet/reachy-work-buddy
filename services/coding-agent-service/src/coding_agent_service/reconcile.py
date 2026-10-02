@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from coding_agent_service.runtime import ContainerRuntime, ContainerRuntimeError
 from coding_agent_service.service import CodingAgentSupervisor, UnknownProviderError
 from coding_agent_service.store import CodingAgentStore
-from shared.models.coding_agent import TERMINAL_STATUSES
+from shared.models.coding_agent import TERMINAL_STATUSES, CodingAgentStatus
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +57,14 @@ async def recover_sessions(
 
     for session in sessions:
         if session.status in TERMINAL_STATUSES:
+            continue
+        # The container exited on purpose; the owner's reply starts a new
+        # one. Inspecting it again would only report it gone as LOST.
+        if session.status in (
+            CodingAgentStatus.WAITING_FOR_INPUT,
+            CodingAgentStatus.WAITING_FOR_PERMISSION,
+        ):
+            report.unchanged.append(session.id)
             continue
         adopted = None
         if session.container_id is None:

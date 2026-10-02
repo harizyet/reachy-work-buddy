@@ -74,6 +74,8 @@ correct facts or links, not to track each new phase dependency.
   real-Docker container runner, real Claude Code provider) implemented
   2026-10-01, plus an early encrypted-credential store and operator-UI card
   for provider credentials (29.19); deployed to the homelab the same day.
+  Revised 2026-10-02 to be subscription-first: acceptance uses the Claude
+  Pro/Max path, and the next step is characterizing owner-input detection.
   See
   [service reference](reference/services.md#coding-agent-service-phase-29-planned).
 - [Jarvis baseline](jarvis-baseline.md): upstream reuse/reference notes.

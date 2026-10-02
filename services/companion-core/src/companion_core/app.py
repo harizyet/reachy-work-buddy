@@ -1026,6 +1026,27 @@ def create_app(
             persona = await app.state.persona_store.get()
             reply = format_clock_reply(clock_kind, datetime.now(UTC), persona.timezone)
             privacy = Privacy.PUBLIC
+        elif reachy_command == "coding_reply":
+            try:
+                waiting = coding_agent_intent.awaiting_sessions(
+                    await app.state.coding_agent_client.list_sessions()
+                )
+                if len(waiting) == 1:
+                    # Verbatim: the answer is the owner's, not rephrased.
+                    await app.state.coding_agent_client.resume_session(
+                        waiting[0]["id"], parsed_command.argument
+                    )
+                    reply = f"Sent your answer to '{waiting[0]['task_summary']}'; it is working again."
+                elif waiting:
+                    reply = (
+                        f"{len(waiting)} coding sessions are waiting; I won't guess which one. "
+                        "Answer from the operator UI."
+                    )
+                else:
+                    reply = "No coding session is waiting for an answer."
+            except httpx.HTTPError as exc:
+                reply = f"Couldn't deliver your answer to the coding agent: {exc}"
+            privacy = Privacy.WORK_PRIVATE
         elif coding_agent_status_query:
             try:
                 sessions = await app.state.coding_agent_client.list_sessions()
@@ -1227,9 +1248,11 @@ def create_app(
             return []
         due = []
         for session in sessions:
-            if not coding_agent_intent.is_terminal(session["status"]):
+            if not coding_agent_intent.notifiable(session):
                 continue
-            if await app.state.coding_agent_notification_store.claim(session["id"]):
+            if await app.state.coding_agent_notification_store.claim(
+                coding_agent_intent.episode_key(session)
+            ):
                 due.append({
                     "session_id": session["id"],
                     "owner_user_id": session["owner_user_id"],

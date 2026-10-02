@@ -133,7 +133,7 @@ def test_a_completed_session_is_pushed_to_telegram_within_one_poll_interval() ->
     assert "Refactor module X" in text
 
 
-def test_a_running_session_is_never_pushed() -> None:
+def test_a_session_waiting_for_the_owner_is_pushed_once_with_a_reply_hint() -> None:
     coding_agent_app = _coding_agent_app()
     coding_agent_client_for_setup = TestClient(coding_agent_app)
     headers = {"X-Reachy-Coding-Agent-Service-Token": CODING_AGENT_TOKEN}
@@ -178,6 +178,8 @@ def test_a_running_session_is_never_pushed() -> None:
     asyncio.run(register_chat())
 
     with TestClient(core_app), TestClient(hub_app):
-        time.sleep(0.3)
+        time.sleep(0.5)
 
-    assert fake_api.sent_messages == []
+    assert len(fake_api.sent_messages) == 1
+    assert "needs your input" in fake_api.sent_messages[0][1]
+    assert "/coding_reply" in fake_api.sent_messages[0][1]

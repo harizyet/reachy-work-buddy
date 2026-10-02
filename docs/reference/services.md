@@ -29,7 +29,7 @@ browser/channel transport. Debug robot calls go through hub.
 | `GET`, `POST /emails/received`; `GET`, `POST /emails/drafts` | Seeded inbox and deterministic drafts, no production mailbox sync yet |
 | `POST /emails/drafts/{id}/approve`, `/send`, `/cancel-send` | Text approval/send, delayed dispatch, cancellation |
 | `GET /briefing` | Prioritized briefing items for hub's delivery engine |
-| `GET /coding-agents/completions/due` | Phase 29.6: newly-terminal coding-agent sessions, claimed once each so reachy-hub's poll loop never double-notifies; same pure-query shape as `/calendar/reminders/due` |
+| `GET /coding-agents/completions/due` | Phase 29.6: newly-terminal or owner-awaiting coding-agent sessions, claimed once per session turn so reachy-hub's poll loop never double-notifies; same pure-query shape as `/calendar/reminders/due` |
 | `GET`, `PUT /settings/llm`; `GET /llm/usage` | Internal settings/usage; operator callers use authenticated hub proxies |
 | `GET`, `PUT /settings/persona` | Assistant name/system prompt (`persona_config` table); prepended as a system message on the generic LLM branch only |
 | `GET`, `PUT /settings/websearch` | Web-search grounding policy/provider (`search_config` table); Phase 24a, see below |

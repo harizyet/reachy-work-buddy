@@ -1,17 +1,36 @@
 # Handover
 
-Current session snapshot: 2026-10-01. Read [AGENTS.md](AGENTS.md) first.
+Current session snapshot: 2026-10-02. Read [AGENTS.md](AGENTS.md) first.
 The [documentation index](docs/README.md) defines ownership;
 [project state](docs/project-state.md) owns deployment limits and open acceptance.
 
 ## Current work
+
+**Phase 29 is closed for the subscription-first scope (2026-10-02, deployed
+to the homelab, uncommitted).** Characterization found that the agent's
+`AskUserQuestion` tool call and `permission_denials` separate needs-owner from
+done; hooks were not needed. Built: confirmed `WAITING_FOR_INPUT` /
+`WAITING_FOR_PERMISSION`, intervention fields and `turn`, a per-session
+`reachy-claude-state-*` volume so `--resume` works, `/coding_reply` (verbatim
+relay), turn-keyed notification claims, Git observations, and the "Terminal
+sessions (view only)" label. Details and the unexercised list:
+[closure](docs/phase-29.md#characterization-results-and-closure-2026-10-02).
+The agent image `reachy-coding-agent-claude` must be rebuilt on any other host
+(`docker build` in `services/coding-agent-service/docker/claude-code`). Terminal
+sessions stay view-only; CLI findings and open options (Remote Control spike,
+`--bg` provider, idle push) are in
+[phase-29](docs/phase-29.md#controlling-terminal-sessions-cli-findings-2026-10-02).
+Left
+behind by live testing: a `git-probe` project (path `/tmp/claude-1000/gitprobe`)
+and two probe sessions in the homelab database. `test_robot_voice.py::
+test_spoken_command_text_does_not_actuate_the_robot` fails on a clean tree too.
 
 **Running-session poller (2026-10-02, deployed):** coding-agent-service
 now inspects in-flight sessions every 30 s (`CODING_AGENT_POLL_INTERVAL_SECONDS`,
 `0` disables) so finished containers reach `COMPLETED` and Telegram's completion
 push fires. Verified with fixture runtimes and a lifespan test, not a real Claude
 container. Still missing: the 29.4 hook bridge (WAITING_FOR_INPUT/PERMISSION,
-hook-driven RATE_LIMITED, Stop/SessionEnd). A live probe (see phase-29 29.4 note) showed hooks surface in the stream with `--include-hook-events`, but a headless run that asks a question still ends as a plain success; do not build WAITING_* from hooks without an API-key probe that triggers a real permission denial. Poller deployed live and verified (probe session reached `completed` unprompted).
+hook-driven RATE_LIMITED, Stop/SessionEnd). A live probe (see phase-29 29.4 note) showed hooks surface in the stream with `--include-hook-events`, but a headless run that asks a question still ends as a plain success; do not build WAITING_* from hooks without observed evidence from subscription sessions (the API-key probe originally proposed here is deprioritized, see above). Poller deployed live and verified (probe session reached `completed` unprompted).
 
 **Reachy sees terminal sessions (2026-10-02, built, not deployed):** the status
 reply (`/coding_sessions`, "is my claude session done") now adds a read-only
@@ -373,9 +392,10 @@ meetings remain in the database/audio volume; no delete endpoint exists.
    `CODING_AGENT_SECRET_KEY_FILE` is already set, so a credential entered
    through the operator UI now survives a restart. The actual next step is
    the owner logging in and using the Settings · Accounts · Coding agent
-   credentials card for real: entering a real API key (an OAuth/
-   subscription token cannot invoke anything yet, by design) and
-   registering a project against a real test repository, since nothing in
+   credentials card for real: the subscription credential is already
+   registered and invokes read-only sessions (the "cannot invoke" note that stood
+   here was superseded 2026-10-01; an API key is optional, see the phase-29
+   revision), and registering a project against a real test repository, since nothing in
    this codebase has a route to create a `CodingProject` from the operator
    UI yet — only `POST /projects` on coding-agent-service directly (no hub
    proxy for project/session management exists, just credentials). That

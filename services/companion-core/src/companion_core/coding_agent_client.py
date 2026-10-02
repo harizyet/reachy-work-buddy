@@ -1,10 +1,10 @@
 """HTTP client for coding-agent-service (Phase 29). ADR 0001 allows a
 direct sibling-service HTTP call like this one — same shape as
 hub_client.py (companion-core -> reachy-hub) and meetings/speech_clients.py
-(companion-core -> the speech sidecars). companion-core only ever reads
-session/usage state through this client; it never starts, resumes or stops
-a session (that stays owner-initiated via reachy-hub/the operator UI,
-29.6/29.7 — not built yet).
+(companion-core -> the speech sidecars). companion-core reads
+session/usage state through this client and, only for an explicit
+`/coding_reply` command, relays the owner's answer to resume a waiting
+session; it never starts or stops one.
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ import httpx
 from shared.protocols.coding_agent import (
     PROVIDER_ALLOWANCE,
     SERVICE_HEADER,
+    SESSION_RESUME,
     SESSION_USAGE,
     SESSIONS,
     TERMINAL_SESSIONS,
@@ -48,6 +49,14 @@ class CodingAgentServiceClient:
 
     async def list_terminal_sessions(self) -> list[dict[str, Any]]:
         resp = await self._client.get(TERMINAL_SESSIONS)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def resume_session(self, session_id: str, instruction: str) -> dict[str, Any]:
+        """The owner's reply, verbatim, resuming the same provider session."""
+        resp = await self._client.post(
+            SESSION_RESUME.format(session_id=session_id), json={"instruction": instruction}
+        )
         resp.raise_for_status()
         return resp.json()
 

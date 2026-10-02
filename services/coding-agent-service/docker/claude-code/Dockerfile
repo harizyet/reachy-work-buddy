@@ -16,6 +16,10 @@ WORKDIR /workspace
 # node:20-slim's built-in "node" user is uid/gid 1000, matching
 # DockerCLIContainerRuntime's default --user "1000:1000" (runtime.py) — no
 # extra useradd needed, and no container here ever runs as root.
+# A named volume mounted here inherits this ownership, so a resumed session
+# finds the transcript an earlier container wrote.
+RUN mkdir -p /home/node/.claude && chown node:node /home/node/.claude
+
 USER node
 
 ENTRYPOINT ["claude"]

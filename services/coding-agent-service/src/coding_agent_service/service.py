@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from datetime import UTC, datetime
 
+from coding_agent_service.git_observer import GitObserver
 from coding_agent_service.providers import (
     CodingAgentProvider,
     ProviderError,
@@ -23,9 +24,11 @@ from shared.models.coding_agent import (
     CodingAgentSession,
     CodingAgentStatus,
     CodingProject,
+    GitState,
     ProviderAllowance,
     ProviderCapabilities,
     UsageSnapshot,
+    awaiting_owner,
 )
 
 logger = logging.getLogger(__name__)
@@ -75,10 +78,22 @@ class CodingAgentSupervisor:
     against whichever store/provider registry it is constructed with."""
 
     def __init__(
-        self, store: CodingAgentStore, providers: dict[str, CodingAgentProvider]
+        self,
+        store: CodingAgentStore,
+        providers: dict[str, CodingAgentProvider],
+        git_observer: GitObserver | None = None,
     ) -> None:
         self._store = store
         self._providers = providers
+        self._git = git_observer
+
+    async def _observe_git(self, session: CodingAgentSession) -> GitState | None:
+        if self._git is None or session.provider == "simulated":
+            return None
+        project = await self._store.get_project(session.project_id)
+        if project is None:
+            return None
+        return await self._git.observe(project.repository_path)
 
     def _provider_for(self, provider_name: str) -> CodingAgentProvider:
         provider = self._providers.get(provider_name)
@@ -119,6 +134,7 @@ class CodingAgentSupervisor:
             branch=branch or project.default_branch,
             owner_user_id=owner_user_id,
         )
+        session.git_start = await self._observe_git(session)
         await self._store.add_session(session)
         await self._record_event(
             session,
@@ -163,16 +179,18 @@ class CodingAgentSupervisor:
         never asked for (29.16: "must preserve exact owner intent")."""
 
         session = await self.get_session(session_id)
-        if session.status in TERMINAL_STATUSES or session.status in (
-            CodingAgentStatus.CREATED,
-            CodingAgentStatus.STARTING,
-            CodingAgentStatus.RUNNING,
-        ):
+        if session.status == CodingAgentStatus.RATE_LIMITED:
+            pass
+        elif not awaiting_owner(session):
             raise SessionNotResumableError(
-                f"Session {session_id} is not waiting for input (status={session.status})"
+                f"Session {session_id} is not waiting for the owner (status={session.status})"
             )
         provider = self._provider_for(session.provider)
         event = await provider.resume_session(session, instruction)
+        # A new owner turn: later completion is a new notifiable episode and
+        # the previous turn's completion time no longer applies.
+        session.turn += 1
+        session.completed_at = None
         return await self.apply_provider_event(session, event)
 
     async def send_input(self, session_id: str, text: str) -> CodingAgentSession:
@@ -297,10 +315,16 @@ class CodingAgentSupervisor:
         container_id = event.metadata.get("container_id")
         if container_id is not None:
             session.container_id = container_id
+        session.intervention_state = event.intervention_state
+        session.intervention_source = event.intervention_source
+        session.intervention_detail = event.intervention_detail
         if event.status in TERMINAL_STATUSES and session.completed_at is None:
             session.completed_at = session.last_activity_at
         if event.status == CodingAgentStatus.FAILED:
             session.error_detail = event.summary
+        if event.status in TERMINAL_STATUSES or awaiting_owner(session):
+            # Taken at every hand-back, so a resumed turn overwrites it.
+            session.git_end = await self._observe_git(session)
         await self._store.update_session(session)
         if event.status in TERMINAL_STATUSES:
             await self._capture_final_usage(session)

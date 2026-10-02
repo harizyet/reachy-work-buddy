@@ -29,6 +29,217 @@ the completions-due endpoint, to be able to report that completion back.
 See [service reference](reference/services.md#coding-agent-service-phase-29-planned)
 for exactly what exists.
 
+## Subscription-first revision (owner, 2026-10-02)
+
+The owner does not intend to buy Anthropic API credits for normal coding-agent
+use. Phase 29's Claude work is therefore validated against the Claude Pro/Max
+subscription path actually used. This revises priorities and acceptance; it
+does not change the provider-neutral architecture, and where older prose
+below assumes API-key evidence (29.4 and 29.17 as originally written, the
+2026-10-02 probe note in 29.27) this section takes precedence.
+
+- **Authentication.** Subscription (`CLAUDE_CODE_OAUTH_TOKEN`) is primary. The
+  API-key path stays supported by the provider but is optional and is not
+  required for acceptance. Test it with mocks or deliberately invalid
+  credentials, never with live credit spend.
+- **Principle: acceptance evidence matches the production authentication mode.**
+  Behaviour relied on for status, supervision or interruption handling is
+  verified with the subscription workflow wherever practical, so the phase is
+  not correct only for a payment mode that is not used.
+- **Deprioritized, no longer a near-term milestone:** the live API-key probe
+  (default permission mode, forced permission-required operation, inspecting
+  `PermissionRequest`/`StopFailure`/`permission_denials`). It costs money and
+  may not match subscription behaviour.
+- **Central open question.** Can Reachy tell "Claude finished" from "Claude
+  stopped because it needs the owner" under the subscription workflow? A
+  subscription session has been observed asking the owner for a decision while
+  reporting `subtype: success`, `terminal_reason: completed`,
+  `permission_denials: []`. So terminal success is not task completion, and a
+  `Stop` event does not mean no owner intervention is required.
+- **Conservative mapping.** Hooks and final assistant text are observations, not
+  authority. Do not map `Stop` to `COMPLETED`, and do not map a final message
+  containing "?" to `WAITING_FOR_INPUT`, without further evidence.
+  `WAITING_FOR_INPUT` needs strong evidence, `WAITING_FOR_PERMISSION` an
+  explicit provider signal, `RATE_LIMITED` a provider or allowance signal, and
+  `COMPLETED` successful termination with no stronger intervention signal.
+- **Possible fallback, only if testing shows it is useful.** If no reliable
+  structured signal exists, a heuristic (provider success, plus a final message
+  explicitly asking the owner to act, plus no completion evidence) may set an
+  *intervention suspected* state rather than `WAITING_FOR_INPUT`: an
+  `intervention_state` of `none`/`suspected`/`confirmed` with a `source` of
+  `provider_event` or `final_message_heuristic`. Owner wording follows the
+  confidence: "Claude appears to be waiting for your input", not "is waiting".
+  This is not built.
+- **Evidence-gathering plan.** Record several real Pro/Max sessions in these
+  classes: (A) normal completion, (B) Claude asks a direct question, (C) cannot
+  proceed without a decision, (D) reaches or approaches usage limits, (E)
+  ordinary tool failure, (F) stops with a partial result. Capture only the
+  stream-json events, hook events, result object, terminal reason, last
+  assistant message, session metadata and relevant Claude session-file state,
+  with no repository contents or secrets. Exit criterion: this document records
+  which signals, if any, reliably separate done from owner-input-required.
+- **Hook bridge stays preferred, via the stream.** `--include-hook-events`
+  surfaces `SessionStart`/`Stop` as `system/hook_started` and `hook_response`
+  in the stream-json log, so hooks should be parsed by `ClaudeCodeProvider`
+  into normalized `CodingAgentEvent`s instead of an outbound callback endpoint
+  (fewer moving parts, no extra network or authentication channel). The
+  `POST /internal/agent-events` callback in 29.6 is the fallback design. Map only
+  events whose behaviour has been observed.
+- **Polling role.** Hooks/events are the primary lifecycle signal; the 30-second
+  poller (29.27) is the reconciliation fallback and stays even after hooks land.
+  Later it should become state-aware: regular polling for `STARTING`/`RUNNING`;
+  none for `WAITING_*` (owner or event driven); low-frequency polling around the
+  known reset time for `RATE_LIMITED`; none for terminal states. Not a blocker.
+- **Terminal sessions stay read-only** for the initial release: no adopting,
+  resuming, stopping or sending input to sessions launched outside Reachy.
+  Status text should keep a small label (for example "Terminal sessions (view
+  only)") rather than a long explanation; the footnote removed in the output
+  cleanup should not return, but the distinction should.
+- **Usage model.** Keep session telemetry (tokens, cost where applicable, from
+  Reachy-managed executions) separate from account allowance (five-hour and
+  weekly windows and resets, from the `claude-code-account` credential), for
+  example a `ClaudeUsageStatus` with `session_usage[]` and `account_allowance`.
+  Allowance must not be attached to a particular session. Show only dimensions
+  that exist.
+- **Credentials stay split.** `claude-code` is the execution credential;
+  `claude-code-account` is read-only in purpose and never passed to a coding
+  container. The execution credential stays isolated from Companion Core's own
+  secrets.
+- **Owner reply relay.** When reliable detection exists, the reply goes through
+  Companion Core authorization to `ClaudeCodeProvider.resume_session()` on the
+  same `provider_session_id`, relayed verbatim as owner-authored text, never an
+  LLM paraphrase unless the owner asked for one.
+- **Deferred, not blocking:** live API-credit experiments, API-key permission
+  denial acceptance, automatic permission approval, automatic terminal-session
+  adoption, multi-agent orchestration, automatic PR merge or push, and automatic
+  billing-account switching. Codex follows the same provider-neutral contract
+  once Claude supervision is useful.
+
+### Revised acceptance (subscription mode)
+
+All required items use the Claude Pro/Max workflow.
+
+| | Criterion |
+|---|---|
+| A. Start | A Reachy-managed subscription session starts in Docker |
+| B. Running | Reachy reports it as running |
+| C. Completion | Within the poll interval `RUNNING` becomes `COMPLETED` with no manual refresh, and Telegram delivers exactly one completion notification |
+| D. Durability | After a coding-agent-service restart, records remain and non-terminal sessions are reconciled conservatively |
+| E. Usage | Recorded session telemetry plus live or latest allowance where available, with no invented values |
+| F. Terminal visibility | A manually launched Claude session appears in read-only status output |
+| G. Input characterization | Several real subscription sessions that ask for owner intervention are recorded and compared with ordinary completions. No `WAITING_FOR_INPUT` claim is accepted until the evidence shows a sufficiently reliable signal |
+| H. Owner relay | Once a reliable signal exists: notification, owner response, same Claude session resumes, end to end |
+
+Minimum useful completion is start, run in Docker, persist, monitor
+automatically, show status remotely, show allowance, notify when finished.
+As of 2026-10-02 A to C and E have live evidence (C via a probe session that
+reached `completed` unprompted). D is deployed but live recovery was never
+exercised, since no non-terminal session existed at startup. F is built but
+needs a companion-core rebuild to activate. G and H were closed the same day (see the next section).
+
+### Characterization results and closure (2026-10-02)
+
+Three live Pro/Max sessions (about $0.08 of subscription usage each) in the
+read-only workflow: (A) a normal task, (B) a direct question, (C) a task that
+cannot proceed without a decision. Every one ended `subtype: success`,
+`terminal_reason: completed`, `permission_denials: []`; the result line alone
+never separates done from needs-owner. What did separate them:
+
+- The agent's own `AskUserQuestion` tool call, visible as a `tool_use` block in
+  the stream. Its `input.questions` arrives JSON-encoded as a string. In the
+  read-only workflow the CLI answers the call with an `is_error`
+  "AskUserQuestion exists but is not enabled in this context" `tool_result` and
+  the agent then stops, so the tool call is the signal, not any interaction.
+- A non-empty `permission_denials` list on the result line (the explicit
+  permission signal; not triggered in these sessions, built from the documented
+  field and unit-tested only).
+- Hooks added nothing (`--include-hook-events` was tried and reverted), so the
+  29.4 hook bridge is not needed and `agent-events` stays an unbuilt fallback.
+
+Built from only those observations (`claude_provider._classify_intervention`):
+
+| Observed | Status | `intervention_state` / source |
+|---|---|---|
+| `AskUserQuestion` tool call | `WAITING_FOR_INPUT` | `confirmed` / `tool_use.AskUserQuestion` |
+| `permission_denials` entries | `WAITING_FOR_PERMISSION` | `confirmed` / `result.permission_denials` |
+| Success whose final message ends in `?` | `COMPLETED` | `suspected` / `final_message_question` |
+| Anything else successful | `COMPLETED` | `none` |
+
+`CodingAgentSession` gains `intervention_state`, `intervention_source`,
+`intervention_detail`, `turn`, `git_start` and `git_end` (additive JSON fields,
+no migration). A session is owner-resumable (`awaiting_owner`) when waiting, or
+`COMPLETED` with a suspected/confirmed flag. Relay and resumption:
+
+- Resume needs the earlier transcript, so each session has a Docker volume
+  `reachy-claude-state-<session id>` at `/home/node/.claude` (the image now
+  creates that directory owned by `node`). Rebuild the agent image
+  (`docker build` in `docker/claude-code`) before relying on resume.
+- `/coding_reply <answer>` (also `/reachy coding_reply`) is a deterministic,
+  typed-only command: it resumes the one session awaiting the owner with the
+  answer verbatim (whitespace and line breaks preserved), refuses to guess if
+  several wait, and bumps `turn`. Telegram receives "needs your input" /
+  "needs permission" pushes naming the question and the reply command.
+- `completions/due` now claims `<session id>` for turn 1 (unchanged, so old
+  claims hold) and `<session id>#<turn>` afterwards, once per episode.
+- Recovery after a restart leaves waiting sessions alone (their container exited
+  on purpose); the poller still only watches in-flight sessions.
+- 29.9 Git: `GitObserver` runs `git` in a throwaway no-network container over a
+  read-only mount, at start and at every hand-back or terminal state; completion
+  pushes include "Git: branch has N changed file(s)" from Git itself. Failure
+  yields no observation, never a blocked transition.
+- Status output labels the host's other sessions "Terminal sessions (view only)".
+
+Live evidence: a session asked a question and reached `waiting_for_input` with
+`confirmed`/`tool_use.AskUserQuestion`; `/coding_reply` through companion-core
+resumed the same Claude session in a new container (transcript from the state
+volume) to `completed`, `turn: 2`, intervention cleared; a session on a real Git
+repository recorded `git_start`/`git_end` with `dirty` and the changed file.
+**Not exercised live:** the Telegram push of a
+waiting session (covered by an in-process hub test), `permission_denials`, a
+restart while a session waits (recovery skip is unit-tested), and the
+suspected-completion heuristic. A suspected session stays `COMPLETED`; it is
+pushed and accepts `/coding_reply`, but is worded "appears to be waiting for
+your input" rather than asserting it.
+
+### Controlling terminal sessions: CLI findings (2026-10-02)
+
+Checked by reading `--help` for the image's CLI (2.1.197) and the host's
+(2.1.286) and running `claude remote-control` once in the image; no remote or
+background feature was exercised. Terminal sessions stay view-only. "Active"
+means the transcript was written within the last 120 s
+(`terminal_sessions.py`), so a long silent step can show as idle; the status
+text says "idle", never "finished".
+
+- **Resume on a live session is unsafe.** `claude -p --resume <id>` starts a
+  separate process appending to the same transcript; the open terminal does not
+  see the new turn.
+- **Remote Control** (`--remote-control`, `/remote-control`) needs a full
+  claude.ai login. The image answered "You must be logged in to use Remote
+  Control". The `setup-token` execution credential is inference-only (the usage
+  endpoint refuses it too). It appears to connect a session to claude.ai and
+  the mobile app; no documented interface lets another program send turns or
+  read replies. Only sessions started with the flag (or `/remote-control`) are
+  covered, not existing terminal sessions. Using the `claude-code-account`
+  credential for it would break the rule that it never reaches a coding
+  container; a separate login would be needed.
+- **Background sessions** (`claude --bg`, `agents`, `attach`, `logs`, `stop`,
+  `--bg --resume <id>`) are CLI-managed on the host and cover only sessions
+  started with `--bg`. `--bg --resume` on a running session starts a copy.
+  Adopting them means running the CLI on the host instead of in a container,
+  trading away the Docker isolation (29.18); an owner decision, not built.
+- **Open options:** a spike of Remote Control with a separate login in a
+  throwaway container (small usage cost, owner completes the login), a
+  `--bg`-based provider proposal, or a push when a terminal session goes from
+  active to idle (only means "stopped writing"; idle time to be chosen).
+  Starting terminal sessions with `--remote-control` lets the owner answer them
+  from claude.ai or the phone without Reachy.
+
+**Phase 29 is closed for the subscription-first scope.** Deferred as listed in
+the revision above: API-key permission probes, auto-approval, terminal-session
+control, Codex (29.10), and the 29.15 stalled-session heuristics.
+
+## Overview
+
 Phase 29 adds supervised development-agent sessions to Reachy Work Buddy.
 The initial provider is Claude Code; the architecture must support
 additional coding agents without changing the core workflow. The first
@@ -603,8 +814,10 @@ bridge needs no network path or token. The run asked the owner a question
 `subtype: success`, `terminal_reason: "completed"`, `permission_denials: []`. Nothing
 structural separates "asked for input" from "finished" in a headless run, and
 `PermissionRequest`/`Notification`/`StopFailure` did not fire (nothing triggered
-them). Their real shapes, and a non-empty `permission_denials`, remain unobserved —
-that needs an API-key session in default permission mode. The probe flags were
+them). Their real shapes, and a non-empty `permission_denials`, remain unobserved.
+The API-key probe once proposed for them is deprioritized (see
+[Subscription-first revision](#subscription-first-revision-owner-2026-10-02));
+observe them in subscription sessions instead. The probe flags were
 not kept in the provider. The probe's project ("hook-probe") and session remain in
 the database; there is no delete route.
 
@@ -631,10 +844,10 @@ speculative endpoints or later-phase functionality (AGENTS.md).
 | 29.1 — Contracts and session store (**implemented** 2026-10-01) | `CodingProject`, `CodingAgentSession`, `CodingAgentEvent`, `ProviderCapabilities`, `UsageSnapshot` | A simulated provider can create and transition a durable coding session — met: `services/coding-agent-service`'s `CodingAgentSupervisor` + in-memory store + `SimulatedProvider`, exercised in `tests/test_service.py` and `tests/test_app.py`. The original store was in-memory only; restart durability arrived with 29.27 (Postgres, see below) |
 | 29.2 — Container runner (**implemented** 2026-10-01) | Container image, project mounts, resource limits, session labels, start/stop/reconcile | A dummy command can run inside a project-specific container and survive supervisor restart reconciliation — met: `DockerCLIContainerRuntime` (no image build yet, runs a plain image like `busybox`) starts a labeled, resource-limited, non-root, no-socket container and a *second, freshly constructed* runtime instance rediscovers and inspects it purely from Docker's own labeled state; verified against a real local Docker daemon (`CODING_AGENT_DOCKER_TEST=1`), not just `SimulatedContainerRuntime`. Restart reconciliation (`recover_sessions`, 29.27) marks a session LOST (never COMPLETED) when its container is gone without a final result. Not yet wired into `CodingAgentSupervisor.start_session` — that integration is 29.3's job, once there is a real provider that needs a container at all |
 | 29.3 — Claude Code provider (**implemented** 2026-10-01) | Containerize Claude Code; start, resume, session ID capture, structured output/event capture | Reachy launches a real Claude Code task against a test repository and tracks the provider session ID — met: `ClaudeCodeProvider` + `docker/claude-code/Dockerfile` (real image, `claude-code` 2.1.197 confirmed), `--session-id` assigns the provider session id immediately at start (no log-parsing needed for that part), and `inspect_session` parses real `stream-json` output for completion/failure/usage. Verified against the real image and a real local Docker daemon, first with an intentionally invalid key, then — once the owner registered a real Claude Pro/Max subscription credential and asked to test it (2026-10-01) — against the real Anthropic API: a real session completed successfully, the first this integration has produced. The subscription credential's no-invocation block (added and lifted the same day) left behind the protection that now actually matters for it: `--permission-mode plan`, a `--disallowedTools` list confirmed live to be what actually restricts the toolset (unlike `--allowedTools` alone), and a Docker-enforced `:ro` mount, confirmed by an actual blocked write — a subscription session runs for real but stays read-only; an API-key session keeps full permissions. Getting this far live also exposed and fixed three real deployment gaps: coding-agent-service's own container had no `docker` CLI and no access to the host's Docker daemon (now has both — `docker-cli` package plus a mounted `/var/run/docker.sock`, an explicit exception to 29.18 for this orchestrator container specifically), and `restricted-network` (the default `CodingProject.allowed_network_profile`) was never actually provisioned as a Docker network (now is, with its name pinned so Compose's project-prefixing doesn't break the literal `--network` flag). No hook-based mid-task `WAITING_FOR_INPUT`/`WAITING_FOR_PERMISSION` detection yet (29.4) |
-| 29.4 — Claude hooks | Wire `SessionStart`, `Stop`, `StopFailure`, `PermissionRequest`/`Notification`, `SessionEnd` into the event bridge | The supervisor correctly distinguishes running, returned-control, permission-needed and failed/rate-limited states |
+| 29.4 — Claude hooks (revised 2026-10-02) | Parse hook events from the stream-json log (`--include-hook-events`) in `ClaudeCodeProvider` into normalized events, mapping only behaviour observed in subscription sessions; preceded by the subscription intervention characterization | Observed Claude events map deterministically to normalized events without guessing unobserved provider behaviour; the supervisor distinguishes running, returned-control, permission-needed and failed/rate-limited states only where a reliable signal exists |
 | 29.5 — Usage telemetry | Capability-detected Claude usage collection | Available context/cost/rate-limit telemetry is captured without scraping terminal text, and unavailable dimensions remain explicitly unknown |
 | 29.6 — Notifications (**partial**, 2026-10-01) | Connect normalized coding events to Reachy's existing interruption/notification pipeline | Owner receives private notifications for input-needed, rate-limit and completion conditions — met for completion only: companion-core's `GET /coding-agents/completions/due` (a pure, claim-once query, same shape as `/calendar/reminders/due`) plus a real reachy-hub background loop (`coding_agent_notify_loop`, 60s interval) push a Telegram message when a session reaches a terminal status. Deliberately skips the full interruption-policy occupied/urgency/DND routing calendar reminders use — it always pushes immediately. Input-needed and rate-limit conditions aren't surfaced yet (depends on 29.4's hooks for the former). Also ahead of schedule: a deterministic (non-LLM) intent in companion-core answers "is my coding session done"/"what's my claude usage" in any channel, including Telegram |
-| 29.7 — Owner input relay | Add web/Telegram input to resume the exact Claude session | Owner can receive a blocking question remotely and answer it without opening the original terminal |
+| 29.7 — Owner input relay | Add web/Telegram input to resume the exact Claude session, relaying the owner's text verbatim; blocked on a reliable `WAITING_FOR_INPUT` signal | Owner can receive a blocking question remotely and answer it without opening the original terminal |
 | 29.8 — Operator UI | Add coding-session dashboard | Owner can inspect projects, running sessions, state, usage and recent events |
 | 29.9 — Git observations | Deterministic Git before/after state and changed-file reporting | Reachy can summarize repository state without trusting the coding agent's own report |
 | 29.10 — Codex provider spike | Implement the same provider contract for Codex CLI | A Codex container can launch/resume a test session and produce normalized lifecycle events |

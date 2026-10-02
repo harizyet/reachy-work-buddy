@@ -123,6 +123,7 @@ work in web chat; `/reachy <action>` is the canonical form (for example,
 |---|---|
 | `/coding_sessions` | Last recorded status of Reachy-managed coding sessions |
 | `/coding_usage` | Recorded coding usage, including finished sessions |
+| `/coding_reply <answer>` | Answer the one coding session waiting on you; your text is relayed verbatim and resumes the same Claude session |
 | `/today` | Today's calendar (the calendar handler currently uses UTC day boundaries) |
 | `/next_event` | Next calendar event |
 | `/tasks` | Open tasks |

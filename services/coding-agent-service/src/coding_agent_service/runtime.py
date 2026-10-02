@@ -59,6 +59,10 @@ class ContainerSpec:
     # the real project. See claude_provider.py's forced use of this for a
     # Claude Pro/Max subscription credential.
     read_only_mount: bool = False
+    # Named Docker volume mounted at the CLI's state directory so a later
+    # container can `--resume` the transcript an earlier one wrote.
+    state_volume: str | None = None
+    state_mount_path: str = "/home/node/.claude"
 
 
 class ContainerRuntime(Protocol):
@@ -70,6 +74,13 @@ class ContainerRuntime(Protocol):
         printed — never parsed by anything outside the provider, same
         boundary as the rest of this module keeping Docker specifics out
         of service.py/providers.py."""
+        ...
+    async def run_once(
+        self, *, image: str, host_path: str, entrypoint: str, args: list[str]
+    ) -> str:
+        """Run one short-lived command with the project mounted read-only
+        and no network, returning stdout. For deterministic observations
+        (Git), never for agent work."""
         ...
     async def list_by_session(self, session_id: str) -> list[str]: ...
     async def list_labeled(self) -> dict[str, dict[str, str]]:
@@ -93,6 +104,8 @@ class SimulatedContainerRuntime:
         # network profile) its provider asked the runtime to start.
         self.specs: dict[str, ContainerSpec] = {}
         self._next_id = 0
+        self.run_once_calls: list[tuple[str, str, list[str]]] = []
+        self.run_once_outputs: dict[tuple[str, ...], str] = {}
 
     async def start(self, spec: ContainerSpec) -> str:
         self._next_id += 1
@@ -116,6 +129,12 @@ class SimulatedContainerRuntime:
 
     async def logs(self, container_id: str) -> str:
         return self._logs.get(container_id, "")
+
+    async def run_once(
+        self, *, image: str, host_path: str, entrypoint: str, args: list[str]
+    ) -> str:
+        self.run_once_calls.append((host_path, entrypoint, args))
+        return self.run_once_outputs.get(tuple(args), "")
 
     def set_logs(self, container_id: str, logs: str) -> None:
         """Test-only hook: seed a container's stdout so a provider's
@@ -176,6 +195,11 @@ class DockerCLIContainerRuntime:
             "--label",
             f"{LABEL_PROVIDER}={spec.provider}",
         ]
+        if spec.state_volume:
+            args[args.index("--volume") + 2 : args.index("--volume") + 2] = [
+                "--volume",
+                f"{spec.state_volume}:{spec.state_mount_path}",
+            ]
         for key, value in spec.env.items():
             args += ["--env", f"{key}={value}"]
         args.append(spec.image)
@@ -183,6 +207,26 @@ class DockerCLIContainerRuntime:
             args += spec.command
         output = await self._run(*args)
         return output.strip()
+
+    async def run_once(
+        self, *, image: str, host_path: str, entrypoint: str, args: list[str]
+    ) -> str:
+        return await self._run(
+            "run",
+            "--rm",
+            "--user",
+            "1000:1000",
+            "--network",
+            "none",
+            "--security-opt",
+            "no-new-privileges",
+            "--volume",
+            f"{host_path}:/workspace:ro",
+            "--entrypoint",
+            entrypoint,
+            image,
+            *args,
+        )
 
     async def stop(self, container_id: str, *, timeout: int = 10) -> None:
         await self._run("stop", "--time", str(timeout), container_id)

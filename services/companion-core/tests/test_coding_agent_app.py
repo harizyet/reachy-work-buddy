@@ -134,7 +134,7 @@ def test_completions_due_claims_each_session_only_once() -> None:
     assert second == []
 
 
-def test_completions_due_skips_sessions_still_running() -> None:
+def test_completions_due_announces_a_waiting_session_once_with_reply_hint() -> None:
     coding_agent_app = _coding_agent_app()
     coding_agent_client = TestClient(coding_agent_app)
     headers = {"X-Reachy-Coding-Agent-Service-Token": SERVICE_TOKEN}
@@ -149,7 +149,36 @@ def test_completions_due_skips_sessions_still_running() -> None:
 
     with TestClient(_core_app(coding_agent_app)) as client:
         due = client.get("/coding-agents/completions/due").json()
-    assert due == []
+        assert len(due) == 1
+        assert "needs your input" in due[0]["text"]
+        assert "/coding_reply" in due[0]["text"]
+        assert client.get("/coding-agents/completions/due").json() == []
+
+
+def test_coding_reply_relays_the_answer_verbatim_and_resumes_the_session() -> None:
+    coding_agent_app = _coding_agent_app()
+    coding_agent_client = TestClient(coding_agent_app)
+    headers = {"X-Reachy-Coding-Agent-Service-Token": SERVICE_TOKEN}
+    project = coding_agent_client.post(
+        "/projects", headers=headers,
+        json={"name": "X", "repository_path": "/x", "provider": "simulated"},
+    ).json()
+    session = coding_agent_client.post(
+        "/sessions", headers=headers,
+        json={"project_id": project["id"], "task_summary": "ask: pick one", "owner_user_id": "owner-1"},
+    ).json()
+
+    with TestClient(_core_app(coding_agent_app)) as client:
+        body = _turn(client, "/coding_reply  Use   Postgres.\nNot SQLite.")
+        assert "Sent your answer" in body["reply"]
+        assert body["privacy"] == "work-private"
+        assert "No coding session is waiting" in _turn(client, "/coding_reply again")["reply"]
+        assert "Usage: /coding_reply <answer>" in _turn(client, "/coding_reply")["reply"]
+
+    resumed = coding_agent_client.get(f"/sessions/{session['id']}", headers=headers).json()
+    assert resumed["status"] == "completed"
+    assert resumed["turn"] == 2
+    assert repr("Use   Postgres.\nNot SQLite.") in resumed["last_event"]
 
 
 def test_completed_session_usage_is_fetched_from_service():

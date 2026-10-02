@@ -193,4 +193,29 @@ def test_format_status_reply_lists_terminal_sessions_active_first() -> None:
     ]
     reply = format_status_reply([], terminal)
     assert reply.index("Fix hub proxy (reachy): active now") < reply.index("Old chore (old): idle")
-    assert "older" not in reply and "read-only" not in reply and "Terminal sessions" not in reply
+    assert reply.startswith("Terminal sessions (view only):")
+
+
+def test_completion_notification_reports_git_state_from_the_service() -> None:
+    from companion_core.coding_agent_intent import format_completion_notification
+
+    session = {
+        "task_summary": "T", "status": "completed",
+        "git_end": {"branch": "main", "dirty": True, "changed_files": ["a.py", "b.py"]},
+    }
+    text = format_completion_notification(session)
+    assert "Git: main has 2 changed file(s): a.py, b.py." in text
+    clean = {**session, "git_end": {"branch": "main", "dirty": False, "changed_files": []}}
+    assert "main is clean" in format_completion_notification(clean)
+
+
+def test_suspected_completion_is_worded_as_a_possibility() -> None:
+    from companion_core.coding_agent_intent import format_completion_notification
+
+    session = {
+        "task_summary": "T", "status": "completed", "intervention_state": "suspected",
+        "last_event": "Shall I proceed?",
+    }
+    text = format_completion_notification(session)
+    assert "appears to be waiting for your input" in text
+    assert "/coding_reply" in text

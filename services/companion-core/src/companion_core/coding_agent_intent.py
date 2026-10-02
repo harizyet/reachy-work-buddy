@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from shared.models.coding_agent import ALLOWANCE_WINDOW_NAMES
+from shared.models.coding_agent import ALLOWANCE_WINDOW_NAMES, awaiting_owner
 
 _STATUS_PHRASES = (
     "is my coding session done", "is my code session done", "is my claude session done",
@@ -75,6 +75,12 @@ def is_usage_query(text: str) -> bool:
 
 def _label(session: dict[str, Any]) -> str:
     status = session["status"]
+    if awaiting_owner(session):
+        return (
+            "waiting for your answer"
+            if status != "completed"
+            else "finished (may be waiting for your answer)"
+        )
     return _TERMINAL_LABELS.get(status, status.replace("_", " "))
 
 
@@ -110,7 +116,7 @@ def format_status_reply(
         ordered = sorted(terminal, key=lambda s: s["last_activity_at"], reverse=True)
         ordered.sort(key=lambda s: not s.get("active"))
         lines = [_terminal_line(s) for s in ordered[:DISPLAY_LIMIT]]
-        parts.append(("Terminal sessions:\n" if sessions else "") + "\n".join(lines))
+        parts.append("Terminal sessions (view only):\n" + "\n".join(lines))
     return "\n".join(parts)
 
 
@@ -187,7 +193,46 @@ def format_completion_notification(session: dict[str, Any]) -> str:
     (GET /coding-agents/completions/due). 29.8: states what actually
     happened — "stopped and is waiting"-style honesty, not an inferred
     success claim beyond what the session's own status already says."""
-    return f"Claude Code session '{session['task_summary']}' {_label(session)}."
+    if awaiting_owner(session):
+        kind = {
+            "waiting_for_permission": "needs permission",
+            "waiting_for_input": "needs your input",
+        }.get(session["status"], "appears to be waiting for your input")
+        detail = session.get("intervention_detail") or session.get("last_event") or ""
+        return (
+            f"Claude Code session '{session['task_summary']}' {kind}"
+            + (f":\n{detail}" if detail else ".")
+            + "\nReply with /coding_reply <your answer>."
+        )
+    return f"Claude Code session '{session['task_summary']}' {_label(session)}." + _git_line(session)
+
+
+def _git_line(session: dict[str, Any]) -> str:
+    """From Git itself, not the agent's account (29.9)."""
+    git = session.get("git_end")
+    if not git:
+        return ""
+    if not git.get("dirty"):
+        return f"\nGit: {git.get('branch')} is clean."
+    files = git.get("changed_files") or []
+    shown = ", ".join(files[:5]) + (f" and {len(files) - 5} more" if len(files) > 5 else "")
+    return f"\nGit: {git.get('branch')} has {len(files)} changed file(s): {shown}."
+
+
+def notifiable(session: dict[str, Any]) -> bool:
+    """Worth a push: finished for good, or handed back to the owner."""
+    return session["status"] in _TERMINAL_LABELS or awaiting_owner(session)
+
+
+def episode_key(session: dict[str, Any]) -> str:
+    """Claim-once key. Turn 1 keeps the bare id so completions already
+    claimed before turns existed are not announced again."""
+    turn = int(session.get("turn") or 1)
+    return session["id"] if turn == 1 else f"{session['id']}#{turn}"
+
+
+def awaiting_sessions(sessions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [s for s in sessions if awaiting_owner(s)]
 
 
 def is_terminal(status: str) -> bool:

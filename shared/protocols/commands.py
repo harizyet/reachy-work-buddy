@@ -5,6 +5,7 @@ QUERY_COMMANDS = (
     ("help", "help", "Show available commands", None),
     ("coding_sessions", "coding_sessions", "Show recorded coding-agent session status", None),
     ("coding_usage", "coding_usage", "Show recorded coding-agent usage", None),
+    ("coding_reply", "coding_reply", "Answer a waiting coding agent: /coding_reply your answer", "answer"),
     ("today", "today", "Show today's calendar", None),
     ("next_event", "next_event", "Show your next calendar event", None),
     ("tasks", "tasks", "List open tasks", None),

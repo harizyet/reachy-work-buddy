@@ -22,6 +22,18 @@ _QUERY_ARGUMENTS = {action: argument for _, action, _, argument in QUERY_COMMAND
 TELEGRAM_ALIASES = {alias: ("reachy", action) for alias, action, _, _ in COMMANDS}
 
 
+# The owner's exact words are relayed to the coding agent, so their
+# whitespace and line breaks must survive parsing.
+_VERBATIM_ACTIONS = {"coding_reply"}
+
+
+def _after_tokens(text: str, count: int) -> str | None:
+    rest = text
+    for _ in range(count):
+        rest = rest.lstrip().split(None, 1)[1] if len(rest.split(None, 1)) > 1 else ""
+    return rest.strip() or None
+
+
 def format_help() -> str:
     return "Available commands:\n" + "\n".join(
         f"/{alias}" + (f" <{argument}>" if argument else "") + f" — {description}"
@@ -64,11 +76,15 @@ def parse(text: str) -> Command | None:
         if action not in _KNOWN_ACTIONS:
             return None
         argument = " ".join(parts[2:]) if len(parts) > 2 else None
+        if action in _VERBATIM_ACTIONS:
+            argument = _after_tokens(stripped, 2)
         return Command(namespace="reachy", action=action, argument=argument)
 
     alias = TELEGRAM_ALIASES.get(head)
     if alias is not None:
         argument = " ".join(parts[1:]) if len(parts) > 1 else None
+        if alias[1] in _VERBATIM_ACTIONS:
+            argument = _after_tokens(stripped, 1)
         return Command(namespace=alias[0], action=alias[1], argument=argument)
 
     return None
