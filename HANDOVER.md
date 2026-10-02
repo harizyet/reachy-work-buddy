@@ -6,9 +6,9 @@ The [documentation index](docs/README.md) defines ownership;
 
 ## Current work
 
-**Wake alert pose removed (2026-10-02, uncommitted, not deployed):** a raw
+**Wake alert pose removed (2026-10-02, committed and pushed, image on the Nano, container not yet recreated):** a raw
 wake-detector hit no longer moves the head; only hub admission brings it to
-home. Embodiment tests/ruff pass. Needs an embodiment rebuild and a physical
+home. Committed (2bf82e4), pulled and image built on the Nano (tagged :2bf82e4 and :local; previous image :bab441e-prev), but the container is not yet recreated. Needs a physical
 check of the delay between admission and head lift. Not done: a "visible
 false activations / hour" metric in the 24g acceptance, and detector-threshold
 tuning. `RestPose "alert"` remains in motion.py, unused by the monitor.
