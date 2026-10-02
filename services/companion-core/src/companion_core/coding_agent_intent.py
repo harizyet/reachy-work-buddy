@@ -27,7 +27,6 @@ _USAGE_PHRASES = (
     "check my coding usage", "how much usage", "usage limit", "claude credits",
 )
 
-_STATUS_SCOPE = "Terminal sessions are read-only: I can see them but not control them."
 _USAGE_SCOPE = (
     "Session figures cover only sessions recorded by Reachy, not account-wide usage. Allowance figures are "
     "what Claude Code last reported during those sessions, not a live reading of "
@@ -85,10 +84,6 @@ def recent_sessions(sessions: list[dict[str, Any]]) -> tuple[list[dict[str, Any]
     return ordered[:DISPLAY_LIMIT], max(0, len(ordered) - DISPLAY_LIMIT)
 
 
-def _older_line(omitted: int) -> str:
-    return f"...and {omitted} older session{'s' if omitted != 1 else ''}.\n" if omitted else ""
-
-
 def _terminal_line(session: dict[str, Any]) -> str:
     title = session.get("title") or session.get("last_prompt") or "untitled"
     folder = (session.get("project_path") or "").rstrip("/").rsplit("/", 1)[-1]
@@ -104,25 +99,19 @@ def format_status_reply(
         return "I can't reach the coding-agent service right now."
     terminal = terminal_sessions or []
     if not sessions and not terminal:
-        return "I have no recorded coding-agent sessions managed by Reachy. " + _STATUS_SCOPE
+        return "No coding sessions found."
     parts = []
-    omitted = 0
     if sessions:
-        shown, omitted = recent_sessions(sessions)
+        shown, _ = recent_sessions(sessions)
         lines = [f"{s['task_summary']} ({s['provider']}): {_label(s)}" for s in shown]
-        parts.append(
-            "Coding-agent sessions (last recorded status):\n" + "\n".join(lines) + "\n" + _older_line(omitted)
-        )
-    else:
-        parts.append("I have no recorded coding-agent sessions managed by Reachy.\n")
+        parts.append("Coding sessions:\n" + "\n".join(lines))
     if terminal:
-        ordered = sorted(terminal, key=lambda s: s["last_activity_at"], reverse=True)
         # Active ones first: those are the ones worth a phone glance.
+        ordered = sorted(terminal, key=lambda s: s["last_activity_at"], reverse=True)
         ordered.sort(key=lambda s: not s.get("active"))
         lines = [_terminal_line(s) for s in ordered[:DISPLAY_LIMIT]]
-        extra = len(ordered) - DISPLAY_LIMIT
-        parts.append("Terminal sessions:\n" + "\n".join(lines) + "\n" + _older_line(max(0, extra)))
-    return "".join(parts) + _STATUS_SCOPE
+        parts.append(("Terminal sessions:\n" if sessions else "") + "\n".join(lines))
+    return "\n".join(parts)
 
 
 def _reset_text(resets_at: str, now: datetime, timezone: str) -> str:
@@ -169,7 +158,7 @@ def format_usage_reply(
                 + (_LIVE_ALLOWANCE_SCOPE if allowance_live else _USAGE_SCOPE)
             )
         return "I have no recorded coding-agent usage for sessions managed by Reachy. " + _USAGE_SCOPE
-    shown, omitted = recent_sessions(sessions)
+    shown, _ = recent_sessions(sessions)
     lines = []
     for session in shown:
         usage = usage_by_session_id.get(session["id"])
@@ -188,7 +177,7 @@ def format_usage_reply(
     allowance = "\n".join(allowance_lines) if allowance_lines else _NO_ALLOWANCE
     return (
         "Recorded coding-agent usage (including finished sessions):\n" + "\n".join(lines) + "\n"
-        + _older_line(omitted) + allowance + "\n"
+        + allowance + "\n"
         + (_USAGE_SCOPE + " " + _LIVE_ALLOWANCE_SCOPE if allowance_live and allowance_lines else _USAGE_SCOPE)
     )
 

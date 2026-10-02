@@ -42,7 +42,7 @@ def _session(**overrides):
 
 
 def test_format_status_reply_with_no_sessions() -> None:
-    assert "no recorded coding-agent sessions managed by Reachy" in format_status_reply([])
+    assert "No coding sessions found" in format_status_reply([])
 
 
 def test_format_status_reply_when_unreachable() -> None:
@@ -134,15 +134,15 @@ def _numbered_session(index: int, provider: str = "claude-code") -> dict:
     }
 
 
-def test_status_and_usage_replies_show_the_three_newest_and_count_the_rest():
+def test_status_and_usage_replies_show_only_the_three_newest():
     sessions = [_numbered_session(i) for i in range(8)]
     status = format_status_reply(sessions)
     assert "task 7" in status and "task 5" in status
     assert "task 4" not in status
-    assert "5 older sessions" in status
+    assert "older" not in status
     usage = format_usage_reply(sessions, {})
     assert "task 5" in usage and "task 4" not in usage
-    assert "5 older sessions" in usage
+    assert "older" not in usage
 
 
 def test_allowance_lines_use_the_persona_timezone_and_skip_unknown_windows():
@@ -193,4 +193,4 @@ def test_format_status_reply_lists_terminal_sessions_active_first() -> None:
     ]
     reply = format_status_reply([], terminal)
     assert reply.index("Fix hub proxy (reachy): active now") < reply.index("Old chore (old): idle")
-    assert "read-only" in reply
+    assert "older" not in reply and "read-only" not in reply and "Terminal sessions" not in reply

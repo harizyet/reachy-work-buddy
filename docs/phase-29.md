@@ -585,9 +585,28 @@ container's logs.
 Deviation from the "`STOPPED`/resumable" mapping: a Claude Code
 `--resume` needs the transcript inside the old container, which is gone
 with it, so a vanished container is `LOST`, not a resumable `STOPPED`.
-Known gap: nothing yet polls running Claude sessions to `COMPLETED` while
-the service is up (29.14); recovery and the owner's `refresh` call are the
-only places that notice a finished container.
+While the service is up, `session_poller.py` inspects every STARTING/RUNNING/
+RATE_LIMITED session that has a container every `CODING_AGENT_POLL_INTERVAL_SECONDS`
+(default 30; `0` disables) and records a transition only when the status
+changes, so a finished container becomes `COMPLETED` and notifiable without a
+`refresh` call. A failed inspection leaves the record as is and retries. This is
+the fallback signal; the 29.4 hook bridge is still the planned primary one
+(`WAITING_*` and hook-driven `RATE_LIMITED` are not detected yet).
+
+Live probe, 2026-10-02 (owner-authorized, one real subscription session,
+claude-code 2.1.197, read-only plan mode): with `--include-hook-events` the
+`SessionStart` and `Stop` hooks appear in the stream-json log as
+`system/hook_started` and `hook_response` events whose `output` carries the hook's
+stdin JSON (including `last_assistant_message`, `permission_mode`), so a hook
+bridge needs no network path or token. The run asked the owner a question
+("switch out of plan mode so I can proceed") and exited; its `result` line was
+`subtype: success`, `terminal_reason: "completed"`, `permission_denials: []`. Nothing
+structural separates "asked for input" from "finished" in a headless run, and
+`PermissionRequest`/`Notification`/`StopFailure` did not fire (nothing triggered
+them). Their real shapes, and a non-empty `permission_denials`, remain unobserved —
+that needs an API-key session in default permission mode. The probe flags were
+not kept in the provider. The probe's project ("hook-probe") and session remain in
+the database; there is no delete route.
 
 Core's claim-once completion ledger is durable too
 (`coding_agent_notifications`), so a core restart does not re-notify

@@ -194,6 +194,18 @@ class CodingAgentSupervisor:
         event = await provider.inspect_session(session)
         return await self.apply_provider_event(session, event)
 
+    async def poll_session(self, session: CodingAgentSession) -> bool:
+        """Background-poll variant of inspect_session: asks the provider but
+        records a transition only when the status actually changed, so a
+        long run does not append a 'still working' event every interval.
+        Returns whether the record changed."""
+        provider = self._provider_for(session.provider)
+        event = await provider.inspect_session(session)
+        if event.status == session.status:
+            return False
+        await self.apply_provider_event(session, event)
+        return True
+
     async def recover_session(
         self, session: CodingAgentSession, adopted_container_id: str | None = None
     ) -> bool:

@@ -142,7 +142,7 @@ modify tasks, or confirm destructive actions.
 Coding status reads list sessions recorded by Reachy, plus a read-only
 "Terminal sessions" section (title, folder, active/idle) for Claude Code
 sessions you ran yourself when `CLAUDE_PROJECTS_DIR` is mounted; Reachy cannot
-control those. Each list shows the newest three. Usage reads cover only Reachy-recorded
+control those. Each list shows only the newest three, with no "older" count or scope footnote. Usage reads cover only Reachy-recorded
 sessions. Session history is stored in Postgres and
 survives a coding-agent-service restart (once migration `013_coding_agent` is
 deployed). `/coding_usage` also lists Claude's 5-hour and weekly allowance when

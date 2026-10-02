@@ -88,7 +88,7 @@ def test_status_question_reports_a_real_session_without_the_model(question) -> N
 def test_status_question_with_no_sessions() -> None:
     with TestClient(_core_app(_coding_agent_app())) as client:
         body = _turn(client, "is my claude session done")
-    assert "no recorded coding-agent sessions managed by Reachy" in body["reply"]
+    assert "No coding sessions found" in body["reply"]
 
 
 @pytest.mark.parametrize("summary", ["ask: pick one", "Completed task"])
@@ -178,7 +178,7 @@ def test_completed_session_usage_is_fetched_from_service():
 
 
 @pytest.mark.parametrize("command, expected, privacy", [
-    ("/coding_sessions", "no recorded coding-agent sessions", "work-private"),
+    ("/coding_sessions", "No coding sessions found", "work-private"),
     ("/coding_usage", "no recorded coding-agent usage", "work-private"),
     ("/today", "nothing on your calendar today", "work-private"),
     ("/next_event", "nothing else on your calendar", "work-private"),

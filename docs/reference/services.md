@@ -445,7 +445,7 @@ exercised on the owner's homelab — not just health-checked.
 | `GET /sessions`; `GET /sessions/{session_id}` | List/inspect durable session records |
 | `POST /sessions/{session_id}/resume`, `/input` | Owner-instruction relay into a `WAITING_FOR_INPUT`/`WAITING_FOR_PERMISSION`/`RATE_LIMITED` session only; rejected with 409 otherwise |
 | `POST /sessions/{session_id}/stop` | Idempotent terminal stop |
-| `POST /sessions/{session_id}/refresh` | Re-checks a non-terminal session against its provider/container right now (29.3); no background poller or hook bridge exists yet to do this automatically |
+| `POST /sessions/{session_id}/refresh` | Re-checks a non-terminal session against its provider/container right now (29.3); a background poller (`CODING_AGENT_POLL_INTERVAL_SECONDS`, default 30) now does this for running sessions; no hook bridge exists yet |
 | `GET /sessions/{session_id}/events` | Normalized event log for that session |
 | `GET /sessions/{session_id}/usage` | Capability-gated `UsageSnapshot`; absent dimensions are unknown, never assumed zero |
 | `GET /providers/{provider}/allowance` | Account allowance windows (5-hour/weekly) last reported by that provider and not yet reset (29.26); empty when none reported |

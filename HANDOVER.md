@@ -6,6 +6,13 @@ The [documentation index](docs/README.md) defines ownership;
 
 ## Current work
 
+**Running-session poller (2026-10-02, deployed):** coding-agent-service
+now inspects in-flight sessions every 30 s (`CODING_AGENT_POLL_INTERVAL_SECONDS`,
+`0` disables) so finished containers reach `COMPLETED` and Telegram's completion
+push fires. Verified with fixture runtimes and a lifespan test, not a real Claude
+container. Still missing: the 29.4 hook bridge (WAITING_FOR_INPUT/PERMISSION,
+hook-driven RATE_LIMITED, Stop/SessionEnd). A live probe (see phase-29 29.4 note) showed hooks surface in the stream with `--include-hook-events`, but a headless run that asks a question still ends as a plain success; do not build WAITING_* from hooks without an API-key probe that triggers a real permission denial. Poller deployed live and verified (probe session reached `completed` unprompted).
+
 **Reachy sees terminal sessions (2026-10-02, built, not deployed):** the status
 reply (`/coding_sessions`, "is my claude session done") now adds a read-only
 "Terminal sessions" section via companion-core's new

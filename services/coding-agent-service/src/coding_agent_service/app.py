@@ -7,6 +7,7 @@ testing conventions).
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -27,6 +28,7 @@ from coding_agent_service.reconcile import recover_sessions
 from coding_agent_service.routes import install_coding_agent_routes
 from coding_agent_service.runtime import ContainerRuntime, DockerCLIContainerRuntime
 from coding_agent_service.service import CodingAgentSupervisor
+from coding_agent_service.session_poller import run_poll_loop
 from coding_agent_service.store import CodingAgentStore, InMemoryCodingAgentStore
 
 logger = logging.getLogger(__name__)
@@ -64,6 +66,7 @@ def create_app(
     credential_store: CredentialStore | None = None,
     container_runtime: ContainerRuntime | None = None,
     terminal_sessions_dir: str | Path | None = None,
+    poll_interval_seconds: float | None = None,
 ) -> FastAPI:
     resolved_store = store if store is not None else _default_store()
     resolved_token = (
@@ -99,6 +102,12 @@ def create_app(
     )
 
     supervisor = CodingAgentSupervisor(resolved_store, resolved_providers)
+    # 0 disables background polling; /refresh still works on demand.
+    poll_interval = (
+        poll_interval_seconds
+        if poll_interval_seconds is not None
+        else float(os.environ.get("CODING_AGENT_POLL_INTERVAL_SECONDS", "30"))
+    )
 
     # ASGITransport-driven tests skip lifespan and inject stores directly;
     # the production-owned Postgres pool opens and closes here (see
@@ -124,7 +133,17 @@ def create_app(
                     if report.skipped_reason
                     else "",
                 )
-            yield
+            poller = None
+            if poll_interval > 0:
+                poller = asyncio.create_task(
+                    run_poll_loop(supervisor, resolved_store, poll_interval)
+                )
+            try:
+                yield
+            finally:
+                if poller is not None:
+                    poller.cancel()
+                    await asyncio.gather(poller, return_exceptions=True)
         finally:
             closer = getattr(resolved_store, "close", None)
             if closer is not None:
