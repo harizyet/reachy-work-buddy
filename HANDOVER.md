@@ -19,9 +19,14 @@ Calibration so far (genuine "Hey Reachy, what time is it"): 5 hits, scores
 session 3 of 5 attempts were never detected and a 0.95 hit was rejected
 `no_wake_phrase` (likely the hub re-downloading `small.en` after a recreate; one
 admitted reply was also "withheld", reason not found, possibly DND/meeting).
-No threshold chosen: still needed is the false-trigger half (TV, chatter,
-coughs, 15-20 min) per [phase-30](docs/phase-30.md) 30.1b. Not built: two-window
-temporal confirmation (30.1c). Not done: metric tooling.
+False-trigger run (2026-10-02, 11:53-about 12:30Z, about 36 min): 16
+detections (about 27/h), all hub-rejected, 0 false conversations, all raised the
+head. False scores 0.75-0.99 overlap genuine 0.78-0.98, so no score threshold
+separates them; no `WAKE_ALERT_THRESHOLD` is set and the Nano keeps raising on
+every detection. Owner decision (2026-10-02): detector comparison (30.1d,
+`wake-bench.py --record`, 0429566) is deprioritized; continue the rest of Phase 30.
+Open: early-hub-verdict design (needs owner go-ahead), 30.2 metric tooling,
+removal of the debug transcript log after calibration, 30.3-30.5.
 
 **Phase 29 is closed for the subscription-first scope (2026-10-02, deployed
 to the homelab, uncommitted).** Characterization found that the agent's
