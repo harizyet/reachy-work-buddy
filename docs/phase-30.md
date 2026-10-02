@@ -16,30 +16,31 @@ start/restart/resume need the owner present.
 
 | Step | Work | Needs the owner |
 |---|---|---|
-| 30.1 | Recreate `reachy-embodiment` on the Nano with image `:2bf82e4` and verify: a raw wake hit causes no motion; hub admission lifts the head to home; measure the admission-to-lift delay | Yes: sudo/container recreate on the Nano |
+| 30.1 | Deploy the restored alert pose (revert of `2bf82e4`, owner request 2026-10-02) to the Nano and verify: a detected wake phrase lifts the head slightly within a second or so, a rejected candidate returns to sleep silently, hub admission brings the head to home | Yes: sudo/container recreate on the Nano |
 | 30.2 | Define and record `visible_false_activations_per_hour` ([below](#visible_false_activations_per_hour)) in the [24g acceptance](phase-24g.md#acceptance-requirements) | No |
 | 30.3 | Calibration session, then cold held-out run to the [agreed targets](phase-24g.md#agreed-numeric-targets-owner-2026-09-27), covering immediate-request and pause-before-request; occupied-room exposure | Yes: speaking and scoring |
 | 30.4 | Decide whether detector threshold/model tuning is needed, from calibration data only (never from the held-out run) | Decision |
 | 30.5 | Selective closure of the [triage list](#closure-triage) | Per row |
 
-30.1 gates 30.3: the held-out run must use the deployed behaviour, not the
-alert-pose build the earlier evidence was gathered on.
+30.1 gates 30.3: the held-out run must use the deployed behaviour.
 
 ## visible_false_activations_per_hour
 
 A **visible false activation** is any robot reaction an observer in the room
-can see or hear that was not caused by a genuine, intended "Hey Reachy". With
-the alert pose removed, a raw detector hit by itself is invisible, so the count
-is, per scored exposure period:
+can see or hear that was not caused by a genuine, intended "Hey Reachy". The
+alert head raise is deliberate feedback on a genuine hit, but on a false hit it
+is exactly such a reaction, so the count is, per scored exposure period:
 
-- every false conversation admitted (head lifts to home, session opens), plus
+- every alert raise on a non-genuine detection (counted separately from the
+  rest, so the cost of the feedback is visible), plus
+- every false conversation admitted (head to home, session opens), plus
 - any other visible or audible cue on a non-genuine hit: unprompted motion, a
   sound, a spoken reply, or a head position that fails to return to rest.
 
 It is reported beside, not instead of, wake candidates/hour and false
-conversations admitted/hour. Because admission is the only visible cue, it
-equals the false-conversation rate unless an extra cue is observed; a
-difference between the two is itself a finding.
+conversations admitted/hour. If the alert raise on false detections proves too
+visible, the options are detector tuning or a gentler cue; removing the cue was
+tried on 2026-10-02 and reverted because nothing showed the phrase was heard.
 
 Method: the owner or observer logs each visible reaction with a timestamp
 during the exposure window; embodiment log lines (`wake phrase detected`,

@@ -12,13 +12,12 @@ Phases 0–29 are the historical ledger; remaining work follows the
 31 meetings and 32 owner recognition, 33 security, 34 embodied secretary,
 35 optional coding-agent extensions, 36 production readiness).
 
-**Now (Phase 30):** the no-alert-pose wake change (`2bf82e4`) is committed and
-its image is on the Nano, but the container has not been recreated and it has
-no physical acceptance: confirm a raw false wake causes no motion and an
-admitted request lifts the head to home, then run the occupied-room wake check
-and add the visible-false-activations-per-hour metric to the
-[24g acceptance](phase-24g.md). The fresh 24g held-out run (deferred by the
-owner on 2026-09-28) is part of this.
+**Now (Phase 30):** the owner restored the small alert head raise on a
+detected wake phrase (2026-10-02; `2bf82e4` had removed it and nothing showed
+the phrase was heard). The revert is not yet deployed to the Nano. Next:
+physical verification, then the occupied-room wake check and the
+visible-false-activations-per-hour metric in the [24g acceptance](phase-24g.md).
+The fresh 24g held-out run (deferred by the owner on 2026-09-28) is part of this.
 
 **Next (Phase 31):** browser checks and a real 30–60 minute meeting through
 [Phase 27](phase-27.md), then alignment, analysis and retrieval. **After

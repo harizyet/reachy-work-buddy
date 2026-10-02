@@ -49,11 +49,10 @@ records:
   candidate filters. Phase 25's pre-STT attribution gate will run before that
   upload.
 
-- **Animation and follow-up:** a detected wake phrase alone does not
-  move the head (2026-10-02: raw detector hits were frequent and each
-  visible pop-up was the main annoyance; the silent alert pose from the
-  [first physical run](verification/phase-24g-physical-2026-09-27.md) is no
-  longer played). Only an admitted conversation brings the head to home. The robot rests in its
+- **Animation and follow-up:** a detected wake phrase lifts the head
+  slightly to a silent alert pose. It replaced the full wake-up move after
+  the [first physical run](verification/phase-24g-physical-2026-09-27.md).
+  An admitted conversation brings the head to home. The robot rests in its
   sleep pose while armed and not conversing, and a false wake returns there
   silently: no daemon routine or sound is used. This replaces the "no large animation before admission"
   guidance below. A wake-started session ends when no further turn starts

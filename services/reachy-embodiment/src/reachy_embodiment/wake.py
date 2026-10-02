@@ -289,8 +289,8 @@ class WakeMonitor:
         return self._ready
 
     async def _rest_move(self, pose: RestPose) -> None:
-        """Waits for the sleep move; the home cue runs alongside the
-        conversation's start."""
+        """Waits for the sleep move; the alert and home cues run alongside
+        capture and the conversation's start."""
         if self._motion is None:
             return
         previous = self._motion_task
@@ -314,9 +314,8 @@ class WakeMonitor:
             ring = await self._listen(microphone, detector, limits)
             if ring is None:
                 return None
-            # No motion on a raw detector hit: false hits are frequent and a
-            # visible pop-up for each is the annoyance. The head stays asleep
-            # until the hub admits the candidate (see `suspend`).
+            self._resting = False
+            await self._rest_move("alert")
             candidate = await self._capture_candidate(microphone, ring, vad, limits)
             if candidate is None:
                 log.info("wake candidate discarded on the robot: no request followed")
