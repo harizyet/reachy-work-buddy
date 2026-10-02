@@ -6,18 +6,22 @@ The [documentation index](docs/README.md) defines ownership;
 
 ## Current work
 
-**Confidence-gated wake alert (2026-10-02, built and committed, not deployed):**
-`2bf82e4` (no head motion on a raw hit) gave no feedback in live testing, so it
-was reverted (cb66bb5, pushed; the owner rebuilt the Nano on it). The owner then
-asked for a design where all detections still go to capture/admission but the
-small head raise needs a stricter score. Built: `WAKE_ALERT_THRESHOLD` (robot env
-file, read in `reachy_embodiment/app.py`; unset = raise on every detection, as
-now), a log line `wake detection (score X): alert raise|silent capture`, and
-tests. Not chosen: the number. First live scores were 0.76–1.00, too few; collect
-genuine and false scores per [phase-30](docs/phase-30.md) 30.1b. Not built: two-window
-temporal confirmation (30.1c). Deploy needs a pull, rebuild and container recreate
-on the Nano.
-Not done: the metric tooling.
+**Confidence-gated wake alert (2026-10-02, deployed to the Nano and homelab hub, calibration in progress):**
+`2bf82e4` (no head motion on a raw hit) gave no feedback and was reverted
+(cb66bb5). Now every detection still goes to capture/admission but the head raise
+needs `WAKE_ALERT_THRESHOLD` (3c7bc6b; robot env file, unset = raise on every
+detection, which is how the Nano runs now, image `reachy-embodiment:local`).
+Hub option `WAKE_DEBUG_LOG_REJECTED_TRANSCRIPTS` (82ff980, hub env/.env) logs the
+first 8 words of rejected candidates; it is OFF (set false in `.env`) and the
+code and compose passthrough should be removed once calibration finishes.
+Calibration so far (genuine "Hey Reachy, what time is it"): 5 hits, scores
+0.88-0.98 admitted and spoken; one 0.78 discarded (no request). Earlier in the
+session 3 of 5 attempts were never detected and a 0.95 hit was rejected
+`no_wake_phrase` (likely the hub re-downloading `small.en` after a recreate; one
+admitted reply was also "withheld", reason not found, possibly DND/meeting).
+No threshold chosen: still needed is the false-trigger half (TV, chatter,
+coughs, 15-20 min) per [phase-30](docs/phase-30.md) 30.1b. Not built: two-window
+temporal confirmation (30.1c). Not done: metric tooling.
 
 **Phase 29 is closed for the subscription-first scope (2026-10-02, deployed
 to the homelab, uncommitted).** Characterization found that the agent's
