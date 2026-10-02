@@ -292,8 +292,8 @@ Dependencies:
 Phases 31 and 32 can run largely in parallel after 30. Phase 33 follows both so
 it reviews real meeting, biometric and coding-agent implementations rather
 than plans; generic hardening may still start earlier. Per-phase detail docs
-(`phase-30.md` and later) are written when a phase starts; until then this
-table owns its scope.
+are written when a phase starts ([phase-30.md](phase-30.md) exists; later
+phases are still owned by this table).
 
 No longer active scope: Phase 29 core expansion, API-key Claude behaviour,
 Claude hooks for input detection, arbitrary terminal-session adoption,

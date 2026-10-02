@@ -404,8 +404,9 @@ Phase 35 (optional). Immediate order: (a) the owner recreates
 `reachy-embodiment` on the Nano with `2bf82e4` and checks false wake = no
 motion, admitted wake = home; (b) occupied-room wake check and the
 visible-false-activations/hour metric; (c) then Phase 31 meeting acceptance.
-Not yet done: only the documentation was updated for this re-sequencing; no
-phase-30 detail doc exists, and waiving old acceptance rows needs the owner.
+[docs/phase-30.md](docs/phase-30.md) (written 2026-10-02) holds the Phase 30
+sequence, the metric definition and the closure triage; no Phase 30 code or
+physical step has been done, and waiving old acceptance rows needs the owner.
 
 0. Phase 29 is now live on the homelab (see Current work) —
    `CODING_AGENT_SECRET_KEY_FILE` is already set, so a credential entered
