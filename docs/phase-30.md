@@ -19,6 +19,7 @@ start/restart/resume need the owner present.
 | 30.1 | Confidence-gated wake acknowledgement (owner, 2026-10-02): every detection at `detection_threshold` continues through capture and hub admission; the small alert raise happens only when the score also reaches a separate, stricter alert threshold (`WAKE_ALERT_THRESHOLD` in the robot env file; unset raises on every detection, the current behaviour). Deploy, then verify on the Nano | Yes: sudo/container recreate on the Nano |
 | 30.1b | Calibration data: from the log line carrying each detection's score and whether it raised the head, plus the existing admitted/rejected/discarded lines, record genuine and false scores; choose the two thresholds from those distributions, never from a few hits | Yes: speaking |
 | 30.1c | Only if single-window spikes still cause false raises after 30.1b: require two high-score windows within about 300–500 ms before the raise. Not built; needs the calibration data first | Decision |
+| 30.1d | Detector comparison (owner, 2026-10-02): the 2026-10-02 false-trigger run (16 detections in about 36 min, all hub-rejected) showed false scores of 0.75–0.99 overlapping genuine 0.78–0.98, so no score threshold separates them. Record labelled clips with `wake-bench.py --record` (a prompted genuine session, then a false session of ambient TV/chatter), then score the current Edge Impulse model against candidates (openWakeWord custom head, sherpa-onnx keyword spotting, retrained Edge Impulse) offline. Alternative if no candidate helps: an early hub verdict before the raise (needs an owner decision, as it changes 24g) | Yes: speaking, consent to local audio |
 | 30.2 | Define and record `visible_false_activations_per_hour` ([below](#visible_false_activations_per_hour)) in the [24g acceptance](phase-24g.md#acceptance-requirements) | No |
 | 30.3 | Calibration session, then cold held-out run to the [agreed targets](phase-24g.md#agreed-numeric-targets-owner-2026-09-27), covering immediate-request and pause-before-request; occupied-room exposure | Yes: speaking and scoring |
 | 30.4 | Decide whether detector threshold/model tuning is needed, from calibration data only (never from the held-out run) | Decision |
@@ -85,7 +86,7 @@ each decision is recorded in the dated record, not here.
 
 ## Code changes
 
-None committed yet for 30.1–30.5. The image for 30.1 already exists on the
+`wake-bench.py --record` (30.1d) stores labelled sessions on the host only; nothing else beyond the 30.1 gate. The image for 30.1 already exists on the
 Nano. Any harness for 30.2 should consume the existing embodiment log lines
 rather than add runtime endpoints.
 

@@ -507,13 +507,86 @@ def listen(args: argparse.Namespace) -> None:
             print(f"{name} events: {len(found)} [{listed}]", flush=True)
 
 
+def record(args: argparse.Namespace) -> None:
+    """Store one labelled microphone session as a WAV plus a JSON timeline.
+
+    A "genuine" session prints a SAY NOW prompt every --prompt-gap seconds
+    and logs each prompt's time, so the owner speaks to a schedule and
+    scoring later knows where the phrase is. A "false" session only
+    records ambient audio the owner has confirmed contains no intended
+    wake phrase. The audio stays on this host; it is the owner's voice
+    and room, so keep it out of the repository and delete it when done.
+    """
+    import signal
+
+    stop = False
+
+    def on_signal(*_: object) -> None:
+        nonlocal stop
+        stop = True
+
+    signal.signal(signal.SIGTERM, on_signal)
+    signal.signal(signal.SIGINT, on_signal)
+
+    os.makedirs(args.record, mode=0o700, exist_ok=True)
+    stem = os.path.join(args.record, f"{args.label}-{time.strftime('%Y%m%dT%H%M%S')}")
+    mic = MicStream()
+    prompts: list[float] = []
+    started = time.monotonic()
+    next_prompt = started + 5
+    deadline = started + 60 * args.minutes
+    print(f"recording {args.label} session to {stem}.wav; Ctrl-C ends", flush=True)
+    with wave.open(f"{stem}.wav", "wb") as out:
+        out.setnchannels(1)
+        out.setsampwidth(2)
+        out.setframerate(SR)
+        try:
+            while not stop and time.monotonic() < deadline:
+                chunk = mic.read()
+                if chunk is not None:
+                    out.writeframes(chunk.tobytes())
+                now = time.monotonic()
+                if args.label == "genuine" and now >= next_prompt:
+                    if len(prompts) >= args.prompts:
+                        break
+                    prompts.append(round(now - started, 2))
+                    next_prompt = now + args.prompt_gap
+                    print(
+                        f"{time.strftime('%H:%M:%S')} SAY NOW ({len(prompts)}/{args.prompts})",
+                        flush=True,
+                    )
+        finally:
+            mic.close()
+    with open(f"{stem}.json", "w") as f:
+        json.dump(
+            {
+                "label": args.label,
+                "duration_s": round(time.monotonic() - started, 2),
+                "prompts_s": prompts,
+                "prompt_gap_s": args.prompt_gap,
+            },
+            f,
+        )
+    os.chmod(f"{stem}.wav", 0o600)
+    print(f"saved {stem}.wav ({len(prompts)} prompts)", flush=True)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--models", required=True)
+    parser.add_argument("--models")
     parser.add_argument("--clips")
     parser.add_argument(
         "--listen", action="store_true", help="score the live robot microphone"
     )
+    parser.add_argument(
+        "--record",
+        metavar="DIR",
+        help="store a labelled session in DIR (needs --label)",
+    )
+    parser.add_argument("--label", choices=["genuine", "false"])
+    parser.add_argument("--prompts", type=int, default=30)
+    parser.add_argument("--prompt-gap", type=float, default=7.0)
+    parser.add_argument("--minutes", type=float, default=60.0)
     parser.add_argument("--threshold", type=float, default=0.5)
     parser.add_argument(
         "--event-db",
@@ -528,6 +601,13 @@ def main() -> None:
     parser.add_argument("--eim-via-16k", action="store_true")
     parser.add_argument("--only", choices=["wake", "event", "eim"])
     args = parser.parse_args()
+    if args.record:
+        if not args.label:
+            raise SystemExit("--record needs --label genuine|false")
+        record(args)
+        return
+    if not args.models:
+        raise SystemExit("--models is required")
     if args.listen:
         listen(args)
         return
