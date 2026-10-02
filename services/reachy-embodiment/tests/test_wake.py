@@ -202,10 +202,10 @@ def test_rejected_candidate_uploads_phrase_and_request_then_rests_and_listens_ag
         samples, arm_id, generation = uploader.uploads[0]
         assert (arm_id, generation) == ("arm-1", 3)
         assert samples >= int(2.0 * SR)  # the phrase and the request together
-        assert motion.moves[:2] == ["sleep", "alert"]
+        assert motion.moves == ["sleep"]  # a detector hit does not move the head
 
         await wait_until(lambda: mic.starts == 2 and mic.open)
-        assert motion.moves == ["sleep", "alert", "sleep"]
+        assert motion.moves == ["sleep"]  # a false wake never left sleep
         assert conversation.primed is None
         await monitor.aclose()
         assert not mic.open
@@ -220,7 +220,7 @@ def test_wake_then_silence_is_discarded_on_the_robot() -> None:
         await monitor.arm(arm, generation=1)
         await wait_until(lambda: mic.open)
         mic.push(np.concatenate([silence(1.0), wake_phrase(), silence(0.6)]))
-        await wait_until(lambda: motion.moves == ["sleep", "alert"])
+        await wait_until(lambda: mic.starts == 1 and mic.open)
         await asyncio.sleep(0.05)
         clock.now += 5.9  # still inside the speech-start allowance
         await asyncio.sleep(0.05)
@@ -228,7 +228,7 @@ def test_wake_then_silence_is_discarded_on_the_robot() -> None:
         clock.now += 0.2
         await wait_until(lambda: mic.starts == 2)
         assert uploader.uploads == []
-        assert motion.moves == ["sleep", "alert", "sleep"]
+        assert motion.moves == ["sleep"]  # a false wake never left sleep
         await monitor.aclose()
 
     asyncio.run(scenario())
@@ -266,12 +266,12 @@ def test_admitted_candidate_is_primed_and_the_head_comes_home_for_the_session() 
         conversation.voice_session_id = "sid-1"
         await monitor.suspend()
         assert mic.starts == 1 and not mic.open  # the microphone is the session's now
-        await wait_until(lambda: motion.moves == ["sleep", "alert", "home"])
+        await wait_until(lambda: motion.moves == ["sleep", "home"])
 
         conversation.voice_session_id = None  # the session ended
         monitor.resume()
         await wait_until(lambda: mic.starts == 2 and mic.open)
-        assert motion.moves == ["sleep", "alert", "home", "sleep"]
+        assert motion.moves == ["sleep", "home", "sleep"]
         await monitor.aclose()
 
     asyncio.run(scenario())
@@ -288,7 +288,7 @@ def test_an_admission_answered_before_voice_start_still_brings_the_head_home() -
         await asyncio.sleep(0.05)  # the answer is in; monitoring waits for the session
         conversation.voice_session_id = "sid-1"
         await monitor.suspend()
-        await wait_until(lambda: motion.moves == ["sleep", "alert", "home"])
+        await wait_until(lambda: motion.moves == ["sleep", "home"])
         await monitor.aclose()
 
     asyncio.run(scenario())

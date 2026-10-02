@@ -30,8 +30,8 @@ and every path behaves as before 24f.
 Phase 24g adds a third switch, `wake_animation` (on by default, owner
 decision 2026-09-27). While wake monitoring is armed:
 - the robot rests in the daemon's sleep pose between conversations;
-- a detected wake phrase lifts the head slightly to an alert pose, a quick
-  cue to go on speaking;
+- a raw wake-detector hit does not move the head (2026-10-02: false hits
+  popped the robot up too often); the alert pose is currently unused;
 - an admitted conversation brings the head up to home.
 
 Every rest move is a silent goto. The daemon's own routines are not used:
