@@ -87,8 +87,12 @@ each decision is recorded in the dated record, not here.
 ## Code changes
 
 `wake-bench.py --record` (30.1d) stores labelled sessions on the host only; nothing else beyond the 30.1 gate. The image for 30.1 already exists on the
-Nano. Any harness for 30.2 should consume the existing embodiment log lines
-rather than add runtime endpoints.
+Nano. [`tools/wake_metrics.py`](../tools/wake_metrics.py) (30.2) computes the
+metrics above from `docker logs -t reachy-embodiment` and the owner's list of
+genuine attempt times; it reads logs only and adds no runtime endpoint. It
+matches a detection to an attempt within 2 s before to 15 s after, and counts
+the other candidates as false. Checked on synthetic log lines only; its first
+real use is the next scored run.
 
 ## Exit
 

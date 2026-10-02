@@ -25,8 +25,8 @@ head. False scores 0.75-0.99 overlap genuine 0.78-0.98, so no score threshold
 separates them; no `WAKE_ALERT_THRESHOLD` is set and the Nano keeps raising on
 every detection. Owner decision (2026-10-02): detector comparison (30.1d,
 `wake-bench.py --record`, 0429566) is deprioritized; continue the rest of Phase 30.
-Open: early-hub-verdict design (needs owner go-ahead), 30.2 metric tooling,
-removal of the debug transcript log after calibration, 30.3-30.5.
+Open: early-hub-verdict design (needs owner go-ahead), 30.2 metric tooling
+(`tools/wake_metrics.py`, built, synthetic-checked only), removal of the debug transcript log after calibration, 30.3-30.5.
 
 **Phase 29 is closed for the subscription-first scope (2026-10-02, deployed
 to the homelab, uncommitted).** Characterization found that the agent's
