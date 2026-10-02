@@ -19,6 +19,11 @@ point into this index rather than maintaining parallel instructions.
 ## Plans
 
 The [roadmap](plan.md#6-implementation-roadmap) owns phase order and status.
+Phases 0–29 are its historical ledger; remaining work is sequenced by
+dependency in the [forward roadmap (Phases 30+)](plan.md#forward-roadmap-phases-30),
+and the phase plans below keep their original numbers (remaining work from
+27 continues as Phase 31, 25 as 32, 26 as 33, 28 as 34, 29's extensions as 35,
+and open 22b–24g rows as 30).
 Detailed future requirements remain in their dedicated plans; they are not
 claims that those features already work. Paths stay stable: completed phase
 records are historical design/implementation references. The mixed 22–23 document retains open acceptance matrices.

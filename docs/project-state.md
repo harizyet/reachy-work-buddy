@@ -1,22 +1,34 @@
 # Project state
 
-Snapshot: 2026-09-30. This page owns current deployment and cross-phase
+Snapshot: 2026-10-02. This page owns current deployment and cross-phase
 acceptance limits. The [phase ledger](plan.md#6-implementation-roadmap)
 owns phase status and scope; dated [verification records](README.md#verification-records)
 own evidence. This snapshot is not a live health check.
 
 ## Current priority and next gates
 
-[Phase 25](phase-25.md) is in progress; the next gates are browser
-verification of benchmark capture, consenting owner/non-owner recordings,
-and a calibrated speaker model. [Phase 24g](phase-24g.md) is deployed but
-not accepted: the fresh held-out run after the 6 s timeout fix was deferred
-by the owner on 2026-09-28. See the [phase ledger](plan.md#6-implementation-roadmap)
-for delivery status and subsequent phases, and [HANDOVER](../HANDOVER.md)
-for concrete next-session steps. Phase 25 runs with conversational motion
-off until 24f's deferred acceptance passes. Its
+Phases 0–29 are the historical ledger; remaining work follows the
+[forward roadmap](plan.md#forward-roadmap-phases-30) (30 stabilization, then
+31 meetings and 32 owner recognition, 33 security, 34 embodied secretary,
+35 optional coding-agent extensions, 36 production readiness).
+
+**Now (Phase 30):** the no-alert-pose wake change (`2bf82e4`) is committed and
+its image is on the Nano, but the container has not been recreated and it has
+no physical acceptance: confirm a raw false wake causes no motion and an
+admitted request lifts the head to home, then run the occupied-room wake check
+and add the visible-false-activations-per-hour metric to the
+[24g acceptance](phase-24g.md). The fresh 24g held-out run (deferred by the
+owner on 2026-09-28) is part of this.
+
+**Next (Phase 31):** browser checks and a real 30–60 minute meeting through
+[Phase 27](phase-27.md), then alignment, analysis and retrieval. **After
+(Phase 32):** [Phase 25](phase-25.md) owner-recognition data collection,
+calibration and the real verifier; its next gates are browser verification of
+benchmark capture and consenting owner/non-owner recordings. Phase 25 work runs
+with conversational motion off until 24f's deferred acceptance passes. Its
 [24e prerequisites](phase-24e.md#prerequisites-for-phase-25) passed or were
-waived by the owner; Nano diagnostics remain deferred.
+waived by the owner; Nano diagnostics remain deferred. See
+[HANDOVER](../HANDOVER.md) for concrete next-session steps.
 
 ## Deployment and production acceptance
 

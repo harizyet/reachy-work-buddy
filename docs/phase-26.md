@@ -1,5 +1,7 @@
 # Phase 26 — Security hardening and assurance
 
+> **Forward roadmap (2026-10-02):** The system-wide assurance work continues as [Phase 33](plan.md#forward-roadmap-phases-30), scheduled after meeting intelligence and owner recognition so it assesses implemented systems; this document keeps its Phase 26 numbering.
+
 Status: planned assurance phase, with benchmark-storage controls from 26d
 implemented early during Phase 25. See the [26d implementation status](#26d-implementation-status)
 for delivered controls and remaining work. Inserted into the roadmap 2026-09-28,

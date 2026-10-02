@@ -1,5 +1,7 @@
 # Phase 28 — Embodied meeting secretary
 
+> **Forward roadmap (2026-10-02):** In the forward roadmap this work is [Phase 34](plan.md#forward-roadmap-phases-30), after meeting intelligence, stabilization and trust/security phases; this document keeps its Phase 28 numbering.
+
 Status: planned, not implemented. The product goal is Reachy acting as a
 physically or hybrid-present secretary: physically in the room for meetings,
 recording only when explicitly enabled, producing minutes, catching questions

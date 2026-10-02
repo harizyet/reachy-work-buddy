@@ -1,5 +1,7 @@
 # Phase 29 — Coding Agent Supervisor
 
+> **Forward roadmap (2026-10-02):** Closed for the subscription-first Claude scope. Deferred enhancements (Codex, Remote Control spike, terminal-session idle notices, multi-agent scheduling) move to optional [Phase 35](plan.md#forward-roadmap-phases-30); this document keeps its Phase 29 numbering.
+
 Status: 29.1 (contracts/session store), 29.2 (container runner) and 29.3
 (Claude Code provider) implemented 2026-10-01, plus 29.19's credential
 storage/owner-UI pulled forward early, and a first slice of 29.6/29.13

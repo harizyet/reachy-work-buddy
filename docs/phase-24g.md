@@ -1,5 +1,7 @@
 # Phase 24g — Wake admission and false-trigger rejection
 
+> **Forward roadmap (2026-10-02):** Open acceptance for this phase (held-out run, visible-false-activation metric) continues in [Phase 30](plan.md#forward-roadmap-phases-30).
+
 Status: **deployed, in physical testing, not accepted** (2026-09-27). Detector cost
 on the Nano is [measured](verification/phase-24g-detector-bench-2026-09-27.md).
 The owner selected the community Edge Impulse "Hey Reachy" model as the

@@ -395,6 +395,18 @@ meetings remain in the database/audio volume; no delete endpoint exists.
 
 ## Next session
 
+**Roadmap re-sequenced 2026-10-02.** Remaining work now follows the
+[forward roadmap](docs/plan.md#forward-roadmap-phases-30) (Phases 30–36);
+Phases 0–29 are the historical ledger and keep their IDs. The numbered list
+below is older and maps as: items 7–8 and the wake check → Phase 30; items 1–3
+→ Phase 31; items 4–6 → Phase 32; Phase 29 is closed and its leftovers are
+Phase 35 (optional). Immediate order: (a) the owner recreates
+`reachy-embodiment` on the Nano with `2bf82e4` and checks false wake = no
+motion, admitted wake = home; (b) occupied-room wake check and the
+visible-false-activations/hour metric; (c) then Phase 31 meeting acceptance.
+Not yet done: only the documentation was updated for this re-sequencing; no
+phase-30 detail doc exists, and waiving old acceptance rows needs the owner.
+
 0. Phase 29 is now live on the homelab (see Current work) —
    `CODING_AGENT_SECRET_KEY_FILE` is already set, so a credential entered
    through the operator UI now survives a restart. The actual next step is

@@ -1,5 +1,7 @@
 # Phase 27 — Meeting Intelligence
 
+> **Forward roadmap (2026-10-02):** Remaining work (acceptance, alignment, analysis, retrieval, reviewed actions) continues as [Phase 31](plan.md#forward-roadmap-phases-30); this document keeps its Phase 27 numbering.
+
 ## Status
 
 Planned replacement for the previous Phase 27 meeting-transcription design.

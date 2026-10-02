@@ -186,11 +186,19 @@ the daemon APIs. [3]
 
 ## 6. Implementation Roadmap
 
-Authoritative phase ledger, updated 2026-09-25. “Implemented” describes
+Authoritative phase ledger, updated 2026-10-02. “Implemented” describes
 code delivery, not production or physical acceptance. “Closed” reflects the
 accepted scope, including explicit deferrals. See [project state](project-state.md)
 for cross-phase deployment limits and [verification](README.md#verification-records)
 for dated evidence. Detailed exit criteria remain in linked phase plans.
+
+**Phases 0–29 are the historical implementation ledger.** Work was delivered
+out of order (security controls from 26 landed during 25, 27 started before
+25/26 closed, 29 was pulled forward and closed), so the old numbering no
+longer shows what remains. Phase IDs are not renumbered: ADRs, phase records
+and verification evidence cite them. Remaining work is re-sequenced by
+dependency in the [forward roadmap (Phases 30+)](#forward-roadmap-phases-30),
+which absorbs or continues the open rows below.
 
 ### Phases 0–18
 
@@ -222,7 +230,12 @@ that every physical deployment scenario has passed.
 
 | Phase 18 — Daily briefing | Combine calendar/tasks/email/reminders/project events into prioritized arrival briefing. | Reachy greets; detailed briefing is privately delivered. |
 
-### Phases 19–28
+### Phases 19–29 (historical ledger)
+
+Open acceptance in these rows is now owned by the
+[forward roadmap](#forward-roadmap-phases-30): 22b/22c/24e/24f/24g by Phase 30,
+27 by Phase 31, 25 by Phase 32, 26 by Phase 33, 28 by Phase 34 and 29 by
+Phase 35.
 
 | Phase | Status | Delivered / planned scope | Acceptance and remaining limits | Evidence / exit criteria |
 |---|---|---|---|---|
@@ -246,6 +259,46 @@ that every physical deployment scenario has passed.
 | 27 | 27.1/27.2/27.3 implemented 2026-09-30 per [ADR 0025](adr/0025-speech-inference-service.md): durable MeetingJob store/worker, upload API, owner-authenticated hub proxy, transcription+diarization sidecars (`--transcription`/`--diarization`) wired to `MeetingWorker` via client interfaces, operator-ui recording + raw transcript/diarization detail view; live homelab speech path smoke-tested with a short synthetic single-speaker clip (existing diarization container reused); real meeting and browser acceptance remain open. Alignment/analysis/retrieval (27.4 onward) not started | Upload-first durable jobs, long-form STT and diarization, speaker-attributed transcripts, evidence-linked analysis, reviewed tasks and hybrid retrieval | Real 30–60 minute meetings, difficult acoustics and technical discussion; independent of physical embodiment and Phase 25 completion. Owner explicitly authorized starting 27.1 and the 27.2/27.3 sidecars ahead of Phase 26's security hardening (2026-09-30) | [Acceptance](phase-27.md#acceptance), [Definition of done](phase-27.md#definition-of-done) |
 | 28 | Planned (formerly Phase 27) | Staged embodied meeting secretary | Builds on 27 and 22b hardware; separate absence-policy amendments for 28a.2 and 28b; virtual attendance deferred | [Sequence and acceptance](phase-28.md#implementation-sequence-and-acceptance) |
 | 29 | 29.1–29.3 (contracts/session store, real-Docker container runner, real Claude Code provider) implemented 2026-10-01, plus 29.19's encrypted credential store and owner-UI pulled forward early; a project configured with `provider: "claude-code"` starts a real session in a real `reachy-coding-agent-claude` container, tracked by provider session id, with completion/failure/usage read from its real output — verified against a real local Docker daemon and the real `claude` CLI (2.1.197), with an intentionally invalid key since a real one costs the owner money; no hook-based mid-task input/permission detection (29.4) and no companion-core/hub session wiring (29.6/29.7) yet; a Claude Pro/Max subscription credential is blocked from invoking anything at all (29.19, revised 2026-10-01). Deployed to the owner's homelab (own container/token/key, health-checked); owner user testing not yet done. Revised 2026-10-02: subscription-first (acceptance on the Claude Pro/Max path, API-key probes deprioritized), characterized 2026-10-02: the agent's `AskUserQuestion` tool call and `permission_denials` separate needs-owner from done, giving confirmed `WAITING_*` states, `/coding_reply` verbatim resume of the same session, and deterministic Git observations — Phase 29 closed for the subscription-first scope | Coding agent supervisor: `coding-agent-service` runs/observes containerized Claude Code (then Codex) sessions behind a provider-neutral contract; event-driven lifecycle, usage telemetry and input relay feed Reachy's existing notification pipeline | Observation and relay only in v1; no auto permission approval, auto push/merge, Docker socket access or billing-mode switching; independent of Phases 22–28 | [Service reference](reference/services.md#coding-agent-service-phase-29-planned), [Sequence and acceptance](phase-29.md#2929--implementation-sequence) |
+
+### Forward roadmap (Phases 30+)
+
+Added 2026-10-02. Capability-completion phases in dependency order, replacing
+continued advancement of the historical sequence. Everything here is planned
+scope, not delivered behaviour; current priorities and the immediate queue are
+in [project state](project-state.md#current-priority-and-next-gates) and
+[HANDOVER](../HANDOVER.md). Core platform (Phases 0–21) and the Phase 29
+subscription-first Claude scope are maintenance-only: regressions get attention,
+new scope does not.
+
+| Phase | Name | Absorbs / continues | Objective and scope | Exit criterion |
+|---|---|---|---|---|
+| 30 | Platform stabilization and acceptance | Absorbs open rows of 22b, 22c, [24e](phase-24e.md), [24f](phase-24f.md), [24g](phase-24g.md) | Short phase. Recreate `reachy-embodiment` with `2bf82e4` (no head motion on a raw wake hit; home only on hub admission) and physically verify it; repeat the 24g held-out run (immediate-request and pause-before-request); add a `visible_false_activations_per_hour` metric beside candidates/hour, false conversations/hour, genuine-turn acceptance and admission latency; decide whether detector threshold/model tuning is needed. Selective closure: LOCAL-camera fresh scene, outage/reconnect, backup/restore, motion edge cases (stop while homing, mid-reply disable, longer conversation), remaining Nano diagnostics. Remaining low-value historical rows are triaged here; waiving one needs an owner decision | Reachy can stay armed in a normally occupied room without visibly reacting to routine false wake detections and without opening false conversations at an unacceptable rate |
+| 31 | Meeting intelligence completion | Continues [27](phase-27.md) | Order: browser upload/recording/detail/restart checks; a real 30–60 minute multi-speaker meeting with real-time factor, CPU, RAM and wall-clock recorded; transcript–diarization alignment into one canonical speaker-attributed `TranscriptSegment[]` (STT and diarization may run in parallel); evidence-linked summary, minutes, decisions and action items; meeting artifacts searchable via work memory/RAG with provenance; action items stay candidates until owner review, never auto-trusted tasks | A real recording yields a speaker-attributed transcript, summary, decisions, action-item candidates and evidence links, and the meeting is later retrievable. Independent of Phase 32 biometrics |
+| 32 | Owner recognition | Continues [25](phase-25.md) | Order: consenting owner/non-owner dataset including Reachy-microphone noise/distance/orientation variation; speaker-verification benchmark; FAR/FRR threshold calibration; production verifier with encrypted templates and calibration UI; second-stage sensitivity classifier (speaker verification alone is not sufficient authorization) with evaluation set and adversarial cases; direction/orientation; face confirmation; trust fusion with expiry/downgrade; adversarial physical acceptance. Starts once the ambient wake path is stable enough for repeated physical tests | Wake → speaker evidence → basic response → sensitive operation → visual confirmation → authorized action, with measured FAR/FRR and explicit uncertainty handling |
+| 33 | Security, privacy and supply-chain assurance | Continues [26](phase-26.md) | Assess the now-implemented system: threat model across robot, homelab, browser, Telegram, LLM providers, coding-agent containers, meeting uploads, RAG, biometric templates, Google OAuth and Tailscale; owner identity ≠ conversation identity ≠ service authentication ≠ tool authorization on every path; coding-agent-service's host Docker socket (high-privilege orchestrator) treated explicitly; SBOM, AIBOM/model inventory, provenance and licences; prompt-injection, RAG-poisoning, malicious-repository, email and coding-agent-transcript tests; DoS/resource exhaustion and physical safety; retention/deletion for voice and face samples, meeting audio/transcripts, coding-agent logs, work memory and search traces; residual-risk register | Every high-value asset and high-impact action has a documented trust boundary, mitigation and residual-risk decision |
+| 34 | Embodied meeting secretary | Continues [28](phase-28.md) (the old Phase 28, reordered) | Consumes semantic meeting events, never raw diarization or transcription: meeting-awareness state and posture, subtle speaker orientation, silent acknowledgements, break and end-of-meeting recap, private delivery, interruption rules. Virtual-meeting attendance stays deferred. Requires Phase 31's canonical meeting model, Phase 30's stable embodiment and the relevant Phase 32/33 trust rules | Reachy is a useful physical meeting secretary without being distracting or leaking private content |
+| 35 | Coding-agent and developer-workflow extensions | Extends [29](phase-29.md) | Optional, started only for a concrete workflow: `CodexProvider` behind the existing provider contract, a bounded Claude Remote Control feasibility spike (full login, no stable machine API), terminal-session idle notification and activity detection, stalled-session heuristics, live permission-denial observation, multi-session UI, history/archive/delete, Git diff summaries, optional PR workflow. Excluded unless separately approved: automatic merges, production deploys, billing changes, permission escalation, attaching to running terminal transcripts, Kubernetes | Not required for core readiness |
+| 36 | Production readiness and operationalization | New | Clean-host and clean-Nano provisioning, reproducible Compose deploy, migrate-from-zero, backup/restore, secrets provisioning and rollback; barrel-jack power, reconnect, watchdog, prolonged operation, network and homelab loss; service restart matrix, database restart, disk pressure, resource limits, health monitoring; create/read/export/expire/delete/restore for every persistent data category; operator runbook, architecture and security baselines, SBOM/AIBOM, known limitations, accepted risks and release checklist | The system can be rebuilt, operated, recovered and securely maintained without undocumented development-session knowledge |
+
+Dependencies:
+
+```text
+30 ──┬─► 31 ──┐
+     │        ├─► 33 ─► 34 ─► 36
+     └─► 32 ──┘
+35 is independent and optional
+```
+
+Phases 31 and 32 can run largely in parallel after 30. Phase 33 follows both so
+it reviews real meeting, biometric and coding-agent implementations rather
+than plans; generic hardening may still start earlier. Per-phase detail docs
+(`phase-30.md` and later) are written when a phase starts; until then this
+table owns its scope.
+
+No longer active scope: Phase 29 core expansion, API-key Claude behaviour,
+Claude hooks for input detection, arbitrary terminal-session adoption,
+Kubernetes (keep runtime abstractions clean; stay on Docker/Compose) and
+virtual-meeting attendance.
 
 ## 7. Release Targets
 

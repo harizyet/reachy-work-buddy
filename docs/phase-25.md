@@ -1,5 +1,7 @@
 # Phase 25 — tiered owner verification and progressive trust
 
+> **Forward roadmap (2026-10-02):** Remaining work (dataset, verifier, sensitivity classifier, visual confirmation, trust fusion) continues as [Phase 32](plan.md#forward-roadmap-phases-30) in the forward roadmap; this document keeps its Phase 25 numbering.
+
 Status: **in progress**. The [phase ledger](plan.md#6-implementation-roadmap)
 owns delivery status; the [implementation sequence](#implementation-sequence)
 distinguishes existing wiring from planned model integration. See the
