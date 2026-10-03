@@ -53,6 +53,7 @@ from fastapi.responses import Response
 from starlette.requests import ClientDisconnect
 
 from reachy_hub.palm_stop import PalmStop
+from reachy_hub.privacy_intent import matches_privacy_on
 from reachy_hub.request_sensitivity import (
     InteractionDecision,
     authorize_request,
@@ -217,6 +218,7 @@ class RobotVoiceManager:
         self._wake_counts: dict[str, WakeCounts] = {}
         # Robots with a candidate being assessed; one at a time each.
         self._candidates: set[str] = set()
+        self._background: set[asyncio.Task] = set()
         self._lease_seconds = lease_seconds
         self._idle_timeout_seconds = idle_timeout_seconds
         self._limits = limits or VoiceLimits()
@@ -381,9 +383,11 @@ class RobotVoiceManager:
     def arm_for(self, robot_id: str) -> WakeArm | None:
         return self._arms.get(robot_id)
 
-    async def set_arm(self, robot_id: str, user_id: str, armed: bool) -> None:
+    async def set_arm(self, robot_id: str, user_id: str, armed: bool, *, end_session: bool = True) -> None:
         """Owner arm or disarm. Arming again issues a new arm id, so a
-        candidate captured under the previous one is refused."""
+        candidate captured under the previous one is refused. With
+        `end_session` false a disarm leaves a running wake session to its
+        caller, which ends it itself."""
         if armed:
             arm = new_arm(robot_id, user_id)
             await self.wake_store.set(arm)
@@ -392,12 +396,25 @@ class RobotVoiceManager:
             await self.wake_store.delete(robot_id)
             self._arms.pop(robot_id, None)
             session = self._sessions.get(robot_id)
-            if session is not None and session.active and session.wake_started:
+            if end_session and session is not None and session.active and session.wake_started:
                 await self.stop(session, "Wake listening turned off")
         log.info("robot %s: wake listening %s", robot_id, "armed" if armed else "disarmed")
         connection = self._connections.get(robot_id)
         if connection is not None:
             await self._send_arm(connection)
+
+    async def enter_privacy_mode(self, session: VoiceSession, reply_seconds: float) -> None:
+        """Spoken privacy mode: disarm now, but end the session only once its
+        spoken confirmation has had time to play, so the robot is not left
+        listening for a follow-up and the reply is not cut off."""
+        await self.set_arm(session.robot_id, session.user_id, False, end_session=False)
+        task = asyncio.create_task(self._end_after(session, reply_seconds + PRIVACY_PLAYBACK_MARGIN_SECONDS))
+        self._background.add(task)
+        task.add_done_callback(self._background.discard)
+
+    async def _end_after(self, session: VoiceSession, delay: float) -> None:
+        await asyncio.sleep(delay)
+        await self.stop(session, "Privacy mode turned on")
 
     async def on_robot_register(self, connection: RobotConnection) -> None:
         await self._send_arm(connection)
@@ -772,6 +789,44 @@ def _elapsed_ms(started: float) -> int:
     return round((time.perf_counter() - started) * 1000)
 
 
+PRIVACY_REPLY = (
+    "Privacy mode is on. I've stopped listening for Hey Reachy. "
+    "You can turn it back on from Telegram or the operator page."
+)
+PRIVACY_PLAYBACK_MARGIN_SECONDS = 1.5
+
+
+def _wav_seconds(audio: bytes) -> float:
+    try:
+        with wave.open(io.BytesIO(audio), "rb") as wav:
+            return wav.getnframes() / wav.getframerate()
+    except (wave.Error, EOFError, ZeroDivisionError):
+        return 5.0
+
+
+async def _enter_privacy_mode(
+    manager: RobotVoiceManager,
+    session: VoiceSession,
+    turn: int,
+    transcript: str,
+    pipeline: VoiceTurnPipeline,
+    finish: Callable[..., VoiceTurnOutcome],
+) -> tuple[VoiceTurnOutcome, bytes | None]:
+    """The owner asked aloud for privacy mode. It takes effect even if the
+    spoken confirmation cannot be produced."""
+
+    try:
+        audio = await pipeline.synthesize(PRIVACY_REPLY)
+    except Exception:
+        log.exception("robot voice turn: privacy confirmation synthesis failed")
+        await manager.enter_privacy_mode(session, 0.0)
+        return finish(
+            VoiceTurnOutcome.FAILED, transcript=transcript, reply=PRIVACY_REPLY, reason="Speech synthesis failed"
+        ), None
+    await manager.enter_privacy_mode(session, _wav_seconds(audio))
+    return finish(VoiceTurnOutcome.SPOKEN, transcript=transcript, reply=PRIVACY_REPLY), audio
+
+
 async def _answer(
     manager: RobotVoiceManager,
     session: VoiceSession,
@@ -786,6 +841,9 @@ async def _answer(
     turn along with the caller's stage timings."""
 
     timings: dict[str, object] = {}
+
+    if matches_privacy_on(transcript):
+        return await _enter_privacy_mode(manager, session, turn, transcript, pipeline, finish)
 
     if pipeline.sensitivity_gate_enabled:
         sensitivity = classify_sensitivity(transcript)

@@ -1301,3 +1301,53 @@ def test_stale_arm_is_refused_and_a_busy_robot_is_only_rejected() -> None:
             assert stt.calls == 0
         finally:
             ws.__exit__(None, None, None)
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["Turn on privacy mode.", "privacy mode on", "Please turn on privacy mode", "Enable privacy mode.",
+     "Go into privacy mode", "Hey Reachy, switch to privacy mode now", "Turn privacy mode on."],
+)
+def test_privacy_phrases_match(text: str) -> None:
+    from reachy_hub.privacy_intent import matches_privacy_on
+
+    assert matches_privacy_on(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["Turn off privacy mode.", "What is privacy mode?", "Do not turn on privacy mode", "I like privacy mode a lot",
+     "Turn on the privacy mode setting in the app", "What time is it?", ""],
+)
+def test_other_phrases_do_not_match_privacy(text: str) -> None:
+    from reachy_hub.privacy_intent import matches_privacy_on
+
+    assert not matches_privacy_on(text)
+
+
+def test_spoken_privacy_mode_disarms_confirms_aloud_then_ends_the_session(monkeypatch) -> None:
+    from reachy_hub import robot_voice
+
+    monkeypatch.setattr(robot_voice, "_wav_seconds", lambda audio: 0.0)
+    monkeypatch.setattr(robot_voice, "PRIVACY_PLAYBACK_MARGIN_SECONDS", 0.05)
+    manager, _, _, socket, _ = make_manager(capabilities=(VOICE_CAPABILITY, WAKE_CAPABILITY))
+    script = ScriptedPipeline("Turn on privacy mode.")
+
+    async def scenario():
+        await manager.set_arm(ROBOT_ID, "owner", True)
+        session = await manager.open_wake_session(manager.arm_for(ROBOT_ID), 1, "Turn on privacy mode.")
+        manager.begin_turn(ROBOT_ID, 1, session.voice_session_id, 1, 1)
+        outcome, audio = await run_turn(manager, session, 1, b"", script.build(), seconds=2.0)
+        disarmed = manager.arm_for(ROBOT_ID) is None
+        still_active = session.active  # the confirmation has not finished playing
+        await asyncio.sleep(0.2)
+        return session, outcome, audio, disarmed, still_active
+
+    session, outcome, audio, disarmed, still_active = asyncio.run(scenario())
+    assert outcome == VoiceTurnOutcome.SPOKEN and audio == b"audio"
+    assert script.synthesized == [robot_voice.PRIVACY_REPLY] and script.conversed == []
+    assert disarmed and still_active
+    assert not session.active and session.stop_reason == "Privacy mode turned on"
+    assert [m["type"] for m in socket.sent if m["type"] == "wake_arm"][-1] == "wake_arm"
+    assert [m for m in socket.sent if m["type"] == "wake_arm"][-1]["arm_id"] is None
+    assert asyncio.run(manager.wake_store.list()) == []

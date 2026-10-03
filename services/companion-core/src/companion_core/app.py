@@ -824,6 +824,17 @@ def create_app(
             except httpx.HTTPError as exc:
                 reply = f"Couldn't reach reachy-hub to wake Reachy up: {exc}"
             privacy = Privacy.PUBLIC
+        elif reachy_command == "privacy":
+            setting = (parsed_command.argument or "").strip().lower()
+            if setting not in {"on", "off"}:
+                reply = "Usage: /privacy on|off"
+            else:
+                try:
+                    results = await app.state.hub_client.set_privacy_mode(setting == "on")
+                    reply = commands.format_privacy_reply(setting == "on", results)
+                except httpx.HTTPError as exc:
+                    reply = f"Couldn't reach reachy-hub to change privacy mode: {exc}"
+            privacy = Privacy.PUBLIC
         elif reachy_command == "status":
             try:
                 robots = await app.state.hub_client.list_robots()

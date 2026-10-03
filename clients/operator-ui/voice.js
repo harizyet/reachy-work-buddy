@@ -36,14 +36,16 @@ function createVoice({api, isLoggedIn, chat}) {
     const wake = el('voice-wake');
     // Turning it off stays possible while the robot is offline.
     wake.disabled = busy || !isLoggedIn() || !selected || !(selected.wake_capable || selected.wake_armed);
-    wake.textContent = selected?.wake_armed ? 'Turn off “Hey Reachy”' : 'Turn on “Hey Reachy”';
+    wake.textContent = selected?.wake_armed ? 'Turn on privacy mode' : 'Turn off privacy mode';
     const detail = [];
     if (selected?.wake_armed) {
       const counts = selected.wake_counts || {candidates: 0, admitted: 0};
-      detail.push(selected.wake_capable ? 'Listening for “Hey Reachy”' : 'On, robot not listening yet');
+      detail.push(selected.wake_capable ? 'Privacy mode off: listening for “Hey Reachy”' : 'Privacy mode off, robot not listening yet');
       if (counts.candidates) detail.push(`${counts.candidates} heard, ${counts.admitted} answered`);
     } else if (selected && selected.online && !selected.wake_capable) {
       detail.push('This robot cannot listen for “Hey Reachy”');
+    } else if (selected) {
+      detail.push('Privacy mode on: not listening for “Hey Reachy”');
     }
     el('voice-wake-detail').textContent = detail.join(' · ');
     if (selected?.wake_armed && isLoggedIn()) startWakePolling(); else stopWakePolling();
@@ -161,7 +163,7 @@ function createVoice({api, isLoggedIn, chat}) {
       const overview = await api('/robot-voice/wake', {method: 'POST', body: JSON.stringify({robot_id: selected.robot_id, armed: !selected.wake_armed, user_id: chat.currentUser()})});
       renderRobots(overview.robots);
     } catch (error) {
-      el('voice-detail').textContent = `Could not change “Hey Reachy”: ${error.message}`;
+      el('voice-detail').textContent = `Could not change privacy mode: ${error.message}`;
     } finally { busy = false; controls(); }
   });
 

@@ -106,6 +106,7 @@ def make_chain(*, registered_robots: Sequence[Robot] = ()) -> TestClient:
     client = TestClient(core_app)
     client.sent_emails = sent_emails
     client.email_store = email_store
+    client.hub_app = hub_app
     return client
 
 
@@ -219,6 +220,53 @@ def test_standby_command_with_no_registered_robot_says_so() -> None:
         )
         assert resp.status_code == 200
         assert "nothing to turn off" in resp.json()["reply"].lower()
+
+
+def _wake_armed(client: TestClient) -> list[bool]:
+    overview = TestClient(client.hub_app).get(
+        "/robot-voice", headers={"Authorization": f"Bearer {_TEST_REMOTE_UI_TOKEN}"}
+    )
+    assert overview.status_code == 200, overview.text
+    return [robot["wake_armed"] for robot in overview.json()["robots"]]
+
+
+def test_privacy_command_disarms_and_rearms_wake_listening_through_the_hub() -> None:
+    with make_chain(registered_robots=[Robot(robot_id="desk-1", base_url="http://desk-1.local")]) as client:
+
+        def say(text: str) -> str:
+            resp = client.post(
+                "/conversation",
+                json={"session_id": "s1", "conversation_id": "c1", "channel": "telegram", "text": text},
+            )
+            assert resp.status_code == 200
+            return resp.json()["reply"]
+
+        assert "off" in say("/privacy off").lower()
+        assert _wake_armed(client) == [True]
+        assert "privacy mode is on" in say("/privacy on").lower()
+        assert _wake_armed(client) == [False]
+        assert say("/privacy").startswith("Usage:")
+        assert say("/privacy maybe").startswith("Usage:")
+        assert _wake_armed(client) == [False]
+
+
+def test_spoken_privacy_phrase_is_not_a_core_command() -> None:
+    with make_chain(registered_robots=[Robot(robot_id="desk-1", base_url="http://desk-1.local")]) as client:
+        client.post(
+            "/conversation",
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "reachy", "text": "/privacy off",
+                  "input_modality": "voice"},
+        )
+        assert _wake_armed(client) == [False]
+
+
+def test_privacy_command_with_no_registered_robot_says_so() -> None:
+    with make_chain() as client:
+        resp = client.post(
+            "/conversation",
+            json={"session_id": "s1", "conversation_id": "c1", "channel": "telegram", "text": "/privacy on"},
+        )
+        assert "nothing to change" in resp.json()["reply"].lower()
 
 
 def test_status_command_reports_registered_robots() -> None:

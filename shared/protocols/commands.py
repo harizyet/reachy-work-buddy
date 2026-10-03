@@ -20,6 +20,7 @@ ROBOT_COMMANDS = (
     ("standby", "standby", "Put Reachy into standby", None),
     ("wake", "wake", "Wake Reachy up", None),
     ("reachy_status", "status", "Check Reachy's status", None),
+    ("privacy", "privacy", "Privacy mode: /privacy on stops listening for Hey Reachy, /privacy off resumes it", "on|off"),
 )
 COMMANDS = QUERY_COMMANDS + ROBOT_COMMANDS
 TELEGRAM_COMMANDS = [{"command": alias, "description": description} for alias, _, description, _ in COMMANDS]

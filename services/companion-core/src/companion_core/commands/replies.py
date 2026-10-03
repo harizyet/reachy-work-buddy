@@ -37,3 +37,15 @@ def format_status_reply(robots: list[dict], states: dict[str, str]) -> str:
         robot_id = robot["robot_id"]
         lines.append(f"{robot_id}: {states.get(robot_id, 'unreachable')}")
     return "\n".join(lines)
+
+
+def format_privacy_reply(enabled: bool, results: list[dict]) -> str:
+    if not results:
+        return "No robot is currently registered, so there's nothing to change."
+    if all(r.get("ok") for r in results):
+        if enabled:
+            return "Privacy mode is on. Reachy is no longer listening for Hey Reachy. Send /privacy off to resume."
+        return "Privacy mode is off. Reachy is listening for Hey Reachy again."
+    if not any(r.get("ok") for r in results):
+        return f"Couldn't change privacy mode: {_describe_failures(results)}"
+    return f"Privacy mode was only partly changed: {_describe_failures(results)}"

@@ -9,7 +9,12 @@ from typing import Any
 
 import httpx
 
-from shared.protocols.operator_api import ROBOTS, ROBOTS_RESUME, ROBOTS_STANDBY
+from shared.protocols.operator_api import (
+    ROBOT_VOICE_WAKE,
+    ROBOTS,
+    ROBOTS_RESUME,
+    ROBOTS_STANDBY,
+)
 
 
 class HubClient:
@@ -70,3 +75,18 @@ class HubClient:
         resp = await self._client.post(ROBOTS_RESUME, params={"wake_up": wake_up})
         resp.raise_for_status()
         return resp.json()
+
+    async def set_privacy_mode(self, enabled: bool) -> list[dict[str, Any]]:
+        """Privacy mode is "no wake listening": on disarms every registered
+        robot's "Hey Reachy", off arms it again. One result per robot so a
+        partial failure is reported rather than hidden."""
+        results: list[dict[str, Any]] = []
+        for robot in await self.list_robots():
+            robot_id = robot["robot_id"]
+            try:
+                resp = await self._client.post(ROBOT_VOICE_WAKE, json={"robot_id": robot_id, "armed": not enabled})
+                resp.raise_for_status()
+                results.append({"robot_id": robot_id, "ok": True})
+            except httpx.HTTPError as exc:
+                results.append({"robot_id": robot_id, "ok": False, "error": str(exc)})
+        return results

@@ -135,6 +135,14 @@ work in web chat; `/reachy <action>` is the canonical form (for example,
 | `/help` | All commands and argument hints |
 
 Existing `/standby`, `/wake`, and `/reachy_status` controls remain available.
+
+**Privacy mode** stops Reachy listening for "Hey Reachy". Say "turn on privacy
+mode" in a live conversation (the robot confirms aloud, then ends the session
+and disarms wake listening), or send `/privacy on`. Turn it off only with
+`/privacy off` in Telegram or the Voice tab button ("Turn off privacy mode");
+it is never switched off by voice, because the robot is not listening. It is
+the existing persisted wake arm, applied to every registered robot from
+Telegram and to the selected robot from the UI.
 Missing search arguments or extra arguments on fixed queries return a usage
 hint. Unknown commands return help guidance instead of going to the model.
 Work-data answers retain private routing; these shortcuts do not send emails,
