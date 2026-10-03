@@ -188,6 +188,10 @@ class WakeMonitor:
         # conversation clears it, so the next listening phase rests again.
         self._resting = False
         self._motion_task: asyncio.Future[bool] | None = None
+        # The hub disarmed while a conversation was running (privacy mode):
+        # rest in the sleep pose once, when that conversation ends.
+        self._sleep_after_session = False
+        self._sleep_task: asyncio.Task[None] | None = None
         # True from a candidate's upload until its session starts or it is
         # turned down.
         self._submitting = False
@@ -204,8 +208,10 @@ class WakeMonitor:
 
     async def arm(self, message: WakeArmMessage, generation: int) -> None:
         if message.arm_id is None:
+            self._sleep_after_session = self._conversation.voice_session_id is not None
             await self.disarm()
             return
+        self._sleep_after_session = False
         if self._arm is not None and self._arm.arm_id == message.arm_id and self._generation == generation:
             return
         await self._cancel()
@@ -233,11 +239,26 @@ class WakeMonitor:
     def resume(self) -> None:
         """Monitoring again, if armed; the conversation calls this when it
         goes idle."""
+        if self._arm is None and self._sleep_after_session:
+            self._sleep_after_session = False
+            self._sleep_task = asyncio.create_task(self._rest_for_privacy())
+            return
         if self._arm is None or self._generation is None or self.listening:
             return
         self._task = asyncio.create_task(self._run(self._arm, self._generation))
 
+    async def _rest_for_privacy(self) -> None:
+        self._resting = False
+        try:
+            await self._rest_move("sleep")
+        except Exception:
+            log.exception("could not rest after privacy mode")
+            return
+        self._resting = True
+
     async def aclose(self) -> None:
+        if self._sleep_task is not None:
+            await asyncio.gather(self._sleep_task, return_exceptions=True)
         await self.disarm()
         if self._motion_task is not None:
             with contextlib.suppress(Exception):

@@ -129,6 +129,10 @@ Nano, while the owner has armed "Hey Reachy", the robot may, unattended:
   replacing the daemon's full wake-up move after the first physical run;
 - raise its head to home (one bounded goto) when a candidate is admitted
   as a conversation (owner request, 2026-09-27).
+- go to the sleep pose (one silent goto, the same rest move) once when a
+  conversation ends after the hub disarmed wake listening during it, i.e. spoken
+  or remote privacy mode (owner request, 2026-10-03). Not triggered by a
+  disarm while no conversation is running, nor by a lost hub connection.
 
 No daemon routine is played: after the first physical run the owner asked
 that false wakes return to sleep silently, so the daemon's go-to-sleep

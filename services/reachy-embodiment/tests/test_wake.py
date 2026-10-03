@@ -380,6 +380,41 @@ def test_suspend_releases_the_microphone_and_disarm_moves_nothing() -> None:
     asyncio.run(scenario())
 
 
+def test_hub_disarm_during_a_conversation_rests_once_when_it_ends() -> None:
+    async def scenario():
+        monitor, mic, motion, _, conversation, arm = make_monitor(ScriptedCandidates())
+        await monitor.arm(arm, generation=1)
+        await wait_until(lambda: mic.open)
+        await monitor.suspend()
+        conversation.voice_session_id = "session"
+        await monitor.arm(WakeArmMessage(arm_id=None, limits=WakeLimits()), generation=1)
+        assert motion.moves == ["sleep"]  # disarming moves nothing by itself
+
+        conversation.voice_session_id = None
+        monitor.resume()
+        await wait_until(lambda: motion.moves == ["sleep", "sleep"])
+        monitor.resume()  # once only; not armed, so nothing else restarts
+        await asyncio.sleep(0.05)
+        assert motion.moves == ["sleep", "sleep"] and not monitor.listening
+        await monitor.aclose()
+
+    asyncio.run(scenario())
+
+
+def test_hub_disarm_with_no_conversation_does_not_move_the_robot() -> None:
+    async def scenario():
+        monitor, mic, motion, _, _, arm = make_monitor(ScriptedCandidates())
+        await monitor.arm(arm, generation=1)
+        await wait_until(lambda: mic.open)
+        await monitor.arm(WakeArmMessage(arm_id=None, limits=WakeLimits()), generation=1)
+        monitor.resume()
+        await asyncio.sleep(0.05)
+        assert motion.moves == ["sleep"]
+        await monitor.aclose()
+
+    asyncio.run(scenario())
+
+
 # --- the conversation side --------------------------------------------------
 
 

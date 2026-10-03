@@ -137,8 +137,8 @@ work in web chat; `/reachy <action>` is the canonical form (for example,
 Existing `/standby`, `/wake`, and `/reachy_status` controls remain available.
 
 **Privacy mode** stops Reachy listening for "Hey Reachy". Say "turn on privacy
-mode" in a live conversation (the robot confirms aloud, then ends the session
-and disarms wake listening), or send `/privacy on`. Turn it off only with
+mode" in a live conversation (the robot confirms aloud, ends the session,
+disarms wake listening and, with wake animation on, settles into its sleep pose), or send `/privacy on`. Turn it off only with
 `/privacy off` in Telegram or the Voice tab button ("Turn off privacy mode");
 it is never switched off by voice, because the robot is not listening. It is
 the existing persisted wake arm, applied to every registered robot from
