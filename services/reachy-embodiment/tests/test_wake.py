@@ -418,6 +418,20 @@ def test_hub_disarm_of_an_armed_monitor_with_no_conversation_rests_once() -> Non
     asyncio.run(scenario())
 
 
+def test_first_hub_disarm_after_a_restart_rests_once() -> None:
+    async def scenario():
+        monitor, _, motion, _, _, _ = make_monitor(ScriptedCandidates())
+        disarm = WakeArmMessage(arm_id=None, limits=WakeLimits())
+        await monitor.arm(disarm, generation=1)
+        await wait_until(lambda: motion.moves == ["sleep"])
+        await monitor.arm(disarm, generation=1)  # reconnect
+        await asyncio.sleep(0.05)
+        assert motion.moves == ["sleep"]
+        await monitor.aclose()
+
+    asyncio.run(scenario())
+
+
 # --- the conversation side --------------------------------------------------
 
 

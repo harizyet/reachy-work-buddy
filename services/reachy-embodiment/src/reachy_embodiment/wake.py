@@ -188,6 +188,7 @@ class WakeMonitor:
         # conversation clears it, so the next listening phase rests again.
         self._resting = False
         self._motion_task: asyncio.Future[bool] | None = None
+        self._disarm_seen = False
         # The hub disarmed while a conversation was running (privacy mode):
         # rest in the sleep pose once, when that conversation ends.
         self._sleep_after_session = False
@@ -208,13 +209,15 @@ class WakeMonitor:
 
     async def arm(self, message: WakeArmMessage, generation: int) -> None:
         if message.arm_id is None:
-            was_armed = self._arm is not None
+            first_disarm = self._arm is not None or not self._disarm_seen
+            self._disarm_seen = True
             in_session = self._conversation.voice_session_id is not None
             self._sleep_after_session = in_session
             await self.disarm()
-            if was_armed and not in_session:
-                # Only a disarm of an armed monitor: a repeated or reconnect
-                # disarm must not move a robot that is already resting.
+            if first_disarm and not in_session:
+                # The hub disarms on every registration, so a repeated or
+                # reconnect disarm must not move a robot that is already
+                # resting; a process start with privacy on must rest it.
                 self._sleep_task = asyncio.create_task(self._rest_for_privacy())
             return
         self._sleep_after_session = False
