@@ -12,7 +12,7 @@ Telegram `/privacy on|off` (core, all robots) and the Voice tab button all drive
 existing wake arm (disarmed = privacy on). Fixture-tested only: no real Telegram
 message, browser check or robot run yet. After a spoken privacy conversation ends the
 robot now rests once in the sleep pose (5ec6d78, AGENTS.md wake/sleep exception);
-the owner reported deploying it to the Nano 2026-10-03, not yet physically verified. Details in the
+the first Nano deploy did not take effect (`start-reachy.sh --build` left the running container on the old image; fixed in 3bd4110, which now replaces it). After the redeploy the owner reported the sleep pose working, 2026-10-03. Details in the
 [operator guide](docs/operator-guide.md#telegram-query-commands). The hub was
 recreated, so `small.en` may re-download (about 2 min) before voice works.
 
