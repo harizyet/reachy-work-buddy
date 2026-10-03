@@ -10,7 +10,9 @@ The [documentation index](docs/README.md) defines ownership;
 spoken "turn on privacy mode" (hub, deterministic, confirmation then session end),
 Telegram `/privacy on|off` (core, all robots) and the Voice tab button all drive the
 existing wake arm (disarmed = privacy on). Fixture-tested only: no real Telegram
-message, browser check or robot run yet. Details in the
+message, browser check or robot run yet. After a spoken privacy conversation ends the
+robot now rests once in the sleep pose (5ec6d78, AGENTS.md wake/sleep exception);
+the owner reported deploying it to the Nano 2026-10-03, not yet physically verified. Details in the
 [operator guide](docs/operator-guide.md#telegram-query-commands). The hub was
 recreated, so `small.en` may re-download (about 2 min) before voice works.
 
