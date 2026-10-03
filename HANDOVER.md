@@ -6,6 +6,14 @@ The [documentation index](docs/README.md) defines ownership;
 
 ## Current work
 
+**Privacy mode (2026-10-03, committed ab87c7c, deployed to the homelab hub/core/UI):**
+spoken "turn on privacy mode" (hub, deterministic, confirmation then session end),
+Telegram `/privacy on|off` (core, all robots) and the Voice tab button all drive the
+existing wake arm (disarmed = privacy on). Fixture-tested only: no real Telegram
+message, browser check or robot run yet. Details in the
+[operator guide](docs/operator-guide.md#telegram-query-commands). The hub was
+recreated, so `small.en` may re-download (about 2 min) before voice works.
+
 **Confidence-gated wake alert (2026-10-02, deployed to the Nano and homelab hub, calibration in progress):**
 `2bf82e4` (no head motion on a raw hit) gave no feedback and was reverted
 (cb66bb5). Now every detection still goes to capture/admission but the head raise
