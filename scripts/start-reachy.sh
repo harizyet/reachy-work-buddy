@@ -347,6 +347,15 @@ if docker ps -a --filter "name=^/${CONTAINER_NAME}\$" -q | grep -q .; then
     fi
 fi
 
+# A container keeps the image it was created from, so a rebuilt image is only
+# picked up by replacing it. Only after --build: a plain restart keeps reusing it.
+if [[ "$DO_BUILD" -eq 1 ]] && docker ps -a --filter "name=^/${CONTAINER_NAME}\$" -q | grep -q .; then
+    if [[ "$(docker inspect -f '{{.Image}}' "$CONTAINER_NAME")" != "$(docker image inspect -f '{{.Id}}' "$IMAGE_NAME")" ]]; then
+        log_info "replacing $CONTAINER_NAME: it was created from an older $IMAGE_NAME image"
+        docker rm -f "$CONTAINER_NAME" >/dev/null
+    fi
+fi
+
 # Idempotent: starting twice must be safe (phase-22-23.md). An existing
 # stopped container is restarted, not duplicated; an already-running one
 # is left alone.
