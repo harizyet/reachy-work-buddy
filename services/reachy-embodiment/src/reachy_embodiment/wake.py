@@ -208,8 +208,14 @@ class WakeMonitor:
 
     async def arm(self, message: WakeArmMessage, generation: int) -> None:
         if message.arm_id is None:
-            self._sleep_after_session = self._conversation.voice_session_id is not None
+            was_armed = self._arm is not None
+            in_session = self._conversation.voice_session_id is not None
+            self._sleep_after_session = in_session
             await self.disarm()
+            if was_armed and not in_session:
+                # Only a disarm of an armed monitor: a repeated or reconnect
+                # disarm must not move a robot that is already resting.
+                self._sleep_task = asyncio.create_task(self._rest_for_privacy())
             return
         self._sleep_after_session = False
         if self._arm is not None and self._arm.arm_id == message.arm_id and self._generation == generation:

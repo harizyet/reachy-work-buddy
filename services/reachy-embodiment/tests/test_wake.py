@@ -401,15 +401,18 @@ def test_hub_disarm_during_a_conversation_rests_once_when_it_ends() -> None:
     asyncio.run(scenario())
 
 
-def test_hub_disarm_with_no_conversation_does_not_move_the_robot() -> None:
+def test_hub_disarm_of_an_armed_monitor_with_no_conversation_rests_once() -> None:
     async def scenario():
         monitor, mic, motion, _, _, arm = make_monitor(ScriptedCandidates())
         await monitor.arm(arm, generation=1)
         await wait_until(lambda: mic.open)
-        await monitor.arm(WakeArmMessage(arm_id=None, limits=WakeLimits()), generation=1)
+        disarm = WakeArmMessage(arm_id=None, limits=WakeLimits())
+        await monitor.arm(disarm, generation=1)
+        await wait_until(lambda: motion.moves == ["sleep", "sleep"])
+        await monitor.arm(disarm, generation=1)  # a repeat or reconnect disarm
         monitor.resume()
         await asyncio.sleep(0.05)
-        assert motion.moves == ["sleep"]
+        assert motion.moves == ["sleep", "sleep"]
         await monitor.aclose()
 
     asyncio.run(scenario())
