@@ -37,10 +37,8 @@ head. False scores 0.75-0.99 overlap genuine 0.78-0.98, so no score threshold
 separates them; no `WAKE_ALERT_THRESHOLD` is set and the Nano keeps raising on
 every detection. Owner decision (2026-10-02): detector comparison (30.1d,
 `wake-bench.py --record`, 0429566) is deprioritized; continue the rest of Phase 30.
-Open: early-hub-verdict design (needs owner go-ahead), 30.2 metric tooling
-(`tools/wake_metrics.py`, run on real Nano logs 2026-10-02: 26.7 visible false
-activations/h on the 0.6 h false-trigger window, see
-[phase-30](docs/phase-30.md#code-changes); no per-hour target agreed), removal of the debug transcript log after calibration, 30.3-30.5.
+30.2 is done (2026-10-04): the metric is defined in [phase-30](docs/phase-30.md#visible_false_activations_per_hour) and the 24g acceptance, and `tools/wake_metrics.py` ran on real Nano logs (26.7 visible false activations/h on the 0.6 h false-trigger window; no per-hour target agreed).
+Open: early-hub-verdict design (needs owner go-ahead), removal of the debug transcript log after calibration, 30.3-30.5.
 
 **Phase 29 is closed for the subscription-first scope (2026-10-02, deployed
 to the homelab, uncommitted).** Characterization found that the agent's

@@ -230,6 +230,8 @@ The false-trigger metric should therefore measure more than wake-word false posi
 
 The second metric is the more important usability measure. A somewhat imperfect wake-word detector can still produce an excellent experience if the post-wake admission gate reliably suppresses false activations.
 
+Phase 30 adds a third, reported beside them: **`visible_false_activations_per_hour`**, every robot reaction an observer can see or hear on a non-genuine detection (alert raises, false conversations, any other cue). Its definition and the log tool that computes it are in [Phase 30](phase-30.md#visible_false_activations_per_hour).
+
 ## Verification and exit criteria
 
 Use every scenario above as a required acceptance row. Separate fixture,
@@ -243,8 +245,10 @@ timeout/goodbye and privacy/consent behaviour.
 
 Before final physical evaluation, agree numeric targets for false
 conversations/hour, genuine-turn acceptance and added latency, with defined
-independent trials and observation duration. Report both wake candidates/hour
-and false conversations admitted/hour, exposure hours, scenario counts,
+independent trials and observation duration. Report wake candidates/hour,
+false conversations admitted/hour and
+[`visible_false_activations_per_hour`](phase-30.md#visible_false_activations_per_hour),
+exposure hours, scenario counts,
 false rejects and p50/p95 admission latency. Separate calibration from
 held-out evaluation; zero observed false admissions is not a universal zero
 rate. Record thresholds and model versions without tuning on final trials.
@@ -265,6 +269,7 @@ trials.
 |---|---|
 | False conversations admitted/hour (primary usability measure) | ≤ 1 per 2 hours of normal occupied-room exposure, held-out session only |
 | Wake candidates/hour | Reported only, no target |
+| `visible_false_activations_per_hour` | Reported only; no target until the owner agrees one before the scored run |
 | Genuine-turn acceptance rate | ≥ 90% of real "Hey Reachy" attempts admitted with the request preserved (same bar as the [24e correctness set](verification/phase-24e-correctness-2026-09-25.md)) |
 | Added admission latency (candidate upload → `voice_start`) | p50 ≤ 1.5 s, p95 ≤ 3 s |
 
