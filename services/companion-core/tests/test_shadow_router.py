@@ -272,3 +272,19 @@ def test_validated_args_are_recorded_only_with_text_logging(tmp_path, log_text):
     (row,) = [json.loads(line) for line in log.read_text().splitlines()]
     assert ("validated_args" in row) is log_text
     assert ("text" in row) is log_text
+
+
+def test_turn_cap_counts_accepted_inputs_not_completed_records(tmp_path):
+    import asyncio
+
+    pipeline, log, turn = _direct(tmp_path, queue_size=1, max_turns=3)
+
+    async def go():
+        for i in range(5):
+            pipeline.submit(turn(i))
+        await pipeline.drain()
+
+    asyncio.run(go())
+    assert pipeline.counters["dropped_busy"] == 2  # accepted but displaced, so the trial does not stretch under contention
+    assert pipeline.counters["trial_complete_skipped"] == 2
+    assert len(log.read_text().splitlines()) == 1

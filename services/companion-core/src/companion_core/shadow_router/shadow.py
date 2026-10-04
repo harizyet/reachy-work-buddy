@@ -97,7 +97,7 @@ class ShadowPipeline:
         try:
             await self._pipeline(turn)
         except Exception:  # noqa: BLE001 - the shadow path must never surface an error
-            self.counters["pipeline_error"] += 1
+            self.counters["shadow_error"] += 1
             log.warning("shadow router pipeline error", exc_info=False)
 
     async def _route(self, text: str) -> dict | None:

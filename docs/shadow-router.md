@@ -54,7 +54,7 @@ Fixed-size, then removed. Nothing here changes a live reply, so rollback is unse
 
 ## Counters
 
-`would_execute`, `would_execute_write`, `withheld` (with `withheld_reason:*`), `bulk_refused`, `dropped_busy` (jobs dropped from the bounded queue), `trial_complete_skipped`, `router_error`, `extractor_error` are observable per process; the report recomputes the outcome counts from the records. `unsafe_would_execute` (a write the validator would let through that is not what the user justified) and `safe_but_withheld` (a legitimate request the validator would have turned into a question) need a person's grade per record; use `tools/shadow_router_report.py --labels`.
+`would_execute`, `would_execute_write`, `withheld` (with `withheld_reason:*`), `bulk_refused`, `dropped_busy` (jobs dropped from the bounded queue), `trial_complete_skipped` (turns refused after the cap), `shadow_error` (an unexpected exception inside the shadow task), `router_error`, `extractor_error` are observable per process, and mean different things when judging coverage; the turn cap counts accepted inputs, not completed records, so contention cannot stretch the trial; the report recomputes the outcome counts from the records. `unsafe_would_execute` (a write the validator would let through that is not what the user justified) and `safe_but_withheld` (a legitimate request the validator would have turned into a question) need a person's grade per record; use `tools/shadow_router_report.py --labels`.
 
 ## Evidence carried forward
 
