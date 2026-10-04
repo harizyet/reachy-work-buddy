@@ -129,6 +129,29 @@ services:
     expose:
       - "8010"
 
+  semantic-router:
+    # Shadow semantic router sidecar (docs/shadow-router.md). Profile-gated like
+    # the speech sidecars: a bare `up` does not start it, and companion-core only
+    # calls it when SHADOW_ROUTER_ENABLED=true. Models are mounted, not baked in
+    # (see semantic-router/README.md). CPU-only; the cap keeps it from starving
+    # the production services on the same host.
+    build: ./semantic-router
+    image: reachy-semantic-router:latest
+    restart: unless-stopped
+    profiles: ["shadow-router"]
+    cpus: ${SEMANTIC_ROUTER_CPUS:-3}
+    mem_limit: 3g
+    volumes:
+      - ${SEMANTIC_ROUTER_MODELS_DIR:-./semantic-router/models}:/app/models:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8012/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    expose:
+      - "8012"
+
   transcription:
     # Phase 27.2 (docs/phase-27.md, ADR 0025): long-form meeting
     # transcription with faster-whisper, deployed as its own sidecar
@@ -363,10 +386,14 @@ services:
       # is final; it never executes a tool or changes any reply or state.
       # SHADOW_ROUTER_URL points at the separate semantic-router sidecar.
       SHADOW_ROUTER_ENABLED: ${SHADOW_ROUTER_ENABLED:-false}
-      SHADOW_ROUTER_URL: ${SHADOW_ROUTER_URL:-}
+      SHADOW_ROUTER_URL: ${SHADOW_ROUTER_URL:-http://semantic-router:8012}
       SHADOW_ROUTER_LOG_PATH: ${SHADOW_ROUTER_LOG_PATH:-/data/shadow-router/shadow.jsonl}
       # true also writes each utterance (never a sensitive-labelled one).
       SHADOW_ROUTER_LOG_TEXT: ${SHADOW_ROUTER_LOG_TEXT:-false}
+      # Trial bounds: stop recording after this many turns (0 = unlimited) and
+      # keep at most this many shadow jobs waiting (extras are dropped, never queued behind production).
+      SHADOW_ROUTER_MAX_TURNS: ${SHADOW_ROUTER_MAX_TURNS:-0}
+      SHADOW_ROUTER_QUEUE_SIZE: ${SHADOW_ROUTER_QUEUE_SIZE:-3}
     volumes:
       - meeting-audio:/data/meeting-audio
       - shadow-router:/data/shadow-router

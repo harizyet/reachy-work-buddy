@@ -7,7 +7,7 @@
 #
 # Usage: scripts/start-homelab.sh [--env-file PATH] [--no-browser] [--check]
 #                                  [--project NAME] [--build] [--simulation]
-#                                  [--diarization] [--transcription] [--help]
+#                                  [--diarization] [--transcription] [--shadow-router] [--help]
 set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
@@ -21,6 +21,7 @@ DO_BUILD=0
 SIMULATION=0
 DIARIZATION=0
 TRANSCRIPTION=0
+SHADOW_ROUTER=0
 
 print_help() {
     cat <<EOF
@@ -43,6 +44,10 @@ Options:
                      deploy/homelab/docker-compose.yml's "diarization"
                      service comment. companion-core calls it whenever a
                      meeting job reaches DIARIZING.
+  --shadow-router   Also start the shadow semantic-router sidecar
+                     (docs/shadow-router.md). Starting it changes nothing by
+                     itself: companion-core only calls it when
+                     SHADOW_ROUTER_ENABLED=true in the env file.
   --transcription   Also start the Phase 27.2 long-form transcription
                      service (docs/phase-27.md, ADR 0025). CPU-only,
                      downloads a real Whisper model on first start.
@@ -78,6 +83,9 @@ while [[ $i -lt ${#REMAINING[@]} ]]; do
             ;;
         --transcription)
             TRANSCRIPTION=1
+            ;;
+        --shadow-router)
+            SHADOW_ROUTER=1
             ;;
         --help)
             print_help
@@ -148,6 +156,9 @@ if [[ "$DIARIZATION" -eq 1 ]]; then
 fi
 if [[ "$TRANSCRIPTION" -eq 1 ]]; then
     COMPOSE_ARGS+=(--profile transcription)
+fi
+if [[ "$SHADOW_ROUTER" -eq 1 ]]; then
+    COMPOSE_ARGS+=(--profile shadow-router)
 fi
 
 cd "$COMPOSE_DIR"

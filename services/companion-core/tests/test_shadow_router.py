@@ -206,3 +206,69 @@ def test_slash_commands_are_not_shadowed(tmp_path):
         client.post("/conversation", json={**TURN, "text": "/help"})
         time.sleep(0.3)
     assert not log.exists() and shadow.counters["turns"] == 0
+
+
+# ---- bounded queue, trial cap, grading fields ----------------------------------------------------------------------------------
+
+def _direct(tmp_path, **kwargs):
+    from companion_core.shadow_router.shadow import ShadowTurn
+
+    from shared.models.llm import LLMConfig, ProviderConfig
+
+    calls: list = []
+    log = tmp_path / "direct.jsonl"
+    pipeline = ShadowPipeline("http://router:8011", str(log), router_transport=_router("tasks.complete"),
+                              llm_transport=_llm({"task": "the roof inspection"}, calls), **kwargs)
+    llm = LLMConfig(local=ProviderConfig(base_url="http://ovms/v1", model="qwen"))
+
+    def turn(i: int):
+        return ShadowTurn(session_id="s", text=f"mark the roof inspection as complete {i}", channel="web", modality="text",
+                          privacy="public", production_handler="generic_chat", llm=llm)
+    return pipeline, log, turn
+
+
+def test_burst_drops_the_oldest_jobs_and_never_builds_a_backlog(tmp_path):
+    import asyncio
+
+    pipeline, log, turn = _direct(tmp_path, queue_size=3, log_text=True)
+
+    async def go():
+        for i in range(6):
+            pipeline.submit(turn(i))  # all six arrive before the worker gets a turn
+        await pipeline.drain()
+
+    asyncio.run(go())
+    rows = [json.loads(line) for line in log.read_text().splitlines()]
+    assert pipeline.counters["dropped_busy"] == 3
+    assert [r["text"][-1] for r in rows] == ["3", "4", "5"]  # the newest three survive
+
+
+def test_trial_cap_stops_recording(tmp_path):
+    import asyncio
+
+    pipeline, log, turn = _direct(tmp_path, queue_size=10, max_turns=2)
+
+    async def go():
+        for i in range(5):
+            pipeline.submit(turn(i))
+        await pipeline.drain()
+
+    asyncio.run(go())
+    assert len(log.read_text().splitlines()) == 2
+    assert pipeline.counters["trial_complete_skipped"] == 3
+
+
+@pytest.mark.parametrize("log_text", [False, True])
+def test_validated_args_are_recorded_only_with_text_logging(tmp_path, log_text):
+    import asyncio
+
+    pipeline, log, turn = _direct(tmp_path, log_text=log_text)
+
+    async def go():
+        pipeline.submit(turn(1))
+        await pipeline.drain()
+
+    asyncio.run(go())
+    (row,) = [json.loads(line) for line in log.read_text().splitlines()]
+    assert ("validated_args" in row) is log_text
+    assert ("text" in row) is log_text

@@ -696,7 +696,7 @@ Compose runs `migrate` before hub/core, including through
 run migrations. Do not use `--no-deps` to bypass the migration gate.
 
 Revision `014_planner` adds the `notes` and `reminders` tables for the
-[To-do & notes tab](operator-guide.md#to-do-reminders-and-notes). It is additive
+[To-do, Reminders and Notes tabs](operator-guide.md#to-do-reminders-and-notes). It is additive
 and core is its only client, but it still changes the required revision, so use
 the backup/stop-writers/migrate/rebuild procedure and rebuild `migrate`,
 `companion-core` and `reachy-hub` together.

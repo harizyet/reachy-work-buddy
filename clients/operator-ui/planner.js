@@ -19,7 +19,9 @@ function createPlanner({api, isLoggedIn}) {
     b.addEventListener('click', onClick);
     return b;
   }
-  function status(text) { el('planner-status').textContent = text; }
+  function status(text) {
+    for (const line of document.querySelectorAll('.planner-status')) line.textContent = text;
+  }
   async function act(call, after = loadAll) {
     try { await call(); status(''); } catch (error) { if (isLoggedIn()) status(error.message); return; }
     if (isLoggedIn()) await after();
@@ -140,7 +142,7 @@ function createPlanner({api, isLoggedIn}) {
     clearTimeout(noteSearchTimer);
     noteSearchTimer = setTimeout(() => void loadNotes().catch(error => isLoggedIn() && status(error.message)), 250);
   });
-  el('planner-refresh').addEventListener('click', () => void loadAll());
+  for (const refresh of document.querySelectorAll('.planner-refresh')) refresh.addEventListener('click', () => void loadAll());
 
   function reset() {
     loadToken++; clearTimeout(noteSearchTimer); editingNote = null;

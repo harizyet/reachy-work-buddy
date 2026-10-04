@@ -6,12 +6,13 @@ Hard contract (owner decision 2026-10-05):
 - robot routes are not extracted: the production Qwen classifier (`command_suggestion.classify`) stays authoritative for them;
 - `needs_clarification` records a reason category only; nothing is synthesised into the live conversation;
 - memory.forget / tasks.complete always retain the resolved target (validated value) so what would have been confirmed can be compared.
-Privacy: the file is created 0600; the utterance is written only with SHADOW_ROUTER_LOG_TEXT=true, and never for a SENSITIVE-labelled turn.
+Trial bounds: a bounded queue (oldest job dropped when full) and an optional turn cap. Privacy: the file is created 0600; the utterance is written only with SHADOW_ROUTER_LOG_TEXT=true, and never for a SENSITIVE-labelled turn.
 Observable counters here are `would_execute` / `withheld`; `unsafe_would_execute` and `safe_but_withheld` need a grade per record and come from
 tools/shadow_router_report.py."""
 from __future__ import annotations
 
 import asyncio
+import collections
 import hashlib
 import json
 import logging
@@ -56,26 +57,41 @@ class ShadowPipeline:
     router_url: str
     log_path: str
     log_text: bool = False
+    max_turns: int = 0  # trial bound: stop recording after this many accepted turns (0 = unlimited)
+    queue_size: int = 3  # pending shadow jobs; beyond this the OLDEST is dropped so production never waits behind shadow work
     router_transport: httpx.AsyncBaseTransport | None = None
     llm_transport: httpx.AsyncBaseTransport | None = None
     counters: Counter = field(default_factory=Counter)
-    _busy: asyncio.Semaphore = field(default_factory=lambda: asyncio.Semaphore(1))
-    _tasks: set = field(default_factory=set)
+    _pending: collections.deque = field(default_factory=collections.deque)
+    _worker: asyncio.Task | None = None
+    _accepted: int = 0
 
     def submit(self, turn: ShadowTurn) -> None:
-        """Fire and forget. Never raises, never awaits the pipeline."""
+        """Best-effort and non-blocking: never raises, never awaits the pipeline, never builds a backlog."""
         if turn.production_handler == "slash_command":  # typed commands are authenticated and deterministic, nothing to compare
             return
-        try:
-            task = asyncio.get_running_loop().create_task(self._run(turn))
-        except RuntimeError:
+        if self.max_turns and self._accepted >= self.max_turns:
+            self.counters["trial_complete_skipped"] += 1
             return
-        self._tasks.add(task)
-        task.add_done_callback(self._tasks.discard)
+        self._accepted += 1
+        if len(self._pending) >= max(1, self.queue_size):
+            self._pending.popleft()  # drop the oldest shadow job
+            self.counters["dropped_busy"] += 1
+        self._pending.append(turn)
+        if self._worker is None or self._worker.done():
+            try:
+                self._worker = asyncio.get_running_loop().create_task(self._drain_queue())
+            except RuntimeError:
+                self._pending.clear()
+
+    async def _drain_queue(self) -> None:
+        # One job at a time: the extractor shares the production model, so shadow work is serialized and bounded.
+        while self._pending:
+            await self._run(self._pending.popleft())
 
     async def drain(self) -> None:  # tests and shutdown
-        if self._tasks:
-            await asyncio.gather(*list(self._tasks), return_exceptions=True)
+        if self._worker is not None:
+            await asyncio.gather(self._worker, return_exceptions=True)
 
     async def _run(self, turn: ShadowTurn) -> None:
         try:
@@ -106,15 +122,11 @@ class ShadowPipeline:
             provider: ProviderConfig | None = turn.llm.local if turn.llm else None  # local only, never cloud
             if provider is None:
                 extraction = {"status": "no_local_provider"}
-            elif self._busy.locked():
-                extraction = {"status": "dropped_busy"}
-                self.counters["dropped_busy"] += 1
             else:
-                async with self._busy:
-                    started = time.monotonic()
-                    proposed = await extract(provider, route, turn.text, transport=self.llm_transport)
-                    extraction = {"status": "ok" if proposed is not None else "error", "model": provider.model,
-                                  "ms": round((time.monotonic() - started) * 1000)}
+                started = time.monotonic()
+                proposed = await extract(provider, route, turn.text, transport=self.llm_transport)
+                extraction = {"status": "ok" if proposed is not None else "error", "model": provider.model,
+                              "ms": round((time.monotonic() - started) * 1000)}
                 if proposed is None:
                     self.counters["extractor_error"] += 1
                 else:
@@ -176,6 +188,8 @@ class ShadowPipeline:
             row["resolved_target"] = verdict.args.get(_RETAIN_TARGET[route])  # what would have been echoed back for confirmation
         if self.log_text and not sensitive:
             row["text"] = turn.text
+            if verdict is not None:
+                row["validated_args"] = verdict.args  # user words only; lets a blind grader's expected target be compared without unblinding
         fd = os.open(self.log_path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
         with os.fdopen(fd, "a") as handle:
             handle.write(json.dumps(row) + "\n")
@@ -189,4 +203,7 @@ def shadow_from_env() -> ShadowPipeline | None:
     if not url or not path:
         log.warning("SHADOW_ROUTER_ENABLED is set but SHADOW_ROUTER_URL / SHADOW_ROUTER_LOG_PATH is missing; shadow router stays off")
         return None
-    return ShadowPipeline(router_url=url, log_path=path, log_text=(os.environ.get("SHADOW_ROUTER_LOG_TEXT") or "").lower() == "true")
+    return ShadowPipeline(
+        router_url=url, log_path=path, log_text=(os.environ.get("SHADOW_ROUTER_LOG_TEXT") or "").lower() == "true",
+        max_turns=int(os.environ.get("SHADOW_ROUTER_MAX_TURNS") or 0), queue_size=int(os.environ.get("SHADOW_ROUTER_QUEUE_SIZE") or 3),
+    )

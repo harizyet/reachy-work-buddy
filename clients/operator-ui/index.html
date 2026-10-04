@@ -18,7 +18,9 @@
 
         <button id="chat-tab" class="secondary" aria-pressed="false" aria-controls="chat-pane">Chat</button>
         <button id="meetings-tab" class="secondary" aria-pressed="false" aria-controls="meetings-pane">Meetings</button>
-        <button id="planner-tab" class="secondary" aria-pressed="false" aria-controls="planner-pane">To-do &amp; notes</button>
+        <button id="todo-tab" class="secondary" aria-pressed="false" aria-controls="todo-pane">To-do</button>
+        <button id="reminders-tab" class="secondary" aria-pressed="false" aria-controls="reminders-pane">Reminders</button>
+        <button id="notes-tab" class="secondary" aria-pressed="false" aria-controls="notes-pane">Notes</button>
         <button id="coding-tab" class="secondary" aria-pressed="false" aria-controls="coding-pane">Coding agents</button>
         <button id="settings-tab" class="secondary" aria-pressed="false" aria-controls="settings-pane">Settings</button>
       </div>
@@ -200,14 +202,20 @@
         <section class="card"><div class="section-title"><h3>Terminal sessions</h3></div><p class="muted">Claude Code sessions you ran yourself, read from the host's session history. These are shown for monitoring only; Reachy cannot control them.</p><div id="coding-terminal-sessions"></div></section>
         <section class="card"><div class="section-title"><h3>Sessions</h3><button id="coding-refresh" type="button" class="secondary">Refresh</button></div><div id="coding-sessions"></div></section>
       </section>
-      <div id="planner-pane" class="workspace planner-workspace" hidden>
-        <section class="card planner-wide"><div class="section-title"><div><span class="eyebrow">YOUR LISTS</span><h2>To-do, reminders and notes</h2></div><button id="planner-refresh" type="button" class="secondary">Refresh</button></div><p id="planner-status" role="status"></p><p class="muted">Reminders are also sent to your Telegram when they come due.</p></section>
+      <div id="todo-pane" class="workspace planner-workspace" hidden>
+        <section class="card planner-wide"><div class="section-title"><div><span class="eyebrow">YOUR LISTS</span><h2>To-do</h2></div><button type="button" class="secondary planner-refresh">Refresh</button></div><p class="planner-status" role="status"></p></section>
         <section class="card" aria-labelledby="planner-task-title"><h3 id="planner-task-title">To-do</h3>
           <form id="planner-task-form" class="planner-form"><label>New to-do<input id="planner-task-text" maxlength="2000" required autocomplete="off"></label><button>Add</button></form>
           <ul id="planner-task-list" class="planner-list"></ul><p id="planner-task-empty" class="muted">Nothing to do yet.</p></section>
+      </div>
+      <div id="reminders-pane" class="workspace planner-workspace" hidden>
+        <section class="card planner-wide"><div class="section-title"><div><span class="eyebrow">YOUR LISTS</span><h2>Reminders</h2></div><button type="button" class="secondary planner-refresh">Refresh</button></div><p class="planner-status" role="status"></p><p class="muted">Reminders are also sent to your Telegram when they come due.</p></section>
         <section class="card" aria-labelledby="planner-reminder-title"><h3 id="planner-reminder-title">Reminders</h3>
           <form id="planner-reminder-form" class="planner-form"><label>Remind me to<input id="planner-reminder-text" maxlength="500" required autocomplete="off"></label><label>When<input id="planner-reminder-due" type="datetime-local" required></label><button>Add</button></form>
           <ul id="planner-reminder-list" class="planner-list"></ul><p id="planner-reminder-empty" class="muted">No reminders.</p></section>
+      </div>
+      <div id="notes-pane" class="workspace planner-workspace" hidden>
+        <section class="card planner-wide"><div class="section-title"><div><span class="eyebrow">YOUR LISTS</span><h2>Notes</h2></div><button type="button" class="secondary planner-refresh">Refresh</button></div><p class="planner-status" role="status"></p></section>
         <section class="card planner-wide" aria-labelledby="planner-note-heading"><h3 id="planner-note-heading">Notes</h3>
           <form id="planner-note-form" class="planner-form planner-note-form"><label>Title<input id="planner-note-title" maxlength="200" required autocomplete="off"></label><label>Note<textarea id="planner-note-body" rows="4" maxlength="20000"></textarea></label><span><button id="planner-note-save">Add note</button> <button id="planner-note-cancel" type="button" class="secondary" hidden>Cancel</button></span></form>
           <label class="search-label">Find a note<input id="planner-note-search" type="search" placeholder="Search titles and text…"></label>

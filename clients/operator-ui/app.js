@@ -56,7 +56,7 @@ for (const tab of document.querySelectorAll('.settings-tabs [role="tab"]')) {
   });
 }
 function showView(view) {
-  for (const name of ['chat', 'overview', 'settings', 'meetings', 'planner', 'coding']) {
+  for (const name of ['chat', 'overview', 'settings', 'meetings', 'todo', 'reminders', 'notes', 'coding']) {
     $(name + '-pane').hidden = name !== view;
     $(name + '-tab').setAttribute('aria-pressed', String(name === view));
     $(name + '-tab').classList.toggle('secondary', name !== view);
@@ -65,10 +65,10 @@ function showView(view) {
   if (view === 'settings') showSettings(settingsFeature);
   else ownerRecognition.stopCapture();
   if (view === 'meetings') void meetings.load();
-  if (view === 'planner') void planner.load();
+  if (['todo', 'reminders', 'notes'].includes(view)) void planner.load();
   if (view === 'coding') codingMonitor.start(); else codingMonitor.stop();
 }
-for (const view of ['chat', 'overview', 'settings', 'meetings', 'planner', 'coding']) {
+for (const view of ['chat', 'overview', 'settings', 'meetings', 'todo', 'reminders', 'notes', 'coding']) {
   $(view + '-tab').addEventListener('click', () => showView(view));
 }
 function notice(text) { $('notice').textContent = text; }

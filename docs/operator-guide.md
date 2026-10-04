@@ -2,7 +2,7 @@
 
 Open `/hub/ui/` through Caddy (direct hub: `/ui/`) after following
 [deployment setup](deployment.md#owner-login). The dashboard provides
-Overview, Chat, Meetings, To-do & notes, Coding agents, and Settings; the navigation links to telepresence. Both frontends
+Overview, Chat, Meetings, To-do, Reminders, Notes, Coding agents, and Settings; the navigation links to telepresence. Both frontends
 are plain HTML/JS/CSS served by hub, with no build step or external assets.
 
 ## Overview and session controls
@@ -55,7 +55,7 @@ minutes). This is read-only monitoring; Reachy cannot control them. It needs
 
 ## To-do, reminders and notes
 
-**To-do & notes** keeps three lists on your homelab. *To-do*: add, tick off,
+The **To-do**, **Reminders** and **Notes** tabs keep three lists on your homelab. *To-do*: add, tick off,
 reopen, edit and delete items (the same tasks the assistant manages by chat).
 *Reminders*: text plus a date and time in your browser's time zone; when one
 comes due the hub sends `Reminder: <text>` to your Telegram once, and the tab

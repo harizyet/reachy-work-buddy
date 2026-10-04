@@ -18,28 +18,43 @@ Evidence and benchmarks live outside this repo in the `inferencing/bench/router`
 
 | Piece | Where | Notes |
 |---|---|---|
-| Router sidecar | `inferencing/router` (own compose project, port 8011) | ModernBERT-base x3, 18 fine routes, ONNX FP32 on CPU, argmax (no confidence threshold). `POST /route`; stores nothing. |
-| Extractor | `companion_core/shadow_router/extractor.py` | Few-shot, schema-constrained JSON, temperature 0, **local provider only** (never the cloud role). One extraction at a time; a second concurrent one is dropped and counted (`dropped_busy`). |
+| Router sidecar | `deploy/homelab/semantic-router/` (compose profile `shadow-router`, internal port 8012, CPU cap `SEMANTIC_ROUTER_CPUS`=3) | ModernBERT-base x3, 18 fine routes, ONNX FP32 on CPU, argmax (no confidence threshold). `POST /route`; stores nothing. Models are mounted, not in git (see its README). |
+| Extractor | `companion_core/shadow_router/extractor.py` | Few-shot, schema-constrained JSON, temperature 0, **local provider only** (never the cloud role). Shadow jobs run one at a time from a bounded queue (`SHADOW_ROUTER_QUEUE_SIZE`, default 3); when it is full the oldest job is dropped and counted (`dropped_busy`), so shadow work never backs up behind production. A dropped turn has no record. |
 | Validator | `companion_core/shadow_router/validator.py` | Deterministic. Rejects placeholders, copied schema text, pure references (it/this/that one/them/him/her), invented words, copies of the instruction, multiple targets for forget/complete; bulk scope comes from the words as well as the model and is refused. |
 | Hook | `app.py` (`production_handler` labels, one background submit after `record_reply`) | Wrapped so nothing from the shadow reaches the turn. |
-| Report | `tools/shadow_router_report.py` | Observable counters, production-vs-router table, and, given graded labels, `unsafe_would_execute` and `safe_but_withheld`. |
+| Report and grading | `tools/shadow_router_report.py`, `tools/shadow_router_grade.py` | Observable counters, production-vs-router table; blind sheet, labelled-results counters `unsafe_would_execute` and `safe_but_withheld`, and a purge step. |
 
 ## Enabling
 
-Off unless all of these are set (compose passes them through; defaults are off):
+The sidecar is started with `scripts/start-homelab.sh --shadow-router` and does nothing by itself. companion-core stays off unless all of these are set (compose defaults are off):
 
 | Variable | Meaning |
 |---|---|
 | `SHADOW_ROUTER_ENABLED=true` | master switch |
-| `SHADOW_ROUTER_URL` | the router sidecar, reachable from the companion-core container |
+| `SHADOW_ROUTER_URL` | default `http://semantic-router:8012` |
 | `SHADOW_ROUTER_LOG_PATH` | JSONL file (default `/data/shadow-router/shadow.jsonl`, volume `shadow-router`), created mode 0600 |
-| `SHADOW_ROUTER_LOG_TEXT=true` | also write the utterance (never for a sensitive-labelled turn); default off, records then hold a hash and length |
+| `SHADOW_ROUTER_LOG_TEXT=true` | also write the utterance and the validated arguments (never for a sensitive-labelled turn). Only for the grading window |
+| `SHADOW_ROUTER_MAX_TURNS` | stop recording after this many accepted turns (0 = unlimited) |
+| `SHADOW_ROUTER_QUEUE_SIZE` | pending shadow jobs before the oldest is dropped (default 3) |
 
-The sidecar is not part of the homelab compose file yet. It shares the GPU box's CPU with the 7B: measured contention (see the bench workspace) says x3 is the deployable size at a realistic rate; CPU pinning is untested.
+It shares the host CPU with the production services; the sidecar is capped at 3 CPUs and 3 GB. Measured contention says x3 is deployable at a realistic rate; CPU pinning is untested.
+
+## Trial procedure
+
+Fixed-size, then removed. Nothing here changes a live reply, so rollback is unsetting the flag.
+
+1. Put `SHADOW_ROUTER_ENABLED=true`, `SHADOW_ROUTER_LOG_TEXT=true`, `SHADOW_ROUTER_MAX_TURNS=400` in `deploy/homelab/.env`; `scripts/start-homelab.sh --shadow-router --build`. This rebuilds and recreates companion-core (a brief restart) and starts the sidecar.
+2. Use the assistant normally until the cap is reached (`trial_complete_skipped` starts counting).
+3. Immediately set `SHADOW_ROUTER_LOG_TEXT=false` (or `SHADOW_ROUTER_ENABLED=false`) and recreate companion-core; copy the log out of the volume to a local 0600 file.
+4. `uv run python tools/shadow_router_grade.py sheet shadow.jsonl --out sheet.jsonl`: every disagreement plus a random sample of agreements, shuffled, utterance only.
+5. Label the sheet blind (before looking at any router, validator or production output): `gold_route`, `executable`, `gold_args`.
+6. `uv run python tools/shadow_router_report.py shadow.jsonl --labels labels.jsonl`: reports `unsafe_would_execute` and `safe_but_withheld` per stratum (disagreements are all graded; the agreement sample is random, so do not pool the strata), beside `dropped_busy`, `withheld`, `would_execute`, `bulk_refused`.
+7. `uv run python tools/shadow_router_grade.py purge shadow.jsonl --labels labels.jsonl --aggregates aggregates.json --delete sheet.jsonl labels.jsonl`: removes the utterance, its hash, the validated arguments and resolved targets from the log and keeps only aggregates. Remove the volume copy of the raw log as well.
+8. Do not change a live handler from the trial's examples until enough real traffic has accumulated to judge them.
 
 ## Counters
 
-`would_execute`, `would_execute_write`, `withheld` (with `withheld_reason:*`), `bulk_refused`, `dropped_busy`, `router_error`, `extractor_error` are observable per process and in the records. `unsafe_would_execute` (a write the validator would let through that is not what the user justified) and `safe_but_withheld` (a legitimate request the validator would have turned into a question) need a person's grade per record; use `tools/shadow_router_report.py --labels`.
+`would_execute`, `would_execute_write`, `withheld` (with `withheld_reason:*`), `bulk_refused`, `dropped_busy` (jobs dropped from the bounded queue), `trial_complete_skipped`, `router_error`, `extractor_error` are observable per process; the report recomputes the outcome counts from the records. `unsafe_would_execute` (a write the validator would let through that is not what the user justified) and `safe_but_withheld` (a legitimate request the validator would have turned into a question) need a person's grade per record; use `tools/shadow_router_report.py --labels`.
 
 ## Evidence carried forward
 
