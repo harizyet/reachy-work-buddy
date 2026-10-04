@@ -52,6 +52,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import Response
 from starlette.requests import ClientDisconnect
 
+from reachy_hub.end_intent import matches_end_conversation
 from reachy_hub.palm_stop import PalmStop
 from reachy_hub.privacy_intent import matches_privacy_on
 from reachy_hub.request_sensitivity import (
@@ -408,13 +409,21 @@ class RobotVoiceManager:
         spoken confirmation has had time to play, so the robot is not left
         listening for a follow-up and the reply is not cut off."""
         await self.set_arm(session.robot_id, session.user_id, False, end_session=False)
-        task = asyncio.create_task(self._end_after(session, reply_seconds + PRIVACY_PLAYBACK_MARGIN_SECONDS))
+        self._end_after_reply(session, reply_seconds, "Privacy mode turned on")
+
+    def end_conversation(self, session: VoiceSession, reply_seconds: float) -> None:
+        """The owner said goodbye: end the session once the spoken farewell
+        has played, so the robot does not wait out the follow-up window."""
+        self._end_after_reply(session, reply_seconds, "Conversation ended by the owner")
+
+    def _end_after_reply(self, session: VoiceSession, reply_seconds: float, reason: str) -> None:
+        task = asyncio.create_task(self._end_after(session, reply_seconds + PRIVACY_PLAYBACK_MARGIN_SECONDS, reason))
         self._background.add(task)
         task.add_done_callback(self._background.discard)
 
-    async def _end_after(self, session: VoiceSession, delay: float) -> None:
+    async def _end_after(self, session: VoiceSession, delay: float, reason: str) -> None:
         await asyncio.sleep(delay)
-        await self.stop(session, "Privacy mode turned on")
+        await self.stop(session, reason)
 
     async def on_robot_register(self, connection: RobotConnection) -> None:
         await self._send_arm(connection)
@@ -794,6 +803,7 @@ PRIVACY_REPLY = (
     "You can turn it back on from Telegram or the operator page."
 )
 PRIVACY_PLAYBACK_MARGIN_SECONDS = 1.5
+GOODBYE_REPLY = "You're welcome. Goodbye."
 
 
 def _wav_seconds(audio: bytes) -> float:
@@ -827,6 +837,25 @@ async def _enter_privacy_mode(
     return finish(VoiceTurnOutcome.SPOKEN, transcript=transcript, reply=PRIVACY_REPLY), audio
 
 
+async def _end_conversation(
+    manager: RobotVoiceManager,
+    session: VoiceSession,
+    transcript: str,
+    pipeline: VoiceTurnPipeline,
+    finish: Callable[..., VoiceTurnOutcome],
+) -> tuple[VoiceTurnOutcome, bytes | None]:
+    try:
+        audio = await pipeline.synthesize(GOODBYE_REPLY)
+    except Exception:
+        log.exception("robot voice turn: goodbye synthesis failed")
+        manager.end_conversation(session, 0.0)
+        return finish(
+            VoiceTurnOutcome.FAILED, transcript=transcript, reply=GOODBYE_REPLY, reason="Speech synthesis failed"
+        ), None
+    manager.end_conversation(session, _wav_seconds(audio))
+    return finish(VoiceTurnOutcome.SPOKEN, transcript=transcript, reply=GOODBYE_REPLY), audio
+
+
 async def _answer(
     manager: RobotVoiceManager,
     session: VoiceSession,
@@ -844,6 +873,9 @@ async def _answer(
 
     if matches_privacy_on(transcript):
         return await _enter_privacy_mode(manager, session, turn, transcript, pipeline, finish)
+
+    if matches_end_conversation(transcript):
+        return await _end_conversation(manager, session, transcript, pipeline, finish)
 
     if pipeline.sensitivity_gate_enabled:
         sensitivity = classify_sensitivity(transcript)

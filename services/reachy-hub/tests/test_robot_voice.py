@@ -1351,3 +1351,50 @@ def test_spoken_privacy_mode_disarms_confirms_aloud_then_ends_the_session(monkey
     assert [m["type"] for m in socket.sent if m["type"] == "wake_arm"][-1] == "wake_arm"
     assert [m for m in socket.sent if m["type"] == "wake_arm"][-1]["arm_id"] is None
     assert asyncio.run(manager.wake_store.list()) == []
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["Thank you.", "Thanks!", "That's all", "That is all, thank you", "Okay, thanks Reachy", "No thanks",
+     "Goodbye", "Bye bye", "Thank you very much", "ok that will be all"],
+)
+def test_end_conversation_phrases_match(text: str) -> None:
+    from reachy_hub.end_intent import matches_end_conversation
+
+    assert matches_end_conversation(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["Thank you, what's the weather?", "Thanks for the reminder about my meeting", "What does goodbye mean?",
+     "Tell me that's all", "That's all wrong", "What time is it?", ""],
+)
+def test_other_phrases_do_not_end_the_conversation(text: str) -> None:
+    from reachy_hub.end_intent import matches_end_conversation
+
+    assert not matches_end_conversation(text)
+
+
+def test_spoken_goodbye_replies_then_ends_the_session_and_keeps_wake_armed(monkeypatch) -> None:
+    from reachy_hub import robot_voice
+
+    monkeypatch.setattr(robot_voice, "_wav_seconds", lambda audio: 0.0)
+    monkeypatch.setattr(robot_voice, "PRIVACY_PLAYBACK_MARGIN_SECONDS", 0.05)
+    manager, _, _, _, _ = make_manager(capabilities=(VOICE_CAPABILITY, WAKE_CAPABILITY))
+    script = ScriptedPipeline("Thank you.")
+
+    async def scenario():
+        await manager.set_arm(ROBOT_ID, "owner", True)
+        session = await manager.open_wake_session(manager.arm_for(ROBOT_ID), 1, "Thank you.")
+        manager.begin_turn(ROBOT_ID, 1, session.voice_session_id, 1, 1)
+        outcome, audio = await run_turn(manager, session, 1, b"", script.build(), seconds=2.0)
+        still_active = session.active
+        await asyncio.sleep(0.2)
+        return session, outcome, audio, still_active
+
+    session, outcome, audio, still_active = asyncio.run(scenario())
+    assert outcome == VoiceTurnOutcome.SPOKEN and audio == b"audio"
+    assert script.synthesized == [robot_voice.GOODBYE_REPLY] and script.conversed == []
+    assert still_active and not session.active
+    assert session.stop_reason == "Conversation ended by the owner"
+    assert manager.arm_for(ROBOT_ID) is not None

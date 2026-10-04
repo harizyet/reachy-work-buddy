@@ -136,6 +136,12 @@ work in web chat; `/reachy <action>` is the canonical form (for example,
 
 Existing `/standby`, `/wake`, and `/reachy_status` controls remain available.
 
+**Ending a conversation aloud.** Saying only "thank you", "thanks", "that's all",
+"goodbye" or a close variant (the hub's deterministic matcher, whole utterance
+only) makes Reachy answer "You're welcome. Goodbye." and end the session, so it
+returns to the sleep pose while wake listening stays armed. "Thank you, what's
+the weather?" is still a question.
+
 **Privacy mode** stops Reachy listening for "Hey Reachy". Say "turn on privacy
 mode" in a live conversation (the robot confirms aloud, ends the session,
 disarms wake listening and, with wake animation on, settles into its sleep pose), or send `/privacy on`. Turn it off only with

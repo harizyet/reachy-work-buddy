@@ -16,6 +16,8 @@ the first Nano deploy did not take effect (`start-reachy.sh --build` left the ru
 [operator guide](docs/operator-guide.md#telegram-query-commands). The hub was
 recreated, so `small.en` may re-download (about 2 min) before voice works.
 
+**Spoken goodbye (2026-10-04, committed, not yet deployed):** a whole-utterance "thank you" / "that's all" / "goodbye" ends the voice session after a fixed farewell (`end_intent.py`, hub only); the robot then rests via the normal armed path. Fixture-tested only: needs a hub redeploy and a spoken test on the robot.
+
 **Confidence-gated wake alert (2026-10-02, deployed to the Nano and homelab hub, calibration in progress):**
 `2bf82e4` (no head motion on a raw hit) gave no feedback and was reverted
 (cb66bb5). Now every detection still goes to capture/admission but the head raise
