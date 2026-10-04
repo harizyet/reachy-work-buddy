@@ -158,6 +158,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import httpx
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
@@ -249,6 +250,7 @@ from companion_core.privacy_classifier import (
 )
 from companion_core.rag.postgres_store import PostgresDocumentStore
 from companion_core.rag.store import DocumentStore
+from companion_core.reminder_time import split_reminder_time
 from companion_core.shadow_router import ShadowPipeline, shadow_from_env
 from companion_core.shadow_router.shadow import ShadowTurn
 from companion_core.task_intent import (
@@ -911,6 +913,15 @@ def create_app(
             production_handler = "tasks.capture"
             task = await app.state.task_store.add_task(capture_text)
             reply = format_capture_reply(task)
+            if intent_text.strip().lower().startswith("remind me to "):
+                persona = await app.state.persona_store.get()
+                reminder_text, due_at = split_reminder_time(
+                    capture_text, datetime.now(UTC), persona.timezone
+                )
+                if due_at is not None and reminder_text:
+                    await app.state.planner_store.add_reminder(reminder_text, due_at)
+                    due_local = due_at.astimezone(ZoneInfo(persona.timezone))
+                    reply += f" I'll also remind you on {due_local:%a %d %b at %I:%M %p}."
             privacy = classify_privacy(turn.text)
         elif complete_query:
             production_handler = "tasks.complete"

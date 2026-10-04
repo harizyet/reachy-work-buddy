@@ -62,6 +62,12 @@ comes due the hub sends `Reminder: <text>` to your Telegram once, and the tab
 shows it as due until you mark it **Done**. A reminder is pushed only when
 Telegram is configured and the owner chat is known; there is no retry if the
 push fails. *Notes*: a title and free text, searchable by title and body.
+Telling the assistant (Telegram, web chat or voice) "remind me to X at 4pm"
+adds the to-do as before **and** a reminder when it ends in an unambiguous time
+(`at 4pm`, `at 16:00`, `tomorrow at 10:30am`, `in 20 minutes`, or `tomorrow`,
+which means 9:00); the time zone is the persona's. Anything else, including a
+bare `at 4`, stays a to-do only. This is deterministic phrase matching
+(`reminder_time.py`), to be replaced by real language understanding.
 All text is shown literally. Requests go through owner-authenticated
 `/planner/*` hub routes to companion-core's `/tasks`, `/notes` and `/reminders`.
 

@@ -115,3 +115,16 @@ def test_routes_round_trip() -> None:
         client.post(f"/reminders/{reminder['id']}/complete").json()["status"] == "done"
     )
     assert client.delete(f"/reminders/{reminder['id']}").json() == {"deleted": True}
+
+
+def test_remind_me_with_a_time_creates_a_todo_and_a_reminder() -> None:
+    client = make_client()
+    turn = {"session_id": "s", "conversation_id": "c", "channel": "telegram"}
+    reply = client.post("/conversation", json={**turn, "text": "remind me to email brian later at 4pm"}).json()["reply"]
+    assert "I'll also remind you" in reply
+    assert [t["text"] for t in client.get("/tasks").json()] == ["email brian later at 4pm"]
+    assert [r["text"] for r in client.get("/reminders").json()] == ["email brian"]
+
+    reply = client.post("/conversation", json={**turn, "text": "remind me to buy milk"}).json()["reply"]
+    assert "also remind" not in reply
+    assert len(client.get("/reminders").json()) == 1
