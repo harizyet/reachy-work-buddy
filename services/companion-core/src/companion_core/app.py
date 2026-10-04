@@ -393,12 +393,11 @@ SPOKEN_REPLY_INSTRUCTION = (
     "sentences of plain conversational text, unless the user asks for more "
     "detail. Do not use lists, headings, markdown or URLs."
 )
-# The local model ignored the instruction on some 24d turns (120-160 words,
-# up to a minute of speech), and the long replies then slowed every later
-# turn through the history. The token cap bounds local generation time; the
-# word cap bounds speech and history for any provider (the cloud model gets
-# no token cap, see route_completion). 75 words is about 30 s of speech.
-SPOKEN_REPLY_MAX_TOKENS = 100
+# The word cap bounds speech and history for any provider; 75 words is about
+# 30 s of speech. The local token cap is only a generation-time backstop: the
+# 7B vLLM model follows the spoken-reply instruction, so it must not truncate
+# a reply the word cap would keep (the cloud model gets no token cap).
+SPOKEN_REPLY_MAX_TOKENS = 300
 SPOKEN_REPLY_MAX_WORDS = 75
 _SENTENCE_END = re.compile(r"[.!?][\"')\]]*(?=\s|$)")
 _LIST_NUMBER = re.compile(r"(?:^|\n)\s*\d+$")
@@ -1282,7 +1281,8 @@ def create_app(
                 shadow.submit(ShadowTurn(
                     session_id=turn.session_id, text=turn.text, channel=turn.channel, modality=str(turn.input_modality.value),
                     privacy=str(privacy.value), production_handler=production_handler, production_suggestion=production_suggestion,
-                    llm=await app.state.llm_settings_store.get(),
+                    # Only the live extract mode needs the provider; offline mode touches nothing but the router sidecar.
+                    llm=await app.state.llm_settings_store.get() if shadow.extract_mode == "live" else None,
                 ))
         return ConversationTurnResponse(
             reply=reply, turn_count=len(history), privacy=privacy, web_search=web_search,

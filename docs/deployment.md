@@ -189,6 +189,18 @@ encrypted through core's SecretStore after the Phase 23 upgrade. Protect
 the separate key file and historical plaintext backups; see
 [upgrade and recovery](#schema-upgrades-and-credential-keys).
 
+### vLLM on the NVIDIA GPU
+
+`scripts/start-vllm.sh` starts the compose `vllm` service (profile `vllm`,
+default `Qwen/Qwen2.5-7B-Instruct-AWQ`, overridable with `VLLM_MODEL`;
+`VLLM_GPU_MEMORY_UTILIZATION`, `VLLM_MAX_MODEL_LEN`, `VLLM_CACHE_DIR` and
+`VLLM_HOST_PORT` are optional). It refuses to start when free VRAM is below the
+threshold and lists likely holders; it never stops them. `--check`, `--status`
+and `--stop` (this container only) are available. To make it the active local
+model, set the `local` provider in Settings to `http://vllm:8000/v1` and the
+served model name. Record the previous OVMS values first so the switch can be
+reversed from Settings; hosted fallback is unchanged.
+
 For assisted live verification, put `CLOUD_LLM_BASE_URL`, `CLOUD_LLM_MODEL`,
 and `CLOUD_LLM_API_KEY` in gitignored `deploy/homelab/.env.local`, never chat.
 These are verification inputs, not automatically loaded runtime settings.

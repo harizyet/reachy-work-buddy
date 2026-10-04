@@ -7,7 +7,7 @@
 #
 # Usage: scripts/start-homelab.sh [--env-file PATH] [--no-browser] [--check]
 #                                  [--project NAME] [--build] [--simulation]
-#                                  [--diarization] [--transcription] [--shadow-router] [--help]
+#                                  [--diarization] [--transcription] [--shadow-router] [--vllm] [--help]
 set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
@@ -22,6 +22,7 @@ SIMULATION=0
 DIARIZATION=0
 TRANSCRIPTION=0
 SHADOW_ROUTER=0
+VLLM=0
 
 print_help() {
     cat <<EOF
@@ -48,6 +49,8 @@ Options:
                      (docs/shadow-router.md). Starting it changes nothing by
                      itself: companion-core only calls it when
                      SHADOW_ROUTER_ENABLED=true in the env file.
+  --vllm            Also start the vLLM model server on the NVIDIA GPU. Prefer
+                     scripts/start-vllm.sh, which checks free VRAM first.
   --transcription   Also start the Phase 27.2 long-form transcription
                      service (docs/phase-27.md, ADR 0025). CPU-only,
                      downloads a real Whisper model on first start.
@@ -86,6 +89,9 @@ while [[ $i -lt ${#REMAINING[@]} ]]; do
             ;;
         --shadow-router)
             SHADOW_ROUTER=1
+            ;;
+        --vllm)
+            VLLM=1
             ;;
         --help)
             print_help
@@ -159,6 +165,9 @@ if [[ "$TRANSCRIPTION" -eq 1 ]]; then
 fi
 if [[ "$SHADOW_ROUTER" -eq 1 ]]; then
     COMPOSE_ARGS+=(--profile shadow-router)
+fi
+if [[ "$VLLM" -eq 1 ]]; then
+    COMPOSE_ARGS+=(--profile vllm)
 fi
 
 cd "$COMPOSE_DIR"

@@ -154,6 +154,44 @@ services:
     expose:
       - "8012"
 
+  vllm:
+    # Primary local conversational model (ADR 0018): an OpenAI-compatible vLLM
+    # server on the NVIDIA GPU. Profile-gated; scripts/start-vllm.sh checks free
+    # VRAM before starting. companion-core reaches it as http://vllm:8000/v1
+    # once the `local` provider in Settings points there; nothing else changes.
+    image: vllm/vllm-openai:latest
+    restart: unless-stopped
+    profiles: ["vllm"]
+    ipc: host
+    environment:
+      HF_HUB_DISABLE_XET: "1"
+    command:
+      - ${VLLM_MODEL:-Qwen/Qwen2.5-7B-Instruct-AWQ}
+      - --max-model-len
+      - "${VLLM_MAX_MODEL_LEN:-8192}"
+      - --gpu-memory-utilization
+      - "${VLLM_GPU_MEMORY_UTILIZATION:-0.85}"
+    volumes:
+      - ${VLLM_CACHE_DIR:-${HOME}/vllm/cache}/huggingface:/root/.cache/huggingface
+      - ${VLLM_CACHE_DIR:-${HOME}/vllm/cache}/vllm:/root/.cache/vllm
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 600s
+    expose:
+      - "8000"
+    ports:
+      - "127.0.0.1:${VLLM_HOST_PORT:-8003}:8000"
+
   transcription:
     # Phase 27.2 (docs/phase-27.md, ADR 0025): long-form meeting
     # transcription with faster-whisper, deployed as its own sidecar
