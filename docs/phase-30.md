@@ -76,7 +76,7 @@ each decision is recorded in the dated record, not here.
 | Row | Source | Proposed handling |
 |---|---|---|
 | LOCAL-camera fresh scene | 22c | Run: one deliberate capture of a changed scene |
-| Outage/reconnect | 22b | Run: stop/restore hub link, confirm re-arm without owner action. Needs the owner to approve stopping the production hub |
+| Outage/reconnect | 22b | Run: stop/restore hub link, confirm re-arm without owner action. **Passed 2026-10-04** for a 5-minute hub outage, see [record](verification/phase-30-2026-10-04.md) |
 | Backup/restore | 22b | Run against a disposable Compose project, never user volumes. **Passed 2026-10-04**, see [record](verification/phase-30-2026-10-04.md) |
 | Stop while homing | 24f | Run as bounded diagnostic motion |
 | Mid-reply motion switch-off | 24f | Run as bounded diagnostic motion |
