@@ -10,6 +10,7 @@ from companion_core.llm.store import InMemoryLLMSettingsStore, InMemoryLLMUsageS
 from companion_core.meetings.store import InMemoryMeetingStore
 from companion_core.memory.store import InMemoryMemoryStore
 from companion_core.persona.store import InMemoryPersonaStore
+from companion_core.planner.store import InMemoryPlannerStore
 from companion_core.rag.store import InMemoryDocumentStore
 from companion_core.tasks.store import InMemoryTaskStore
 from companion_core.websearch.store import InMemorySearchSettingsStore
@@ -32,6 +33,7 @@ def make_client(**kwargs):
     core = create_core_app(
         calendar_store=InMemoryCalendarStore(),
         task_store=InMemoryTaskStore(),
+        planner_store=InMemoryPlannerStore(),
         meeting_store=InMemoryMeetingStore(),
         run_meeting_worker_task=False,
         memory_store=InMemoryMemoryStore(),
@@ -454,3 +456,25 @@ def test_chat_owner_binding_bearer_and_ambiguous_failure():
     assert len(detail['turns']) == 1
     assert detail['turns'][0]['status'] == 'unknown'
     assert detail['turns'][0]['reply'] is None
+
+
+def test_planner_proxy_requires_auth_and_round_trips_through_core():
+    client = make_client()
+    assert client.get("/planner/tasks").status_code == 401
+    assert client.post("/planner/tasks", json={"text": "x"}, headers=CSRF).status_code == 401
+    login(client)
+    task = client.post("/planner/tasks", json={"text": "call dentist"}, headers=CSRF).json()
+    assert client.get("/planner/tasks").json()[0]["text"] == "call dentist"
+    assert client.post(f"/planner/tasks/{task['id']}/complete", headers=CSRF).json()["status"] == "done"
+    assert client.put("/planner/tasks/missing", json={"text": "y"}, headers=CSRF).status_code == 404
+    assert client.post("/planner/tasks", json={"text": ""}, headers=CSRF).status_code == 422
+
+    note = client.post("/planner/notes", json={"title": "N", "body": "<b>x</b>"}, headers=CSRF).json()
+    assert client.get("/planner/notes", params={"q": "<b>"}).json()[0]["id"] == note["id"]
+    assert client.delete(f"/planner/notes/{note['id']}", headers=CSRF).json() == {"deleted": True}
+
+    reminder = client.post(
+        "/planner/reminders", json={"text": "r", "due_at": "2020-01-01T00:00:00Z"}, headers=CSRF
+    ).json()
+    assert client.get("/planner/reminders").json()[0]["id"] == reminder["id"]
+    assert client.post(f"/planner/reminders/{reminder['id']}/complete", headers=CSRF).json()["status"] == "done"

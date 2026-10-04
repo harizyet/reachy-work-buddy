@@ -2,7 +2,7 @@
 
 Open `/hub/ui/` through Caddy (direct hub: `/ui/`) after following
 [deployment setup](deployment.md#owner-login). The dashboard provides
-Overview, Chat, Meetings, Coding agents, and Settings; the navigation links to telepresence. Both frontends
+Overview, Chat, Meetings, To-do & notes, Coding agents, and Settings; the navigation links to telepresence. Both frontends
 are plain HTML/JS/CSS served by hub, with no build step or external assets.
 
 ## Overview and session controls
@@ -52,6 +52,18 @@ branch, last prompt, and an Active marker when touched in the last two
 minutes). This is read-only monitoring; Reachy cannot control them. It needs
 `CLAUDE_PROJECTS_DIR` in `deploy/homelab/.env` pointing at the host's
 `~/.claude/projects`, which is mounted read-only into coding-agent-service.
+
+## To-do, reminders and notes
+
+**To-do & notes** keeps three lists on your homelab. *To-do*: add, tick off,
+reopen, edit and delete items (the same tasks the assistant manages by chat).
+*Reminders*: text plus a date and time in your browser's time zone; when one
+comes due the hub sends `Reminder: <text>` to your Telegram once, and the tab
+shows it as due until you mark it **Done**. A reminder is pushed only when
+Telegram is configured and the owner chat is known; there is no retry if the
+push fails. *Notes*: a title and free text, searchable by title and body.
+All text is shown literally. Requests go through owner-authenticated
+`/planner/*` hub routes to companion-core's `/tasks`, `/notes` and `/reminders`.
 
 ## Meeting recordings
 

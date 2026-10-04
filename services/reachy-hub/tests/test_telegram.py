@@ -18,6 +18,7 @@ from companion_core.llm.store import InMemoryLLMSettingsStore, InMemoryLLMUsageS
 from companion_core.meetings.store import InMemoryMeetingStore
 from companion_core.memory.store import InMemoryMemoryStore
 from companion_core.persona.store import InMemoryPersonaStore
+from companion_core.planner.store import InMemoryPlannerStore
 from companion_core.rag.store import InMemoryDocumentStore
 from companion_core.tasks.store import InMemoryTaskStore
 from companion_core.websearch.store import InMemorySearchSettingsStore
@@ -38,6 +39,7 @@ from reachy_hub.telegram_client import TelegramClient
 def create_core_app(**kwargs):
     kwargs.setdefault("calendar_store", InMemoryCalendarStore())
     kwargs.setdefault("task_store", InMemoryTaskStore())
+    kwargs.setdefault("planner_store", InMemoryPlannerStore())
     kwargs.setdefault("meeting_store", InMemoryMeetingStore())
     kwargs.setdefault("run_meeting_worker_task", False)
     kwargs.setdefault("memory_store", InMemoryMemoryStore())

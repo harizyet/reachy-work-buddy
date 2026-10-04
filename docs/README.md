@@ -83,6 +83,7 @@ correct facts or links, not to track each new phase dependency.
   Pro/Max path, and the next step is characterizing owner-input detection.
   See
   [service reference](reference/services.md#coding-agent-service-phase-29-planned).
+- [Shadow semantic router](shadow-router.md): disabled-by-default shadow-mode router, extractor and validator that only records what it would propose.
 - [Phase 30](phase-30.md): platform stabilization and acceptance — verify the
   no-alert-pose wake build, add the visible-false-activations metric, run the
   held-out 24g session and triage the open 22b/22c/24e/24f rows.

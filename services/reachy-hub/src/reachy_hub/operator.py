@@ -1,6 +1,8 @@
 """Authenticated operator API. Reasoning settings remain owned by core."""
 
 import asyncio
+from datetime import datetime
+from urllib.parse import quote
 
 import httpx
 from fastapi import Depends, File, Form, HTTPException, Query, Request, UploadFile
@@ -22,6 +24,15 @@ from shared.protocols.operator_api import (
     MEETING_CANCEL,
     MEETINGS,
     PERSONA_SETTINGS,
+    PLANNER_NOTE,
+    PLANNER_NOTES,
+    PLANNER_REMINDER,
+    PLANNER_REMINDER_COMPLETE,
+    PLANNER_REMINDERS,
+    PLANNER_TASK,
+    PLANNER_TASK_COMPLETE,
+    PLANNER_TASK_REOPEN,
+    PLANNER_TASKS,
     STATUS,
     WEBSEARCH_LOG,
     WEBSEARCH_SETTINGS,
@@ -31,6 +42,20 @@ from shared.protocols.operator_api import (
 class LoginRequest(BaseModel):
     username: str = Field(min_length=1, max_length=256)
     password: str = Field(min_length=1, max_length=4096, repr=False)
+
+
+class PlannerTextBody(BaseModel):
+    text: str = Field(min_length=1, max_length=2000)
+
+
+class PlannerNoteBody(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    body: str = Field(default="", max_length=20000)
+
+
+class PlannerReminderBody(BaseModel):
+    text: str = Field(min_length=1, max_length=500)
+    due_at: datetime
 
 
 def require_csrf(request: Request) -> None:
@@ -189,6 +214,71 @@ def install_operator_routes(
             meeting_error(exc)
         except httpx.HTTPError:
             raise HTTPException(502, "Companion core unavailable") from None
+
+    async def planner(method: str, path: str, *, json=None, params=None):
+        # Core's 404/422 name the missing or invalid item; pass them through.
+        try:
+            return await core.planner_request(method, path, json=json, params=params)
+        except httpx.HTTPStatusError as exc:
+            meeting_error(exc)
+        except (httpx.HTTPError, ValueError):
+            raise HTTPException(502, "Companion core unavailable") from None
+
+    @app.get(PLANNER_TASKS, dependencies=dependencies)
+    async def planner_list_tasks(status: str | None = Query(None, pattern="^(open|done)$")) -> list[dict]:
+        return await planner("GET", "/tasks", params={"status": status} if status else None)
+
+    @app.post(PLANNER_TASKS, dependencies=dependencies)
+    async def planner_add_task(body: PlannerTextBody) -> dict:
+        return await planner("POST", "/tasks", json={"text": body.text})
+
+    @app.put(PLANNER_TASK, dependencies=dependencies)
+    async def planner_edit_task(item_id: str, body: PlannerTextBody) -> dict:
+        return await planner("PUT", f"/tasks/{quote(item_id, safe='')}", json={"text": body.text})
+
+    @app.delete(PLANNER_TASK, dependencies=dependencies)
+    async def planner_delete_task(item_id: str) -> dict:
+        return await planner("DELETE", f"/tasks/{quote(item_id, safe='')}")
+
+    @app.post(PLANNER_TASK_COMPLETE, dependencies=dependencies)
+    async def planner_complete_task(item_id: str) -> dict:
+        return await planner("POST", f"/tasks/{quote(item_id, safe='')}/complete")
+
+    @app.post(PLANNER_TASK_REOPEN, dependencies=dependencies)
+    async def planner_reopen_task(item_id: str) -> dict:
+        return await planner("POST", f"/tasks/{quote(item_id, safe='')}/reopen")
+
+    @app.get(PLANNER_NOTES, dependencies=dependencies)
+    async def planner_list_notes(q: str | None = Query(None, max_length=200)) -> list[dict]:
+        return await planner("GET", "/notes", params={"q": q} if q else None)
+
+    @app.post(PLANNER_NOTES, dependencies=dependencies)
+    async def planner_add_note(body: PlannerNoteBody) -> dict:
+        return await planner("POST", "/notes", json=body.model_dump())
+
+    @app.put(PLANNER_NOTE, dependencies=dependencies)
+    async def planner_edit_note(item_id: str, body: PlannerNoteBody) -> dict:
+        return await planner("PUT", f"/notes/{quote(item_id, safe='')}", json=body.model_dump())
+
+    @app.delete(PLANNER_NOTE, dependencies=dependencies)
+    async def planner_delete_note(item_id: str) -> dict:
+        return await planner("DELETE", f"/notes/{quote(item_id, safe='')}")
+
+    @app.get(PLANNER_REMINDERS, dependencies=dependencies)
+    async def planner_list_reminders() -> list[dict]:
+        return await planner("GET", "/reminders")
+
+    @app.post(PLANNER_REMINDERS, dependencies=dependencies)
+    async def planner_add_reminder(body: PlannerReminderBody) -> dict:
+        return await planner("POST", "/reminders", json=body.model_dump(mode="json"))
+
+    @app.post(PLANNER_REMINDER_COMPLETE, dependencies=dependencies)
+    async def planner_complete_reminder(item_id: str) -> dict:
+        return await planner("POST", f"/reminders/{quote(item_id, safe='')}/complete")
+
+    @app.delete(PLANNER_REMINDER, dependencies=dependencies)
+    async def planner_delete_reminder(item_id: str) -> dict:
+        return await planner("DELETE", f"/reminders/{quote(item_id, safe='')}")
 
     @app.get(STATUS, dependencies=dependencies)
     async def status() -> dict:

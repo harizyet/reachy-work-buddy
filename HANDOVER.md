@@ -6,6 +6,10 @@ The [documentation index](docs/README.md) defines ownership;
 
 ## Current work
 
+**To-do, reminders and notes tab (2026-10-04, uncommitted, not deployed):** operator-UI tab `planner.js`, hub `/planner/*` owner proxies plus a `reminder_notify_loop` (Telegram push, claim-once from core `/reminders/due`), core `/notes`, `/reminders` and task edit/reopen/delete routes, migration `014_planner` (SCHEMA_REVISION bumped, so deploy needs backup, stop writers, migrate, rebuild migrate/core/hub together; see deployment). Verified: ruff, full core/hub pytest (one failure, `test_robot_voice::test_spoken_command_text_does_not_actuate_the_robot`, also fails without these changes), the Postgres store and migration against a disposable pgvector container. Not verified: the tab in a browser (no playwright here, `node --check` only) and a real Telegram reminder push. The hub reuses `run_coding_agent_notify_task`/interval for the reminder loop. Phase 30.3 calibration is still paused until the owner says concurrent work has ended.
+
+**Shadow semantic router (2026-10-05, uncommitted, not deployed):** `companion_core/shadow_router/` + a background submit in `app.py`, off unless `SHADOW_ROUTER_ENABLED=true`; contract and evidence in [shadow-router](docs/shadow-router.md). The router sidecar lives in `/home/hariz/inferencing/router` (compose, port 8011) and is not in the homelab compose. Verified with the real sidecar and the real Qwen 7B through /conversation (17 turns, production replies unchanged) plus pytest. Next: owner decides whether to run it on real traffic; then grade records with `tools/shadow_router_report.py --labels`.
+
 **Privacy mode (2026-10-03, committed ab87c7c, deployed to the homelab hub/core/UI):**
 spoken "turn on privacy mode" (hub, deterministic, confirmation then session end),
 Telegram `/privacy on|off` (core, all robots) and the Voice tab button all drive the

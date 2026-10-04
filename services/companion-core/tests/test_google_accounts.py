@@ -18,6 +18,7 @@ from companion_core.email.store import InMemoryEmailStore
 from companion_core.llm.store import InMemoryLLMSettingsStore, InMemoryLLMUsageStore
 from companion_core.memory.store import InMemoryMemoryStore
 from companion_core.persona.store import InMemoryPersonaStore
+from companion_core.planner.store import InMemoryPlannerStore
 from companion_core.rag.store import InMemoryDocumentStore
 from companion_core.secrets import Keyring
 from companion_core.tasks.store import InMemoryTaskStore
@@ -369,7 +370,7 @@ def test_provider_pagination_all_day_timezone_and_backoff():
 async def chain(svc, **hub_options):
     core = create_core(
         account_service=svc, accounts_service_token=SERVICE_TOKEN,
-        calendar_store=InMemoryCalendarStore(), task_store=InMemoryTaskStore(),
+        calendar_store=InMemoryCalendarStore(), task_store=InMemoryTaskStore(), planner_store=InMemoryPlannerStore(),
         memory_store=InMemoryMemoryStore(), rag_store=InMemoryDocumentStore(),
         email_store=InMemoryEmailStore(), confirmation_store=InMemoryConfirmationStore(),
         llm_settings_store=InMemoryLLMSettingsStore(), llm_usage_store=InMemoryLLMUsageStore(),

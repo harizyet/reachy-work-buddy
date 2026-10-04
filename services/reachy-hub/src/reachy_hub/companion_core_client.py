@@ -191,6 +191,18 @@ class CompanionCoreClient:
         resp.raise_for_status()
         return resp.json()
 
+    async def planner_request(
+        self, method: str, path: str, *, json: Any = None, params: dict[str, str] | None = None
+    ) -> Any:
+        """Owner to-do/reminder/note passthrough to core's /tasks, /notes, /reminders."""
+        resp = await self._client.request(method, path, json=json, params=params, timeout=15.0)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def reminders_due(self) -> list[dict[str, Any]]:
+        """Claim-once poll, like coding_agent_completions_due."""
+        return await self.planner_request("GET", "/reminders/due")
+
     async def accounts_request(self, method, path, *, data=None, params=None):
         response = await self._client.request(method, path, json=data, params=params, timeout=65)
         response.raise_for_status()

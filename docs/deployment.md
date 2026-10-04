@@ -688,12 +688,18 @@ explicitly disposable project. Leave unrelated services such as OVMS alone.
 ## Schema upgrades and credential keys
 
 Core and hub require the revision declared in
-[`shared/database.py`](../shared/database.py) (`013_coding_agent` at this snapshot).
+[`shared/database.py`](../shared/database.py) (`014_planner` at this snapshot).
 The ordered Alembic history ships
 in core's image; SQL stores perform compatibility checks, not startup DDL.
 Compose runs `migrate` before hub/core, including through
 `scripts/start-homelab.sh`. Launcher `--check` remains read-only and does not
 run migrations. Do not use `--no-deps` to bypass the migration gate.
+
+Revision `014_planner` adds the `notes` and `reminders` tables for the
+[To-do & notes tab](operator-guide.md#to-do-reminders-and-notes). It is additive
+and core is its only client, but it still changes the required revision, so use
+the backup/stop-writers/migrate/rebuild procedure and rebuild `migrate`,
+`companion-core` and `reachy-hub` together.
 
 Revision `013_coding_agent` adds the coding-agent session tables and core's
 completion-notification ledger. coding-agent-service is now a database client:

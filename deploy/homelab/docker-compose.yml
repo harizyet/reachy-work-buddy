@@ -357,8 +357,19 @@ services:
       # block), so an unset value here just means every call 401s.
       CODING_AGENT_SERVICE_URL: http://coding-agent-service:8000
       CODING_AGENT_SERVICE_TOKEN: ${CODING_AGENT_SERVICE_TOKEN:?set CODING_AGENT_SERVICE_TOKEN in .env}
+      # Shadow semantic router (docs/shadow-router.md). OFF by default: with
+      # SHADOW_ROUTER_ENABLED unset nothing runs and nothing is written. When
+      # on, it only appends records to SHADOW_ROUTER_LOG_PATH after each reply
+      # is final; it never executes a tool or changes any reply or state.
+      # SHADOW_ROUTER_URL points at the separate semantic-router sidecar.
+      SHADOW_ROUTER_ENABLED: ${SHADOW_ROUTER_ENABLED:-false}
+      SHADOW_ROUTER_URL: ${SHADOW_ROUTER_URL:-}
+      SHADOW_ROUTER_LOG_PATH: ${SHADOW_ROUTER_LOG_PATH:-/data/shadow-router/shadow.jsonl}
+      # true also writes each utterance (never a sensitive-labelled one).
+      SHADOW_ROUTER_LOG_TEXT: ${SHADOW_ROUTER_LOG_TEXT:-false}
     volumes:
       - meeting-audio:/data/meeting-audio
+      - shadow-router:/data/shadow-router
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -464,6 +475,8 @@ volumes:
   # privacy control is about outbound processing (never leaving the
   # homelab by default), not encryption of this volume.
   meeting-audio:
+  # Shadow router records (see SHADOW_ROUTER_LOG_PATH above); empty unless the shadow router is enabled. Utterance text only if SHADOW_ROUTER_LOG_TEXT=true.
+  shadow-router:
   # Phase 27.3: the diarization service's downloaded HF weights and
   # exported ONNX graph (see its own service comment above). Losing this
   # volume just costs a re-download/re-export on next start, not data.

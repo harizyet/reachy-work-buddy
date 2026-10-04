@@ -22,6 +22,7 @@ from companion_core.llm.store import InMemoryLLMSettingsStore, InMemoryLLMUsageS
 from companion_core.meetings.store import InMemoryMeetingStore
 from companion_core.memory.store import InMemoryMemoryStore
 from companion_core.persona.store import InMemoryPersonaStore
+from companion_core.planner.store import InMemoryPlannerStore
 from companion_core.rag.store import InMemoryDocumentStore
 from companion_core.tasks.store import InMemoryTaskStore
 from companion_core.websearch.store import InMemorySearchSettingsStore
@@ -61,7 +62,7 @@ def _coding_agent_app():
 
 def _core_app(coding_agent_app):
     return create_core_app(
-        calendar_store=InMemoryCalendarStore(), task_store=InMemoryTaskStore(),
+        calendar_store=InMemoryCalendarStore(), task_store=InMemoryTaskStore(), planner_store=InMemoryPlannerStore(),
         meeting_store=InMemoryMeetingStore(), run_meeting_worker_task=False,
         memory_store=InMemoryMemoryStore(), rag_store=InMemoryDocumentStore(),
         email_store=InMemoryEmailStore(), confirmation_store=InMemoryConfirmationStore(),

@@ -164,7 +164,7 @@ from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
 from companion_core import (
     coding_agent_intent,
@@ -240,12 +240,17 @@ from companion_core.memory.store import MemoryStore
 from companion_core.persona.context import context_message
 from companion_core.persona.postgres_store import PostgresPersonaStore
 from companion_core.persona.store import PersonaStore
+from companion_core.planner.models import Note, Reminder
+from companion_core.planner.postgres_store import PostgresPlannerStore
+from companion_core.planner.store import PlannerStore
 from companion_core.privacy_classifier import (
     classify_privacy,
     classify_question_privacy,
 )
 from companion_core.rag.postgres_store import PostgresDocumentStore
 from companion_core.rag.store import DocumentStore
+from companion_core.shadow_router import ShadowPipeline, shadow_from_env
+from companion_core.shadow_router.shadow import ShadowTurn
 from companion_core.task_intent import (
     format_capture_reply,
     format_complete_reply,
@@ -321,6 +326,20 @@ class ReminderPayload(BaseModel):
 
 class CreateTaskRequest(BaseModel):
     text: str
+
+
+class TaskTextRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=2000)
+
+
+class NoteRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    body: str = Field(default="", max_length=20000)
+
+
+class CreateReminderRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=500)
+    due_at: datetime
 
 
 class ConfirmForgetRequest(BaseModel):
@@ -422,6 +441,7 @@ def create_app(
     transport: httpx.AsyncBaseTransport | None = None,
     calendar_store: CalendarStore | None = None,
     task_store: TaskStore | None = None,
+    planner_store: PlannerStore | None = None,
     memory_store: MemoryStore | None = None,
     rag_store: DocumentStore | None = None,
     email_store: EmailStore | None = None,
@@ -440,6 +460,7 @@ def create_app(
     coding_agent_transport: httpx.AsyncBaseTransport | None = None,
     coding_agent_service_token: str | None = None,
     coding_agent_notification_store: CodingAgentNotificationStore | None = None,
+    shadow_router: ShadowPipeline | None = None,
 ) -> FastAPI:
     hub_base_url = hub_base_url or os.environ.get("REACHY_HUB_URL", "http://reachy-hub:8000")
     coding_agent_base_url = coding_agent_base_url or os.environ.get(
@@ -479,12 +500,15 @@ def create_app(
     accounts_service_token = accounts_service_token or os.environ.get("ACCOUNTS_SERVICE_TOKEN")
     owns_accounts = bool(accounts_service_token) and account_service is None
     conversation_store = ConversationStore()
+    # Disabled by default (SHADOW_ROUTER_ENABLED); an injected pipeline is for tests.
+    shadow_router = shadow_router or shadow_from_env()
     owns_llm_settings = llm_settings_store is None
     owns_llm_usage = llm_usage_store is None
     owns_persona_store = persona_store is None
     owns_search_settings = search_settings_store is None
     owns_calendar_store = calendar_store is None
     owns_task_store = task_store is None
+    owns_planner_store = planner_store is None
     owns_memory_store = memory_store is None
     owns_rag_store = rag_store is None
     owns_email_store = email_store is None
@@ -525,6 +549,9 @@ def create_app(
         if owns_task_store:
             dsn = database_url or os.environ["DATABASE_URL"]
             app.state.task_store = await PostgresTaskStore.connect(dsn)
+        if owns_planner_store:
+            dsn = database_url or os.environ["DATABASE_URL"]
+            app.state.planner_store = await PostgresPlannerStore.connect(dsn)
         if owns_memory_store:
             dsn = database_url or os.environ["DATABASE_URL"]
             app.state.memory_store = await PostgresMemoryStore.connect(dsn)
@@ -608,6 +635,8 @@ def create_app(
                 await app.state.calendar_store.close()
             if owns_task_store:
                 await app.state.task_store.close()
+            if owns_planner_store:
+                await app.state.planner_store.close()
             if owns_memory_store:
                 await app.state.memory_store.close()
             if owns_rag_store:
@@ -651,6 +680,7 @@ def create_app(
         return await request_validation_exception_handler(request, exc)
 
     app.state.conversation_store = conversation_store
+    app.state.shadow_router = shadow_router
     if llm_settings_store is not None:
         app.state.llm_settings_store = llm_settings_store
     if llm_usage_store is not None:
@@ -724,6 +754,8 @@ def create_app(
         app.state.calendar_store = calendar_store
     if not owns_task_store:
         app.state.task_store = task_store
+    if not owns_planner_store:
+        app.state.planner_store = planner_store
     if not owns_memory_store:
         app.state.memory_store = memory_store
     if not owns_rag_store:
@@ -798,16 +830,23 @@ def create_app(
         # None: later replies inherit this reply's own label (private tool
         # and memory results). Only the generated-reply branch narrows it.
         carried: Privacy | None = None
+        # Shadow router bookkeeping only (companion_core/shadow_router): which production branch answered. Never read by the branches.
+        production_handler = "generic_chat"
+        production_suggestion: str | None = None
         if slash_input and parsed_command is None:
+            production_handler = "slash_command"
             reply = "Unknown or unavailable command. Type /help for available commands."
             privacy = Privacy.PUBLIC
         elif command_error:
+            production_handler = "slash_command"
             reply = command_error
             privacy = Privacy.PUBLIC
         elif reachy_command == "help":
+            production_handler = "slash_command"
             reply = format_help()
             privacy = Privacy.PUBLIC
         elif reachy_command == "standby":
+            production_handler = "slash_command"
             try:
                 results = await app.state.hub_client.standby_robots()
                 reply = commands.format_standby_reply(results)
@@ -818,6 +857,7 @@ def create_app(
                 reply = f"Couldn't reach reachy-hub to put Reachy in standby: {exc}"
             privacy = Privacy.PUBLIC
         elif reachy_command == "wake":
+            production_handler = "slash_command"
             try:
                 results = await app.state.hub_client.resume_robots()
                 reply = commands.format_resume_reply(results)
@@ -825,6 +865,7 @@ def create_app(
                 reply = f"Couldn't reach reachy-hub to wake Reachy up: {exc}"
             privacy = Privacy.PUBLIC
         elif reachy_command == "privacy":
+            production_handler = "slash_command"
             setting = (parsed_command.argument or "").strip().lower()
             if setting not in {"on", "off"}:
                 reply = "Usage: /privacy on|off"
@@ -836,6 +877,7 @@ def create_app(
                     reply = f"Couldn't reach reachy-hub to change privacy mode: {exc}"
             privacy = Privacy.PUBLIC
         elif reachy_command == "status":
+            production_handler = "slash_command"
             try:
                 robots = await app.state.hub_client.list_robots()
                 states: dict[str, str] = {}
@@ -850,6 +892,7 @@ def create_app(
                 reply = f"Couldn't reach reachy-hub to check Reachy's status: {exc}"
             privacy = Privacy.PUBLIC
         elif reachy_command == "next_event" or is_next_event_query(intent_text):
+            production_handler = "calendar.next_event"
             event = await app.state.calendar_store.next_event(datetime.now(UTC))
             reply = format_next_event_reply(event)
             # Calendar content is inherently work-private (docs/plan.md §4's
@@ -859,29 +902,35 @@ def create_app(
             # from turn.text the way the generic placeholder reply is.
             privacy = Privacy.WORK_PRIVATE
         elif reachy_command == "today" or is_today_schedule_query(intent_text):
+            production_handler = "calendar.today"
             start, end = today_window(datetime.now(UTC))
             events = await app.state.calendar_store.list_events(start, end)
             reply = format_today_schedule_reply(events)
             privacy = Privacy.WORK_PRIVATE
         elif capture_text:
+            production_handler = "tasks.capture"
             task = await app.state.task_store.add_task(capture_text)
             reply = format_capture_reply(task)
             privacy = classify_privacy(turn.text)
         elif complete_query:
+            production_handler = "tasks.complete"
             open_tasks = await app.state.task_store.list_tasks(TaskStatus.OPEN)
             matched = next((t for t in open_tasks if complete_query.lower() in t.text.lower()), None)
             completed = await app.state.task_store.complete_task(matched.id) if matched else None
             reply = format_complete_reply(completed, complete_query)
             privacy = classify_privacy(turn.text)
         elif search_query:
+            production_handler = "tasks.search"
             found = await app.state.task_store.search_tasks(search_query)
             reply = format_search_reply(found, search_query)
             privacy = Privacy.WORK_PRIVATE if parsed_command else classify_privacy(turn.text)
         elif reachy_command == "tasks" or is_list_query(intent_text):
+            production_handler = "tasks.read"
             open_tasks = await app.state.task_store.list_tasks(TaskStatus.OPEN)
             reply = format_list_reply(open_tasks)
             privacy = Privacy.WORK_PRIVATE if parsed_command else classify_privacy(turn.text)
         elif memory_capture_text:
+            production_handler = "memory.capture"
             record = await app.state.memory_store.add_memory(
                 content=memory_capture_text,
                 source="conversation",
@@ -890,6 +939,7 @@ def create_app(
             reply = memory_intent.format_capture_reply(record)
             privacy = record.sensitivity
         elif memory_recall_query:
+            production_handler = "memory.read"
             # Deliberately queries MemoryStore only — never conversation_store
             # — this is the exit criterion's "without transcript dumping" as
             # an actual code-level guarantee, not just a claim.
@@ -899,6 +949,7 @@ def create_app(
             if parsed_command and privacy == Privacy.PUBLIC:
                 privacy = Privacy.WORK_PRIVATE
         elif confirm_forget_query:
+            production_handler = "memory.confirm_forget"
             # docs/adr/0011: the only place memory.forget is actually
             # invoked, and only after confirm_action has verified this
             # wasn't a voice-sourced attempt.
@@ -922,6 +973,7 @@ def create_app(
                     reply = memory_intent.format_confirmation_not_found_reply(confirm_forget_query)
             privacy = Privacy.WORK_PRIVATE
         elif forget_query:
+            production_handler = "memory.forget"
             # Only *requests* a confirmation — never deletes anything
             # itself. request_confirmation is always called at SINGLE
             # scope here (one recalled record); it would refuse BULK
@@ -941,6 +993,7 @@ def create_app(
                 reply = memory_intent.format_forget_confirmation_reply(target, forget_query)
             privacy = Privacy.WORK_PRIVATE
         elif restore_query:
+            production_handler = "memory.restore"
             # The undo — no confirmation gate, any modality: undoing must
             # never be harder than the destructive action it reverses.
             found = await app.state.memory_store.find_forgotten(restore_query)
@@ -951,21 +1004,25 @@ def create_app(
                 reply = memory_intent.format_restored_reply(restored)
             privacy = Privacy.WORK_PRIVATE
         elif rag_query:
+            production_handler = "rag.query"
             results = await app.state.rag_store.search(rag_query)
             reply = rag_intent.format_answer(results, rag_query)
             privacy = classify_privacy(reply)
             if parsed_command and privacy == Privacy.PUBLIC:
                 privacy = Privacy.WORK_PRIVATE
         elif reachy_command == "inbox" or email_intent.match_list_inbox(intent_text):
+            production_handler = "email.read"
             messages = await app.state.email_store.list_received()
             reply = email_intent.format_inbox_reply(messages)
             privacy = Privacy.WORK_PRIVATE
         elif draft_request:
+            production_handler = "email.draft"
             to, body = draft_request
             draft = await app.state.email_store.create_draft(to=to, subject=body, body=body)
             reply = email_intent.format_draft_reply(draft)
             privacy = Privacy.WORK_PRIVATE
         elif approve_query:
+            production_handler = "email.approve"
             # docs/adr/0011: approval is consent for an outbound
             # communication — text-only, same rule as memory.forget's
             # confirmation.
@@ -979,6 +1036,7 @@ def create_app(
                 reply = memory_intent.format_voice_confirmation_blocked_reply()
             privacy = Privacy.WORK_PRIVATE
         elif cancel_send_query:
+            production_handler = "email.cancel_send"
             # The undo — no text-only gate: cancelling is always safe and
             # must never be harder than the send it's cancelling.
             candidates = await app.state.email_store.list_drafts(DraftStatus.QUEUED)
@@ -990,6 +1048,7 @@ def create_app(
                 reply = email_intent.format_cancel_send_reply(cancelled)
             privacy = Privacy.WORK_PRIVATE
         elif send_query:
+            production_handler = "email.send"
             # "send draft X" only *queues* it ~10 minutes out — docs/adr/0011's
             # delay-before-dispatch window — and requires text, same as
             # approval. run_dispatch_loop (started in lifespan) is what
@@ -1015,6 +1074,7 @@ def create_app(
             turn.text.lower().strip() in {"check gmail", "list gmail", "read gmail", "check email", "list emails"}
             or turn.text.lower().startswith(("search gmail ", "read gmail "))
         ):
+            production_handler = "gmail.account"
             text = turn.text.strip()
             if text.lower().startswith("read gmail "):
                 message = await checked(app.state.accounts, "message", {"id": text[11:].strip()})
@@ -1027,6 +1087,7 @@ def create_app(
                 ) or "No matching Gmail messages."
             privacy = Privacy.WORK_PRIVATE
         elif email_intent.match_unsupported_email_action(intent_text):
+            production_handler = "email.unsupported"
             reply = email_intent.format_unsupported_email_action_reply(
                 spoken=turn.input_modality == InputModality.VOICE
             )
@@ -1034,10 +1095,12 @@ def create_app(
             # request mentions email; carried labels are not applied here.
             privacy = Privacy.PUBLIC
         elif clock_kind := (reachy_command if reachy_command in {"time", "date"} else match_local_clock(intent_text)):
+            production_handler = "clock.read"
             persona = await app.state.persona_store.get()
             reply = format_clock_reply(clock_kind, datetime.now(UTC), persona.timezone)
             privacy = Privacy.PUBLIC
         elif reachy_command == "coding_reply":
+            production_handler = "coding.reply"
             try:
                 waiting = coding_agent_intent.awaiting_sessions(
                     await app.state.coding_agent_client.list_sessions()
@@ -1059,6 +1122,7 @@ def create_app(
                 reply = f"Couldn't deliver your answer to the coding agent: {exc}"
             privacy = Privacy.WORK_PRIVATE
         elif coding_agent_status_query:
+            production_handler = "coding.status"
             try:
                 sessions = await app.state.coding_agent_client.list_sessions()
             except httpx.HTTPError:
@@ -1072,6 +1136,7 @@ def create_app(
             reply = coding_agent_intent.format_status_reply(sessions, terminal_sessions)
             privacy = Privacy.WORK_PRIVATE
         elif coding_agent_usage_query:
+            production_handler = "coding.usage"
             allowances: list[dict] = []
             try:
                 sessions = await app.state.coding_agent_client.list_sessions()
@@ -1115,6 +1180,7 @@ def create_app(
                 # only ever offered in place of the model's answer, never
                 # alongside an executed action (docs/phase-24b.md).
                 suggestion = await command_suggestion.classify(turn.text, config, transport=llm_transport)
+                production_suggestion = str(suggestion.intent.value) if suggestion is not None else None
                 if suggestion is not None:
                     reply = command_suggestion.format_suggestion_reply(suggestion.intent)
                 else:
@@ -1197,6 +1263,16 @@ def create_app(
                 turn_count=0, privacy=Privacy.WORK_PRIVATE,
             )
         conversation_store.record_reply(turn.session_id, reply, privacy, carried=carried)
+        # Shadow mode: the reply above is final. This only snapshots plain data into a background task that appends a record;
+        # it cannot alter the response, consent, draft, memory, task or robot state (see shadow_router/shadow.py).
+        shadow = app.state.shadow_router
+        if shadow is not None and not slash_input:
+            with contextlib.suppress(Exception):  # nothing in the shadow path may reach the production turn
+                shadow.submit(ShadowTurn(
+                    session_id=turn.session_id, text=turn.text, channel=turn.channel, modality=str(turn.input_modality.value),
+                    privacy=str(privacy.value), production_handler=production_handler, production_suggestion=production_suggestion,
+                    llm=await app.state.llm_settings_store.get(),
+                ))
         return ConversationTurnResponse(
             reply=reply, turn_count=len(history), privacy=privacy, web_search=web_search,
         )
@@ -1454,6 +1530,76 @@ def create_app(
     @app.get("/tasks/search")
     async def search_tasks_endpoint(q: str) -> list[Task]:
         return await app.state.task_store.search_tasks(q)
+
+    @app.post("/tasks/{task_id}/reopen")
+    async def reopen_task_by_id(task_id: str) -> Task:
+        task = await app.state.task_store.reopen_task(task_id)
+        if task is None:
+            raise HTTPException(status_code=404, detail=f"no task '{task_id}'")
+        return task
+
+    @app.put("/tasks/{task_id}")
+    async def update_task_by_id(task_id: str, request: TaskTextRequest) -> Task:
+        task = await app.state.task_store.update_task_text(task_id, request.text.strip())
+        if task is None:
+            raise HTTPException(status_code=404, detail=f"no task '{task_id}'")
+        return task
+
+    @app.delete("/tasks/{task_id}")
+    async def delete_task_by_id(task_id: str) -> dict[str, bool]:
+        if not await app.state.task_store.delete_task(task_id):
+            raise HTTPException(status_code=404, detail=f"no task '{task_id}'")
+        return {"deleted": True}
+
+    @app.get("/notes")
+    async def list_notes(q: str | None = None) -> list[Note]:
+        return await app.state.planner_store.list_notes(q)
+
+    @app.post("/notes")
+    async def create_note(request: NoteRequest) -> Note:
+        return await app.state.planner_store.add_note(request.title.strip(), request.body)
+
+    @app.put("/notes/{note_id}")
+    async def update_note(note_id: str, request: NoteRequest) -> Note:
+        note = await app.state.planner_store.update_note(note_id, request.title.strip(), request.body)
+        if note is None:
+            raise HTTPException(status_code=404, detail=f"no note '{note_id}'")
+        return note
+
+    @app.delete("/notes/{note_id}")
+    async def delete_note(note_id: str) -> dict[str, bool]:
+        if not await app.state.planner_store.delete_note(note_id):
+            raise HTTPException(status_code=404, detail=f"no note '{note_id}'")
+        return {"deleted": True}
+
+    @app.get("/reminders")
+    async def list_reminders() -> list[Reminder]:
+        return await app.state.planner_store.list_reminders()
+
+    @app.post("/reminders")
+    async def create_reminder(request: CreateReminderRequest) -> Reminder:
+        if request.due_at.tzinfo is None:
+            raise HTTPException(status_code=422, detail="due_at must include a time zone")
+        return await app.state.planner_store.add_reminder(request.text.strip(), request.due_at)
+
+    @app.get("/reminders/due")
+    async def reminders_due_now() -> list[Reminder]:
+        """Claim-once, like /coding-agents/completions/due: reachy-hub polls
+        this and pushes each reminder to Telegram."""
+        return await app.state.planner_store.claim_due(datetime.now(UTC))
+
+    @app.post("/reminders/{reminder_id}/complete")
+    async def complete_reminder(reminder_id: str) -> Reminder:
+        reminder = await app.state.planner_store.complete_reminder(reminder_id)
+        if reminder is None:
+            raise HTTPException(status_code=404, detail=f"no reminder '{reminder_id}'")
+        return reminder
+
+    @app.delete("/reminders/{reminder_id}")
+    async def delete_reminder(reminder_id: str) -> dict[str, bool]:
+        if not await app.state.planner_store.delete_reminder(reminder_id):
+            raise HTTPException(status_code=404, detail=f"no reminder '{reminder_id}'")
+        return {"deleted": True}
 
     @app.post("/meetings")
     async def upload_meeting(

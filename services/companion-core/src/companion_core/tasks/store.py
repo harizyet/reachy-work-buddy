@@ -23,6 +23,9 @@ class TaskStore(Protocol):
     async def list_tasks(self, status: TaskStatus | None = None) -> list[Task]: ...
     async def complete_task(self, task_id: str) -> Task | None: ...
     async def search_tasks(self, query: str) -> list[Task]: ...
+    async def reopen_task(self, task_id: str) -> Task | None: ...
+    async def update_task_text(self, task_id: str, text: str) -> Task | None: ...
+    async def delete_task(self, task_id: str) -> bool: ...
 
 
 class InMemoryTaskStore:
@@ -52,3 +55,21 @@ class InMemoryTaskStore:
         lowered = query.lower()
         matches = [t for t in self._tasks.values() if lowered in t.text.lower()]
         return sorted(matches, key=lambda t: t.created_at)
+
+    async def reopen_task(self, task_id: str) -> Task | None:
+        task = self._tasks.get(task_id)
+        if task is None:
+            return None
+        task.status = TaskStatus.OPEN
+        task.completed_at = None
+        return task
+
+    async def update_task_text(self, task_id: str, text: str) -> Task | None:
+        task = self._tasks.get(task_id)
+        if task is None:
+            return None
+        task.text = text
+        return task
+
+    async def delete_task(self, task_id: str) -> bool:
+        return self._tasks.pop(task_id, None) is not None

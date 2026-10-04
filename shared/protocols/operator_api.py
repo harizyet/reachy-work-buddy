@@ -49,3 +49,16 @@ MEETING_CANCEL = "/meetings/{meeting_id}/cancel"
 # Hub-owned web transcript records.
 CHATS = "/chats"
 CHAT = "/chats/{chat_id}"
+
+# Owner to-do / reminders / notes. Hub proxies to companion-core's /tasks,
+# /reminders and /notes under this prefix.
+PLANNER_PREFIX = "/planner"
+PLANNER_TASKS = "/planner/tasks"
+PLANNER_TASK = "/planner/tasks/{item_id}"
+PLANNER_TASK_COMPLETE = "/planner/tasks/{item_id}/complete"
+PLANNER_TASK_REOPEN = "/planner/tasks/{item_id}/reopen"
+PLANNER_NOTES = "/planner/notes"
+PLANNER_NOTE = "/planner/notes/{item_id}"
+PLANNER_REMINDERS = "/planner/reminders"
+PLANNER_REMINDER = "/planner/reminders/{item_id}"
+PLANNER_REMINDER_COMPLETE = "/planner/reminders/{item_id}/complete"

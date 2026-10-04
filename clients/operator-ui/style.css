@@ -516,3 +516,15 @@ header { margin-bottom: 8px; }
   header h1 { font-size: 23px; }
   .search-usage-row { grid-template-columns: 5em 1fr auto; }
 }
+
+.planner-workspace { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: start; }
+.planner-wide { grid-column: 1 / -1; }
+.planner-form { display: grid; gap: 8px; margin-bottom: 12px; }
+.planner-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.planner-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.planner-row > span:not(.planner-grow) { flex: 1; overflow-wrap: anywhere; }
+.planner-grow { flex: 1; overflow-wrap: anywhere; }
+.planner-done { text-decoration: line-through; opacity: .6; }
+.planner-overdue { font-weight: 600; }
+.planner-note { border: 1px solid var(--border, #8884); border-radius: 8px; padding: 10px; }
+.planner-note-body { white-space: pre-wrap; overflow-wrap: anywhere; margin: 6px 0; }

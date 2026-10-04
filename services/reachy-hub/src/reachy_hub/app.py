@@ -574,6 +574,16 @@ def create_app(
                 for item in await companion_core_client.coding_agent_completions_due():
                     await push_to_telegram(item["owner_user_id"], item["text"])
 
+    async def reminder_notify_loop(interval: float) -> None:
+        """Pushes each due planner reminder to the owner's Telegram once; core
+        claims a reminder when /reminders/due returns it, so a failed push is
+        not retried, and the web UI still shows it as due."""
+        while True:
+            await asyncio.sleep(interval)
+            with contextlib.suppress(httpx.HTTPError):
+                for item in await companion_core_client.reminders_due():
+                    await push_to_telegram(owner_user_id, f"Reminder: {item['text']}")
+
     async def telegram_poll_loop(client: TelegramClient, chat_registry: TelegramChatRegistry, default_user_id: str) -> None:
         # Real Telegram blocks server-side for `timeout` seconds when idle,
         # which is what normally paces this loop. That's not guaranteed for
@@ -684,6 +694,11 @@ def create_app(
             if run_coding_agent_notify_task
             else None
         )
+        reminder_notify_task = (
+            asyncio.create_task(reminder_notify_loop(coding_agent_notify_interval))
+            if run_coding_agent_notify_task
+            else None
+        )
         if telegram_client is not None and run_telegram_poll_task:
             # Phase 24b: registers the flat command aliases (Telegram's
             # BotCommand.command can't hold a space, so the namespaced
@@ -709,7 +724,7 @@ def create_app(
             await robot_voice_manager.stop_all("Hub is shutting down")
             if robot_voice_manager.palm_stop is not None:
                 robot_voice_manager.palm_stop.close()
-            for task in (warm_task, heartbeat_task, coding_agent_notify_task, telegram_task, voice_task):
+            for task in (warm_task, heartbeat_task, coding_agent_notify_task, reminder_notify_task, telegram_task, voice_task):
                 if task is not None:
                     task.cancel()
                     with contextlib.suppress(asyncio.CancelledError):

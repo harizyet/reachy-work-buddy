@@ -28,6 +28,7 @@ from companion_core.meetings.store import InMemoryMeetingStore
 from companion_core.memory.store import InMemoryMemoryStore
 from companion_core.migrations.__main__ import upgrade
 from companion_core.persona.store import InMemoryPersonaStore
+from companion_core.planner.store import InMemoryPlannerStore
 from companion_core.rag.store import InMemoryDocumentStore
 from companion_core.secrets import Keyring
 from companion_core.tasks.store import InMemoryTaskStore
@@ -236,7 +237,7 @@ def test_core_restart_does_not_renotify_finished_sessions(database):
             raise AssertionError("no model call expected")
 
         return create_app(
-            calendar_store=InMemoryCalendarStore(), task_store=InMemoryTaskStore(),
+            calendar_store=InMemoryCalendarStore(), task_store=InMemoryTaskStore(), planner_store=InMemoryPlannerStore(),
             meeting_store=InMemoryMeetingStore(), run_meeting_worker_task=False,
             memory_store=InMemoryMemoryStore(), rag_store=InMemoryDocumentStore(),
             email_store=InMemoryEmailStore(), confirmation_store=InMemoryConfirmationStore(),

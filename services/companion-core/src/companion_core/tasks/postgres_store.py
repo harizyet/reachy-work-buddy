@@ -69,3 +69,25 @@ class PostgresTaskStore:
             )
             rows = await cur.fetchall()
             return [_from_row(row) for row in rows]
+
+    async def reopen_task(self, task_id: str) -> Task | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"UPDATE tasks SET status = %s, completed_at = NULL WHERE id = %s RETURNING {_COLUMNS}",
+                (TaskStatus.OPEN.value, task_id),
+            )
+            row = await cur.fetchone()
+            return _from_row(row) if row else None
+
+    async def update_task_text(self, task_id: str, text: str) -> Task | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"UPDATE tasks SET text = %s WHERE id = %s RETURNING {_COLUMNS}", (text, task_id)
+            )
+            row = await cur.fetchone()
+            return _from_row(row) if row else None
+
+    async def delete_task(self, task_id: str) -> bool:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute("DELETE FROM tasks WHERE id = %s", (task_id,))
+            return cur.rowcount > 0

@@ -536,7 +536,7 @@ Runtime service packages never import one another. Contracts live in
 `shared/models`, route constants in `shared/protocols`. Workspace members
 are independent images even though development installs them together.
 
-[operator-ui](../../clients/operator-ui/) serves Overview, Chat, Meetings and Settings at
+[operator-ui](../../clients/operator-ui/) serves Overview, Chat, Meetings, To-do & notes and Settings at
 `/ui/`; [web-pwa](../../clients/web-pwa/) serves Call Reachy/telepresence at
 `/app/`. Both mount under `/hub/` through Caddy. Browser API paths must stay
 relative so direct and proxied deployments work. User workflows are in the
