@@ -1,6 +1,6 @@
 """Summarise shadow-router records (companion-core SHADOW_ROUTER_LOG_PATH JSONL).
 
-  uv run python tools/shadow_router_report.py shadow.jsonl [--labels labels.jsonl]
+  uv run python tools/shadow_router_report.py shadow.jsonl [--extractions extractions.jsonl] [--labels labels.jsonl]
 
 Without labels it reports what is observable: router route vs the production handler, validator outcomes, proposed actions, latency.
 With a labels file (one JSON object per line: {"text_sha256": "<16 hex from the record>", "gold_route": "tasks.complete",
@@ -58,8 +58,15 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("records")
     ap.add_argument("--labels")
+    ap.add_argument("--extractions", help="results file from shadow_router_extract.py, merged into the records by rid")
     a = ap.parse_args()
     rows = [json.loads(line) for line in Path(a.records).read_text().splitlines() if line.strip()]
+    if a.extractions:
+        late = {x["rid"]: x for x in (json.loads(line) for line in Path(a.extractions).read_text().splitlines() if line.strip())}  # last row per rid wins
+        rows = [{**r, **{k: v for k, v in late[r["rid"]].items() if k != "rid"}} if r.get("rid") in late else r for r in rows]
+    pending = sum(r.get("extraction", {}).get("status") == "pending" for r in rows)
+    if pending:
+        print(f"note: {pending} records still have extraction pending (run shadow_router_extract.py and pass --extractions)")
     print(f"{len(rows)} records")
     agree = collections.Counter()
     for r in rows:

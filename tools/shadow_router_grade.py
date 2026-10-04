@@ -3,7 +3,7 @@
   sheet  LOG --out sheet.jsonl [--agree-sample 50] [--seed 1]
          Writes the items to label: EVERY record where the router and production disagree, plus a random sample of agreements, shuffled,
          showing only the utterance. No router, validator or production output is on the sheet.
-  purge  LOG --labels labels.jsonl --aggregates out.json [--delete SHEET ...]
+  purge  LOG --labels labels.jsonl --aggregates out.json [--extractions extractions.jsonl] [--delete SHEET ...]
          Writes aggregates (counts, the graded labels without text) and then rewrites LOG in place with the utterance, its hash, validated args
          and resolved target removed (mode 0600 kept). Delete the sheet files too with --delete.
 
@@ -62,6 +62,12 @@ def purge(a: argparse.Namespace) -> None:
         for r in scrubbed:
             tmp.write(json.dumps(r) + "\n")
     os.replace(tmp_name, a.log)
+    if a.extractions and Path(a.extractions).exists():
+        late = [json.loads(line) for line in Path(a.extractions).read_text().splitlines() if line.strip()]
+        fd = os.open(a.extractions, os.O_WRONLY | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w") as handle:
+            for x in late:
+                handle.write(json.dumps({k: v for k, v in x.items() if k not in ("validated_args", "resolved_target")}) + "\n")
     for path in a.delete or []:
         Path(path).unlink(missing_ok=True)
     print(f"scrubbed {len(rows)} records (text, hashes, validated args, resolved targets removed); aggregates -> {a.aggregates}; deleted {len(a.delete or [])} file(s)")
@@ -80,6 +86,7 @@ def main() -> None:
     p.add_argument("--labels", required=True)
     p.add_argument("--aggregates", required=True)
     p.add_argument("--delete", nargs="*")
+    p.add_argument("--extractions", help="extractions file to scrub in place (validated args and resolved targets removed)")
     a = ap.parse_args()
     sheet(a) if a.cmd == "sheet" else purge(a)
 

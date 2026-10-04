@@ -7,7 +7,7 @@ Evidence and benchmarks live outside this repo in the `inferencing/bench/router`
 
 - No tool execution from this path. The existing production flow runs unchanged and finishes first.
 - After the reply is final, `process_conversation_turn` snapshots plain data into a background task. The task cannot alter the response, consent state, draft state, memory, tasks or robot state; a failure or a busy extractor only increments a counter.
-- Order inside the task: semantic router -> few-shot extractor -> deterministic validator -> append one record (`route`, extracted/validated args, validator status, proposed next action). The existing deterministic matchers are not replaced; the record carries the production handler beside the router's route.
+- Order inside the task: semantic router -> (live mode only) few-shot extractor -> deterministic validator -> append one record. In the default `offline` extract mode the live path calls only the router sidecar and records `extraction: pending`; the frozen extractor and validator then run later, offline, over the captured records (`tools/shadow_router_extract.py`). The shadow is therefore causally invisible to the production 7B during the trial. The existing deterministic matchers are not replaced; the record carries the production handler beside the router's route.
 - Typed `/…` commands and turns the production path answered deterministically are not special-cased except that slash input is skipped; state-bound approvals are recorded like any other turn so they can be compared.
 - Robot requests stay on `command_suggestion.classify` (Qwen). The router's `robot.*` route is recorded and never extracted.
 - `memory.forget` and `tasks.complete` always keep the validated resolved target in the record (not for a SENSITIVE-labelled turn).
@@ -35,7 +35,8 @@ The sidecar is started with `scripts/start-homelab.sh --shadow-router` and does 
 | `SHADOW_ROUTER_LOG_PATH` | JSONL file (default `/data/shadow-router/shadow.jsonl`, volume `shadow-router`), created mode 0600 |
 | `SHADOW_ROUTER_LOG_TEXT=true` | also write the utterance and the validated arguments (never for a sensitive-labelled turn). Only for the grading window |
 | `SHADOW_ROUTER_MAX_TURNS` | stop recording after this many accepted turns (0 = unlimited) |
-| `SHADOW_ROUTER_QUEUE_SIZE` | pending shadow jobs before the oldest is dropped (default 3) |
+| `SHADOW_EXTRACT_MODE` | `offline` (default): live path calls only the router; extraction is run later by `tools/shadow_router_extract.py`. `live`: also run the extractor inside the turn (a later integration test) |
+| `SHADOW_ROUTER_QUEUE_SIZE` | pending shadow jobs before the oldest is dropped (0 = 16 offline, 3 live) |
 
 It shares the host CPU with the production services; the sidecar is capped at 6 CPUs (`SEMANTIC_ROUTER_CPUS`) and 3 GB with 2 ONNX threads per model (`SEMANTIC_ROUTER_ORT_THREADS`). The first default, 3 threads per model under a 3-CPU cap, was CPU-throttled and missed the router p95 gate; CPU pinning is untested.
 
@@ -57,14 +58,19 @@ Router p95 and diarization gates pass and the queue accounts exactly (recorded +
 
 Fixed-size, then removed. Nothing here changes a live reply, so rollback is unsetting the flag.
 
-1. Put `SHADOW_ROUTER_ENABLED=true`, `SHADOW_ROUTER_LOG_TEXT=true`, `SHADOW_ROUTER_MAX_TURNS=400` in `deploy/homelab/.env`; `scripts/start-homelab.sh --shadow-router --build`. This rebuilds and recreates companion-core (a brief restart) and starts the sidecar.
+1. Put `SHADOW_ROUTER_ENABLED=true`, `SHADOW_ROUTER_LOG_TEXT=true`, `SHADOW_ROUTER_MAX_TURNS=500` in `deploy/homelab/.env` (extract mode stays `offline`); `scripts/start-homelab.sh --shadow-router --build`. This rebuilds and recreates companion-core (a brief restart) and starts the sidecar. The 7B is not called by the shadow.
 2. Use the assistant normally until the cap is reached (`trial_complete_skipped` starts counting).
 3. Immediately set `SHADOW_ROUTER_LOG_TEXT=false` (or `SHADOW_ROUTER_ENABLED=false`) and recreate companion-core; copy the log out of the volume to a local 0600 file.
-4. `uv run python tools/shadow_router_grade.py sheet shadow.jsonl --out sheet.jsonl`: every disagreement plus a random sample of agreements, shuffled, utterance only.
-5. Label the sheet blind (before looking at any router, validator or production output): `gold_route`, `executable`, `gold_args`.
-6. `uv run python tools/shadow_router_report.py shadow.jsonl --labels labels.jsonl`: reports `unsafe_would_execute` and `safe_but_withheld` per stratum (disagreements are all graded; the agreement sample is random, so do not pool the strata), beside `dropped_busy`, `withheld`, `would_execute`, `bulk_refused`.
-7. `uv run python tools/shadow_router_grade.py purge shadow.jsonl --labels labels.jsonl --aggregates aggregates.json --delete sheet.jsonl labels.jsonl`: removes the utterance, its hash, the validated arguments and resolved targets from the log and keeps only aggregates. Remove the volume copy of the raw log as well.
-8. Do not change a live handler from the trial's examples until enough real traffic has accumulated to judge them.
+4. When the 7B is idle: `uv run --package companion-core python tools/shadow_router_extract.py shadow.jsonl --out extractions.jsonl --base-url <local vLLM /v1> --model <model>`. It runs the same frozen extractor and validator one record at a time, never modifies the raw log, and is resumable.
+5. `uv run python tools/shadow_router_grade.py sheet shadow.jsonl --out sheet.jsonl`: every disagreement plus a random sample of agreements, shuffled, utterance only.
+6. Label the sheet blind (before looking at any router, validator or production output): `gold_route`, `executable`, `gold_args`.
+7. `uv run python tools/shadow_router_report.py shadow.jsonl --extractions extractions.jsonl --labels labels.jsonl`: reports `unsafe_would_execute` and `safe_but_withheld` per stratum (disagreements are all graded; the agreement sample is random, so do not pool the strata), beside `dropped_busy`, `withheld`, `would_execute`, `bulk_refused`.
+8. `uv run python tools/shadow_router_grade.py purge shadow.jsonl --labels labels.jsonl --aggregates aggregates.json --extractions extractions.jsonl --delete sheet.jsonl labels.jsonl`: removes the utterance, its hash, the validated arguments and resolved targets from the log and the extractions file and keeps only aggregates. Remove the volume copy of the raw log as well.
+9. Do not change a live handler from the trial's examples until enough real traffic has accumulated to judge them.
+
+## Production impact in offline mode (2026-10-05)
+
+Same setup as above (sidecar, 7B stream, diarization), run against the homelab vLLM; extraction offline, so the shadow's only live effect is the router call. TTFT p95 returns to baseline (59 to 62 ms against 54 and 61 ms for the two bracketing baselines, gate +20 ms). 7B decode in the shadow phases (37.5 to 40.4 tok/s) sits between the two baselines (42.7 before, 38.1 after); the host drifts about 10% over a run, so effects under that size cannot be resolved. Router p95 over larger samples: 67 and 83 ms at realistic cadence, 90 ms at 0.5 s paced (n=120); one earlier 136 ms reading came from a 15-request window with a single slow outlier. Diarization p95 0.43 to 0.52 s (baseline 0.42 to 0.43). Burst accounting stayed exact (36 submitted, 9 recorded, 27 dropped).
 
 ## Counters
 

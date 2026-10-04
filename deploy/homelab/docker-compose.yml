@@ -430,10 +430,15 @@ services:
       SHADOW_ROUTER_LOG_PATH: ${SHADOW_ROUTER_LOG_PATH:-/data/shadow-router/shadow.jsonl}
       # true also writes each utterance (never a sensitive-labelled one).
       SHADOW_ROUTER_LOG_TEXT: ${SHADOW_ROUTER_LOG_TEXT:-false}
+      # offline (default): the live path calls only the router sidecar and marks extraction
+      # pending, so the production model is never touched; tools/shadow_router_extract.py fills
+      # it in later. live: also run the extractor inside the turn (measured to cost the shared
+      # 7B about 10% decode and 20 ms TTFT while it runs).
+      SHADOW_EXTRACT_MODE: ${SHADOW_EXTRACT_MODE:-offline}
       # Trial bounds: stop recording after this many turns (0 = unlimited) and
-      # keep at most this many shadow jobs waiting (extras are dropped, never queued behind production).
+      # keep at most this many shadow jobs waiting (0 = 16 offline, 3 live; the oldest is dropped, never queued behind production).
       SHADOW_ROUTER_MAX_TURNS: ${SHADOW_ROUTER_MAX_TURNS:-0}
-      SHADOW_ROUTER_QUEUE_SIZE: ${SHADOW_ROUTER_QUEUE_SIZE:-3}
+      SHADOW_ROUTER_QUEUE_SIZE: ${SHADOW_ROUTER_QUEUE_SIZE:-0}
     volumes:
       - meeting-audio:/data/meeting-audio
       - shadow-router:/data/shadow-router

@@ -6,6 +6,7 @@ Hard contract (owner decision 2026-10-05):
 - robot routes are not extracted: the production Qwen classifier (`command_suggestion.classify`) stays authoritative for them;
 - `needs_clarification` records a reason category only; nothing is synthesised into the live conversation;
 - memory.forget / tasks.complete always retain the resolved target (validated value) so what would have been confirmed can be compared.
+Extraction is offline by default (SHADOW_EXTRACT_MODE): the live path then calls only the router sidecar, so the production model is never touched.
 Trial bounds: a bounded queue (oldest job dropped when full) and an optional turn cap. Privacy: the file is created 0600; the utterance is written only with SHADOW_ROUTER_LOG_TEXT=true, and never for a SENSITIVE-labelled turn.
 Observable counters here are `would_execute` / `withheld`; `unsafe_would_execute` and `safe_but_withheld` need a grade per record and come from
 tools/shadow_router_report.py."""
@@ -18,6 +19,7 @@ import json
 import logging
 import os
 import time
+import uuid
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -57,8 +59,9 @@ class ShadowPipeline:
     router_url: str
     log_path: str
     log_text: bool = False
+    extract_mode: str = "offline"  # offline: live path calls only the router and marks extraction pending; live: also call the extractor in the turn
     max_turns: int = 0  # trial bound: stop recording after this many accepted turns (0 = unlimited)
-    queue_size: int = 3  # pending shadow jobs; beyond this the OLDEST is dropped so production never waits behind shadow work
+    queue_size: int = 0  # pending shadow jobs (0 = 16 offline, 3 live); beyond this the OLDEST is dropped so production never waits behind shadow work
     router_transport: httpx.AsyncBaseTransport | None = None
     llm_transport: httpx.AsyncBaseTransport | None = None
     counters: Counter = field(default_factory=Counter)
@@ -74,7 +77,7 @@ class ShadowPipeline:
             self.counters["trial_complete_skipped"] += 1
             return
         self._accepted += 1
-        if len(self._pending) >= max(1, self.queue_size):
+        if len(self._pending) >= (self.queue_size or (3 if self.extract_mode == "live" else 16)):
             self._pending.popleft()  # drop the oldest shadow job
             self.counters["dropped_busy"] += 1
         self._pending.append(turn)
@@ -111,6 +114,8 @@ class ShadowPipeline:
 
     async def _pipeline(self, turn: ShadowTurn) -> None:
         self.counters["turns"] += 1
+        if self.extract_mode not in ("offline", "live"):
+            raise ValueError(f"SHADOW_EXTRACT_MODE must be offline or live, not {self.extract_mode!r}")
         routed = await self._route(turn.text)
         if routed is None:
             self.counters["router_error"] += 1
@@ -120,7 +125,9 @@ class ShadowPipeline:
         verdict: validator.Validation | None = None
         if route not in _NO_EXTRACT and route in validator.SCHEMAS:
             provider: ProviderConfig | None = turn.llm.local if turn.llm else None  # local only, never cloud
-            if provider is None:
+            if self.extract_mode == "offline":
+                extraction = {"status": "pending"}  # filled later by tools/shadow_router_extract.py with the same extractor and validator
+            elif provider is None:
                 extraction = {"status": "no_local_provider"}
             else:
                 started = time.monotonic()
@@ -131,7 +138,7 @@ class ShadowPipeline:
                     self.counters["extractor_error"] += 1
                 else:
                     verdict = validator.validate(route, proposed, turn.text)
-        action = self._proposed_action(route, verdict)
+        action = "pending_extraction" if extraction["status"] == "pending" else self._proposed_action(route, verdict)
         self._count(route, verdict, action)
         self._write(turn, routed, extraction, verdict, action)
 
@@ -173,6 +180,7 @@ class ShadowPipeline:
     def _write(self, turn: ShadowTurn, routed: dict, extraction: dict, verdict: validator.Validation | None, action: str) -> None:
         sensitive = turn.privacy == "sensitive"
         row = {
+            "rid": uuid.uuid4().hex[:12],
             "ts": datetime.now(UTC).isoformat(timespec="seconds"),
             "session": hashlib.sha256(turn.session_id.encode()).hexdigest()[:12],
             "channel": turn.channel, "modality": turn.modality, "privacy": turn.privacy,
@@ -205,5 +213,5 @@ def shadow_from_env() -> ShadowPipeline | None:
         return None
     return ShadowPipeline(
         router_url=url, log_path=path, log_text=(os.environ.get("SHADOW_ROUTER_LOG_TEXT") or "").lower() == "true",
-        max_turns=int(os.environ.get("SHADOW_ROUTER_MAX_TURNS") or 0), queue_size=int(os.environ.get("SHADOW_ROUTER_QUEUE_SIZE") or 3),
+        extract_mode=(os.environ.get("SHADOW_EXTRACT_MODE") or "offline").lower(), max_turns=int(os.environ.get("SHADOW_ROUTER_MAX_TURNS") or 0), queue_size=int(os.environ.get("SHADOW_ROUTER_QUEUE_SIZE") or 0),
     )

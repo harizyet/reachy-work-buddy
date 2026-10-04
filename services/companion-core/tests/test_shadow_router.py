@@ -91,7 +91,7 @@ def _app(tmp_path, *, route, extraction=None, log_text=False, enabled=True):
     calls: list = []
     log = tmp_path / "shadow.jsonl"
     llm = _llm(extraction, calls)
-    shadow = ShadowPipeline("http://router:8011", str(log), log_text=log_text, router_transport=_router(route), llm_transport=llm) if enabled else None
+    shadow = ShadowPipeline("http://router:8011", str(log), log_text=log_text, extract_mode="live", router_transport=_router(route), llm_transport=llm) if enabled else None
     app = create_app(
         calendar_store=InMemoryCalendarStore(), task_store=InMemoryTaskStore(), planner_store=InMemoryPlannerStore(), meeting_store=InMemoryMeetingStore(), run_meeting_worker_task=False,
         memory_store=InMemoryMemoryStore(), rag_store=InMemoryDocumentStore(), email_store=InMemoryEmailStore(),
@@ -217,6 +217,7 @@ def _direct(tmp_path, **kwargs):
 
     calls: list = []
     log = tmp_path / "direct.jsonl"
+    kwargs.setdefault("extract_mode", "live")
     pipeline = ShadowPipeline("http://router:8011", str(log), router_transport=_router("tasks.complete"),
                               llm_transport=_llm({"task": "the roof inspection"}, calls), **kwargs)
     llm = LLMConfig(local=ProviderConfig(base_url="http://ovms/v1", model="qwen"))
@@ -288,3 +289,26 @@ def test_turn_cap_counts_accepted_inputs_not_completed_records(tmp_path):
     assert pipeline.counters["dropped_busy"] == 2  # accepted but displaced, so the trial does not stretch under contention
     assert pipeline.counters["trial_complete_skipped"] == 2
     assert len(log.read_text().splitlines()) == 1
+
+
+def test_offline_mode_calls_only_the_router_and_marks_extraction_pending(tmp_path):
+    app, shadow, log, calls = _app(tmp_path, route="memory.forget", extraction={"query": "the garage code", "scope": "single"}, log_text=True)
+    shadow.extract_mode = "offline"
+    with TestClient(app) as client:
+        _configure(client)
+        before = len(calls)
+        client.post("/conversation", json={**TURN, "text": "lose the note about the garage code"})
+        (row,) = _records(log)
+        extractor_calls = [c for c in calls[before:] if "You extract arguments" in c["messages"][0]["content"]]
+    assert extractor_calls == []  # the production model is never called by the shadow
+    assert row["extraction"] == {"status": "pending"} and row["validator"] is None
+    assert row["proposed_action"] == "pending_extraction"
+    assert row["router"]["route"] == "memory.forget" and "rid" in row and row["text"]
+
+
+def test_default_mode_is_offline(monkeypatch, tmp_path):
+    monkeypatch.setenv("SHADOW_ROUTER_ENABLED", "true")
+    monkeypatch.setenv("SHADOW_ROUTER_URL", "http://r:1")
+    monkeypatch.setenv("SHADOW_ROUTER_LOG_PATH", str(tmp_path / "x.jsonl"))
+    monkeypatch.delenv("SHADOW_EXTRACT_MODE", raising=False)
+    assert shadow_from_env().extract_mode == "offline"
