@@ -37,7 +37,21 @@ The sidecar is started with `scripts/start-homelab.sh --shadow-router` and does 
 | `SHADOW_ROUTER_MAX_TURNS` | stop recording after this many accepted turns (0 = unlimited) |
 | `SHADOW_ROUTER_QUEUE_SIZE` | pending shadow jobs before the oldest is dropped (default 3) |
 
-It shares the host CPU with the production services; the sidecar is capped at 3 CPUs and 3 GB. Measured contention says x3 is deployable at a realistic rate; CPU pinning is untested.
+It shares the host CPU with the production services; the sidecar is capped at 6 CPUs (`SEMANTIC_ROUTER_CPUS`) and 3 GB with 2 ONNX threads per model (`SEMANTIC_ROUTER_ORT_THREADS`). The first default, 3 threads per model under a 3-CPU cap, was CPU-throttled and missed the router p95 gate; CPU pinning is untested.
+
+## Deployment regression (2026-10-05, after the queue change)
+
+Compose sidecar + Qwen 7B stream + diarization running together, 45 s windows, host otherwise quiet (an unrelated InfluxDB benchmark on the same host had polluted two earlier runs; a run is only valid with load average under 3).
+
+| Phase | Router p50 / p95 (HTTP, ms) | 7B decode tok/s (TTFT p95 ms) | Diarization p95 (s) | Shadow queue |
+| --- | --- | --- | --- | --- |
+| B: no shadow | - | 41.3 (57) | 0.42 | - |
+| D1: realistic cadence, 1 request / 3 s | 45 / 60 | 38.3 (62) | 0.44 | - |
+| D2: 0.5 s paced (about 6x realistic) | 51 / 75 | 36.7 (65) | 0.51 | - |
+| D3: bursts of 12 turns every 15 s | - | 37.2 (82) | 0.46 | 36 submitted, 9 recorded, 27 `dropped_busy`, 0 errors |
+| D4: one turn every 5 s | - | 37.2 (79) | 0.46 | 9 submitted, 9 recorded, 0 dropped, 0 errors |
+
+Router p95 and diarization gates pass and the queue accounts exactly (recorded + dropped = submitted, three jobs kept per burst). The 7B result does not meet every pre-registered gate: decode was 89% to 93% of baseline (D2 at 6x cadence is 89%) and TTFT p95 rose 22 to 25 ms during extraction (gate: 20 ms). That cost comes from the shadow extractor calling the same 7B as production, not from the sidecar. Baseline-to-baseline noise on this host is about 5% to 10%, so treat the 7B figures as an upper bound on a roughly 10% decode and 20 ms TTFT cost while shadow extraction is active.
 
 ## Trial procedure
 

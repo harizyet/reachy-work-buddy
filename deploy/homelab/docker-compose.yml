@@ -139,7 +139,9 @@ services:
     image: reachy-semantic-router:latest
     restart: unless-stopped
     profiles: ["shadow-router"]
-    cpus: ${SEMANTIC_ROUTER_CPUS:-3}
+    cpus: ${SEMANTIC_ROUTER_CPUS:-6}
+    environment:
+      ORT_THREADS: ${SEMANTIC_ROUTER_ORT_THREADS:-2}
     mem_limit: 3g
     volumes:
       - ${SEMANTIC_ROUTER_MODELS_DIR:-./semantic-router/models}:/app/models:ro

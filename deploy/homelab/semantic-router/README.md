@@ -9,4 +9,4 @@ Started only with `scripts/start-homelab.sh --shadow-router` (compose profile `s
 (`bench/router/export_onnx_fine.py`) and symlink or copy them in; `SEMANTIC_ROUTER_MODELS_DIR` overrides the location. The pilot export's parity check
 (max probability difference 2e-5, 100% argmax agreement on 4,755 rows per model) is in its `parity.json`; re-run the parity check after any re-export.
 
-CPU is capped (`SEMANTIC_ROUTER_CPUS`, default 3) so the sidecar cannot starve the production services that share the host.
+CPU is capped (`SEMANTIC_ROUTER_CPUS`, default 6, with `SEMANTIC_ROUTER_ORT_THREADS`=2 per model; 3 threads per model under a 3-CPU cap was throttled and missed the p95 gate) so the sidecar cannot starve the production services that share the host.
