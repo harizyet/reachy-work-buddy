@@ -67,6 +67,7 @@ def _run(setup) -> tuple[list[str], TestClient]:
         telegram_default_user_id="default-user",
         run_coding_agent_notify_task=True,
         coding_agent_notify_interval=0.05,
+        alarm_poll_interval=0.05,
     )
     core = TestClient(core_app)
     with core, TestClient(hub_app):

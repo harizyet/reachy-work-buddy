@@ -402,6 +402,7 @@ def create_app(
     coding_agent_service_token: str | None = None,
     run_coding_agent_notify_task: bool = True,
     coding_agent_notify_interval: float = 60.0,
+    alarm_poll_interval: float = 5.0,
     person_detector: PersonDetector | None = None,
     alarm_play_seconds: float = 60.0,
     tunein_transport: httpx.AsyncBaseTransport | None = None,
@@ -651,8 +652,8 @@ def create_app(
             yield alarm_audio.chime_wav(min(seconds, 10.0))
             return
         async with httpx.AsyncClient(timeout=15.0, transport=tunein_transport) as http:
-            url, bitrate = await alarm_audio.resolve_stream(http, guide_id)
-            async for wav_bytes in alarm_audio.stream_chunks(http, url, bitrate, total_seconds=seconds):
+            url = await alarm_audio.resolve_stream(http, guide_id)
+            async for wav_bytes in alarm_audio.stream_chunks(http, url, total_seconds=seconds):
                 yield wav_bytes
 
     async def alarm_record(alarm_id: str, delivery: str) -> None:
@@ -792,7 +793,7 @@ def create_app(
             else None
         )
         alarm_task = (
-            asyncio.create_task(alarm_loop(coding_agent_notify_interval)) if run_coding_agent_notify_task else None
+            asyncio.create_task(alarm_loop(alarm_poll_interval)) if run_coding_agent_notify_task else None
         )
         if telegram_client is not None and run_telegram_poll_task:
             # Phase 24b: registers the flat command aliases (Telegram's

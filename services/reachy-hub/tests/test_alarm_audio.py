@@ -85,7 +85,7 @@ def test_search_keeps_only_numeric_station_ids_and_tune_picks_the_most_reliable_
     async def go():
         async with client_for(handler) as client:
             assert await aa.search_stations(client, "jazz") == [{"guide_id": "s123", "name": "Jazz FM", "detail": "London"}]
-            assert await aa.resolve_stream(client, "s123") == ("http://a/best", 96)
+            assert await aa.resolve_stream(client, "s123") == "http://a/best"
 
     run(go())
 
@@ -104,7 +104,6 @@ def test_tune_without_a_direct_stream_or_with_an_error_raises():
 
 def test_stream_is_cut_into_first_then_later_chunks_and_decoded_to_wav():
     data = make_mp3(8.0)
-    kbps = 128
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, content=data)
@@ -114,7 +113,7 @@ def test_stream_is_cut_into_first_then_later_chunks_and_decoded_to_wav():
             return [
                 w
                 async for w in aa.stream_chunks(
-                    client, "http://radio.example/s", kbps, total_seconds=7, first_seconds=2, chunk_seconds=3, resolver=public
+                    client, "http://radio.example/s", total_seconds=7, first_seconds=2, chunk_seconds=3, resolver=public
                 )
             ]
 
@@ -122,6 +121,21 @@ def test_stream_is_cut_into_first_then_later_chunks_and_decoded_to_wav():
     assert len(chunks) == 3
     durations = [aa.wav_seconds(c) for c in chunks]
     assert durations[0] == pytest.approx(2.0, abs=0.2) and durations[1] == pytest.approx(3.0, abs=0.2)
+
+
+def test_stream_joined_mid_frame_in_odd_pieces_still_decodes_every_chunk():
+    data = make_mp3(8.0)[1001:]
+
+    async def go():
+        client = httpx.AsyncClient(transport=httpx.MockTransport(
+            lambda r: httpx.Response(200, content=data)))
+        async with client:
+            return [w async for w in aa.stream_chunks(
+                client, "http://radio.example/s", total_seconds=6, first_seconds=2, chunk_seconds=2, resolver=public)]
+
+    chunks = run(go())
+    assert len(chunks) == 3
+    assert all(aa.wav_seconds(c) == pytest.approx(2.0, abs=0.05) for c in chunks)
 
 
 def test_redirect_to_a_private_host_is_refused_and_redirect_loops_end():
@@ -135,7 +149,7 @@ def test_redirect_to_a_private_host_is_refused_and_redirect_loops_end():
 
     async def go(h, url):
         async with client_for(h) as client:
-            return [w async for w in aa.stream_chunks(client, url, 128, total_seconds=5, resolver=resolver)]
+            return [w async for w in aa.stream_chunks(client, url, total_seconds=5, resolver=resolver)]
 
     with pytest.raises(aa.StreamError, match="public"):
         run(go(handler, "http://radio.example/s"))
@@ -146,12 +160,10 @@ def test_redirect_to_a_private_host_is_refused_and_redirect_loops_end():
 def test_short_stream_with_no_complete_chunk_fails_and_garbage_does_not_decode():
     async def go():
         async with client_for(lambda r: httpx.Response(200, content=b"x" * 100)) as client:
-            return [w async for w in aa.stream_chunks(client, "http://radio.example/s", 128, total_seconds=5, resolver=public)]
+            return [w async for w in aa.stream_chunks(client, "http://radio.example/s", total_seconds=5, resolver=public)]
 
     with pytest.raises(aa.StreamError):
         run(go())
-    with pytest.raises(aa.StreamError):
-        aa.decode_to_wav(b"not audio at all" * 50)
 
 
 def test_chime_is_valid_wav_and_chunk_playback_waits_for_each_chunk_and_honours_stop():
@@ -188,3 +200,10 @@ def test_chime_is_valid_wav_and_chunk_playback_waits_for_each_chunk_and_honours_
         assert await aa.play_chunks(play_and_stop, chunks(5), stop) == 1 and calls == [1]
 
     run(go())
+
+
+def test_codec_is_sniffed_from_frame_headers_not_the_listed_media_type():
+    assert aa.sniff_codec(b"\x00\x12\xff\xf1\x50\x80") == "aac"
+    assert aa.sniff_codec(b"junk\xff\xfb\x90\x00") == "mp3"
+    assert aa.sniff_codec(b"ID3\x04") == "mp3"
+    assert aa.sniff_codec(b"no header here") is None

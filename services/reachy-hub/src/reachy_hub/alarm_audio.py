@@ -8,8 +8,8 @@ again by the HTTP client, so a hostile DNS server could rebind in between.
 Only direct MP3/AAC streams are handled; HLS stations are skipped.
 
 The robot plays WAV bytes only, so the stream is read continuously, cut into
-a short first chunk then longer ones, decoded in memory with PyAV and played
-one chunk after another.
+a short first chunk then longer ones, decoded incrementally in memory with
+PyAV and played one chunk after another.
 """
 
 from __future__ import annotations
@@ -34,7 +34,6 @@ log = logging.getLogger(__name__)
 TUNEIN_BASE = "https://opml.radiotime.com"
 SAMPLE_RATE = 16000
 MAX_REDIRECTS = 3
-DEFAULT_BITRATE_KBPS = 128
 DIRECT_MEDIA_TYPES = {"mp3", "aac"}
 SEARCH_LIMIT = 20
 
@@ -83,8 +82,8 @@ async def search_stations(client: httpx.AsyncClient, query: str) -> list[dict[st
     return found[:SEARCH_LIMIT]
 
 
-async def resolve_stream(client: httpx.AsyncClient, guide_id: str) -> tuple[str, int]:
-    """Returns (stream URL, bitrate kbps) of the best direct stream."""
+async def resolve_stream(client: httpx.AsyncClient, guide_id: str) -> str:
+    """Returns the stream URL of the best direct stream."""
     try:
         resp = await client.get(f"{TUNEIN_BASE}/Tune.ashx", params={"id": guide_id, "render": "json"})
         resp.raise_for_status()
@@ -102,33 +101,71 @@ async def resolve_stream(client: httpx.AsyncClient, guide_id: str) -> tuple[str,
     if not candidates:
         raise StreamError("station has no direct MP3/AAC stream")
     best = max(candidates, key=lambda i: int(i.get("reliability") or 0))
-    return str(best["url"]), int(best.get("bitrate") or DEFAULT_BITRATE_KBPS)
+    return str(best["url"])
 
 
-def decode_to_wav(data: bytes) -> bytes:
-    """Decodes a raw MP3/AAC slice to 16 kHz mono 16-bit WAV. A slice cut
-    mid-frame resyncs at the next frame, so the cut costs at most a click."""
-    import av
+def sniff_codec(data: bytes) -> str | None:
+    """"aac" for ADTS, "mp3" for MPEG audio, None until a frame header shows.
+    TuneIn's listed media type is wrong for some stations, so it is not used."""
+    if data.startswith(b"ID3"):
+        return "mp3"
+    for i in range(len(data) - 1):
+        if data[i] != 0xFF:
+            continue
+        second = data[i + 1]
+        if second & 0xF6 == 0xF0:
+            return "aac"
+        if second & 0xE0 == 0xE0 and second & 0x06 == 0x02:
+            return "mp3"
+    return None
 
-    samples: list[np.ndarray] = []
-    try:
-        with av.open(io.BytesIO(data), mode="r") as container:
-            resampler = av.AudioResampler(format="s16", layout="mono", rate=SAMPLE_RATE)
-            for frame in container.decode(audio=0):
-                for out in resampler.resample(frame):
-                    samples.append(out.to_ndarray().reshape(-1))
-    except (av.error.FFmpegError, ValueError, OSError) as exc:
-        if not samples:
-            raise StreamError(f"could not decode stream audio: {exc}") from exc
-    if not samples:
-        raise StreamError("stream audio decoded to nothing")
-    pcm = np.concatenate(samples).astype("<i2")
+
+class _StreamDecoder:
+    """Incremental MP3/AAC decoder. Decoder and parser state live across the
+    whole stream, so a read that starts mid-frame resyncs and later reads
+    decode normally; decoding each slice as a standalone file does not."""
+
+    def __init__(self) -> None:
+        import av
+
+        self._av = av
+        self._ctx = None
+        self._head = b""
+        self._resampler = av.AudioResampler(format="s16", layout="mono", rate=SAMPLE_RATE)
+
+    def feed(self, data: bytes) -> list[np.ndarray]:
+        av = self._av
+        out: list[np.ndarray] = []
+        if self._ctx is None:
+            self._head += data
+            codec = sniff_codec(self._head)
+            if codec is None:
+                self._head = self._head[-4096:]
+                return out
+            self._ctx = av.CodecContext.create(codec, "r")
+            data, self._head = self._head, b""
+        try:
+            packets = self._ctx.parse(data)
+        except (av.error.FFmpegError, ValueError):
+            return out
+        for packet in packets:
+            try:
+                frames = self._ctx.decode(packet)
+            except (av.error.FFmpegError, ValueError):
+                continue
+            for frame in frames:
+                for resampled in self._resampler.resample(frame):
+                    out.append(resampled.to_ndarray().reshape(-1))
+        return out
+
+
+def pcm_to_wav(pcm: np.ndarray) -> bytes:
     out = io.BytesIO()
     with wave.open(out, "wb") as wav:
         wav.setnchannels(1)
         wav.setsampwidth(2)
         wav.setframerate(SAMPLE_RATE)
-        wav.writeframes(pcm.tobytes())
+        wav.writeframes(pcm.astype("<i2").tobytes())
     return out.getvalue()
 
 
@@ -159,36 +196,42 @@ async def _open_guarded(
 async def stream_chunks(
     client: httpx.AsyncClient,
     url: str,
-    bitrate_kbps: int,
     *,
     total_seconds: float,
     first_seconds: float = 5.0,
     chunk_seconds: float = 15.0,
     resolver: Resolver = _resolve_host,
 ) -> AsyncIterator[bytes]:
-    """Yields WAV chunks covering roughly `total_seconds` of the stream."""
-    bytes_per_second = max(1, bitrate_kbps) * 1000 // 8
+    """Yields WAV chunks covering `total_seconds` of decoded audio, sized by
+    decoded duration (a station's listed bitrate is unreliable)."""
     wanted = [first_seconds]
     remaining = total_seconds - first_seconds
     while remaining > 0:
         wanted.append(min(chunk_seconds, remaining))
         remaining -= chunk_seconds
-    buffer = bytearray()
+    decoder = _StreamDecoder()
+    pending: list[np.ndarray] = []
+    have = 0
     index = 0
     try:
         async for piece in _open_guarded(client, url, resolver):
-            buffer.extend(piece)
-            while index < len(wanted) and len(buffer) >= wanted[index] * bytes_per_second:
-                size = int(wanted[index] * bytes_per_second)
-                raw, buffer = bytes(buffer[:size]), buffer[size:]
-                yield await asyncio.to_thread(decode_to_wav, raw)
+            for samples in await asyncio.to_thread(decoder.feed, piece):
+                pending.append(samples)
+                have += len(samples)
+            while index < len(wanted) and have >= wanted[index] * SAMPLE_RATE:
+                pcm = np.concatenate(pending)
+                size = int(wanted[index] * SAMPLE_RATE)
+                pending, have = ([pcm[size:]], len(pcm) - size)
+                yield pcm_to_wav(pcm[:size])
                 index += 1
             if index >= len(wanted):
                 return
     except httpx.HTTPError as exc:
         raise StreamError(f"stream read failed: {exc}") from exc
-    if index == 0:
-        raise StreamError("stream ended before any audio arrived")
+    if have >= SAMPLE_RATE // 2 or (index == 0 and have):
+        yield pcm_to_wav(np.concatenate(pending))
+    elif index == 0:
+        raise StreamError("stream ended before any audio decoded")
 
 
 def chime_wav(seconds: float = 6.0) -> bytes:
