@@ -62,3 +62,11 @@ PLANNER_NOTE = "/planner/notes/{item_id}"
 PLANNER_REMINDERS = "/planner/reminders"
 PLANNER_REMINDER = "/planner/reminders/{item_id}"
 PLANNER_REMINDER_COMPLETE = "/planner/reminders/{item_id}/complete"
+
+# Phase 38.6 (ADR 0027): alarm list/add/cancel/stop and TuneIn station choice.
+PLANNER_ALARMS = "/planner/alarms"
+PLANNER_ALARM = "/planner/alarms/{item_id}"
+PLANNER_ALARMS_STOP = "/planner/alarms/stop"
+PLANNER_STATIONS = "/planner/stations"
+PLANNER_STATION = "/planner/stations/{item_id}"
+PLANNER_STATIONS_SEARCH = "/planner/stations/search"

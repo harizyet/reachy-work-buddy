@@ -14,6 +14,8 @@ BEHAVIOUR = "/behaviour/{name}"
 GAZE = "/gaze"
 POSE = "/pose"
 AUDIO_PLAY = "/audio/play"
+# Phase 38.3: silences whatever AUDIO_PLAY started (alarm stop).
+AUDIO_STOP = "/audio/stop"
 # Phase 16 (remote telepresence, ADR 0013): the other two ADR 0003
 # endpoints this contract always reserved but never implemented, plus a
 # new REMOTE marker (not in the original ADR 0003 list) for
@@ -30,3 +32,11 @@ DAEMON_STANDBY = "/daemon/standby"
 DAEMON_RESUME = "/daemon/resume"
 
 MOTION_SETTINGS = "/settings/motion"
+
+# Phase 38.2 (ADR 0027): bounded room-occupancy sweep. GET reports whether it
+# is enabled and how many fixed stops exist; POST /sweep/{index} moves to one
+# stop and returns a JPEG of what the camera sees there; POST /sweep/home
+# returns the head. The hub never sends an angle.
+SWEEP = "/sweep"
+SWEEP_STOP = "/sweep/{index}"
+SWEEP_HOME = "/sweep/home"

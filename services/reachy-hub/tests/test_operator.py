@@ -478,3 +478,39 @@ def test_planner_proxy_requires_auth_and_round_trips_through_core():
     ).json()
     assert client.get("/planner/reminders").json()[0]["id"] == reminder["id"]
     assert client.post(f"/planner/reminders/{reminder['id']}/complete", headers=CSRF).json()["status"] == "done"
+
+
+def test_alarm_and_station_proxy_requires_auth_and_round_trips_through_core():
+    def tunein(request: httpx.Request) -> httpx.Response:
+        assert request.url.path.endswith("Search.ashx")
+        return httpx.Response(
+            200, json={"body": [{"guide_id": "s24896", "text": "Test FM", "subtext": "jazz"}, {"guide_id": "p1", "text": "x"}]}
+        )
+
+    client = make_client(tunein_transport=httpx.MockTransport(tunein))
+    assert client.get("/planner/alarms").status_code == 401
+    assert client.post("/planner/alarms", json={"label": "x", "due_at": "2030-01-01T00:00:00Z"}, headers=CSRF).status_code == 401
+    assert client.post("/planner/alarms/stop", headers=CSRF).status_code == 401
+    assert client.get("/planner/stations/search", params={"q": "jazz"}).status_code == 401
+    login(client)
+
+    found = client.get("/planner/stations/search", params={"q": "jazz"}).json()
+    assert found == [{"guide_id": "s24896", "name": "Test FM", "detail": "jazz"}]
+    assert client.get("/planner/stations/search", params={"q": "j"}).status_code == 422
+
+    assert client.post("/planner/stations", json={"name": "Test FM", "guide_id": "http://evil"}, headers=CSRF).status_code == 422
+    station = client.post("/planner/stations", json={"name": "Test FM", "guide_id": "s24896"}, headers=CSRF).json()
+    assert client.get("/planner/stations").json()[0]["id"] == station["id"]
+
+    alarm = client.post(
+        "/planner/alarms",
+        json={"label": "wake", "due_at": "2030-01-01T07:00:00Z", "station_id": station["id"]},
+        headers=CSRF,
+    ).json()
+    assert alarm["station_id"] == station["id"] and alarm["status"] == "scheduled"
+    assert client.post("/planner/alarms", json={"label": "x", "due_at": "2030-01-01T07:00:00"}, headers=CSRF).status_code == 422
+    assert client.get("/planner/alarms").json()[0]["id"] == alarm["id"]
+    assert client.post("/planner/alarms/stop", headers=CSRF).json() == {"stopped": False}
+    assert client.delete(f"/planner/alarms/{alarm['id']}", headers=CSRF).json()["status"] == "cancelled"
+    assert client.delete("/planner/alarms/missing", headers=CSRF).status_code == 404
+    assert client.delete(f"/planner/stations/{station['id']}", headers=CSRF).json() == {"deleted": True}

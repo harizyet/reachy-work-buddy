@@ -137,6 +137,9 @@ class RecordingSimBackend(SimulatedRobotBackend):
     def stop_motion(self) -> None:
         self.calls.append("stop")
 
+    def stop_audio(self) -> None:
+        self.calls.append("stop_audio")
+
     def daemon_standby(self) -> dict[str, object]:
         self.calls.append("standby")
         return super().daemon_standby()
@@ -193,3 +196,28 @@ def test_motion_settings_reject_active_conversation_and_invalid_values():
         assert client.put(MOTION_SETTINGS, json=invalid).status_code == 422
     assert client.get(MOTION_SETTINGS).json() == initial
     assert client.put(MOTION_SETTINGS, json=settings).json() == {**settings, "conversation_active": False}
+
+
+def test_sweep_routes_are_disabled_by_default_and_return_a_frame_per_stop() -> None:
+    assert make_client().get("/sweep").json() == {"enabled": False, "stops": 5}
+    off = make_client()
+    assert off.post("/sweep/0").status_code == 409 and off.post("/sweep/home").status_code == 409
+
+    backend = RecordingSimBackend()
+    motion = MotionController(backend, ServiceState(), presence_sweep=True, threaded=False, sleep=lambda _s: None)
+    client = TestClient(create_app(backend, run_presence_loop=False, motion=motion))
+    assert client.get("/sweep").json() == {"enabled": True, "stops": 5}
+    frame = client.post("/sweep/2")
+    assert frame.status_code == 200 and frame.headers["content-type"] == "image/jpeg"
+    assert client.post("/sweep/9").status_code == 409
+    assert client.post("/sweep/home").json() == {"home": True}
+    assert client.post("/sweep/x").status_code == 422
+    motion.begin_conversation()
+    assert client.post("/sweep/1").status_code == 409
+
+
+def test_audio_stop_silences_the_backend() -> None:
+    backend = RecordingSimBackend()
+    client = TestClient(create_app(backend, run_presence_loop=False))
+    assert client.post("/audio/stop").json() == {"stopped": True}
+    assert backend.calls == ["stop_audio"]

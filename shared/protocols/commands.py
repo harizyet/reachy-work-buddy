@@ -13,6 +13,8 @@ QUERY_COMMANDS = (
     ("inbox", "inbox", "List received emails", None),
     ("recall", "recall", "Recall saved memories: /recall topic", "topic"),
     ("docs", "docs", "Search stored documents: /docs topic", "topic"),
+    ("alarm", "alarm", "Set an alarm: /alarm 7am or /alarm thursday 2pm", "when"),
+    ("alarms", "alarms", "List your alarms", None),
     ("time", "time", "Show the time in your configured timezone", None),
     ("date", "date", "Show the date in your configured timezone", None),
 )

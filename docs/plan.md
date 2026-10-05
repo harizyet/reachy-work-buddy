@@ -280,6 +280,7 @@ new scope does not.
 | 35 | Coding-agent and developer-workflow extensions | Extends [29](phase-29.md) | Optional, started only for a concrete workflow: `CodexProvider` behind the existing provider contract, a bounded Claude Remote Control feasibility spike (full login, no stable machine API), terminal-session idle notification and activity detection, stalled-session heuristics, live permission-denial observation, multi-session UI, history/archive/delete, Git diff summaries, optional PR workflow. Excluded unless separately approved: automatic merges, production deploys, billing changes, permission escalation, attaching to running terminal transcripts, Kubernetes | Not required for core readiness |
 | 36 | Production readiness and operationalization | New | Clean-host and clean-Nano provisioning, reproducible Compose deploy, migrate-from-zero, backup/restore, secrets provisioning and rollback; barrel-jack power, reconnect, watchdog, prolonged operation, network and homelab loss; service restart matrix, database restart, disk pressure, resource limits, health monitoring; create/read/export/expire/delete/restore for every persistent data category; operator runbook, architecture and security baselines, SBOM/AIBOM, known limitations, accepted risks and release checklist | The system can be rebuilt, operated, recovered and securely maintained without undocumented development-session knowledge |
 | 37 | Semantic routing and argument validation | New (2026-10-05); independent of 31/32 | Shadow-first replacement of the open-ended phrase-matcher fall-through: a CPU router proposes the operation class, a local extractor proposes arguments, deterministic code validates them, and the ADR 0011 consent gate authorizes. Stages 37.0 build and verify (done), 37.1 shadow trial (enabled), 37.2 blind evaluation then destruction of recorded data, then read routes, clarifications, writes behind confirmation, live-extraction impact, rule retirement, each a separate owner decision. See [phase-37](phase-37.md) and [ADR 0026](adr/0026-semantic-routing-and-argument-validation.md) | Blind-graded real-traffic evidence with near-zero unsafe would-execute, then each promoted stage runs a canary with a kill switch and unchanged consent behaviour |
+| 38 | Alarm clock and presence-gated delivery | New (2026-10-05); independent of 31/32 | Core alarm domain linked to reminders; TuneIn stations chosen in the web UI and played by the robot; alarms set from Telegram or conversation (including a reminder-to-alarm offer) and listed in the web UI; delivery obeys privacy mode, DND/meeting and a camera-based room-occupancy check, with Telegram fallback when audio is not played. See [phase-38](phase-38.md) and [ADR 0027](adr/0027-alarms-and-presence-gated-delivery.md) | An alarm set from Telegram plays the chosen stream when someone is present, and falls back to Telegram in privacy mode, with nobody detected, or during DND/meeting, verified live with the owner |
 
 Dependencies:
 
@@ -289,13 +290,14 @@ Dependencies:
      └─► 32 ──┘
 35 is independent and optional
 37 is independent (shadow-first); 33 reviews it before any stage past shadow
+38 is independent (alarms; uses the existing wake/privacy arm and reminders)
 ```
 
 Phases 31 and 32 can run largely in parallel after 30. Phase 33 follows both so
 it reviews real meeting, biometric and coding-agent implementations rather
 than plans; generic hardening may still start earlier. Per-phase detail docs
-are written when a phase starts ([phase-30.md](phase-30.md) and
-[phase-37.md](phase-37.md) exist; later phases are still owned by this table).
+are written when a phase starts ([phase-30.md](phase-30.md),
+[phase-37.md](phase-37.md) and [phase-38.md](phase-38.md) exist; later phases are still owned by this table).
 
 No longer active scope: Phase 29 core expansion, API-key Claude behaviour,
 Claude hooks for input detection, arbitrary terminal-session adoption,

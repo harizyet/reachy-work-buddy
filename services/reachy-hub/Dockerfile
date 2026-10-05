@@ -45,6 +45,12 @@ ADD --checksum=sha256:97952348cf6a6a4915c2ea1496b4b37ebabc50cbbf80571435643c455f
     https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task \
     /opt/models/gesture_recognizer.task
 
+# Phase 38.2: MediaPipe face detector for the alarm room-occupancy check,
+# pinned the same way.
+ADD --checksum=sha256:b4578f35940bf5a1a655214a1cce5cab13eba73c1297cd78e1a04c2380b0152f \
+    https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite \
+    /opt/models/blaze_face_short_range.tflite
+
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
 COPY shared/ shared/

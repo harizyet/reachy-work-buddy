@@ -11,6 +11,8 @@ import re
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+from companion_core.alarm_intent import _DAYS, parse_when
+
 _FILLER = r"(?:\s+(?:later|today|tonight))*"
 _AT = re.compile(
     rf"{_FILLER}\s+(?P<day>tomorrow\s+)?at\s+(?P<h>\d{{1,2}})(?::(?P<m>\d{{2}}))?\s*(?P<ap>am|pm)?\s*[.!]?$",
@@ -20,9 +22,36 @@ _IN = re.compile(r"\s+in\s+(?P<n>\d{1,3})\s+(?P<unit>minutes?|mins?|hours?|hrs?|
 _TOMORROW = re.compile(r"\s+tomorrow\s*[.!]?$", re.IGNORECASE)
 
 
+_WEEKDAY_TAIL = re.compile(
+    r"(?:\s+on)?\s+(?:next\s+)?(?P<day>" + "|".join(_DAYS) + r")(?P<time>\s+at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?)?\s*[.!]?$",
+    re.IGNORECASE,
+)
+
+
 def split_reminder_time(text: str, now: datetime, timezone: str) -> tuple[str, datetime | None]:
     """Return (text without the time phrase, due time or None)."""
+    stripped, due, _ = split_reminder_when(text, now, timezone)
+    return stripped, due
+
+
+def split_reminder_when(text: str, now: datetime, timezone: str) -> tuple[str, datetime | None, bool]:
+    """Like split_reminder_time, plus whether the phrase gave a clock time (a
+    bare day such as "on thursday" or "tomorrow" is due at 09:00)."""
     text = text.strip()
+    match = _WEEKDAY_TAIL.search(text)
+    if match:
+        when = parse_when(match["day"] + (match["time"] or ""), now, timezone)
+        if match["time"] and when.due_at is None:
+            return text, None, False
+        due = when.due_at or when.day.replace(hour=9)
+        return text[: match.start()].strip(), due, when.due_at is not None
+    stripped, due = _split_simple(text, now, timezone)
+    if due is None:
+        return text, None, False
+    return stripped, due, not _TOMORROW.search(text)
+
+
+def _split_simple(text: str, now: datetime, timezone: str) -> tuple[str, datetime | None]:
     local_now = now.astimezone(ZoneInfo(timezone))
 
     match = _IN.search(text)

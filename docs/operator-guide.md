@@ -71,6 +71,16 @@ bare `at 4`, stays a to-do only. This is deterministic phrase matching
 All text is shown literally. Requests go through owner-authenticated
 `/planner/*` hub routes to companion-core's `/tasks`, `/notes` and `/reminders`.
 
+## Alarms
+
+The **Alarms** tab lists every alarm with its status and how it was delivered.
+Add one with a label and a date and time in your browser's time zone, optionally
+choosing a saved radio station. Search TuneIn by name, save a station (only its
+guide id is stored) and remove it again. **Cancel** drops a scheduled alarm;
+**Stop** silences an alarm that is playing now. Playback follows privacy mode and
+room presence (ADR 0027); otherwise the alarm goes to Telegram. Requests use
+owner-authenticated `/planner/alarms*` and `/planner/stations*` hub routes.
+
 ## Meeting recordings
 
 Open **Meetings** to record or upload audio with **Add meeting**. The left
@@ -148,6 +158,8 @@ work in web chat; `/reachy <action>` is the canonical form (for example,
 | `/find_tasks <words>` | Tasks matching the supplied words |
 | `/inbox` | Received email list |
 | `/recall <topic>` | Saved memories matching the topic |
+| `/alarm <when>` | Set an alarm, e.g. `/alarm 7am` or `/alarm thursday 2pm` |
+| `/alarms` | List scheduled alarms |
 | `/docs <topic>` | Matching stored document content with its source |
 | `/time`, `/date` | Time or date in the configured owner timezone |
 | `/help` | All commands and argument hints |

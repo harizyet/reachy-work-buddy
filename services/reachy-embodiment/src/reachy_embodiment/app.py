@@ -31,7 +31,7 @@ from pydantic import BaseModel
 
 from reachy_embodiment.behaviours import DESCRIPTIONS, STATE_FOR_BEHAVIOUR
 from reachy_embodiment.gesture import HubPalmStop
-from reachy_embodiment.motion import MotionController
+from reachy_embodiment.motion import SWEEP_BODY_YAWS, MotionController
 from reachy_embodiment.presence import PresenceLoop
 from reachy_embodiment.robot import (
     ReachyDaemonBackend,
@@ -108,6 +108,7 @@ def _default_motion_controller(backend: RobotBackend, state: ServiceState) -> Mo
         conversation_motion=_env_flag("CONVERSATION_MOTION_ENABLED"),
         speech_wobble=_env_flag("SPEECH_WOBBLE_ENABLED"),
         wake_animation=_env_flag("WAKE_ANIMATION_ENABLED", default=True),
+        presence_sweep=_env_flag("PRESENCE_SWEEP_ENABLED"),
     )
 
 
@@ -322,6 +323,23 @@ def create_app(
         presence_loop.heartbeat()
         return Response(content=backend.capture_frame(), media_type="image/jpeg")
 
+    @app.get(routes.SWEEP)
+    def sweep_status() -> dict[str, object]:
+        return {"enabled": motion.presence_sweep_enabled, "stops": len(SWEEP_BODY_YAWS)}
+
+    @app.post(routes.SWEEP_HOME)
+    def sweep_home() -> dict[str, bool]:
+        if not motion.sweep_home():
+            raise HTTPException(status_code=409, detail="presence sweep is disabled")
+        return {"home": True}
+
+    @app.post(routes.SWEEP_STOP)
+    def sweep_stop(index: int) -> Response:
+        if not motion.sweep_to(index):
+            raise HTTPException(status_code=409, detail="presence sweep unavailable")
+        presence_loop.heartbeat()
+        return Response(content=backend.capture_frame(), media_type="image/jpeg")
+
     @app.post(routes.REMOTE)
     def set_remote(body: RemoteBody) -> ServiceState:
         presence_loop.heartbeat()
@@ -346,6 +364,12 @@ def create_app(
         # other state transition in this module.
         state.embodiment_state = EmbodimentState.REMOTE if state.remote_active else EmbodimentState.IDLE
         return state
+
+    @app.post(routes.AUDIO_STOP)
+    def audio_stop() -> dict[str, bool]:
+        presence_loop.heartbeat()
+        backend.stop_audio()
+        return {"stopped": True}
 
     @app.post(routes.DAEMON_STANDBY)
     def daemon_standby() -> dict[str, object]:

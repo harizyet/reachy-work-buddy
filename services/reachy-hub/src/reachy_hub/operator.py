@@ -11,6 +11,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from reachy_hub import alarm_audio
 from shared.models.llm import LLMConfigPatch
 from shared.models.persona import PersonaPatch
 from shared.models.websearch import SearchConfigPatch
@@ -24,11 +25,17 @@ from shared.protocols.operator_api import (
     MEETING_CANCEL,
     MEETINGS,
     PERSONA_SETTINGS,
+    PLANNER_ALARM,
+    PLANNER_ALARMS,
+    PLANNER_ALARMS_STOP,
     PLANNER_NOTE,
     PLANNER_NOTES,
     PLANNER_REMINDER,
     PLANNER_REMINDER_COMPLETE,
     PLANNER_REMINDERS,
+    PLANNER_STATION,
+    PLANNER_STATIONS,
+    PLANNER_STATIONS_SEARCH,
     PLANNER_TASK,
     PLANNER_TASK_COMPLETE,
     PLANNER_TASK_REOPEN,
@@ -56,6 +63,17 @@ class PlannerNoteBody(BaseModel):
 class PlannerReminderBody(BaseModel):
     text: str = Field(min_length=1, max_length=500)
     due_at: datetime
+
+
+class PlannerAlarmBody(BaseModel):
+    label: str = Field(min_length=1, max_length=200)
+    due_at: datetime
+    station_id: str | None = Field(default=None, max_length=100)
+
+
+class PlannerStationBody(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    guide_id: str = Field(pattern=r"^s[0-9]{1,12}$")
 
 
 def require_csrf(request: Request) -> None:
@@ -279,6 +297,42 @@ def install_operator_routes(
     @app.delete(PLANNER_REMINDER, dependencies=dependencies)
     async def planner_delete_reminder(item_id: str) -> dict:
         return await planner("DELETE", f"/reminders/{quote(item_id, safe='')}")
+
+    @app.get(PLANNER_ALARMS, dependencies=dependencies)
+    async def planner_list_alarms() -> list[dict]:
+        return await planner("GET", "/alarms")
+
+    @app.post(PLANNER_ALARMS, dependencies=dependencies)
+    async def planner_add_alarm(body: PlannerAlarmBody) -> dict:
+        return await planner("POST", "/alarms", json=body.model_dump(mode="json"))
+
+    @app.post(PLANNER_ALARMS_STOP, dependencies=dependencies)
+    async def planner_stop_alarm() -> dict:
+        return {"stopped": await app.state.alarm_deliverer.stop()}
+
+    @app.delete(PLANNER_ALARM, dependencies=dependencies)
+    async def planner_cancel_alarm(item_id: str) -> dict:
+        return await planner("DELETE", f"/alarms/{quote(item_id, safe='')}")
+
+    @app.get(PLANNER_STATIONS, dependencies=dependencies)
+    async def planner_list_stations() -> list[dict]:
+        return await planner("GET", "/stations")
+
+    @app.post(PLANNER_STATIONS, dependencies=dependencies)
+    async def planner_add_station(body: PlannerStationBody) -> dict:
+        return await planner("POST", "/stations", json=body.model_dump())
+
+    @app.get(PLANNER_STATIONS_SEARCH, dependencies=dependencies)
+    async def planner_search_stations(q: str = Query(min_length=2, max_length=100)) -> list[dict]:
+        async with httpx.AsyncClient(timeout=10.0, transport=app.state.tunein_transport) as http:
+            try:
+                return await alarm_audio.search_stations(http, q)
+            except alarm_audio.StreamError:
+                raise HTTPException(502, "Station search unavailable") from None
+
+    @app.delete(PLANNER_STATION, dependencies=dependencies)
+    async def planner_delete_station(item_id: str) -> dict:
+        return await planner("DELETE", f"/stations/{quote(item_id, safe='')}")
 
     @app.get(STATUS, dependencies=dependencies)
     async def status() -> dict:

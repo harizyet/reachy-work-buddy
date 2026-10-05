@@ -718,7 +718,7 @@ explicitly disposable project. Leave unrelated services such as OVMS alone.
 ## Schema upgrades and credential keys
 
 Core and hub require the revision declared in
-[`shared/database.py`](../shared/database.py) (`014_planner` at this snapshot).
+[`shared/database.py`](../shared/database.py) (`015_alarms` at this snapshot).
 The ordered Alembic history ships
 in core's image; SQL stores perform compatibility checks, not startup DDL.
 Compose runs `migrate` before hub/core, including through
@@ -730,6 +730,8 @@ Revision `014_planner` adds the `notes` and `reminders` tables for the
 and core is its only client, but it still changes the required revision, so use
 the backup/stop-writers/migrate/rebuild procedure and rebuild `migrate`,
 `companion-core` and `reachy-hub` together.
+
+Revision `015_alarms` (Phase 38, [ADR 0027](adr/0027-alarms-and-presence-gated-delivery.md)) adds the `alarms` table. Same additive, core-only procedure; not yet deployed.
 
 Revision `013_coding_agent` adds the coding-agent session tables and core's
 completion-notification ledger. coding-agent-service is now a database client:

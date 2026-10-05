@@ -6,7 +6,14 @@ from datetime import UTC, datetime
 
 from psycopg_pool import AsyncConnectionPool
 
-from companion_core.planner.models import Note, Reminder, ReminderStatus
+from companion_core.planner.models import (
+    Alarm,
+    AlarmStatus,
+    Note,
+    Reminder,
+    ReminderStatus,
+    Station,
+)
 from shared.database import check_schema
 
 _NOTE_COLUMNS = "id, title, body, created_at, updated_at"
@@ -29,6 +36,28 @@ def _reminder(row: tuple) -> Reminder:
         completed_at=row[5],
         notified_at=row[6],
     )
+
+_ALARM_COLUMNS = "id, label, due_at, reminder_id, station_id, status, created_at, fired_at, delivery"
+
+
+def _alarm(row: tuple) -> Alarm:
+    return Alarm(
+        id=row[0],
+        label=row[1],
+        due_at=row[2],
+        reminder_id=row[3],
+        station_id=row[4],
+        status=AlarmStatus(row[5]),
+        created_at=row[6],
+        fired_at=row[7],
+        delivery=row[8],
+    )
+
+_STATION_COLUMNS = "id, name, guide_id, created_at"
+
+
+def _station(row: tuple) -> Station:
+    return Station(id=row[0], name=row[1], guide_id=row[2], created_at=row[3])
 
 
 def _like(query: str) -> str:
@@ -141,3 +170,80 @@ class PostgresPlannerStore:
             return sorted(
                 (_reminder(row) for row in await cur.fetchall()), key=lambda r: r.due_at
             )
+
+    async def list_alarms(self) -> list[Alarm]:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(f"SELECT {_ALARM_COLUMNS} FROM alarms ORDER BY due_at")
+            return [_alarm(row) for row in await cur.fetchall()]
+
+    async def add_alarm(
+        self, label: str, due_at: datetime, *, reminder_id: str | None = None, station_id: str | None = None
+    ) -> Alarm:
+        alarm = Alarm(label=label, due_at=due_at, reminder_id=reminder_id, station_id=station_id)
+        async with self._pool.connection() as conn:
+            await conn.execute(
+                f"INSERT INTO alarms ({_ALARM_COLUMNS}) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (
+                    alarm.id,
+                    alarm.label,
+                    alarm.due_at,
+                    alarm.reminder_id,
+                    alarm.station_id,
+                    alarm.status.value,
+                    alarm.created_at,
+                    alarm.fired_at,
+                    alarm.delivery,
+                ),
+            )
+        return alarm
+
+    async def cancel_alarm(self, alarm_id: str) -> Alarm | None:
+        async with self._pool.connection() as conn:
+            await conn.execute(
+                "UPDATE alarms SET status = %s WHERE id = %s AND status = %s",
+                (AlarmStatus.CANCELLED.value, alarm_id, AlarmStatus.SCHEDULED.value),
+            )
+            cur = await conn.execute(f"SELECT {_ALARM_COLUMNS} FROM alarms WHERE id = %s", (alarm_id,))
+            row = await cur.fetchone()
+            return _alarm(row) if row else None
+
+    async def claim_due_alarms(self, now: datetime) -> list[Alarm]:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"UPDATE alarms SET status = %s, fired_at = %s WHERE status = %s AND due_at <= %s "
+                f"RETURNING {_ALARM_COLUMNS}",
+                (AlarmStatus.FIRED.value, now, AlarmStatus.SCHEDULED.value, now),
+            )
+            return sorted((_alarm(row) for row in await cur.fetchall()), key=lambda a: a.due_at)
+
+    async def record_alarm_delivery(self, alarm_id: str, delivery: str) -> Alarm | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"UPDATE alarms SET delivery = %s WHERE id = %s RETURNING {_ALARM_COLUMNS}", (delivery, alarm_id)
+            )
+            row = await cur.fetchone()
+            return _alarm(row) if row else None
+
+    async def list_stations(self) -> list[Station]:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(f"SELECT {_STATION_COLUMNS} FROM stations ORDER BY lower(name), created_at")
+            return [_station(row) for row in await cur.fetchall()]
+
+    async def add_station(self, name: str, guide_id: str) -> Station:
+        station = Station(name=name, guide_id=guide_id)
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"INSERT INTO stations ({_STATION_COLUMNS}) VALUES (%s, %s, %s, %s) "
+                f"ON CONFLICT (guide_id) DO NOTHING RETURNING {_STATION_COLUMNS}",
+                (station.id, station.name, station.guide_id, station.created_at),
+            )
+            row = await cur.fetchone()
+            if row is None:
+                cur = await conn.execute(f"SELECT {_STATION_COLUMNS} FROM stations WHERE guide_id = %s", (guide_id,))
+                row = await cur.fetchone()
+            return _station(row)
+
+    async def delete_station(self, station_id: str) -> bool:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute("DELETE FROM stations WHERE id = %s", (station_id,))
+            return cur.rowcount > 0

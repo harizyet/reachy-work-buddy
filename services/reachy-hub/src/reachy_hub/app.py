@@ -150,6 +150,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
+from reachy_hub import alarm_audio
+from reachy_hub.alarm_delivery import AlarmContext, AlarmDeliverer
 from reachy_hub.audit_log import AuditEntry, AuditLog
 from reachy_hub.chat_store import ChatStore, InMemoryChatStore, PostgresChatStore
 from reachy_hub.coding_agent_client import CodingAgentServiceClient
@@ -167,6 +169,7 @@ from reachy_hub.interruption_policy import (
 )
 from reachy_hub.keyring import Keyring
 from reachy_hub.notification_queue import NotificationQueue, QueuedNotification
+from reachy_hub.occupancy import MediaPipeFaceDetector, PersonDetector, check_occupancy
 from reachy_hub.operator import install_operator_routes, require_csrf
 from reachy_hub.owner_recognition import install_owner_recognition_routes
 from reachy_hub.palm_stop import (
@@ -399,6 +402,9 @@ def create_app(
     coding_agent_service_token: str | None = None,
     run_coding_agent_notify_task: bool = True,
     coding_agent_notify_interval: float = 60.0,
+    person_detector: PersonDetector | None = None,
+    alarm_play_seconds: float = 60.0,
+    tunein_transport: httpx.AsyncBaseTransport | None = None,
     run_heartbeat_task: bool = True,
     heartbeat_interval: float = 2.0,
     telegram_client: TelegramClient | None = None,
@@ -581,8 +587,94 @@ def create_app(
         while True:
             await asyncio.sleep(interval)
             with contextlib.suppress(httpx.HTTPError):
-                for item in await companion_core_client.reminders_due():
-                    await push_to_telegram(owner_user_id, f"Reminder: {item['text']}")
+                due = await companion_core_client.reminders_due()
+                if not due:
+                    continue
+                # A reminder with a live alarm is delivered by that alarm
+                # (ADR 0027), so the same moment does not notify twice.
+                alarmed = {
+                    a["reminder_id"]
+                    for a in await companion_core_client.planner_request("GET", "/alarms")
+                    if a["reminder_id"] and a["status"] != "cancelled"
+                }
+                for item in due:
+                    if item["id"] not in alarmed:
+                        await push_to_telegram(owner_user_id, f"Reminder: {item['text']}")
+
+    async def alarm_context() -> AlarmContext:
+        manager = app.state.robot_voice_manager
+        robots = await app.state.registry.list()
+        armed = any(manager.arm_for(robot.robot_id) is not None for robot in robots)
+        session = await app.state.session_store.get_by_user(owner_user_id)
+        occupied = False
+        if session is not None:
+            try:
+                in_progress = await companion_core_client.events_in_progress(datetime.now(UTC))
+            except httpx.HTTPError:
+                in_progress = []
+            occupied = is_occupied(
+                dnd=session.dnd, privacy_context=session.privacy_context, event_in_progress=bool(in_progress)
+            )
+        return AlarmContext(privacy_mode=not armed, robot_available=await robot_available(), occupied=occupied)
+
+    async def alarm_present() -> bool:
+        detector = app.state.person_detector
+        if detector is None:
+            try:
+                detector = app.state.person_detector = MediaPipeFaceDetector()
+            except (ImportError, OSError, ValueError, RuntimeError):
+                log.warning("person detector unavailable; treating the room as empty")
+                return False
+        for robot in await app.state.registry.list():
+            result = await check_occupancy(get_client(robot), detector)
+            if result.present:
+                return True
+        return False
+
+    async def alarm_robot_client() -> EmbodimentClient:
+        for robot in await app.state.registry.list():
+            return get_client(robot)
+        raise httpx.ConnectError("no robot registered")
+
+    async def alarm_play(wav_bytes: bytes) -> None:
+        await (await alarm_robot_client()).play_audio(wav_bytes)
+
+    async def alarm_stop_audio() -> None:
+        await (await alarm_robot_client()).stop_audio()
+
+    async def alarm_chunks(station_id: str | None, seconds: float) -> AsyncIterator[bytes]:
+        guide_id = None
+        if station_id:
+            stations = await companion_core_client.planner_request("GET", "/stations")
+            guide_id = next((s["guide_id"] for s in stations if s["id"] == station_id), None)
+        if guide_id is None:
+            yield alarm_audio.chime_wav(min(seconds, 10.0))
+            return
+        async with httpx.AsyncClient(timeout=15.0, transport=tunein_transport) as http:
+            url, bitrate = await alarm_audio.resolve_stream(http, guide_id)
+            async for wav_bytes in alarm_audio.stream_chunks(http, url, bitrate, total_seconds=seconds):
+                yield wav_bytes
+
+    async def alarm_record(alarm_id: str, delivery: str) -> None:
+        with contextlib.suppress(httpx.HTTPError):
+            await companion_core_client.planner_request(
+                "POST", f"/alarms/{alarm_id}/delivery", json={"delivery": delivery}
+            )
+
+    async def alarm_tick() -> None:
+        with contextlib.suppress(httpx.HTTPError):
+            for alarm in await companion_core_client.planner_request("GET", "/alarms/due"):
+                try:
+                    await app.state.alarm_deliverer.deliver(alarm)
+                except Exception:
+                    # The claim is already spent, so never lose the alarm.
+                    log.exception("alarm delivery failed")
+                    await push_to_telegram(owner_user_id, f"Alarm: {alarm['label']}")
+
+    async def alarm_loop(interval: float) -> None:
+        while True:
+            await asyncio.sleep(interval)
+            await alarm_tick()
 
     async def telegram_poll_loop(client: TelegramClient, chat_registry: TelegramChatRegistry, default_user_id: str) -> None:
         # Real Telegram blocks server-side for `timeout` seconds when idle,
@@ -699,6 +791,9 @@ def create_app(
             if run_coding_agent_notify_task
             else None
         )
+        alarm_task = (
+            asyncio.create_task(alarm_loop(coding_agent_notify_interval)) if run_coding_agent_notify_task else None
+        )
         if telegram_client is not None and run_telegram_poll_task:
             # Phase 24b: registers the flat command aliases (Telegram's
             # BotCommand.command can't hold a space, so the namespaced
@@ -724,7 +819,7 @@ def create_app(
             await robot_voice_manager.stop_all("Hub is shutting down")
             if robot_voice_manager.palm_stop is not None:
                 robot_voice_manager.palm_stop.close()
-            for task in (warm_task, heartbeat_task, coding_agent_notify_task, reminder_notify_task, telegram_task, voice_task):
+            for task in (warm_task, heartbeat_task, coding_agent_notify_task, reminder_notify_task, alarm_task, telegram_task, voice_task):
                 if task is not None:
                     task.cancel()
                     with contextlib.suppress(asyncio.CancelledError):
@@ -827,6 +922,19 @@ def create_app(
     app.state.robot_credential_store = robot_credential_store
     app.state.robot_connection_manager = robot_connection_manager
     app.state.robot_voice_manager = robot_voice_manager
+    app.state.person_detector = person_detector
+    app.state.tunein_transport = tunein_transport
+    app.state.alarm_deliverer = AlarmDeliverer(
+        context=alarm_context,
+        check_present=alarm_present,
+        push_telegram=lambda text: push_to_telegram(owner_user_id, text),
+        record=alarm_record,
+        play=alarm_play,
+        stop_audio=alarm_stop_audio,
+        chunks_for=alarm_chunks,
+        play_seconds=alarm_play_seconds,
+    )
+    app.state.alarm_tick = alarm_tick
     # Phase 25a.2/25b.3 portal skeleton, Phase 26d benchmark-vs-operational
     # policy: benchmark-only raw sample capture, see
     # reachy_hub/owner_recognition.py and reachy_hub/enrollment_store.py.

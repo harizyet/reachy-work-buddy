@@ -168,6 +168,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, ValidationError
 
 from companion_core import (
+    alarm_intent,
     coding_agent_intent,
     command_suggestion,
     commands,
@@ -241,7 +242,7 @@ from companion_core.memory.store import MemoryStore
 from companion_core.persona.context import context_message
 from companion_core.persona.postgres_store import PostgresPersonaStore
 from companion_core.persona.store import PersonaStore
-from companion_core.planner.models import Note, Reminder
+from companion_core.planner.models import Alarm, Note, Reminder, Station
 from companion_core.planner.postgres_store import PostgresPlannerStore
 from companion_core.planner.store import PlannerStore
 from companion_core.privacy_classifier import (
@@ -250,7 +251,7 @@ from companion_core.privacy_classifier import (
 )
 from companion_core.rag.postgres_store import PostgresDocumentStore
 from companion_core.rag.store import DocumentStore
-from companion_core.reminder_time import split_reminder_time
+from companion_core.reminder_time import split_reminder_when
 from companion_core.shadow_router import ShadowPipeline, shadow_from_env
 from companion_core.shadow_router.shadow import ShadowTurn
 from companion_core.task_intent import (
@@ -346,6 +347,22 @@ class NoteRequest(BaseModel):
 class CreateReminderRequest(BaseModel):
     text: str = Field(min_length=1, max_length=500)
     due_at: datetime
+
+
+class CreateAlarmRequest(BaseModel):
+    label: str = Field(min_length=1, max_length=500)
+    due_at: datetime
+    reminder_id: str | None = Field(default=None, max_length=100)
+    station_id: str | None = Field(default=None, max_length=100)
+
+
+class CreateStationRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    guide_id: str = Field(pattern=r"^[A-Za-z][0-9]{1,12}$")
+
+
+class AlarmDeliveryRequest(BaseModel):
+    delivery: str = Field(min_length=1, max_length=200)
 
 
 class ConfirmForgetRequest(BaseModel):
@@ -505,6 +522,7 @@ def create_app(
     accounts_service_token = accounts_service_token or os.environ.get("ACCOUNTS_SERVICE_TOKEN")
     owns_accounts = bool(accounts_service_token) and account_service is None
     conversation_store = ConversationStore()
+    alarm_offers: dict[str, alarm_intent.AlarmOffer] = {}
     # Disabled by default (SHADOW_ROUTER_ENABLED); an injected pipeline is for tests.
     shadow_router = shadow_router or shadow_from_env()
     owns_llm_settings = llm_settings_store is None
@@ -832,6 +850,25 @@ def create_app(
         coding_agent_usage_query |= reachy_command == "coding_usage"
         command_error = query_usage_error(parsed_command) if parsed_command else None
 
+        # Phase 38.5 (ADR 0027): a pending alarm offer only reacts to a plain
+        # yes/no/time reply; anything else ends the offer and is handled normally.
+        now_utc = datetime.now(UTC)
+        offer = alarm_offers.get(turn.session_id)
+        if offer is not None and offer.expires_at <= now_utc:
+            offer = alarm_offers.pop(turn.session_id)
+            offer = None
+        offer_reply: str | None = None
+        if offer is not None:
+            if intent_text and capture_text is None and alarm_intent.match_set(intent_text) is None:
+                offer_reply = alarm_intent.classify_reply(intent_text)
+            if offer_reply in (None, "other"):
+                offer_reply = None
+                alarm_offers.pop(turn.session_id, None)
+        alarm_phrase = parsed_command.argument or "" if reachy_command == "alarm" else alarm_intent.match_set(intent_text)
+        alarm_list_query = reachy_command == "alarms" or (
+            alarm_phrase is None and alarm_intent.is_alarm_query(intent_text)
+        )
+
         # None: later replies inherit this reply's own label (private tool
         # and memory results). Only the generated-reply branch narrows it.
         carried: Privacy | None = None
@@ -912,19 +949,69 @@ def create_app(
             events = await app.state.calendar_store.list_events(start, end)
             reply = format_today_schedule_reply(events)
             privacy = Privacy.WORK_PRIVATE
+        elif offer_reply is not None:
+            production_handler = "alarms.offer"
+            persona = await app.state.persona_store.get()
+            if offer_reply == "no":
+                alarm_offers.pop(turn.session_id, None)
+                reply = "Okay, no alarm."
+            else:
+                when = alarm_intent.parse_when(intent_text, now_utc, persona.timezone, day=offer.day)
+                due = when.due_at or (offer.reminder_due if offer.time_given else None)
+                if due is None:
+                    reply = "What time should the alarm be?"
+                elif due <= now_utc:
+                    reply = "That time has already passed. What time should the alarm be?"
+                else:
+                    await app.state.planner_store.add_alarm(offer.label, due, reminder_id=offer.reminder_id)
+                    alarm_offers.pop(turn.session_id, None)
+                    reply = f"Alright, an alarm is set for {alarm_intent.format_alarm_when(due, persona.timezone, now_utc)}."
+            privacy = classify_privacy(turn.text)
+        elif alarm_phrase is not None:
+            production_handler = "alarms.set"
+            persona = await app.state.persona_store.get()
+            when = alarm_intent.parse_when(alarm_phrase, now_utc, persona.timezone)
+            if when.due_at is None:
+                reply = "What time should the alarm be? For example: set an alarm for 7am, or /alarm thursday 2pm."
+            elif when.due_at <= now_utc:
+                reply = "That time has already passed."
+            else:
+                await app.state.planner_store.add_alarm("Alarm", when.due_at)
+                reply = f"Alright, an alarm is set for {alarm_intent.format_alarm_when(when.due_at, persona.timezone, now_utc)}."
+            privacy = Privacy.PUBLIC
+        elif alarm_list_query:
+            production_handler = "alarms.read"
+            persona = await app.state.persona_store.get()
+            reply = alarm_intent.format_alarms_reply(
+                await app.state.planner_store.list_alarms(), persona.timezone, now_utc
+            )
+            privacy = Privacy.WORK_PRIVATE
         elif capture_text:
             production_handler = "tasks.capture"
             task = await app.state.task_store.add_task(capture_text)
             reply = format_capture_reply(task)
             if intent_text.strip().lower().startswith("remind me to "):
                 persona = await app.state.persona_store.get()
-                reminder_text, due_at = split_reminder_time(
+                reminder_text, due_at, time_given = split_reminder_when(
                     capture_text, datetime.now(UTC), persona.timezone
                 )
                 if due_at is not None and reminder_text:
-                    await app.state.planner_store.add_reminder(reminder_text, due_at)
+                    reminder = await app.state.planner_store.add_reminder(reminder_text, due_at)
                     due_local = due_at.astimezone(ZoneInfo(persona.timezone))
                     reply += f" I'll also remind you on {due_local:%a %d %b at %I:%M %p}."
+                    alarm_offers[turn.session_id] = alarm_intent.AlarmOffer(
+                        reminder_id=reminder.id,
+                        label=reminder_text,
+                        reminder_due=due_at,
+                        day=due_local.replace(hour=0, minute=0, second=0, microsecond=0),
+                        time_given=time_given,
+                        expires_at=datetime.now(UTC) + alarm_intent.OFFER_TTL,
+                    )
+                    reply += (
+                        " Would you like an alarm set for that time too?"
+                        if time_given
+                        else f" Would you like an alarm set for {due_local:%A} to remind you? Tell me a time."
+                    )
             privacy = classify_privacy(turn.text)
         elif complete_query:
             production_handler = "tasks.complete"
@@ -1623,6 +1710,52 @@ def create_app(
     async def delete_reminder(reminder_id: str) -> dict[str, bool]:
         if not await app.state.planner_store.delete_reminder(reminder_id):
             raise HTTPException(status_code=404, detail=f"no reminder '{reminder_id}'")
+        return {"deleted": True}
+
+    @app.get("/alarms")
+    async def list_alarms() -> list[Alarm]:
+        return await app.state.planner_store.list_alarms()
+
+    @app.post("/alarms")
+    async def create_alarm(request: CreateAlarmRequest) -> Alarm:
+        if request.due_at.tzinfo is None:
+            raise HTTPException(status_code=422, detail="due_at must include a time zone")
+        return await app.state.planner_store.add_alarm(
+            request.label.strip(), request.due_at, reminder_id=request.reminder_id, station_id=request.station_id
+        )
+
+    @app.get("/alarms/due")
+    async def alarms_due_now() -> list[Alarm]:
+        """Claim-once, same shape as /reminders/due: the hub polls this and
+        applies the ADR 0027 delivery policy."""
+        return await app.state.planner_store.claim_due_alarms(datetime.now(UTC))
+
+    @app.post("/alarms/{alarm_id}/delivery")
+    async def record_alarm_delivery(alarm_id: str, request: AlarmDeliveryRequest) -> Alarm:
+        alarm = await app.state.planner_store.record_alarm_delivery(alarm_id, request.delivery)
+        if alarm is None:
+            raise HTTPException(status_code=404, detail=f"no alarm '{alarm_id}'")
+        return alarm
+
+    @app.delete("/alarms/{alarm_id}")
+    async def cancel_alarm(alarm_id: str) -> Alarm:
+        alarm = await app.state.planner_store.cancel_alarm(alarm_id)
+        if alarm is None:
+            raise HTTPException(status_code=404, detail=f"no alarm '{alarm_id}'")
+        return alarm
+
+    @app.get("/stations")
+    async def list_stations() -> list[Station]:
+        return await app.state.planner_store.list_stations()
+
+    @app.post("/stations")
+    async def create_station(request: CreateStationRequest) -> Station:
+        return await app.state.planner_store.add_station(request.name.strip(), request.guide_id)
+
+    @app.delete("/stations/{station_id}")
+    async def delete_station(station_id: str) -> dict[str, bool]:
+        if not await app.state.planner_store.delete_station(station_id):
+            raise HTTPException(status_code=404, detail=f"no station '{station_id}'")
         return {"deleted": True}
 
     @app.post("/meetings")

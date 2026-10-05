@@ -95,6 +95,21 @@ ALERT_POSE: dict[str, object] = {
     "duration": 0.5,
 }
 
+# Phase 38.2 (ADR 0027): the room-occupancy sweep. Fixed body-yaw stops in
+# radians (about -57, -29, 0, 29, 57 degrees), head level at home, so the
+# hub can ask for a stop by index but never choose an angle.
+SWEEP_BODY_YAWS = (-1.0, -0.5, 0.0, 0.5, 1.0)
+SWEEP_DURATION = 1.5
+SWEEP_SETTLE = 0.5
+
+
+def sweep_pose(index: int) -> dict[str, object]:
+    pose = dict(HOME_GOTO)
+    pose["body_yaw"] = SWEEP_BODY_YAWS[index]
+    pose["duration"] = SWEEP_DURATION
+    return pose
+
+
 RestPose = Literal["sleep", "alert", "home"]
 
 # Hard bounds every pose is clamped to, whatever the constants above say.
@@ -182,6 +197,7 @@ class MotionController:
         conversation_motion: bool = False,
         speech_wobble: bool = False,
         wake_animation: bool = False,
+        presence_sweep: bool = False,
         threaded: bool = True,
         rng: random.Random | None = None,
         sleep: Callable[[float], None] = time.sleep,
@@ -193,6 +209,7 @@ class MotionController:
         self._conversation_motion = conversation_motion
         self._speech_wobble = speech_wobble
         self._wake_animation = wake_animation
+        self._presence_sweep = presence_sweep
         # `_lock` guards the fields below. `_dispatch_lock` serializes daemon
         # motion calls, so `stop()` waits for an in-flight play and then
         # stops it rather than racing ahead of it.
@@ -341,6 +358,41 @@ class MotionController:
                 self._backend.goto_pose(SLEEP_POSE)
             self._rest_pose = pose
             self._away_from_home = pose != "home"
+        return True
+
+    @property
+    def presence_sweep_enabled(self) -> bool:
+        return self._presence_sweep
+
+    def sweep_to(self, index: int) -> bool:
+        """Phase 38.2: one bounded goto to a fixed sweep stop, blocking until
+        it has settled. False when the switch is off, or a conversation,
+        remote control or a closed controller owns motion. The caller returns
+        home with `sweep_home`, and `stop()` always preempts a sweep."""
+        if not self._presence_sweep or not 0 <= index < len(SWEEP_BODY_YAWS):
+            return False
+        with self._lock:
+            if self._conversation is not None or self._closed or self._state.remote_active:
+                return False
+            self._generation += 1
+            self._pending = None
+            self._lock.notify_all()
+        with self._dispatch_lock:
+            self._set_wobble(False)
+            self._backend.goto_pose(sweep_pose(index))
+            self._sleep(SWEEP_DURATION + SWEEP_SETTLE)
+            self._away_from_home = True
+            self._rest_pose = None
+        return True
+
+    def sweep_home(self) -> bool:
+        if not self._presence_sweep:
+            return False
+        with self._dispatch_lock:
+            self._backend.goto_home()
+            self._sleep(float(HOME_GOTO["duration"]) + 0.2)
+            self._away_from_home = False
+            self._rest_pose = None
         return True
 
     def stop(self) -> None:

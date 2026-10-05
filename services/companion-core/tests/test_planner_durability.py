@@ -73,3 +73,39 @@ def test_notes_reminders_and_tasks_persist_across_reconnect(database):
             await store.close()
 
     asyncio.run(read())
+
+
+def test_alarms_and_stations_persist_and_claim_once(database):
+    now = datetime.now(UTC)
+
+    async def write():
+        store = await PostgresPlannerStore.connect(database)
+        try:
+            station = await store.add_station("Zed FM", "s2")
+            assert (await store.add_station("renamed", "s2")).id == station.id
+            due = await store.add_alarm("wake", now - timedelta(minutes=1), reminder_id="r1", station_id=station.id)
+            skipped = await store.add_alarm("skip", now - timedelta(minutes=2))
+            await store.add_alarm("later", now + timedelta(hours=1))
+            assert (await store.cancel_alarm(skipped.id)).status == "cancelled"
+            return station.id, due.id
+        finally:
+            await store.close()
+
+    station_id, due_id = asyncio.run(write())
+
+    async def read():
+        store = await PostgresPlannerStore.connect(database)
+        try:
+            claimed = await store.claim_due_alarms(now)
+            assert [a.id for a in claimed] == [due_id]
+            assert claimed[0].status == "fired" and claimed[0].station_id == station_id
+            assert await store.claim_due_alarms(now) == []
+            assert (await store.cancel_alarm(due_id)).status == "fired"
+            assert (await store.record_alarm_delivery(due_id, "played")).delivery == "played"
+            assert [a.label for a in await store.list_alarms()] == ["skip", "wake", "later"]
+            assert await store.delete_station(station_id) is True
+            assert await store.delete_station(station_id) is False
+        finally:
+            await store.close()
+
+    asyncio.run(read())

@@ -75,6 +75,22 @@ class EmbodimentClient:
         resp.raise_for_status()
         return resp.content
 
+    async def sweep_status(self) -> dict[str, Any]:
+        """Phase 38.2: `{"enabled": bool, "stops": int}`."""
+        resp = await self._client.get(routes.SWEEP)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def sweep_stop(self, index: int) -> bytes:
+        """Moves to a fixed sweep stop (blocks until settled) and returns its JPEG."""
+        resp = await self._client.post(routes.SWEEP_STOP.format(index=index), timeout=20.0)
+        resp.raise_for_status()
+        return resp.content
+
+    async def sweep_home(self) -> None:
+        resp = await self._client.post(routes.SWEEP_HOME, timeout=20.0)
+        resp.raise_for_status()
+
     async def set_remote(self, active: bool) -> dict[str, Any]:
         resp = await self._client.post(routes.REMOTE, json={"active": active})
         resp.raise_for_status()
@@ -84,6 +100,10 @@ class EmbodimentClient:
         resp = await self._client.post(routes.AUDIO_PLAY, files={"audio": ("reply.wav", wav_bytes, "audio/wav")})
         resp.raise_for_status()
         return resp.json()
+
+    async def stop_audio(self) -> None:
+        resp = await self._client.post(routes.AUDIO_STOP)
+        resp.raise_for_status()
 
     async def daemon_standby(self) -> dict[str, Any]:
         """Phase 22b: owner-requested remote "turn off/standby" command."""

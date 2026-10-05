@@ -21,7 +21,7 @@ THINKING = EmbodimentState.THINKING
 SPEAKING = EmbodimentState.SPEAKING
 
 
-_POSE_KINDS = {LISTEN_DURATION: "listen", THINK_DURATION: "think"}
+_POSE_KINDS = {LISTEN_DURATION: "listen", THINK_DURATION: "think", 1.5: "sweep"}
 LISTEN = ("pose", "listen")
 THINK = ("pose", "think")
 
@@ -385,3 +385,28 @@ def test_runtime_settings_change_no_motion_and_wait_for_conversation_end():
     ctl.conversation_state(token, 2, LISTENING)
     ctl.run_pending()
     assert backend.calls == []
+
+
+def test_presence_sweep_needs_its_switch_and_yields_to_conversation_and_remote_control() -> None:
+    waits: list[float] = []
+    off = MotionController(FakeBackend(), ServiceState(connected=True, sim=True), threaded=False)
+    assert off.sweep_to(0) is False and off.sweep_home() is False
+
+    backend = FakeBackend()
+    backend.poses = []
+    state = ServiceState(connected=True, sim=True)
+    motion = MotionController(backend, state, presence_sweep=True, threaded=False, sleep=waits.append)
+    assert motion.sweep_to(-1) is False and motion.sweep_to(5) is False and backend.poses == []
+    assert motion.sweep_to(0) and motion.sweep_to(4)
+    assert [p["body_yaw"] for p in backend.poses] == [-1.0, 1.0]
+    assert all(p["head_pose"]["yaw"] == 0.0 and p["duration"] == 1.5 for p in backend.poses)
+    assert motion.sweep_home() and backend.calls[-1] == ("home",) and waits == [2.0, 2.0, 1.2]
+
+    state.remote_active = True
+    assert motion.sweep_to(2) is False
+    state.remote_active = False
+    token = motion.begin_conversation()
+    assert motion.sweep_to(2) is False
+    motion.end_conversation(token, completed=False)
+    motion.close()
+    assert motion.sweep_to(2) is False
