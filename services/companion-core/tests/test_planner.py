@@ -239,3 +239,16 @@ def test_remind_me_without_a_time_still_creates_no_offer() -> None:
     client = make_client()
     assert "alarm" not in say(client, "remind me to buy milk").lower()
     assert "What time" not in say(client, "yes 2pm")
+
+
+def test_alarm_phrase_picks_a_saved_station_named_in_the_text() -> None:
+    client = make_client()
+    station = client.post("/stations", json={"name": "Class 95 FM", "guide_id": "s25599"}).json()
+    reply = say(client, "/alarm class 95 fm in 5 minutes")
+    assert reply.endswith("with Class 95 FM.")
+    assert client.get("/alarms").json()[0]["station_id"] == station["id"]
+    say(client, "remind me to call mum on friday")
+    reply = say(client, "yes 2pm with class 95 fm")
+    assert "with Class 95 FM" in reply
+    assert [a["station_id"] for a in client.get("/alarms").json()] == [station["id"]] * 2
+    assert say(client, "/alarm in 5 minutes").endswith(".") and "with" not in say(client, "/alarm in 6 minutes")

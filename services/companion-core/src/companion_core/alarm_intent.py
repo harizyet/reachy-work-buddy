@@ -95,6 +95,13 @@ def match_set(text: str) -> str | None:
     return match["rest"] if match else None
 
 
+def find_station(text: str, stations: list) -> object | None:
+    """The saved station whose name appears in the text (longest name wins)."""
+    squashed = " ".join(text.lower().split())
+    named = [s for s in stations if " ".join(s.name.lower().split()) in squashed]
+    return max(named, key=lambda s: len(s.name), default=None)
+
+
 def is_alarm_query(text: str) -> bool:
     return bool(_ALARM_QUERY.search(text))
 

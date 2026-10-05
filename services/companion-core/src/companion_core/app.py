@@ -963,9 +963,13 @@ def create_app(
                 elif due <= now_utc:
                     reply = "That time has already passed. What time should the alarm be?"
                 else:
-                    await app.state.planner_store.add_alarm(offer.label, due, reminder_id=offer.reminder_id)
+                    station = alarm_intent.find_station(intent_text, await app.state.planner_store.list_stations())
+                    await app.state.planner_store.add_alarm(
+                        offer.label, due, reminder_id=offer.reminder_id, station_id=station.id if station else None
+                    )
                     alarm_offers.pop(turn.session_id, None)
-                    reply = f"Alright, an alarm is set for {alarm_intent.format_alarm_when(due, persona.timezone, now_utc)}."
+                    reply = f"Alright, an alarm is set for {alarm_intent.format_alarm_when(due, persona.timezone, now_utc)}"
+                    reply += f" with {station.name}." if station else "."
             privacy = classify_privacy(turn.text)
         elif alarm_phrase is not None:
             production_handler = "alarms.set"
@@ -976,8 +980,12 @@ def create_app(
             elif when.due_at <= now_utc:
                 reply = "That time has already passed."
             else:
-                await app.state.planner_store.add_alarm("Alarm", when.due_at)
-                reply = f"Alright, an alarm is set for {alarm_intent.format_alarm_when(when.due_at, persona.timezone, now_utc)}."
+                station = alarm_intent.find_station(alarm_phrase, await app.state.planner_store.list_stations())
+                await app.state.planner_store.add_alarm(
+                    "Alarm", when.due_at, station_id=station.id if station else None
+                )
+                reply = f"Alright, an alarm is set for {alarm_intent.format_alarm_when(when.due_at, persona.timezone, now_utc)}"
+                reply += f" with {station.name}." if station else "."
             privacy = Privacy.PUBLIC
         elif alarm_list_query:
             production_handler = "alarms.read"
