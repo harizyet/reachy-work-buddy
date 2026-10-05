@@ -78,6 +78,32 @@ class SpeechUploadTests(unittest.TestCase):
         self.assertEqual(len(result["segments"]), 1)
         self.assertFalse(server.lock.locked())
 
+    def test_m4a_upload_decodes_for_diarization(self):
+        if self.is_stt:
+            self.skipTest("transcription decodes with faster-whisper's own PyAV path")
+        import av
+
+        data = io.BytesIO()
+        with av.open(data, "w", format="ipod") as container:
+            stream = container.add_stream("aac", rate=44100)
+            stream.layout = "stereo"
+            samples = bytes(4096 * 2 * 2)
+            for i in range(44100 // 1024 + 1):
+                frame = av.AudioFrame(format="s16", layout="stereo", samples=1024)
+                frame.sample_rate = 44100
+                frame.pts = i * 1024
+                frame.planes[0].update(samples[: frame.planes[0].buffer_size])
+                for packet in stream.encode(frame):
+                    container.mux(packet)
+            for packet in stream.encode(None):
+                container.mux(packet)
+        paths = []
+        server.S["diarizer"] = SimpleNamespace(diarize=lambda p, **kw: paths.append(p[0]) or [["0.0 1.0 speaker_0"]])
+        result = self.endpoint(UploadFile(BoundedUpload(data.getvalue()), filename="meeting.m4a"))
+        self.assertEqual(len(paths), 1)
+        self.assertAlmostEqual(result["duration_s"], 1.0, delta=0.15)
+        self.assertFalse(server.lock.locked())
+
     def test_failed_decode_releases_lock(self):
         self.set_model()
         with self.assertRaises(HTTPException) as caught:

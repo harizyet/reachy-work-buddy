@@ -28,6 +28,25 @@ def require_service_token(x_reachy_speech_token: str | None = Header(default=Non
         x_reachy_speech_token and secrets.compare_digest(x_reachy_speech_token, SPEECH_SERVICE_TOKEN)
     ):
         raise HTTPException(401, "Invalid or missing service token")
+
+
+def decode_with_av(stream) -> np.ndarray:
+    """16 kHz mono float32 from containers libsndfile cannot read (m4a/aac/mp3/opus/webm)."""
+    import av
+
+    resampler = av.AudioResampler(format="flt", layout="mono", rate=16000)
+    chunks = []
+    with av.open(stream) as container:
+        if not container.streams.audio:
+            raise ValueError("no audio stream")
+        for frame in container.decode(audio=0):
+            for out in resampler.resample(frame):
+                chunks.append(out.to_ndarray().reshape(-1))
+        for out in resampler.resample(None):
+            chunks.append(out.to_ndarray().reshape(-1))
+    return np.concatenate(chunks).astype(np.float32) if chunks else np.zeros(0, dtype=np.float32)
+
+
 S = {"diarizer": None, "status": "loading", "load_seconds": None, "device": None}
 lock = threading.Lock()
 
@@ -69,7 +88,7 @@ def health():
 
 @app.post("/diarize", dependencies=[Depends(require_service_token)])
 def diarize(file: UploadFile = File(...)):  # noqa: B008
-    """Upload wav/flac/ogg audio (any rate/channels). Returns speaker segments in seconds."""
+    """Upload audio: wav/flac/ogg via libsndfile, anything else (m4a, mp3, aac, opus, webm) via PyAV. Returns speaker segments in seconds."""
     if S["status"] != "ready":
         raise HTTPException(503, detail=S["status"])
     if not lock.acquire(blocking=False):
@@ -77,9 +96,13 @@ def diarize(file: UploadFile = File(...)):  # noqa: B008
     try:
         try:
             audio, sr = sf.read(file.file, dtype="float32", always_2d=True)
-        except Exception as e:
-            raise HTTPException(400, detail=f"could not decode audio (wav/flac/ogg only): {e}") from e
-        audio = audio.mean(axis=1)
+            audio = audio.mean(axis=1)
+        except RuntimeError:  # soundfile: unrecognised container
+            try:
+                file.file.seek(0)
+                audio, sr = decode_with_av(file.file), 16000
+            except Exception as e:
+                raise HTTPException(400, detail=f"could not decode audio: {e}") from e
         if not len(audio):
             raise HTTPException(400, detail="empty audio file")
         if sr != 16000:

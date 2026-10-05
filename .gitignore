@@ -18,3 +18,6 @@ __pycache__/
 dist/
 build/
 vendor/
+
+# Private real-meeting recordings used by the opt-in end-to-end meeting test
+test/

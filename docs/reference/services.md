@@ -519,7 +519,7 @@ Started only with the `diarization` Compose profile (see
 [deployment](../deployment.md#meeting-diarization)); not part of a bare
 `docker compose up`. Internal-only at `http://diarization:8010`:
 `GET /health` reports load/compile status, `POST /diarize` takes
-multipart wav/flac/ogg audio at any rate/channels and returns
+multipart audio (wav/flac/ogg via libsndfile, m4a/mp3/aac/opus/webm via PyAV) at any rate/channels and returns
 `{duration_s, process_s, rtf, num_speakers, segments: [{start, end,
 speaker}]}` in seconds.
 `companion_core.meetings.speech_clients.HTTPDiarizationClient` calls this

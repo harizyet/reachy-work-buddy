@@ -16,7 +16,7 @@ RUN uv venv --python 3.12 /opt/venv \
  && uv pip install Cython packaging
 # NeMo main, pinned: the released 3.0.0 cannot load this model (needs 'rope' attention support).
 RUN uv pip install "nemo-toolkit[asr] @ https://github.com/NVIDIA-NeMo/NeMo/archive/cf724ac337d1ebc7d0dda1e23fb80916f52927a5.tar.gz" \
- && uv pip install openvino fastapi "uvicorn[standard]" python-multipart
+ && uv pip install openvino "av==14.0.1" fastapi "uvicorn[standard]" python-multipart
 COPY app /app
 WORKDIR /app
 # HF_HOME/HOME/ONNX_PATH all live under /data (the diarization-data volume,
