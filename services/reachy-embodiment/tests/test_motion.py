@@ -399,7 +399,8 @@ def test_presence_sweep_needs_its_switch_and_yields_to_conversation_and_remote_c
     assert motion.sweep_to(-1) is False and motion.sweep_to(5) is False and backend.poses == []
     assert motion.sweep_to(0) and motion.sweep_to(4)
     assert [p["body_yaw"] for p in backend.poses] == [-1.0, 1.0]
-    assert all(p["head_pose"]["yaw"] == 0.0 and p["duration"] == 1.5 for p in backend.poses)
+    assert [p["head_pose"]["yaw"] for p in backend.poses] == [-1.0, 1.0]
+    assert all(p["head_pose"]["pitch"] == 0.0 and p["duration"] == 1.5 for p in backend.poses)
     assert motion.sweep_home() and backend.calls[-1] == ("home",) and waits == [2.0, 2.0, 1.2]
 
     state.remote_active = True

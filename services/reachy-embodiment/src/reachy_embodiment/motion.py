@@ -96,8 +96,10 @@ ALERT_POSE: dict[str, object] = {
 }
 
 # Phase 38.2 (ADR 0027): the room-occupancy sweep. Fixed body-yaw stops in
-# radians (about -57, -29, 0, 29, 57 degrees), head level at home, so the
-# hub can ask for a stop by index but never choose an angle.
+# radians (about -57, -29, 0, 29, 57 degrees), head level, so the hub can ask
+# for a stop by index but never choose an angle. The daemon's head pose is in
+# the world frame, so the head yaw is set to the body yaw: turning the body
+# alone leaves the camera facing forward (seen on nano-1, 2026-10-05).
 SWEEP_BODY_YAWS = (-1.0, -0.5, 0.0, 0.5, 1.0)
 SWEEP_DURATION = 1.5
 SWEEP_SETTLE = 0.5
@@ -106,6 +108,7 @@ SWEEP_SETTLE = 0.5
 def sweep_pose(index: int) -> dict[str, object]:
     pose = dict(HOME_GOTO)
     pose["body_yaw"] = SWEEP_BODY_YAWS[index]
+    pose["head_pose"] = {**HOME_GOTO["head_pose"], "yaw": SWEEP_BODY_YAWS[index]}
     pose["duration"] = SWEEP_DURATION
     return pose
 
