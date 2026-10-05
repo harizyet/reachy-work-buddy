@@ -731,7 +731,7 @@ and core is its only client, but it still changes the required revision, so use
 the backup/stop-writers/migrate/rebuild procedure and rebuild `migrate`,
 `companion-core` and `reachy-hub` together.
 
-Revision `015_alarms` (Phase 38, [ADR 0027](adr/0027-alarms-and-presence-gated-delivery.md)) adds the `alarms` table. Same additive, core-only procedure; not yet deployed.
+Revision `015_alarms` (Phase 38, [ADR 0027](adr/0027-alarms-and-presence-gated-delivery.md)) adds the `alarms` table. Same additive, core-only procedure. Deployed 2026-10-05 to the homelab stack (backup first, then migrate; `alarms` table verified).
 
 Revision `013_coding_agent` adds the coding-agent session tables and core's
 completion-notification ledger. coding-agent-service is now a database client:
