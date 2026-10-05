@@ -11,6 +11,7 @@ robot presence and fallback independent of homelab availability.
 - [Develop and test](docs/development.md)
 - [Find service APIs and source](docs/reference/services.md)
 - [Roadmap and release scope](docs/plan.md#6-implementation-roadmap)
+- [Shadow semantic router trial](docs/shadow-router.md) and [Phase 37](docs/phase-37.md): shadow-first routing and argument validation (decision: [ADR 0026](docs/adr/0026-semantic-routing-and-argument-validation.md))
 - [Coding-agent instructions](AGENTS.md) and [current handover](HANDOVER.md)
 
 ## Status

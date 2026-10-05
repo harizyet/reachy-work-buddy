@@ -1,6 +1,6 @@
 # Shadow semantic router
 
-Status: implemented behind a disabled-by-default flag (2026-10-05). Owner decision: shadow only, no behaviour change.
+Status: implemented behind a disabled-by-default flag (2026-10-05); the trial was enabled by the owner the same day. Owner decision: shadow only, no behaviour change. Decision record: [ADR 0026](adr/0026-semantic-routing-and-argument-validation.md); stages and gates: [Phase 37](phase-37.md).
 Evidence and benchmarks live outside this repo in the `inferencing/bench/router` workspace; the numbers below are copied from there and are author-written data, except MASSIVE.
 
 ## Contract
@@ -78,7 +78,7 @@ Same setup as above (sidecar, 7B stream, diarization), run against the homelab v
 
 ## Retention
 
-Recorded turns exist only for the evaluation window. Raw log, extraction results, blind sheet and labels are all destroyed when grading is finished (procedure step 8). What survives is `aggregates.json` and the saved report: counts and per-item gold route / executable flags, with no utterance text, no hashes, no arguments and no resolved targets. Limits to know: overwriting a file does not reach filesystem snapshots, backups, or copy-on-write/SSD remapping, so no copy of these files should be placed in any backed-up location, and any extra copy you make (for example when copying the log out of the volume) must be listed and destroyed too. The log lives only in the `shadow-router` volume and in the working copies you make from it.
+Recorded turns exist only for the evaluation window, and there is no deadline other than completing the evaluation: the files are destroyed when evaluation and testing are complete. Raw log, extraction results, blind sheet and labels are all destroyed when grading is finished (procedure step 8). What survives is `aggregates.json` and the saved report: counts and per-item gold route / executable flags, with no utterance text, no hashes, no arguments and no resolved targets. Limits to know: overwriting a file does not reach filesystem snapshots, backups, or copy-on-write/SSD remapping, so no copy of these files should be placed in any backed-up location, and any extra copy you make (for example when copying the log out of the volume) must be listed and destroyed too. The log lives only in the `shadow-router` volume and in the working copies you make from it.
 
 ## Counters
 

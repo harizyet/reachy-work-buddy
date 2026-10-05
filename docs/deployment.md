@@ -145,6 +145,24 @@ instance is not an upgrade. No schema migration is required. The
 [long-audio verification](verification/phase-27-long-audio-2026-09-30.md)
 used isolated containers with mounted updated source, not a live rollout.
 
+## Shadow semantic router
+
+```bash
+scripts/start-homelab.sh --shadow-router --build
+```
+
+The `shadow-router` Compose profile adds the `semantic-router` sidecar (ModernBERT x3, ONNX FP32, CPU only; source in
+`deploy/homelab/semantic-router/`, internal `http://semantic-router:8012`). Starting it changes nothing by itself: companion-core calls it only when
+`SHADOW_ROUTER_ENABLED=true`. The ONNX models are not in git; mount them at `deploy/homelab/semantic-router/models` (or set `SEMANTIC_ROUTER_MODELS_DIR`) as
+described in that directory's README. The sidecar is capped at 6 CPUs and 3 GB with 2 ONNX threads per model (`SEMANTIC_ROUTER_CPUS`,
+`SEMANTIC_ROUTER_ORT_THREADS`).
+
+Shadow flags for companion-core in the env file (all default off): `SHADOW_ROUTER_ENABLED`, `SHADOW_ROUTER_LOG_TEXT` (utterance text, only for the
+evaluation window, never for a sensitive turn), `SHADOW_ROUTER_MAX_TURNS`, `SHADOW_EXTRACT_MODE` (`offline` default, or `live`), `SHADOW_ROUTER_QUEUE_SIZE`.
+Records go to the `shadow-router` volume (`/data/shadow-router/shadow.jsonl`, mode 0600). The trial procedure, grading, rollback and the rule that recorded
+files are destroyed once evaluation is complete are in [shadow-router](shadow-router.md#trial-procedure). Rollback is removing the `SHADOW_*` lines and
+recreating companion-core; the shadow never executes a tool or alters a reply, so no data repair is needed.
+
 ## Owner login
 
 Set `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and an independent random

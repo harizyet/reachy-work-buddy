@@ -30,6 +30,8 @@ with conversational motion off until 24f's deferred acceptance passes. Its
 waived by the owner; Nano diagnostics remain deferred. See
 [HANDOVER](../HANDOVER.md) for concrete next-session steps.
 
+**Shadow semantic router (Phase 37, enabled 2026-10-05):** a router-only shadow trial of up to 500 accepted turns runs in the homelab; it never executes a tool or changes a reply, and extraction is offline. Nothing is promoted: evaluation (blind grading, report) is next, and every later stage is a separate owner decision. Recorded trial files are destroyed when evaluation and testing are complete (no other deadline). See [phase-37](phase-37.md), [shadow-router](shadow-router.md) and [ADR 0026](adr/0026-semantic-routing-and-argument-validation.md).
+
 ## Deployment and production acceptance
 
 The homelab stack is a dev/test deployment, not production-accepted. Use

@@ -478,6 +478,20 @@ below for that loop. Session *management* — registering a project,
 starting/resuming/stopping a session — still has no hub/companion-core
 path; only status/usage reads and completion notifications do.
 
+## Shadow semantic router (Phase 37)
+
+Two parts, neither authoritative. [Source](../../deploy/homelab/semantic-router/) is a standalone sidecar, not a workspace member: ModernBERT-base x3
+(18 routes) on ONNX Runtime CPU, internal-only at `http://semantic-router:8012` (`GET /health`, `POST /route {"text"}` returning `route`, `confidence`,
+`member_routes`, `top3`, `latency_ms`). It stores and logs nothing and holds no tool, consent or credential logic. Started only with the `shadow-router`
+Compose profile (see [deployment](../deployment.md#shadow-semantic-router)).
+
+`companion_core/shadow_router/` (`validator.py`, `extractor.py`, `shadow.py`) is the shadow pipeline. `process_conversation_turn` labels the production
+branch (`production_handler`) and, after the reply is final, hands a plain-data snapshot to a bounded background queue (disabled unless
+`SHADOW_ROUTER_ENABLED=true`; wrapped so nothing from it reaches the turn). It records route, production handler, extraction state, validator status and
+the proposed action to a JSONL file; in the default `offline` extract mode only the router is called live. `tools/shadow_router_extract.py`,
+`shadow_router_report.py` and `shadow_router_grade.py` (sheet, purge, destroy) are the offline evaluation tools. Decision: [ADR 0026](../adr/0026-semantic-routing-and-argument-validation.md);
+contract, flags and retention: [shadow-router](../shadow-router.md).
+
 ## Meeting transcription (Phase 27.2)
 
 [Source](../../deploy/homelab/transcription/) is a standalone sidecar, not

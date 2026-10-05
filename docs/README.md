@@ -83,7 +83,8 @@ correct facts or links, not to track each new phase dependency.
   Pro/Max path, and the next step is characterizing owner-input detection.
   See
   [service reference](reference/services.md#coding-agent-service-phase-29-planned).
-- [Shadow semantic router](shadow-router.md): disabled-by-default shadow-mode router, extractor and validator that only records what it would propose.
+- [Phase 37](phase-37.md): semantic routing and argument validation — stage sequence and gates for replacing the phrase-matcher fall-through; decision in [ADR 0026](adr/0026-semantic-routing-and-argument-validation.md).
+- [Shadow semantic router](shadow-router.md): shadow-mode router, extractor and validator that only records what it would propose; contract, flags, trial procedure, retention and evidence.
 - [Phase 30](phase-30.md): platform stabilization and acceptance — verify the
   no-alert-pose wake build, add the visible-false-activations metric, run the
   held-out 24g session and triage the open 22b/22c/24e/24f rows.
@@ -117,6 +118,7 @@ over the original decision where they explicitly change it.
 | [0023](adr/0023-robot-voice-conversation.md) | Robot microphone/speaker conversation transport |
 | [0024](adr/0024-owner-recognition-trust.md) | Owner recognition trust boundary (evidence/trust/authorization split) |
 | [0025](adr/0025-speech-inference-service.md) | Generalized speech inference service (target architecture and migration path) |
+| [0026](adr/0026-semantic-routing-and-argument-validation.md) | Semantic routing with deterministic argument validation (shadow accepted; promotion proposed) |
 
 ## Verification records
 
