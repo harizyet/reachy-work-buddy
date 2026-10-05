@@ -257,8 +257,12 @@ from companion_core.task_intent import (
     format_capture_reply,
     format_complete_reply,
     format_list_reply,
+    format_notes_reply,
+    format_reminders_reply,
     format_search_reply,
     is_list_query,
+    is_note_list_query,
+    is_reminder_list_query,
     match_capture,
     match_complete,
     match_search,
@@ -939,6 +943,15 @@ def create_app(
             open_tasks = await app.state.task_store.list_tasks(TaskStatus.OPEN)
             reply = format_list_reply(open_tasks)
             privacy = Privacy.WORK_PRIVATE if parsed_command else classify_privacy(turn.text)
+        elif is_reminder_list_query(intent_text):
+            production_handler = "reminders.read"
+            persona = await app.state.persona_store.get()
+            reply = format_reminders_reply(await app.state.planner_store.list_reminders(), persona.timezone)
+            privacy = Privacy.WORK_PRIVATE
+        elif is_note_list_query(intent_text):
+            production_handler = "notes.read"
+            reply = format_notes_reply(await app.state.planner_store.list_notes())
+            privacy = Privacy.WORK_PRIVATE
         elif memory_capture_text:
             production_handler = "memory.capture"
             record = await app.state.memory_store.add_memory(

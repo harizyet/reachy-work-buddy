@@ -14,6 +14,11 @@ are more specific and should win over an accidental substring collision.
 
 from __future__ import annotations
 
+import re
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+from companion_core.planner.models import Note, Reminder, ReminderStatus
 from companion_core.tasks.models import Task
 
 _CAPTURE_PREFIXES = (
@@ -61,9 +66,45 @@ def match_search(text: str) -> str | None:
     return _match_prefix(text, _SEARCH_PREFIXES) or None
 
 
+_ASKING = (
+    r"(?:do i have|have i got|what|which|show|list|tell me|check|any|are there|is there|got any)"
+)
+_TASK_QUERY = re.compile(rf"\b{_ASKING}\b.*\b(?:tasks?|to-?dos?)\b")
+_REMINDER_QUERY = re.compile(rf"^(?!\s*(?:set|add|create|remind)\b).*\b{_ASKING}\b.*\breminders?\b")
+
+
 def is_list_query(text: str) -> bool:
     lowered = text.strip().lower()
-    return any(phrase in lowered for phrase in _LIST_PHRASES)
+    return any(phrase in lowered for phrase in _LIST_PHRASES) or bool(_TASK_QUERY.search(lowered))
+
+
+_NOTE_QUERY = re.compile(rf"^(?!\s*(?:take|make|write|add|create|save)\b).*\b{_ASKING}\b.*\bnotes\b")
+
+
+def is_note_list_query(text: str) -> bool:
+    return bool(_NOTE_QUERY.search(text.strip().lower()))
+
+
+def format_notes_reply(notes: list[Note]) -> str:
+    if not notes:
+        return "You have no notes."
+    return "Your notes: " + "; ".join(n.title for n in notes) + "."
+
+
+def is_reminder_list_query(text: str) -> bool:
+    return bool(_REMINDER_QUERY.search(text.strip().lower()))
+
+
+def format_reminders_reply(reminders: list[Reminder], timezone: str) -> str:
+    pending = [r for r in reminders if r.status == ReminderStatus.PENDING]
+    if not pending:
+        return "You have no upcoming reminders."
+    zone = ZoneInfo(timezone)
+
+    def when(due: datetime) -> str:
+        return f"{due.astimezone(zone):%a %d %b at %I:%M %p}"
+
+    return "Your reminders: " + "; ".join(f"{r.text} ({when(r.due_at)})" for r in pending) + "."
 
 
 def format_capture_reply(task: Task) -> str:

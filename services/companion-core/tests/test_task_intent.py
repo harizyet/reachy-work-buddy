@@ -59,3 +59,24 @@ def test_format_replies() -> None:
 
     assert format_search_reply([], "milk") == "No tasks found matching 'milk'."
     assert "buy milk" in format_search_reply([task], "milk")
+
+
+def test_natural_task_and_reminder_questions_are_list_queries() -> None:
+    from companion_core.task_intent import is_reminder_list_query
+
+    assert is_list_query("Do I currently have any tasks I need done?")
+    assert is_list_query("what to-dos do I have")
+    assert not is_list_query("tell me a joke")
+    assert is_reminder_list_query("Do I have any reminders?")
+    assert is_reminder_list_query("what reminders do I have today")
+    assert not is_reminder_list_query("set a reminder for 4pm")
+    assert not is_reminder_list_query("remind me to call mum")
+
+
+def test_note_list_questions() -> None:
+    from companion_core.task_intent import is_note_list_query
+
+    assert is_note_list_query("Do I have any notes?")
+    assert is_note_list_query("show my notes")
+    assert not is_note_list_query("take a note about the meeting")
+    assert not is_note_list_query("what's the weather")
