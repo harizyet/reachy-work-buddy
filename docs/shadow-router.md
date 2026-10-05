@@ -65,12 +65,20 @@ Fixed-size, then removed. Nothing here changes a live reply, so rollback is unse
 5. `uv run python tools/shadow_router_grade.py sheet shadow.jsonl --out sheet.jsonl`: every disagreement plus a random sample of agreements, shuffled, utterance only.
 6. Label the sheet blind (before looking at any router, validator or production output): `gold_route`, `executable`, `gold_args`.
 7. `uv run python tools/shadow_router_report.py shadow.jsonl --extractions extractions.jsonl --labels labels.jsonl`: reports `unsafe_would_execute` and `safe_but_withheld` per stratum (disagreements are all graded; the agreement sample is random, so do not pool the strata), beside `dropped_busy`, `withheld`, `would_execute`, `bulk_refused`.
-8. `uv run python tools/shadow_router_grade.py purge shadow.jsonl --labels labels.jsonl --aggregates aggregates.json --extractions extractions.jsonl --delete sheet.jsonl labels.jsonl`: removes the utterance, its hash, the validated arguments and resolved targets from the log and the extractions file and keeps only aggregates. Remove the volume copy of the raw log as well.
+8. Save the results, then destroy every recorded file (owner policy, 2026-10-05: recorded files are destroyed once evaluation and testing are complete):
+   1. `uv run python tools/shadow_router_report.py ... > report.txt`, then `uv run python tools/shadow_router_grade.py purge shadow.jsonl --labels labels.jsonl --aggregates aggregates.json --extractions extractions.jsonl` (scrubs text, hashes, arguments and targets; writes de-identified aggregates).
+   2. `uv run python tools/shadow_router_grade.py destroy shadow.jsonl extractions.jsonl sheet.jsonl labels.jsonl --aggregates aggregates.json`: overwrites each file with zeros, deletes it and verifies it is gone. It refuses to run until the aggregates exist.
+   3. Destroy the original in the volume: `docker exec reachy-homelab-companion-core-1 shred -u -z /data/shadow-router/shadow.jsonl`, and confirm with `docker exec reachy-homelab-companion-core-1 ls /data/shadow-router`.
+   4. Remove the `SHADOW_*` lines from `deploy/homelab/.env` and recreate companion-core.
 9. Do not change a live handler from the trial's examples until enough real traffic has accumulated to judge them.
 
 ## Production impact in offline mode (2026-10-05)
 
 Same setup as above (sidecar, 7B stream, diarization), run against the homelab vLLM; extraction offline, so the shadow's only live effect is the router call. TTFT p95 returns to baseline (59 to 62 ms against 54 and 61 ms for the two bracketing baselines, gate +20 ms). 7B decode in the shadow phases (37.5 to 40.4 tok/s) sits between the two baselines (42.7 before, 38.1 after); the host drifts about 10% over a run, so effects under that size cannot be resolved. Router p95 over larger samples: 67 and 83 ms at realistic cadence, 90 ms at 0.5 s paced (n=120); one earlier 136 ms reading came from a 15-request window with a single slow outlier. Diarization p95 0.43 to 0.52 s (baseline 0.42 to 0.43). Burst accounting stayed exact (36 submitted, 9 recorded, 27 dropped).
+
+## Retention
+
+Recorded turns exist only for the evaluation window. Raw log, extraction results, blind sheet and labels are all destroyed when grading is finished (procedure step 8). What survives is `aggregates.json` and the saved report: counts and per-item gold route / executable flags, with no utterance text, no hashes, no arguments and no resolved targets. Limits to know: overwriting a file does not reach filesystem snapshots, backups, or copy-on-write/SSD remapping, so no copy of these files should be placed in any backed-up location, and any extra copy you make (for example when copying the log out of the volume) must be listed and destroyed too. The log lives only in the `shadow-router` volume and in the working copies you make from it.
 
 ## Counters
 

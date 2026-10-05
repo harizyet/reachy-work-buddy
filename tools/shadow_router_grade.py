@@ -7,6 +7,11 @@
          Writes aggregates (counts, the graded labels without text) and then rewrites LOG in place with the utterance, its hash, validated args
          and resolved target removed (mode 0600 kept). Delete the sheet files too with --delete.
 
+  destroy FILE... --aggregates out.json [--report report.txt]
+         Final step. Overwrites each file with zeros, syncs, and deletes it, then verifies it is gone. Refuses to run unless the aggregates file
+         exists (so results are saved first). Use it on the raw log, extractions, sheet and labels. Overwriting is best effort: it cannot reach
+         copies on snapshots, backups or copy-on-write/SSD remapping, so also remove any volume or backup copy (see docs/shadow-router.md).
+
 Label each sheet item by adding: "gold_route" (one of the 18 routes), "executable" (true if a correct system would act on it now), and
 "gold_args" ({"task": "..."} the target as the user stated it; null for a field the user did not state). Then run shadow_router_report.py --labels."""
 import argparse
@@ -73,6 +78,29 @@ def purge(a: argparse.Namespace) -> None:
     print(f"scrubbed {len(rows)} records (text, hashes, validated args, resolved targets removed); aggregates -> {a.aggregates}; deleted {len(a.delete or [])} file(s)")
 
 
+def destroy(a: argparse.Namespace) -> None:
+    if not Path(a.aggregates).exists():
+        sys.exit(f"refusing to destroy: aggregates file {a.aggregates} does not exist; run `purge` (or report) first so the results are kept")
+    gone = 0
+    for name in a.files:
+        path = Path(name)
+        if not path.exists():
+            print(f"  not found (already gone): {name}")
+            continue
+        if not path.is_file() or path.is_symlink():
+            sys.exit(f"refusing: {name} is not a regular file")
+        size = path.stat().st_size
+        with open(path, "r+b") as handle:  # overwrite in place before unlinking
+            handle.write(b"\0" * size)
+            handle.flush()
+            os.fsync(handle.fileno())
+        path.unlink()
+        assert not path.exists()
+        gone += 1
+        print(f"  destroyed {name} ({size} bytes overwritten and deleted)")
+    print(f"{gone} file(s) destroyed; aggregates kept at {a.aggregates}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -87,8 +115,11 @@ def main() -> None:
     p.add_argument("--aggregates", required=True)
     p.add_argument("--delete", nargs="*")
     p.add_argument("--extractions", help="extractions file to scrub in place (validated args and resolved targets removed)")
+    d = sub.add_parser("destroy")
+    d.add_argument("files", nargs="+")
+    d.add_argument("--aggregates", required=True)
     a = ap.parse_args()
-    sheet(a) if a.cmd == "sheet" else purge(a)
+    {"sheet": sheet, "purge": purge, "destroy": destroy}[a.cmd](a)
 
 
 if __name__ == "__main__":
