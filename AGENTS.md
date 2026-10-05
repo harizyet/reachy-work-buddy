@@ -145,6 +145,17 @@ wake monitoring. It is not a relaxation for any other move, for daemon
 start/restart/resume, or for development sessions. There, these silent
 gotos are ordinary bounded motion, per the next paragraph.
 
+Alarm delivery is a further exception the owner decided explicitly,
+2026-10-05, during Phase 38: "for the alarm/sweep feature it doesn't need my
+supervision or explicit approval as it's an intended design and function."
+Alarm audio and the room-occupancy sweep (`/sweep` on reachy-embodiment,
+driven only by the hub's alarm delivery, [ADR 0027](docs/adr/0027-alarms-and-presence-gated-delivery.md))
+run unattended on the production Nano, and in development sessions that
+exercise or test them, without the owner present. The sweep is the bounded
+set of fixed body-yaw stops with its return home; it is not a general
+relaxation. `/gaze`, `/pose`, arbitrary or diagnostic moves, full animations,
+and daemon start/restart/resume keep the rules above.
+
 Unattended development testing is allowed. The owner decided this
 explicitly on 2026-09-25, during 24f: "waive the safety rules to allow for
 development testing unattended unless full animations is to be played.

@@ -198,9 +198,11 @@ def test_motion_settings_reject_active_conversation_and_invalid_values():
     assert client.put(MOTION_SETTINGS, json=settings).json() == {**settings, "conversation_active": False}
 
 
-def test_sweep_routes_are_disabled_by_default_and_return_a_frame_per_stop() -> None:
-    assert make_client().get("/sweep").json() == {"enabled": False, "stops": 5}
-    off = make_client()
+def test_sweep_routes_refuse_when_disabled_and_return_a_frame_per_stop() -> None:
+    backend_off = RecordingSimBackend()
+    motion_off = MotionController(backend_off, ServiceState(), presence_sweep=False, threaded=False, sleep=lambda _s: None)
+    off = TestClient(create_app(backend_off, run_presence_loop=False, motion=motion_off))
+    assert off.get("/sweep").json() == {"enabled": False, "stops": 5}
     assert off.post("/sweep/0").status_code == 409 and off.post("/sweep/home").status_code == 409
 
     backend = RecordingSimBackend()

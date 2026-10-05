@@ -101,14 +101,16 @@ def _default_motion_controller(backend: RobotBackend, state: ServiceState) -> Mo
     physically accepted; off means no conversation motion and no ownership.
     Phase 24g: `WAKE_ANIMATION_ENABLED` (the daemon's wake-up and go-to-sleep
     moves around wake monitoring) is on by default, by the owner's decision
-    of 2026-09-27; it only moves while the owner has armed wake listening."""
+    of 2026-09-27; it only moves while the owner has armed wake listening.
+    Phase 38: `PRESENCE_SWEEP_ENABLED` (the alarm room sweep) is on by default,
+    by the owner's decision of 2026-10-05; only the hub's alarm delivery drives it."""
     return MotionController(
         backend,
         state,
         conversation_motion=_env_flag("CONVERSATION_MOTION_ENABLED"),
         speech_wobble=_env_flag("SPEECH_WOBBLE_ENABLED"),
         wake_animation=_env_flag("WAKE_ANIMATION_ENABLED", default=True),
-        presence_sweep=_env_flag("PRESENCE_SWEEP_ENABLED"),
+        presence_sweep=_env_flag("PRESENCE_SWEEP_ENABLED", default=True),
     )
 
 

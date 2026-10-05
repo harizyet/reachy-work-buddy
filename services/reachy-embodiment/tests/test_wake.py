@@ -670,3 +670,17 @@ def test_wake_animation_is_on_by_default_and_the_env_file_can_turn_it_off(monkey
     motion = _default_motion_controller(backend, state)
     assert motion.rest_move("alert") is False
     motion.close()
+
+
+def test_presence_sweep_is_on_by_default_and_the_env_file_can_turn_it_off(monkeypatch) -> None:
+    from reachy_embodiment.app import _default_motion_controller
+
+    state = ServiceState(connected=True, sim=True)
+    monkeypatch.delenv("PRESENCE_SWEEP_ENABLED", raising=False)
+    motion = _default_motion_controller(RecordingBackend(), state)
+    assert motion.presence_sweep_enabled is True
+    motion.close()
+    monkeypatch.setenv("PRESENCE_SWEEP_ENABLED", "false")
+    motion = _default_motion_controller(RecordingBackend(), state)
+    assert motion.presence_sweep_enabled is False
+    motion.close()
