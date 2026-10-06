@@ -206,7 +206,7 @@
       <div id="todo-pane" class="workspace planner-workspace" hidden>
         <section class="card planner-wide"><div class="section-title"><div><span class="eyebrow">YOUR LISTS</span><h2>To-do</h2></div><button type="button" class="secondary planner-refresh">Refresh</button></div><p class="planner-status" role="status"></p></section>
         <section class="card" aria-labelledby="planner-task-title"><h3 id="planner-task-title">To-do</h3>
-          <form id="planner-task-form" class="planner-form"><label>New to-do<input id="planner-task-text" maxlength="2000" required autocomplete="off"></label><button>Add</button></form>
+          <form id="planner-task-form" class="planner-form"><label>New to-do<input id="planner-task-text" maxlength="2000" required autocomplete="off"></label><label>Volume <output id="alarm-volume-value">100%</output><input id="alarm-volume" type="range" min="10" max="400" step="10" value="100"></label><button>Add</button></form>
           <ul id="planner-task-list" class="planner-list"></ul><p id="planner-task-empty" class="muted">Nothing to do yet.</p></section>
       </div>
       <div id="reminders-pane" class="workspace planner-workspace" hidden>

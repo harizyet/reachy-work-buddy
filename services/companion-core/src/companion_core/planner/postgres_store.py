@@ -37,7 +37,7 @@ def _reminder(row: tuple) -> Reminder:
         notified_at=row[6],
     )
 
-_ALARM_COLUMNS = "id, label, due_at, reminder_id, station_id, status, created_at, fired_at, delivery"
+_ALARM_COLUMNS = "id, label, due_at, reminder_id, station_id, status, created_at, fired_at, delivery, volume"
 
 
 def _alarm(row: tuple) -> Alarm:
@@ -51,6 +51,7 @@ def _alarm(row: tuple) -> Alarm:
         created_at=row[6],
         fired_at=row[7],
         delivery=row[8],
+        volume=row[9],
     )
 
 _STATION_COLUMNS = "id, name, guide_id, created_at"
@@ -177,12 +178,18 @@ class PostgresPlannerStore:
             return [_alarm(row) for row in await cur.fetchall()]
 
     async def add_alarm(
-        self, label: str, due_at: datetime, *, reminder_id: str | None = None, station_id: str | None = None
+        self,
+        label: str,
+        due_at: datetime,
+        *,
+        reminder_id: str | None = None,
+        station_id: str | None = None,
+        volume: int = 100,
     ) -> Alarm:
-        alarm = Alarm(label=label, due_at=due_at, reminder_id=reminder_id, station_id=station_id)
+        alarm = Alarm(label=label, due_at=due_at, reminder_id=reminder_id, station_id=station_id, volume=volume)
         async with self._pool.connection() as conn:
             await conn.execute(
-                f"INSERT INTO alarms ({_ALARM_COLUMNS}) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                f"INSERT INTO alarms ({_ALARM_COLUMNS}) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     alarm.id,
                     alarm.label,
@@ -193,6 +200,7 @@ class PostgresPlannerStore:
                     alarm.created_at,
                     alarm.fired_at,
                     alarm.delivery,
+                    alarm.volume,
                 ),
             )
         return alarm

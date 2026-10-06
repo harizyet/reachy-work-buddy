@@ -234,6 +234,15 @@ async def stream_chunks(
         raise StreamError("stream ended before any audio decoded")
 
 
+def apply_gain(wav_bytes: bytes, percent: int) -> bytes:
+    """Scales 16-bit mono WAV samples, clipping rather than wrapping."""
+    if percent == 100:
+        return wav_bytes
+    with wave.open(io.BytesIO(wav_bytes)) as wav:
+        pcm = np.frombuffer(wav.readframes(wav.getnframes()), dtype="<i2")
+    return pcm_to_wav(np.clip(pcm.astype(np.float32) * percent / 100, -32768, 32767))
+
+
 def chime_wav(seconds: float = 6.0) -> bytes:
     """Plain repeating two-tone chime for an alarm with no station chosen."""
     t = np.arange(int(SAMPLE_RATE * 0.4)) / SAMPLE_RATE

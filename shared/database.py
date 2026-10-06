@@ -1,6 +1,6 @@
 """Schema compatibility contract shared by SQL stores; no startup DDL."""
 
-SCHEMA_REVISION = "015_alarms"
+SCHEMA_REVISION = "016_alarm_volume"
 
 
 async def check_schema(conn) -> None:

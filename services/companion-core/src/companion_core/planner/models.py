@@ -59,6 +59,7 @@ class Alarm(BaseModel):
     created_at: datetime = Field(default_factory=_now)
     fired_at: datetime | None = None
     delivery: str | None = None
+    volume: int = Field(default=100, ge=10, le=400)
 
 
 class Station(BaseModel):

@@ -43,7 +43,7 @@ function createAlarms({api, isLoggedIn}) {
     const sorted = [...alarms].sort((a, b) => rank[a.status] - rank[b.status] || new Date(a.due_at) - new Date(b.due_at));
     el('alarm-list').replaceChildren(...sorted.map(alarm => {
       const detail = [when(alarm.due_at), alarm.station_id ? names.get(alarm.station_id) || 'saved station' : 'chime',
-        alarm.status === 'scheduled' ? '' : alarm.status, alarm.delivery || ''].filter(Boolean).join(' · ');
+        `${alarm.volume ?? 100}% volume`, alarm.status === 'scheduled' ? '' : alarm.status, alarm.delivery || ''].filter(Boolean).join(' · ');
       const row = node('li', {className: 'planner-row'},
         node('span', {className: 'planner-grow'}, node('span', {className: alarm.status === 'scheduled' ? '' : 'planner-done', textContent: alarm.label}),
           node('br'), node('span', {className: 'muted', textContent: detail})));
@@ -69,9 +69,11 @@ function createAlarms({api, isLoggedIn}) {
     const due = el('alarm-due').value;
     if (!label || !due) return;
     const station_id = el('alarm-station').value || null;
-    await act(() => send('POST', '/planner/alarms', {label, due_at: new Date(due).toISOString(), station_id}));
+    await act(() => send('POST', '/planner/alarms', {label, due_at: new Date(due).toISOString(), station_id, volume: Number(el('alarm-volume').value)}));
     el('alarm-label').value = ''; el('alarm-due').value = '';
   });
+
+  el('alarm-volume').addEventListener('input', () => { el('alarm-volume-value').textContent = `${el('alarm-volume').value}%`; });
 
   el('alarm-stop').addEventListener('click', async () => {
     try {

@@ -83,7 +83,7 @@ def test_alarms_and_stations_persist_and_claim_once(database):
         try:
             station = await store.add_station("Zed FM", "s2")
             assert (await store.add_station("renamed", "s2")).id == station.id
-            due = await store.add_alarm("wake", now - timedelta(minutes=1), reminder_id="r1", station_id=station.id)
+            due = await store.add_alarm("wake", now - timedelta(minutes=1), reminder_id="r1", station_id=station.id, volume=250)
             skipped = await store.add_alarm("skip", now - timedelta(minutes=2))
             await store.add_alarm("later", now + timedelta(hours=1))
             assert (await store.cancel_alarm(skipped.id)).status == "cancelled"
@@ -99,6 +99,7 @@ def test_alarms_and_stations_persist_and_claim_once(database):
             claimed = await store.claim_due_alarms(now)
             assert [a.id for a in claimed] == [due_id]
             assert claimed[0].status == "fired" and claimed[0].station_id == station_id
+            assert claimed[0].volume == 250
             assert await store.claim_due_alarms(now) == []
             assert (await store.cancel_alarm(due_id)).status == "fired"
             assert (await store.record_alarm_delivery(due_id, "played")).delivery == "played"

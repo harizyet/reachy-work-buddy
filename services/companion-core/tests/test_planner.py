@@ -164,6 +164,11 @@ def test_alarm_routes_create_list_claim_record_and_cancel() -> None:
     recorded = client.post(f"/alarms/{past['id']}/delivery", json={"delivery": "telegram"}).json()
     assert recorded["delivery"] == "telegram"
     assert client.post("/alarms/nope/delivery", json={"delivery": "x"}).status_code == 404
+    assert alarm["volume"] == 100
+    loud = client.post("/alarms", json={"label": "loud", "due_at": soon, "volume": 300}).json()
+    assert loud["volume"] == 300
+    for bad in (0, 9, 401):
+        assert client.post("/alarms", json={"label": "x", "due_at": soon, "volume": bad}).status_code == 422
     assert client.delete(f"/alarms/{alarm['id']}").json()["status"] == "cancelled"
     assert client.delete("/alarms/nope").status_code == 404
 

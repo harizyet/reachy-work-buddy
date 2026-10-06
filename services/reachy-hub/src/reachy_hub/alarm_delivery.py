@@ -112,8 +112,13 @@ class AlarmDeliverer:
         self._stop = stop
         try:
             kwargs = {"clock": self._clock} if self._clock else {}
+            volume = int(alarm.get("volume") or 100)
+
+            async def play(wav_bytes: bytes) -> None:
+                await self._play(alarm_audio.apply_gain(wav_bytes, volume))
+
             played = await alarm_audio.play_chunks(
-                self._play, self._chunks_for(alarm.get("station_id"), self._play_seconds), stop, **kwargs
+                play, self._chunks_for(alarm.get("station_id"), self._play_seconds), stop, **kwargs
             )
         except (httpx.HTTPError, alarm_audio.StreamError, RuntimeError, ValueError, OSError) as exc:
             log.warning("alarm playback failed: %s", exc)

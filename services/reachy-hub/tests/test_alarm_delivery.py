@@ -108,6 +108,26 @@ def test_person_present_plays_and_records_without_telegram() -> None:
     assert not rig.deliverer.playing
 
 
+def test_alarm_volume_scales_what_the_robot_plays_and_clips_instead_of_wrapping() -> None:
+    quiet = alarm_audio.chime_wav(1.0)
+    for volume, factor in ((100, 1), (200, 2), (400, 4)):
+        rig = Rig(chunks=[quiet])
+        asyncio.run(rig.deliverer.deliver({**ALARM, "volume": volume}))
+        assert len(rig.played) == 1
+        import io
+        import wave
+
+        import numpy as np
+
+        def pcm(b):
+            with wave.open(io.BytesIO(b)) as w:
+                return np.frombuffer(w.readframes(w.getnframes()), dtype="<i2").astype(int)
+
+        base, loud = pcm(quiet), pcm(rig.played[0])
+        assert np.array_equal(loud, np.clip(base * factor, -32768, 32767))
+    assert pcm(rig.played[0]).max() > pcm(quiet).max()
+
+
 def test_failed_telegram_send_is_recorded() -> None:
     rig = Rig(ctx=AlarmContext(True, True, False), push_ok=False)
     assert "send failed" in asyncio.run(rig.deliverer.deliver(ALARM))

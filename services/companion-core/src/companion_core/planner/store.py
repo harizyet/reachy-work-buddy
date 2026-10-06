@@ -28,7 +28,13 @@ class PlannerStore(Protocol):
     async def claim_due(self, now: datetime) -> list[Reminder]: ...
     async def list_alarms(self) -> list[Alarm]: ...
     async def add_alarm(
-        self, label: str, due_at: datetime, *, reminder_id: str | None = None, station_id: str | None = None
+        self,
+        label: str,
+        due_at: datetime,
+        *,
+        reminder_id: str | None = None,
+        station_id: str | None = None,
+        volume: int = 100,
     ) -> Alarm: ...
     async def cancel_alarm(self, alarm_id: str) -> Alarm | None: ...
     async def claim_due_alarms(self, now: datetime) -> list[Alarm]: ...
@@ -106,9 +112,15 @@ class InMemoryPlannerStore:
         return sorted(self._alarms.values(), key=lambda a: a.due_at)
 
     async def add_alarm(
-        self, label: str, due_at: datetime, *, reminder_id: str | None = None, station_id: str | None = None
+        self,
+        label: str,
+        due_at: datetime,
+        *,
+        reminder_id: str | None = None,
+        station_id: str | None = None,
+        volume: int = 100,
     ) -> Alarm:
-        alarm = Alarm(label=label, due_at=due_at, reminder_id=reminder_id, station_id=station_id)
+        alarm = Alarm(label=label, due_at=due_at, reminder_id=reminder_id, station_id=station_id, volume=volume)
         self._alarms[alarm.id] = alarm
         return alarm
 

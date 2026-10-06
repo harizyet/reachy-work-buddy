@@ -77,7 +77,7 @@ The **Alarms** tab lists every alarm with its status and how it was delivered.
 Add one with a label and a date and time in your browser's time zone, optionally
 choosing a saved radio station. Search TuneIn by name, save a station (only its
 guide id is stored) and remove it again. **Cancel** drops a scheduled alarm;
-**Stop** silences an alarm that is playing now. Playback follows privacy mode and
+**Stop** silences an alarm that is playing now. The **Volume** slider (10-400%, default 100%) sets the loudness of each new alarm; above 100% boosts the audio and can distort. Playback follows privacy mode and
 room presence (ADR 0027); otherwise the alarm goes to Telegram. Requests use
 owner-authenticated `/planner/alarms*` and `/planner/stations*` hub routes.
 

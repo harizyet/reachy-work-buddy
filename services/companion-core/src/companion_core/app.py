@@ -354,6 +354,7 @@ class CreateAlarmRequest(BaseModel):
     due_at: datetime
     reminder_id: str | None = Field(default=None, max_length=100)
     station_id: str | None = Field(default=None, max_length=100)
+    volume: int = Field(default=100, ge=10, le=400)
 
 
 class CreateStationRequest(BaseModel):
@@ -1729,7 +1730,8 @@ def create_app(
         if request.due_at.tzinfo is None:
             raise HTTPException(status_code=422, detail="due_at must include a time zone")
         return await app.state.planner_store.add_alarm(
-            request.label.strip(), request.due_at, reminder_id=request.reminder_id, station_id=request.station_id
+            request.label.strip(), request.due_at, reminder_id=request.reminder_id, station_id=request.station_id,
+            volume=request.volume,
         )
 
     @app.get("/alarms/due")

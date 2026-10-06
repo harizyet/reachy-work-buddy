@@ -58,9 +58,12 @@ test('alarms tab lists, adds, cancels, stops and picks stations with literal tex
       await page.locator('#alarm-label').fill('cake');
       await page.locator('#alarm-due').fill('2030-03-04T14:00');
       await page.locator('#alarm-station').selectOption('s1');
+      await page.locator('#alarm-volume').evaluate(input => { input.value = '250'; input.dispatchEvent(new Event('input', {bubbles: true})); });
+      assert.equal(await page.locator('#alarm-volume-value').textContent(), '250%');
       await page.locator('#alarm-form button').click();
       await page.waitForFunction(() => document.querySelectorAll('#alarm-list li').length === 3);
       assert.ok(calls.includes('POST /planner/alarms'));
+      assert.equal(alarms.at(-1).volume, 250);
 
       await page.locator('#alarm-list li').first().getByText('Cancel', {exact: true}).click();
       await page.waitForFunction(() => !document.querySelector('#alarm-list li button') || document.querySelectorAll('#alarm-list li button').length === 1);
