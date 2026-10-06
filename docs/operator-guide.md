@@ -81,6 +81,10 @@ guide id is stored) and remove it again. **Cancel** drops a scheduled alarm;
 room presence (ADR 0027); otherwise the alarm goes to Telegram. Requests use
 owner-authenticated `/planner/alarms*` and `/planner/stations*` hub routes.
 
+The **Activity** tab lists recent action receipts: what the assistant actually
+changed (alarms, tasks, reminders, memory) and whether an alarm was delivered,
+independent of how a reply was worded. It is read-only.
+
 ## Meeting recordings
 
 Open **Meetings** to record or upload audio with **Add meeting**. The left

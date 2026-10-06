@@ -13,6 +13,8 @@ from companion_core.planner.postgres_store import PostgresPlannerStore
 from companion_core.secrets import Keyring
 from companion_core.tasks.postgres_store import PostgresTaskStore
 
+from shared.models.receipt import ActionReceipt
+
 pytestmark = pytest.mark.skipif(
     not os.environ.get("DATABASE_MIGRATION_TEST_URL"),
     reason="requires explicitly disposable Postgres",
@@ -110,3 +112,27 @@ def test_alarms_and_stations_persist_and_claim_once(database):
             await store.close()
 
     asyncio.run(read())
+
+
+def test_receipts_persist_and_claim_once(database):
+    now = datetime.now(UTC)
+
+    async def run():
+        store = await PostgresPlannerStore.connect(database)
+        try:
+            await store.add_receipt(ActionReceipt(action_type="task.created", source_channel="web", object_type="task",
+                                                  fields={"Task": "t"}, notify=True, at=now - timedelta(seconds=5)))
+            await store.add_receipt(ActionReceipt(action_type="alarm.created", source_channel="web", object_type="alarm"))
+        finally:
+            await store.close()
+        store = await PostgresPlannerStore.connect(database)
+        try:
+            listed = await store.list_receipts()
+            assert [r.action_type for r in listed] == ["alarm.created", "task.created"]
+            assert listed[1].fields == {"Task": "t"}
+            assert [r.action_type for r in await store.claim_receipts_to_notify(now)] == ["task.created"]
+            assert await store.claim_receipts_to_notify(now) == []
+        finally:
+            await store.close()
+
+    asyncio.run(run())

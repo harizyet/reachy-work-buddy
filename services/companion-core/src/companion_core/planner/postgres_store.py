@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from psycopg.types.json import Jsonb
 from psycopg_pool import AsyncConnectionPool
 
 from companion_core.planner.models import (
@@ -15,6 +16,7 @@ from companion_core.planner.models import (
     Station,
 )
 from shared.database import check_schema
+from shared.models.receipt import ActionReceipt
 
 _NOTE_COLUMNS = "id, title, body, created_at, updated_at"
 _REMINDER_COLUMNS = "id, text, due_at, status, created_at, completed_at, notified_at"
@@ -53,6 +55,18 @@ def _alarm(row: tuple) -> Alarm:
         delivery=row[8],
         volume=row[9],
     )
+
+_RECEIPT_COLUMNS = (
+    "id, action_type, status, at, source_channel, object_type, object_id, fields, failure_reason, notify, notified_at"
+)
+
+
+def _receipt(row: tuple) -> ActionReceipt:
+    return ActionReceipt(
+        id=row[0], action_type=row[1], status=row[2], at=row[3], source_channel=row[4], object_type=row[5],
+        object_id=row[6], fields=row[7], failure_reason=row[8], notify=row[9], notified_at=row[10],
+    )
+
 
 _STATION_COLUMNS = "id, name, guide_id, created_at"
 
@@ -255,3 +269,31 @@ class PostgresPlannerStore:
         async with self._pool.connection() as conn:
             cur = await conn.execute("DELETE FROM stations WHERE id = %s", (station_id,))
             return cur.rowcount > 0
+
+    async def add_receipt(self, receipt: ActionReceipt) -> ActionReceipt:
+        async with self._pool.connection() as conn:
+            await conn.execute(
+                f"INSERT INTO action_receipts ({_RECEIPT_COLUMNS}) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (
+                    receipt.id, receipt.action_type, receipt.status, receipt.at, receipt.source_channel,
+                    receipt.object_type, receipt.object_id, Jsonb(receipt.fields), receipt.failure_reason,
+                    receipt.notify, receipt.notified_at,
+                ),
+            )
+        return receipt
+
+    async def list_receipts(self, limit: int = 100) -> list[ActionReceipt]:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"SELECT {_RECEIPT_COLUMNS} FROM action_receipts ORDER BY at DESC LIMIT %s", (limit,)
+            )
+            return [_receipt(row) for row in await cur.fetchall()]
+
+    async def claim_receipts_to_notify(self, now: datetime) -> list[ActionReceipt]:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"UPDATE action_receipts SET notified_at = %s WHERE notify AND notified_at IS NULL "
+                f"RETURNING {_RECEIPT_COLUMNS}",
+                (now,),
+            )
+            return sorted((_receipt(row) for row in await cur.fetchall()), key=lambda r: r.at)

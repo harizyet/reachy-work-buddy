@@ -30,6 +30,7 @@ from shared.protocols.operator_api import (
     PLANNER_ALARMS_STOP,
     PLANNER_NOTE,
     PLANNER_NOTES,
+    PLANNER_RECEIPTS,
     PLANNER_REMINDER,
     PLANNER_REMINDER_COMPLETE,
     PLANNER_REMINDERS,
@@ -313,6 +314,10 @@ def install_operator_routes(
     @app.delete(PLANNER_ALARM, dependencies=dependencies)
     async def planner_cancel_alarm(item_id: str) -> dict:
         return await planner("DELETE", f"/alarms/{quote(item_id, safe='')}")
+
+    @app.get(PLANNER_RECEIPTS, dependencies=dependencies)
+    async def planner_list_receipts() -> list[dict]:
+        return await planner("GET", "/receipts")
 
     @app.get(PLANNER_STATIONS, dependencies=dependencies)
     async def planner_list_stations() -> list[dict]:

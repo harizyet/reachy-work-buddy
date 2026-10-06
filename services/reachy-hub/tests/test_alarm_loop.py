@@ -90,3 +90,13 @@ def test_a_reminder_with_an_alarm_notifies_once_through_the_alarm() -> None:
 
     sent, _ = _run(setup)
     assert sorted(sent) == ["Alarm: cake", "Reminder: plain"]
+
+
+def test_a_notify_receipt_reaches_telegram_exactly_once() -> None:
+    def setup(c: TestClient) -> None:
+        c.post("/conversation", json={"session_id": "s", "conversation_id": "c", "channel": "web", "text": "remind me to feed fish"})
+        c.post("/conversation", json={"session_id": "t", "conversation_id": "c", "channel": "telegram", "text": "remind me to skip"})
+
+    sent, core = _run(setup)
+    assert sent == ["Task added.\n\nTask: feed fish"]
+    assert len(core.get("/receipts").json()) == 2

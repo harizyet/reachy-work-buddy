@@ -14,6 +14,7 @@ from companion_core.planner.models import (
     ReminderStatus,
     Station,
 )
+from shared.models.receipt import ActionReceipt
 
 
 class PlannerStore(Protocol):
@@ -42,6 +43,9 @@ class PlannerStore(Protocol):
     async def list_stations(self) -> list[Station]: ...
     async def add_station(self, name: str, guide_id: str) -> Station: ...
     async def delete_station(self, station_id: str) -> bool: ...
+    async def add_receipt(self, receipt: ActionReceipt) -> ActionReceipt: ...
+    async def list_receipts(self, limit: int = 100) -> list[ActionReceipt]: ...
+    async def claim_receipts_to_notify(self, now: datetime) -> list[ActionReceipt]: ...
 
 
 class InMemoryPlannerStore:
@@ -50,6 +54,7 @@ class InMemoryPlannerStore:
         self._reminders: dict[str, Reminder] = {}
         self._alarms: dict[str, Alarm] = {}
         self._stations: dict[str, Station] = {}
+        self._receipts: dict[str, ActionReceipt] = {}
 
     async def list_notes(self, query: str | None = None) -> list[Note]:
         notes = list(self._notes.values())
@@ -158,3 +163,16 @@ class InMemoryPlannerStore:
 
     async def delete_station(self, station_id: str) -> bool:
         return self._stations.pop(station_id, None) is not None
+
+    async def add_receipt(self, receipt: ActionReceipt) -> ActionReceipt:
+        self._receipts[receipt.id] = receipt
+        return receipt
+
+    async def list_receipts(self, limit: int = 100) -> list[ActionReceipt]:
+        return sorted(self._receipts.values(), key=lambda r: r.at, reverse=True)[:limit]
+
+    async def claim_receipts_to_notify(self, now: datetime) -> list[ActionReceipt]:
+        pending = [r for r in self._receipts.values() if r.notify and r.notified_at is None]
+        for receipt in pending:
+            receipt.notified_at = now
+        return sorted(pending, key=lambda r: r.at)

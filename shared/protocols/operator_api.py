@@ -67,6 +67,8 @@ PLANNER_REMINDER_COMPLETE = "/planner/reminders/{item_id}/complete"
 PLANNER_ALARMS = "/planner/alarms"
 PLANNER_ALARM = "/planner/alarms/{item_id}"
 PLANNER_ALARMS_STOP = "/planner/alarms/stop"
+# Phase 39 (ADR 0028): read-only recent action receipts.
+PLANNER_RECEIPTS = "/planner/receipts"
 PLANNER_STATIONS = "/planner/stations"
 PLANNER_STATION = "/planner/stations/{item_id}"
 PLANNER_STATIONS_SEARCH = "/planner/stations/search"

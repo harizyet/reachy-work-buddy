@@ -718,7 +718,7 @@ explicitly disposable project. Leave unrelated services such as OVMS alone.
 ## Schema upgrades and credential keys
 
 Core and hub require the revision declared in
-[`shared/database.py`](../shared/database.py) (`017_persona_tone` at this snapshot).
+[`shared/database.py`](../shared/database.py) (`018_action_receipts` at this snapshot).
 The ordered Alembic history ships
 in core's image; SQL stores perform compatibility checks, not startup DDL.
 Compose runs `migrate` before hub/core, including through
@@ -733,9 +733,11 @@ the backup/stop-writers/migrate/rebuild procedure and rebuild `migrate`,
 
 Revision `015_alarms` (Phase 38, [ADR 0027](adr/0027-alarms-and-presence-gated-delivery.md)) adds the `alarms` table. Same additive, core-only procedure. Deployed 2026-10-05 to the homelab stack (backup first, then migrate; `alarms` table verified).
 
-Revision `016_alarm_volume` adds `alarms.volume` (percent gain, default 100). Same additive, core-only procedure; not yet deployed.
+Revision `016_alarm_volume` adds `alarms.volume` (percent gain, default 100). Same additive, core-only procedure. Deployed 2026-10-06 with 017 and 018.
 
-Revision `017_persona_tone` adds `persona_config.tone` (reply style preset, default `default`). Same additive, core-only procedure; not yet deployed.
+Revision `017_persona_tone` adds `persona_config.tone` (reply style preset, default `default`). Same additive, core-only procedure. Deployed 2026-10-06.
+
+Revision `018_action_receipts` (Phase 39, [ADR 0028](adr/0028-persona-responses-and-action-receipts.md)) adds the `action_receipts` table. Same additive, core-only procedure. Deployed 2026-10-06 (backup `reachy-before-phase39-20261006-1248.dump`; migrate, core, hub and coding-agent rebuilt; revision verified).
 
 Revision `013_coding_agent` adds the coding-agent session tables and core's
 completion-notification ledger. coding-agent-service is now a database client:

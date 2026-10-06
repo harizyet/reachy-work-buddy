@@ -491,6 +491,7 @@ def test_alarm_and_station_proxy_requires_auth_and_round_trips_through_core():
     assert client.get("/planner/alarms").status_code == 401
     assert client.post("/planner/alarms", json={"label": "x", "due_at": "2030-01-01T00:00:00Z"}, headers=CSRF).status_code == 401
     assert client.post("/planner/alarms/stop", headers=CSRF).status_code == 401
+    assert client.get("/planner/receipts").status_code == 401
     assert client.get("/planner/stations/search", params={"q": "jazz"}).status_code == 401
     login(client)
 

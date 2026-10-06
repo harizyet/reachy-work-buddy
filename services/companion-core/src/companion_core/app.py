@@ -176,6 +176,7 @@ from companion_core import (
     memory_intent,
     rag_intent,
 )
+from companion_core import receipts as action_receipts
 from companion_core.briefing import BriefingItem, build_briefing
 from companion_core.calendar.models import CalendarEvent
 from companion_core.calendar.postgres_store import PostgresCalendarStore
@@ -241,6 +242,7 @@ from companion_core.memory.postgres_store import PostgresMemoryStore
 from companion_core.memory.store import MemoryStore
 from companion_core.persona.context import context_message
 from companion_core.persona.postgres_store import PostgresPersonaStore
+from companion_core.persona.render import render
 from companion_core.persona.store import PersonaStore
 from companion_core.planner.models import Alarm, Note, Reminder, Station
 from companion_core.planner.postgres_store import PostgresPlannerStore
@@ -255,7 +257,6 @@ from companion_core.reminder_time import split_reminder_when
 from companion_core.shadow_router import ShadowPipeline, shadow_from_env
 from companion_core.shadow_router.shadow import ShadowTurn
 from companion_core.task_intent import (
-    format_capture_reply,
     format_complete_reply,
     format_list_reply,
     format_notes_reply,
@@ -291,6 +292,7 @@ from shared.models.llm import LLMConfigPatch
 from shared.models.memory import MemoryRecord, MemoryType
 from shared.models.persona import TONE_INSTRUCTIONS, PersonaConfig, PersonaPatch
 from shared.models.rag import DocumentChunk, RetrievedChunk
+from shared.models.receipt import ActionReceipt
 from shared.models.response import Privacy, Urgency
 from shared.models.session import InputModality
 from shared.models.websearch import (
@@ -854,6 +856,17 @@ def create_app(
         # Phase 38.5 (ADR 0027): a pending alarm offer only reacts to a plain
         # yes/no/time reply; anything else ends the offer and is handled normally.
         now_utc = datetime.now(UTC)
+        notify_receipt = action_receipts.conversation_notify(turn.channel, explicit_command=parsed_command is not None)
+
+        async def receipt(action_type: str, object_type: str, object_id: str | None, **fields: str) -> None:
+            await action_receipts.record(
+                app.state.planner_store,
+                ActionReceipt(
+                    action_type=action_type, source_channel=turn.channel, object_type=object_type,
+                    object_id=object_id, fields=fields, notify=notify_receipt,
+                ),
+            )
+
         offer = alarm_offers.get(turn.session_id)
         if offer is not None and offer.expires_at <= now_utc:
             offer = alarm_offers.pop(turn.session_id)
@@ -955,7 +968,7 @@ def create_app(
             persona = await app.state.persona_store.get()
             if offer_reply == "no":
                 alarm_offers.pop(turn.session_id, None)
-                reply = "Okay, no alarm."
+                reply = render("alarm_declined", persona.tone)
             else:
                 when = alarm_intent.parse_when(intent_text, now_utc, persona.timezone, day=offer.day)
                 due = when.due_at or (offer.reminder_due if offer.time_given else None)
@@ -965,12 +978,18 @@ def create_app(
                     reply = "That time has already passed. What time should the alarm be?"
                 else:
                     station = alarm_intent.find_station(intent_text, await app.state.planner_store.list_stations())
-                    await app.state.planner_store.add_alarm(
+                    alarm = await app.state.planner_store.add_alarm(
                         offer.label, due, reminder_id=offer.reminder_id, station_id=station.id if station else None
                     )
                     alarm_offers.pop(turn.session_id, None)
-                    reply = f"Alright, an alarm is set for {alarm_intent.format_alarm_when(due, persona.timezone, now_utc)}"
-                    reply += f" with {station.name}." if station else "."
+                    when_text = alarm_intent.format_alarm_when(due, persona.timezone, now_utc)
+                    reply = render(
+                        "alarm_set", persona.tone, when=when_text, station=f" with {station.name}" if station else ""
+                    )
+                    await receipt(
+                        "alarm.created", "alarm", alarm.id, Label=alarm.label, When=when_text,
+                        **({"Station": station.name} if station else {}),
+                    )
             privacy = classify_privacy(turn.text)
         elif alarm_phrase is not None:
             production_handler = "alarms.set"
@@ -982,11 +1001,17 @@ def create_app(
                 reply = "That time has already passed."
             else:
                 station = alarm_intent.find_station(alarm_phrase, await app.state.planner_store.list_stations())
-                await app.state.planner_store.add_alarm(
+                alarm = await app.state.planner_store.add_alarm(
                     "Alarm", when.due_at, station_id=station.id if station else None
                 )
-                reply = f"Alright, an alarm is set for {alarm_intent.format_alarm_when(when.due_at, persona.timezone, now_utc)}"
-                reply += f" with {station.name}." if station else "."
+                when_text = alarm_intent.format_alarm_when(when.due_at, persona.timezone, now_utc)
+                reply = render(
+                    "alarm_set", persona.tone, when=when_text, station=f" with {station.name}" if station else ""
+                )
+                await receipt(
+                    "alarm.created", "alarm", alarm.id, Label=alarm.label, When=when_text,
+                    **({"Station": station.name} if station else {}),
+                )
             privacy = Privacy.PUBLIC
         elif alarm_list_query:
             production_handler = "alarms.read"
@@ -998,16 +1023,19 @@ def create_app(
         elif capture_text:
             production_handler = "tasks.capture"
             task = await app.state.task_store.add_task(capture_text)
-            reply = format_capture_reply(task)
+            persona = await app.state.persona_store.get()
+            reply = render("task_captured", persona.tone, text=task.text)
+            await receipt("task.created", "task", task.id, Task=task.text)
             if intent_text.strip().lower().startswith("remind me to "):
-                persona = await app.state.persona_store.get()
                 reminder_text, due_at, time_given = split_reminder_when(
                     capture_text, datetime.now(UTC), persona.timezone
                 )
                 if due_at is not None and reminder_text:
                     reminder = await app.state.planner_store.add_reminder(reminder_text, due_at)
                     due_local = due_at.astimezone(ZoneInfo(persona.timezone))
-                    reply += f" I'll also remind you on {due_local:%a %d %b at %I:%M %p}."
+                    reminder_when = f"{due_local:%a %d %b at %I:%M %p}"
+                    reply += render("reminder_added", persona.tone, when=reminder_when)
+                    await receipt("reminder.created", "reminder", reminder.id, Reminder=reminder_text, When=reminder_when)
                     alarm_offers[turn.session_id] = alarm_intent.AlarmOffer(
                         reminder_id=reminder.id,
                         label=reminder_text,
@@ -1027,7 +1055,13 @@ def create_app(
             open_tasks = await app.state.task_store.list_tasks(TaskStatus.OPEN)
             matched = next((t for t in open_tasks if complete_query.lower() in t.text.lower()), None)
             completed = await app.state.task_store.complete_task(matched.id) if matched else None
-            reply = format_complete_reply(completed, complete_query)
+            reply = (
+                render("task_completed", (await app.state.persona_store.get()).tone, text=completed.text)
+                if completed
+                else format_complete_reply(completed, complete_query)
+            )
+            if completed:
+                await receipt("task.completed", "task", completed.id, Task=completed.text)
             privacy = classify_privacy(turn.text)
         elif search_query:
             production_handler = "tasks.search"
@@ -1055,7 +1089,8 @@ def create_app(
                 source="conversation",
                 sensitivity=classify_privacy(memory_capture_text),
             )
-            reply = memory_intent.format_capture_reply(record)
+            reply = render("memory_captured", (await app.state.persona_store.get()).tone, content=record.content)
+            await receipt("memory.created", "memory", record.id, Sensitivity=str(record.sensitivity.value))
             privacy = record.sensitivity
         elif memory_recall_query:
             production_handler = "memory.read"
@@ -1731,10 +1766,18 @@ def create_app(
     async def create_alarm(request: CreateAlarmRequest) -> Alarm:
         if request.due_at.tzinfo is None:
             raise HTTPException(status_code=422, detail="due_at must include a time zone")
-        return await app.state.planner_store.add_alarm(
+        alarm = await app.state.planner_store.add_alarm(
             request.label.strip(), request.due_at, reminder_id=request.reminder_id, station_id=request.station_id,
             volume=request.volume,
         )
+        await action_receipts.record(
+            app.state.planner_store,
+            ActionReceipt(
+                action_type="alarm.created", source_channel="web", object_type="alarm", object_id=alarm.id,
+                fields={"Label": alarm.label, "When": alarm.due_at.isoformat(timespec="minutes")},
+            ),
+        )
+        return alarm
 
     @app.get("/alarms/due")
     async def alarms_due_now() -> list[Alarm]:
@@ -1747,13 +1790,44 @@ def create_app(
         alarm = await app.state.planner_store.record_alarm_delivery(alarm_id, request.delivery)
         if alarm is None:
             raise HTTPException(status_code=404, detail=f"no alarm '{alarm_id}'")
+        # Delivery, not creation, is what an alarm receipt proves. Only a
+        # robot-played alarm pushes to Telegram; failures already fall back
+        # to the hub's own Telegram alarm message.
+        played = request.delivery in ("played", "stopped by owner")
+        await action_receipts.record(
+            app.state.planner_store,
+            ActionReceipt(
+                action_type="alarm.delivered", status="success" if played else "failed", source_channel="system",
+                object_type="alarm", object_id=alarm.id, fields={"Label": alarm.label, "Delivery": request.delivery},
+                failure_reason=None if played else request.delivery[:300], notify=played,
+            ),
+        )
         return alarm
+
+    @app.get("/receipts")
+    async def list_receipts(limit: int = Query(default=100, ge=1, le=500)) -> list[ActionReceipt]:
+        return await app.state.planner_store.list_receipts(limit)
+
+    @app.get("/receipts/pending")
+    async def receipts_to_notify() -> list[dict]:
+        """Claim-once, like /reminders/due: the hub pushes each `text` (built
+        from the structured fields only) to Telegram."""
+        claimed = await app.state.planner_store.claim_receipts_to_notify(datetime.now(UTC))
+        return [{**r.model_dump(mode="json"), "text": action_receipts.describe(r)} for r in claimed]
 
     @app.delete("/alarms/{alarm_id}")
     async def cancel_alarm(alarm_id: str) -> Alarm:
         alarm = await app.state.planner_store.cancel_alarm(alarm_id)
         if alarm is None:
             raise HTTPException(status_code=404, detail=f"no alarm '{alarm_id}'")
+        if alarm.status == "cancelled":
+            await action_receipts.record(
+                app.state.planner_store,
+                ActionReceipt(
+                    action_type="alarm.cancelled", source_channel="web", object_type="alarm", object_id=alarm.id,
+                    fields={"Label": alarm.label},
+                ),
+            )
         return alarm
 
     @app.get("/stations")

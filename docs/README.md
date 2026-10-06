@@ -85,6 +85,7 @@ correct facts or links, not to track each new phase dependency.
   [service reference](reference/services.md#coding-agent-service-phase-29-planned).
 - [Phase 37](phase-37.md): semantic routing and argument validation — stage sequence and gates for replacing the phrase-matcher fall-through; decision in [ADR 0026](adr/0026-semantic-routing-and-argument-validation.md).
 - [Phase 38](phase-38.md): alarm clock and presence-gated delivery — stage sequence and gates; decision in [ADR 0027](adr/0027-alarms-and-presence-gated-delivery.md).
+- [Phase 39](phase-39.md): persona-aware responses and action receipts — stage sequence and gates; decision in [ADR 0028](adr/0028-persona-responses-and-action-receipts.md).
 - [Shadow semantic router](shadow-router.md): shadow-mode router, extractor and validator that only records what it would propose; contract, flags, trial procedure, retention and evidence.
 - [Phase 30](phase-30.md): platform stabilization and acceptance — verify the
   no-alert-pose wake build, add the visible-false-activations metric, run the
@@ -121,6 +122,7 @@ over the original decision where they explicitly change it.
 | [0025](adr/0025-speech-inference-service.md) | Generalized speech inference service (target architecture and migration path) |
 | [0026](adr/0026-semantic-routing-and-argument-validation.md) | Semantic routing with deterministic argument validation (shadow accepted; promotion proposed) |
 | [0027](adr/0027-alarms-and-presence-gated-delivery.md) | Alarms with presence-gated, privacy-aware delivery |
+| [0028](adr/0028-persona-responses-and-action-receipts.md) | Persona-aware responses and authoritative action receipts |
 
 ## Verification records
 

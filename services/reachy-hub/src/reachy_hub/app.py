@@ -602,6 +602,16 @@ def create_app(
                     if item["id"] not in alarmed:
                         await push_to_telegram(owner_user_id, f"Reminder: {item['text']}")
 
+    async def receipt_notify_loop(interval: float) -> None:
+        """Pushes each notify-flagged action receipt (Phase 39, ADR 0028) to
+        Telegram once. Core claims on read, so a failed push is not retried;
+        the receipt stays visible in the Activity tab."""
+        while True:
+            await asyncio.sleep(interval)
+            with contextlib.suppress(httpx.HTTPError):
+                for item in await companion_core_client.planner_request("GET", "/receipts/pending"):
+                    await push_to_telegram(owner_user_id, item["text"])
+
     async def alarm_context() -> AlarmContext:
         manager = app.state.robot_voice_manager
         robots = await app.state.registry.list()
@@ -792,6 +802,11 @@ def create_app(
             if run_coding_agent_notify_task
             else None
         )
+        receipt_notify_task = (
+            asyncio.create_task(receipt_notify_loop(coding_agent_notify_interval))
+            if run_coding_agent_notify_task
+            else None
+        )
         alarm_task = (
             asyncio.create_task(alarm_loop(alarm_poll_interval)) if run_coding_agent_notify_task else None
         )
@@ -820,7 +835,7 @@ def create_app(
             await robot_voice_manager.stop_all("Hub is shutting down")
             if robot_voice_manager.palm_stop is not None:
                 robot_voice_manager.palm_stop.close()
-            for task in (warm_task, heartbeat_task, coding_agent_notify_task, reminder_notify_task, alarm_task, telegram_task, voice_task):
+            for task in (warm_task, heartbeat_task, coding_agent_notify_task, reminder_notify_task, receipt_notify_task, alarm_task, telegram_task, voice_task):
                 if task is not None:
                     task.cancel()
                     with contextlib.suppress(asyncio.CancelledError):
