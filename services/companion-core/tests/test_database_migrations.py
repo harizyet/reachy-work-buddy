@@ -192,6 +192,9 @@ def test_persona_location_and_timezone_persist(database, keys):
         assert (config.location, config.timezone, config.name) == ("Singapore", "Asia/Singapore", "Reachy")
         await store.set(PersonaPatch(location=""))
         assert (await store.get()).location is None
+        assert (await store.get()).tone == "default"
+        await store.set(PersonaPatch(tone="calm"))
+        assert (await store.get()).tone == "calm"
         await store.close()
     asyncio.run(check())
 

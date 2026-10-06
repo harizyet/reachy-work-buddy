@@ -153,11 +153,12 @@ test('web search settings card configures hosted rotation and the SearXNG fallba
     await page.locator('#persona-location').fill('Singapore');
     await page.locator('#persona-browser-timezone').click();
     assert.equal(await page.locator('#persona-timezone').inputValue(), 'Asia/Singapore');
+    await page.locator('#persona-tone').selectOption('cheery');
     await Promise.all([
       page.waitForResponse(r => r.url().includes('/settings/persona') && r.request().method() === 'PUT'),
       page.locator('#persona').locator('button', {hasText: 'Save persona'}).click(),
     ]);
-    assert.deepEqual(personaPuts.at(-1), {name: 'Reachy', system_prompt: 'p', location: 'Singapore', timezone: 'Asia/Singapore'});
+    assert.deepEqual(personaPuts.at(-1), {name: 'Reachy', system_prompt: 'p', location: 'Singapore', timezone: 'Asia/Singapore', tone: 'cheery'});
     assert.equal(await page.locator('#persona-location').inputValue(), 'Singapore');
     assert.equal(await page.locator('#search-log-dialog').evaluate(d => d.open), false);
     assert.deepEqual(errors, []);

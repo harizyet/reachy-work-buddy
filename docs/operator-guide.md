@@ -24,7 +24,7 @@ replies. The model indicator means configured, not proven reachable.
 
 All persistent configuration and robot listening controls are grouped by feature:
 
-- **Assistant:** session mode/DND, assistant persona, location and time zone.
+- **Assistant:** session mode/DND, assistant persona (including a reply **Tone** preset: cheery, serious, formal, casual, playful or calm; style only, it never changes what the assistant may do), location and time zone.
 - **Models:** local/cloud endpoints, credentials and routing.
 - **Web search:** policy, providers, quotas and fallback.
 - **Voice & motion:** robot microphone, “Hey Reachy” and conversational animations.

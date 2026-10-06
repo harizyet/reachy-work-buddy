@@ -734,6 +734,27 @@ def test_follow_up_turns_search_with_topic_and_weather_uses_location():
     assert any("do not tell the user to check a link" in c for c in system)
 
 
+def test_persona_tone_is_validated_and_sent_as_a_style_only_system_message():
+    llm_requests = []
+
+    def llm_respond(request):
+        llm_requests.append(json.loads(request.content))
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    client = TestClient(core_app(llm_transport=httpx.MockTransport(llm_respond)))
+    client.put("/settings/llm", json={"local": {"base_url": "http://ovms/v1", "model": "qwen"}})
+    assert client.get("/settings/persona").json()["tone"] == "default"
+    assert client.put("/settings/persona", json={"tone": "sarcastic"}).status_code == 422
+    assert client.post("/conversation", json={**TURN, "text": "Tell me a joke about robots."}).status_code == 200
+    system = [m["content"] for m in llm_requests[-1]["messages"] if m["role"] == "system"]
+    assert not any("tone" in c.lower() and c.startswith("Reply in") for c in system)
+    assert client.put("/settings/persona", json={"tone": "formal"}).json()["tone"] == "formal"
+    assert client.post("/conversation", json={**TURN, "text": "Tell me another joke about robots."}).status_code == 200
+    system = [m["content"] for m in llm_requests[-1]["messages"] if m["role"] == "system"]
+    assert any(c.startswith("Reply in a formal") for c in system)
+    assert any("action" in c.lower() for c in system)
+
+
 # --- Phase 24e: search-trigger fixes from the 24d transcripts' shapes -----
 
 

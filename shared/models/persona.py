@@ -3,6 +3,7 @@
 Location and time zone (Phase 24a follow-up) give every conversation turn the owner's
 local date/time and place, so relative dates and weather resolve correctly."""
 
+from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -17,6 +18,18 @@ DEFAULT_SYSTEM_PROMPT = (
 
 
 DEFAULT_TIMEZONE = "UTC"
+
+Tone = Literal["default", "cheery", "serious", "formal", "casual", "playful", "calm"]
+# Style only: each line is sent as a system message and never changes what the
+# assistant is allowed to do (the action boundary and consent gates still apply).
+TONE_INSTRUCTIONS: dict[str, str] = {
+    "cheery": "Reply in a cheerful, upbeat, friendly tone.",
+    "serious": "Reply in a serious, direct, no-nonsense tone. Do not joke.",
+    "formal": "Reply in a formal, polished, professional tone. Avoid slang and contractions.",
+    "casual": "Reply in a relaxed, casual, conversational tone, like a friendly colleague.",
+    "playful": "Reply in a playful, light-hearted tone with a little wit, without becoming verbose.",
+    "calm": "Reply in a calm, gentle, reassuring tone.",
+}
 
 
 def _validate_timezone(value: str | None) -> str | None:
@@ -41,6 +54,7 @@ class PersonaConfig(BaseModel):
     # no location to the model context or to weather searches.
     location: str | None = Field(default=None, max_length=120)
     timezone: str = Field(default=DEFAULT_TIMEZONE, max_length=64)
+    tone: Tone = "default"
 
     _location = field_validator("location", mode="before")(_blank_to_none)
     _timezone = field_validator("timezone")(_validate_timezone)
@@ -52,6 +66,7 @@ class PersonaPatch(BaseModel):
     system_prompt: str | None = Field(default=None, min_length=1, max_length=4000)
     location: str | None = Field(default=None, max_length=120)
     timezone: str | None = Field(default=None, max_length=64)
+    tone: Tone | None = None
 
     _location = field_validator("location", mode="before")(_blank_to_none)
     _timezone = field_validator("timezone")(_validate_timezone)

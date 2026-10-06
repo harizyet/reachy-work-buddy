@@ -4,7 +4,7 @@ from companion_core.persona.store import merge_persona
 from shared.database import check_schema
 from shared.models.persona import PersonaConfig, PersonaPatch
 
-_FIELDS = ("name", "system_prompt", "location", "timezone")
+_FIELDS = ("name", "system_prompt", "location", "timezone", "tone")
 _COLUMNS = ", ".join(_FIELDS)
 
 
@@ -38,8 +38,8 @@ class PostgresPersonaStore:
             current = PersonaConfig(**dict(zip(_FIELDS, await cur.fetchone(), strict=True)))
             config = merge_persona(current, patch)
             await conn.execute(
-                """UPDATE persona_config SET name = %s, system_prompt = %s, location = %s, timezone = %s,
+                """UPDATE persona_config SET name = %s, system_prompt = %s, location = %s, timezone = %s, tone = %s,
                 updated_at = now() WHERE id = 'default'""",
-                (config.name, config.system_prompt, config.location, config.timezone),
+                (config.name, config.system_prompt, config.location, config.timezone, config.tone),
             )
             return config

@@ -46,6 +46,8 @@
           <form id="persona"><fieldset id="persona-fields" disabled><label>Name<input id="persona-name" required maxlength="64" placeholder="Reachy"></label>
           <label>System prompt<textarea id="persona-prompt" rows="5" required maxlength="4000" placeholder="You are Reachy, an embodied work assistant..."></textarea></label>
           <p class="muted">Sent to the model ahead of every conversation turn.</p>
+          <label>Tone<select id="persona-tone"><option value="default">Default</option><option value="cheery">Cheery</option><option value="serious">Serious</option><option value="formal">Formal</option><option value="casual">Casual</option><option value="playful">Playful</option><option value="calm">Calm</option></select></label>
+          <p class="muted">Sets the style of replies. It never changes what the assistant is allowed to do.</p>
           <label>Location<input id="persona-location" maxlength="120" placeholder="Singapore"></label>
           <label>Time zone<input id="persona-timezone" maxlength="64" placeholder="Asia/Singapore"></label>
           <button type="button" id="persona-browser-timezone" class="secondary">Use this browser's time zone</button>

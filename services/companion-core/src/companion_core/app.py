@@ -289,7 +289,7 @@ from companion_core.websearch.store import (
 )
 from shared.models.llm import LLMConfigPatch
 from shared.models.memory import MemoryRecord, MemoryType
-from shared.models.persona import PersonaConfig, PersonaPatch
+from shared.models.persona import TONE_INSTRUCTIONS, PersonaConfig, PersonaPatch
 from shared.models.rag import DocumentChunk, RetrievedChunk
 from shared.models.response import Privacy, Urgency
 from shared.models.session import InputModality
@@ -1351,6 +1351,8 @@ def create_app(
                             ))
                         history_with_persona = [
                             {"role": "system", "content": persona.system_prompt},
+                            *([{"role": "system", "content": TONE_INSTRUCTIONS[persona.tone]}]
+                              if persona.tone in TONE_INSTRUCTIONS else []),
                             {"role": "system", "content": ACTION_BOUNDARY_INSTRUCTION},
                             context_message(persona, datetime.now(UTC)),
                             *grounding_messages,

@@ -180,6 +180,7 @@ function renderPersona(config) {
   $('persona-prompt').value = config.system_prompt || '';
   $('persona-location').value = config.location || '';
   $('persona-timezone').value = config.timezone || 'UTC';
+  $('persona-tone').value = config.tone || 'default';
   $('persona-fields').disabled = false;
 }
 const HOSTED_SEARCH = ['brave', 'exa', 'tavily'];
@@ -375,7 +376,7 @@ submit('session-controls', async () => {
 submit('persona', async () => {
   const patch = {
     name: $('persona-name').value.trim(), system_prompt: $('persona-prompt').value.trim(),
-    location: $('persona-location').value.trim() || null, timezone: $('persona-timezone').value.trim() || 'UTC',
+    location: $('persona-location').value.trim() || null, timezone: $('persona-timezone').value.trim() || 'UTC', tone: $('persona-tone').value,
   };
   renderPersona(await api('/settings/persona', {method: 'PUT', body: JSON.stringify(patch)}));
   notice('Persona saved.');
@@ -386,6 +387,7 @@ $('persona-browser-timezone').addEventListener('click', () => {
 $('reset-persona').addEventListener('click', () => {
   $('persona-name').value = DEFAULT_PERSONA_NAME;
   $('persona-prompt').value = DEFAULT_PERSONA_PROMPT;
+  $('persona-tone').value = 'default';
   notice('Default persona loaded — click Save persona to apply.');
 });
 $('llm-routing').addEventListener('change', () => { routingEdited = true; });

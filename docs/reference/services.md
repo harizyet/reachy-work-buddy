@@ -35,7 +35,7 @@ browser/channel transport. Debug robot calls go through hub.
 | `GET/POST /planner/alarms`, `DELETE /planner/alarms/{id}`, `POST /planner/alarms/stop`, `GET/POST /planner/stations`, `GET /planner/stations/search?q=`, `DELETE /planner/stations/{id}` (hub) | Phase 38.6: owner-cookie/CSRF proxies to core `/alarms` and `/stations` for the Alarms tab; `search` queries TuneIn with the SSRF guard; `stop` calls the in-process `AlarmDeliverer.stop()` and returns `{"stopped": bool}` |
 | `GET /coding-agents/completions/due` | Phase 29.6: newly-terminal or owner-awaiting coding-agent sessions, claimed once per session turn so reachy-hub's poll loop never double-notifies; same pure-query shape as `/calendar/reminders/due` |
 | `GET`, `PUT /settings/llm`; `GET /llm/usage` | Internal settings/usage; operator callers use authenticated hub proxies |
-| `GET`, `PUT /settings/persona` | Assistant name/system prompt (`persona_config` table); prepended as a system message on the generic LLM branch only |
+| `GET`, `PUT /settings/persona` | Assistant name/system prompt/location/time zone/tone (`persona_config` table; `tone` is one of default, cheery, serious, formal, casual, playful, calm, migration 017, sent as a style-only system message after the system prompt); prepended as a system message on the generic LLM branch only |
 | `GET`, `PUT /settings/websearch` | Web-search grounding policy/provider (`search_config` table); Phase 24a, see below |
 | `/debug/robots/...` | Debug integration plumbing, not a stable agent-tool API |
 
