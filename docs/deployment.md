@@ -729,6 +729,14 @@ another host. The recorded live Call Reachy check used an aiortc client,
 not a physical cross-machine browser acceptance test. TURN/LAN deployment
 and physical media validation are still outstanding.
 
+## Android app
+
+The Android app ([README](../clients/android/README.md), [Phase 40](phase-40.md)) is a sideloaded debug build, delivered by hand, not a deployed
+service. It needs the hub routes of the current core and hub images: after a core and hub rebuild, install the matching APK so the screens and
+the hub agree (older APKs keep working for what they already did). It reaches the hub over the tailnet address (plain HTTP). Its phone alarm
+backup needs no extra service: it polls the hub's existing `/planner/alarms`. Rebuild the APK from `clients/android` with
+`./gradlew :app:assembleDebug`; the version is `versionName` in `app/build.gradle.kts`.
+
 ## Upgrades and verification cleanup
 
 Schema upgrades now use the dedicated migration job; follow

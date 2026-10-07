@@ -15,6 +15,11 @@ Status: **built and deployed 2026-10-07.** Decision: [ADR 0032](adr/0032-meeting
 
 API (core, hub proxies the same): `DELETE /meetings/{id}`, `POST/DELETE /meetings/{id}/outputs/{summary|minutes}`, `POST /meetings/{id}/outputs/{kind}/deep`, `context_meeting_id` on chat turns. See [services reference](reference/services.md). Migration 021 (`summary`, `minutes`).
 
+## Additions (2026-10-08)
+
+- **Longer summaries and minutes.** The prompts no longer ask for "a short paragraph" and "up to six bullets": they ask for a thorough summary and detailed minutes covering every topic. The answer limit is 2500 tokens (summary) and 3500 (minutes), reduced to what the 8192-token window leaves after the request; per-part notes get 700 tokens; and when the combined notes of a long meeting would not leave room for the answer they are condensed in stages first (the old behaviour could overflow the window and fail). A very long meeting still covers its first 12 parts, and says so.
+- **Titles and descriptions.** Every meeting has a title and a one-or-two-line description (list and detail, web and app). A recording named only by the app's default ("Meeting 7 Oct 12:05") is named from its transcript automatically by the local model (worker `description` stage, retried every two minutes if the model is unavailable); an owner-chosen or edited title is never replaced. Edit title (web) or the pencil (app) edits both by hand, or writes them again from the transcript on the local model. `PUT /meetings/{id}/title`, `POST /meetings/{id}/describe`; migration 025 (`description`, `title_source`). On the real 7B the first meeting was named "Enterprise AI & Client Engagement" with an accurate description.
+
 ## Verification (2026-10-07)
 
 - Core, hub, Postgres, Android (31 JVM tests) and browser tests pass; the Android flows were run in an emulator against a throwaway hub.

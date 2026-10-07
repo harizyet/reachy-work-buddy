@@ -1,6 +1,6 @@
 # Project state
 
-Snapshot: 2026-10-02. This page owns current deployment and cross-phase
+Snapshot: 2026-10-08 (the sections on Phase 30 onward and the hardware limits were last reviewed 2026-10-02). This page owns current deployment and cross-phase
 acceptance limits. The [phase ledger](plan.md#6-implementation-roadmap)
 owns phase status and scope; dated [verification records](README.md#verification-records)
 own evidence. This snapshot is not a live health check.
@@ -21,7 +21,7 @@ visible-false-activations metric and the fresh 24g held-out run (deferred by the
 owner on 2026-09-28); see [phase-30](phase-30.md).
 
 **Next (Phase 31):** browser checks and a real 30–60 minute meeting through
-[Phase 27](phase-27.md), then alignment, analysis and retrieval. **After
+[Phase 27](phase-27.md) (alignment now exists), then analysis and retrieval. **After
 (Phase 32):** [Phase 25](phase-25.md) owner-recognition data collection,
 calibration and the real verifier; its next gates are browser verification of
 benchmark capture and consenting owner/non-owner recordings. Phase 25 work runs
@@ -49,12 +49,27 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
   Real multi-speaker/30–60 minute acceptance, resource measurements,
   browser recording/detail checks and explicit row/audio survival across
   restart remain open. Speech-service token authentication is implemented
-  but unset in the reported deployment. Alignment and analysis remain
-  unimplemented. File-backed transfers and longer configurable inference
+  but unset in the reported deployment. Since 2026-10-07 (deployed, database
+  revision 025) a meeting is aligned (a speaker per line), checked for silent
+  recording gaps, playable, editable line by line, titled and described
+  automatically, and summarised from the local model; see
+  [the 2026-10-07 evidence](verification/clients-meetings-alarms-2026-10-07.md). The
+  owner's one real recording is two thirds silent (the phone captured nothing),
+  so alignment and summary quality on a clean multi-speaker recording are still
+  unjudged. Analysis and retrieval remain unimplemented. File-backed transfers and longer configurable inference
   waits have [isolated 65-minute synthetic checks](verification/phase-27-long-audio-2026-09-30.md);
   these changes have not been rolled out to the live stack. See [evidence](verification/phase-27-foundation-2026-09-30.md)
   and the [next diagnostic run](phase-27.md#before-alignment-representative-speech-acceptance).
 
+- **Android app and phone-facing screens (40, 38.8/38.9):** built through app
+  0.14.0 and verified on an emulator (including the Fold's inner-screen size and a phone
+  alarm firing with the app killed and the hub down), with the hub features deployed. Not
+  accepted on a physical phone or Pixel Fold. Open: spoken replies on the owner's
+  phone (reported silent after 0.12.1, not reproduced; 0.12.2 hardened playback),
+  the phone alarm in Doze and against a real "robot unavailable" or "nobody detected"
+  outcome, and the web screens against the production hub. Alarm times are read in the
+  assistant's time zone but shown in the device's. See
+  [the evidence](verification/clients-meetings-alarms-2026-10-07.md).
 - **Physical platform (22b/22c):** named behaviours were owner-accepted despite
   tracking imprecision; audio and camera have run on hardware. LOCAL-backend
   captures now work on the Nano, but a deliberate fresh-scene check is still

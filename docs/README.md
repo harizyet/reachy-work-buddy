@@ -86,7 +86,7 @@ correct facts or links, not to track each new phase dependency.
 - [Phase 37](phase-37.md): semantic routing and argument validation — stage sequence and gates for replacing the phrase-matcher fall-through; decision in [ADR 0026](adr/0026-semantic-routing-and-argument-validation.md).
 - [Phase 38](phase-38.md): alarm clock and presence-gated delivery — stage sequence and gates; decision in [ADR 0027](adr/0027-alarms-and-presence-gated-delivery.md).
 - [Phase 39](phase-39.md): persona-aware responses and action receipts — stage sequence and gates; decision in [ADR 0028](adr/0028-persona-responses-and-action-receipts.md).
-- [Phase 40](phase-40.md): Android companion app — stage sequence and gates; decision in [ADR 0029](adr/0029-android-companion-app.md).
+- [Phase 40](phase-40.md): Android companion app (built through version 0.14.0) — stage sequence and gates; decision in [ADR 0029](adr/0029-android-companion-app.md).
 - [Phase 41](phase-41.md): meeting speaker names and reviewed transcript corrections — stage sequence and gates; decision in [ADR 0030](adr/0030-meeting-speaker-names-and-reviewed-corrections.md).
 - [Phase 42](phase-42.md): three-tier model escalation — stage sequence and gates; decision in [ADR 0031](adr/0031-three-tier-local-model-escalation.md).
 - [Phase 43](phase-43.md): meeting deletion, summaries, minutes and meeting context — decision in [ADR 0032](adr/0032-meeting-outputs-and-context.md).
@@ -135,6 +135,11 @@ over the original decision where they explicitly change it.
 ## Verification records
 
 These are dated evidence, not startup instructions or current health checks.
+
+- [Android, meetings and alarms 2026-10-07/08](verification/clients-meetings-alarms-2026-10-07.md):
+  deploys with their backups, the real silent recording, emulator checks (including the
+  unfolded Fold layout and the phone alarm with the app killed), test counts and what is
+  still unverified.
 
 - [Operator UI reorganization](verification/operator-ui-2026-10-01.md): feature
   settings tabs, dashboard, meeting sidebar and durable web records; Chromium

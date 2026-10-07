@@ -192,8 +192,9 @@ alone missed those historical failures.
 `clients/android` needs JDK 17 and the Android SDK (platform 35, build-tools
 35.0.0); see its [README](../clients/android/README.md). `./gradlew
 :app:testDebugUnitTest` runs the JVM tests against a mock hub;
-`:app:assembleDebug` builds the APK. Emulator checks need KVM and a throwaway
-hub, never the production stack.
+`:app:assembleDebug` builds the APK (55 JVM tests at version 0.14.0). Emulator checks need KVM and a throwaway
+hub, never the production stack; an in-process hub with in-memory stores serves them. The unfolded Pixel Fold layout is checked by switching
+the emulator with `adb shell wm size 2208x1840` and `wm density 380` (then `reset`). The emulator has no audio output.
 
 ## Model manager
 

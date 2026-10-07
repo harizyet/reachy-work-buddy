@@ -12,8 +12,12 @@ Status: **started 2026-10-07.** Decision: [ADR 0030](adr/0030-meeting-speaker-na
 | 41.3 Android | Speaker labels in the transcript, tap to name, Suggest corrections (asks local or cloud model each time) grouped into one "Change all N" card per mistake, a Replace (find and replace) dialog, tap a segment to edit or restore | **Done 2026-10-07**; verified in an emulator against a throwaway hub with a stubbed local model | Real model and real recording |
 | 41.6 Key terms | Global glossary (`/meeting-terms`), per-meeting terms, attendees and speaker names as vocabulary; candidate generation (spelling plus phonetic) and a model that only chooses; spelling variants accepted without a model; confidence and source on each suggestion; migration 020; app screens | **Done 2026-10-07**; real-Postgres tests pass; emulator-checked with a stub model | Permanent regression case "germanite to Gemini" (`test_meeting_annotations.py`) |
 | 41.7 Model benchmark | 23-case harness; compare the 7B, Qwen3-14B, Gemma-3-12B and Gemma-4-12B; keep the production 7B | **Done 2026-10-07**, see [the record](verification/meeting-corrections-benchmark-2026-10-07.md); no production model change | Add real ASR mistakes over time (1 real case so far) |
-| 41.4 Web panel | Show names and corrections in the Meetings tab | **Not started** | n/a |
+| 41.4 Web panel | Speaker chips with click-to-rename on each transcript line; suggestions and Replace; per-line Edit and Restore original; an audio player and click-a-line-to-play | **Done 2026-10-07** (browser-fixture verified, `meeting_outputs.test.cjs`) | Real browser against production |
 | 41.5 Acceptance | Deploy migration 019, run suggestions with the real local model on a real recording | **Pending (owner)** | Owner |
+
+## Review additions (2026-10-07)
+
+Selecting a transcript line plays the recording from that line's start (web player; the app downloads the recording once and plays it locally, so seeking is instant), so a wrong line can be checked against the audio. **Edit** on a line stores a manual correction exactly like an accepted suggestion (same overlay, same Restore original), the fail-safe when every model is wrong. If the recording itself has no audio at that point, the transcript line is flagged ([Phase 27](phase-27.md)).
 
 ## Known limits
 

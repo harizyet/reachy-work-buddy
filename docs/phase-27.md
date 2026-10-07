@@ -19,10 +19,9 @@ and
 `test_meetings_proxy_upload_list_get_cancel_require_auth` for automated
 coverage; the browser UI has not been checked in a real browser (no
 Playwright/Chromium available this session). 27.2/27.3 (long-form STT,
-diarization) are now implemented too — see below — but ALIGNING onward
-(alignment, analysis, retrieval) is not; a meeting whose speech sidecars
-are both deployed and reachable will now reach ALIGNING and wait there,
-which is correct given the current scope, not a bug. See the 27.1
+diarization) are now implemented too — see below. Alignment was added
+on 2026-10-07 (a meeting now ends at COMPLETE); analysis and retrieval
+(27.5 onward) are not. See the 27.1
 implementation-sequence entry below for what specifically exists.
 
 **Speech inference architecture decided 2026-09-30:**
@@ -1087,6 +1086,14 @@ diarization-complete (or the reverse) as distinct, legible states rather
 than one ambiguous stage. This step creates the canonical
 speaker-attributed `TranscriptSegment`s from whatever combination of
 completed STT/diarization output is available.
+
+**Meeting additions 2026-10-07/08 (all deployed to the homelab):** alignment (below, migration 022); a recording check that finds
+stretches where the phone captured exact silence and flags the transcript lines inside them (`meetings/silence.py`, worker `audio check`
+stage, `audio_gaps`, migration 023; PyAV is now a core dependency); `GET /meetings/{id}/audio` with byte-range support so clients can play
+the recording; automatic titles and one-or-two-line descriptions from the transcript (`meetings/describe.py`, worker `description` stage,
+`title_source`, migration 025) with `PUT /meetings/{id}/title` and `POST /meetings/{id}/describe`; and longer, thorough summaries and
+minutes ([Phase 43](phase-43.md)). Still not built: analysis (27.5 onward), concurrent STT and diarization, a richer canonical
+`TranscriptSegment`, and a fix for the cause of silent gaps (phones silencing a background recording; see the 2026-10-07 verification record).
 
 **Alignment implemented 2026-10-07** (migration `022_meeting_alignment`).
 `meetings/align.py` gives every transcript segment the diarization speaker with
