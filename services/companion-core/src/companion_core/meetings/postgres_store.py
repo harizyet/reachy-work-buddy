@@ -35,7 +35,7 @@ _COLUMNS = (
     "id, title, project_scope, context, participants, started_at, source_filename, content_type, "
     "audio_path, normalized_audio_path, duration_seconds, transcript_segments, diarization_segments, "
     "status, error_detail, created_at, updated_at, speaker_names, transcript_corrections, key_terms, summary, minutes, "
-    "aligned_segments"
+    "aligned_segments, audio_gaps"
 )
 
 
@@ -64,6 +64,7 @@ def _from_row(row: tuple) -> Meeting:
         summary=MeetingOutput(**row[20]) if row[20] else None,
         minutes=MeetingOutput(**row[21]) if row[21] else None,
         aligned_segments=row[22],
+        audio_gaps=row[23],
     )
 
 
@@ -127,13 +128,13 @@ class PostgresMeetingStore:
         async with self._pool.connection() as conn:
             await conn.execute(
                 f"INSERT INTO meetings ({_COLUMNS}) VALUES "
-                "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     meeting.id, meeting.title, meeting.project_scope, meeting.context, meeting.participants,
                     meeting.started_at, meeting.source_filename, meeting.content_type, meeting.audio_path,
                     meeting.normalized_audio_path, meeting.duration_seconds, None, None,
                     meeting.status.value, meeting.error_detail, meeting.created_at, meeting.updated_at,
-                    Json({}), Json({}), Json([]), None, None, None,
+                    Json({}), Json({}), Json([]), None, None, None, None,
                 ),
             )
         return meeting
@@ -277,6 +278,24 @@ class PostgresMeetingStore:
             )
             row = await cur.fetchone()
             return _from_row(row) if row else await self.get_meeting(meeting_id)
+
+    async def claim_next_audio_check(self) -> Meeting | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"SELECT {_COLUMNS} FROM meetings WHERE status = %s AND audio_gaps IS NULL ORDER BY created_at LIMIT 1",
+                (MeetingJobStatus.COMPLETE.value,),
+            )
+            row = await cur.fetchone()
+            return _from_row(row) if row else None
+
+    async def set_audio_gaps(self, meeting_id: str, gaps: dict[str, Any]) -> Meeting | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"UPDATE meetings SET audio_gaps = %s, updated_at = now() WHERE id = %s RETURNING {_COLUMNS}",
+                (Json(gaps), meeting_id),
+            )
+            row = await cur.fetchone()
+            return _from_row(row) if row else None
 
     async def mark_failed(self, meeting_id: str, *, error_detail: str) -> Meeting | None:
         async with self._pool.connection() as conn:

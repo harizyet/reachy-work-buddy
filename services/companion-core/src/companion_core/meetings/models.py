@@ -117,6 +117,9 @@ class Meeting(BaseModel):
     # Phase 27.4: the transcript with a speaker on every segment, index-aligned with transcript_segments. Written once,
     # when the ALIGNING stage runs; None until then.
     aligned_segments: list[dict[str, Any]] | None = None
+    # Stretches of the recording with no captured audio: {"spans": [{start, end}], "segments": [transcript indexes],
+    # "seconds": total}. None until the recording has been checked.
+    audio_gaps: dict[str, Any] | None = None
     # Owner-assigned display names, keyed by diarization label ("SPEAKER_00").
     # The raw diarization output is never rewritten (Phase 41, ADR 0030).
     speaker_names: dict[str, str] = Field(default_factory=dict)

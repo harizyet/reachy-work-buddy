@@ -85,6 +85,12 @@ class MeetingStore(Protocol):
         """Store the aligned transcript and complete the job. A no-op unless the job is still ALIGNING."""
         ...
 
+    async def claim_next_audio_check(self) -> Meeting | None:
+        """A finished meeting whose recording has not been checked for silent stretches yet, or None."""
+        ...
+
+    async def set_audio_gaps(self, meeting_id: str, gaps: dict[str, Any]) -> Meeting | None: ...
+
     async def mark_failed(self, meeting_id: str, *, error_detail: str) -> Meeting | None: ...
     async def cancel_meeting(self, meeting_id: str) -> Meeting | None: ...
     async def set_speaker_names(self, meeting_id: str, names: dict[str, str]) -> Meeting | None:
@@ -235,6 +241,14 @@ class InMemoryMeetingStore:
         if meeting.status != MeetingJobStatus.ALIGNING:
             return meeting
         return self._touch(meeting, status=MeetingJobStatus.COMPLETE, aligned_segments=aligned_segments)
+
+    async def claim_next_audio_check(self) -> Meeting | None:
+        candidates = [m for m in self._meetings.values() if m.status == MeetingJobStatus.COMPLETE and m.audio_gaps is None]
+        return min(candidates, key=lambda m: m.created_at) if candidates else None
+
+    async def set_audio_gaps(self, meeting_id: str, gaps: dict[str, Any]) -> Meeting | None:
+        meeting = self._meetings.get(meeting_id)
+        return self._touch(meeting, audio_gaps=gaps) if meeting else None
 
     async def mark_diarized(
         self, meeting_id: str, *, diarization_segments: list[dict[str, Any]]

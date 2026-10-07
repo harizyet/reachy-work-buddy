@@ -45,3 +45,13 @@ fun countOccurrences(meeting: Meeting, find: String): Int {
 /** The transcript line being spoken at [seconds], or null between lines. */
 fun lineAt(segments: List<Segment>, seconds: Double): Int? =
     segments.indexOfFirst { seconds >= it.start && seconds < it.end }.takeIf { it >= 0 }
+
+/** Seconds of the recording the phone captured no audio for; 0 when none or not yet checked. */
+fun silentSeconds(meeting: Meeting): Double = meeting.audioGaps?.seconds ?: 0.0
+
+fun gapNotice(meeting: Meeting): String =
+    "${clockText(silentSeconds(meeting))} of this recording has no audio — the phone stopped capturing sound (for example when it locked or another app used the microphone). Lines marked with a warning may be missing or unreliable."
+
+fun lineIsSilent(meeting: Meeting, index: Int): Boolean = meeting.audioGaps?.segments?.contains(index) == true
+
+private fun clockText(seconds: Double): String = "%d:%02d".format(seconds.toInt() / 60, seconds.toInt() % 60)

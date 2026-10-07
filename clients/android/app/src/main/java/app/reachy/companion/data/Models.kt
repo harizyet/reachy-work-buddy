@@ -25,6 +25,8 @@ data class Meeting(
     @SerialName("diarization_segments") val speakers: List<Segment>? = null,
     // The server-side alignment: one entry per transcript segment, with its speaker. Null until the meeting is aligned.
     @SerialName("aligned_segments") val aligned: List<Segment>? = null,
+    // Stretches of the recording where the phone captured no audio, found by the server (null until checked).
+    @SerialName("audio_gaps") val audioGaps: AudioGaps? = null,
     @SerialName("speaker_names") val speakerNames: Map<String, String> = emptyMap(),
     @SerialName("transcript_corrections") val corrections: Map<String, String> = emptyMap(),
     @SerialName("key_terms") val keyTerms: List<String> = emptyList(),
@@ -103,3 +105,6 @@ data class Receipt(
     val at: String = "",
     val fields: Map<String, String> = emptyMap(),
 )
+
+@Serializable
+data class AudioGaps(val seconds: Double = 0.0, val segments: List<Int> = emptyList())

@@ -12,6 +12,7 @@ dependencies = [
     "pgvector>=0.3",
     "alembic>=1.16",
     "cryptography>=45",
+    "av>=14",  # decodes recordings to find stretches where the phone captured no audio
     "aiosmtplib>=3.0",
     "reachy-work-companion",
     "sentence-transformers>=3.0",

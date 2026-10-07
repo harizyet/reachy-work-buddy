@@ -130,6 +130,11 @@ def test_aligned_segments_persist_and_the_meeting_completes(database, tmp_path):
             assert await store.claim_next_alignment() is None
             again = await store.mark_aligned(meeting.id, aligned_segments=[{"speaker": "OTHER"}])
             assert again.aligned_segments[0]["speaker"] == "SPEAKER_00"  # only from ALIGNING
+            assert (await store.claim_next_audio_check()).id == meeting.id  # complete and not yet checked
+            gaps = {"spans": [{"start": 1.0, "end": 9.0}], "segments": [0], "seconds": 8.0}
+            assert (await store.set_audio_gaps(meeting.id, gaps)).audio_gaps == gaps
+            assert await store.claim_next_audio_check() is None
+            assert (await store.get_meeting(meeting.id)).audio_gaps == gaps
         finally:
             await store.close()
 

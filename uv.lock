@@ -512,6 +512,7 @@ source = { editable = "services/companion-core" }
 dependencies = [
     { name = "aiosmtplib" },
     { name = "alembic" },
+    { name = "av" },
     { name = "cryptography" },
     { name = "fastapi" },
     { name = "httpx" },
@@ -529,6 +530,7 @@ dependencies = [
 requires-dist = [
     { name = "aiosmtplib", specifier = ">=3.0" },
     { name = "alembic", specifier = ">=1.16" },
+    { name = "av", specifier = ">=14" },
     { name = "cryptography", specifier = ">=45" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", specifier = ">=0.27" },

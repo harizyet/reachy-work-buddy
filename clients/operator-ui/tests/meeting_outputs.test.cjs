@@ -12,7 +12,7 @@ test('meetings: delete, summary and minutes with rerun tiers, and use as context
   const segments = [{start: 0, end: 6, text: 'We compare ClickHouse and InfluxDB.'}, {start: 6, end: 12, text: 'ClickHouse is open source <img src=x onerror=boom()>.'}];
   const meetings = new Map();
   const add = (id, title, status, extra = {}) => meetings.set(id, {id, title, status, participants: [], created_at: '2026-10-07T00:00:00Z', transcript_segments: null, diarization_segments: null, transcript_corrections: {}, summary: null, minutes: null, ...extra});
-  add('ready', 'Database choice', 'complete', {transcript_segments: segments, diarization_segments: [{start: 0, end: 12, speaker: 'SPEAKER_00'}], aligned_segments: [{start: 0, end: 6, text: segments[0].text, speaker: 'SPEAKER_00'}, {start: 6, end: 12, text: segments[1].text, speaker: 'SPEAKER_01'}], speaker_names: {}});
+  add('ready', 'Database choice', 'complete', {transcript_segments: segments, diarization_segments: [{start: 0, end: 12, speaker: 'SPEAKER_00'}], aligned_segments: [{start: 0, end: 6, text: segments[0].text, speaker: 'SPEAKER_00'}, {start: 6, end: 12, text: segments[1].text, speaker: 'SPEAKER_01'}], speaker_names: {}, audio_gaps: {spans: [{start: 6, end: 12}], segments: [1], seconds: 6}});
   add('failed', 'Old failed test', 'failed', {error_detail: 'boom'});
   add('cancelled', 'Cancelled upload', 'cancelled');
   add('busy', 'Stuck upload', 'transcribing');
@@ -99,6 +99,10 @@ test('meetings: delete, summary and minutes with rerun tiers, and use as context
     // detail of a processed meeting: the transcript shows who spoke, and a speaker can be named
     await row('Database choice').getByRole('button', {name: 'View details'}).click();
     await page.waitForSelector('#meeting-toolbar:not([hidden])');
+    assert.match(await page.textContent('#meeting-detail-gaps'), /0:06 of this recording has no audio/);
+    assert.deepEqual(await page.locator('#meeting-detail-transcript .gap-warning').count(), 1);
+    assert.equal(await page.locator('#meeting-detail-transcript li').nth(1).locator('.gap-warning').count(), 1);
+    assert.equal(await row('Database choice').locator('.gap-warning').count(), 1);
     const chips = page.locator('#meeting-detail-transcript .speaker-chip');
     assert.deepEqual(await chips.allTextContents(), ['Speaker 1', 'Speaker 2']);
     await chips.nth(1).click(); await page.waitForSelector('#speaker-dialog[open]');

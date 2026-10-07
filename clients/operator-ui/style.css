@@ -558,3 +558,6 @@ li.playing .line-text { font-weight: 600; }
 dialog#line-dialog { border: 1px solid #888; border-radius: 8px; padding: 1.2rem; min-width: min(32rem, 90vw); }
 dialog#line-dialog::backdrop { background: rgba(0,0,0,.45); }
 dialog#line-dialog textarea { width: 100%; }
+.gap-warning { color: #b7791f; font-weight: 700; cursor: help; }
+.gap-banner { background: #fff4d6; color: #5c4400; border: 1px solid #e0b03c; border-radius: 6px; padding: .5rem .75rem; }
+@media (prefers-color-scheme: dark) { .gap-banner { background: #3b2f0b; color: #f3dca0; border-color: #8a6a14; } .gap-warning { color: #f0b429; } }

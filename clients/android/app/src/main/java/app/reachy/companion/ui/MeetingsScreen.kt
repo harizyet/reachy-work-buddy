@@ -32,6 +32,10 @@ import androidx.compose.material3.TextButton
 import app.reachy.companion.data.countOccurrences
 import app.reachy.companion.data.lineAt
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.Warning
+import app.reachy.companion.data.gapNotice
+import app.reachy.companion.data.lineIsSilent
+import app.reachy.companion.data.silentSeconds
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Slider
 import app.reachy.companion.data.segmentText
@@ -68,6 +72,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.core.content.ContextCompat
 import app.reachy.companion.AppViewModel
 import app.reachy.companion.DeepReviewController
@@ -169,7 +176,10 @@ private fun MeetingList(model: AppViewModel, modifier: Modifier) {
             items(model.meetings, key = { it.id }) { meeting ->
                 Row(Modifier.fillMaxWidth().clickable { model.showMeeting(meeting.id) }.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f).padding(vertical = 14.dp)) {
-                        Text(meeting.title, style = MaterialTheme.typography.titleMedium)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(meeting.title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f, fill = false))
+                            if (silentSeconds(meeting) > 0) GapIcon("Part of this recording has no audio", Modifier.padding(start = 6.dp))
+                        }
                         Text(statusLabel(meeting.status), style = MaterialTheme.typography.bodySmall)
                     }
                     if (meeting.status in IN_PROGRESS) TextButton({ model.cancelMeeting(meeting.id) }) { Text("Cancel") }
@@ -179,6 +189,15 @@ private fun MeetingList(model: AppViewModel, modifier: Modifier) {
             }
         }
     }
+}
+
+private val GapIconColor = Color(0xFFB7791F)
+private val GapBackground = Color(0xFFFFF4D6)
+private val GapText = Color(0xFF5C4400)
+
+@Composable
+private fun GapIcon(description: String, modifier: Modifier = Modifier) {
+    Icon(Icons.Default.Warning, description, modifier.size(18.dp), tint = GapIconColor)
 }
 
 @Composable
@@ -217,6 +236,13 @@ private fun MeetingDetail(model: AppViewModel, meeting: Meeting, modifier: Modif
             }
         }
         ErrorLine(meeting.errorDetail ?: model.listError)
+        if (silentSeconds(meeting) > 0) Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).background(GapBackground, RoundedCornerShape(8.dp)).padding(10.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            GapIcon("Recording gap")
+            Text(gapNotice(meeting), Modifier.padding(start = 8.dp), style = MaterialTheme.typography.bodySmall, color = GapText)
+        }
         if (ready) {
             Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(section == "summary", { section = "summary"; if (meeting.summary == null && model.generatingKind == null) model.generateOutput("summary", "local") }, { Text("Summary") })
@@ -304,6 +330,10 @@ private fun MeetingDetail(model: AppViewModel, meeting: Meeting, modifier: Modif
                     }
                 } else if (label == null) {
                     Text(clock(segment.start), style = MaterialTheme.typography.labelSmall)
+                }
+                if (lineIsSilent(meeting, index)) Row(verticalAlignment = Alignment.CenterVertically) {
+                    GapIcon("No audio was recorded for most of this line")
+                    Text("  no audio recorded here", style = MaterialTheme.typography.labelSmall, color = GapIconColor)
                 }
                 Text(
                     segmentText(meeting, index),

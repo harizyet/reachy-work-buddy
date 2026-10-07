@@ -31,6 +31,7 @@ import wave
 from io import BytesIO
 from typing import BinaryIO
 
+from companion_core.meetings import silence
 from companion_core.meetings.align import align
 from companion_core.meetings.models import Meeting
 from companion_core.meetings.speech_clients import (
@@ -130,6 +131,21 @@ async def align_stage(store: MeetingStore, meeting: Meeting) -> bool:
     return True
 
 
+async def audio_check_stage(store: MeetingStore, meeting: Meeting) -> bool:
+    """Look for stretches of the recording with no captured audio. Never fails the meeting: it is already complete, so a
+    recording that cannot be decoded is recorded as checked with no findings (and the reason kept) rather than retried."""
+    gaps: dict
+    try:
+        audio = await store.open_audio(meeting.id)
+        with audio:
+            gaps = await asyncio.to_thread(silence.analyse, audio, meeting.transcript_segments or [])
+    except Exception as exc:  # noqa: BLE001 - decoding is best effort; the transcript stays usable without it
+        logger.warning("meeting %s: could not check the recording for silent stretches: %s", meeting.id, exc)
+        gaps = {"spans": [], "segments": [], "seconds": 0.0, "error": str(exc)[:200]}
+    await store.set_audio_gaps(meeting.id, gaps)
+    return True
+
+
 class MeetingWorker:
     def __init__(
         self,
@@ -182,6 +198,7 @@ class MeetingWorker:
             ))
 
         stages.append((self._store.claim_next_alignment, lambda m: align_stage(self._store, m), "alignment"))
+        stages.append((self._store.claim_next_audio_check, lambda m: audio_check_stage(self._store, m), "audio check"))
 
         for claim, run_stage, error_label in stages:
             result = await self._try_stage(claim, run_stage, error_label)

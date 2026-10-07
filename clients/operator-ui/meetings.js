@@ -135,6 +135,19 @@ function createMeetings({api, apiUploadForm, isLoggedIn, onUseAsContext = () => 
   let selectedMeeting = null;
   let detailVersion = 0;
 
+  // Phase 27.4 follow-up: stretches where the phone captured no audio (exact silence), found by the server.
+  function silentSeconds(meeting) { return meeting.audio_gaps?.seconds || 0; }
+  function silentSummary(meeting) {
+    const seconds = Math.round(silentSeconds(meeting));
+    return `${formatTimestamp(seconds)} of this recording has no audio — the phone stopped capturing sound (for example when it locked or another app used the microphone). Lines marked ⚠ may be missing or unreliable.`;
+  }
+  function warningIcon(label) {
+    const icon = document.createElement('span');
+    icon.className = 'gap-warning'; icon.textContent = '⚠'; icon.title = label;
+    icon.setAttribute('role', 'img'); icon.setAttribute('aria-label', label);
+    return icon;
+  }
+
   function renderList(meetingList) {
     meetingsById = new Map(meetingList.map(meeting => [meeting.id, meeting]));
     const failedCount = meetingList.filter(m => m.status === 'failed' || m.status === 'cancelled').length;
@@ -155,6 +168,7 @@ function createMeetings({api, apiUploadForm, isLoggedIn, onUseAsContext = () => 
       status.className = 'meeting-status';
       status.textContent = statusLabel(meeting.status);
       heading.append(title, status);
+      if (silentSeconds(meeting) > 0) title.append(' ', warningIcon('Part of this recording has no audio'));
       const uploaded = document.createElement('p');
       uploaded.className = 'muted';
       uploaded.textContent = `Uploaded ${new Date(meeting.created_at).toLocaleString()}`;
@@ -494,6 +508,7 @@ function createMeetings({api, apiUploadForm, isLoggedIn, onUseAsContext = () => 
       const index = segments.indexOf(segment);
       const corrected = kind === 'transcript' && corrections ? corrections[String(index)] : undefined;
       if (kind === 'transcript') {
+        if (meeting?.audio_gaps?.segments?.includes(index)) item.append(warningIcon('No audio was recorded for most of this line'), ' ');
         const aligned = meeting?.aligned_segments;
         const label = aligned && aligned.length === segments.length ? aligned[index]?.speaker : null;
         const previous = aligned && aligned.length === segments.length && index > 0 ? aligned[index - 1]?.speaker : null;
@@ -534,6 +549,7 @@ function createMeetings({api, apiUploadForm, isLoggedIn, onUseAsContext = () => 
     el('meeting-detail-title').textContent = '';
     el('meeting-detail-meta').textContent = '';
     el('meeting-detail-context').textContent = '';
+    el('meeting-detail-gaps').hidden = true;
     el('meeting-detail-transcript').replaceChildren();
     el('meeting-detail-diarization').replaceChildren();
     el('meeting-detail-error').hidden = true;
@@ -553,6 +569,8 @@ function createMeetings({api, apiUploadForm, isLoggedIn, onUseAsContext = () => 
       if (meeting.duration_seconds) parts.push(`Duration: ${formatTimestamp(meeting.duration_seconds)}`);
       el('meeting-detail-meta').textContent = parts.join(' · ');
       el('meeting-detail-context').textContent = meeting.context || '';
+      el('meeting-detail-gaps').hidden = silentSeconds(meeting) <= 0;
+      el('meeting-detail-gaps').textContent = silentSeconds(meeting) > 0 ? `⚠ ${silentSummary(meeting)}` : '';
       el('meeting-detail-status').textContent = statusDescription(meeting);
       el('meeting-detail-error').hidden = !meeting.error_detail;
       el('meeting-detail-error-text').textContent = meeting.error_detail || '';

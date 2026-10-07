@@ -82,6 +82,7 @@ def test_the_worker_aligns_stores_the_result_and_completes_the_meeting() -> None
         assert meeting.status == MeetingJobStatus.COMPLETE
         assert [s["speaker"] for s in meeting.aligned_segments] == ["SPEAKER_00", "SPEAKER_01"]
         assert meeting.transcript_segments[0]["text"] == "hello"  # raw evidence untouched
+        assert await worker.process_one() is True  # the recording check (these tests store no real audio)
         assert await worker.process_one() is False  # nothing left to do
 
     asyncio.run(run())

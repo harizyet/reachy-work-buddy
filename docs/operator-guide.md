@@ -97,6 +97,17 @@ shows a speaker chip where the speaker changes; click it to give that speaker a
 name, which is applied to the whole meeting (the raw speaker timings stay listed
 separately).
 
+**Recording gaps.** When the phone stops capturing sound mid-recording (for
+example when it locks or another app takes the microphone), Android supplies
+exact silence while the clock keeps running, and the transcript can then bridge
+the gap with a line that covers seconds holding no audio. After a meeting
+completes, the server checks the recording for runs of exact silence of five
+seconds or more. A meeting with any shows a yellow ⚠ in the list, a banner in
+its detail saying how much of the recording has no audio, and a ⚠ on each
+transcript line that lies mostly inside a gap. Ordinary pauses and quiet rooms
+are not flagged. The check runs once per meeting (earlier meetings are checked
+after the upgrade) and never changes the transcript or the meeting's status.
+
 **Playing the recording.** The meeting detail has an audio player (the app has a
 play bar above the transcript). Selecting a transcript line plays from that line's
 start, and the line being spoken is highlighted, so you can check what was really
