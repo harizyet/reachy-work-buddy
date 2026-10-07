@@ -17,7 +17,7 @@ test('animation settings load, apply, reject stale active sessions and reset on 
     const json = (status, body) => { res.writeHead(status, {'Content-Type': 'application/json'}); res.end(JSON.stringify(body)); };
     if (route.startsWith('/ui/')) {
       const name = route.slice(4) || 'index.html';
-      if (!['index.html', 'app.js', 'chat.js', 'voice.js', 'accounts.js', 'owner-recognition.js', 'meetings.js', 'coding_agents.js', 'alarms.js', 'activity.js', 'planner.js', 'coding_monitor.js', 'style.css'].includes(name)) return json(404, {});
+      if (!['index.html', 'app.js', 'chat.js', 'voice.js', 'accounts.js', 'owner-recognition.js', 'meetings.js', 'coding_agents.js', 'alarms.js', 'notes.js', 'notes.js', 'activity.js', 'planner.js', 'coding_monitor.js', 'style.css'].includes(name)) return json(404, {});
       res.writeHead(200, {'Content-Type': name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : 'text/html'});
       return res.end(fs.readFileSync(path.join(__dirname, '..', name)));
     }

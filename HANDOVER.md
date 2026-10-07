@@ -6,6 +6,12 @@ The [documentation index](docs/README.md) defines ownership;
 
 ## Current work
 
+**Android adapts to the Pixel Fold (0.11.0, 2026-10-07, uncommitted):** the activity now handles configuration changes itself (manifest `configChanges`), so folding or unfolding re-lays out in place without restarting; windows at least 600 dp wide get a navigation rail instead of the bottom bar and two panes for Notes, Meetings and Reminders (`ui/Adaptive.kt`: `isWide`, `TwoPane`, `ReadableWidth`); Notes also autosave a moment after typing stops. Verified on the emulator by switching the display to the Pixel Fold's inner size (2208x1840 at 380 dpi) and back mid-edit (no crash, note kept); not run on a physical fold, and the hinge/posture is not used.
+
+**To Do / Reminders screens (2026-10-07, uncommitted, no backend change):** Apple-Reminders-style web `planner.js`/`index.html` panes (circles, inline add/rename, Completed section, New Reminder sheet) and a new Android Reminders tab (0.10.0: lists home, To Do, Scheduled). Reminders cannot be reopened (hub has no route). Emulator-verified add/inline entry/sheet; found and fixed a blur-on-first-composition bug that closed inline rows.
+
+**Notes screens (2026-10-07, uncommitted, no backend change):** Apple-Notes-style web Notes tab (`clients/operator-ui/notes.js`, three columns, autosave) and Android Notes (0.9.1: month-grouped list, search, full-screen editor whose first line is the title). `planner.js` no longer handles notes. Emulator-verified create/list/back (found and fixed a double-save on back).
+
 **Alarm clock screens (2026-10-07, uncommitted, migration 024, not yet deployed):** web Alarms tab and a new Android Alarms tab (0.8.0) in the iPhone Clock style; backend `repeat`/`enabled`, `PATCH /alarms/{id}` (hub `PATCH /planner/alarms/{id}`), re-arm in `/alarms/due`; ADR 0027 addendum, phase-38 row 38.8. Emulator-verified add/toggle against a throwaway hub; not run against the production stack or a physical alarm ring. Times are interpreted in the persona time zone.
 
 **Recording-gap flag (2026-10-07, uncommitted, migration 023, not yet deployed):** `meetings/silence.py` + worker `audio check` stage store `audio_gaps` ({spans, segments, seconds}) for completed meetings; web/Android show a yellow warning on the list, a banner and per-line flags. Checked on the owner's real recording: three gaps totalling 511 s of 758 s (the phone supplied exact zeros); the cause (lock-screen background capture) is not fixed. Core now depends on `av` (uv.lock updated).

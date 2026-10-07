@@ -598,3 +598,72 @@ dialog.alarm-sheet::backdrop { background: rgba(0,0,0,.5); }
 .day-toggle { padding: .3rem .5rem; border-radius: 999px; font-size: .85rem; }
 .day-toggle[aria-pressed="true"] { background: #ff9f0a; color: #000; border-color: #ff9f0a; }
 .sheet-delete { width: 100%; margin-top: .8rem; background: rgba(128,128,128,.15); color: #ff453a; border: 0; padding: .7rem; border-radius: 10px; font-size: 1rem; }
+
+/* Notes: the Apple Notes layout (folders | grouped list | editor) */
+.notes-app { display: grid; grid-template-columns: 11rem minmax(14rem, 20rem) 1fr; min-height: 34rem; grid-column: 1 / -1; align-self: start; width: 100%; border: 1px solid rgba(128,128,128,.35); border-radius: 12px; overflow: hidden; }
+.notes-folders { display: block; padding: .8rem .6rem; border-right: 1px solid rgba(128,128,128,.3); background: rgba(128,128,128,.08); }
+.notes-folders h2 { font-size: 1.1rem; margin: 0 0 .6rem .4rem; color: #e0a800; }
+.notes-folders ul { list-style: none; margin: 0; padding: 0; }
+.notes-folder { all: unset; display: flex; justify-content: space-between; width: calc(100% - 1rem); padding: .45rem .5rem; border-radius: 8px; cursor: pointer; }
+.notes-folder.selected { background: rgba(224,168,0,.28); }
+.notes-list-pane { border-right: 1px solid rgba(128,128,128,.3); overflow-y: auto; max-height: 40rem; padding: .6rem; }
+.notes-search input { width: 100%; box-sizing: border-box; border-radius: 10px; padding: .45rem .7rem; }
+.notes-section { font-size: 1.05rem; margin: 1rem .3rem .3rem; }
+.notes-group { list-style: none; margin: 0; padding: 0; border-radius: 12px; background: rgba(128,128,128,.14); overflow: hidden; }
+.notes-group li { border-top: 1px solid rgba(128,128,128,.25); }
+.notes-group li:first-child { border-top: 0; }
+.notes-group li.selected { background: rgba(224,168,0,.3); }
+.notes-row { all: unset; display: grid; gap: .1rem; width: calc(100% - 1.4rem); padding: .55rem .7rem; cursor: pointer; }
+.notes-row:focus-visible { outline: 2px solid currentColor; outline-offset: -2px; }
+.notes-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notes-row-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .9rem; }
+.notes-row-folder { font-size: .8rem; }
+.notes-editor { display: flex; flex-direction: column; padding: .6rem 1rem 1rem; min-width: 0; }
+.notes-toolbar { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin-bottom: .4rem; }
+.notes-toolbar #notes-status { margin-left: auto; font-size: .85rem; }
+.notes-back { display: none; }
+.notes-meta { text-align: center; font-size: .8rem; margin: .3rem 0; }
+.notes-title { padding: 0; font-size: 1.7rem; font-weight: 700; border: 0; background: transparent; color: inherit; width: 100%; box-sizing: border-box; padding: .2rem 0; }
+.notes-title:focus, .notes-body:focus { outline: none; }
+.notes-body { padding: 0; flex: 1; min-height: 22rem; border: 0; background: transparent; color: inherit; font: inherit; font-size: 1.05rem; line-height: 1.5; resize: vertical; width: 100%; box-sizing: border-box; }
+.notes-placeholder { margin: 3rem auto; }
+@media (max-width: 760px) {
+  .notes-app { grid-template-columns: 1fr; }
+  .notes-folders { display: none; }
+  .notes-list-pane { border-right: 0; max-height: none; }
+  .notes-app:not(.notes-editing) .notes-editor { order: -1; padding-bottom: 0; }
+  .notes-app:not(.notes-editing) .notes-placeholder { display: none; }
+  .notes-app.notes-editing .notes-list-pane { display: none; }
+  .notes-app.notes-editing .notes-back { display: inline-block; }
+}
+
+/* To Do and Reminders: the Apple Reminders list look */
+.rl-card { max-width: 46rem; width: 100%; margin: 0 auto; grid-column: 1 / -1; }
+.rl-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.rl-title { font-size: 2.2rem; margin: .2rem 0 .6rem; }
+.rl-red { color: #ff453a; --rl-accent: #ff453a; }
+.rl-purple { color: #bf5af2; --rl-accent: #bf5af2; }
+.rl-list { list-style: none; margin: 0; padding: 0; }
+.rl-row { display: flex; align-items: flex-start; gap: .8rem; padding: .65rem 0; border-bottom: 1px solid rgba(128,128,128,.25); }
+.rl-check { appearance: none; flex: none; width: 1.5rem; height: 1.5rem; margin: .1rem 0 0; border-radius: 50%; border: 2px solid #8a8a8e; background: transparent; cursor: pointer; position: relative; }
+.rl-check:checked { background: #8a8a8e; }
+.rl-check:checked::after { content: ""; position: absolute; left: .42rem; top: .15rem; width: .35rem; height: .7rem; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.rl-check:disabled { cursor: default; opacity: .7; }
+.rl-check:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.rl-body { flex: 1; min-width: 0; display: grid; gap: .1rem; }
+.rl-text { all: unset; cursor: text; overflow-wrap: anywhere; font-size: 1.05rem; }
+button.rl-text:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.rl-sub { font-size: .85rem; opacity: .7; }
+.rl-overdue { color: #ff453a; opacity: 1; font-weight: 600; }
+.rl-edit { border: 0; background: transparent; color: inherit; font: inherit; font-size: 1.05rem; width: 100%; padding: 0; }
+.rl-edit:focus { outline: none; }
+.rl-delete { padding: .1rem .5rem; opacity: 0; transition: opacity .1s; }
+.rl-row:hover .rl-delete, .rl-row:focus-within .rl-delete { opacity: 1; }
+@media (hover: none) { .rl-delete { opacity: .6; } }
+.rl-completed { all: unset; display: block; margin: .8rem 0 .2rem; cursor: pointer; opacity: .75; font-size: .95rem; }
+.rl-completed:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.rl-done .rl-row { opacity: .85; }
+.rl-new { all: unset; display: inline-flex; align-items: center; gap: .5rem; margin-top: 1rem; cursor: pointer; font-weight: 600; background: none; }
+.rl-new:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.rl-plus { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--rl-accent, #888); }
+.rl-plus { color: #fff; font-size: 1.2rem; line-height: 1; }

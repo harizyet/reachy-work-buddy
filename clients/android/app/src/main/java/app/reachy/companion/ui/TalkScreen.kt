@@ -64,6 +64,11 @@ import app.reachy.companion.SpeechOutput
 
 @Composable
 fun TalkScreen(model: AppViewModel, speakReplies: Boolean, modifier: Modifier = Modifier) {
+    ReadableWidth(modifier, 760) { TalkContent(model, speakReplies) }
+}
+
+@Composable
+private fun TalkContent(model: AppViewModel, speakReplies: Boolean) {
     val context = LocalContext.current
     var draft by remember { mutableStateOf("") }
     var listening by remember { mutableStateOf(false) }
@@ -99,7 +104,7 @@ fun TalkScreen(model: AppViewModel, speakReplies: Boolean, modifier: Modifier = 
     val listState = rememberLazyListState()
     LaunchedEffect(model.chat.size) { if (model.chat.isNotEmpty()) listState.animateScrollToItem(model.chat.lastIndex) }
 
-    Column(modifier.fillMaxSize().imePadding()) {
+    Column(Modifier.fillMaxSize().imePadding()) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
             if (model.chat.isEmpty()) {
                 Column(Modifier.align(Alignment.Center).padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {

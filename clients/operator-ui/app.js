@@ -25,6 +25,7 @@ const voice = createVoice({api, isLoggedIn: () => loggedIn, chat});
 const meetings = createMeetings({api, apiUploadForm, isLoggedIn: () => loggedIn, onUseAsContext(meeting) { chat.setContext(meeting); showView('chat'); }});
 const planner = createPlanner({api, isLoggedIn: () => loggedIn});
 const alarms = createAlarms({api, isLoggedIn: () => loggedIn});
+const notes = createNotes({api, isLoggedIn: () => loggedIn});
 const activity = createActivity({api, isLoggedIn: () => loggedIn});
 const codingAgents = createCodingAgents({api, isLoggedIn: () => loggedIn});
 const codingMonitor = createCodingMonitor({api, isLoggedIn: () => loggedIn});
@@ -67,7 +68,8 @@ function showView(view) {
   if (view === 'settings') showSettings(settingsFeature);
   else ownerRecognition.stopCapture();
   if (view === 'meetings') void meetings.load();
-  if (['todo', 'reminders', 'notes'].includes(view)) void planner.load();
+  if (['todo', 'reminders'].includes(view)) void planner.load();
+  if (view === 'notes') void notes.load();
   if (view === 'alarms') void alarms.load();
   if (view === 'activity') void activity.load();
   if (view === 'coding') codingMonitor.start(); else codingMonitor.stop();
@@ -81,7 +83,7 @@ function showLogin() {
   $('login-panel').hidden = false; $('dashboard').hidden = true; $('nav').hidden = true;
   $('api-key').value = ''; $('cloud-api-key').value = ''; $('websearch-api-key').value = ''; for (const name of HOSTED_SEARCH) $(`websearch-${name}-api-key`).value = ''; $('password').value = '';
   $('search-log-dialog').close(); $('search-log-entries').replaceChildren();
-  chat.reset(); accounts.reset(); voice.reset(); motionSettings.reset(); ownerRecognition.reset(); meetings.reset(); planner.reset(); alarms.reset(); activity.reset(); codingAgents.reset(); codingMonitor.reset(); showView('overview');
+  chat.reset(); accounts.reset(); voice.reset(); motionSettings.reset(); ownerRecognition.reset(); meetings.reset(); planner.reset(); alarms.reset(); notes.reset(); activity.reset(); codingAgents.reset(); codingMonitor.reset(); showView('overview');
 }
 async function api(path, options = {}) {
   const response = await fetch(base + path, {

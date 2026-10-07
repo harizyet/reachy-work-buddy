@@ -65,12 +65,17 @@ import androidx.compose.material3.ExperimentalMaterial3Api as Exp
 /** An iPhone-Clock-style alarm list: big times with on/off switches, Edit to delete, + to add. */
 @Composable
 fun AlarmsScreen(model: AppViewModel, modifier: Modifier = Modifier) {
+    ReadableWidth(modifier, 640) { AlarmsContent(model) }
+}
+
+@Composable
+private fun AlarmsContent(model: AppViewModel) {
     var editing by remember { mutableStateOf(false) }
     var sheetFor by remember { mutableStateOf<Alarm?>(null) }
     var adding by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { model.loadAlarms() }
     val alarms = listedAlarms(model.alarms)
-    Column(modifier.fillMaxSize()) {
+    Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             TextButton({ editing = !editing }) { Text(if (editing) "Done" else "Edit") }
             Text("Alarms", Modifier.weight(1f).padding(start = 8.dp), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)

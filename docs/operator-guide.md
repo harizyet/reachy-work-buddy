@@ -55,13 +55,20 @@ minutes). This is read-only monitoring; Reachy cannot control them. It needs
 
 ## To-do, reminders and notes
 
-The **To-do**, **Reminders** and **Notes** tabs keep three lists on your homelab. *To-do*: add, tick off,
-reopen, edit and delete items (the same tasks the assistant manages by chat).
-*Reminders*: text plus a date and time in your browser's time zone; when one
-comes due the hub sends `Reminder: <text>` to your Telegram once, and the tab
-shows it as due until you mark it **Done**. A reminder is pushed only when
+The **To-do**, **Reminders** and **Notes** tabs keep three lists on your homelab. They look like the
+Apple Reminders and Notes apps. *To Do* (red title): round check circles, with ticked items collected
+under a collapsed **N Completed** line (select it to show or hide them); select an item's text to
+rename it in place (Enter saves, Escape cancels); **New Reminder** at the bottom opens a new row, and
+Enter adds it and opens the next; the ✕ on a row (or a swipe left in the app) deletes it. These are the same
+tasks the assistant manages by chat. *Reminders* (purple title): a title plus a date and time in your
+browser's time zone, set in the **New Reminder** sheet (Title, Date, Time); the date and time show under
+each reminder as "Today, 4:00 PM" or "Tomorrow, 9:00 AM", in red once overdue. Ticking a reminder completes
+it, and a completed reminder stays completed (the hub cannot reopen one). In the Android app the
+**Reminders** tab opens a lists home with **To Do** and **Scheduled** (the timed reminders) tiles showing their
+counts. When a reminder comes due the hub sends `Reminder: <text>` to your Telegram once, and it shows as
+due until you tick it. There are no subtasks, flags, tags, priorities or repeating reminders. A reminder is pushed only when
 Telegram is configured and the owner chat is known; there is no retry if the
-push fails. *Notes*: a title and free text, searchable by title and body.
+push fails. *Notes*: see below.
 Telling the assistant (Telegram, web chat or voice) "remind me to X at 4pm"
 adds the to-do as before **and** a reminder when it ends in an unambiguous time
 (`at 4pm`, `at 16:00`, `tomorrow at 10:30am`, `in 20 minutes`, or `tomorrow`,
@@ -70,6 +77,23 @@ bare `at 4`, stays a to-do only. This is deterministic phrase matching
 (`reminder_time.py`), to be replaced by real language understanding.
 All text is shown literally. Requests go through owner-authenticated
 `/planner/*` hub routes to companion-core's `/tasks`, `/notes` and `/reminders`.
+
+**On a wide screen** (an unfolded Pixel Fold, a tablet, or a phone in landscape; 600 dp or wider) the Android
+app swaps the bottom bar for a navigation rail on the left and shows Notes, Meetings and Reminders as two panes
+(the list on the left, the open note, meeting or list on the right); Alarms and Talk keep a readable column. Folding
+or unfolding re-lays the app out in place without restarting it.
+
+**Notes** follow the Apple Notes layout. On the web it is three columns: a
+folder column (All Notes), a list grouped under Today, Yesterday, Previous 7 Days,
+Previous 30 Days and then months (each row shows the title, date, the first line
+of the text and "Notes"), and an editor with a large title field above the text.
+The Android app shows the grouped list with a Search box and a pencil button, and
+opens a note full screen where the first line is the title; the share button sends
+the text and **Delete** is in the menu. A note saves itself shortly after you stop
+typing (web) or when you leave it (app); a blank new note is never created, and a
+note left without a title is titled from its first line or "New Note". The list
+search is by title and text. There are no folders, tags, pinning or attachments:
+a note is a title and plain text.
 
 ## Alarms
 

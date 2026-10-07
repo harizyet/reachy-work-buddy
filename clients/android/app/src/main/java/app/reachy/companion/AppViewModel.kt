@@ -147,6 +147,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun deleteTask(task: Task) = load { api.deleteTask(task.id); loadTasksNow() }
     private suspend fun loadTasksNow() { tasks.replace(api.tasks().sortedBy { it.done }) }
 
+    val reminders = mutableStateListOf<app.reachy.companion.data.Reminder>()
+    private suspend fun loadRemindersNow() { reminders.replace(api.reminders()) }
+    fun loadReminders() = load { loadRemindersNow(); loadTasksNow() }
+    fun addReminder(text: String, dueAtIso: String) = load { api.addReminder(text.trim(), dueAtIso); loadRemindersNow() }
+    fun completeReminder(id: String) = load { api.completeReminder(id); loadRemindersNow() }
+    fun deleteReminder(id: String) = load { api.deleteReminder(id); loadRemindersNow() }
+    fun editTask(task: Task, text: String) = load { api.editTask(task.id, text.trim()); loadTasksNow() }
+
     val alarms = mutableStateListOf<app.reachy.companion.data.Alarm>()
     val stations = mutableStateListOf<app.reachy.companion.data.Station>()
     private suspend fun loadAlarmsNow() { alarms.replace(api.alarms()); stations.replace(api.stations()) }
@@ -159,7 +167,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun loadNotes() = load { notes.replace(api.notes()) }
-    fun saveNote(id: String?, title: String, body: String) = load { api.saveNote(id, title.trim(), body); notes.replace(api.notes()) }
+    fun saveNote(id: String?, title: String, body: String, onSaved: (String) -> Unit = {}) = load {
+        val saved = api.saveNote(id, title.trim(), body)
+        notes.replace(api.notes())
+        onSaved(saved.id)
+    }
     fun deleteNote(note: Note) = load { api.deleteNote(note.id); notes.replace(api.notes()) }
 
     fun loadMeetings() = load { meetings.replace(api.meetings().sortedByDescending { it.createdAt }) }

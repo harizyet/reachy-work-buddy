@@ -102,8 +102,17 @@ fun clock(seconds: Double): String = "%d:%02d".format(seconds.toInt() / 60, seco
 @Composable
 fun MeetingsScreen(model: AppViewModel, modifier: Modifier = Modifier, onUseAsContext: () -> Unit = {}) {
     val open = model.openMeeting
-    BackHandler(open != null) { model.showMeeting(null) }
-    if (open != null) MeetingDetail(model, open, modifier, onUseAsContext) else MeetingList(model, modifier)
+    val wide = isWide()
+    BackHandler(open != null && !wide) { model.showMeeting(null) }
+    when {
+        // Unfolded or landscape: the list stays on the left while the open meeting fills the right.
+        wide -> TwoPane(modifier, listWidth = 380, list = { MeetingList(model, Modifier) }, detail = {
+            if (open != null) MeetingDetail(model, open, Modifier, onUseAsContext)
+            else Text("Select a meeting to read its transcript, summary and minutes.", Modifier.padding(24.dp), color = MaterialTheme.colorScheme.outline)
+        })
+        open != null -> MeetingDetail(model, open, modifier, onUseAsContext)
+        else -> MeetingList(model, modifier)
+    }
 }
 
 @Composable

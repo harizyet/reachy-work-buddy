@@ -9,7 +9,10 @@ data class Task(val id: String, val text: String, val status: String = "open") {
 }
 
 @Serializable
-data class Note(val id: String, val title: String, val body: String = "")
+data class Note(
+    val id: String, val title: String, val body: String = "",
+    @SerialName("updated_at") val updatedAt: String = "",
+)
 
 @Serializable
 data class MeetingOutput(val text: String, val tier: String = "local", @SerialName("generated_at") val generatedAt: String = "")

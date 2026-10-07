@@ -18,7 +18,7 @@ test('Coding agent credentials: shows configured state, saves without echoing th
     const json = (payload, code = 200) => {res.writeHead(code, {'Content-Type': 'application/json'}); res.end(JSON.stringify(payload));};
     if (route.startsWith('/ui/')) {
       const file = route.slice(4) || 'index.html';
-      if (!['index.html','app.js','chat.js','voice.js','accounts.js','owner-recognition.js','meetings.js','coding_agents.js', 'alarms.js', 'activity.js', 'planner.js', 'coding_monitor.js','style.css'].includes(file)) return json({}, 404);
+      if (!['index.html','app.js','chat.js','voice.js','accounts.js','owner-recognition.js','meetings.js','coding_agents.js', 'alarms.js', 'notes.js', 'notes.js', 'activity.js', 'planner.js', 'coding_monitor.js','style.css'].includes(file)) return json({}, 404);
       res.writeHead(200, {'Content-Type': file.endsWith('.js') ? 'application/javascript' : file.endsWith('.css') ? 'text/css' : 'text/html'});
       return res.end(fs.readFileSync(path.join(__dirname, '..', file)));
     }

@@ -261,6 +261,22 @@ class ReachyApi(baseUrl: String, private val cookieJar: PersistentCookieJar, cli
         }
     }
 
+    suspend fun reminders(): List<Reminder> =
+        json.decodeFromString(ListSerializer(Reminder.serializer()), call(req("/planner/reminders").build()))
+
+    suspend fun addReminder(text: String, dueAtIso: String): Reminder =
+        json.decodeFromString(call(req("/planner/reminders").post(jsonBody(buildJsonObject { put("text", text); put("due_at", dueAtIso) })).build()))
+
+    suspend fun completeReminder(id: String) {
+        call(req("/planner/reminders/$id/complete").post("{}".toRequestBody("application/json".toMediaType())).build())
+    }
+
+    suspend fun deleteReminder(id: String) { call(req("/planner/reminders/$id").delete().build()) }
+
+    suspend fun editTask(id: String, text: String) {
+        call(req("/planner/tasks/$id").put(jsonBody(buildJsonObject { put("text", text) })).build())
+    }
+
     suspend fun alarms(): List<Alarm> =
         json.decodeFromString(ListSerializer(Alarm.serializer()), call(req("/planner/alarms").build()))
 

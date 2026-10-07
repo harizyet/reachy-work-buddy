@@ -8,6 +8,16 @@
   <header><div><span class="eyebrow">WORK COMPANION</span><h1>Reachy operator</h1></div><nav id="nav" hidden><a href="../app/telepresence.html">Telepresence ↗</a><button id="logout" class="secondary">Log out</button></nav></header>
   <p id="notice" role="status" aria-live="polite"></p>
   <div id="deep-banner" class="deep-banner" role="status" aria-live="polite" hidden><strong>Reachy is unavailable: deep review in progress.</strong> <span id="deep-banner-stage"></span></div>
+  <dialog id="reminder-dialog" class="alarm-sheet" aria-labelledby="reminder-dialog-title">
+    <form id="reminder-form">
+      <div class="sheet-bar"><button type="button" id="reminder-cancel" class="sheet-link">Cancel</button><h3 id="reminder-dialog-title">New Reminder</h3><button type="submit" id="reminder-save" class="sheet-link sheet-strong">Add</button></div>
+      <div class="sheet-group">
+        <label class="sheet-row">Title<input id="reminder-text" maxlength="500" required autocomplete="off" placeholder="Remind me to…"></label>
+        <label class="sheet-row">Date<input id="reminder-date" type="date" required></label>
+        <label class="sheet-row">Time<input id="reminder-time" type="time" required></label>
+      </div>
+    </form>
+  </dialog>
   <dialog id="alarm-dialog" class="alarm-sheet" aria-labelledby="alarm-dialog-title">
     <form id="alarm-form">
       <div class="sheet-bar"><button type="button" id="alarm-cancel" class="sheet-link">Cancel</button><h3 id="alarm-dialog-title">Add Alarm</h3><button type="submit" id="alarm-save" class="sheet-link sheet-strong">Save</button></div>
@@ -243,16 +253,25 @@
         <section class="card"><div class="section-title"><h3>Sessions</h3><button id="coding-refresh" type="button" class="secondary">Refresh</button></div><div id="coding-sessions"></div></section>
       </section>
       <div id="todo-pane" class="workspace planner-workspace" hidden>
-        <section class="card planner-wide"><div class="section-title"><div><span class="eyebrow">YOUR LISTS</span><h2>To-do</h2></div><button type="button" class="secondary planner-refresh">Refresh</button></div><p class="planner-status" role="status"></p></section>
-        <section class="card" aria-labelledby="planner-task-title"><h3 id="planner-task-title">To-do</h3>
-          <form id="planner-task-form" class="planner-form"><label>New to-do<input id="planner-task-text" maxlength="2000" required autocomplete="off"></label><button>Add</button></form>
-          <ul id="planner-task-list" class="planner-list"></ul><p id="planner-task-empty" class="muted">Nothing to do yet.</p></section>
+        <section class="card rl-card" aria-labelledby="planner-task-title">
+          <div class="rl-head"><h2 id="planner-task-title" class="rl-title rl-red">To Do</h2><button type="button" class="secondary planner-refresh">Refresh</button></div>
+          <p class="planner-status" role="status"></p>
+          <ul id="planner-task-list" class="rl-list"></ul><p id="planner-task-empty" class="muted">Nothing to do yet.</p>
+          <button type="button" id="planner-task-completed" class="rl-completed" aria-expanded="false" hidden></button>
+          <ul id="planner-task-done-list" class="rl-list rl-done" hidden></ul>
+          <button type="button" id="planner-task-new" class="rl-new rl-red"><span class="rl-plus" aria-hidden="true">+</span> New Reminder</button>
+        </section>
       </div>
       <div id="reminders-pane" class="workspace planner-workspace" hidden>
-        <section class="card planner-wide"><div class="section-title"><div><span class="eyebrow">YOUR LISTS</span><h2>Reminders</h2></div><button type="button" class="secondary planner-refresh">Refresh</button></div><p class="planner-status" role="status"></p><p class="muted">Reminders are also sent to your Telegram when they come due.</p></section>
-        <section class="card" aria-labelledby="planner-reminder-title"><h3 id="planner-reminder-title">Reminders</h3>
-          <form id="planner-reminder-form" class="planner-form"><label>Remind me to<input id="planner-reminder-text" maxlength="500" required autocomplete="off"></label><label>When<input id="planner-reminder-due" type="datetime-local" required></label><button>Add</button></form>
-          <ul id="planner-reminder-list" class="planner-list"></ul><p id="planner-reminder-empty" class="muted">No reminders.</p></section>
+        <section class="card rl-card" aria-labelledby="planner-reminder-title">
+          <div class="rl-head"><h2 id="planner-reminder-title" class="rl-title rl-purple">Reminders</h2><button type="button" class="secondary planner-refresh">Refresh</button></div>
+          <p class="planner-status" role="status"></p>
+          <p class="muted">Reminders are also sent to your Telegram when they come due.</p>
+          <ul id="planner-reminder-list" class="rl-list"></ul><p id="planner-reminder-empty" class="muted">No reminders.</p>
+          <button type="button" id="planner-reminder-completed" class="rl-completed" aria-expanded="false" hidden></button>
+          <ul id="planner-reminder-done-list" class="rl-list rl-done" hidden></ul>
+          <button type="button" id="planner-reminder-new" class="rl-new rl-purple"><span class="rl-plus" aria-hidden="true">+</span> New Reminder</button>
+        </section>
       </div>
       <div id="alarms-pane" class="workspace planner-workspace" hidden>
         <section class="card planner-wide"><div class="section-title"><div><span class="eyebrow">YOUR LISTS</span><h2>Alarms</h2></div><span><button type="button" id="alarm-stop">Stop alarm</button> <button type="button" id="alarm-refresh" class="secondary">Refresh</button></span></div><p id="alarm-status" role="status"></p><p class="muted">Alarms play only when Reachy is listening for you and someone is detected in the room; otherwise you get a Telegram message instead.</p></section>
@@ -269,11 +288,17 @@
           <ul id="activity-list" class="planner-list"></ul><p id="activity-empty" class="muted">No recent activity.</p></section>
       </div>
       <div id="notes-pane" class="workspace planner-workspace" hidden>
-        <section class="card planner-wide"><div class="section-title"><div><span class="eyebrow">YOUR LISTS</span><h2>Notes</h2></div><button type="button" class="secondary planner-refresh">Refresh</button></div><p class="planner-status" role="status"></p></section>
-        <section class="card planner-wide" aria-labelledby="planner-note-heading"><h3 id="planner-note-heading">Notes</h3>
-          <form id="planner-note-form" class="planner-form planner-note-form"><label>Title<input id="planner-note-title" maxlength="200" required autocomplete="off"></label><label>Note<textarea id="planner-note-body" rows="4" maxlength="20000"></textarea></label><span><button id="planner-note-save">Add note</button> <button id="planner-note-cancel" type="button" class="secondary" hidden>Cancel</button></span></form>
-          <label class="search-label">Find a note<input id="planner-note-search" type="search" placeholder="Search titles and text…"></label>
-          <ul id="planner-note-list" class="planner-list"></ul><p id="planner-note-empty" class="muted">No notes.</p></section>
+        <div id="notes-app" class="notes-app">
+          <nav class="notes-folders" aria-label="Folders"><h2>Notes</h2>
+            <ul><li><button type="button" class="notes-folder selected" aria-current="true">All Notes <span id="notes-count" class="muted">0</span></button></li></ul></nav>
+          <section class="notes-list-pane" aria-label="Notes list">
+            <div class="notes-search"><input id="notes-search" type="search" placeholder="Search all notes" aria-label="Search all notes" autocomplete="off"></div>
+            <div id="notes-list" class="notes-list"></div><p id="notes-empty" class="muted">No notes.</p></section>
+          <section class="notes-editor" aria-label="Note">
+            <div class="notes-toolbar"><button type="button" id="notes-back" class="secondary notes-back">‹ Notes</button><button type="button" id="notes-new" class="secondary" aria-label="New note">✎ New note</button><button type="button" id="notes-refresh" class="secondary">Refresh</button><span id="notes-status" role="status" class="muted"></span><button type="button" id="notes-delete" class="secondary" aria-label="Delete note" disabled>🗑 Delete</button></div>
+            <div id="notes-edit-area" hidden><p id="notes-meta" class="muted notes-meta"></p><input id="notes-title" class="notes-title" maxlength="200" placeholder="Title" aria-label="Title" autocomplete="off"><textarea id="notes-body" class="notes-body" maxlength="20000" placeholder="Start writing" aria-label="Note"></textarea></div>
+            <p id="notes-placeholder" class="muted notes-placeholder">Select a note, or choose New note to start one.</p></section>
+        </div>
       </div>
       <div id="meetings-pane" class="workspace meeting-workspace" hidden>
 <aside class="record-sidebar" aria-label="Meeting records"><button id="meeting-new" type="button">＋ Add meeting</button><div class="section-title"><h3>Meeting records</h3><button id="meeting-refresh" class="secondary" type="button" aria-label="Refresh meeting records">↻</button></div><label class="search-label">Find a meeting<input id="meeting-search" type="search" placeholder="Search titles…"></label><button type="button" id="meeting-clear-failed" class="secondary" hidden>Delete failed and cancelled</button><ul id="meeting-list" class="meeting-list"></ul><p id="meeting-list-status" role="status"></p></aside><div class="meeting-main">
@@ -365,6 +390,6 @@
   </main><footer>Reachy Work Companion · Operator UI</footer><dialog id="search-log-dialog" aria-labelledby="search-log-title"><div class="dialog-head"><h2 id="search-log-title">Recent searches</h2><button type="button" id="refresh-search-log" class="secondary">Refresh</button><button type="button" id="close-search-log" class="secondary">Close</button></div>
   <p class="muted">The last 50 searches, newest first. Companion Core keeps them in memory only; a restart clears them.</p>
   <div id="search-log-entries"></div></dialog>
-  <script src="chat.js" defer></script><script src="voice.js" defer></script><script src="accounts.js" defer></script><script src="owner-recognition.js" defer></script><script src="meetings.js" defer></script><script src="planner.js" defer></script><script src="alarms.js" defer></script><script src="activity.js" defer></script><script src="coding_agents.js" defer></script><script src="coding_monitor.js" defer></script><script src="app.js" defer></script>
+  <script src="chat.js" defer></script><script src="voice.js" defer></script><script src="accounts.js" defer></script><script src="owner-recognition.js" defer></script><script src="meetings.js" defer></script><script src="planner.js" defer></script><script src="alarms.js" defer></script><script src="notes.js" defer></script><script src="activity.js" defer></script><script src="coding_agents.js" defer></script><script src="coding_monitor.js" defer></script><script src="app.js" defer></script>
 </body>
 </html>
