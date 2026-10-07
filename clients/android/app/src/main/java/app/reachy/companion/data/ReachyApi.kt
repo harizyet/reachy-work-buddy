@@ -111,6 +111,16 @@ class ReachyApi(baseUrl: String, private val cookieJar: PersistentCookieJar, cli
             put("user_id", userId); put("title", title.take(120))
         })).build()))
 
+    private fun chatReq(path: String, userId: String) = req("$path?user_id=${java.net.URLEncoder.encode(userId, "UTF-8")}")
+
+    suspend fun chats(userId: String): List<ChatRecord> =
+        json.decodeFromString(ListSerializer(ChatRecord.serializer()), call(chatReq("/chats", userId).build()))
+
+    suspend fun chat(userId: String, id: String): ChatDetail =
+        json.decodeFromString(call(chatReq("/chats/$id", userId).build()))
+
+    suspend fun deleteChat(userId: String, id: String) { call(chatReq("/chats/$id", userId).delete().build()) }
+
     /** Typed turns join a chat record; spoken turns do not (the hub archives typed web messages only). */
     suspend fun send(userId: String, text: String, spoken: Boolean, chatId: String?, contextMeetingId: String? = null, forceFrontier: Boolean = false): Reply =
         json.decodeFromString<Reply>(call(req("/messages").post(jsonBody(buildJsonObject {

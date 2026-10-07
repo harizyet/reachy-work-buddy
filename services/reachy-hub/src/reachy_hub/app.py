@@ -1505,6 +1505,14 @@ def create_app(
             raise HTTPException(404, "Chat not found")
         return record
 
+    @app.delete(CHAT, dependencies=[Depends(require_remote_auth)])
+    async def delete_chat(chat_id: str, user_id: str):
+        """Removes a saved chat record (the owner's transcript archive). Core's own reasoning context is not touched."""
+        check_chat_user(user_id)
+        if not await app.state.chat_store.delete(user_id, chat_id):
+            raise HTTPException(404, "Chat not found")
+        return {"deleted": True}
+
     @app.post("/messages")
     async def post_message(message: InboundMessage, request: Request) -> MessageResponse:
         if not message.chat_id:

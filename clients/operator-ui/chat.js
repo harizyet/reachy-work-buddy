@@ -135,7 +135,13 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
       const date = document.createElement('small'); date.textContent = new Date(record.updated_at).toLocaleDateString();
       button.append(title, date);
       button.addEventListener('click', () => void openChat(record.id));
-      item.append(button); el('chat-history').append(item);
+      const remove = document.createElement('button');
+      remove.type = 'button'; remove.className = 'history-delete secondary'; remove.textContent = '✕';
+      remove.setAttribute('aria-label', `Delete chat: ${record.title}`);
+      remove.disabled = pending || reading;
+      remove.addEventListener('click', () => void deleteChat(record));
+      item.className = 'history-item';
+      item.append(button, remove); el('chat-history').append(item);
     }
     if (!records.length) {
       const item = document.createElement('li'); item.className = 'muted';
@@ -170,6 +176,37 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
       if (generation === version && read === readVersion) el('chat-history-status').textContent = `Could not load chat: ${error.message}`;
     } finally {
       if (generation === version && read === readVersion) { reading = false; controls(); }
+    }
+  }
+
+  function confirmDeleteChat(title) {
+    return new Promise(resolve => {
+      const dialog = el('confirm-dialog');
+      el('confirm-title').textContent = 'Delete this chat?';
+      el('confirm-text').textContent = `\u201c${title}\u201d and its saved messages will be removed from your chat history. This cannot be undone.`;
+      el('confirm-ok').textContent = 'Delete';
+      const done = value => { el('confirm-ok').onclick = null; el('confirm-cancel').onclick = null; dialog.close(); resolve(value); };
+      el('confirm-ok').onclick = () => done(true); el('confirm-cancel').onclick = () => done(false);
+      dialog.addEventListener('cancel', () => done(false), {once: true});
+      dialog.showModal();
+    });
+  }
+
+  async function deleteChat(record) {
+    if (pending || reading || !user || !isLoggedIn()) return;
+    if (!await confirmDeleteChat(record.title)) return;
+    try {
+      await api(`/chats/${encodeURIComponent(record.id)}?user_id=${encodeURIComponent(user)}`, {method: 'DELETE'});
+      history = history.filter(r => r.id !== record.id);
+      if (activeChat === record.id) {          // the open chat was deleted: go back to an empty one
+        activeChat = null; clearView();
+        el('chat-title').textContent = 'Chat with Reachy';
+        el('chat-status').textContent = '';
+      }
+      el('chat-history-status').textContent = '';
+      renderHistory();
+    } catch (error) {
+      el('chat-history-status').textContent = `Could not delete chat: ${error.message}`;
     }
   }
 

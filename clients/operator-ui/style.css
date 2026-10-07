@@ -673,3 +673,8 @@ button.rl-text:focus-visible { outline: 2px solid currentColor; outline-offset: 
 .sheet-col { display: grid; gap: .3rem; padding: .6rem 0; border-top: 1px solid rgba(128,128,128,.25); }
 .sheet-col textarea { width: 100%; box-sizing: border-box; border: 0; background: transparent; color: inherit; font: inherit; resize: vertical; }
 #meeting-title-dialog .sheet-row input { flex: 1; text-align: right; border: 0; background: transparent; font: inherit; color: inherit; min-width: 0; }
+.history-item { display: flex; align-items: stretch; gap: 4px; }
+.history-item .history-button { flex: 1; min-width: 0; }
+.history-delete { flex: none; padding: 0 .6rem; opacity: 0; }
+.history-item:hover .history-delete, .history-item:focus-within .history-delete { opacity: 1; }
+@media (hover: none) { .history-delete { opacity: .7; } }

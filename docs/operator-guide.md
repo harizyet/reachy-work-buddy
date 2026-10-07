@@ -336,6 +336,12 @@ applies to robot microphone replies displayed in Chat; ordinary turns have
 no search indicator. Search details clear with the visible transcript.
 
 The left sidebar lists saved typed web chats, newest first, with title search.
+**Previous chats and deleting them.** The Previous chats list (web sidebar; in the Android app a drawer from the
+history button on the Talk screen, or a permanent panel when unfolded) lists the saved chats, newest first. Select one to read
+it. Each has a ✕ (web) or a bin icon (app) that deletes it after a confirmation; if it is the chat you have open, the
+view empties. Deleting removes the saved chat record only: the assistant's own working memory of the
+conversation, and anything it already did (tasks, alarms, notes), are unaffected. Spoken turns are not saved as chats.
+
 **New chat record** begins a separate saved transcript; its first message becomes
 the title. Select a record to read it and append another message. Records share
 the existing companion session and recent context across channels; selecting one

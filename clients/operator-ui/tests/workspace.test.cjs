@@ -85,14 +85,14 @@ test('dashboard, feature settings and saved chat/meeting workspaces at both moun
       await page.locator('#new-chat').click();
       await page.locator('#chat-text').fill('Second chat');
       await page.locator('#chat-send').click();
-      await page.waitForFunction(() => document.querySelectorAll('#chat-history button').length === 2);
+      await page.waitForFunction(() => document.querySelectorAll('#chat-history .history-button').length === 2);
       const before = sends;
       await page.reload();
       await page.locator('#chat-tab').click();
       await page.waitForFunction(() => document.getElementById('chat-title').textContent === 'Second chat');
       assert.equal(await page.locator('.from-reachy').textContent(), 'Reachy<b>Saved reply</b>');
       await page.locator('#chat-history-search').fill('First');
-      await page.locator('#chat-history button').click();
+      await page.locator('#chat-history .history-button').click();
       await page.waitForFunction(() => document.getElementById('chat-title').textContent.includes('First'));
       assert.equal(await page.locator('#chat-transcript script, #chat-transcript b').count(), 0);
       assert.equal(sends, before, 'reading history must not replay a message');
@@ -124,7 +124,7 @@ test('dashboard, feature settings and saved chat/meeting workspaces at both moun
       await page.locator('#logout').click();
       await page.locator('#login-panel').waitFor({state: 'visible'});
       assert.equal(await page.locator('.chat-message').count(), 0);
-      assert.equal(await page.locator('#chat-history button').count(), 0);
+      assert.equal(await page.locator('#chat-history .history-button').count(), 0);
       assert.deepEqual(errors, []);
       await page.close();
     }

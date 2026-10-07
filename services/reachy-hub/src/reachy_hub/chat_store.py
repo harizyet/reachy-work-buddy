@@ -12,6 +12,7 @@ class ChatStore(Protocol):
     async def create(self, record: ChatRecord) -> ChatRecord: ...
     async def list(self, user_id: str) -> list[ChatRecord]: ...
     async def get(self, user_id: str, chat_id: str) -> ChatDetail | None: ...
+    async def delete(self, user_id: str, chat_id: str) -> bool: ...
     async def append(self, chat_id: str, turn: ChatTurn) -> None: ...
     async def finish(self, chat_id: str, turn: ChatTurn) -> None: ...
 
@@ -32,6 +33,13 @@ class InMemoryChatStore:
     async def get(self, user_id, chat_id):
         record = self.records.get(chat_id)
         return record.model_copy(deep=True) if record and record.user_id == user_id else None
+
+    async def delete(self, user_id, chat_id):
+        record = self.records.get(chat_id)
+        if record is None or record.user_id != user_id:
+            return False
+        del self.records[chat_id]
+        return True
 
     async def append(self, chat_id, turn):
         self.records[chat_id].turns.append(turn.model_copy(deep=True))
@@ -95,6 +103,16 @@ class PostgresChatStore:
             return ChatDetail(**self._record(row).model_dump(), turns=[
                 ChatTurn.model_validate(r[0]) for r in await cursor.fetchall()
             ])
+
+    async def delete(self, user_id, chat_id):
+        # The turns go with the chat, in one transaction, and only for the owner's own chat.
+        async with self.pool.connection() as conn, conn.transaction():
+            cursor = await conn.execute('SELECT 1 FROM web_chats WHERE user_id=%s AND id=%s FOR UPDATE', (user_id, chat_id))
+            if await cursor.fetchone() is None:
+                return False
+            await conn.execute('DELETE FROM web_chat_turns WHERE chat_id=%s', (chat_id,))
+            await conn.execute('DELETE FROM web_chats WHERE id=%s', (chat_id,))
+            return True
 
     async def append(self, chat_id, turn):
         async with self.pool.connection() as conn:

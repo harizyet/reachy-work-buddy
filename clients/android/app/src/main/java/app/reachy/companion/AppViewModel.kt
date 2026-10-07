@@ -25,6 +25,14 @@ data class ChatLine(
     val sources: List<app.reachy.companion.data.WebSource> = emptyList(), val searchFailed: Boolean = false,
 )
 
+/** A saved chat as it is shown in the Talk screen: each typed message, then its reply when one was recorded. */
+fun chatLines(detail: app.reachy.companion.data.ChatDetail): List<ChatLine> = detail.turns.flatMap { turn ->
+    listOfNotNull(
+        ChatLine(true, turn.text, failed = turn.status != "complete"),   // no recorded reply: shown as "Reply not received"
+        turn.reply?.let { ChatLine(false, it, sources = turn.webSearch?.results.orEmpty(), searchFailed = turn.webSearch?.failed == true) },
+    )
+}
+
 enum class Session { Checking, SignedOut, SignedIn }
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
@@ -102,7 +110,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun signOut() {
-        viewModelScope.launch { api.logout(); chat.clear(); tasks.clear(); notes.clear(); meetings.clear(); chatId = null; if (recording) stopRecording(); DeepReviewController.job = null; session = Session.SignedOut }
+        viewModelScope.launch { api.logout(); chat.clear(); chatHistory.clear(); tasks.clear(); notes.clear(); meetings.clear(); chatId = null; if (recording) stopRecording(); DeepReviewController.job = null; session = Session.SignedOut }
     }
 
     private fun failed(e: Exception): String {
@@ -119,9 +127,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         chat.add(line)
         viewModelScope.launch {
             try {
-                if (!spoken && chatId == null) chatId = api.createChat(user, message).id
+                if (!spoken && chatId == null) { chatId = api.createChat(user, message).id; runCatching { chatHistory.replace(api.chats(user)) } }
                 val reply = api.send(user, message, spoken, chatId, contextMeeting?.first, forceFrontier = contextCloud && contextMeeting != null)
                 chat.add(ChatLine(false, reply.reply, context = reply.contextMeeting, sources = reply.webSearch?.results.orEmpty(), searchFailed = reply.webSearch?.failed == true)); lastReply = reply.reply; replySeq++
+                if (!spoken) runCatching { chatHistory.replace(api.chats(user)) }   // the chat moves to the top
             } catch (e: Exception) {
                 // Never retried automatically: the hub may already have acted on the message.
                 chat[chat.lastIndex] = line.copy(failed = true)
@@ -140,6 +149,35 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun clearContext() { contextMeeting = null; contextCloud = false }
 
     fun newChat() { chat.clear(); chatId = null; chatStatus = null }
+
+    /** The saved chats (newest first) and the one open in the Talk screen. */
+    val chatHistory = mutableStateListOf<app.reachy.companion.data.ChatRecord>()
+    val openChatId get() = chatId
+
+    fun loadChatHistory() = load { val user = userId ?: return@load; chatHistory.replace(api.chats(user)) }
+
+    /** Shows a saved chat. Nothing is read aloud: only replies that arrive now are. */
+    fun openChat(id: String) {
+        val user = userId ?: return
+        if (sending) return
+        viewModelScope.launch {
+            try {
+                val detail = api.chat(user, id)
+                chat.replace(chatLines(detail)); chatId = detail.id; chatStatus = null; listError = null
+            } catch (e: Exception) { listError = failed(e) }
+        }
+    }
+
+    fun deleteChat(record: app.reachy.companion.data.ChatRecord) {
+        val user = userId ?: return
+        viewModelScope.launch {
+            try {
+                api.deleteChat(user, record.id)
+                if (chatId == record.id) newChat()
+                chatHistory.replace(api.chats(user)); listError = null
+            } catch (e: Exception) { listError = failed(e) }
+        }
+    }
 
     private fun load(block: suspend () -> Unit) {
         viewModelScope.launch { try { block(); listError = null } catch (e: Exception) { listError = failed(e) } }

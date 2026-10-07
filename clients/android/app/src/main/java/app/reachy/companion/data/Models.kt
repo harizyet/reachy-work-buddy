@@ -99,7 +99,17 @@ data class WebSource(val title: String = "", val url: String = "", val snippet: 
 data class WebSearch(val query: String = "", val failed: Boolean = false, val results: List<WebSource> = emptyList())
 
 @Serializable
-data class ChatRecord(val id: String, val title: String = "")
+data class ChatRecord(val id: String, val title: String = "", @SerialName("updated_at") val updatedAt: String = "")
+
+/** One saved exchange in a chat record: what was typed and, when it was recorded, the reply. */
+@Serializable
+data class ChatTurnRecord(
+    val text: String, val reply: String? = null, val status: String = "complete",
+    @SerialName("web_search") val webSearch: WebSearch? = null,
+)
+
+@Serializable
+data class ChatDetail(val id: String, val title: String = "", val turns: List<ChatTurnRecord> = emptyList())
 
 @Serializable
 data class StatusInfo(@SerialName("default_user_id") val defaultUserId: String? = null)

@@ -156,7 +156,7 @@ WebRTC, and static UI. It does not own reasoning policy or motor control.
 | Surface | Purpose |
 |---|---|
 | `POST /messages`; `GET /sessions/{user_id}` | Shared session across text channels; one active session per user |
-| `GET`, `POST /chats`; `GET /chats/{chat_id}?user_id=…` | Authenticated durable web chat records; `POST /messages` accepts optional `chat_id` to archive a typed web turn. Shared session/context remains unchanged |
+| `GET`, `POST /chats`; `GET`, `DELETE /chats/{chat_id}?user_id=…` | Authenticated durable web chat records (`DELETE` removes a chat and its saved turns, for the owner's own chat only, with a `404` otherwise; core's own reasoning context is not touched); `POST /messages` accepts optional `chat_id` to archive a typed web turn. Shared session/context remains unchanged |
 | `POST /voice/turn` | Caller-upload diagnostic: multipart WAV `audio` and owner `user_id`; STT → shared conversation → WAV TTS. Owner-gated by the work-route middleware before STT; not the robot workflow and no speaker-routing check |
 | `POST /webrtc/offer` | Conversational push-to-talk call; voice modality cannot confirm actions |
 | `PATCH /sessions/{user_id}/mode`, `/dnd`, `/privacy-context` | Authenticated updates to existing sessions |

@@ -612,3 +612,18 @@ def test_speech_returns_reachys_voice_for_the_owner_only_and_strips_markup():
     assert voice.said == ["Gemini is open"]  # the same cleaning the robot's replies get
     assert client.post("/speech", json={"text": ""}, headers=CSRF).status_code == 422
     assert client.post("/speech", json={"text": "x" * 3001}, headers=CSRF).status_code == 422
+
+
+def test_a_saved_chat_can_be_deleted_by_its_owner_only():
+    client = make_client()
+    assert client.delete('/chats/x?user_id=default-user').status_code in (401, 403)
+    login(client)
+    keep = client.post('/chats', json={'user_id': 'default-user', 'title': 'Keep'}, headers=CSRF).json()
+    gone = client.post('/chats', json={'user_id': 'default-user', 'title': 'Delete me'}, headers=CSRF).json()
+    client.post('/messages', json={'user_id': 'default-user', 'channel': 'web', 'text': 'hello', 'chat_id': gone['id']}, headers=CSRF)
+    assert client.delete(f"/chats/{gone['id']}?user_id=default-user").status_code == 403    # no CSRF header
+    assert client.delete(f"/chats/{gone['id']}?user_id=other", headers=CSRF).status_code == 404   # not someone else's
+    assert client.delete(f"/chats/{gone['id']}?user_id=default-user", headers=CSRF).json() == {'deleted': True}
+    assert client.delete(f"/chats/{gone['id']}?user_id=default-user", headers=CSRF).status_code == 404
+    assert [c['id'] for c in client.get('/chats?user_id=default-user').json()] == [keep['id']]
+    assert client.get(f"/chats/{gone['id']}?user_id=default-user").status_code == 404

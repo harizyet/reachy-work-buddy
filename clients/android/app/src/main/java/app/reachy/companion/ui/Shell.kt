@@ -19,6 +19,13 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.Badge
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material.icons.filled.History
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -60,9 +67,19 @@ fun Shell(model: AppViewModel) {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) { model.prefs.askedAlarmNotifications = true; notifications.launch(Manifest.permission.POST_NOTIFICATIONS) }
     }
+    val drawer = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(Unit) { model.loadChatHistory() }
+    // Previous chats slide in from the left on a phone; when unfolded they are a permanent panel beside the chat (see below).
+    ModalNavigationDrawer(
+        drawerState = drawer, gesturesEnabled = tab == Tab.Talk && !wide,
+        drawerContent = { ModalDrawerSheet { ChatHistoryPanel(model, onPicked = { scope.launch { drawer.close() } }) } },
+    ) {
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text(tab.title) }, actions = {
+            TopAppBar(title = { Text(tab.title) }, navigationIcon = {
+                if (tab == Tab.Talk && !wide) IconButton({ scope.launch { drawer.open() } }) { Icon(Icons.Default.History, "Previous chats") }
+            }, actions = {
                 IconButton({ menu = true }) { Icon(Icons.Default.MoreVert, "Menu") }
                 DropdownMenu(menu, { menu = false }) {
                     if (tab == Tab.Talk) DropdownMenuItem({ Text("New chat") }, { menu = false; model.newChat() })
@@ -99,7 +116,8 @@ fun Shell(model: AppViewModel) {
         DeepReviewBanner()
         TailscaleBanner()
         when (tab) {
-            Tab.Talk -> TalkScreen(model, speak, Modifier.weight(1f))
+            Tab.Talk -> if (wide) TwoPane(Modifier.weight(1f), listWidth = 300, list = { ChatHistoryPanel(model) }, detail = { TalkScreen(model, speak, Modifier) })
+                else TalkScreen(model, speak, Modifier.weight(1f))
             Tab.Todo -> RemindersScreen(model, Modifier.weight(1f))
             Tab.Notes -> NotesScreen(model, Modifier.weight(1f))
             Tab.Meetings -> MeetingsScreen(model, Modifier.weight(1f), onUseAsContext = { tab = Tab.Talk })
@@ -107,6 +125,7 @@ fun Shell(model: AppViewModel) {
         }
         }
         }
+    }
     }
 }
 
