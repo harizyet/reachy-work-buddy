@@ -23,6 +23,7 @@ from shared.protocols.operator_api import (
     LLM_SETTINGS,
     LLM_USAGE,
     MEETING,
+    MEETING_AUDIO,
     MEETING_CANCEL,
     MEETINGS,
     PERSONA_SETTINGS,
@@ -187,6 +188,14 @@ class CompanionCoreClient:
         resp = await self._client.get(MEETING.format(meeting_id=meeting_id), timeout=10.0)
         resp.raise_for_status()
         return resp.json()
+
+    async def open_meeting_audio(self, meeting_id: str, range_header: str | None) -> httpx.Response:
+        """An open streaming response; the caller closes it."""
+        request = self._client.build_request(
+            "GET", MEETING_AUDIO.format(meeting_id=meeting_id),
+            headers={"Range": range_header} if range_header else None, timeout=httpx.Timeout(60.0, connect=10.0),
+        )
+        return await self._client.send(request, stream=True)
 
     async def cancel_meeting(self, meeting_id: str) -> dict[str, Any]:
         resp = await self._client.post(MEETING_CANCEL.format(meeting_id=meeting_id), timeout=10.0)

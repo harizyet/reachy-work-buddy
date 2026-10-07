@@ -3,6 +3,7 @@
 import asyncio
 import json
 import time
+from datetime import UTC, datetime
 
 import httpx
 from companion_core.app import create_app
@@ -285,3 +286,70 @@ def test_summary_and_minutes_become_part_of_the_context_and_a_long_meeting_is_tr
         assert "Summary (written by a model" in system and "Apache 2.0" in system
         assert system.count("filler line") < 12 and len(system) < 12000  # bounded, not the whole transcript
         assert "excerpts relevant to the question" in system
+
+
+def test_summaries_use_the_stored_alignment_and_fall_back_to_computing_it() -> None:
+    client, ids, store, seen = make_client()
+    with client:
+        meeting = asyncio.run(store.get_meeting(ids["main"]))
+        # a stored alignment that disagrees with the raw diarization wins: it is the source of truth once written
+        stored = [{**s, "speaker": "SPEAKER_01"} for s in CLICKHOUSE]
+        store._touch(meeting, aligned_segments=stored)
+        client.post(f"/meetings/{ids['main']}/outputs/summary")
+        prompt = json.loads(seen[-1].content)["messages"][1]["content"]
+        assert "[0:00] Speaker 2: Today we are comparing" in prompt
+        store._touch(asyncio.run(store.get_meeting(ids["main"])), aligned_segments=None)  # unaligned: computed from diarization
+        client.post(f"/meetings/{ids['main']}/outputs/summary")
+        assert "[0:00] Speaker 1: Today we are comparing" in json.loads(seen[-1].content)["messages"][1]["content"]
+
+
+def test_the_recording_is_served_whole_or_by_range() -> None:
+    client, ids, _, _ = make_client()
+    whole = client.get(f"/meetings/{ids['main']}/audio")
+    assert whole.status_code == 200 and whole.content == b"x" and whole.headers["accept-ranges"] == "bytes"
+    assert whole.headers["content-type"] == "audio/mp4"
+    assert client.get(f"/meetings/{ids['main']}/audio", headers={"Range": "bytes=0-"}).status_code == 206
+    assert client.get(f"/meetings/{ids['main']}/audio", headers={"Range": "bytes=5-9"}).status_code == 416
+    assert client.get(f"/meetings/{ids['main']}/audio", headers={"Range": "items=1-2"}).status_code == 416
+    assert client.get("/meetings/nope/audio").status_code == 404
+
+
+def _long_meeting(parts: int):
+    from companion_core.meetings.models import Meeting
+
+    lines = [{"start": float(i), "end": float(i) + 1, "text": f"Point number {i} " + "about the database migration plan. " * 12} for i in range(parts * 18)]
+    return Meeting(id="m", title="Long", status="complete", transcript_segments=lines, diarization_segments=[], audio_path="m.wav",
+                   source_filename="m.wav", content_type="audio/wav", created_at=datetime.now(UTC), updated_at=datetime.now(UTC))
+
+
+def test_outputs_have_generous_room_and_ask_for_thorough_text() -> None:
+    from companion_core.meetings import outputs
+
+    seen: list[tuple[str, int]] = []
+
+    async def ask(messages, max_tokens):
+        seen.append((messages[0]["content"], max_tokens))
+        return "A long answer."
+
+    asyncio.run(outputs.generate(_long_meeting(1), "summary", ask))
+    prompt, cap = seen[-1]
+    assert "short paragraph" not in prompt and "up to six" not in prompt and cap >= 1000
+    seen.clear()
+    asyncio.run(outputs.generate(_long_meeting(1), "minutes", ask))
+    assert seen[-1][1] >= 1000
+
+
+def test_a_long_meetings_notes_are_condensed_so_the_final_request_fits_the_window() -> None:
+    from companion_core.meetings import outputs
+
+    sizes: list[int] = []
+
+    async def ask(messages, max_tokens):
+        size = sum(len(m["content"]) for m in messages)
+        sizes.append(size)
+        assert size // 3 + max_tokens <= outputs.CONTEXT_TOKENS + 100  # request plus answer fits the window
+        return "- " + "a detailed note about the plan. " * 80  # ~2.6k characters, as a model near its cap would write
+
+    text, truncated = asyncio.run(outputs.generate(_long_meeting(9), "minutes", ask))
+    assert text and not truncated
+    assert len(sizes) > 10  # parts, then a condensing pass, then the final answer

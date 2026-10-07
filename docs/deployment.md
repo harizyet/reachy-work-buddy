@@ -743,7 +743,7 @@ explicitly disposable project. Leave unrelated services such as OVMS alone.
 ## Schema upgrades and credential keys
 
 Core and hub require the revision declared in
-[`shared/database.py`](../shared/database.py) (`021_meeting_outputs` at this snapshot).
+[`shared/database.py`](../shared/database.py) (`022_meeting_alignment` at this snapshot).
 The ordered Alembic history ships
 in core's image; SQL stores perform compatibility checks, not startup DDL.
 Compose runs `migrate` before hub/core, including through
@@ -767,6 +767,8 @@ Revision `018_action_receipts` (Phase 39, [ADR 0028](adr/0028-persona-responses-
 Revision `019_meeting_annotations` (Phase 41, [ADR 0030](adr/0030-meeting-speaker-names-and-reviewed-corrections.md)) adds `meetings.speaker_names` and `meetings.transcript_corrections`. Deployed 2026-10-07 (backup `reachy-before-phase41-20261007-1333.dump`; 5 existing meetings kept). Rebuild `migrate`, `companion-core`, `reachy-hub` and `coding-agent-service` together.
 
 Revision `020_meeting_terms` (Phase 41) adds `meetings.key_terms` and the `meeting_terms` glossary table. Deployed 2026-10-07 (backup `reachy-before-meeting-terms-20261007-1456.dump`; 5 existing meetings kept).
+
+Revision `022_meeting_alignment` (Phase 27.4) adds nullable `meetings.aligned_segments` JSONB; meetings resting at `aligning` complete on the next worker poll.
 
 Revision `021_meeting_outputs` (Phase 43) adds nullable `meetings.summary` and `meetings.minutes` JSON. Deployed 2026-10-07 (backup `reachy-before-meeting-outputs-20261007-1718.dump`; 5 existing meetings kept).
 

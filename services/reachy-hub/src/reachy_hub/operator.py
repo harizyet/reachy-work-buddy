@@ -9,8 +9,9 @@ import httpx
 from fastapi import Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
+from starlette.background import BackgroundTask
 
 from reachy_hub import alarm_audio
 from shared.models.llm import LLMConfigPatch
@@ -26,6 +27,7 @@ from shared.protocols.operator_api import (
     LLM_SETTINGS,
     LLM_USAGE,
     MEETING,
+    MEETING_AUDIO,
     MEETING_CANCEL,
     MEETING_CORRECTION,
     MEETING_CORRECTIONS_REPLACE,
@@ -267,6 +269,23 @@ def install_operator_routes(
             meeting_error(exc)
         except httpx.HTTPError:
             raise HTTPException(502, "Companion core unavailable") from None
+
+    @app.get(MEETING_AUDIO, dependencies=dependencies)
+    async def meeting_audio(meeting_id: str, request: Request):
+        try:
+            upstream = await core.open_meeting_audio(meeting_id, request.headers.get("range"))
+        except httpx.HTTPError:
+            raise HTTPException(502, "Companion core unavailable") from None
+        if upstream.status_code not in (200, 206):
+            await upstream.aclose()
+            if upstream.status_code in (404, 416):
+                raise HTTPException(upstream.status_code, "Recording not available" if upstream.status_code == 404 else "Range not satisfiable")
+            raise HTTPException(502, "Companion core request failed")
+        keep = ("content-type", "content-range", "content-length", "accept-ranges", "cache-control")
+        return StreamingResponse(
+            upstream.aiter_raw(), status_code=upstream.status_code,
+            headers={k: v for k, v in upstream.headers.items() if k in keep}, background=BackgroundTask(upstream.aclose),
+        )
 
     @app.post(MEETING_CANCEL, dependencies=dependencies)
     async def cancel_meeting(meeting_id: str) -> dict:

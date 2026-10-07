@@ -31,6 +31,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val cookieJar = PersistentCookieJar({ prefs.cookies }, { prefs.cookies = it })
     private var api = ReachyApi(prefs.baseUrl.ifBlank { "http://localhost" }, cookieJar)
     private var userId: String? = null
+    val player = MeetingPlayer(File(app.cacheDir, "meeting-audio")) { id, file -> api.downloadAudio(id, file) }
     private var chatId: String? = null
 
     var session by mutableStateOf(Session.Checking); private set
@@ -279,6 +280,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun renameSpeaker(label: String, name: String) = annotate { api.setSpeakerNames(it, mapOf(label to name.trim())) }
+    fun playMeetingFrom(id: String, seconds: Double) { viewModelScope.launch { player.playFrom(id, seconds) } }
+
+    override fun onCleared() { player.release() }
+
     fun editSegment(index: Int, text: String) = annotate { api.setCorrection(it, index, text.trim()) }
     fun restoreSegment(index: Int) = annotate { api.clearCorrection(it, index) }
 

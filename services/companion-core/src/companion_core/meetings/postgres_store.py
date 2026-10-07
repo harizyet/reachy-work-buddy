@@ -34,7 +34,8 @@ from shared.database import check_schema
 _COLUMNS = (
     "id, title, project_scope, context, participants, started_at, source_filename, content_type, "
     "audio_path, normalized_audio_path, duration_seconds, transcript_segments, diarization_segments, "
-    "status, error_detail, created_at, updated_at, speaker_names, transcript_corrections, key_terms, summary, minutes"
+    "status, error_detail, created_at, updated_at, speaker_names, transcript_corrections, key_terms, summary, minutes, "
+    "aligned_segments"
 )
 
 
@@ -62,6 +63,7 @@ def _from_row(row: tuple) -> Meeting:
         key_terms=list(row[19] or []),
         summary=MeetingOutput(**row[20]) if row[20] else None,
         minutes=MeetingOutput(**row[21]) if row[21] else None,
+        aligned_segments=row[22],
     )
 
 
@@ -125,13 +127,13 @@ class PostgresMeetingStore:
         async with self._pool.connection() as conn:
             await conn.execute(
                 f"INSERT INTO meetings ({_COLUMNS}) VALUES "
-                "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     meeting.id, meeting.title, meeting.project_scope, meeting.context, meeting.participants,
                     meeting.started_at, meeting.source_filename, meeting.content_type, meeting.audio_path,
                     meeting.normalized_audio_path, meeting.duration_seconds, None, None,
                     meeting.status.value, meeting.error_detail, meeting.created_at, meeting.updated_at,
-                    Json({}), Json({}), Json([]), None, None,
+                    Json({}), Json({}), Json([]), None, None, None,
                 ),
             )
         return meeting
@@ -251,6 +253,27 @@ class PostgresMeetingStore:
                 WHERE id = %s AND status = %s RETURNING {_COLUMNS}
                 """,
                 (MeetingJobStatus.ALIGNING.value, Json(diarization_segments), meeting_id, MeetingJobStatus.DIARIZING.value),
+            )
+            row = await cur.fetchone()
+            return _from_row(row) if row else await self.get_meeting(meeting_id)
+
+    async def claim_next_alignment(self) -> Meeting | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"SELECT {_COLUMNS} FROM meetings WHERE status = %s ORDER BY created_at LIMIT 1",
+                (MeetingJobStatus.ALIGNING.value,),
+            )
+            row = await cur.fetchone()
+            return _from_row(row) if row else None
+
+    async def mark_aligned(self, meeting_id: str, *, aligned_segments: list[dict[str, Any]]) -> Meeting | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"""
+                UPDATE meetings SET status = %s, aligned_segments = %s, updated_at = now()
+                WHERE id = %s AND status = %s RETURNING {_COLUMNS}
+                """,
+                (MeetingJobStatus.COMPLETE.value, Json(aligned_segments), meeting_id, MeetingJobStatus.ALIGNING.value),
             )
             row = await cur.fetchone()
             return _from_row(row) if row else await self.get_meeting(meeting_id)

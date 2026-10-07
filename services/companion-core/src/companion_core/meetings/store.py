@@ -77,6 +77,14 @@ class MeetingStore(Protocol):
         self, meeting_id: str, *, diarization_segments: list[dict[str, Any]]
     ) -> Meeting | None: ...
 
+    async def claim_next_alignment(self) -> Meeting | None:
+        """The oldest ALIGNING job, or None. Same non-transitioning shape as claim_next_diarization."""
+        ...
+
+    async def mark_aligned(self, meeting_id: str, *, aligned_segments: list[dict[str, Any]]) -> Meeting | None:
+        """Store the aligned transcript and complete the job. A no-op unless the job is still ALIGNING."""
+        ...
+
     async def mark_failed(self, meeting_id: str, *, error_detail: str) -> Meeting | None: ...
     async def cancel_meeting(self, meeting_id: str) -> Meeting | None: ...
     async def set_speaker_names(self, meeting_id: str, names: dict[str, str]) -> Meeting | None:
@@ -215,6 +223,18 @@ class InMemoryMeetingStore:
         return self._touch(
             meeting, status=MeetingJobStatus.DIARIZING, transcript_segments=transcript_segments
         )
+
+    async def claim_next_alignment(self) -> Meeting | None:
+        candidates = [m for m in self._meetings.values() if m.status == MeetingJobStatus.ALIGNING]
+        return min(candidates, key=lambda m: m.created_at) if candidates else None
+
+    async def mark_aligned(self, meeting_id: str, *, aligned_segments: list[dict[str, Any]]) -> Meeting | None:
+        meeting = self._meetings.get(meeting_id)
+        if meeting is None:
+            return None
+        if meeting.status != MeetingJobStatus.ALIGNING:
+            return meeting
+        return self._touch(meeting, status=MeetingJobStatus.COMPLETE, aligned_segments=aligned_segments)
 
     async def mark_diarized(
         self, meeting_id: str, *, diarization_segments: list[dict[str, Any]]

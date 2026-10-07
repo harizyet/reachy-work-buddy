@@ -23,6 +23,8 @@ data class Meeting(
     @SerialName("created_at") val createdAt: String = "",
     @SerialName("transcript_segments") val transcript: List<Segment>? = null,
     @SerialName("diarization_segments") val speakers: List<Segment>? = null,
+    // The server-side alignment: one entry per transcript segment, with its speaker. Null until the meeting is aligned.
+    @SerialName("aligned_segments") val aligned: List<Segment>? = null,
     @SerialName("speaker_names") val speakerNames: Map<String, String> = emptyMap(),
     @SerialName("transcript_corrections") val corrections: Map<String, String> = emptyMap(),
     @SerialName("key_terms") val keyTerms: List<String> = emptyList(),

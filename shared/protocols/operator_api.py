@@ -50,6 +50,7 @@ MEETING_OUTPUT = "/meetings/{meeting_id}/outputs/{kind}"
 MEETING_OUTPUT_DEEP = "/meetings/{meeting_id}/outputs/{kind}/deep"
 # Phase 41 (ADR 0030): owner speaker names and reviewed transcript corrections.
 MEETING_SPEAKERS = "/meetings/{meeting_id}/speakers"
+MEETING_AUDIO = "/meetings/{meeting_id}/audio"
 MEETING_CORRECTIONS_SUGGEST = "/meetings/{meeting_id}/corrections/suggest"
 MEETING_TERMS = "/meetings/{meeting_id}/terms"
 MEETING_GLOSSARY = "/meeting-terms"

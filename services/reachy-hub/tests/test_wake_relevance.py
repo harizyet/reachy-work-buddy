@@ -33,3 +33,11 @@ def test_addressed_requests_are_admitted_without_the_wake_phrase(transcript, req
 def test_unaddressed_or_empty_candidates_are_rejected(transcript, reason) -> None:
     result = assess(transcript)
     assert (result.admitted, result.reason, result.request) == (False, reason, "")
+
+
+def test_a_lone_wake_phrase_is_recognised_but_a_request_is_not() -> None:
+    from reachy_hub.wake_relevance import is_wake_phrase_only
+
+    assert is_wake_phrase_only("Hey Reachy") and is_wake_phrase_only("hey, Reachy.") and is_wake_phrase_only("Okay hey Reachy hello")
+    assert not is_wake_phrase_only("Hey Reachy what time is it") and not is_wake_phrase_only("what time is it")
+    assert not is_wake_phrase_only("")

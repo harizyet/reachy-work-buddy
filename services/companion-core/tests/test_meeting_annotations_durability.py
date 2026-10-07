@@ -109,3 +109,28 @@ def test_outputs_persist_and_deleting_a_meeting_removes_the_record_and_its_audio
             await store.close()
 
     asyncio.run(run())
+
+
+def test_aligned_segments_persist_and_the_meeting_completes(database, tmp_path):
+    from companion_core.meetings.models import MeetingJobStatus
+
+    async def run() -> None:
+        store = await PostgresMeetingStore.connect(database, audio_dir=tmp_path)
+        try:
+            meeting = await store.create_meeting(title="Sync", audio=b"x", source_filename="m.m4a", content_type="audio/mp4")
+            assert meeting.aligned_segments is None
+            assert (await store.claim_next_upload()).id == meeting.id  # the job moves through the real stages
+            await store.mark_preprocessed(meeting.id, normalized_audio_path=None, duration_seconds=1.0)
+            await store.mark_transcribed(meeting.id, transcript_segments=[{"start": 0, "end": 2, "text": "hi"}])
+            await store.mark_diarized(meeting.id, diarization_segments=[{"start": 0, "end": 2, "speaker": "SPEAKER_00"}])
+            claimed = await store.claim_next_alignment()
+            assert claimed.id == meeting.id and claimed.status == MeetingJobStatus.ALIGNING
+            done = await store.mark_aligned(meeting.id, aligned_segments=[{"start": 0, "end": 2, "text": "hi", "speaker": "SPEAKER_00"}])
+            assert done.status == MeetingJobStatus.COMPLETE and done.aligned_segments[0]["speaker"] == "SPEAKER_00"
+            assert await store.claim_next_alignment() is None
+            again = await store.mark_aligned(meeting.id, aligned_segments=[{"speaker": "OTHER"}])
+            assert again.aligned_segments[0]["speaker"] == "SPEAKER_00"  # only from ALIGNING
+        finally:
+            await store.close()
+
+    asyncio.run(run())

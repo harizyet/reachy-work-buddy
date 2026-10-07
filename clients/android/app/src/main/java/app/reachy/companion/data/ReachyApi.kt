@@ -241,6 +241,17 @@ class ReachyApi(baseUrl: String, private val cookieJar: PersistentCookieJar, cli
         return if (body == "null" || body.isEmpty()) null else json.decodeFromString(body)
     }
 
+    /** Streams the recording to [target]; the whole file is fetched once and played locally so seeking is instant. */
+    suspend fun downloadAudio(id: String, target: File) = withContext(Dispatchers.IO) {
+        val slow = http.newBuilder().readTimeout(120, TimeUnit.SECONDS).build()
+        slow.newCall(req("/meetings/$id/audio").build()).execute().use { response ->
+            if (!response.isSuccessful) throw ApiException(response.code, errorDetail(response.body?.string().orEmpty()) ?: "Recording unavailable (${response.code})")
+            val temp = File(target.parentFile, target.name + ".part")
+            response.body!!.byteStream().use { input -> temp.outputStream().use { input.copyTo(it) } }
+            if (!temp.renameTo(target)) throw IOException("could not store the recording")
+        }
+    }
+
     suspend fun clearCorrection(id: String, segment: Int): Meeting =
         json.decodeFromString(call(req("/meetings/$id/corrections/$segment").delete().build()))
 

@@ -546,3 +546,15 @@ dialog#deep-warning::backdrop { background: rgba(0,0,0,.45); }
 .chat-sources { margin-top: .6rem; font-size: .9em; }
 .chat-sources ol { margin: .2rem 0 0; padding-left: 1.4rem; }
 .chat-sources a { overflow-wrap: anywhere; }
+
+.speaker-chip { padding: .1rem .5rem; margin-right: .3rem; }
+dialog#speaker-dialog { border: 1px solid #888; border-radius: 8px; padding: 1.2rem; }
+dialog#speaker-dialog::backdrop { background: rgba(0,0,0,.45); }
+.line-text { cursor: pointer; }
+.line-text:hover, .line-text:focus-visible { text-decoration: underline; }
+li.playing .line-text { font-weight: 600; }
+.line-edit { padding: .05rem .4rem; font-size: .8em; }
+#meeting-player { width: 100%; }
+dialog#line-dialog { border: 1px solid #888; border-radius: 8px; padding: 1.2rem; min-width: min(32rem, 90vw); }
+dialog#line-dialog::backdrop { background: rgba(0,0,0,.45); }
+dialog#line-dialog textarea { width: 100%; }

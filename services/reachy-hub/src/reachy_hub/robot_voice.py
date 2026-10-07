@@ -71,7 +71,7 @@ from reachy_hub.wake_arm_store import (
     WakeArmStore,
     new_arm,
 )
-from reachy_hub.wake_relevance import assess
+from reachy_hub.wake_relevance import assess, is_wake_phrase_only
 from shared.models.robot_voice import (
     MAX_PALM_FRAME_BYTES,
     MAX_UTTERANCE_BYTES,
@@ -804,6 +804,8 @@ PRIVACY_REPLY = (
 )
 PRIVACY_PLAYBACK_MARGIN_SECONDS = 1.5
 GOODBYE_REPLY = "You're welcome. Goodbye."
+# Said when the wake phrase arrives alone during a conversation's follow-up window; one is picked at random.
+AFFIRMATIONS = ("Hmm?", "Hey!", "Hello!", "Yes?", "I'm here.")
 
 
 def _wav_seconds(audio: bytes) -> float:
@@ -856,6 +858,26 @@ async def _end_conversation(
     return finish(VoiceTurnOutcome.SPOKEN, transcript=transcript, reply=GOODBYE_REPLY), audio
 
 
+async def _acknowledge(
+    manager: RobotVoiceManager,
+    session: VoiceSession,
+    turn: int,
+    transcript: str,
+    pipeline: VoiceTurnPipeline,
+    finish: Callable[..., VoiceTurnOutcome],
+) -> tuple[VoiceTurnOutcome, bytes | None]:
+    """A lone "Hey Reachy" mid-conversation: answer with a short affirmation, leave the conversation open."""
+    reply = secrets.choice(AFFIRMATIONS)
+    try:
+        audio = await pipeline.synthesize(reply)
+    except Exception:
+        log.exception("robot voice turn: acknowledgement synthesis failed")
+        return finish(VoiceTurnOutcome.FAILED, transcript=transcript, reply=reply, reason="Speech synthesis failed"), None
+    if not manager.is_current(session, turn):
+        return finish(VoiceTurnOutcome.CANCELLED, transcript=transcript, reply=reply, reason="Stopped"), None
+    return finish(VoiceTurnOutcome.SPOKEN, transcript=transcript, reply=reply), audio
+
+
 async def _answer(
     manager: RobotVoiceManager,
     session: VoiceSession,
@@ -876,6 +898,9 @@ async def _answer(
 
     if matches_end_conversation(transcript):
         return await _end_conversation(manager, session, transcript, pipeline, finish)
+
+    if is_wake_phrase_only(transcript):
+        return await _acknowledge(manager, session, turn, transcript, pipeline, finish)
 
     if pipeline.sensitivity_gate_enabled:
         sensitivity = classify_sensitivity(transcript)

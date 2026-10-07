@@ -30,9 +30,13 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import app.reachy.companion.data.countOccurrences
+import app.reachy.companion.data.lineAt
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Slider
 import app.reachy.companion.data.segmentText
 import app.reachy.companion.data.speakerDisplayName
-import app.reachy.companion.data.speakerFor
+import app.reachy.companion.data.speakerAt
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -52,6 +56,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -74,8 +81,10 @@ fun statusLabel(status: String) = when (status) {
     "preprocessing" -> "Preparing audio"
     "transcribing" -> "Transcribing"
     "diarizing" -> "Identifying speakers"
-    "aligning", "analyzing" -> "Finishing up"
-    "complete" -> "Ready"
+    // "aligning" is where every meeting rests once transcription and speaker detection are done (combining them is not
+    // implemented), so it is a finished meeting, not one still working.
+    "aligning", "complete" -> "Ready"
+    "analyzing" -> "Finishing up"
     "failed" -> "Failed"
     "cancelled" -> "Cancelled"
     else -> status
@@ -230,6 +239,31 @@ private fun MeetingDetail(model: AppViewModel, meeting: Meeting, modifier: Modif
         }
         model.suggestionNote?.let { Text(it, Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall) }
         if (segments.isEmpty()) Text("No transcript yet.", Modifier.padding(16.dp))
+        val player = model.player
+        val loaded = player.meetingId == meeting.id
+        LaunchedEffect(player.playing, loaded) {
+            while (loaded && player.playing) { player.refresh(); kotlinx.coroutines.delay(250) }
+        }
+        DisposableEffect(meeting.id) { onDispose { if (player.meetingId == meeting.id) player.release() } }
+        if (segments.isNotEmpty()) {
+            Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton({ if (loaded) player.toggle() else model.playMeetingFrom(meeting.id, 0.0) }, enabled = !player.loading) {
+                    Icon(if (loaded && player.playing) Icons.Default.Pause else Icons.Default.PlayArrow, if (loaded && player.playing) "Pause recording" else "Play recording")
+                }
+                if (loaded && player.durationMs > 0) {
+                    Slider(
+                        value = player.positionMs.toFloat(), onValueChange = { player.seekTo(it.toInt()) },
+                        valueRange = 0f..player.durationMs.toFloat(), modifier = Modifier.weight(1f),
+                    )
+                    Text("${clock(player.positionMs / 1000.0)} / ${clock(player.durationMs / 1000.0)}", style = MaterialTheme.typography.labelSmall)
+                } else Text(
+                    if (player.loading) "Loading the recording…" else "Play the recording; tap a line to start from it.",
+                    Modifier.weight(1f), style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            ErrorLine(player.error)
+        }
+        val playingLine = if (loaded) lineAt(segments, player.positionMs / 1000.0) else null
         LazyColumn(Modifier.padding(horizontal = 16.dp)) {
             val groups = model.suggestions.distinctBy { it.original to it.suggested }
             if (groups.isNotEmpty()) item {
@@ -262,8 +296,8 @@ private fun MeetingDetail(model: AppViewModel, meeting: Meeting, modifier: Modif
                 }
             }
             itemsIndexed(segments) { index, segment ->
-                val label = speakerFor(meeting, segment)
-                val previous = segments.getOrNull(index - 1)?.let { speakerFor(meeting, it) }
+                val label = speakerAt(meeting, index, segment)
+                val previous = segments.getOrNull(index - 1)?.let { speakerAt(meeting, index - 1, it) }
                 if (label != null && (index == 0 || label != previous)) {
                     TextButton({ renaming = label }, contentPadding = PaddingValues(0.dp)) {
                         Text("${speakerDisplayName(meeting, label)}  ·  ${clock(segment.start)}", style = MaterialTheme.typography.labelLarge)
@@ -273,11 +307,16 @@ private fun MeetingDetail(model: AppViewModel, meeting: Meeting, modifier: Modif
                 }
                 Text(
                     segmentText(meeting, index),
-                    Modifier.clickable { editing = index }.padding(bottom = 8.dp),
+                    Modifier.clickable { model.playMeetingFrom(meeting.id, segment.start) },
+                    fontWeight = if (playingLine == index) androidx.compose.ui.text.font.FontWeight.Bold else null,
                 )
-                if (meeting.corrections.containsKey(index.toString())) {
-                    Text("edited", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(bottom = 8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton({ editing = index }, contentPadding = PaddingValues(0.dp)) { Text("Edit", style = MaterialTheme.typography.labelSmall) }
+                    if (meeting.corrections.containsKey(index.toString())) {
+                        Text("  edited", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                    }
                 }
+                Spacer(Modifier.height(4.dp))
             }
         }
     }

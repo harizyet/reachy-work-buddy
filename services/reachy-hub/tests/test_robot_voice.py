@@ -617,7 +617,7 @@ def test_recognition_is_biased_toward_the_configured_assistant_name() -> None:
 
 
 def test_spoken_turns_share_the_conversation_with_web_chat() -> None:
-    stt = ScriptedSTT("hello reachy", "and what did I just say")
+    stt = ScriptedSTT("how are you today", "and what did I just say")
     tts = RecordingTTS()
     client, _, _ = make_hub(stt, tts)
     with client:
@@ -630,7 +630,7 @@ def test_spoken_turns_share_the_conversation_with_web_chat() -> None:
             assert first.headers["x-voice-turn-outcome"] == "spoken"
             assert first.headers["content-type"] == "audio/wav"
             spoken = wait_for_state(client, "speaking")["turns"][0]
-            assert spoken["transcript"] == "hello reachy"
+            assert spoken["transcript"] == "how are you today"
             assert spoken["received_at"]
             assert all(spoken[stage] >= 0 for stage in ("transcription_ms", "conversation_ms", "synthesis_ms"))
             socket.send_json({"type": "voice_state", "voice_session_id": sid, "state": "listening"})
@@ -1399,3 +1399,22 @@ def test_spoken_goodbye_replies_then_ends_the_session_and_keeps_wake_armed(monke
     assert still_active and not session.active
     assert session.stop_reason == "Conversation ended by the owner"
     assert manager.arm_for(ROBOT_ID) is not None
+
+
+def test_a_lone_wake_phrase_mid_conversation_gets_an_affirmation_and_keeps_the_session() -> None:
+    from reachy_hub import robot_voice
+
+    manager, _, _, _, _ = make_manager(capabilities=(VOICE_CAPABILITY, WAKE_CAPABILITY))
+    script = ScriptedPipeline("Hey Reachy")
+
+    async def scenario():
+        await manager.set_arm(ROBOT_ID, "owner", True)
+        session = await manager.open_wake_session(manager.arm_for(ROBOT_ID), 1, "Hey Reachy")
+        manager.begin_turn(ROBOT_ID, 1, session.voice_session_id, 1, 1)
+        outcome, audio = await run_turn(manager, session, 1, b"", script.build(), seconds=2.0)
+        return session, outcome, audio
+
+    session, outcome, audio = asyncio.run(scenario())
+    assert outcome == VoiceTurnOutcome.SPOKEN and audio == b"audio"
+    assert script.conversed == [] and script.synthesized[0] in robot_voice.AFFIRMATIONS
+    assert session.active

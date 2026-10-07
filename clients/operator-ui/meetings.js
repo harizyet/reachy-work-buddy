@@ -17,13 +17,13 @@ function createMeetings({api, apiUploadForm, isLoggedIn, onUseAsContext = () => 
 
   const STATUS_LABELS = {
     uploaded: 'Queued', preprocessing: 'Preparing audio', transcribing: 'Transcribing',
-    diarizing: 'Identifying speakers', aligning: 'Processing paused', analyzing: 'Analyzing',
+    diarizing: 'Identifying speakers', aligning: 'Ready', analyzing: 'Analyzing',
     complete: 'Complete', failed: 'Failed', cancelled: 'Cancelled',
   };
   function statusLabel(status) { return STATUS_LABELS[status] || status; }
 
   function statusDescription(meeting) {
-    if (meeting.status === 'aligning') return 'Transcription and speaker detection finished. Combining them into a speaker-labelled transcript is not available yet.';
+    if (meeting.status === 'aligning') return 'Transcript and speakers are ready.';
     if (meeting.status === 'failed') return 'Processing failed. Open details for the technical error.';
     if (meeting.status === 'cancelled') return 'Processing was cancelled.';
     return '';
@@ -408,7 +408,76 @@ function createMeetings({api, apiUploadForm, isLoggedIn, onUseAsContext = () => 
     } catch (error) { /* the banner simply does not show */ }
   }
 
-  function renderSegments(container, segments, {kind, corrections}) {
+  // The stored alignment (Phase 27.4) gives each transcript line its speaker; the owner's name wins over "Speaker N".
+  function speakerName(meeting, label) {
+    const named = meeting.speaker_names?.[label];
+    if (named) return named;
+    const match = /^SPEAKER_(\d+)$/.exec(label);
+    return match ? `Speaker ${Number(match[1]) + 1}` : label;
+  }
+
+  function renameSpeaker(meeting, label) {
+    const dialog = el('speaker-dialog');
+    el('speaker-dialog-title').textContent = `Who is ${speakerName(meeting, label)}?`;
+    el('speaker-dialog-name').value = meeting.speaker_names?.[label] || '';
+    el('speaker-dialog-clear').hidden = !meeting.speaker_names?.[label];
+    const save = async name => {
+      dialog.close();
+      try {
+        const updated = await api(`/meetings/${meeting.id}/speakers`, {method: 'PUT', body: JSON.stringify({names: {[label]: name}})});
+        meetingsById.set(meeting.id, updated);
+        await showDetail(meeting.id, {keepSuggestions: true});
+      } catch (error) { el('meeting-detail-status').textContent = error.message; }
+    };
+    el('speaker-dialog-save').onclick = () => { const name = el('speaker-dialog-name').value.trim(); if (name) void save(name); };
+    el('speaker-dialog-clear').onclick = () => void save('');
+    el('speaker-dialog-cancel').onclick = () => dialog.close();
+    dialog.showModal();
+  }
+
+  function playFrom(seconds) {
+    const audio = el('meeting-player');
+    audio.currentTime = Math.max(0, seconds || 0);
+    void audio.play().catch(() => { /* Playback needs a user gesture on some browsers; the controls still work. */ });
+  }
+
+  function editLine(meeting, index) {
+    const segment = meeting.transcript_segments[index];
+    const current = meeting.transcript_corrections?.[String(index)];
+    const dialog = el('line-dialog');
+    el('line-dialog-title').textContent = `Edit line at ${formatTimestamp(segment.start)}`;
+    el('line-dialog-original').textContent = current !== undefined ? `Original: ${segment.text || ''}` : '';
+    el('line-dialog-text').value = current ?? (segment.text || '');
+    el('line-dialog-revert').hidden = current === undefined;
+    const done = async request => {
+      dialog.close();
+      try {
+        const updated = await api(`/meetings/${meeting.id}/corrections/${index}`, request);
+        meetingsById.set(meeting.id, updated);
+        await showDetail(meeting.id, {keepSuggestions: true});
+      } catch (error) { el('meeting-detail-status').textContent = error.message; }
+    };
+    el('line-dialog-save').onclick = () => {
+      const text = el('line-dialog-text').value.trim();
+      if (text) void done({method: 'PUT', body: JSON.stringify({text})});
+    };
+    el('line-dialog-revert').onclick = () => void done({method: 'DELETE'});
+    el('line-dialog-cancel').onclick = () => dialog.close();
+    dialog.showModal();
+  }
+
+  el('meeting-player').addEventListener('timeupdate', () => {
+    const meeting = meetingsById.get(selectedMeeting);
+    const segments = meeting?.transcript_segments;
+    if (!segments) return;
+    const now = el('meeting-player').currentTime;
+    const active = segments.findIndex(s => now >= s.start && now < s.end);
+    for (const item of el('meeting-detail-transcript').querySelectorAll('li')) {
+      item.classList.toggle('playing', Number(item.dataset.index) === active);
+    }
+  });
+
+  function renderSegments(container, segments, {kind, corrections, meeting}) {
     container.replaceChildren();
     if (!segments || !segments.length) {
       const empty = document.createElement('p');
@@ -424,9 +493,31 @@ function createMeetings({api, apiUploadForm, isLoggedIn, onUseAsContext = () => 
       const stamp = `${formatTimestamp(segment.start)}–${formatTimestamp(segment.end)}`;
       const index = segments.indexOf(segment);
       const corrected = kind === 'transcript' && corrections ? corrections[String(index)] : undefined;
-      item.textContent = kind === 'transcript'
-        ? `${stamp}  ${corrected ?? (segment.text || '')}${corrected !== undefined ? '  (edited)' : ''}`
-        : `${stamp}  ${segment.speaker || 'unknown speaker'}`;
+      if (kind === 'transcript') {
+        const aligned = meeting?.aligned_segments;
+        const label = aligned && aligned.length === segments.length ? aligned[index]?.speaker : null;
+        const previous = aligned && aligned.length === segments.length && index > 0 ? aligned[index - 1]?.speaker : null;
+        if (label && label !== previous) {
+          const chip = document.createElement('button');
+          chip.type = 'button'; chip.className = 'secondary speaker-chip';
+          chip.textContent = speakerName(meeting, label);
+          chip.setAttribute('aria-label', `Rename ${speakerName(meeting, label)}`);
+          chip.addEventListener('click', () => renameSpeaker(meeting, label));
+          item.append(chip, ' ');
+        }
+        item.dataset.index = String(index);
+        const line = document.createElement('span');
+        line.className = 'line-text'; line.tabIndex = 0; line.setAttribute('role', 'button');
+        line.title = 'Play from here';
+        line.textContent = `${stamp}  ${corrected ?? (segment.text || '')}${corrected !== undefined ? '  (edited)' : ''}`;
+        line.addEventListener('click', () => playFrom(segment.start));
+        line.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); playFrom(segment.start); } });
+        const edit = document.createElement('button');
+        edit.type = 'button'; edit.className = 'secondary line-edit'; edit.textContent = 'Edit';
+        edit.setAttribute('aria-label', `Edit line at ${formatTimestamp(segment.start)}`);
+        edit.addEventListener('click', () => editLine(meeting, index));
+        item.append(line, ' ', edit);
+      } else item.textContent = `${stamp}  ${segment.speaker || 'unknown speaker'}`;
       list.append(item);
     }
     container.append(list);
@@ -454,6 +545,8 @@ function createMeetings({api, apiUploadForm, isLoggedIn, onUseAsContext = () => 
       if (version !== detailVersion || !isLoggedIn()) return;
       meetingsById.set(meetingId, meeting);
       el('meeting-detail-title').textContent = meeting.title;
+      const audio = el('meeting-player');
+      if (audio.dataset.meeting !== meetingId) { audio.pause(); audio.src = `${base}/meetings/${encodeURIComponent(meetingId)}/audio`; audio.dataset.meeting = meetingId; }
       const parts = [`Status: ${statusLabel(meeting.status)}`];
       if (meeting.project_scope) parts.push(`Project: ${meeting.project_scope}`);
       if (meeting.participants?.length) parts.push(`Participants: ${meeting.participants.join(', ')}`);
@@ -469,7 +562,7 @@ function createMeetings({api, apiUploadForm, isLoggedIn, onUseAsContext = () => 
       el('meeting-suggest').hidden = !(meeting.transcript_segments && meeting.transcript_segments.length);
       if (!ready) section = 'transcript';
       renderOutput();
-      renderSegments(el('meeting-detail-transcript'), meeting.transcript_segments, {kind: 'transcript', corrections: meeting.transcript_corrections});
+      renderSegments(el('meeting-detail-transcript'), meeting.transcript_segments, {kind: 'transcript', corrections: meeting.transcript_corrections, meeting});
       renderSegments(el('meeting-detail-diarization'), meeting.diarization_segments, {kind: 'diarization'});
     } catch (error) {
       if (version === detailVersion) el('meeting-detail-status').textContent = error.message;
@@ -478,6 +571,7 @@ function createMeetings({api, apiUploadForm, isLoggedIn, onUseAsContext = () => 
 
   function newMeeting() {
     detailVersion += 1; selectedMeeting = null;
+    el('meeting-player').pause();
     el('meeting-detail').hidden = true; el('meeting-create').hidden = false;
     renderList([...meetingsById.values()]);
   }

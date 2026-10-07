@@ -1088,13 +1088,16 @@ than one ambiguous stage. This step creates the canonical
 speaker-attributed `TranscriptSegment`s from whatever combination of
 completed STT/diarization output is available.
 
-**Not implemented.** `MeetingWorker` currently keeps 27.2/27.3
-sequential (TRANSCRIBING must complete before DIARIZING is attempted,
-matching the documented reading order) rather than running them
-concurrently — that parallelism, and this step's alignment/
-`TranscriptSegment` work, are both still open. A job that clears both
-stages rests at ALIGNING with `transcript_segments` and
-`diarization_segments` populated but not yet merged.
+**Alignment implemented 2026-10-07** (migration `022_meeting_alignment`).
+`meetings/align.py` gives every transcript segment the diarization speaker with
+the largest time overlap (a point-in-span test for instants, the nearest span
+within 1.5 s when nothing overlaps, otherwise no speaker). The worker's final
+`alignment` stage stores the result as `aligned_segments`, index-aligned with
+`transcript_segments`, and moves ALIGNING → COMPLETE; meetings that were resting
+at ALIGNING complete on the next poll. Transcript views, summaries and minutes
+use the stored alignment, falling back to computing it. **Still open:** running
+27.2/27.3 concurrently (`MeetingWorker` keeps them sequential) and a richer
+canonical `TranscriptSegment` model (word timings, overlapping speech).
 
 Persist independent transcription/diarization completion and errors so a
 successful result survives a retry of the other operation. Expose completed

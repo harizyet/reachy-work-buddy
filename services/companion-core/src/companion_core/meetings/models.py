@@ -12,9 +12,8 @@ self-healing rather than claim-and-transition: the status name already
 means "this stage's work has not yet succeeded," so a crash mid-call, a
 transient sidecar outage, or no client configured at all all look the
 same — the job simply rests there and is retried on the next poll,
-without needing ORPHAN_RESUME. ALIGNING, ANALYZING and COMPLETE remain
-declared for the full 27.1-27.9 sequence but are not reachable until
-their phases add a handler.
+without needing ORPHAN_RESUME. ALIGNING is claimed by the alignment stage (27.4) and ends at COMPLETE;
+ANALYZING remains declared for later phases but is not reachable.
 """
 
 from __future__ import annotations
@@ -76,8 +75,8 @@ CANCELLABLE_STATUSES = tuple(
 SUPPORTED_AUDIO_EXTENSIONS = frozenset({".wav", ".flac", ".m4a", ".aac", ".mp3", ".opus", ".webm"})
 
 
-# States where nothing is running for the meeting, so it may be deleted: the job finished, failed, was cancelled, or
-# rests at ALIGNING (the processing-paused state every meeting reaches today, since alignment is not implemented).
+# States where nothing is running for the meeting, so it may be deleted: the job finished, failed, was cancelled, or is
+# at ALIGNING, a quick in-process step with no recording work left to disturb.
 DELETABLE_STATUSES = frozenset({
     MeetingJobStatus.COMPLETE, MeetingJobStatus.FAILED, MeetingJobStatus.CANCELLED, MeetingJobStatus.ALIGNING,
 })
@@ -115,6 +114,9 @@ class Meeting(BaseModel):
     # model yet — that's a future reducer over both of these.
     transcript_segments: list[dict[str, Any]] | None = None
     diarization_segments: list[dict[str, Any]] | None = None
+    # Phase 27.4: the transcript with a speaker on every segment, index-aligned with transcript_segments. Written once,
+    # when the ALIGNING stage runs; None until then.
+    aligned_segments: list[dict[str, Any]] | None = None
     # Owner-assigned display names, keyed by diarization label ("SPEAKER_00").
     # The raw diarization output is never rewritten (Phase 41, ADR 0030).
     speaker_names: dict[str, str] = Field(default_factory=dict)

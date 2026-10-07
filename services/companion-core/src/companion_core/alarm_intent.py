@@ -10,11 +10,14 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 _DAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
-_TIME = re.compile(r"(?:\bat\s+)?\b(?P<h>\d{1,2})(?::(?P<m>\d{2}))?\s*(?P<ap>am|pm)\b|\b(?:at\s+)?(?P<h24>[01]?\d|2[0-3]):(?P<m24>[0-5]\d)\b", re.IGNORECASE)
+_TIME = re.compile(r"(?:\bat\s+)?\b(?P<h>\d{1,2})(?:[:.](?P<m>\d{2}))?\s*(?P<ap>am|pm)\b|\b(?:at\s+)?(?P<h24>[01]?\d|2[0-3]):(?P<m24>[0-5]\d)\b", re.IGNORECASE)
 _IN = re.compile(r"\bin\s+(?P<n>\d{1,3})\s+(?P<unit>minutes?|mins?|hours?|hrs?)\b", re.IGNORECASE)
 _SET = re.compile(
     r"^\s*(?:please\s+)?(?:(?:set|create|add)\s+(?:me\s+)?(?:an?\s+)?alarm\b|wake me(?:\s+up)?\b)\s*(?P<rest>.*?)[.!]?\s*$",
     re.IGNORECASE,
+)
+_LABEL = re.compile(
+    r"\b(?:(?:with\s+)?(?:the\s+|a\s+)?(?:tag|label|name)(?:\s+of)?|tagged|labell?ed|called|named)\s+(?P<label>.+)$", re.IGNORECASE
 )
 _ALARM_QUERY = re.compile(r"\b(?:what|which|show|list|any|do i have|tell me)\b.*\balarms?\b", re.IGNORECASE)
 _YES = re.compile(r"^\s*(?:yes|yeah|yep|yup|sure|ok|okay|please|alright|do that|go ahead)\b", re.IGNORECASE)
@@ -93,6 +96,15 @@ def match_set(text: str) -> str | None:
     the text is not an alarm request (empty string: asked without a time)."""
     match = _SET.match(text)
     return match["rest"] if match else None
+
+
+def label_of(text: str) -> str:
+    """The owner's tag in "set an alarm at 5pm called call Lisa"; "Alarm" when none was given."""
+    match = _LABEL.search(text)
+    if not match:
+        return "Alarm"
+    label = _TIME.sub(" ", match["label"]).strip(" .,!?\"'")
+    return " ".join(label.split())[:80] or "Alarm"
 
 
 def find_station(text: str, stations: list) -> object | None:

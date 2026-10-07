@@ -65,3 +65,8 @@ def assess(transcript: str) -> Relevance:
         return Relevance(False, "continuation")
     request = transcript[rest[0].start() :].strip()
     return Relevance(True, "admitted", request[:1].upper() + request[1:])
+
+
+def is_wake_phrase_only(transcript: str) -> bool:
+    """The speaker said only "Hey Reachy" (a call for attention, no request)."""
+    return assess(transcript).reason in ("no_request", "filler_only")

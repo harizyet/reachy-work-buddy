@@ -143,8 +143,8 @@ constructed here, same as `hub_client` above: an undeployed or
 unreachable sidecar is not a startup failure, it just means those jobs
 rest at their current status and retry on the worker's next poll
 (`SpeechServiceUnavailable` in worker.py) rather than failing the
-meeting. ALIGNING and everything after it (27.4 onward) remain correctly
-unimplemented, not broken.
+meeting. Alignment (27.4) completes the job; analysis and retrieval (27.5 onward) remain
+unimplemented.
 """
 
 from __future__ import annotations
@@ -162,10 +162,10 @@ from typing import Literal
 from zoneinfo import ZoneInfo
 
 import httpx
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field, ValidationError
 
 from companion_core import (
@@ -1089,7 +1089,7 @@ def create_app(
             else:
                 station = alarm_intent.find_station(alarm_phrase, await app.state.planner_store.list_stations())
                 alarm = await app.state.planner_store.add_alarm(
-                    "Alarm", when.due_at, station_id=station.id if station else None
+                    alarm_intent.label_of(alarm_phrase), when.due_at, station_id=station.id if station else None
                 )
                 when_text = alarm_intent.format_alarm_when(when.due_at, persona.timezone, now_utc)
                 reply = render(
@@ -1998,6 +1998,41 @@ def create_app(
         if meeting is None:
             raise HTTPException(status_code=404, detail=f"no meeting '{meeting_id}'")
         return meeting
+
+    @app.get("/meetings/{meeting_id}/audio")
+    async def get_meeting_audio(meeting_id: str, request: Request) -> Response:
+        """The recording, with single-range support so a player can seek without downloading everything first."""
+        meeting = await _meeting_or_404(meeting_id)
+        try:
+            stream = await app.state.meeting_store.open_audio(meeting_id)
+        except (KeyError, FileNotFoundError):
+            raise HTTPException(status_code=404, detail="the recording is no longer available") from None
+        with stream:
+            total = stream.seek(0, 2)
+            start, end = 0, total - 1
+            header = request.headers.get("range")
+            ranged = False
+            if header:
+                match = re.fullmatch(r"bytes=(\d*)-(\d*)", header.strip())
+                if not match or not (match[1] or match[2]):
+                    raise HTTPException(status_code=416, detail="unsupported range", headers={"Content-Range": f"bytes */{total}"})
+                if match[1]:
+                    start = int(match[1])
+                    end = min(int(match[2]), total - 1) if match[2] else total - 1
+                else:  # "-N": the last N bytes
+                    start = max(total - int(match[2]), 0)
+                if start >= total or start > end:
+                    raise HTTPException(status_code=416, detail="range not satisfiable", headers={"Content-Range": f"bytes */{total}"})
+                ranged = True
+            stream.seek(start)
+            body = stream.read(end - start + 1)
+        headers = {"Accept-Ranges": "bytes", "Cache-Control": "private, no-store"}
+        if ranged:
+            headers["Content-Range"] = f"bytes {start}-{end}/{total}"
+        return Response(
+            body, status_code=206 if ranged else 200, media_type=meeting.content_type or "application/octet-stream",
+            headers=headers,
+        )
 
     @app.post("/meetings/{meeting_id}/cancel")
     async def cancel_meeting(meeting_id: str) -> Meeting:

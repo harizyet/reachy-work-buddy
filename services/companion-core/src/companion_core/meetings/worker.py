@@ -12,6 +12,8 @@ simply rests at that status, same honesty-about-scope as before ADR
 0025: no sidecar deployed is not an error, it's a feature that hasn't
 been turned on.
 
+ALIGNING (27.4) runs in-process: it matches transcript segments to speakers and completes the job.
+
 TRANSCRIBING/DIARIZING are self-healing rather than claim-and-transition
 (see models.py's module docstring): a `SpeechServiceUnavailable` (sidecar
 down/timed out) leaves the job's status untouched for the next poll to
@@ -29,6 +31,7 @@ import wave
 from io import BytesIO
 from typing import BinaryIO
 
+from companion_core.meetings.align import align
 from companion_core.meetings.models import Meeting
 from companion_core.meetings.speech_clients import (
     DiarizationClient,
@@ -119,6 +122,14 @@ async def diarize(store: MeetingStore, meeting: Meeting, client: DiarizationClie
     return True
 
 
+async def align_stage(store: MeetingStore, meeting: Meeting) -> bool:
+    """Phase 27.4: attribute each transcript segment to a speaker and complete the job. Pure and in-process, so there is
+    no sidecar to wait for: it always makes progress (a crash is turned into a failed job by _try_stage)."""
+    aligned = align(meeting.transcript_segments or [], meeting.diarization_segments)
+    await store.mark_aligned(meeting.id, aligned_segments=aligned)
+    return True
+
+
 class MeetingWorker:
     def __init__(
         self,
@@ -169,6 +180,8 @@ class MeetingWorker:
                 lambda m: diarize(self._store, m, self._diarization_client),
                 "diarization",
             ))
+
+        stages.append((self._store.claim_next_alignment, lambda m: align_stage(self._store, m), "alignment"))
 
         for claim, run_stage, error_label in stages:
             result = await self._try_stage(claim, run_stage, error_label)

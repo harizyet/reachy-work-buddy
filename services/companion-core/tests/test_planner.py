@@ -240,6 +240,13 @@ def test_set_and_list_alarms_from_a_phrase_or_command() -> None:
     assert say(client, "show my alarms").startswith("Your alarms:")
 
 
+def test_alarm_phrase_accepts_a_dotted_time_and_keeps_the_owner_tag() -> None:
+    client = make_client()
+    assert say(client, "set an alarm at 5.30pm with the tag call Lisa").startswith("Alright, an alarm is set for 5:30 PM")
+    assert say(client, "set an alarm for 7am").startswith("Alright")
+    assert sorted(alarm["label"] for alarm in client.get("/alarms").json()) == ["Alarm", "call Lisa"]
+
+
 def test_remind_me_without_a_time_still_creates_no_offer() -> None:
     client = make_client()
     assert "alarm" not in say(client, "remind me to buy milk").lower()

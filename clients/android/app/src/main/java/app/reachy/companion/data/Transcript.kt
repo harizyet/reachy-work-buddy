@@ -9,6 +9,12 @@ fun speakerFor(meeting: Meeting, segment: Segment): String? {
         ?: spans.firstOrNull { segment.start >= it.start && segment.start < it.end }?.speaker
 }
 
+/** The speaker of transcript segment [index]: the server's stored alignment, or (for a meeting not yet aligned) the overlap. */
+fun speakerAt(meeting: Meeting, index: Int, segment: Segment): String? {
+    val stored = meeting.aligned
+    return if (stored != null && stored.size == meeting.transcript.orEmpty().size) stored[index].speaker else speakerFor(meeting, segment)
+}
+
 /** The owner's name for a speaker, else "Speaker N" for SPEAKER_NN labels, else the raw label. */
 fun speakerDisplayName(meeting: Meeting, label: String): String {
     meeting.speakerNames[label]?.takeIf { it.isNotBlank() }?.let { return it }
@@ -35,3 +41,7 @@ fun countOccurrences(meeting: Meeting, find: String): Int {
     val regex = replacementRegex(find)
     return meeting.transcript.orEmpty().indices.count { regex.containsMatchIn(segmentText(meeting, it)) }
 }
+
+/** The transcript line being spoken at [seconds], or null between lines. */
+fun lineAt(segments: List<Segment>, seconds: Double): Int? =
+    segments.indexOfFirst { seconds >= it.start && seconds < it.end }.takeIf { it >= 0 }

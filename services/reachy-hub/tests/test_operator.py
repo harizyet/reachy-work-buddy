@@ -218,6 +218,16 @@ def test_meetings_proxy_upload_list_get_cancel_require_auth(monkeypatch):
     assert client.get(f"/meetings/{meeting_id}").json()["id"] == meeting_id
     assert client.get("/meetings/does-not-exist").status_code == 404
 
+    # the recording streams through the hub with byte ranges, behind the same login
+    audio = client.get(f"/meetings/{meeting_id}/audio")
+    assert audio.status_code == 200 and audio.content == b"RIFF....WAVEfmt " and audio.headers["content-type"] == "audio/wav"
+    part = client.get(f"/meetings/{meeting_id}/audio", headers={"Range": "bytes=4-7"})
+    assert part.status_code == 206 and part.content == b"...." and part.headers["content-range"] == "bytes 4-7/16"
+    assert client.get("/meetings/does-not-exist/audio").status_code == 404
+    client.cookies.clear()
+    assert client.get(f"/meetings/{meeting_id}/audio").status_code == 401
+    login(client)
+
     cancelled = client.post(f"/meetings/{meeting_id}/cancel", headers=CSRF)
     assert cancelled.status_code == 200 and cancelled.json()["status"] == "cancelled"
     assert client.post(f"/meetings/{meeting_id}/cancel", headers=CSRF).status_code == 409

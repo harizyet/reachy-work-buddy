@@ -12,7 +12,7 @@ test('meetings: delete, summary and minutes with rerun tiers, and use as context
   const segments = [{start: 0, end: 6, text: 'We compare ClickHouse and InfluxDB.'}, {start: 6, end: 12, text: 'ClickHouse is open source <img src=x onerror=boom()>.'}];
   const meetings = new Map();
   const add = (id, title, status, extra = {}) => meetings.set(id, {id, title, status, participants: [], created_at: '2026-10-07T00:00:00Z', transcript_segments: null, diarization_segments: null, transcript_corrections: {}, summary: null, minutes: null, ...extra});
-  add('ready', 'Database choice', 'aligning', {transcript_segments: segments, diarization_segments: [{start: 0, end: 12, speaker: 'SPEAKER_00'}]});
+  add('ready', 'Database choice', 'complete', {transcript_segments: segments, diarization_segments: [{start: 0, end: 12, speaker: 'SPEAKER_00'}], aligned_segments: [{start: 0, end: 6, text: segments[0].text, speaker: 'SPEAKER_00'}, {start: 6, end: 12, text: segments[1].text, speaker: 'SPEAKER_01'}], speaker_names: {}});
   add('failed', 'Old failed test', 'failed', {error_detail: 'boom'});
   add('cancelled', 'Cancelled upload', 'cancelled');
   add('busy', 'Stuck upload', 'transcribing');
@@ -37,6 +37,13 @@ test('meetings: delete, summary and minutes with rerun tiers, and use as context
     let m = route.match(/^\/meetings\/([a-z]+)$/);
     if (m && req.method === 'GET') return meetings.has(m[1]) ? json(meetings.get(m[1])) : json({detail: 'no'}, 404);
     if (m && req.method === 'DELETE') { calls.push(`delete:${m[1]}`); meetings.delete(m[1]); return json({deleted: true}); }
+    m = route.match(/^\/meetings\/([a-z]+)\/audio$/);
+    if (m && req.method === 'GET') { calls.push(`audio:${m[1]}`); res.writeHead(200, {'Content-Type': 'audio/wav'}); return res.end(Buffer.alloc(44)); }
+    m = route.match(/^\/meetings\/([a-z]+)\/corrections\/(\d+)$/);
+    if (m && req.method === 'PUT') { calls.push(`correct:${m[2]}:${body.text}`); meetings.get(m[1]).transcript_corrections[m[2]] = body.text; return json(meetings.get(m[1])); }
+    if (m && req.method === 'DELETE') { calls.push(`uncorrect:${m[2]}`); delete meetings.get(m[1]).transcript_corrections[m[2]]; return json(meetings.get(m[1])); }
+    m = route.match(/^\/meetings\/([a-z]+)\/speakers$/);
+    if (m && req.method === 'PUT') { calls.push(`speakers:${JSON.stringify(body.names)}`); Object.assign(meetings.get(m[1]).speaker_names, body.names); return json(meetings.get(m[1])); }
     m = route.match(/^\/meetings\/([a-z]+)\/outputs\/(summary|minutes)(\/deep)?$/);
     if (m && req.method === 'POST' && !m[3]) {
       calls.push(`output:${m[2]}:${body.model}`);
@@ -89,9 +96,31 @@ test('meetings: delete, summary and minutes with rerun tiers, and use as context
     await page.waitForFunction(() => !document.getElementById('meeting-list').textContent.includes('Cancelled upload'));
     assert.ok(calls.includes('delete:cancelled'));
 
-    // detail of a processed meeting: toolbar, summary auto-written locally, shown literally
+    // detail of a processed meeting: the transcript shows who spoke, and a speaker can be named
     await row('Database choice').getByRole('button', {name: 'View details'}).click();
     await page.waitForSelector('#meeting-toolbar:not([hidden])');
+    const chips = page.locator('#meeting-detail-transcript .speaker-chip');
+    assert.deepEqual(await chips.allTextContents(), ['Speaker 1', 'Speaker 2']);
+    await chips.nth(1).click(); await page.waitForSelector('#speaker-dialog[open]');
+    assert.match(await page.textContent('#speaker-dialog-title'), /Who is Speaker 2\?/);
+    await page.fill('#speaker-dialog-name', 'Priya'); await page.click('#speaker-dialog-save');
+    await page.waitForFunction(() => document.querySelectorAll('#meeting-detail-transcript .speaker-chip')[1]?.textContent === 'Priya');
+    assert.ok(calls.includes('speakers:{"SPEAKER_01":"Priya"}'));
+    // the recording plays from the line the owner picks, and a wrong line can be fixed by hand
+    assert.match(await page.getAttribute('#meeting-player', 'src'), /\/meetings\/ready\/audio$/);
+    await page.evaluate(() => { const a = document.getElementById('meeting-player'); window.__played = []; a.play = () => { window.__played.push(a.currentTime); return Promise.resolve(); }; Object.defineProperty(a, 'currentTime', {configurable: true, get: () => window.__t || 0, set: v => { window.__t = v; }}); });
+    await page.locator('#meeting-detail-transcript .line-text').nth(1).click();
+    assert.deepEqual(await page.evaluate(() => window.__played), [6]);
+    await page.locator('#meeting-detail-transcript .line-edit').nth(1).click(); await page.waitForSelector('#line-dialog[open]');
+    await page.fill('#line-dialog-text', 'Fixed <i>by hand</i>'); await page.click('#line-dialog-save');
+    await page.waitForFunction(() => document.querySelectorAll('#meeting-detail-transcript .line-text')[1]?.textContent.includes('(edited)'));
+    assert.ok(calls.includes('correct:1:Fixed <i>by hand</i>'));
+    assert.equal(await page.locator('#meeting-detail-transcript i').count(), 0);
+    await page.locator('#meeting-detail-transcript .line-edit').nth(1).click(); await page.waitForSelector('#line-dialog[open]');
+    await page.click('#line-dialog-revert');
+    await page.waitForFunction(() => !document.querySelectorAll('#meeting-detail-transcript .line-text')[1]?.textContent.includes('(edited)'));
+    assert.ok(calls.includes('uncorrect:1'));
+    // summary auto-written locally, shown literally
     await page.click('#meeting-tab-summary');
     await page.waitForFunction(() => document.getElementById('meeting-output-text').textContent.includes('Local <b>summary</b>'));
     assert.equal(await page.locator('#meeting-output-text b').count(), 0);

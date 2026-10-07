@@ -91,10 +91,20 @@ Open **Meetings** to record or upload audio with **Add meeting**. The left
 sidebar lists saved meetings with title search, status and refresh. **View details**
 opens a record beside that list, showing the transcript and separate speaker
 timings. On narrow screens the list sits above the detail. Selecting a record
-stops any active browser recording and keeps the clip available under Add meeting. **Processing paused** means
-transcription and speaker detection finished, but combining them into a
-speaker-labelled transcript is not implemented yet. Meeting summaries are
-also unavailable. **Cancel processing** stops a pending job; it does not
+stops any active browser recording and keeps the clip available under Add meeting. **Ready** means
+transcription, speaker detection and their alignment finished. The transcript
+shows a speaker chip where the speaker changes; click it to give that speaker a
+name, which is applied to the whole meeting (the raw speaker timings stay listed
+separately).
+
+**Playing the recording.** The meeting detail has an audio player (the app has a
+play bar above the transcript). Selecting a transcript line plays from that line's
+start, and the line being spoken is highlighted, so you can check what was really
+said. **Edit** on a line (in the app, also selectable) replaces its text by hand;
+**Restore original** brings back the transcript's wording. Manual edits are stored
+the same way as accepted suggestions and feed summaries, minutes and meeting
+context. The recording stays until the meeting is deleted. Summaries, minutes and use as context are described below.
+**Cancel processing** stops a pending job; it does not
 delete the recording. Failed jobs keep their diagnostic message under
 **Technical error** in the detail view. An old failed job remains failed
 even after its underlying service problem has been fixed.
@@ -199,7 +209,7 @@ work in web chat; `/reachy <action>` is the canonical form (for example,
 | `/find_tasks <words>` | Tasks matching the supplied words |
 | `/inbox` | Received email list |
 | `/recall <topic>` | Saved memories matching the topic |
-| `/alarm <when>` | Set an alarm, e.g. `/alarm 7am` or `/alarm thursday 2pm` |
+| `/alarm <when>` | Set an alarm, e.g. `/alarm 7am` or `/alarm thursday 2pm`; add a tag with "called ..." or "with the tag ..." ("set an alarm at 5.30pm with the tag call Lisa") |
 | `/alarms` | List scheduled alarms |
 | `/docs <topic>` | Matching stored document content with its source |
 | `/time`, `/date` | Time or date in the configured owner timezone |
@@ -212,6 +222,11 @@ Existing `/standby`, `/wake`, and `/reachy_status` controls remain available.
 only) makes Reachy answer "You're welcome. Goodbye." and end the session, so it
 returns to the sleep pose while wake listening stays armed. "Thank you, what's
 the weather?" is still a question.
+
+**Calling Reachy mid-conversation.** Saying only "Hey Reachy" while it waits for
+your next turn gets a short random affirmation ("Hmm?", "Hey!", "Hello!", "Yes?",
+"I'm here.") and the conversation stays open; nothing is sent to the assistant.
+"Hey Reachy, what time is it?" is still a normal question.
 
 **Privacy mode** stops Reachy listening for "Hey Reachy". Say "turn on privacy
 mode" in a live conversation (the robot confirms aloud, ends the session,

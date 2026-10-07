@@ -65,8 +65,8 @@ correct facts or links, not to track each new phase dependency.
   diarization sidecars wired via [ADR 0025](adr/0025-speech-inference-service.md)'s
   client interfaces, operator-ui recording and detail view) landed
   2026-09-30; the live service path passed a short single-speaker smoke test.
-  Real meeting acceptance remains open. Alignment and
-  analysis (27.4 onward) not started.
+  Real meeting acceptance remains open. Alignment
+  (27.4) landed 2026-10-07; analysis and retrieval (27.5 onward) not started.
 - [Phase 28](phase-28.md): embodied meeting secretary — owner-present
   companion, then physical secretary attendance, then bounded delegation;
   virtual/cloud attendance is deferred. (Formerly Phase 27; renumbered

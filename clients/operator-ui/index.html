@@ -8,6 +8,17 @@
   <header><div><span class="eyebrow">WORK COMPANION</span><h1>Reachy operator</h1></div><nav id="nav" hidden><a href="../app/telepresence.html">Telepresence ↗</a><button id="logout" class="secondary">Log out</button></nav></header>
   <p id="notice" role="status" aria-live="polite"></p>
   <div id="deep-banner" class="deep-banner" role="status" aria-live="polite" hidden><strong>Reachy is unavailable: deep review in progress.</strong> <span id="deep-banner-stage"></span></div>
+  <dialog id="line-dialog" aria-labelledby="line-dialog-title">
+    <h3 id="line-dialog-title">Edit line</h3>
+    <p id="line-dialog-original" class="muted"></p>
+    <label>Text <textarea id="line-dialog-text" rows="4" maxlength="4000"></textarea></label>
+    <div class="dialog-actions"><button type="button" id="line-dialog-cancel" class="secondary">Cancel</button><button type="button" id="line-dialog-revert" class="secondary">Restore original</button><button type="button" id="line-dialog-save">Save</button></div>
+  </dialog>
+  <dialog id="speaker-dialog" aria-labelledby="speaker-dialog-title">
+    <h3 id="speaker-dialog-title"></h3>
+    <label>Name <input id="speaker-dialog-name" maxlength="60" autocomplete="off"></label>
+    <div class="dialog-actions"><button type="button" id="speaker-dialog-cancel" class="secondary">Cancel</button><button type="button" id="speaker-dialog-clear" class="secondary">Clear name</button><button type="button" id="speaker-dialog-save">Save</button></div>
+  </dialog>
   <dialog id="confirm-dialog" aria-labelledby="confirm-title">
     <h3 id="confirm-title"></h3>
     <p id="confirm-text"></p>
@@ -308,9 +319,12 @@
               <p id="meeting-suggest-status" role="status"></p>
               <ul id="meeting-suggestions" class="planner-list"></ul>
             </div>
+            <h4>Recording</h4>
+            <audio id="meeting-player" controls preload="none"></audio>
+            <p class="muted">Select a transcript line to play from its start; use Edit on a line to fix it by hand.</p>
             <h4>Transcript</h4>
             <div id="meeting-detail-transcript"></div>
-            <h4>Speaker segments</h4>
+            <h4>Raw speaker segments</h4>
             <div id="meeting-detail-diarization"></div>
             </div>
           </section>
