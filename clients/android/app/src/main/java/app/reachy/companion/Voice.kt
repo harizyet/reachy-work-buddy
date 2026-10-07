@@ -2,9 +2,14 @@ package app.reachy.companion
 
 import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.MediaRecorder
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -30,12 +35,14 @@ class SpeechInput(
                     val text = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
                     if (text.isNotBlank()) onFinal(text)
                     onEnd(null)
+                    release()
                 }
                 override fun onPartialResults(partial: Bundle) {
                     partial.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let(onPartial)
                 }
                 override fun onError(error: Int) {
                     onEnd(if (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) null else "Could not hear that (code $error)")
+                    release()
                 }
                 override fun onReadyForSpeech(params: Bundle?) {}
                 override fun onBeginningOfSpeech() {}
@@ -51,31 +58,52 @@ class SpeechInput(
         }
     }
 
+    /** Frees the recogniser once it has finished (some phones keep the media volume muted until it is destroyed). */
+    private fun release() { Handler(Looper.getMainLooper()).post { stop() } }
+
     fun stop() { recognizer?.destroy(); recognizer = null }
 }
 
-class SpeechOutput(context: Context) {
+class SpeechOutput(private val context: Context) {
     private var ready = false
-    private val tts = TextToSpeech(context) { ready = it == TextToSpeech.SUCCESS }
+    private var waiting: String? = null   // a reply asked for before the engine finished starting
+    private val tts: TextToSpeech = TextToSpeech(context) { status ->
+        ready = status == TextToSpeech.SUCCESS
+        // A freshly opened Talk screen can have a reply to read before the phone's engine is up; read it as soon as it is.
+        waiting?.let { text -> waiting = null; if (ready) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "reply") }
+    }
     private var player: MediaPlayer? = null
+    private val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private var focus: AudioFocusRequest? = null
 
-    /** The phone's own voice: the fallback when Reachy's voice cannot be fetched. */
-    fun speak(text: String) { stopPlayer(); if (ready) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "reply") }
+    /** The phone's own voice: the fallback when Reachy's voice cannot be fetched or played. */
+    fun speak(text: String) {
+        stopPlayer()
+        if (ready) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "reply") else waiting = text
+    }
 
-    /** Plays a WAV in Reachy's voice; false when it cannot be played. */
-    fun play(file: File): Boolean {
+    /** Plays a WAV in Reachy's voice; false when it cannot be played. [onError] runs if playback fails once it has started. */
+    fun play(file: File, onError: () -> Unit = {}): Boolean {
         stop()
         return try {
+            val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
+            focus = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(attributes).build()
+                .also { audio.requestAudioFocus(it) }
             player = MediaPlayer().apply {
+                setAudioAttributes(attributes)
                 setDataSource(file.absolutePath)
                 setOnCompletionListener { stopPlayer() }
+                setOnErrorListener { _, _, _ -> stopPlayer(); onError(); true }
                 prepare(); start()
             }
             true
         } catch (e: Exception) { stopPlayer(); false }
     }
 
-    private fun stopPlayer() { player?.release(); player = null }
+    private fun stopPlayer() {
+        player?.release(); player = null
+        focus?.let { audio.abandonAudioFocusRequest(it) }; focus = null
+    }
     fun stop() { tts.stop(); stopPlayer() }
     fun shutdown() { stopPlayer(); tts.shutdown() }
 }

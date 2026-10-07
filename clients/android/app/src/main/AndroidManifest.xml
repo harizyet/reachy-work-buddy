@@ -8,6 +8,13 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Exact clock alarms for the phone's backup alarm: granted automatically to alarm-clock apps from Android 13, and
+         a user-grantable (default on) permission on Android 12. -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
     <queries>
         <intent><action android:name="android.speech.RecognitionService" /></intent>
     </queries>
@@ -26,6 +33,12 @@
             </intent-filter>
         </activity>
         <service android:name=".DeepReviewService" android:exported="false" android:foregroundServiceType="dataSync" />
+        <service android:name=".AlarmService" android:exported="false" android:foregroundServiceType="dataSync|mediaPlayback" />
+        <service android:name=".AlarmSyncJob" android:exported="false" android:permission="android.permission.BIND_JOB_SERVICE" />
+        <receiver android:name=".AlarmReceiver" android:exported="false" />
+        <receiver android:name=".BootReceiver" android:exported="true">
+            <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /></intent-filter>
+        </receiver>
         <service android:name=".RecordingService" android:exported="false" android:foregroundServiceType="microphone" />
     </application>
 </manifest>

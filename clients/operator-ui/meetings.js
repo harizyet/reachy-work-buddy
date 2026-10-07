@@ -172,7 +172,9 @@ function createMeetings({api, apiUploadForm, isLoggedIn, onUseAsContext = () => 
       const uploaded = document.createElement('p');
       uploaded.className = 'muted';
       uploaded.textContent = `Uploaded ${new Date(meeting.created_at).toLocaleString()}`;
-      item.append(heading, uploaded);
+      item.append(heading);
+      if (meeting.description) item.append(node('p', {className: 'meeting-description', textContent: meeting.description}));
+      item.append(uploaded);
       const actions = document.createElement('div');
       actions.className = 'meeting-actions';
       const view = document.createElement('button');
@@ -547,6 +549,8 @@ function createMeetings({api, apiUploadForm, isLoggedIn, onUseAsContext = () => 
     el('meeting-detail').hidden = false;
     if (!keepSuggestions) { suggestions = []; el('meeting-suggestions').replaceChildren(); el('meeting-suggest-status').textContent = ''; section = 'transcript'; }
     el('meeting-detail-title').textContent = '';
+    el('meeting-detail-description').hidden = true;
+    el('meeting-rename').hidden = true;
     el('meeting-detail-meta').textContent = '';
     el('meeting-detail-context').textContent = '';
     el('meeting-detail-gaps').hidden = true;
@@ -561,6 +565,9 @@ function createMeetings({api, apiUploadForm, isLoggedIn, onUseAsContext = () => 
       if (version !== detailVersion || !isLoggedIn()) return;
       meetingsById.set(meetingId, meeting);
       el('meeting-detail-title').textContent = meeting.title;
+      el('meeting-detail-description').hidden = !meeting.description;
+      el('meeting-detail-description').textContent = meeting.description || '';
+      el('meeting-rename').hidden = false;
       const audio = el('meeting-player');
       if (audio.dataset.meeting !== meetingId) { audio.pause(); audio.src = `${base}/meetings/${encodeURIComponent(meetingId)}/audio`; audio.dataset.meeting = meetingId; }
       const parts = [`Status: ${statusLabel(meeting.status)}`];
@@ -586,6 +593,47 @@ function createMeetings({api, apiUploadForm, isLoggedIn, onUseAsContext = () => 
       if (version === detailVersion) el('meeting-detail-status').textContent = error.message;
     }
   }
+
+  // --- rename: the owner's own title and description, or a fresh one written from the transcript ---------------
+  function node(tag, props = {}, ...children) {
+    const item = document.createElement(tag);
+    Object.assign(item, props);
+    item.append(...children);
+    return item;
+  }
+  el('meeting-rename').addEventListener('click', () => {
+    const meeting = meetingsById.get(selectedMeeting);
+    if (!meeting) return;
+    el('meeting-title-input').value = meeting.title;
+    el('meeting-description-input').value = meeting.description || '';
+    el('meeting-title-status').textContent = '';
+    el('meeting-title-regenerate').disabled = !(meeting.transcript_segments && meeting.transcript_segments.length);
+    el('meeting-title-dialog').showModal();
+  });
+  el('meeting-title-cancel').addEventListener('click', () => el('meeting-title-dialog').close());
+  async function applyTitle(request) {
+    const id = selectedMeeting;
+    const updated = await api(request.path.replace('{id}', encodeURIComponent(id)), request.options);
+    meetingsById.set(id, updated);
+    el('meeting-title-dialog').close();
+    await load();
+    if (selectedMeeting === id) await showDetail(id, {keepSuggestions: true});
+  }
+  el('meeting-title-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    const title = el('meeting-title-input').value.trim();
+    if (!title) return;
+    try {
+      await applyTitle({path: '/meetings/{id}/title', options: {method: 'PUT', body: JSON.stringify({title, description: el('meeting-description-input').value.trim()})}});
+    } catch (error) { el('meeting-title-status').textContent = error.message; }
+  });
+  el('meeting-title-regenerate').addEventListener('click', async () => {
+    el('meeting-title-status').textContent = 'Writing…';
+    el('meeting-title-regenerate').disabled = true;
+    try {
+      await applyTitle({path: '/meetings/{id}/describe', options: {method: 'POST', body: JSON.stringify({model: 'local'})}});
+    } catch (error) { el('meeting-title-status').textContent = error.message; el('meeting-title-regenerate').disabled = false; }
+  });
 
   function newMeeting() {
     detailVersion += 1; selectedMeeting = null;

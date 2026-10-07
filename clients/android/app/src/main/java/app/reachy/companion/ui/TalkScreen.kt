@@ -83,13 +83,19 @@ private fun TalkContent(model: AppViewModel, speakReplies: Boolean) {
         )
     }
     DisposableEffect(Unit) { onDispose { input.stop(); output.shutdown() } }
-    LaunchedEffect(model.lastReply, speakReplies) {
+    LaunchedEffect(model.replySeq, speakReplies) {
         val reply = model.lastReply
-        if (speakReplies && reply != null) {
-            // Reachy's own voice first, so replies sound like the robot; the phone's voice only when the hub cannot speak.
+        val seq = model.replySeq
+        // Each reply is read aloud once. This effect runs again whenever the screen is rebuilt (changing tab, folding the
+        // phone, toggling the setting), and must not read an old reply again.
+        val fresh = seq > model.spokenSeq
+        model.spokenSeq = seq
+        if (speakReplies && reply != null && fresh) {
+            // Reachy's own voice first, so replies sound like the robot; the phone's voice when the hub cannot speak or the
+            // audio cannot be played.
             val voice = model.replyVoice(reply)
-            if (voice == null || !output.play(voice)) output.speak(reply)
-        } else output.stop()
+            if (voice == null || !output.play(voice) { output.speak(reply) }) output.speak(reply)
+        } else if (!speakReplies) output.stop()
     }
     fun startListening() { output.stop(); micError = null; listening = true; input.start() }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->

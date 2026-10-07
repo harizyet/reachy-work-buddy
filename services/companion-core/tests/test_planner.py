@@ -339,3 +339,19 @@ def test_the_due_route_re_arms_repeating_alarms_and_returns_the_one_that_rang() 
     # a finished one-time alarm is switched back on for its next occurrence
     again = client.patch(f"/alarms/{once.id}", json={"enabled": True}).json()
     assert again["status"] == "scheduled" and datetime.fromisoformat(again["due_at"]) > datetime.now(UTC)
+
+
+def test_each_ring_starts_with_no_delivery_so_a_client_can_tell_which_ring_it_is_looking_at() -> None:
+    async def run() -> None:
+        store = InMemoryPlannerStore()
+        daily = await store.add_alarm("daily", NOW - timedelta(minutes=1), repeat=list(range(7)))
+        first = (await store.claim_due_alarms(NOW))[0]
+        await store.record_alarm_delivery(daily.id, "played")
+        await store.rearm_alarm(daily.id, NOW + timedelta(days=1))
+        assert (await store.list_alarms())[0].delivery == "played" and first.fired_at == NOW
+        await store.update_alarm(daily.id, {"due_at": NOW - timedelta(seconds=1)})   # due again
+        later = NOW + timedelta(days=1)
+        again = (await store.claim_due_alarms(later))[0]
+        assert again.delivery is None and again.fired_at == later   # the stale "played" is gone; this ring is undelivered
+
+    asyncio.run(run())

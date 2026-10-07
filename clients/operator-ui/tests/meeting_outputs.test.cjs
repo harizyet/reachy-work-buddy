@@ -12,7 +12,7 @@ test('meetings: delete, summary and minutes with rerun tiers, and use as context
   const segments = [{start: 0, end: 6, text: 'We compare ClickHouse and InfluxDB.'}, {start: 6, end: 12, text: 'ClickHouse is open source <img src=x onerror=boom()>.'}];
   const meetings = new Map();
   const add = (id, title, status, extra = {}) => meetings.set(id, {id, title, status, participants: [], created_at: '2026-10-07T00:00:00Z', transcript_segments: null, diarization_segments: null, transcript_corrections: {}, summary: null, minutes: null, ...extra});
-  add('ready', 'Database choice', 'complete', {transcript_segments: segments, diarization_segments: [{start: 0, end: 12, speaker: 'SPEAKER_00'}], aligned_segments: [{start: 0, end: 6, text: segments[0].text, speaker: 'SPEAKER_00'}, {start: 6, end: 12, text: segments[1].text, speaker: 'SPEAKER_01'}], speaker_names: {}, audio_gaps: {spans: [{start: 6, end: 12}], segments: [1], seconds: 6}});
+  add('ready', 'Database choice', 'complete', {transcript_segments: segments, diarization_segments: [{start: 0, end: 12, speaker: 'SPEAKER_00'}], aligned_segments: [{start: 0, end: 6, text: segments[0].text, speaker: 'SPEAKER_00'}, {start: 6, end: 12, text: segments[1].text, speaker: 'SPEAKER_01'}], description: 'The team compared <b>two</b> databases.', title_source: 'generated', speaker_names: {}, audio_gaps: {spans: [{start: 6, end: 12}], segments: [1], seconds: 6}});
   add('failed', 'Old failed test', 'failed', {error_detail: 'boom'});
   add('cancelled', 'Cancelled upload', 'cancelled');
   add('busy', 'Stuck upload', 'transcribing');
@@ -37,6 +37,10 @@ test('meetings: delete, summary and minutes with rerun tiers, and use as context
     let m = route.match(/^\/meetings\/([a-z]+)$/);
     if (m && req.method === 'GET') return meetings.has(m[1]) ? json(meetings.get(m[1])) : json({detail: 'no'}, 404);
     if (m && req.method === 'DELETE') { calls.push(`delete:${m[1]}`); meetings.delete(m[1]); return json({deleted: true}); }
+    m = route.match(/^\/meetings\/([a-z]+)\/title$/);
+    if (m && req.method === 'PUT') { calls.push(`title:${JSON.stringify(body)}`); const meeting = meetings.get(m[1]); Object.assign(meeting, body, {title_source: 'owner'}); return json(meeting); }
+    m = route.match(/^\/meetings\/([a-z]+)\/describe$/);
+    if (m && req.method === 'POST') { calls.push(`describe:${body.model}`); const meeting = meetings.get(m[1]); Object.assign(meeting, {title: 'Written Again', description: 'Fresh description.', title_source: 'generated'}); return json(meeting); }
     m = route.match(/^\/meetings\/([a-z]+)\/audio$/);
     if (m && req.method === 'GET') { calls.push(`audio:${m[1]}`); res.writeHead(200, {'Content-Type': 'audio/wav'}); return res.end(Buffer.alloc(44)); }
     m = route.match(/^\/meetings\/([a-z]+)\/corrections\/(\d+)$/);
@@ -103,6 +107,22 @@ test('meetings: delete, summary and minutes with rerun tiers, and use as context
     assert.deepEqual(await page.locator('#meeting-detail-transcript .gap-warning').count(), 1);
     assert.equal(await page.locator('#meeting-detail-transcript li').nth(1).locator('.gap-warning').count(), 1);
     assert.equal(await row('Database choice').locator('.gap-warning').count(), 1);
+    // the description sits under the title (literal text), and the title can be edited or written again
+    assert.equal(await page.textContent('#meeting-detail-description'), 'The team compared <b>two</b> databases.');
+    assert.equal(await page.locator('#meeting-detail-description b').count(), 0);
+    assert.equal(await row('Database choice').locator('.meeting-description').textContent(), 'The team compared <b>two</b> databases.');
+    await page.click('#meeting-rename'); await page.waitForSelector('#meeting-title-dialog[open]');
+    assert.equal(await page.inputValue('#meeting-title-input'), 'Database choice');
+    await page.fill('#meeting-title-input', 'Metrics store decision'); await page.fill('#meeting-description-input', 'ClickHouse versus InfluxDB.');
+    await page.click('#meeting-title-save');
+    await page.waitForFunction(() => document.getElementById('meeting-detail-title').textContent === 'Metrics store decision');
+    assert.ok(calls.includes('title:{"title":"Metrics store decision","description":"ClickHouse versus InfluxDB."}'));
+    assert.equal(await page.textContent('#meeting-detail-description'), 'ClickHouse versus InfluxDB.');
+    await page.click('#meeting-rename'); await page.waitForSelector('#meeting-title-dialog[open]');
+    await page.click('#meeting-title-regenerate');
+    await page.waitForFunction(() => document.getElementById('meeting-detail-title').textContent === 'Written Again');
+    assert.ok(calls.includes('describe:local'));
+    assert.equal(await page.textContent('#meeting-detail-description'), 'Fresh description.');
     const chips = page.locator('#meeting-detail-transcript .speaker-chip');
     assert.deepEqual(await chips.allTextContents(), ['Speaker 1', 'Speaker 2']);
     await chips.nth(1).click(); await page.waitForSelector('#speaker-dialog[open]');
@@ -156,7 +176,7 @@ test('meetings: delete, summary and minutes with rerun tiers, and use as context
     // use as context: lands in chat with a chip; the next question carries the meeting id and the answer says where it came from
     await page.click('#meeting-use-context');
     await page.waitForSelector('#chat-context:not([hidden])');
-    assert.match(await page.textContent('#chat-context-title'), /Database choice/);
+    assert.match(await page.textContent('#chat-context-title'), /Written Again/);
     await page.waitForFunction(() => !document.getElementById('chat-text').disabled);
     await page.fill('#chat-text', 'is clickhouse free?'); await page.click('#chat-send');
     await page.waitForFunction(() => document.getElementById('chat-transcript').textContent.includes('per the meeting'));
@@ -167,9 +187,9 @@ test('meetings: delete, summary and minutes with rerun tiers, and use as context
 
     // delete from the detail
     await page.click('#meetings-tab');
-    await row('Database choice').getByRole('button', {name: 'View details'}).click();
+    await row('Written Again').getByRole('button', {name: 'View details'}).click();
     await page.click('#meeting-delete'); await page.click('#confirm-ok');
-    await page.waitForFunction(() => !document.getElementById('meeting-list').textContent.includes('Database choice'));
+    await page.waitForFunction(() => !document.getElementById('meeting-list').textContent.includes('Written Again'));
     assert.ok(calls.includes('delete:ready') && injected === false);
   } finally { await browser.close(); server.close(); }
 });

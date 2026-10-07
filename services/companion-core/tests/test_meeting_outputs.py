@@ -39,6 +39,8 @@ def llm_factory(seen: list[httpx.Request]):
             text = f"Summary from {host}: ClickHouse versus InfluxDB."
         elif "You write meeting minutes" in system:
             text = f"Topics discussed\n- ClickHouse ({host})\nDecisions\n- None recorded\nAction items\n- Priya: benchmark by Friday\nOpen questions\n- None recorded"
+        elif "You name meetings" in system:
+            text = f"TITLE: \"ClickHouse vs InfluxDB for Metrics\".\nDESCRIPTION: The team compared two databases ({host}) and Priya will benchmark ingestion."
         elif "reading one part" in system:
             text = f"- part notes from {host}"
         else:
@@ -353,3 +355,29 @@ def test_a_long_meetings_notes_are_condensed_so_the_final_request_fits_the_windo
     text, truncated = asyncio.run(outputs.generate(_long_meeting(9), "minutes", ask))
     assert text and not truncated
     assert len(sizes) > 10  # parts, then a condensing pass, then the final answer
+
+
+def test_the_owner_can_rename_a_meeting_and_the_title_is_then_protected() -> None:
+    client, ids, _store, _ = make_client(status="complete")
+    with client:
+        assert client.put(f"/meetings/{ids['main']}/title", json={}).status_code == 422
+        assert client.put(f"/meetings/{ids['main']}/title", json={"title": "   "}).status_code == 422
+        renamed = client.put(f"/meetings/{ids['main']}/title", json={"title": "  Database   choice  "}).json()
+        assert renamed["title"] == "Database choice" and renamed["title_source"] == "owner"
+        edited = client.put(f"/meetings/{ids['main']}/title", json={"description": "Two databases compared."}).json()
+        assert edited["description"] == "Two databases compared." and edited["title"] == "Database choice" and edited["title_source"] == "owner"
+        assert client.put("/meetings/nope/title", json={"title": "x"}).status_code == 404
+
+
+def test_describe_writes_a_title_and_description_from_the_transcript_on_the_chosen_model() -> None:
+    client, ids, _store, seen = make_client(status="complete", cloud=True)
+    with client:
+        local = client.post(f"/meetings/{ids['main']}/describe").json()
+        assert local["title"] == "ClickHouse vs InfluxDB for Metrics" and local["title_source"] == "generated"
+        assert "ovms" in local["description"] and seen[-1].url.host == "ovms"
+        cloud = client.post(f"/meetings/{ids['main']}/describe", json={"model": "cloud"}).json()
+        assert "cloud.example" in cloud["description"] and seen[-1].url.host == "cloud.example"
+        sent = json.loads(seen[-1].content)["messages"][1]["content"]
+        assert "ClickHouse" in sent and "Priya" in sent
+        assert client.post(f"/meetings/{ids['queued']}/describe").status_code == 409   # nothing to read yet
+        assert client.post("/meetings/nope/describe").status_code == 404

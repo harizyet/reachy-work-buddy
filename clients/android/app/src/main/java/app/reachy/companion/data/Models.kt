@@ -30,6 +30,9 @@ data class Meeting(
     @SerialName("aligned_segments") val aligned: List<Segment>? = null,
     // Stretches of the recording where the phone captured no audio, found by the server (null until checked).
     @SerialName("audio_gaps") val audioGaps: AudioGaps? = null,
+    // One or two lines under the title on what the meeting covered; written by the model, editable by the owner.
+    val description: String? = null,
+    @SerialName("title_source") val titleSource: String = "default",
     @SerialName("speaker_names") val speakerNames: Map<String, String> = emptyMap(),
     @SerialName("transcript_corrections") val corrections: Map<String, String> = emptyMap(),
     @SerialName("key_terms") val keyTerms: List<String> = emptyList(),

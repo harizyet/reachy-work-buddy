@@ -14,6 +14,17 @@ class Prefs(context: Context) {
     var cookies: String?
         get() = store.getString("cookies", null)
         set(value) = store.edit().putString("cookies", value).apply()
+    /** Ring an alarm on this phone when Reachy cannot (offline, nobody detected, playback failed). */
+    var phoneAlarms: Boolean
+        get() = store.getBoolean("phone_alarms", true)
+        set(value) = store.edit().putBoolean("phone_alarms", value).apply()
+    var askedAlarmNotifications: Boolean
+        get() = store.getBoolean("asked_alarm_notifications", false)
+        set(value) = store.edit().putBoolean("asked_alarm_notifications", value).apply()
+    /** Ids of the alarms scheduled on this phone, so ones that were changed or deleted can be cancelled. */
+    var scheduledAlarmIds: Set<String>
+        get() = store.getStringSet("scheduled_alarm_ids", emptySet()) ?: emptySet()
+        set(value) = store.edit().putStringSet("scheduled_alarm_ids", value).apply()
     var speakReplies: Boolean
         get() = store.getBoolean("speak_replies", true)
         set(value) = store.edit().putBoolean("speak_replies", value).apply()

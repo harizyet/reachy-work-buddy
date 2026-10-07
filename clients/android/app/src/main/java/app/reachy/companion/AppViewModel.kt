@@ -3,6 +3,7 @@ package app.reachy.companion
 import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
@@ -42,6 +43,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var sending by mutableStateOf(false); private set
     var chatStatus by mutableStateOf<String?>(null)
     var lastReply by mutableStateOf<String?>(null); private set
+    /** Counts replies, so the Talk screen can tell a new reply from one it already read aloud (it is rebuilt on every tab change). */
+    var replySeq by mutableIntStateOf(0); private set
+    var spokenSeq = 0
 
     val tasks = mutableStateListOf<Task>()
     val notes = mutableStateListOf<Note>()
@@ -117,7 +121,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 if (!spoken && chatId == null) chatId = api.createChat(user, message).id
                 val reply = api.send(user, message, spoken, chatId, contextMeeting?.first, forceFrontier = contextCloud && contextMeeting != null)
-                chat.add(ChatLine(false, reply.reply, context = reply.contextMeeting, sources = reply.webSearch?.results.orEmpty(), searchFailed = reply.webSearch?.failed == true)); lastReply = reply.reply
+                chat.add(ChatLine(false, reply.reply, context = reply.contextMeeting, sources = reply.webSearch?.results.orEmpty(), searchFailed = reply.webSearch?.failed == true)); lastReply = reply.reply; replySeq++
             } catch (e: Exception) {
                 // Never retried automatically: the hub may already have acted on the message.
                 chat[chat.lastIndex] = line.copy(failed = true)
@@ -157,7 +161,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     val alarms = mutableStateListOf<app.reachy.companion.data.Alarm>()
     val stations = mutableStateListOf<app.reachy.companion.data.Station>()
-    private suspend fun loadAlarmsNow() { alarms.replace(api.alarms()); stations.replace(api.stations()) }
+    private suspend fun loadAlarmsNow() {
+        alarms.replace(api.alarms()); stations.replace(api.stations())
+        AlarmScheduler.sync(getApplication(), alarms.toList())   // the phone keeps its own clock alarm for each of these
+    }
     fun loadAlarms() = load { loadAlarmsNow() }
     fun setAlarmOn(id: String, on: Boolean) = load { api.setAlarmEnabled(id, on); loadAlarmsNow() }
     fun deleteAlarm(id: String) = load { api.deleteAlarm(id); loadAlarmsNow() }
@@ -179,6 +186,34 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var suggestions by mutableStateOf<List<app.reachy.companion.data.Suggestion>>(emptyList()); private set
     var suggesting by mutableStateOf(false); private set
     var suggestionNote by mutableStateOf<String?>(null); private set
+
+    var renaming by mutableStateOf(false); private set
+    var renameError by mutableStateOf<String?>(null); private set
+
+    /** Saves the owner's title and description for the open meeting; [onDone] runs when it worked. */
+    fun renameMeeting(title: String, description: String, onDone: () -> Unit) {
+        val id = openMeeting?.id ?: return
+        viewModelScope.launch {
+            renaming = true; renameError = null
+            try {
+                openMeeting = api.renameMeeting(id, title.trim(), description.trim())
+                meetings.replace(api.meetings().sortedByDescending { it.createdAt })
+                onDone()
+            } catch (e: Exception) { renameError = failed(e) } finally { renaming = false }
+        }
+    }
+
+    fun describeMeeting(onDone: () -> Unit) {
+        val id = openMeeting?.id ?: return
+        viewModelScope.launch {
+            renaming = true; renameError = null
+            try {
+                openMeeting = api.describeMeeting(id)
+                meetings.replace(api.meetings().sortedByDescending { it.createdAt })
+                onDone()
+            } catch (e: Exception) { renameError = failed(e) } finally { renaming = false }
+        }
+    }
 
     private fun annotate(call: suspend (String) -> Meeting) {
         val id = openMeeting?.id ?: return

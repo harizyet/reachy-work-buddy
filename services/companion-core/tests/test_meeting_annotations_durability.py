@@ -139,3 +139,32 @@ def test_aligned_segments_persist_and_the_meeting_completes(database, tmp_path):
             await store.close()
 
     asyncio.run(run())
+
+
+def test_description_and_who_named_the_meeting_persist(database, tmp_path):
+
+    async def run() -> None:
+        store = await PostgresMeetingStore.connect(database, audio_dir=tmp_path)
+        try:
+            unnamed = await store.create_meeting(title="Meeting 7 Oct 12:05", audio=b"x", source_filename="m.m4a", content_type="audio/mp4")
+            chosen = await store.create_meeting(title="Q3 planning", audio=b"x", source_filename="m.m4a", content_type="audio/mp4")
+            assert (unnamed.title_source, chosen.title_source) == ("default", "owner") and unnamed.description is None
+            for meeting in (unnamed, chosen):
+                await store.claim_next_upload()
+                await store.mark_preprocessed(meeting.id, normalized_audio_path=None, duration_seconds=1.0)
+                await store.mark_transcribed(meeting.id, transcript_segments=[{"start": 0, "end": 2, "text": "hi"}])
+                await store.mark_diarized(meeting.id, diarization_segments=[])
+                await store.claim_next_alignment()
+                await store.mark_aligned(meeting.id, aligned_segments=[{"start": 0, "end": 2, "text": "hi", "speaker": None}])
+            assert (await store.claim_next_description()).id == unnamed.id
+            named = await store.set_title(unnamed.id, title="Budget Review", description="About the budget.", source="generated")
+            assert (named.title, named.description, named.title_source) == ("Budget Review", "About the budget.", "generated")
+            only = await store.set_title(chosen.id, title=None, description="", source="owner")   # description only, settled as empty
+            assert only.title == "Q3 planning" and only.description == "" and only.title_source == "owner"
+            assert await store.claim_next_description() is None
+            assert (await store.get_meeting(unnamed.id)).title == "Budget Review"
+            assert await store.set_title("nope", title="x", description=None, source="owner") is None
+        finally:
+            await store.close()
+
+    asyncio.run(run())

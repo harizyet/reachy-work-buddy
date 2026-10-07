@@ -277,6 +277,16 @@ class ReachyApi(baseUrl: String, private val cookieJar: PersistentCookieJar, cli
         call(req("/planner/tasks/$id").put(jsonBody(buildJsonObject { put("text", text) })).build())
     }
 
+    /** Sets the owner's own title and/or description; a title set here is never replaced by an automatic one. */
+    suspend fun renameMeeting(id: String, title: String?, description: String?): Meeting =
+        json.decodeFromString(call(req("/meetings/$id/title").put(jsonBody(buildJsonObject {
+            title?.let { put("title", it) }; description?.let { put("description", it) }
+        })).build()))
+
+    /** Writes the title and description again from the transcript on the local model. */
+    suspend fun describeMeeting(id: String): Meeting =
+        json.decodeFromString(call(req("/meetings/$id/describe").post(jsonBody(buildJsonObject { put("model", "local") })).build()))
+
     suspend fun alarms(): List<Alarm> =
         json.decodeFromString(ListSerializer(Alarm.serializer()), call(req("/planner/alarms").build()))
 

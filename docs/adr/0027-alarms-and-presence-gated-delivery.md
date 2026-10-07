@@ -41,3 +41,19 @@ At the owner's request the alarm screens follow the phone Clock app, so an alarm
 - A disabled alarm is never claimed. Switching one on, or giving it a new time or days, schedules its next occurrence.
 - Deleting removes an alarm from the clock (history stays in action receipts), including one that has already rung.
 - Snooze is not part of this change.
+
+## Addendum 2026-10-07: phone backup when Reachy cannot play it
+
+When Reachy is offline, finds nobody in the room during the sweep, or cannot play the alarm, the owner wants the alarm to
+sound on their Android phone, not only arrive as a Telegram message. The hub's delivery order and fallbacks above are unchanged and
+there is no push channel from the hub to the phone. Instead the app keeps its own exact clock alarm for each of the owner's
+alarms and, when one fires, asks the hub what happened to that ring:
+
+- The hub records the outcome in the alarm's `delivery` and now clears it when it picks a ring up, so a repeating alarm's
+  earlier outcome is never mistaken for this ring's.
+- The phone rings for "robot unavailable", "not played, nobody detected" and "failed: …", and when the hub cannot be reached
+  or does not answer within three minutes. It stays silent for "played", "stopped by owner", privacy mode and do-not-disturb or
+  meeting, so those owner choices still hold on the phone.
+- An alarm that was switched off, moved or deleted elsewhere is dropped when the phone asks, so a stale phone copy does not ring.
+- The phone's copy is refreshed when the app opens, when an alarm rings, after a restart and by a 15-minute background job; an
+  alarm created shortly before it is due elsewhere may therefore have no phone backup.

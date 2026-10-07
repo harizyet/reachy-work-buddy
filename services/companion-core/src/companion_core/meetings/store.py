@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from io import BytesIO
 from typing import Any, BinaryIO, Protocol
 
+from companion_core.meetings import describe
 from companion_core.meetings.models import (
     CANCELLABLE_STATUSES,
     ORPHAN_RESUME,
@@ -85,6 +86,14 @@ class MeetingStore(Protocol):
         """Store the aligned transcript and complete the job. A no-op unless the job is still ALIGNING."""
         ...
 
+    async def claim_next_description(self) -> Meeting | None:
+        """A finished meeting with a transcript that has no description yet, or None."""
+        ...
+
+    async def set_title(self, meeting_id: str, *, title: str | None, description: str | None, source: str) -> Meeting | None:
+        """Change the title and/or description (None leaves a field alone) and record who named it."""
+        ...
+
     async def claim_next_audio_check(self) -> Meeting | None:
         """A finished meeting whose recording has not been checked for silent stretches yet, or None."""
         ...
@@ -146,6 +155,7 @@ class InMemoryMeetingStore:
     ) -> Meeting:
         meeting = Meeting(
             title=title,
+            title_source="default" if describe.looks_default(title) else "owner",
             source_filename=source_filename,
             content_type=content_type,
             audio_path=source_filename,
@@ -241,6 +251,24 @@ class InMemoryMeetingStore:
         if meeting.status != MeetingJobStatus.ALIGNING:
             return meeting
         return self._touch(meeting, status=MeetingJobStatus.COMPLETE, aligned_segments=aligned_segments)
+
+    async def claim_next_description(self) -> Meeting | None:
+        candidates = [
+            m for m in self._meetings.values()
+            if m.status == MeetingJobStatus.COMPLETE and m.description is None and m.transcript_segments
+        ]
+        return min(candidates, key=lambda m: m.created_at) if candidates else None
+
+    async def set_title(self, meeting_id: str, *, title: str | None, description: str | None, source: str) -> Meeting | None:
+        meeting = self._meetings.get(meeting_id)
+        if meeting is None:
+            return None
+        changes: dict = {"title_source": source}
+        if title is not None:
+            changes["title"] = title
+        if description is not None:
+            changes["description"] = description
+        return self._touch(meeting, **changes)
 
     async def claim_next_audio_check(self) -> Meeting | None:
         candidates = [m for m in self._meetings.values() if m.status == MeetingJobStatus.COMPLETE and m.audio_gaps is None]

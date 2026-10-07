@@ -8,6 +8,17 @@
   <header><div><span class="eyebrow">WORK COMPANION</span><h1>Reachy operator</h1></div><nav id="nav" hidden><a href="../app/telepresence.html">Telepresence ↗</a><button id="logout" class="secondary">Log out</button></nav></header>
   <p id="notice" role="status" aria-live="polite"></p>
   <div id="deep-banner" class="deep-banner" role="status" aria-live="polite" hidden><strong>Reachy is unavailable: deep review in progress.</strong> <span id="deep-banner-stage"></span></div>
+  <dialog id="meeting-title-dialog" class="alarm-sheet" aria-labelledby="meeting-title-dialog-title">
+    <form id="meeting-title-form">
+      <div class="sheet-bar"><button type="button" id="meeting-title-cancel" class="sheet-link">Cancel</button><h3 id="meeting-title-dialog-title">Meeting title</h3><button type="submit" id="meeting-title-save" class="sheet-link sheet-strong">Save</button></div>
+      <div class="sheet-group">
+        <label class="sheet-row">Title<input id="meeting-title-input" maxlength="200" required autocomplete="off"></label>
+        <label class="sheet-col">Description<textarea id="meeting-description-input" rows="3" maxlength="400" placeholder="One or two lines on what the meeting covered"></textarea></label>
+      </div>
+      <p id="meeting-title-status" role="status" class="muted"></p>
+      <button type="button" id="meeting-title-regenerate" class="secondary">Write again from the transcript</button>
+    </form>
+  </dialog>
   <dialog id="reminder-dialog" class="alarm-sheet" aria-labelledby="reminder-dialog-title">
     <form id="reminder-form">
       <div class="sheet-bar"><button type="button" id="reminder-cancel" class="sheet-link">Cancel</button><h3 id="reminder-dialog-title">New Reminder</h3><button type="submit" id="reminder-save" class="sheet-link sheet-strong">Add</button></div>
@@ -322,7 +333,8 @@
           <p id="meeting-upload-status" role="status"></p>
         </section>
           <section id="meeting-detail" class="card" hidden aria-labelledby="meeting-detail-title">
-            <div class="section-title"><h3 id="meeting-detail-title"></h3><button type="button" id="meeting-detail-close" class="secondary">Close</button></div>
+            <div class="section-title"><h3 id="meeting-detail-title"></h3><span><button type="button" id="meeting-rename" class="secondary">Edit title</button> <button type="button" id="meeting-detail-close" class="secondary">Close</button></span></div>
+            <p id="meeting-detail-description" class="meeting-description" hidden></p>
             <p id="meeting-detail-meta" class="muted"></p>
             <p id="meeting-detail-context"></p>
             <p id="meeting-detail-gaps" class="gap-banner" role="status" hidden></p>

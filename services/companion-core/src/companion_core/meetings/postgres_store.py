@@ -21,6 +21,7 @@ from typing import Any, BinaryIO
 from psycopg.types.json import Json
 from psycopg_pool import AsyncConnectionPool
 
+from companion_core.meetings import describe
 from companion_core.meetings.models import (
     CANCELLABLE_STATUSES,
     ORPHAN_RESUME,
@@ -35,7 +36,7 @@ _COLUMNS = (
     "id, title, project_scope, context, participants, started_at, source_filename, content_type, "
     "audio_path, normalized_audio_path, duration_seconds, transcript_segments, diarization_segments, "
     "status, error_detail, created_at, updated_at, speaker_names, transcript_corrections, key_terms, summary, minutes, "
-    "aligned_segments, audio_gaps"
+    "aligned_segments, audio_gaps, description, title_source"
 )
 
 
@@ -65,6 +66,8 @@ def _from_row(row: tuple) -> Meeting:
         minutes=MeetingOutput(**row[21]) if row[21] else None,
         aligned_segments=row[22],
         audio_gaps=row[23],
+        description=row[24],
+        title_source=row[25],
     )
 
 
@@ -107,6 +110,7 @@ class PostgresMeetingStore:
     ) -> Meeting:
         meeting = Meeting(
             title=title,
+            title_source="default" if describe.looks_default(title) else "owner",
             source_filename=source_filename,
             content_type=content_type,
             audio_path=f"{uuid.uuid4()}{Path(source_filename).suffix.lower()}",
@@ -128,13 +132,13 @@ class PostgresMeetingStore:
         async with self._pool.connection() as conn:
             await conn.execute(
                 f"INSERT INTO meetings ({_COLUMNS}) VALUES "
-                "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     meeting.id, meeting.title, meeting.project_scope, meeting.context, meeting.participants,
                     meeting.started_at, meeting.source_filename, meeting.content_type, meeting.audio_path,
                     meeting.normalized_audio_path, meeting.duration_seconds, None, None,
                     meeting.status.value, meeting.error_detail, meeting.created_at, meeting.updated_at,
-                    Json({}), Json({}), Json([]), None, None, None, None,
+                    Json({}), Json({}), Json([]), None, None, None, None, None, meeting.title_source,
                 ),
             )
         return meeting
@@ -278,6 +282,26 @@ class PostgresMeetingStore:
             )
             row = await cur.fetchone()
             return _from_row(row) if row else await self.get_meeting(meeting_id)
+
+    async def claim_next_description(self) -> Meeting | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"SELECT {_COLUMNS} FROM meetings WHERE status = %s AND description IS NULL "
+                f"AND transcript_segments IS NOT NULL ORDER BY created_at LIMIT 1",
+                (MeetingJobStatus.COMPLETE.value,),
+            )
+            row = await cur.fetchone()
+            return _from_row(row) if row else None
+
+    async def set_title(self, meeting_id: str, *, title: str | None, description: str | None, source: str) -> Meeting | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"UPDATE meetings SET title = COALESCE(%s, title), description = COALESCE(%s, description), title_source = %s, "
+                f"updated_at = now() WHERE id = %s RETURNING {_COLUMNS}",
+                (title, description, source, meeting_id),
+            )
+            row = await cur.fetchone()
+            return _from_row(row) if row else None
 
     async def claim_next_audio_check(self) -> Meeting | None:
         async with self._pool.connection() as conn:

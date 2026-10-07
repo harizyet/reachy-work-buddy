@@ -267,7 +267,7 @@ class PostgresPlannerStore:
     async def claim_due_alarms(self, now: datetime) -> list[Alarm]:
         async with self._pool.connection() as conn:
             cur = await conn.execute(
-                f"UPDATE alarms SET status = %s, fired_at = %s WHERE status = %s AND enabled AND due_at <= %s "
+                f"UPDATE alarms SET status = %s, fired_at = %s, delivery = NULL WHERE status = %s AND enabled AND due_at <= %s "
                 f"RETURNING {_ALARM_COLUMNS}",
                 (AlarmStatus.FIRED.value, now, AlarmStatus.SCHEDULED.value, now),
             )

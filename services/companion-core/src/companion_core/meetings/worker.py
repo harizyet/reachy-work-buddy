@@ -27,11 +27,13 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import time
 import wave
+from collections.abc import Awaitable, Callable
 from io import BytesIO
 from typing import BinaryIO
 
-from companion_core.meetings import silence
+from companion_core.meetings import describe, silence
 from companion_core.meetings.align import align
 from companion_core.meetings.models import Meeting
 from companion_core.meetings.speech_clients import (
@@ -131,6 +133,26 @@ async def align_stage(store: MeetingStore, meeting: Meeting) -> bool:
     return True
 
 
+# Returns the written title and description, or None when the language model cannot be reached right now.
+Describer = Callable[[Meeting], Awaitable["describe.Described | None"]]
+DESCRIBE_RETRY_SECONDS = 120.0
+
+
+async def describe_stage(store: MeetingStore, meeting: Meeting, describer: Describer) -> bool:
+    """Name a finished meeting from its content. An unreachable model is not a failure: the meeting waits and is tried again
+    later. A title the owner chose is kept; only the description is added."""
+    result = await describer(meeting)
+    if result is None:
+        return False
+    owner_named = meeting.title_source == "owner"
+    title = None if owner_named or not result.title else result.title
+    await store.set_title(
+        meeting.id, title=title, description=result.description,
+        source=meeting.title_source if title is None else "generated",
+    )
+    return True
+
+
 async def audio_check_stage(store: MeetingStore, meeting: Meeting) -> bool:
     """Look for stretches of the recording with no captured audio. Never fails the meeting: it is already complete, so a
     recording that cannot be decoded is recorded as checked with no findings (and the reason kept) rather than retried."""
@@ -154,8 +176,11 @@ class MeetingWorker:
         transcription_client: TranscriptionClient | None = None,
         diarization_client: DiarizationClient | None = None,
         poll_interval: float = 2.0,
+        describer: Describer | None = None,
     ) -> None:
         self._store = store
+        self._describer = describer
+        self._describe_retry_at = 0.0
         self._transcription_client = transcription_client
         self._diarization_client = diarization_client
         self._poll_interval = poll_interval
@@ -174,6 +199,12 @@ class MeetingWorker:
             with contextlib.suppress(Exception):
                 await self._store.mark_failed(meeting.id, error_detail=f"{error_label} error: {exc}")
             return True
+
+    async def _describe(self, meeting: Meeting) -> bool:
+        done = await describe_stage(self._store, meeting, self._describer)
+        if not done:  # the model is busy or down: wait before asking again instead of asking on every poll
+            self._describe_retry_at = time.monotonic() + DESCRIBE_RETRY_SECONDS
+        return done
 
     async def process_one(self) -> bool:
         """Try each stage in pipeline order and return on the first one
@@ -199,6 +230,8 @@ class MeetingWorker:
 
         stages.append((self._store.claim_next_alignment, lambda m: align_stage(self._store, m), "alignment"))
         stages.append((self._store.claim_next_audio_check, lambda m: audio_check_stage(self._store, m), "audio check"))
+        if self._describer is not None and time.monotonic() >= self._describe_retry_at:
+            stages.append((self._store.claim_next_description, self._describe, "description"))
 
         for claim, run_stage, error_label in stages:
             result = await self._try_stage(claim, run_stage, error_label)

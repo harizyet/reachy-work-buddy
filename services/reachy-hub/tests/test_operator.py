@@ -228,6 +228,14 @@ def test_meetings_proxy_upload_list_get_cancel_require_auth(monkeypatch):
     assert client.get(f"/meetings/{meeting_id}/audio").status_code == 401
     login(client)
 
+    # rename and describe go through the hub behind the same login
+    assert client.put(f"/meetings/{meeting_id}/title", json={"title": "x"}).status_code == 403   # no CSRF header
+    renamed = client.put(f"/meetings/{meeting_id}/title", json={"title": "Weekly review", "description": "Status round."}, headers=CSRF)
+    assert renamed.status_code == 200 and renamed.json()["title"] == "Weekly review" and renamed.json()["title_source"] == "owner"
+    assert client.put(f"/meetings/{meeting_id}/title", json={}, headers=CSRF).status_code == 422
+    assert client.put("/meetings/nope/title", json={"title": "x"}, headers=CSRF).status_code == 404
+    assert client.post(f"/meetings/{meeting_id}/describe", headers=CSRF).status_code == 409   # not processed yet
+
     cancelled = client.post(f"/meetings/{meeting_id}/cancel", headers=CSRF)
     assert cancelled.status_code == 200 and cancelled.json()["status"] == "cancelled"
     assert client.post(f"/meetings/{meeting_id}/cancel", headers=CSRF).status_code == 409

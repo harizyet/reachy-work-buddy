@@ -238,6 +238,7 @@ from companion_core.llm.postgres_store import (
 from companion_core.llm.router import route_completion
 from companion_core.llm.store import LLMSettingsStore, LLMUsageStore, masked_config
 from companion_core.meetings import corrections as meeting_corrections
+from companion_core.meetings import describe as meeting_describe
 from companion_core.meetings import outputs as meeting_outputs
 from companion_core.meetings.models import (
     DELETABLE_STATUSES,
@@ -383,6 +384,11 @@ class CreateAlarmRequest(BaseModel):
     reminder_id: str | None = Field(default=None, max_length=100)
     station_id: str | None = Field(default=None, max_length=100)
     volume: int = Field(default=100, ge=10, le=400)
+
+
+class RenameMeetingRequest(BaseModel):
+    title: str | None = Field(default=None, max_length=200)
+    description: str | None = Field(default=None, max_length=400)
 
 
 class UpdateAlarmRequest(BaseModel):
@@ -726,6 +732,7 @@ def create_app(
                     app.state.meeting_store,
                     transcription_client=app.state.transcription_client,
                     diarization_client=app.state.diarization_client,
+                    describer=lambda meeting: _describe_with(meeting, "local"),
                 ).run_forever()
             )
             if run_meeting_worker_task
@@ -2335,6 +2342,62 @@ def create_app(
         updated = await app.state.meeting_store.set_output(meeting.id, kind, MeetingOutput(text=text, tier=tier))
         if updated is None:
             raise HTTPException(status_code=404, detail=f"no meeting '{meeting.id}'")
+        return updated
+
+    async def _describe_with(meeting: Meeting, tier: str) -> meeting_describe.Described | None:
+        """A title and description written by the chosen model, or None when that model is not available right now."""
+        config = await app.state.llm_settings_store.get()
+        use_cloud = tier == "cloud"
+        if (config.cloud if use_cloud else config.local) is None:
+            return None
+        local_only = config.model_copy(
+            update={"routing": config.routing.model_copy(update={"mode": LLMRoutingMode.LOCAL_ONLY})}
+        )
+
+        async def ask(messages: list[dict[str, str]], max_tokens: int) -> str:
+            return await route_completion(
+                config if use_cloud else local_only, messages, app.state.llm_usage_store, force_frontier=use_cloud,
+                transport=llm_transport, local_max_tokens=max_tokens,
+                timeout=meeting_corrections.CLOUD_REQUEST_TIMEOUT_SECONDS if use_cloud else meeting_corrections.REQUEST_TIMEOUT_SECONDS,
+            )
+
+        try:
+            return await meeting_describe.describe(meeting, ask)
+        except ProviderUnavailable:
+            return None
+
+    @app.put("/meetings/{meeting_id}/title")
+    async def rename_meeting(meeting_id: str, request: RenameMeetingRequest) -> Meeting:
+        """The owner's own title and/or description; a title set here is never replaced by an automatic one."""
+        meeting = await _meeting_or_404(meeting_id)
+        title = " ".join(request.title.split()) if request.title is not None else None
+        if title is None and request.description is None:
+            raise HTTPException(status_code=422, detail="send a title or a description")
+        if title is not None and not title:
+            raise HTTPException(status_code=422, detail="the title cannot be empty")
+        description = " ".join(request.description.split()) if request.description is not None else None
+        updated = await app.state.meeting_store.set_title(
+            meeting.id, title=title, description=description, source="owner" if title is not None else meeting.title_source
+        )
+        if updated is None:
+            raise HTTPException(status_code=404, detail=f"no meeting '{meeting_id}'")
+        return updated
+
+    @app.post("/meetings/{meeting_id}/describe")
+    async def describe_meeting(meeting_id: str, request: OutputRequest | None = None) -> Meeting:
+        """Write the title and description again from the transcript, on the local model or (when the owner chooses) the cloud one."""
+        meeting = await _ready_meeting(meeting_id)
+        result = await _describe_with(meeting, request.model if request else "local")
+        if result is None:
+            raise HTTPException(status_code=503, detail="the language model is unavailable right now")
+        if result.title is None and not result.description:
+            raise HTTPException(status_code=502, detail="the model did not return a usable title; try again")
+        updated = await app.state.meeting_store.set_title(
+            meeting.id, title=result.title, description=result.description or None,
+            source="generated" if result.title else meeting.title_source,
+        )
+        if updated is None:
+            raise HTTPException(status_code=404, detail=f"no meeting '{meeting_id}'")
         return updated
 
     @app.post("/meetings/{meeting_id}/outputs/{kind}")

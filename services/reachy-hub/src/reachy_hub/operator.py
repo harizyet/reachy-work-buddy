@@ -33,11 +33,13 @@ from shared.protocols.operator_api import (
     MEETING_CORRECTIONS_REPLACE,
     MEETING_CORRECTIONS_SUGGEST,
     MEETING_DEEP_REVIEW,
+    MEETING_DESCRIBE,
     MEETING_GLOSSARY,
     MEETING_OUTPUT,
     MEETING_OUTPUT_DEEP,
     MEETING_SPEAKERS,
     MEETING_TERMS,
+    MEETING_TITLE,
     MEETINGS,
     PERSONA_SETTINGS,
     PLANNER_ALARM,
@@ -74,6 +76,11 @@ class PlannerTextBody(BaseModel):
 
 class SpeechBody(BaseModel):
     text: str = Field(min_length=1, max_length=3000)
+
+
+class MeetingTitleBody(BaseModel):
+    title: str | None = Field(default=None, max_length=200)
+    description: str | None = Field(default=None, max_length=400)
 
 
 class MeetingSpeakersBody(BaseModel):
@@ -335,6 +342,23 @@ def install_operator_routes(
     @app.put(MEETING_SPEAKERS, dependencies=dependencies)
     async def set_meeting_speakers(meeting_id: str, body: MeetingSpeakersBody) -> dict:
         return await planner("PUT", f"/meetings/{quote(meeting_id, safe='')}/speakers", json=body.model_dump())
+
+    @app.put(MEETING_TITLE, dependencies=dependencies)
+    async def rename_meeting(meeting_id: str, body: MeetingTitleBody) -> dict:
+        return await planner("PUT", f"/meetings/{quote(meeting_id, safe='')}/title", json=body.model_dump(exclude_none=True))
+
+    @app.post(MEETING_DESCRIBE, dependencies=dependencies)
+    async def describe_meeting(meeting_id: str, body: MeetingOutputBody | None = None) -> dict:
+        # One short model call, but a loaded model may need a moment.
+        try:
+            return await core.planner_request(
+                "POST", f"/meetings/{quote(meeting_id, safe='')}/describe",
+                json=(body or MeetingOutputBody()).model_dump(), timeout=120.0,
+            )
+        except httpx.HTTPStatusError as exc:
+            meeting_error(exc)
+        except (httpx.HTTPError, ValueError):
+            raise HTTPException(502, "Companion core unavailable") from None
 
     @app.get(DEEP_REVIEW_INFO, dependencies=dependencies)
     async def deep_review_info() -> dict:

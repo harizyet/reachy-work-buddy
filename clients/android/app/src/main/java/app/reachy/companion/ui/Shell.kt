@@ -1,6 +1,14 @@
 package app.reachy.companion.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -42,6 +50,16 @@ fun Shell(model: AppViewModel) {
     var menu by remember { mutableStateOf(false) }
     var speak by remember { mutableStateOf(model.prefs.speakReplies) }
     val wide = isWide()
+    var phoneAlarms by remember { mutableStateOf(model.prefs.phoneAlarms) }
+    val context = LocalContext.current
+    // The phone's backup alarm needs notifications to show its Stop button (Android 13+); ask once.
+    val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    LaunchedEffect(Unit) {
+        model.loadAlarms()   // schedules the phone's own alarm for each of the owner's alarms
+        if (Build.VERSION.SDK_INT >= 33 && model.prefs.phoneAlarms && !model.prefs.askedAlarmNotifications &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) { model.prefs.askedAlarmNotifications = true; notifications.launch(Manifest.permission.POST_NOTIFICATIONS) }
+    }
     Scaffold(
         topBar = {
             TopAppBar(title = { Text(tab.title) }, actions = {
@@ -51,6 +69,10 @@ fun Shell(model: AppViewModel) {
                     DropdownMenuItem(
                         { Text(if (speak) "Read replies aloud: on" else "Read replies aloud: off") },
                         { speak = !speak; model.prefs.speakReplies = speak; menu = false },
+                    )
+                    DropdownMenuItem(
+                        { Text(if (phoneAlarms) "Ring on this phone if Reachy can't: on" else "Ring on this phone if Reachy can't: off") },
+                        { phoneAlarms = !phoneAlarms; model.prefs.phoneAlarms = phoneAlarms; model.loadAlarms(); menu = false },
                     )
                     DropdownMenuItem({ Text("Sign out") }, { menu = false; model.signOut() })
                 }

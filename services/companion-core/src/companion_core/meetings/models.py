@@ -120,6 +120,10 @@ class Meeting(BaseModel):
     # Stretches of the recording with no captured audio: {"spans": [{start, end}], "segments": [transcript indexes],
     # "seconds": total}. None until the recording has been checked.
     audio_gaps: dict[str, Any] | None = None
+    # A short summary line or two under the title, written from the transcript; None until written, "" when it could not be.
+    description: str | None = None
+    # Who named the meeting: "default" (an unnamed recording), "generated" (written from the transcript) or "owner".
+    title_source: str = "default"
     # Owner-assigned display names, keyed by diarization label ("SPEAKER_00").
     # The raw diarization output is never rewritten (Phase 41, ADR 0030).
     speaker_names: dict[str, str] = Field(default_factory=dict)

@@ -17,6 +17,7 @@ data class Alarm(
     val repeat: List<Int> = emptyList(),
     val volume: Int = 100,
     val delivery: String? = null,
+    @SerialName("fired_at") val firedAt: String? = null,
 )
 
 @Serializable

@@ -164,7 +164,7 @@ class InMemoryPlannerStore:
         due = [a for a in self._alarms.values() if a.status is AlarmStatus.SCHEDULED and a.enabled and a.due_at <= now]
         snapshots = []
         for alarm in due:
-            alarm.status, alarm.fired_at = AlarmStatus.FIRED, now
+            alarm.status, alarm.fired_at, alarm.delivery = AlarmStatus.FIRED, now, None   # delivery describes this ring, not the last
             snapshots.append(alarm.model_copy())  # a repeating alarm is re-armed after this, so the caller keeps the fired state
         return sorted(snapshots, key=lambda a: a.due_at)
 

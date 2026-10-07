@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Card
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
@@ -189,7 +190,8 @@ private fun MeetingList(model: AppViewModel, modifier: Modifier) {
                             Text(meeting.title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f, fill = false))
                             if (silentSeconds(meeting) > 0) GapIcon("Part of this recording has no audio", Modifier.padding(start = 6.dp))
                         }
-                        Text(statusLabel(meeting.status), style = MaterialTheme.typography.bodySmall)
+                        if (!meeting.description.isNullOrBlank()) Text(meeting.description, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        Text(statusLabel(meeting.status), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                     }
                     if (meeting.status in IN_PROGRESS) TextButton({ model.cancelMeeting(meeting.id) }) { Text("Cancel") }
                     else IconButton({ pendingDelete = meeting }) { Icon(Icons.Default.Delete, "Delete ${meeting.title}") }
@@ -221,6 +223,7 @@ private fun MeetingDetail(model: AppViewModel, meeting: Meeting, modifier: Modif
     var section by remember { mutableStateOf("transcript") }
     var menu by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var editingTitle by remember { mutableStateOf(false) }
     var rerunKind by remember { mutableStateOf<String?>(null) }
     val segments = meeting.transcript.orEmpty()
     val ready = segments.isNotEmpty() && meeting.status in READY
@@ -228,8 +231,12 @@ private fun MeetingDetail(model: AppViewModel, meeting: Meeting, modifier: Modif
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton({ model.showMeeting(null) }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to meetings") }
             Column(Modifier.weight(1f)) {
-                Text(meeting.title, style = MaterialTheme.typography.titleMedium)
-                Text(statusLabel(meeting.status), style = MaterialTheme.typography.bodySmall)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(meeting.title, Modifier.weight(1f, fill = false), style = MaterialTheme.typography.titleMedium)
+                    IconButton({ editingTitle = true }, Modifier.size(32.dp)) { Icon(Icons.Default.Edit, "Edit title", Modifier.size(18.dp)) }
+                }
+                if (!meeting.description.isNullOrBlank()) Text(meeting.description, style = MaterialTheme.typography.bodyMedium, maxLines = 3)
+                Text(statusLabel(meeting.status), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
             }
             if (section == "transcript" && segments.isNotEmpty()) {
                 TextButton({ replacing = true }) { Text("Replace") }
@@ -378,6 +385,7 @@ private fun MeetingDetail(model: AppViewModel, meeting: Meeting, modifier: Modif
             }
         },
     )
+    if (editingTitle) TitleDialog(model, meeting, onDismiss = { editingTitle = false })
     if (confirmDelete) ConfirmDeleteDialog(meeting.title, onDismiss = { confirmDelete = false }, onConfirm = { confirmDelete = false; model.deleteMeeting(meeting.id) })
     val notifyPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { startDeep() }
     if (warningDeep) DeepWarningDialog(
@@ -576,4 +584,32 @@ private fun OutputPanel(model: AppViewModel, meeting: Meeting, kind: String, onR
             }
         }
     }
+}
+
+
+/** Edit the meeting's title and description by hand, or have the model write them again from the transcript. */
+@Composable
+private fun TitleDialog(model: AppViewModel, meeting: Meeting, onDismiss: () -> Unit) {
+    var title by remember { mutableStateOf(meeting.title) }
+    var description by remember { mutableStateOf(meeting.description.orEmpty()) }
+    val hasTranscript = !meeting.transcript.isNullOrEmpty()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Meeting title") },
+        text = {
+            Column {
+                OutlinedTextField(title, { title = it.take(200) }, label = { Text("Title") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(
+                    description, { description = it.take(400) }, label = { Text("Description") }, minLines = 2, maxLines = 4,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+                if (hasTranscript) TextButton({ model.describeMeeting { onDismiss() } }, enabled = !model.renaming) {
+                    Text(if (model.renaming) "Working…" else "Write again from the transcript")
+                }
+                ErrorLine(model.renameError)
+            }
+        },
+        confirmButton = { TextButton({ model.renameMeeting(title, description) { onDismiss() } }, enabled = title.isNotBlank() && !model.renaming) { Text("Save") } },
+        dismissButton = { TextButton(onDismiss) { Text("Cancel") } },
+    )
 }

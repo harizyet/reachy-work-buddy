@@ -112,7 +112,15 @@ the screens show them in the device's own zone, so keep the two the same.
 Search TuneIn by name on the web tab, save a station (only its guide id is stored)
 and remove it again. **Stop alarm** silences an alarm that is playing now.
 Playback follows privacy mode and room presence (ADR 0027); otherwise the alarm
-goes to Telegram. Requests use owner-authenticated `/planner/alarms*` and
+goes to Telegram. **Phone backup (Android):** the app keeps a clock alarm on the phone for each alarm that is on. When
+one comes due the phone asks the hub what Reachy did with it, and rings itself (the phone's alarm sound, on the alarm
+volume, with a **Stop** button in the notification, for up to five minutes) if Reachy was offline, found nobody in the
+room during the sweep, or could not play it, or if the hub cannot be reached. It stays quiet when Reachy played the
+alarm, in privacy mode, and during do-not-disturb or a meeting. It works with the app closed (it needs the app to have
+been opened once, and not force-stopped from Android's settings), and the phone re-schedules after a restart. The phone
+learns about alarms set elsewhere (Telegram, the robot, the web) when the app opens, when an alarm rings, and about every 15
+minutes in the background, so an alarm set only minutes before it is due may not have a phone backup. It rings the phone's
+alarm sound, not a radio station. The app menu has **Ring on this phone if Reachy can't** to turn this off. Requests use owner-authenticated `/planner/alarms*` and
 `/planner/stations*` hub routes.
 
 The **Activity** tab lists recent action receipts: what the assistant actually
@@ -130,6 +138,15 @@ transcription, speaker detection and their alignment finished. The transcript
 shows a speaker chip where the speaker changes; click it to give that speaker a
 name, which is applied to the whole meeting (the raw speaker timings stay listed
 separately).
+
+**Titles and descriptions.** Each meeting has a title and a one-or-two-line description under it (also
+shown in the meeting list). A recording named only by the app's own default ("Meeting 7 Oct 12:05") is named from
+what was said once it has been processed: the local model writes a title of a few words and the description
+automatically, and tries again later if the model is busy or unavailable. A title you typed when uploading, or
+edited, is never replaced; only its description is added. **Edit title** (web) or the pencil beside the title (app)
+lets you change the title and description by hand, or **Write again from the transcript** to have the local model
+write both again (this replaces the title as well). The model sees accepted corrections and speaker names, and
+for long meetings a sample spread across the whole recording.
 
 **Recording gaps.** When the phone stops capturing sound mid-recording (for
 example when it locks or another app takes the microphone), Android supplies
