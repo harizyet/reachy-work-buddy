@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The homelab Caddy listens on plain HTTP (docs/deployment.md); cleartext is
+     allowed because the app is meant to reach it over Tailscale, which encrypts
+     the hop. Prefer https:// if TLS is added in front of the hub. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
