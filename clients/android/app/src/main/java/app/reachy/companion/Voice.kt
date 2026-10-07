@@ -2,6 +2,7 @@ package app.reachy.companion
 
 import android.content.Context
 import android.content.Intent
+import android.media.MediaPlayer
 import android.media.MediaRecorder
 import android.os.Build
 import android.os.Bundle
@@ -56,9 +57,27 @@ class SpeechInput(
 class SpeechOutput(context: Context) {
     private var ready = false
     private val tts = TextToSpeech(context) { ready = it == TextToSpeech.SUCCESS }
-    fun speak(text: String) { if (ready) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "reply") }
-    fun stop() { tts.stop() }
-    fun shutdown() { tts.shutdown() }
+    private var player: MediaPlayer? = null
+
+    /** The phone's own voice: the fallback when Reachy's voice cannot be fetched. */
+    fun speak(text: String) { stopPlayer(); if (ready) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "reply") }
+
+    /** Plays a WAV in Reachy's voice; false when it cannot be played. */
+    fun play(file: File): Boolean {
+        stop()
+        return try {
+            player = MediaPlayer().apply {
+                setDataSource(file.absolutePath)
+                setOnCompletionListener { stopPlayer() }
+                prepare(); start()
+            }
+            true
+        } catch (e: Exception) { stopPlayer(); false }
+    }
+
+    private fun stopPlayer() { player?.release(); player = null }
+    fun stop() { tts.stop(); stopPlayer() }
+    fun shutdown() { stopPlayer(); tts.shutdown() }
 }
 
 /** Records one AAC/m4a clip for the meeting uploader (the hub accepts .m4a). */

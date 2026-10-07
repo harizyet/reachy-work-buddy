@@ -9,7 +9,7 @@ import httpx
 from fastapi import Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
 from starlette.background import BackgroundTask
 
@@ -56,6 +56,7 @@ from shared.protocols.operator_api import (
     PLANNER_TASK_COMPLETE,
     PLANNER_TASK_REOPEN,
     PLANNER_TASKS,
+    SPEECH,
     STATUS,
     WEBSEARCH_LOG,
     WEBSEARCH_SETTINGS,
@@ -69,6 +70,10 @@ class LoginRequest(BaseModel):
 
 class PlannerTextBody(BaseModel):
     text: str = Field(min_length=1, max_length=2000)
+
+
+class SpeechBody(BaseModel):
+    text: str = Field(min_length=1, max_length=3000)
 
 
 class MeetingSpeakersBody(BaseModel):
@@ -131,7 +136,7 @@ def require_csrf(request: Request) -> None:
 
 def install_operator_routes(
     app, require_auth, core, get_robot_client, *, login_enabled, telegram_enabled, default_user_id,
-    owner_bound=False, on_logout=None
+    owner_bound=False, on_logout=None, synthesize=None
 ):
 
     @app.exception_handler(RequestValidationError)
@@ -269,6 +274,17 @@ def install_operator_routes(
             meeting_error(exc)
         except httpx.HTTPError:
             raise HTTPException(502, "Companion core unavailable") from None
+
+    @app.post(SPEECH, dependencies=dependencies)
+    async def speech(body: SpeechBody) -> Response:
+        """Reachy's voice (the hub's local TTS, as the robot uses) for the owner's own clients."""
+        if synthesize is None:
+            raise HTTPException(503, "Speech is not available")
+        try:
+            audio = await synthesize(body.text)
+        except Exception:  # noqa: BLE001 - the engine is a local subprocess/model; the client falls back to its own voice
+            raise HTTPException(503, "Speech is not available") from None
+        return Response(audio, media_type="audio/wav", headers={"Cache-Control": "no-store"})
 
     @app.get(MEETING_AUDIO, dependencies=dependencies)
     async def meeting_audio(meeting_id: str, request: Request):

@@ -977,7 +977,8 @@ def create_app(
     install_operator_routes(app, require_remote_auth, companion_core_client, get_client,
                             login_enabled=bool(session_secret_key), telegram_enabled=telegram_enabled,
                             default_user_id=default_chat_user_id,
-                            owner_bound=bool(accounts_service_token), on_logout=stop_voice_on_logout)
+                            owner_bound=bool(accounts_service_token), on_logout=stop_voice_on_logout,
+                            synthesize=lambda text: asyncio.to_thread(synthesize, text))
 
     install_robot_ws_routes(
         app,

@@ -572,3 +572,25 @@ def test_meeting_speaker_and_correction_proxies_need_auth_and_pass_core_errors_t
     assert client.delete("/meeting-terms", params={"term": "codex"}, headers=CSRF).json() == []
     assert client.post("/meeting-terms", json={"term": ""}, headers=CSRF).status_code == 422
     assert client.put("/meetings/missing/speakers", json={"names": {}}, headers=CSRF).status_code == 404
+
+
+class _RecordingVoice:
+    def __init__(self):
+        self.said = []
+
+    def synthesize(self, text):
+        self.said.append(text)
+        return b"RIFF-wav"
+
+
+def test_speech_returns_reachys_voice_for_the_owner_only_and_strips_markup():
+    voice = _RecordingVoice()
+    client = make_client(tts=voice)
+    assert client.post("/speech", json={"text": "hello"}, headers=CSRF).status_code == 401
+    login(client)
+    assert client.post("/speech", json={"text": "hello"}).status_code in (401, 403)  # no CSRF header
+    ok = client.post("/speech", json={"text": "**Gemini** is open [S1]"}, headers=CSRF)
+    assert ok.status_code == 200 and ok.content == b"RIFF-wav" and ok.headers["content-type"] == "audio/wav"
+    assert voice.said == ["Gemini is open"]  # the same cleaning the robot's replies get
+    assert client.post("/speech", json={"text": ""}, headers=CSRF).status_code == 422
+    assert client.post("/speech", json={"text": "x" * 3001}, headers=CSRF).status_code == 422

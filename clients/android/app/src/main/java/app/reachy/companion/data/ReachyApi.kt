@@ -252,6 +252,15 @@ class ReachyApi(baseUrl: String, private val cookieJar: PersistentCookieJar, cli
         }
     }
 
+    /** Reachy's own synthesized voice for [text] (the hub's TTS, as the robot uses), written to [target]; false when unavailable. */
+    suspend fun speech(text: String, target: File): Boolean = withContext(Dispatchers.IO) {
+        http.newCall(req("/speech").post(jsonBody(buildJsonObject { put("text", text.take(3000)) })).build()).execute().use { response ->
+            if (!response.isSuccessful) return@use false
+            response.body!!.byteStream().use { input -> target.outputStream().use { input.copyTo(it) } }
+            true
+        }
+    }
+
     suspend fun clearCorrection(id: String, segment: Int): Meeting =
         json.decodeFromString(call(req("/meetings/$id/corrections/$segment").delete().build()))
 

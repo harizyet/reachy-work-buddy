@@ -280,6 +280,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun renameSpeaker(label: String, name: String) = annotate { api.setSpeakerNames(it, mapOf(label to name.trim())) }
+    /** A reply in Reachy's voice, or null when the hub cannot speak (the caller then uses the phone's own voice). */
+    suspend fun replyVoice(text: String): File? {
+        val target = File(getApplication<Application>().cacheDir, "reply-voice.wav")
+        return try { if (api.speech(text, target)) target else null } catch (e: Exception) { null }
+    }
+
     fun playMeetingFrom(id: String, seconds: Double) { viewModelScope.launch { player.playFrom(id, seconds) } }
 
     override fun onCleared() { player.release() }

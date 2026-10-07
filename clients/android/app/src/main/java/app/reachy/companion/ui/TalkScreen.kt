@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -79,7 +80,11 @@ fun TalkScreen(model: AppViewModel, speakReplies: Boolean, modifier: Modifier = 
     DisposableEffect(Unit) { onDispose { input.stop(); output.shutdown() } }
     LaunchedEffect(model.lastReply, speakReplies) {
         val reply = model.lastReply
-        if (speakReplies && reply != null) output.speak(reply) else output.stop()
+        if (speakReplies && reply != null) {
+            // Reachy's own voice first, so replies sound like the robot; the phone's voice only when the hub cannot speak.
+            val voice = model.replyVoice(reply)
+            if (voice == null || !output.play(voice)) output.speak(reply)
+        } else output.stop()
     }
     fun startListening() { output.stop(); micError = null; listening = true; input.start() }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -151,6 +156,8 @@ private fun Bubble(
     sources: List<WebSource> = emptyList(), searchFailed: Boolean = false,
 ) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (fromOwner) Arrangement.End else Arrangement.Start) {
+        // Selectable so a reply (or what was heard) can be long-pressed, highlighted and copied.
+        SelectionContainer {
         Column(
             Modifier.widthIn(max = 300.dp)
                 .background(
@@ -186,6 +193,7 @@ private fun Bubble(
             } else if (searchFailed) Text("The web search was unavailable for this answer.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
             if (context != null) Text("From the meeting “$context”", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
             if (failed) Text("Reply not received", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+        }
         }
     }
 }

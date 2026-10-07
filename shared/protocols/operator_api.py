@@ -51,6 +51,8 @@ MEETING_OUTPUT_DEEP = "/meetings/{meeting_id}/outputs/{kind}/deep"
 # Phase 41 (ADR 0030): owner speaker names and reviewed transcript corrections.
 MEETING_SPEAKERS = "/meetings/{meeting_id}/speakers"
 MEETING_AUDIO = "/meetings/{meeting_id}/audio"
+# Reachy's own synthesized voice for a piece of text (WAV), so a client can speak a reply the way the robot does.
+SPEECH = "/speech"
 MEETING_CORRECTIONS_SUGGEST = "/meetings/{meeting_id}/corrections/suggest"
 MEETING_TERMS = "/meetings/{meeting_id}/terms"
 MEETING_GLOSSARY = "/meeting-terms"
