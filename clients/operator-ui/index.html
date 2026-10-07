@@ -7,6 +7,17 @@
 <body>
   <header><div><span class="eyebrow">WORK COMPANION</span><h1>Reachy operator</h1></div><nav id="nav" hidden><a href="../app/telepresence.html">Telepresence ↗</a><button id="logout" class="secondary">Log out</button></nav></header>
   <p id="notice" role="status" aria-live="polite"></p>
+  <div id="deep-banner" class="deep-banner" role="status" aria-live="polite" hidden><strong>Reachy is unavailable: deep review in progress.</strong> <span id="deep-banner-stage"></span></div>
+  <dialog id="confirm-dialog" aria-labelledby="confirm-title">
+    <h3 id="confirm-title"></h3>
+    <p id="confirm-text"></p>
+    <div class="dialog-actions"><button type="button" id="confirm-cancel" class="secondary">Cancel</button><button type="button" id="confirm-ok"></button></div>
+  </dialog>
+  <dialog id="deep-warning" aria-labelledby="deep-warning-title">
+    <h3 id="deep-warning-title">Reachy will be unavailable</h3>
+    <p id="deep-warning-text"></p>
+    <div class="dialog-actions"><button type="button" id="deep-warning-cancel" class="secondary">Cancel</button><button type="button" id="deep-warning-start">Start deep review</button></div>
+  </dialog>
   <main>
     <section id="login-panel" class="card login">
       <span class="eyebrow">OWNER ACCESS</span><h2>Welcome back</h2><p>Log in to monitor your companion and adjust its settings.</p>
@@ -35,7 +46,7 @@
         <p class="muted">Select a saved chat or start a new record. Live robot voice turns appear here but are not saved in chat history.</p>
 
         <div id="chat-transcript" class="chat-transcript" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions text"><p id="chat-empty">Send a message to start or continue your conversation.</p></div>
-        <form id="chat-form"><label for="chat-text">Message<textarea id="chat-text" rows="3" placeholder="Ask Reachy something… (try /reachy standby)" required disabled></textarea></label><div id="chat-command-hints" hidden></div><label class="check"><input id="force-frontier" type="checkbox"> Use frontier model for this message (sends conversation context to cloud)</label><div class="chat-compose-footer"><span id="chat-status" role="status"></span><button id="chat-send" disabled>Send</button></div></form>
+        <form id="chat-form"><label for="chat-text">Message<textarea id="chat-text" rows="3" placeholder="Ask Reachy something… (try /reachy standby)" required disabled></textarea></label><div id="chat-context" class="chat-context" hidden><span>Meeting context: <strong id="chat-context-title"></strong></span> <button type="button" id="chat-context-clear" class="secondary" aria-label="Stop using this meeting as context">✕</button><small>Questions are answered from this meeting with the local model; the transcript stays on your homelab. For a stronger answer, tick "Use frontier model" below: it sends this meeting's text to your cloud provider.</small></div><div id="chat-command-hints" hidden></div><label class="check"><input id="force-frontier" type="checkbox"> Use frontier model for this message (sends conversation context to cloud)</label><div class="chat-compose-footer"><span id="chat-status" role="status"></span><button id="chat-send" disabled>Send</button></div></form>
       </div></section>
       <section id="settings-pane" hidden aria-labelledby="settings-title"><div class="page-heading"><span class="eyebrow">PREFERENCES &amp; CONNECTIONS</span><h2 id="settings-title">Settings</h2><p>Configure your assistant and its connected features.</p></div>
 <div class="settings-tabs" role="tablist" aria-label="Feature settings"><button id="settings-assistant-tab" role="tab" aria-selected="true" aria-controls="settings-assistant" tabindex="0">Assistant</button><button id="settings-models-tab" role="tab" aria-selected="false" aria-controls="settings-models" tabindex="-1">Models</button><button id="settings-search-tab" role="tab" aria-selected="false" aria-controls="settings-search" tabindex="-1">Web search</button><button id="settings-voice-tab" role="tab" aria-selected="false" aria-controls="settings-voice" tabindex="-1">Voice &amp; motion</button><button id="settings-accounts-tab" role="tab" aria-selected="false" aria-controls="settings-accounts" tabindex="-1">Accounts</button><button id="settings-recognition-tab" role="tab" aria-selected="false" aria-controls="settings-recognition" tabindex="-1">Owner recognition</button></div><div id="settings-assistant" class="settings-panel" role="tabpanel" aria-labelledby="settings-assistant-tab" ><section class="card"><span class="eyebrow">YOUR WORKDAY</span><h2>Session controls</h2>
@@ -240,7 +251,7 @@
           <ul id="planner-note-list" class="planner-list"></ul><p id="planner-note-empty" class="muted">No notes.</p></section>
       </div>
       <div id="meetings-pane" class="workspace meeting-workspace" hidden>
-<aside class="record-sidebar" aria-label="Meeting records"><button id="meeting-new" type="button">＋ Add meeting</button><div class="section-title"><h3>Meeting records</h3><button id="meeting-refresh" class="secondary" type="button" aria-label="Refresh meeting records">↻</button></div><label class="search-label">Find a meeting<input id="meeting-search" type="search" placeholder="Search titles…"></label><ul id="meeting-list" class="meeting-list"></ul><p id="meeting-list-status" role="status"></p></aside><div class="meeting-main">
+<aside class="record-sidebar" aria-label="Meeting records"><button id="meeting-new" type="button">＋ Add meeting</button><div class="section-title"><h3>Meeting records</h3><button id="meeting-refresh" class="secondary" type="button" aria-label="Refresh meeting records">↻</button></div><label class="search-label">Find a meeting<input id="meeting-search" type="search" placeholder="Search titles…"></label><button type="button" id="meeting-clear-failed" class="secondary" hidden>Delete failed and cancelled</button><ul id="meeting-list" class="meeting-list"></ul><p id="meeting-list-status" role="status"></p></aside><div class="meeting-main">
         <section id="meeting-create" class="card" aria-labelledby="meetings-title">
           <span class="eyebrow">RECORDINGS</span><h2 id="meetings-title">Add a meeting</h2>
           <p>Record or upload a meeting to transcribe it and detect speakers locally. Recordings and transcripts stay in your homelab. You can view the transcript and speaker timings separately. Speaker-labelled transcripts and meeting summaries are not available yet.</p>
@@ -266,10 +277,42 @@
             <p id="meeting-detail-context"></p>
             <p id="meeting-detail-status" role="status"></p>
             <details id="meeting-detail-error" hidden><summary>Technical error</summary><pre id="meeting-detail-error-text"></pre></details>
+            <div id="meeting-toolbar" class="meeting-toolbar" role="group" aria-label="What to do with this meeting" hidden>
+              <button type="button" id="meeting-tab-summary" class="secondary" aria-pressed="false">Summary</button>
+              <button type="button" id="meeting-tab-minutes" class="secondary" aria-pressed="false">Minutes</button>
+              <button type="button" id="meeting-tab-transcript" class="secondary" aria-pressed="true">Transcript</button>
+              <button type="button" id="meeting-use-context" class="secondary">Use as context</button>
+              <button type="button" id="meeting-delete" class="secondary">Delete meeting</button>
+            </div>
+            <div id="meeting-output" hidden>
+              <p id="meeting-output-status" role="status"></p>
+              <div id="meeting-output-text" class="output-text"></div>
+              <p id="meeting-output-meta" class="muted"></p>
+              <label>Rerun with <select id="meeting-output-model">
+                <option value="local">Local: private and quick</option>
+                <option value="deep">Deep local: larger model, Reachy unavailable while it runs</option>
+                <option value="cloud">Cloud: sends the transcript text to your cloud provider</option>
+              </select></label>
+              <button type="button" id="meeting-output-run">Rerun</button>
+              <button type="button" id="meeting-output-clear" class="secondary">Clear</button>
+            </div>
+            <div id="meeting-transcript-section">
+            <div id="meeting-suggest" hidden>
+              <h4>Suggest corrections</h4>
+              <label>Model <select id="meeting-suggest-model">
+                <option value="local">Local: private and quick</option>
+                <option value="deep" id="meeting-suggest-deep">Deep local: larger model, Reachy unavailable while it runs</option>
+                <option value="cloud">Cloud: sends the transcript text to your cloud provider</option>
+              </select></label>
+              <button type="button" id="meeting-suggest-go">Suggest corrections</button>
+              <p id="meeting-suggest-status" role="status"></p>
+              <ul id="meeting-suggestions" class="planner-list"></ul>
+            </div>
             <h4>Transcript</h4>
             <div id="meeting-detail-transcript"></div>
             <h4>Speaker segments</h4>
             <div id="meeting-detail-diarization"></div>
+            </div>
           </section>
         </div>
       </div>

@@ -2,6 +2,7 @@
 
 import asyncio
 from datetime import datetime
+from typing import Literal
 from urllib.parse import quote
 
 import httpx
@@ -19,10 +20,22 @@ from shared.protocols.operator_api import (
     AUTH_LOGIN,
     AUTH_LOGOUT,
     AUTH_ME,
+    DEEP_REVIEW_CURRENT,
+    DEEP_REVIEW_INFO,
+    DEEP_REVIEW_JOB,
     LLM_SETTINGS,
     LLM_USAGE,
     MEETING,
     MEETING_CANCEL,
+    MEETING_CORRECTION,
+    MEETING_CORRECTIONS_REPLACE,
+    MEETING_CORRECTIONS_SUGGEST,
+    MEETING_DEEP_REVIEW,
+    MEETING_GLOSSARY,
+    MEETING_OUTPUT,
+    MEETING_OUTPUT_DEEP,
+    MEETING_SPEAKERS,
+    MEETING_TERMS,
     MEETINGS,
     PERSONA_SETTINGS,
     PLANNER_ALARM,
@@ -56,6 +69,35 @@ class PlannerTextBody(BaseModel):
     text: str = Field(min_length=1, max_length=2000)
 
 
+class MeetingSpeakersBody(BaseModel):
+    names: dict[str, str] = Field(max_length=50)
+
+
+class MeetingCorrectionBody(BaseModel):
+    text: str = Field(min_length=1, max_length=2000)
+
+
+class MeetingOutputBody(BaseModel):
+    model: Literal["local", "cloud"] = "local"
+
+
+class MeetingSuggestBody(BaseModel):
+    model: Literal["local", "cloud"] = "local"
+
+
+class MeetingTermBody(BaseModel):
+    term: str = Field(min_length=1, max_length=60)
+
+
+class MeetingTermsBody(BaseModel):
+    terms: list[str] = Field(max_length=50)
+
+
+class MeetingReplaceBody(BaseModel):
+    find: str = Field(min_length=1, max_length=100)
+    replace: str = Field(min_length=1, max_length=100)
+
+
 class PlannerNoteBody(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     body: str = Field(default="", max_length=20000)
@@ -70,6 +112,7 @@ class PlannerAlarmBody(BaseModel):
     label: str = Field(min_length=1, max_length=200)
     due_at: datetime
     station_id: str | None = Field(default=None, max_length=100)
+    volume: int = Field(default=100, ge=10, le=400)
 
 
 class PlannerStationBody(BaseModel):
@@ -180,7 +223,7 @@ def install_operator_routes(
         # owner (no such meeting, past the cancellable stage, bad upload) —
         # pass those through rather than collapsing them into 502 like the
         # generic `proxy()` helper above does for settings routes.
-        if exc.response.status_code in (404, 409, 422):
+        if exc.response.status_code in (404, 409, 422, 503):
             raise HTTPException(exc.response.status_code, exc.response.json().get("detail", "Request rejected")) from None
         raise HTTPException(502, "Companion core request failed") from None
 
@@ -242,6 +285,97 @@ def install_operator_routes(
             meeting_error(exc)
         except (httpx.HTTPError, ValueError):
             raise HTTPException(502, "Companion core unavailable") from None
+
+    @app.put(MEETING_SPEAKERS, dependencies=dependencies)
+    async def set_meeting_speakers(meeting_id: str, body: MeetingSpeakersBody) -> dict:
+        return await planner("PUT", f"/meetings/{quote(meeting_id, safe='')}/speakers", json=body.model_dump())
+
+    @app.get(DEEP_REVIEW_INFO, dependencies=dependencies)
+    async def deep_review_info() -> dict:
+        return await planner("GET", "/deep-review/info")
+
+    @app.get(DEEP_REVIEW_CURRENT, dependencies=dependencies)
+    async def deep_review_current():
+        return await planner("GET", "/deep-review/current")
+
+    @app.get(DEEP_REVIEW_JOB, dependencies=dependencies)
+    async def deep_review_job(job_id: str) -> dict:
+        return await planner("GET", f"/deep-review/{quote(job_id, safe='')}")
+
+    @app.post(MEETING_DEEP_REVIEW, dependencies=dependencies, status_code=202)
+    async def start_deep_review(meeting_id: str) -> dict:
+        # Starts a background job on the larger local model; Reachy is unavailable until it finishes.
+        return await planner("POST", f"/meetings/{quote(meeting_id, safe='')}/corrections/deep-review")
+
+    @app.delete(MEETING, dependencies=dependencies)
+    async def delete_meeting(meeting_id: str) -> dict:
+        return await planner("DELETE", f"/meetings/{quote(meeting_id, safe='')}")
+
+    @app.post(MEETING_OUTPUT, dependencies=dependencies)
+    async def generate_meeting_output(meeting_id: str, kind: str, body: MeetingOutputBody | None = None) -> dict:
+        # The model may need minutes for a long meeting; give it the time.
+        try:
+            return await core.planner_request(
+                "POST", f"/meetings/{quote(meeting_id, safe='')}/outputs/{quote(kind, safe='')}",
+                json=(body or MeetingOutputBody()).model_dump(), timeout=270.0,
+            )
+        except httpx.HTTPStatusError as exc:
+            meeting_error(exc)
+        except (httpx.HTTPError, ValueError):
+            raise HTTPException(502, "Companion core unavailable") from None
+
+    @app.delete(MEETING_OUTPUT, dependencies=dependencies)
+    async def clear_meeting_output(meeting_id: str, kind: str) -> dict:
+        return await planner("DELETE", f"/meetings/{quote(meeting_id, safe='')}/outputs/{quote(kind, safe='')}")
+
+    @app.post(MEETING_OUTPUT_DEEP, dependencies=dependencies, status_code=202)
+    async def deep_meeting_output(meeting_id: str, kind: str) -> dict:
+        return await planner("POST", f"/meetings/{quote(meeting_id, safe='')}/outputs/{quote(kind, safe='')}/deep")
+
+    @app.put(MEETING_TERMS, dependencies=dependencies)
+    async def set_meeting_terms(meeting_id: str, body: MeetingTermsBody) -> dict:
+        return await planner("PUT", f"/meetings/{quote(meeting_id, safe='')}/terms", json=body.model_dump())
+
+    @app.get(MEETING_GLOSSARY, dependencies=dependencies)
+    async def list_glossary() -> list:
+        return await planner("GET", "/meeting-terms")
+
+    @app.post(MEETING_GLOSSARY, dependencies=dependencies)
+    async def add_glossary_term(body: MeetingTermBody) -> list:
+        return await planner("POST", "/meeting-terms", json=body.model_dump())
+
+    @app.delete(MEETING_GLOSSARY, dependencies=dependencies)
+    async def delete_glossary_term(term: str = Query(min_length=1, max_length=60)) -> list:
+        return await planner("DELETE", "/meeting-terms", params={"term": term})
+
+    @app.post(MEETING_CORRECTIONS_SUGGEST, dependencies=dependencies)
+    async def suggest_meeting_corrections(meeting_id: str, body: MeetingSuggestBody | None = None) -> dict:
+        # The local model reads the transcript in several passes; allow it time.
+        try:
+            return await core.planner_request(
+                "POST", f"/meetings/{quote(meeting_id, safe='')}/corrections/suggest",
+                json=(body or MeetingSuggestBody()).model_dump(), timeout=240.0,
+            )
+        except httpx.HTTPStatusError as exc:
+            meeting_error(exc)
+        except (httpx.HTTPError, ValueError):
+            raise HTTPException(502, "Companion core unavailable") from None
+
+    @app.post(MEETING_CORRECTIONS_REPLACE, dependencies=dependencies)
+    async def replace_in_meeting(meeting_id: str, body: MeetingReplaceBody) -> dict:
+        return await planner(
+            "POST", f"/meetings/{quote(meeting_id, safe='')}/corrections/replace", json=body.model_dump()
+        )
+
+    @app.put(MEETING_CORRECTION, dependencies=dependencies)
+    async def set_meeting_correction(meeting_id: str, segment: int, body: MeetingCorrectionBody) -> dict:
+        return await planner(
+            "PUT", f"/meetings/{quote(meeting_id, safe='')}/corrections/{segment}", json=body.model_dump()
+        )
+
+    @app.delete(MEETING_CORRECTION, dependencies=dependencies)
+    async def clear_meeting_correction(meeting_id: str, segment: int) -> dict:
+        return await planner("DELETE", f"/meetings/{quote(meeting_id, safe='')}/corrections/{segment}")
 
     @app.get(PLANNER_TASKS, dependencies=dependencies)
     async def planner_list_tasks(status: str | None = Query(None, pattern="^(open|done)$")) -> list[dict]:

@@ -216,7 +216,9 @@ default `Qwen/Qwen2.5-7B-Instruct-AWQ`, overridable with `VLLM_MODEL`;
 threshold and lists likely holders; it never stops them. `--check`, `--status`
 and `--stop` (this container only) are available. To make it the active local
 model, set the `local` provider in Settings to `http://vllm:8000/v1` and the
-served model name. Record the previous OVMS values first so the switch can be
+served model name, which is now `reachy-local` (the compose service passes
+`--served-model-name reachy-local`; every local tier is served under that name,
+so a model swap never changes the setting). Record the previous OVMS values first so the switch can be
 reversed from Settings; hosted fallback is unchanged.
 
 For assisted live verification, put `CLOUD_LLM_BASE_URL`, `CLOUD_LLM_MODEL`,
@@ -224,6 +226,29 @@ and `CLOUD_LLM_API_KEY` in gitignored `deploy/homelab/.env.local`, never chat.
 These are verification inputs, not automatically loaded runtime settings.
 The hosted-provider evidence and reasoning-model token-budget caveat are in
 [verification history](verification/history.md).
+
+### Model manager (Phase 42B/42C)
+
+The model manager swaps the vLLM tiers and always restores the fast one
+([ADR 0031](adr/0031-three-tier-local-model-escalation.md),
+[Phase 42](phase-42.md)). It is a **host process**, started by hand:
+
+```bash
+scripts/start-model-manager.sh --check    # read-only
+scripts/start-model-manager.sh --bridge   # listens on the Docker bridge address only
+```
+
+`--bridge` binds the `docker0` address (for example 172.17.0.1), which
+companion-core reaches as `host.docker.internal:8090` and the LAN does not;
+without it the manager listens on 127.0.0.1 and core cannot use it. Its token is
+generated into `deploy/homelab/.env.model-manager` (mode 600, gitignored, never
+printed); compose reads that file for companion-core as an optional env file, so
+without it the Deep local option reports "the model manager is not configured".
+After creating or rotating the token, recreate companion-core (`docker compose
+up -d companion-core`). Do not run `docker compose config` into logs: it prints
+interpolated environment values. The manager is not supervised: if it is not
+running, Deep local is disabled and nothing else changes. Whoever can call it can
+take the local model offline for minutes, so treat its token like Docker access.
 
 ## Web search
 
@@ -718,7 +743,7 @@ explicitly disposable project. Leave unrelated services such as OVMS alone.
 ## Schema upgrades and credential keys
 
 Core and hub require the revision declared in
-[`shared/database.py`](../shared/database.py) (`018_action_receipts` at this snapshot).
+[`shared/database.py`](../shared/database.py) (`021_meeting_outputs` at this snapshot).
 The ordered Alembic history ships
 in core's image; SQL stores perform compatibility checks, not startup DDL.
 Compose runs `migrate` before hub/core, including through
@@ -738,6 +763,12 @@ Revision `016_alarm_volume` adds `alarms.volume` (percent gain, default 100). Sa
 Revision `017_persona_tone` adds `persona_config.tone` (reply style preset, default `default`). Same additive, core-only procedure. Deployed 2026-10-06.
 
 Revision `018_action_receipts` (Phase 39, [ADR 0028](adr/0028-persona-responses-and-action-receipts.md)) adds the `action_receipts` table. Same additive, core-only procedure. Deployed 2026-10-06 (backup `reachy-before-phase39-20261006-1248.dump`; migrate, core, hub and coding-agent rebuilt; revision verified).
+
+Revision `019_meeting_annotations` (Phase 41, [ADR 0030](adr/0030-meeting-speaker-names-and-reviewed-corrections.md)) adds `meetings.speaker_names` and `meetings.transcript_corrections`. Deployed 2026-10-07 (backup `reachy-before-phase41-20261007-1333.dump`; 5 existing meetings kept). Rebuild `migrate`, `companion-core`, `reachy-hub` and `coding-agent-service` together.
+
+Revision `020_meeting_terms` (Phase 41) adds `meetings.key_terms` and the `meeting_terms` glossary table. Deployed 2026-10-07 (backup `reachy-before-meeting-terms-20261007-1456.dump`; 5 existing meetings kept).
+
+Revision `021_meeting_outputs` (Phase 43) adds nullable `meetings.summary` and `meetings.minutes` JSON. Deployed 2026-10-07 (backup `reachy-before-meeting-outputs-20261007-1718.dump`; 5 existing meetings kept).
 
 Revision `013_coding_agent` adds the coding-agent session tables and core's
 completion-notification ledger. coding-agent-service is now a database client:

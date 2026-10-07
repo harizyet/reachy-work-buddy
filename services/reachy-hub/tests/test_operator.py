@@ -505,13 +505,60 @@ def test_alarm_and_station_proxy_requires_auth_and_round_trips_through_core():
 
     alarm = client.post(
         "/planner/alarms",
-        json={"label": "wake", "due_at": "2030-01-01T07:00:00Z", "station_id": station["id"]},
+        json={"label": "wake", "due_at": "2030-01-01T07:00:00Z", "station_id": station["id"], "volume": 250},
         headers=CSRF,
     ).json()
     assert alarm["station_id"] == station["id"] and alarm["status"] == "scheduled"
+    assert alarm["volume"] == 250
     assert client.post("/planner/alarms", json={"label": "x", "due_at": "2030-01-01T07:00:00"}, headers=CSRF).status_code == 422
     assert client.get("/planner/alarms").json()[0]["id"] == alarm["id"]
     assert client.post("/planner/alarms/stop", headers=CSRF).json() == {"stopped": False}
     assert client.delete(f"/planner/alarms/{alarm['id']}", headers=CSRF).json()["status"] == "cancelled"
     assert client.delete("/planner/alarms/missing", headers=CSRF).status_code == 404
     assert client.delete(f"/planner/stations/{station['id']}", headers=CSRF).json() == {"deleted": True}
+
+
+def test_meeting_speaker_and_correction_proxies_need_auth_and_pass_core_errors_through():
+    client = make_client()
+    files = {"audio": ("meeting.wav", b"RIFF....WAVEfmt ", "audio/wav")}
+    assert client.put("/meetings/x/speakers", json={"names": {}}, headers=CSRF).status_code == 401
+    assert client.post("/meetings/x/corrections/suggest", headers=CSRF).status_code == 401
+    assert client.put("/meetings/x/corrections/0", json={"text": "t"}, headers=CSRF).status_code == 401
+    assert client.delete("/meetings/x/corrections/0", headers=CSRF).status_code == 401
+    assert client.post("/meetings/x/corrections/replace", json={"find": "a", "replace": "b"}, headers=CSRF).status_code == 401
+    assert client.get("/meeting-terms").status_code == 401
+    assert client.delete("/meetings/x", headers=CSRF).status_code == 401
+    assert client.post("/meetings/x/outputs/summary", headers=CSRF).status_code == 401
+    assert client.delete("/meetings/x/outputs/summary", headers=CSRF).status_code == 401
+    assert client.post("/meetings/x/outputs/summary/deep", headers=CSRF).status_code == 401
+    assert client.get("/deep-review/info").status_code == 401
+    assert client.get("/deep-review/current").status_code == 401
+    assert client.get("/deep-review/x").status_code == 401
+    assert client.post("/meetings/x/corrections/deep-review", headers=CSRF).status_code == 401
+    assert client.put("/meetings/x/terms", json={"terms": []}, headers=CSRF).status_code == 401
+
+    login(client)
+    meeting_id = client.post("/meetings", data={"title": "Sync"}, files=files, headers=CSRF).json()["id"]
+    # No transcript or diarization yet: core's 4xx reaches the owner instead of a 502.
+    assert client.put(f"/meetings/{meeting_id}/speakers", json={"names": {"SPEAKER_00": "Ana"}}, headers=CSRF).status_code == 422
+    assert client.post(f"/meetings/{meeting_id}/corrections/suggest", headers=CSRF).status_code == 409
+    assert client.put(f"/meetings/{meeting_id}/corrections/0", json={"text": "t"}, headers=CSRF).status_code == 404
+    assert client.put(f"/meetings/{meeting_id}/corrections/0", json={"text": ""}, headers=CSRF).status_code == 422
+    assert client.post(f"/meetings/{meeting_id}/corrections/replace", json={"find": "a", "replace": "b"}, headers=CSRF).status_code == 409
+    # Phase 43: outputs need a processed transcript (409 passes through), unknown kinds are 422, delete works.
+    assert client.post(f"/meetings/{meeting_id}/outputs/summary", headers=CSRF).status_code == 409
+    assert client.post(f"/meetings/{meeting_id}/outputs/summary/deep", headers=CSRF).status_code == 409
+    assert client.delete(f"/meetings/{meeting_id}/outputs/poem", headers=CSRF).status_code == 422
+    assert client.delete(f"/meetings/{meeting_id}", headers=CSRF).status_code == 409  # still queued: cancel first
+    assert client.post(f"/meetings/{meeting_id}/cancel", headers=CSRF).status_code == 200
+    # Deep local review: with no model manager configured, core's refusal reaches the owner as a 409, not a 502.
+    assert client.get("/deep-review/info").json()["configured"] is False
+    assert client.get("/deep-review/current").json() is None
+    assert client.get("/deep-review/nope").status_code == 404
+    assert client.post(f"/meetings/{meeting_id}/corrections/deep-review", headers=CSRF).status_code == 409
+    assert client.put(f"/meetings/{meeting_id}/terms", json={"terms": ["Gemini"]}, headers=CSRF).json()["key_terms"] == ["Gemini"]
+    assert client.post("/meeting-terms", json={"term": "Codex"}, headers=CSRF).json() == ["Codex"]
+    assert client.get("/meeting-terms").json() == ["Codex"]
+    assert client.delete("/meeting-terms", params={"term": "codex"}, headers=CSRF).json() == []
+    assert client.post("/meeting-terms", json={"term": ""}, headers=CSRF).status_code == 422
+    assert client.put("/meetings/missing/speakers", json={"names": {}}, headers=CSRF).status_code == 404

@@ -187,6 +187,21 @@ read-only `--check` guard before any daemon start. Validate launcher changes
 on the target platform, with supervised permission for motion; syntax checks
 alone missed those historical failures.
 
+## Android app
+
+`clients/android` needs JDK 17 and the Android SDK (platform 35, build-tools
+35.0.0); see its [README](../clients/android/README.md). `./gradlew
+:app:testDebugUnitTest` runs the JVM tests against a mock hub;
+`:app:assembleDebug` builds the APK. Emulator checks need KVM and a throwaway
+hub, never the production stack.
+
+## Model manager
+
+`services/model-manager` has no database. `pytest services/model-manager` runs its state machine against a fake
+runtime with injected faults and a fake clock, and its Docker layer against a fake command runner and a mock vLLM. The
+real-hardware acceptance run is described in [Phase 42](phase-42.md#phase-42b-acceptance); it swaps the production
+model and needs the owner's permission.
+
 ## Migration and SecretStore tests
 
 `test_database_migrations.py` is opt-in and creates/drops uniquely named

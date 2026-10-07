@@ -13,6 +13,51 @@ const REACHY_COMMANDS = ['/reachy standby', '/reachy wake', '/reachy status'];
 const SUGGESTED_COMMAND_PATTERN = /\/reachy (standby|wake|status)\b/;
 
 // Search evidence belongs to this reply, never the global debug log.
+// Only plain http(s) links without credentials are ever made clickable; anything else stays literal text.
+function safeUrl(value) {
+  try {
+    const parsed = new URL(value);
+    return ['https:', 'http:'].includes(parsed.protocol) && !parsed.username && !parsed.password ? parsed.href : null;
+  } catch { return null; }
+}
+
+function citationLink(label, url, className) {
+  const link = document.createElement('a');
+  link.textContent = label; link.href = url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+  if (className) link.className = className;
+  return link;
+}
+
+// The model cites sources as [S1], [S2]: turn each into a link to that result, leaving unknown ids as plain text.
+function fillWithCitations(paragraph, text, results) {
+  let last = 0;
+  for (const match of text.matchAll(/\[S(\d+)\]/g)) {
+    paragraph.append(document.createTextNode(text.slice(last, match.index)));
+    const url = safeUrl(results[Number(match[1]) - 1]?.url || '');
+    if (url) paragraph.append(citationLink(match[0], url, 'chat-cite'));
+    else paragraph.append(document.createTextNode(match[0]));
+    last = match.index + match[0].length;
+  }
+  paragraph.append(document.createTextNode(text.slice(last)));
+}
+
+// A visible Sources list under the answer so any claim can be checked, not only inside the collapsed search details.
+function sourcesList(results) {
+  const box = document.createElement('div');
+  box.className = 'chat-sources';
+  const heading = document.createElement('strong'); heading.textContent = 'Sources';
+  const list = document.createElement('ol');
+  for (const [index, result] of results.entries()) {
+    const item = document.createElement('li');
+    const label = `[S${index + 1}] ${result.source_domain ? result.source_domain + ': ' : ''}${result.title || result.url}`;
+    const url = safeUrl(result.url);
+    item.append(url ? citationLink(label, url) : document.createTextNode(label));
+    list.append(item);
+  }
+  box.append(heading, list);
+  return box;
+}
+
 function searchDetails(search) {
   const details = document.createElement('details');
   details.className = 'chat-search';
@@ -182,14 +227,29 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
     el('chat-form').requestSubmit();
   }
 
-  function appendMessage(speaker, text, {fromUser = speaker === 'You', note = false, webSearch = null} = {}) {
+  // A meeting attached as context (Phase 43): questions are answered from it, with the local model only.
+  let contextMeeting = null;
+  function renderContext() {
+    el('chat-context').hidden = !contextMeeting;
+    el('chat-context-title').textContent = contextMeeting ? contextMeeting.title : '';
+  }
+  el('chat-context-clear').addEventListener('click', () => { contextMeeting = null; renderContext(); });
+
+  function appendMessage(speaker, text, {fromUser = speaker === 'You', note = false, webSearch = null, fromMeeting = null} = {}) {
     el('chat-empty')?.remove();
     const item = document.createElement('article');
     item.className = `chat-message ${fromUser ? 'from-user' : 'from-reachy'}${note ? ' voice-note' : ''}`;
     const label = document.createElement('strong'); label.textContent = speaker;
-    const body = document.createElement('p'); body.textContent = text;
+    const body = document.createElement('p');
+    const cited = !fromUser && webSearch?.results?.length;
+    if (cited) fillWithCitations(body, text, webSearch.results); else body.textContent = text;
     item.append(label, body);
+    if (cited) item.append(sourcesList(webSearch.results));
     if (!fromUser && webSearch) item.append(searchDetails(webSearch));
+    if (!fromUser && fromMeeting) {
+      const source = document.createElement('small'); source.className = 'chat-source';
+      source.textContent = `From the meeting \u201c${fromMeeting}\u201d`; item.append(source);
+    }
     // Phase 24b: a suggested-command reply renders as a real button, not
     // by re-parsing the reply text as HTML — clicking it re-sends the
     // literal command text through the normal /messages path, the same
@@ -316,10 +376,10 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
       sent = true;
       const result = await api('/messages', {
         method: 'POST', signal,
-        body: JSON.stringify({user_id: recipient, channel: 'web', text, input_modality: 'text', chat_id: activeChat, ...(forceFrontier ? {force_frontier: true} : {})}),
+        body: JSON.stringify({user_id: recipient, channel: 'web', text, input_modality: 'text', chat_id: activeChat, ...(contextMeeting ? {context_meeting_id: contextMeeting.id} : {}), ...(forceFrontier ? {force_frontier: true} : {})}),
       });
       if (generation !== version || !isLoggedIn()) return;
-      appendMessage('Reachy', result.reply, {webSearch: result.web_search});
+      appendMessage('Reachy', result.reply, {webSearch: result.web_search, fromMeeting: result.context_meeting});
       el('chat-status').textContent = '';
       await refreshSession();
     } catch (error) {
@@ -363,6 +423,8 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
   return {
     setUser, refreshSession, appendVoiceTurn, loadHistory,
     currentUser() { return user; },
+    setContext(meeting) { contextMeeting = meeting; renderContext(); },
+    clearContext() { contextMeeting = null; renderContext(); },
     initializeUser(defaultUser) { if (!user) setUser(defaultUser); },
     updateTelegram(telegram) {
       el('chat-telegram').textContent = !telegram ? 'Telegram status unavailable. You can still try web chat.'
@@ -372,6 +434,7 @@ function createChat({api, isLoggedIn, onUserChange, onBusyChange}) {
       el('chat-telegram').classList.toggle('warn', Boolean(telegram?.configured && !telegram.healthy));
     },
     reset() {
+      contextMeeting = null; renderContext();
       generation += 1;
       requestController?.abort(); requestController = null;
       user = null; pending = false;

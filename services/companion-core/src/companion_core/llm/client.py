@@ -12,7 +12,9 @@ PROVIDER_TIMEOUT_SECONDS = 60
 
 
 class ChatProvider(Protocol):
-    async def complete(self, history: list[dict[str, str]], *, max_tokens: int | None = None) -> str: ...
+    async def complete(
+        self, history: list[dict[str, str]], *, max_tokens: int | None = None, timeout: float | None = None
+    ) -> str: ...
 
 
 class ProviderUnavailable(Exception):
@@ -53,7 +55,9 @@ class OpenAICompatibleChatProvider:
         self.usage = usage
         self.transport = transport
 
-    async def complete(self, history: list[dict[str, str]], *, max_tokens: int | None = None) -> str:
+    async def complete(
+        self, history: list[dict[str, str]], *, max_tokens: int | None = None, timeout: float | None = None
+    ) -> str:
         entry = LLMUsageEntry(
             model=self.config.model,
             role=self.role,
@@ -68,10 +72,10 @@ class OpenAICompatibleChatProvider:
             )
             # Redirects must never carry credentials to a different endpoint.
             async with (
-                asyncio.timeout(PROVIDER_TIMEOUT_SECONDS),
+                asyncio.timeout(timeout or PROVIDER_TIMEOUT_SECONDS),
                 httpx.AsyncClient(
                     transport=self.transport,
-                    timeout=PROVIDER_TIMEOUT_SECONDS,
+                    timeout=timeout or PROVIDER_TIMEOUT_SECONDS,
                     follow_redirects=False,
                 ) as client,
             ):

@@ -45,6 +45,16 @@ OWNER_RECOGNITION_BENCHMARK_FACE_EXPORT = "/owner-recognition/benchmark/face/exp
 MEETINGS = "/meetings"
 MEETING = "/meetings/{meeting_id}"
 MEETING_CANCEL = "/meetings/{meeting_id}/cancel"
+# Phase 43: generated summary and minutes (local or cloud inline, deep local as a job).
+MEETING_OUTPUT = "/meetings/{meeting_id}/outputs/{kind}"
+MEETING_OUTPUT_DEEP = "/meetings/{meeting_id}/outputs/{kind}/deep"
+# Phase 41 (ADR 0030): owner speaker names and reviewed transcript corrections.
+MEETING_SPEAKERS = "/meetings/{meeting_id}/speakers"
+MEETING_CORRECTIONS_SUGGEST = "/meetings/{meeting_id}/corrections/suggest"
+MEETING_TERMS = "/meetings/{meeting_id}/terms"
+MEETING_GLOSSARY = "/meeting-terms"
+MEETING_CORRECTIONS_REPLACE = "/meetings/{meeting_id}/corrections/replace"
+MEETING_CORRECTION = "/meetings/{meeting_id}/corrections/{segment}"
 
 # Hub-owned web transcript records.
 CHATS = "/chats"
@@ -72,3 +82,9 @@ PLANNER_RECEIPTS = "/planner/receipts"
 PLANNER_STATIONS = "/planner/stations"
 PLANNER_STATION = "/planner/stations/{item_id}"
 PLANNER_STATIONS_SEARCH = "/planner/stations/search"
+
+# Phase 42C (ADR 0031): deep local review on the larger model. Reachy is unavailable while it runs.
+DEEP_REVIEW_INFO = "/deep-review/info"
+DEEP_REVIEW_CURRENT = "/deep-review/current"
+DEEP_REVIEW_JOB = "/deep-review/{job_id}"
+MEETING_DEEP_REVIEW = "/meetings/{meeting_id}/corrections/deep-review"

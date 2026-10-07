@@ -15,6 +15,7 @@ from companion_core.meetings.models import (
     ORPHAN_RESUME,
     Meeting,
     MeetingJobStatus,
+    MeetingOutput,
 )
 
 
@@ -78,12 +79,44 @@ class MeetingStore(Protocol):
 
     async def mark_failed(self, meeting_id: str, *, error_detail: str) -> Meeting | None: ...
     async def cancel_meeting(self, meeting_id: str) -> Meeting | None: ...
+    async def set_speaker_names(self, meeting_id: str, names: dict[str, str]) -> Meeting | None:
+        """Replace the whole speaker-name map."""
+        ...
+
+    async def set_correction(self, meeting_id: str, segment: int, text: str | None) -> Meeting | None:
+        """Overlay text for one transcript segment; None removes the overlay."""
+        ...
+
+    async def set_corrections(self, meeting_id: str, updates: dict[int, str]) -> Meeting | None:
+        """Overlay several segments in one write."""
+        ...
+
+    async def set_key_terms(self, meeting_id: str, terms: list[str]) -> Meeting | None:
+        """Replace this meeting's vocabulary."""
+        ...
+
+    async def list_terms(self) -> list[str]:
+        """The owner's global glossary, alphabetical."""
+        ...
+
+    async def set_output(self, meeting_id: str, kind: str, output: MeetingOutput | None) -> Meeting | None:
+        """Store (or with None clear) the generated summary or minutes."""
+        ...
+
+    async def delete_meeting(self, meeting_id: str) -> bool:
+        """Remove the record and its audio. The caller has already checked the meeting is in a deletable state."""
+        ...
+
+    async def add_term(self, term: str) -> None: ...
+
+    async def delete_term(self, term: str) -> bool: ...
 
 
 class InMemoryMeetingStore:
     def __init__(self) -> None:
         self._meetings: dict[str, Meeting] = {}
         self._audio: dict[str, bytes] = {}
+        self._terms: dict[str, str] = {}
 
     async def create_meeting(
         self,
@@ -208,3 +241,46 @@ class InMemoryMeetingStore:
         if meeting.status not in CANCELLABLE_STATUSES:
             raise MeetingNotCancellableError(f"meeting '{meeting_id}' is past the cancellable stage")
         return self._touch(meeting, status=MeetingJobStatus.CANCELLED)
+
+    async def set_speaker_names(self, meeting_id: str, names: dict[str, str]) -> Meeting | None:
+        meeting = self._meetings.get(meeting_id)
+        return None if meeting is None else self._touch(meeting, speaker_names=dict(names))
+
+    async def set_correction(self, meeting_id: str, segment: int, text: str | None) -> Meeting | None:
+        meeting = self._meetings.get(meeting_id)
+        if meeting is None:
+            return None
+        corrections = dict(meeting.transcript_corrections)
+        if text is None:
+            corrections.pop(str(segment), None)
+        else:
+            corrections[str(segment)] = text
+        return self._touch(meeting, transcript_corrections=corrections)
+
+    async def set_corrections(self, meeting_id: str, updates: dict[int, str]) -> Meeting | None:
+        meeting = self._meetings.get(meeting_id)
+        if meeting is None:
+            return None
+        merged = {**meeting.transcript_corrections, **{str(i): t for i, t in updates.items()}}
+        return self._touch(meeting, transcript_corrections=merged)
+
+    async def set_key_terms(self, meeting_id: str, terms: list[str]) -> Meeting | None:
+        meeting = self._meetings.get(meeting_id)
+        return None if meeting is None else self._touch(meeting, key_terms=list(terms))
+
+    async def list_terms(self) -> list[str]:
+        return sorted(self._terms.values(), key=str.lower)
+
+    async def add_term(self, term: str) -> None:
+        self._terms.setdefault(term.lower(), term)
+
+    async def delete_term(self, term: str) -> bool:
+        return self._terms.pop(term.lower(), None) is not None
+
+    async def set_output(self, meeting_id: str, kind: str, output: MeetingOutput | None) -> Meeting | None:
+        meeting = self._meetings.get(meeting_id)
+        return None if meeting is None else self._touch(meeting, **{kind: output})
+
+    async def delete_meeting(self, meeting_id: str) -> bool:
+        self._audio.pop(meeting_id, None)
+        return self._meetings.pop(meeting_id, None) is not None

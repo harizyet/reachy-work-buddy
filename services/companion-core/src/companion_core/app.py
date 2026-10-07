@@ -158,6 +158,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Literal
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -209,6 +210,11 @@ from companion_core.consent.models import ActionScope, ConfirmationRequest
 from companion_core.consent.postgres_store import PostgresConfirmationStore
 from companion_core.consent.store import ConfirmationStore
 from companion_core.conversation import ConversationStore
+from companion_core.deep_review import (
+    DeepReviewRunner,
+    DeepReviewUnavailable,
+    ModelManagerClient,
+)
 from companion_core.email.models import DraftStatus, EmailDraft, EmailMessage
 from companion_core.email.postgres_store import PostgresEmailStore
 from companion_core.email.sender import smtp_send
@@ -230,7 +236,15 @@ from companion_core.llm.postgres_store import (
 )
 from companion_core.llm.router import route_completion
 from companion_core.llm.store import LLMSettingsStore, LLMUsageStore, masked_config
-from companion_core.meetings.models import SUPPORTED_AUDIO_EXTENSIONS, Meeting
+from companion_core.meetings import corrections as meeting_corrections
+from companion_core.meetings import outputs as meeting_outputs
+from companion_core.meetings.models import (
+    DELETABLE_STATUSES,
+    READY_FOR_OUTPUTS,
+    SUPPORTED_AUDIO_EXTENSIONS,
+    Meeting,
+    MeetingOutput,
+)
 from companion_core.meetings.postgres_store import PostgresMeetingStore
 from companion_core.meetings.speech_clients import (
     HTTPDiarizationClient,
@@ -278,6 +292,7 @@ from companion_core.websearch.policy import (
     localize_query,
     next_search_topic,
     should_search,
+    should_search_for_meeting_question,
 )
 from companion_core.websearch.postgres_store import PostgresSearchSettingsStore
 from companion_core.websearch.prompt import build_grounding_messages
@@ -288,7 +303,8 @@ from companion_core.websearch.store import (
     masked_search_config,
     usage_period,
 )
-from shared.models.llm import LLMConfigPatch
+from shared.models.deep_review import DeepReviewInfo, DeepReviewJob
+from shared.models.llm import LLMConfigPatch, LLMRoutingMode
 from shared.models.memory import MemoryRecord, MemoryType
 from shared.models.persona import TONE_INSTRUCTIONS, PersonaConfig, PersonaPatch
 from shared.models.rag import DocumentChunk, RetrievedChunk
@@ -317,10 +333,13 @@ class ConversationTurnRequest(BaseModel):
     text: str
     input_modality: InputModality = InputModality.TEXT
     force_frontier: bool = False
+    # A meeting the owner attached as context for this conversation (Phase 43).
+    context_meeting_id: str | None = None
 
 
 class ConversationTurnResponse(BaseModel):
     web_search: TurnWebSearch | None = None
+    context_meeting: str | None = None  # the title of the meeting this reply drew on, if any
     reply: str
     turn_count: int
     privacy: Privacy
@@ -362,6 +381,62 @@ class CreateAlarmRequest(BaseModel):
 class CreateStationRequest(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     guide_id: str = Field(pattern=r"^[A-Za-z][0-9]{1,12}$")
+
+
+class SpeakerNamesRequest(BaseModel):
+    """Partial update: a blank name clears that speaker's name."""
+
+    names: dict[str, str] = Field(max_length=50)
+
+
+class CorrectionRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=2000)
+
+
+class SuggestCorrectionsRequest(BaseModel):
+    """Where the transcript text is sent. Cloud only when the owner picks it for this one request."""
+
+    model: Literal["local", "cloud"] = "local"
+
+
+class OutputRequest(BaseModel):
+    model: Literal["local", "cloud"] = "local"
+
+
+class TermRequest(BaseModel):
+    term: str = Field(min_length=1, max_length=60)
+
+
+class KeyTermsRequest(BaseModel):
+    terms: list[str] = Field(max_length=50)
+
+
+class ReplaceEverywhereRequest(BaseModel):
+    find: str = Field(min_length=1, max_length=100)
+    replace: str = Field(min_length=1, max_length=100)
+
+
+class ReplaceEverywhereResponse(BaseModel):
+    meeting: Meeting
+    replaced_segments: int
+
+
+class CorrectionSuggestionResponse(BaseModel):
+    segment: int
+    original: str
+    suggested: str
+    reason: str
+    corrected_text: str
+    confidence: str = "medium"
+    source: str = "model"
+
+
+class CorrectionSuggestionsResponse(BaseModel):
+    suggestions: list[CorrectionSuggestionResponse]
+    checked_segments: int
+    truncated: bool
+    terms_used: int = 0
+    candidates_checked: int = 0
 
 
 class AlarmDeliveryRequest(BaseModel):
@@ -461,6 +536,7 @@ def create_app(
     persona_store: PersonaStore | None = None,
     search_settings_store: SearchSettingsStore | None = None,
     llm_transport: httpx.AsyncBaseTransport | None = None,
+    model_manager_client: ModelManagerClient | None = None,
     websearch_transport: httpx.AsyncBaseTransport | None = None,
     hub_base_url: str | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
@@ -546,6 +622,12 @@ def create_app(
     # for the same docker-compose `${VAR:-}` reason as the email env
     # lookups above.
     hub_bearer_token = hub_bearer_token or os.environ.get("REMOTE_UI_TOKEN") or None
+    # Phase 42C: the host's model manager, reached over the Docker bridge. Without a token the Deep Local option is off.
+    manager_token = os.environ.get("MODEL_MANAGER_TOKEN") or None
+    if model_manager_client is None and manager_token:
+        model_manager_client = ModelManagerClient(
+            os.environ.get("MODEL_MANAGER_URL") or "http://host.docker.internal:8090", manager_token
+        )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -645,6 +727,9 @@ def create_app(
             await app.state.diarization_client.aclose()
             if owns_accounts:
                 await app.state.accounts.repository.close()
+            await app.state.deep_review.close()
+            if model_manager_client is not None:
+                await model_manager_client.aclose()
             await app.state.hub_client.aclose()
             await app.state.coding_agent_client.aclose()
             if owns_coding_agent_notifications:
@@ -808,6 +893,8 @@ def create_app(
 
     async def process_conversation_turn(turn: ConversationTurnRequest) -> ConversationTurnResponse:
         web_search = None
+        context_title: str | None = None
+        meeting_missing = False
         generation = conversation_store.generation
         history = conversation_store.append(turn.session_id, turn.channel, turn.text)
 
@@ -1342,9 +1429,18 @@ def create_app(
                         persona = await app.state.persona_store.get()
                         search_config = await app.state.search_settings_store.get()
                         search_topic = conversation_store.search_topic(turn.session_id)
+                        attached = None
+                        if turn.context_meeting_id:
+                            attached = await app.state.meeting_store.get_meeting(turn.context_meeting_id)
+                            if attached is None or not attached.transcript_segments:
+                                attached, meeting_missing = None, True
                         searched = should_search(
                             turn.text, policy=search_config.policy, follows_search=search_topic is not None,
+                        ) or (
+                            attached is not None
+                            and should_search_for_meeting_question(turn.text, policy=search_config.policy)
                         )
+                        failed = False
                         grounding_messages: list[dict[str, str]] = []
                         if searched:
                             topic_query = build_query(
@@ -1357,7 +1453,6 @@ def create_app(
                             query = localize_query(topic_query, persona.location)
                             attempts = []
                             results = []
-                            failed = False
                             started = time.monotonic()
                             try:
                                 results = await search_with_rotation(
@@ -1384,6 +1479,14 @@ def create_app(
                                 served_by=served, total_ms=round((time.monotonic() - started) * 1000),
                                 attempts=attempts, results=results,
                             ))
+                        # An attached meeting is work-private speech: the answer is generated locally unless the owner
+                        # explicitly asked for the frontier model for this message (ADR 0030).
+                        meeting_context_text = None
+                        if attached is not None:
+                            meeting_context_text = meeting_outputs.build_context(
+                                attached, turn.text, searched=searched and not failed
+                            )
+                            context_title = attached.title
                         history_with_persona = [
                             {"role": "system", "content": persona.system_prompt},
                             *([{"role": "system", "content": TONE_INSTRUCTIONS[persona.tone]}]
@@ -1391,21 +1494,31 @@ def create_app(
                             {"role": "system", "content": ACTION_BOUNDARY_INSTRUCTION},
                             context_message(persona, datetime.now(UTC)),
                             *grounding_messages,
+                            *([{"role": "system", "content": meeting_context_text}] if meeting_context_text else []),
                             *([{"role": "system", "content": SPOKEN_REPLY_INSTRUCTION}]
                               if turn.input_modality == InputModality.VOICE else []),
                             *conversation_store.messages(turn.session_id),
                         ]
                         spoken = turn.input_modality == InputModality.VOICE
+                        call_config = config
+                        if meeting_context_text and not turn.force_frontier:
+                            call_config = config.model_copy(
+                                update={"routing": config.routing.model_copy(update={"mode": LLMRoutingMode.LOCAL_ONLY})}
+                            )
                         reply = await route_completion(
-                            config, history_with_persona, app.state.llm_usage_store,
+                            call_config, history_with_persona, app.state.llm_usage_store,
                             force_frontier=turn.force_frontier, transport=llm_transport,
                             local_max_tokens=SPOKEN_REPLY_MAX_TOKENS if spoken else None,
                         )
                         if spoken:
                             reply = spoken_reply(reply)
+                        if meeting_missing:
+                            reply += "\n\n(The meeting you attached is no longer available, so this answer does not use it.)"
                     except ProviderUnavailable:
                         reply = "The language model is unavailable right now. Please try again shortly."
             privacy = classify_question_privacy(turn.text)
+            if context_title:
+                privacy = Privacy.WORK_PRIVATE  # the answer draws on meeting speech: never spoken on a shared speaker
             carried = privacy
             if config.local is not None or config.cloud is not None or turn.force_frontier:
                 # The model's own wording is not classified (owner, 2026-09-26):
@@ -1431,7 +1544,7 @@ def create_app(
                     llm=await app.state.llm_settings_store.get() if shadow.extract_mode == "live" else None,
                 ))
         return ConversationTurnResponse(
-            reply=reply, turn_count=len(history), privacy=privacy, web_search=web_search,
+            reply=reply, turn_count=len(history), privacy=privacy, web_search=web_search, context_meeting=context_title,
         )
 
     @app.post("/calendar/events")
@@ -1895,6 +2008,314 @@ def create_app(
         if meeting is None:
             raise HTTPException(status_code=404, detail=f"no meeting '{meeting_id}'")
         return meeting
+
+    async def _meeting_or_404(meeting_id: str) -> Meeting:
+        meeting = await app.state.meeting_store.get_meeting(meeting_id)
+        if meeting is None:
+            raise HTTPException(status_code=404, detail=f"no meeting '{meeting_id}'")
+        return meeting
+
+    def _clean_terms(raw: list[str]) -> list[str]:
+        cleaned = [" ".join(t.split()) for t in raw]
+        if any(len(t) > 60 for t in cleaned):
+            raise HTTPException(status_code=422, detail="terms are limited to 60 characters")
+        return list(dict.fromkeys(t for t in cleaned if t))
+
+    @app.get("/meeting-terms")
+    async def list_meeting_terms() -> list[str]:
+        return await app.state.meeting_store.list_terms()
+
+    @app.post("/meeting-terms")
+    async def add_meeting_term(request: TermRequest) -> list[str]:
+        for term in _clean_terms([request.term]):
+            await app.state.meeting_store.add_term(term)
+        return await app.state.meeting_store.list_terms()
+
+    @app.delete("/meeting-terms")
+    async def delete_meeting_term(term: str = Query(min_length=1, max_length=60)) -> list[str]:
+        await app.state.meeting_store.delete_term(term)
+        return await app.state.meeting_store.list_terms()
+
+    @app.put("/meetings/{meeting_id}/terms")
+    async def set_meeting_terms(meeting_id: str, request: KeyTermsRequest) -> Meeting:
+        await _meeting_or_404(meeting_id)
+        return await app.state.meeting_store.set_key_terms(meeting_id, _clean_terms(request.terms))
+
+    @app.put("/meetings/{meeting_id}/speakers")
+    async def set_meeting_speakers(meeting_id: str, request: SpeakerNamesRequest) -> Meeting:
+        meeting = await _meeting_or_404(meeting_id)
+        known = {str(s.get("speaker")) for s in meeting.diarization_segments or [] if s.get("speaker")}
+        names = dict(meeting.speaker_names)
+        for label, name in request.names.items():
+            if label not in known:
+                raise HTTPException(status_code=422, detail=f"unknown speaker '{label[:40]}'")
+            name = " ".join(name.split())
+            if len(name) > 60:
+                raise HTTPException(status_code=422, detail="speaker names are limited to 60 characters")
+            if name:
+                names[label] = name
+            else:
+                names.pop(label, None)
+        return await app.state.meeting_store.set_speaker_names(meeting_id, names)
+
+    @app.post("/meetings/{meeting_id}/corrections/suggest")
+    async def suggest_meeting_corrections(
+        meeting_id: str, request: SuggestCorrectionsRequest | None = None
+    ) -> CorrectionSuggestionsResponse:
+        """Ask a model for likely mis-heard words. Read-only: nothing is stored
+        until the owner applies a suggestion with PUT .../corrections/{n}.
+        Meeting speech is work-private, so it goes to the local model unless
+        the owner explicitly chooses the cloud model for this request; routing
+        settings never send it there on their own."""
+        meeting = await _meeting_or_404(meeting_id)
+        return await _suggest(meeting, use_cloud=request is not None and request.model == "cloud")
+
+    async def _suggest(meeting: Meeting, *, use_cloud: bool) -> CorrectionSuggestionsResponse:
+        """Shared by the synchronous route and the background deep review (which runs it on the larger local model)."""
+        if not meeting.transcript_segments:
+            raise HTTPException(status_code=409, detail="this meeting has no transcript yet")
+        config = await app.state.llm_settings_store.get()
+        if use_cloud and config.cloud is None:
+            raise HTTPException(status_code=409, detail="suggestions need a cloud language model to be configured")
+        if not use_cloud and config.local is None:
+            raise HTTPException(status_code=409, detail="suggestions need a local language model to be configured")
+        local_only = config.model_copy(
+            update={"routing": config.routing.model_copy(update={"mode": LLMRoutingMode.LOCAL_ONLY})}
+        )
+        groups = meeting_corrections.windows(
+            meeting, meeting_corrections.CLOUD_WINDOW_CHARS if use_cloud else meeting_corrections.WINDOW_CHARS
+        )
+        limit = meeting_corrections.CLOUD_MAX_WINDOWS if use_cloud else meeting_corrections.MAX_WINDOWS
+        scan_groups = groups[:limit]
+
+        # Key terms: deterministic candidates first; a model only chooses among them (or rejects them).
+        all_terms = meeting_corrections.collect_terms(meeting, await app.state.meeting_store.list_terms())
+        candidates = meeting_corrections.find_term_candidates(meeting, all_terms)
+        suggestions = meeting_corrections.deterministic_suggestions(meeting, candidates)
+        unresolved = [(n, c) for n, c in enumerate(c for c in candidates if not c.spelling_variant)]
+        batches = [
+            unresolved[k : k + meeting_corrections.RESOLVER_BATCH]
+            for k in range(0, len(unresolved), meeting_corrections.RESOLVER_BATCH)
+        ]
+
+        gate = asyncio.Semaphore(meeting_corrections.CLOUD_CONCURRENCY if use_cloud else 1)
+        request_timeout = (
+            meeting_corrections.CLOUD_REQUEST_TIMEOUT_SECONDS if use_cloud else meeting_corrections.REQUEST_TIMEOUT_SECONDS
+        )
+
+        async def ask(messages: list[dict[str, str]], *, max_tokens: int | None = None) -> str | None:
+            async with gate:
+                try:
+                    return await route_completion(
+                        config if use_cloud else local_only, messages, app.state.llm_usage_store,
+                        force_frontier=use_cloud, transport=llm_transport, timeout=request_timeout,
+                        local_max_tokens=max_tokens,
+                    )
+                except ProviderUnavailable:
+                    return None
+
+        scans = [asyncio.create_task(ask(meeting_corrections.build_messages(meeting, group))) for group in scan_groups]
+        # Local models get one multiple-choice question per candidate (benchmarked: far more reliable for a 7B than a
+        # batched JSON reply); the cloud model gets batches, since each call is slow and it handles them well.
+        singles = not use_cloud
+        cands = [c for _, c in unresolved]
+        if singles:
+            resolves = [
+                asyncio.create_task(ask(meeting_corrections.build_choice_messages(meeting, cand, all_terms), max_tokens=8))
+                for cand in cands
+            ]
+        else:
+            resolves = [
+                asyncio.create_task(ask(meeting_corrections.build_resolver_messages(meeting, batch, all_terms)))
+                for batch in batches
+            ]
+        tasks = [*scans, *resolves]
+        _, pending = await asyncio.wait(tasks, timeout=meeting_corrections.OVERALL_DEADLINE_SECONDS)
+        for task in pending:
+            task.cancel()
+        await asyncio.gather(*pending, return_exceptions=True)
+        replies = [None if task in pending else task.result() for task in tasks]
+        if tasks and all(reply is None for reply in replies):
+            raise HTTPException(status_code=503, detail="the language model is unavailable right now")
+
+        resolve_replies = replies[len(scans) :]
+        chosen: list[tuple[meeting_corrections.key_terms.Candidate, str]] = []
+        if singles:
+            for cand, reply in zip(cands, resolve_replies, strict=True):
+                term = meeting_corrections.parse_choice(reply, cand) if reply else None
+                if term:
+                    chosen.append((cand, term))
+        else:
+            for batch, reply in zip(batches, resolve_replies, strict=True):
+                for number, term in (meeting_corrections.parse_choices(reply, batch) if reply else {}).items():
+                    chosen.append((dict(batch)[number], term))
+        for cand, term in chosen:
+            suggestions.append(meeting_corrections.suggestion_from_candidate(
+                meeting, cand, term, confirmed_by=f"Matches your term \u201c{term}\u201d in this context",
+            ))
+        taken = {(s.segment, s.original.lower()) for s in suggestions}
+        scan_replies = replies[: len(scans)]
+        for reply in scan_replies:
+            for found in meeting_corrections.parse_suggestions(reply, meeting) if reply else []:
+                if (found.segment, found.original.lower()) not in taken:
+                    suggestions.append(found)
+        suggestions.sort(key=lambda s: ({"high": 0, "likely": 1}.get(s.confidence, 2), s.segment))
+        return CorrectionSuggestionsResponse(
+            suggestions=[CorrectionSuggestionResponse(**vars(s)) for s in suggestions],
+            checked_segments=sum(len(g) for g, reply in zip(scan_groups, scan_replies, strict=True) if reply is not None),
+            truncated=len(groups) > limit or any(reply is None for reply in replies),
+            terms_used=len(all_terms),
+            candidates_checked=len(candidates),
+        )
+
+    async def _deep_compute(meeting_id: str, task: str) -> dict:
+        meeting = await app.state.meeting_store.get_meeting(meeting_id)
+        if meeting is None:
+            raise HTTPException(status_code=404, detail=f"no meeting '{meeting_id}'")
+        if task == "corrections":
+            return (await _suggest(meeting, use_cloud=False)).model_dump(mode="json")
+        updated = await _generate_output(meeting, task, tier="deep")
+        return {"kind": task, "tier": "deep", "text": getattr(updated, task).text}
+
+    async def _deep_record(receipt: ActionReceipt) -> None:
+        await action_receipts.record(app.state.planner_store, receipt)
+
+    app.state.deep_review = DeepReviewRunner(model_manager_client, _deep_compute, _deep_record)
+
+    async def _ready_meeting(meeting_id: str) -> Meeting:
+        meeting = await _meeting_or_404(meeting_id)
+        if meeting.status not in READY_FOR_OUTPUTS or not meeting.transcript_segments:
+            raise HTTPException(status_code=409, detail="this meeting has no processed transcript yet")
+        return meeting
+
+    def _output_kind(kind: str) -> str:
+        if kind not in meeting_outputs.KINDS:
+            raise HTTPException(status_code=422, detail="kind must be summary or minutes")
+        return kind
+
+    async def _generate_output(meeting: Meeting, kind: str, *, tier: str) -> Meeting:
+        """Write the summary or minutes with the chosen tier and store it with that tier recorded. "deep" is the larger
+        local model, already loaded by the deep job; "cloud" is only used when the owner asked for it."""
+        config = await app.state.llm_settings_store.get()
+        use_cloud = tier == "cloud"
+        if use_cloud and config.cloud is None:
+            raise HTTPException(status_code=409, detail="this needs a cloud language model to be configured")
+        if not use_cloud and config.local is None:
+            raise HTTPException(status_code=409, detail="this needs a local language model to be configured")
+        local_only = config.model_copy(
+            update={"routing": config.routing.model_copy(update={"mode": LLMRoutingMode.LOCAL_ONLY})}
+        )
+
+        async def ask(messages: list[dict[str, str]], max_tokens: int) -> str:
+            try:
+                return await route_completion(
+                    config if use_cloud else local_only, messages, app.state.llm_usage_store, force_frontier=use_cloud,
+                    transport=llm_transport, local_max_tokens=max_tokens,
+                    timeout=meeting_corrections.CLOUD_REQUEST_TIMEOUT_SECONDS * 2 if use_cloud else meeting_corrections.REQUEST_TIMEOUT_SECONDS,
+                )
+            except ProviderUnavailable:
+                raise HTTPException(status_code=503, detail="the language model is unavailable right now") from None
+
+        try:
+            async with asyncio.timeout(meeting_corrections.OVERALL_DEADLINE_SECONDS + 20):
+                text, truncated = await meeting_outputs.generate(meeting, kind, ask)
+        except TimeoutError:
+            raise HTTPException(status_code=504, detail="the model took too long; try again or use a smaller meeting") from None
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from None
+        if truncated:
+            text += "\n\n(This meeting is very long: only the first part was covered.)"
+        updated = await app.state.meeting_store.set_output(meeting.id, kind, MeetingOutput(text=text, tier=tier))
+        if updated is None:
+            raise HTTPException(status_code=404, detail=f"no meeting '{meeting.id}'")
+        return updated
+
+    @app.post("/meetings/{meeting_id}/outputs/{kind}")
+    async def generate_meeting_output(meeting_id: str, kind: str, request: OutputRequest | None = None) -> Meeting:
+        """Summary or minutes on the local model, or on the cloud model when the owner chooses it for this request."""
+        meeting = await _ready_meeting(meeting_id)
+        return await _generate_output(meeting, _output_kind(kind), tier=request.model if request else "local")
+
+    @app.delete("/meetings/{meeting_id}/outputs/{kind}")
+    async def clear_meeting_output(meeting_id: str, kind: str) -> Meeting:
+        await _meeting_or_404(meeting_id)
+        return await app.state.meeting_store.set_output(meeting_id, _output_kind(kind), None)
+
+    @app.post("/meetings/{meeting_id}/outputs/{kind}/deep", status_code=202)
+    async def deep_meeting_output(meeting_id: str, kind: str) -> DeepReviewJob:
+        """The same output on the larger local model; Reachy is unavailable while it runs (Phase 42C)."""
+        meeting = await _ready_meeting(meeting_id)
+        try:
+            return await app.state.deep_review.start(meeting.id, meeting.title, task=_output_kind(kind))
+        except DeepReviewUnavailable as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from None
+
+    @app.delete("/meetings/{meeting_id}")
+    async def delete_meeting(meeting_id: str) -> dict[str, bool]:
+        """Remove a meeting and its recording. Refused while a job is still processing it: cancel it first."""
+        meeting = await _meeting_or_404(meeting_id)
+        if meeting.status not in DELETABLE_STATUSES:
+            raise HTTPException(status_code=409, detail="this meeting is still being processed; cancel it first")
+        active = app.state.deep_review.current()
+        if active and not active.finished and active.meeting_id == meeting_id:
+            raise HTTPException(status_code=409, detail="a deep job is running on this meeting")
+        await app.state.meeting_store.delete_meeting(meeting_id)
+        return {"deleted": True}
+
+    @app.get("/deep-review/info")
+    async def deep_review_info() -> DeepReviewInfo:
+        return await app.state.deep_review.info()
+
+    @app.get("/deep-review/current")
+    async def deep_review_current() -> DeepReviewJob | None:
+        return app.state.deep_review.current()
+
+    @app.get("/deep-review/{job_id}")
+    async def deep_review_job(job_id: str) -> DeepReviewJob:
+        job = app.state.deep_review.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail=f"no deep review '{job_id}'")
+        return job
+
+    @app.post("/meetings/{meeting_id}/corrections/deep-review", status_code=202)
+    async def start_deep_review(meeting_id: str) -> DeepReviewJob:
+        """Run the suggestion pipeline on the larger local model. Reachy's fast model is unloaded for the duration,
+        so this is an explicit owner action; progress is read from GET /deep-review/{id}."""
+        meeting = await _meeting_or_404(meeting_id)
+        if not meeting.transcript_segments:
+            raise HTTPException(status_code=409, detail="this meeting has no transcript yet")
+        try:
+            return await app.state.deep_review.start(meeting.id, meeting.title)
+        except DeepReviewUnavailable as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from None
+
+    @app.post("/meetings/{meeting_id}/corrections/replace")
+    async def replace_in_meeting(meeting_id: str, request: ReplaceEverywhereRequest) -> ReplaceEverywhereResponse:
+        """Owner-initiated find and replace across every segment, stored as corrections."""
+        meeting = await _meeting_or_404(meeting_id)
+        if not meeting.transcript_segments:
+            raise HTTPException(status_code=409, detail="this meeting has no transcript yet")
+        find, replace = request.find.strip(), request.replace.strip()
+        if not find or not replace:
+            raise HTTPException(status_code=422, detail="find and replace text cannot be blank")
+        updates = meeting_corrections.replace_everywhere(meeting, find, replace)
+        if any(len(text) > 2000 for text in updates.values()):
+            raise HTTPException(status_code=422, detail="a corrected segment would exceed 2000 characters")
+        if updates:
+            meeting = await app.state.meeting_store.set_corrections(meeting_id, updates)
+        return ReplaceEverywhereResponse(meeting=meeting, replaced_segments=len(updates))
+
+    @app.put("/meetings/{meeting_id}/corrections/{segment}")
+    async def set_meeting_correction(meeting_id: str, segment: int, request: CorrectionRequest) -> Meeting:
+        meeting = await _meeting_or_404(meeting_id)
+        if not 0 <= segment < len(meeting.transcript_segments or []):
+            raise HTTPException(status_code=404, detail=f"no transcript segment {segment}")
+        return await app.state.meeting_store.set_correction(meeting_id, segment, request.text.strip())
+
+    @app.delete("/meetings/{meeting_id}/corrections/{segment}")
+    async def clear_meeting_correction(meeting_id: str, segment: int) -> Meeting:
+        await _meeting_or_404(meeting_id)
+        return await app.state.meeting_store.set_correction(meeting_id, segment, None)
 
     @app.get("/debug/robots/{robot_id}/state")
     async def debug_robot_state(robot_id: str) -> dict:

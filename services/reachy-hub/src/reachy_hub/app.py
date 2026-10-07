@@ -256,6 +256,8 @@ class InboundMessage(BaseModel):
     input_modality: InputModality = InputModality.TEXT
     force_frontier: bool = False
     chat_id: str | None = None
+    # A meeting attached as context for the conversation (Phase 43); only the generic chat answer uses it.
+    context_meeting_id: str | None = None
 
 
 class MessageResponse(BaseModel):
@@ -266,6 +268,7 @@ class MessageResponse(BaseModel):
     delivery_channel: Channel
     privacy: Privacy
     reply: str
+    context_meeting: str | None = None  # the title of the meeting the reply drew on
 
 
 class SetModeRequest(BaseModel):
@@ -1447,6 +1450,7 @@ def create_app(
                 message.text,
                 input_modality=message.input_modality.value,
                 force_frontier=message.force_frontier,
+                context_meeting_id=message.context_meeting_id,
             )
         except httpx.HTTPError as exc:
             raise HTTPException(status_code=502, detail=f"companion-core unreachable: {exc}") from exc
@@ -1475,6 +1479,7 @@ def create_app(
             privacy=privacy,
             reply=result["reply"],
             web_search=result.get("web_search"),
+            context_meeting=result.get("context_meeting"),
         )
 
     def check_chat_user(user_id: str):

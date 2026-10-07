@@ -86,6 +86,10 @@ correct facts or links, not to track each new phase dependency.
 - [Phase 37](phase-37.md): semantic routing and argument validation — stage sequence and gates for replacing the phrase-matcher fall-through; decision in [ADR 0026](adr/0026-semantic-routing-and-argument-validation.md).
 - [Phase 38](phase-38.md): alarm clock and presence-gated delivery — stage sequence and gates; decision in [ADR 0027](adr/0027-alarms-and-presence-gated-delivery.md).
 - [Phase 39](phase-39.md): persona-aware responses and action receipts — stage sequence and gates; decision in [ADR 0028](adr/0028-persona-responses-and-action-receipts.md).
+- [Phase 40](phase-40.md): Android companion app — stage sequence and gates; decision in [ADR 0029](adr/0029-android-companion-app.md).
+- [Phase 41](phase-41.md): meeting speaker names and reviewed transcript corrections — stage sequence and gates; decision in [ADR 0030](adr/0030-meeting-speaker-names-and-reviewed-corrections.md).
+- [Phase 42](phase-42.md): three-tier model escalation — stage sequence and gates; decision in [ADR 0031](adr/0031-three-tier-local-model-escalation.md).
+- [Phase 43](phase-43.md): meeting deletion, summaries, minutes and meeting context — decision in [ADR 0032](adr/0032-meeting-outputs-and-context.md).
 - [Shadow semantic router](shadow-router.md): shadow-mode router, extractor and validator that only records what it would propose; contract, flags, trial procedure, retention and evidence.
 - [Phase 30](phase-30.md): platform stabilization and acceptance — verify the
   no-alert-pose wake build, add the visible-false-activations metric, run the
@@ -123,6 +127,10 @@ over the original decision where they explicitly change it.
 | [0026](adr/0026-semantic-routing-and-argument-validation.md) | Semantic routing with deterministic argument validation (shadow accepted; promotion proposed) |
 | [0027](adr/0027-alarms-and-presence-gated-delivery.md) | Alarms with presence-gated, privacy-aware delivery |
 | [0028](adr/0028-persona-responses-and-action-receipts.md) | Persona-aware responses and authoritative action receipts |
+| [0029](adr/0029-android-companion-app.md) | Native Android companion app |
+| [0030](adr/0030-meeting-speaker-names-and-reviewed-corrections.md) | Meeting speaker names and reviewed transcript corrections |
+| [0031](adr/0031-three-tier-local-model-escalation.md) | Three-tier model escalation (proposed) |
+| [0032](adr/0032-meeting-outputs-and-context.md) | Meeting deletion, generated outputs and meeting context |
 
 ## Verification records
 

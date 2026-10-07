@@ -99,6 +99,43 @@ delete the recording. Failed jobs keep their diagnostic message under
 **Technical error** in the detail view. An old failed job remains failed
 even after its underlying service problem has been fixed.
 
+### Deleting meetings, summaries, minutes and meeting context
+
+Each meeting has a delete button (a confirmation first) and, when several have
+failed or been cancelled, **Delete failed and cancelled**. A meeting still being
+processed shows **Cancel** instead; cancel it, then delete it. Deleting removes
+the recording, transcript, names, corrections, summary and minutes.
+
+Open a processed meeting and choose **Summary**, **Minutes**, **Transcript** or
+**Use as context**. Summary and minutes are written by the local model and show
+which model wrote them; **Rerun with another model** offers Local, Deep local
+(warns that Reachy is unavailable) and Cloud, for when the first result is not
+accurate enough. **Use as context** opens the chat with the meeting attached:
+ask "what is ClickHouse?" or "is ClickHouse free?" and the answer draws on the
+meeting. Questions about the outside world are also checked against the web
+(your question only is sent, never the transcript) and the answer shows its
+sources as clickable links; questions about what was said stay on the meeting.
+Answers use the local model; tick **Use frontier model** (web) or **Ask the
+cloud model** (Android) to send the meeting text to your cloud provider for a
+stronger answer.
+
+### Suggested corrections and Deep local review
+
+In an open meeting, **Suggest corrections** (web) or **Suggest** (Android) asks
+for likely transcript mistakes and lets you apply them with **Change all**.
+Matching uses your key terms and glossary. Choose the model each time:
+
+- **Local**: your homelab model, private and quick.
+- **Deep local**: a larger model on your homelab, still private and more
+  accurate. **Reachy is unavailable while it runs** (about 6 minutes: the larger
+  model loads, reviews, then Reachy's standard model reloads). You are warned
+  first. A banner shows on every screen while Reachy is unavailable; you get
+  **"Reachy is available again"** as an app notification, and Telegram messages
+  when the standard model is unloaded and again when Reachy is back online. It is
+  disabled with a reason when the model manager is not running, not on the
+  standard model, or a review is already in progress.
+- **Cloud**: sends the transcript text to your cloud provider.
+
 ## Conversational animations
 
 Open **Settings → Voice & motion**, select the robot,

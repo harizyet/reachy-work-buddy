@@ -1,0 +1,532 @@
+[
+ {
+  "id": "real-gemini-germanite",
+  "source": "real",
+  "note": "From the 2026-10-07 recording where Gemini was heard as germanite; lines 0-3 are verbatim, line 4 is a synthetic negative.",
+  "terms": [
+   "Gemini",
+   "Codex",
+   "Claude",
+   "Antigravity"
+  ],
+  "transcript": [
+   "And codex, and codex.",
+   "And germanite.",
+   "And germanite.",
+   "And anti-gravity too.",
+   "I could not say which is best."
+  ],
+  "expected": [
+   {
+    "segment": 1,
+    "original": "germanite",
+    "suggested": "Gemini"
+   },
+   {
+    "segment": 2,
+    "original": "germanite",
+    "suggested": "Gemini"
+   },
+   {
+    "segment": 3,
+    "original": "anti-gravity",
+    "suggested": "Antigravity"
+   }
+  ],
+  "forbidden": [
+   {
+    "segment": 4,
+    "original": "could"
+   }
+  ]
+ },
+ {
+  "id": "kubernetes-multiword",
+  "source": "synthetic",
+  "note": "",
+  "terms": [
+   "Kubernetes",
+   "Docker"
+  ],
+  "transcript": [
+   "We deployed it on Cooper Nettys last week.",
+   "It has been stable since."
+  ],
+  "expected": [
+   {
+    "segment": 0,
+    "original": "Cooper Nettys",
+    "suggested": "Kubernetes"
+   }
+  ],
+  "forbidden": []
+ },
+ {
+  "id": "postgres-split",
+  "source": "synthetic",
+  "note": "",
+  "terms": [
+   "Postgres",
+   "Redis"
+  ],
+  "transcript": [
+   "Our data lives in post grass.",
+   "We back it up nightly."
+  ],
+  "expected": [
+   {
+    "segment": 0,
+    "original": "post grass",
+    "suggested": "Postgres"
+   }
+  ],
+  "forbidden": []
+ },
+ {
+  "id": "clickhouse-split",
+  "source": "synthetic",
+  "note": "",
+  "terms": [
+   "ClickHouse",
+   "InfluxDB"
+  ],
+  "transcript": [
+   "The click house cluster is slow today.",
+   "Let us look at the merges."
+  ],
+  "expected": [
+   {
+    "segment": 0,
+    "original": "click house",
+    "suggested": "ClickHouse"
+   }
+  ],
+  "forbidden": []
+ },
+ {
+  "id": "name-priya",
+  "source": "synthetic",
+  "note": "",
+  "terms": [
+   "Priya",
+   "Hariz"
+  ],
+  "transcript": [
+   "Ask Pria to review the draft.",
+   "She knows the contract."
+  ],
+  "expected": [
+   {
+    "segment": 0,
+    "original": "Pria",
+    "suggested": "Priya"
+   }
+  ],
+  "forbidden": []
+ },
+ {
+  "id": "grafana-split",
+  "source": "synthetic",
+  "note": "",
+  "terms": [
+   "Grafana",
+   "Prometheus"
+  ],
+  "transcript": [
+   "We use graph ana for the dashboards.",
+   "The alerts come from there too."
+  ],
+  "expected": [
+   {
+    "segment": 0,
+    "original": "graph ana",
+    "suggested": "Grafana"
+   }
+  ],
+  "forbidden": []
+ },
+ {
+  "id": "qwen-phonetic",
+  "source": "synthetic",
+  "note": "",
+  "terms": [
+   "Qwen",
+   "Llama"
+  ],
+  "transcript": [
+   "Switch the model to Kwen for the summaries.",
+   "It is faster."
+  ],
+  "expected": [
+   {
+    "segment": 0,
+    "original": "Kwen",
+    "suggested": "Qwen"
+   }
+  ],
+  "forbidden": []
+ },
+ {
+  "id": "vllm-split",
+  "source": "synthetic",
+  "note": "",
+  "terms": [
+   "vLLM",
+   "Ollama"
+  ],
+  "transcript": [
+   "The vee LLM server crashed overnight.",
+   "Restart it please."
+  ],
+  "expected": [
+   {
+    "segment": 0,
+    "original": "vee LLM",
+    "suggested": "vLLM"
+   }
+  ],
+  "forbidden": []
+ },
+ {
+  "id": "gemini-jemini",
+  "source": "synthetic",
+  "note": "",
+  "terms": [
+   "Gemini",
+   "Claude"
+  ],
+  "transcript": [
+   "We could try Jemini for the long documents.",
+   "It handles them well."
+  ],
+  "expected": [
+   {
+    "segment": 0,
+    "original": "Jemini",
+    "suggested": "Gemini"
+   }
+  ],
+  "forbidden": []
+ },
+ {
+  "id": "claude-claud",
+  "source": "synthetic",
+  "note": "",
+  "terms": [
+   "Claude",
+   "Codex"
+  ],
+  "transcript": [
+   "We asked Claud to write the first draft.",
+   "Then we edited it."
+  ],
+  "expected": [
+   {
+    "segment": 0,
+    "original": "Claud",
+    "suggested": "Claude"
+   }
+  ],
+  "forbidden": []
+ },
+ {
+  "id": "huggingface-split",
+  "source": "synthetic",
+  "note": "",
+  "terms": [
+   "Hugging Face",
+   "GitHub"
+  ],
+  "transcript": [
+   "We pulled the weights from hug and face.",
+   "Then converted them."
+  ],
+  "expected": [
+   {
+    "segment": 0,
+    "original": "hug and face",
+    "suggested": "Hugging Face"
+   }
+  ],
+  "forbidden": []
+ },
+ {
+  "id": "tailscale-phonetic",
+  "source": "synthetic",
+  "note": "",
+  "terms": [
+   "Tailscale",
+   "WireGuard"
+  ],
+  "transcript": [
+   "The phone connects over tail scale from anywhere.",
+   "Nothing is exposed."
+  ],
+  "expected": [
+   {
+    "segment": 0,
+    "original": "tail scale",
+    "suggested": "Tailscale"
+   }
+  ],
+  "forbidden": []
+ },
+ {
+  "id": "neg-could-claude",
+  "source": "synthetic",
+  "note": "",
+  "terms": [
+   "Claude",
+   "Codex"
+  ],
+  "transcript": [
+   "I could not say which is best.",
+   "Ask me tomorrow."
+  ],
+  "expected": [],
+  "forbidden": [
+   {
+    "segment": 0,
+    "original": "could"
+   }
+  ]
+ },
+ {
+  "id": "neg-code-codex",
+  "source": "synthetic",
+  "note": "",
+  "terms": [
+   "Codex",
+   "Claude"
+  ],
+  "transcript": [
+   "We need to review the code first.",
+   "Then merge it."
+  ],
+  "expected": [],
+  "forbidden": [
+   {
+    "segment": 0,
+    "original": "code"
+   }
+  ]
+ },
+ {
+  "id": "neg-mean-gemini",
+  "source": "synthetic",
+  "note": "",
+  "terms": [
+   "Gemini",
+   "Claude"
+  ],
+  "transcript": [
+   "That would mean a lot to the team.",
+   "Thank you."
+  ],
+  "expected": [],
+  "forbidden": [
+   {
+    "segment": 0,
+    "original": "mean"
+   }
+  ]
+ },
+ {
+  "id": "neg-join-gemini",
+  "source": "synthetic",
+  "note": "",
+  "terms": [
+   "Gemini",
+   "Claude"
+  ],
+  "transcript": [
+   "Please join us on Friday afternoon.",
+   "Bring questions."
+  ],
+  "expected": [],
+  "forbidden": [
+   {
+    "segment": 0,
+    "original": "join"
+   }
+  ]
+ },
+ {
+  "id": "neg-judgment-gemini",
+  "source": "synthetic",
+  "note": "",
+  "terms": [
+   "Gemini",
+   "Claude"
+  ],
+  "transcript": [
+   "Good judgment matters in these cases.",
+   "Trust the team."
+  ],
+  "expected": [],
+  "forbidden": [
+   {
+    "segment": 0,
+    "original": "judgment"
+   }
+  ]
+ },
+ {
+  "id": "neg-clause-claude",
+  "source": "synthetic",
+  "note": "",
+  "terms": [
+   "Claude",
+   "Codex"
+  ],
+  "transcript": [
+   "The clause was removed from the contract.",
+   "Legal agreed."
+  ],
+  "expected": [],
+  "forbidden": [
+   {
+    "segment": 0,
+    "original": "clause"
+   }
+  ]
+ },
+ {
+  "id": "neg-research-cursor",
+  "source": "synthetic",
+  "note": "",
+  "terms": [
+   "Cursor",
+   "Claude"
+  ],
+  "transcript": [
+   "There was a lot of research behind it.",
+   "Impressive."
+  ],
+  "expected": [],
+  "forbidden": [
+   {
+    "segment": 0,
+    "original": "research"
+   }
+  ]
+ },
+ {
+  "id": "neg-context-codex",
+  "source": "synthetic",
+  "note": "",
+  "terms": [
+   "Codex",
+   "Claude"
+  ],
+  "transcript": [
+   "We reached the context limit quickly.",
+   "So we split it."
+  ],
+  "expected": [],
+  "forbidden": [
+   {
+    "segment": 0,
+    "original": "context"
+   }
+  ]
+ },
+ {
+  "id": "mixed-tools-list",
+  "source": "synthetic",
+  "note": "",
+  "terms": [
+   "Claude",
+   "Codex",
+   "Gemini",
+   "Antigravity"
+  ],
+  "transcript": [
+   "We compared Claude, Codex and Jemini side by side.",
+   "The code quality was close.",
+   "Anti gravity was newer."
+  ],
+  "expected": [
+   {
+    "segment": 0,
+    "original": "Jemini",
+    "suggested": "Gemini"
+   },
+   {
+    "segment": 2,
+    "original": "Anti gravity",
+    "suggested": "Antigravity"
+   }
+  ],
+  "forbidden": [
+   {
+    "segment": 1,
+    "original": "code"
+   }
+  ]
+ },
+ {
+  "id": "mixed-infra",
+  "source": "synthetic",
+  "note": "",
+  "terms": [
+   "InfluxDB",
+   "Grafana",
+   "Claude",
+   "Codex"
+  ],
+  "transcript": [
+   "Metrics go into in flux db and show up in graph ana.",
+   "Could you check the code for that?"
+  ],
+  "expected": [
+   {
+    "segment": 0,
+    "original": "in flux db",
+    "suggested": "InfluxDB"
+   },
+   {
+    "segment": 0,
+    "original": "graph ana",
+    "suggested": "Grafana"
+   }
+  ],
+  "forbidden": [
+   {
+    "segment": 1,
+    "original": "Could"
+   },
+   {
+    "segment": 1,
+    "original": "code"
+   }
+  ]
+ },
+ {
+  "id": "name-and-product",
+  "source": "synthetic",
+  "note": "",
+  "terms": [
+   "Priya",
+   "Qwen",
+   "Sean"
+  ],
+  "transcript": [
+   "Pria wants to try Kwen for the summaries.",
+   "Sean will own the rollout."
+  ],
+  "expected": [
+   {
+    "segment": 0,
+    "original": "Pria",
+    "suggested": "Priya"
+   },
+   {
+    "segment": 0,
+    "original": "Kwen",
+    "suggested": "Qwen"
+   }
+  ],
+  "forbidden": []
+ }
+]

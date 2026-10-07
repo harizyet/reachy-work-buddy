@@ -209,3 +209,31 @@ def localize_query(query: str, location: str | None) -> str:
     ):
         return query
     return f"{query} in {location}"
+
+
+# ---- a meeting attached as context (Phase 43) -------------------------------------------------------------------
+# With a meeting attached, a question about the outside world ("is ClickHouse free?", "what is ClickHouse?") should be
+# checked against the web rather than answered from a model's possibly stale memory, while a question about what was
+# SAID in the meeting stays on the meeting. Deterministic like everything in this module: the model has no say.
+_MEETING_RECALL_RE = re.compile(
+    r"\b(?:in|from|during|at|of) (?:the|this|that|our) (?:meeting|call|recording|discussion|conversation|session)\b"
+    r"|\b(?:we|you|they|everyone|anyone|someone|he|she) (?:said|decided|discussed|agreed|mentioned|talked|covered)\b"
+    r"|\bwho (?:said|mentioned|agreed|owns|is going to|will|has to|was|were)\b"
+    r"|\bwhat (?:did|was said|was discussed|happened|were the)\b"
+    r"|\b(?:action items?|next steps|decisions?|summar(?:y|ise|ize)|minutes|attendees|participants)\b"
+    r"|\b(?:was|were) (?:mentioned|discussed|decided|agreed)\b|\bremind me what\b"
+)
+
+
+def should_search_for_meeting_question(text: str, *, policy: SearchPolicy) -> bool:
+    """Auto: search outward-looking questions only, and never a bare pronoun question ("is it free?"), whose subject
+    lives in the meeting and cannot be put in a query without sending meeting content. Always: every non-social turn.
+    Off: never. The query is the owner's own question text; the transcript is never part of it."""
+    if policy == SearchPolicy.OFF or is_social(text) or is_self_identity(text):
+        return False
+    if policy == SearchPolicy.ALWAYS:
+        return True
+    words = _normalize(text).split()
+    if not _is_request(text) or _MEETING_RECALL_RE.search(text.lower()) or _BACK_REFERENCES.intersection(words):
+        return False
+    return len(words) >= 2

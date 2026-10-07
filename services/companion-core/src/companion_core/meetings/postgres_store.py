@@ -26,6 +26,7 @@ from companion_core.meetings.models import (
     ORPHAN_RESUME,
     Meeting,
     MeetingJobStatus,
+    MeetingOutput,
 )
 from companion_core.meetings.store import MeetingNotCancellableError
 from shared.database import check_schema
@@ -33,7 +34,7 @@ from shared.database import check_schema
 _COLUMNS = (
     "id, title, project_scope, context, participants, started_at, source_filename, content_type, "
     "audio_path, normalized_audio_path, duration_seconds, transcript_segments, diarization_segments, "
-    "status, error_detail, created_at, updated_at"
+    "status, error_detail, created_at, updated_at, speaker_names, transcript_corrections, key_terms, summary, minutes"
 )
 
 
@@ -56,6 +57,11 @@ def _from_row(row: tuple) -> Meeting:
         error_detail=row[14],
         created_at=row[15],
         updated_at=row[16],
+        speaker_names=dict(row[17] or {}),
+        transcript_corrections=dict(row[18] or {}),
+        key_terms=list(row[19] or []),
+        summary=MeetingOutput(**row[20]) if row[20] else None,
+        minutes=MeetingOutput(**row[21]) if row[21] else None,
     )
 
 
@@ -119,12 +125,13 @@ class PostgresMeetingStore:
         async with self._pool.connection() as conn:
             await conn.execute(
                 f"INSERT INTO meetings ({_COLUMNS}) VALUES "
-                "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     meeting.id, meeting.title, meeting.project_scope, meeting.context, meeting.participants,
                     meeting.started_at, meeting.source_filename, meeting.content_type, meeting.audio_path,
                     meeting.normalized_audio_path, meeting.duration_seconds, None, None,
                     meeting.status.value, meeting.error_detail, meeting.created_at, meeting.updated_at,
+                    Json({}), Json({}), Json([]), None, None,
                 ),
             )
         return meeting
@@ -274,3 +281,81 @@ class PostgresMeetingStore:
             if existing is None:
                 return None
             raise MeetingNotCancellableError(f"meeting '{meeting_id}' is past the cancellable stage")
+
+    async def set_speaker_names(self, meeting_id: str, names: dict[str, str]) -> Meeting | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"UPDATE meetings SET speaker_names = %s, updated_at = now() WHERE id = %s RETURNING {_COLUMNS}",
+                (Json(names), meeting_id),
+            )
+            row = await cur.fetchone()
+            return _from_row(row) if row else None
+
+    async def set_correction(self, meeting_id: str, segment: int, text: str | None) -> Meeting | None:
+        async with self._pool.connection() as conn:
+            if text is None:
+                cur = await conn.execute(
+                    f"UPDATE meetings SET transcript_corrections = transcript_corrections - %s, updated_at = now() "
+                    f"WHERE id = %s RETURNING {_COLUMNS}",
+                    (str(segment), meeting_id),
+                )
+            else:
+                cur = await conn.execute(
+                    f"UPDATE meetings SET transcript_corrections = transcript_corrections || %s::jsonb, updated_at = now() "
+                    f"WHERE id = %s RETURNING {_COLUMNS}",
+                    (Json({str(segment): text}), meeting_id),
+                )
+            row = await cur.fetchone()
+            return _from_row(row) if row else None
+
+    async def set_corrections(self, meeting_id: str, updates: dict[int, str]) -> Meeting | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"UPDATE meetings SET transcript_corrections = transcript_corrections || %s::jsonb, updated_at = now() "
+                f"WHERE id = %s RETURNING {_COLUMNS}",
+                (Json({str(i): t for i, t in updates.items()}), meeting_id),
+            )
+            row = await cur.fetchone()
+            return _from_row(row) if row else None
+
+    async def set_key_terms(self, meeting_id: str, terms: list[str]) -> Meeting | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"UPDATE meetings SET key_terms = %s, updated_at = now() WHERE id = %s RETURNING {_COLUMNS}",
+                (Json(terms), meeting_id),
+            )
+            row = await cur.fetchone()
+            return _from_row(row) if row else None
+
+    async def list_terms(self) -> list[str]:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute("SELECT term FROM meeting_terms ORDER BY lower(term)")
+            return [row[0] for row in await cur.fetchall()]
+
+    async def add_term(self, term: str) -> None:
+        async with self._pool.connection() as conn:
+            await conn.execute("INSERT INTO meeting_terms (term) VALUES (%s) ON CONFLICT DO NOTHING", (term,))
+
+    async def delete_term(self, term: str) -> bool:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute("DELETE FROM meeting_terms WHERE lower(term) = lower(%s)", (term,))
+            return cur.rowcount > 0
+
+    async def set_output(self, meeting_id: str, kind: str, output: MeetingOutput | None) -> Meeting | None:
+        if kind not in ("summary", "minutes"):
+            raise ValueError(kind)
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"UPDATE meetings SET {kind} = %s, updated_at = now() WHERE id = %s RETURNING {_COLUMNS}",
+                (Json(output.model_dump(mode="json")) if output else None, meeting_id),
+            )
+            row = await cur.fetchone()
+            return _from_row(row) if row else None
+
+    async def delete_meeting(self, meeting_id: str) -> bool:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute("DELETE FROM meetings WHERE id = %s", (meeting_id,))
+            deleted = cur.rowcount > 0
+        if deleted:
+            await asyncio.to_thread(shutil.rmtree, self._audio_dir / meeting_id, True)
+        return deleted

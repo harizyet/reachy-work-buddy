@@ -22,7 +22,7 @@ const accounts = createAccounts({api, isLoggedIn: () => loggedIn});
 const ownerRecognition = createOwnerRecognition({api, apiUpload, apiDownload, isLoggedIn: () => loggedIn});
 const motionSettings = createMotionSettings();
 const voice = createVoice({api, isLoggedIn: () => loggedIn, chat});
-const meetings = createMeetings({api, apiUploadForm, isLoggedIn: () => loggedIn});
+const meetings = createMeetings({api, apiUploadForm, isLoggedIn: () => loggedIn, onUseAsContext(meeting) { chat.setContext(meeting); showView('chat'); }});
 const planner = createPlanner({api, isLoggedIn: () => loggedIn});
 const alarms = createAlarms({api, isLoggedIn: () => loggedIn});
 const activity = createActivity({api, isLoggedIn: () => loggedIn});
@@ -348,6 +348,7 @@ async function loadSession() {
 }
 async function enter() {
   loggedIn = true; $('login-panel').hidden = true; $('dashboard').hidden = false; $('nav').hidden = false;
+  void meetings.resumeDeep();
   $('llm-fields').disabled = true; $('persona-fields').disabled = true; $('websearch-fields').disabled = true; notice('');
   try { renderSettings(await api('/settings/llm')); } catch (error) { notice(error.message); }
   try { renderPersona(await api('/settings/persona')); } catch (error) { notice(error.message); }

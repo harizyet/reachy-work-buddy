@@ -76,6 +76,24 @@ CANCELLABLE_STATUSES = tuple(
 SUPPORTED_AUDIO_EXTENSIONS = frozenset({".wav", ".flac", ".m4a", ".aac", ".mp3", ".opus", ".webm"})
 
 
+# States where nothing is running for the meeting, so it may be deleted: the job finished, failed, was cancelled, or
+# rests at ALIGNING (the processing-paused state every meeting reaches today, since alignment is not implemented).
+DELETABLE_STATUSES = frozenset({
+    MeetingJobStatus.COMPLETE, MeetingJobStatus.FAILED, MeetingJobStatus.CANCELLED, MeetingJobStatus.ALIGNING,
+})
+# States with a usable transcript for summaries, minutes and use as context.
+READY_FOR_OUTPUTS = frozenset({MeetingJobStatus.ALIGNING, MeetingJobStatus.ANALYZING, MeetingJobStatus.COMPLETE})
+
+
+class MeetingOutput(BaseModel):
+    """A generated artefact. `tier` records which model wrote it ("local", "deep" or "cloud") so the owner can judge it
+    and rerun it on a higher tier."""
+
+    text: str
+    tier: str
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
 class Meeting(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     title: str
@@ -97,6 +115,16 @@ class Meeting(BaseModel):
     # model yet — that's a future reducer over both of these.
     transcript_segments: list[dict[str, Any]] | None = None
     diarization_segments: list[dict[str, Any]] | None = None
+    # Owner-assigned display names, keyed by diarization label ("SPEAKER_00").
+    # The raw diarization output is never rewritten (Phase 41, ADR 0030).
+    speaker_names: dict[str, str] = Field(default_factory=dict)
+    # Meeting-specific vocabulary (product, project and people names) that corrections are matched against.
+    key_terms: list[str] = Field(default_factory=list)
+    # Owner-accepted text for a transcript segment, keyed by its index as a
+    # string. Overlays transcript_segments, which stays the raw ASR evidence.
+    transcript_corrections: dict[str, str] = Field(default_factory=dict)
+    summary: MeetingOutput | None = None
+    minutes: MeetingOutput | None = None
     status: MeetingJobStatus = MeetingJobStatus.UPLOADED
     error_detail: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

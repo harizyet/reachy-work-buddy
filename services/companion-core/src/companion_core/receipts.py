@@ -40,6 +40,9 @@ def describe(receipt: ActionReceipt) -> str:
         "task.completed": "Task completed",
         "memory.created": "Saved to memory",
     }
+    # Deep review notices (Phase 42C) are complete sentences the runner wrote from known facts.
+    if receipt.action_type.startswith("deep_review.") and receipt.fields.get("Message"):
+        return receipt.fields["Message"]
     title = titles.get(receipt.action_type, receipt.action_type)
     if receipt.status == "failed":
         title += " (failed)"

@@ -48,7 +48,8 @@ class CompanionCoreClient:
         await self._client.aclose()
 
     async def send_turn(
-        self, session_id: str, conversation_id: str, channel: str, text: str, *, input_modality: str = "text", force_frontier: bool = False
+        self, session_id: str, conversation_id: str, channel: str, text: str, *, input_modality: str = "text", force_frontier: bool = False,
+        context_meeting_id: str | None = None,
     ) -> dict[str, Any]:
         resp = await self._client.post(
             "/conversation",
@@ -60,6 +61,7 @@ class CompanionCoreClient:
                 "text": text,
                 "input_modality": input_modality,
                 "force_frontier": force_frontier,
+                "context_meeting_id": context_meeting_id,
             },
         )
         resp.raise_for_status()
@@ -192,10 +194,11 @@ class CompanionCoreClient:
         return resp.json()
 
     async def planner_request(
-        self, method: str, path: str, *, json: Any = None, params: dict[str, str] | None = None
+        self, method: str, path: str, *, json: Any = None, params: dict[str, str] | None = None,
+        timeout: float = 15.0,
     ) -> Any:
         """Owner to-do/reminder/note passthrough to core's /tasks, /notes, /reminders."""
-        resp = await self._client.request(method, path, json=json, params=params, timeout=15.0)
+        resp = await self._client.request(method, path, json=json, params=params, timeout=timeout)
         resp.raise_for_status()
         return resp.json()
 
