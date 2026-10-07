@@ -501,6 +501,7 @@ def test_alarm_and_station_proxy_requires_auth_and_round_trips_through_core():
     assert client.get("/planner/alarms").status_code == 401
     assert client.post("/planner/alarms", json={"label": "x", "due_at": "2030-01-01T00:00:00Z"}, headers=CSRF).status_code == 401
     assert client.post("/planner/alarms/stop", headers=CSRF).status_code == 401
+    assert client.patch("/planner/alarms/x", json={"enabled": False}, headers=CSRF).status_code == 401
     assert client.get("/planner/receipts").status_code == 401
     assert client.get("/planner/stations/search", params={"q": "jazz"}).status_code == 401
     login(client)
@@ -523,6 +524,15 @@ def test_alarm_and_station_proxy_requires_auth_and_round_trips_through_core():
     assert client.post("/planner/alarms", json={"label": "x", "due_at": "2030-01-01T07:00:00"}, headers=CSRF).status_code == 422
     assert client.get("/planner/alarms").json()[0]["id"] == alarm["id"]
     assert client.post("/planner/alarms/stop", headers=CSRF).json() == {"stopped": False}
+    # the clock screen: a repeating alarm by time of day, edited and switched off through the proxy
+    daily = client.post("/planner/alarms", json={"label": "Gym", "time": "06:30", "repeat": [0, 2, 4]}, headers=CSRF).json()
+    assert daily["repeat"] == [0, 2, 4] and daily["enabled"] is True
+    off = client.patch(f"/planner/alarms/{daily['id']}", json={"enabled": False}, headers=CSRF).json()
+    assert off["enabled"] is False and off["label"] == "Gym"
+    edited = client.patch(f"/planner/alarms/{daily['id']}", json={"label": "Run", "station_id": None, "repeat": []}, headers=CSRF).json()
+    assert edited["label"] == "Run" and edited["repeat"] == [] and edited["station_id"] is None
+    assert client.patch("/planner/alarms/missing", json={"enabled": True}, headers=CSRF).status_code == 404
+    assert client.patch(f"/planner/alarms/{daily['id']}", json={"time": "25:00"}, headers=CSRF).status_code == 422
     assert client.delete(f"/planner/alarms/{alarm['id']}", headers=CSRF).json()["status"] == "cancelled"
     assert client.delete("/planner/alarms/missing", headers=CSRF).status_code == 404
     assert client.delete(f"/planner/stations/{station['id']}", headers=CSRF).json() == {"deleted": True}

@@ -103,15 +103,43 @@ def test_alarms_and_stations_persist_and_claim_once(database):
             assert claimed[0].status == "fired" and claimed[0].station_id == station_id
             assert claimed[0].volume == 250
             assert await store.claim_due_alarms(now) == []
-            assert (await store.cancel_alarm(due_id)).status == "fired"
             assert (await store.record_alarm_delivery(due_id, "played")).delivery == "played"
             assert [a.label for a in await store.list_alarms()] == ["skip", "wake", "later"]
             assert await store.delete_station(station_id) is True
             assert await store.delete_station(station_id) is False
+            assert (await store.cancel_alarm(due_id)).status == "cancelled"  # a finished alarm can be removed
         finally:
             await store.close()
 
     asyncio.run(read())
+
+
+def test_alarm_repeat_switch_update_and_rearm_persist(database):
+    now = datetime.now(UTC)
+
+    async def run():
+        store = await PostgresPlannerStore.connect(database)
+        try:
+            daily = await store.add_alarm("daily", now - timedelta(minutes=1), repeat=[4, 0, 0])
+            assert daily.repeat == [0, 4] and daily.enabled is True
+            off = await store.add_alarm("off", now - timedelta(minutes=1))
+            assert (await store.update_alarm(off.id, {"enabled": False})).enabled is False
+            claimed = await store.claim_due_alarms(now)
+            assert [a.id for a in claimed] == [daily.id]  # the disabled one never rings
+            assert (await store.rearm_alarm(daily.id, now + timedelta(days=1))).status == "scheduled"
+            assert (await store.rearm_alarm(off.id, now + timedelta(days=1))).status == "scheduled"  # not fired, not repeating: unchanged
+            edited = await store.update_alarm(daily.id, {"label": "Run", "volume": 120, "repeat": [1], "station_id": None})
+            assert (edited.label, edited.volume, edited.repeat) == ("Run", 120, [1])
+            back = await store.update_alarm(off.id, {"enabled": True, "due_at": now - timedelta(seconds=5)})
+            assert back.enabled and back.status == "scheduled"
+            assert [a.id for a in await store.claim_due_alarms(now)] == [off.id]
+            reread = {a.id: a for a in await store.list_alarms()}
+            assert reread[daily.id].repeat == [1] and reread[daily.id].label == "Run"
+            assert await store.update_alarm("nope", {"enabled": True}) is None
+        finally:
+            await store.close()
+
+    asyncio.run(run())
 
 
 def test_receipts_persist_and_claim_once(database):

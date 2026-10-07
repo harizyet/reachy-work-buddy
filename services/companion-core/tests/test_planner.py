@@ -142,7 +142,7 @@ def test_alarm_store_claims_each_scheduled_alarm_once_and_skips_cancelled() -> N
         assert [a.id for a in claimed] == [due.id]
         assert claimed[0].status == "fired" and claimed[0].fired_at == NOW
         assert await store.claim_due_alarms(NOW) == []
-        assert (await store.cancel_alarm(due.id)).status == "fired"
+        assert (await store.cancel_alarm(due.id)).status == "cancelled"  # a finished alarm can be removed
         assert (await store.record_alarm_delivery(due.id, "telegram: privacy mode")).delivery == "telegram: privacy mode"
         assert [a.label for a in await store.list_alarms()] == ["skip", "wake", "later"]
 
@@ -264,3 +264,78 @@ def test_alarm_phrase_picks_a_saved_station_named_in_the_text() -> None:
     assert "with Class 95 FM" in reply
     assert [a["station_id"] for a in client.get("/alarms").json()] == [station["id"]] * 2
     assert say(client, "/alarm in 5 minutes").endswith(".") and "with" not in say(client, "/alarm in 6 minutes")
+
+
+def test_next_occurrence_follows_repeat_days_in_the_owners_zone() -> None:
+    from datetime import time
+
+    from companion_core.planner.alarm_schedule import next_occurrence, repeat_text
+
+    friday_evening = datetime(2026, 10, 9, 20, 0, tzinfo=UTC)  # 2026-10-09 is a Friday; 04:00 Saturday in Singapore
+    sg = "Asia/Singapore"
+    assert next_occurrence(time(6, 30), [], sg, friday_evening) == datetime(2026, 10, 9, 22, 30, tzinfo=UTC)  # Sat 06:30 local
+    assert next_occurrence(time(6, 30), [0, 1, 2, 3, 4], sg, friday_evening) == datetime(2026, 10, 11, 22, 30, tzinfo=UTC)  # Mon
+    assert next_occurrence(time(6, 30), [5], sg, friday_evening) == datetime(2026, 10, 9, 22, 30, tzinfo=UTC)
+    assert next_occurrence(time(4, 0), [5], sg, friday_evening) == datetime(2026, 10, 16, 20, 0, tzinfo=UTC)  # already 04:00: next Saturday
+    assert repeat_text([0, 1, 2, 3, 4]) == "Weekdays" and repeat_text([6, 5]) == "Weekends" and repeat_text(list(range(7))) == "Every day"
+    assert repeat_text([0, 2]) == "Mon, Wed" and repeat_text([]) == ""
+
+
+def test_alarm_by_clock_time_with_repeat_switch_and_rearm() -> None:
+    client = make_client()
+    client.put("/settings/persona", json={"timezone": "UTC"})
+    assert client.post("/alarms", json={"label": "x"}).status_code == 422  # neither due_at nor time
+    assert client.post("/alarms", json={"label": "x", "time": "6:30"}).status_code == 422
+    assert client.post("/alarms", json={"label": "x", "time": "06:30", "repeat": [7]}).status_code == 422
+    made = client.post("/alarms", json={"label": "Gym", "time": "06:30", "repeat": [0, 2, 4, 2]}).json()
+    due = datetime.fromisoformat(made["due_at"])
+    assert made["repeat"] == [0, 2, 4] and made["enabled"] is True and (due.hour, due.minute) == (6, 30) and due.weekday() in (0, 2, 4) and due > datetime.now(UTC)
+    once = client.post("/alarms", json={"label": "Once", "time": "06:30"}).json()
+    assert once["repeat"] == []
+    # switching off keeps it but it will not ring; switching on again re-arms
+    off = client.patch(f"/alarms/{made['id']}", json={"enabled": False}).json()
+    assert off["enabled"] is False and off["status"] == "scheduled" and off["due_at"] == made["due_at"]
+    assert client.patch(f"/alarms/{made['id']}", json={"enabled": True}).json()["enabled"] is True
+    # edits
+    edited = client.patch(f"/alarms/{made['id']}", json={"label": " Run ", "time": "07:15", "repeat": [1], "volume": 150, "station_id": None}).json()
+    due = datetime.fromisoformat(edited["due_at"])
+    assert (edited["label"], edited["repeat"], edited["volume"], due.weekday(), due.hour, due.minute) == ("Run", [1], 150, 1, 7, 15)
+    assert client.patch("/alarms/nope", json={"enabled": False}).status_code == 404
+    assert client.patch(f"/alarms/{made['id']}", json={"repeat": [9]}).status_code == 422
+
+
+def test_a_repeating_alarm_rings_then_is_re_armed_and_a_disabled_one_never_rings() -> None:
+    async def run() -> None:
+        store = InMemoryPlannerStore()
+        ringing = await store.add_alarm("daily", NOW - timedelta(minutes=1), repeat=list(range(7)))
+        silent = await store.add_alarm("off", NOW - timedelta(minutes=1))
+        await store.update_alarm(silent.id, {"enabled": False})
+        claimed = await store.claim_due_alarms(NOW)
+        assert [a.id for a in claimed] == [ringing.id] and claimed[0].status == "fired"
+        rearmed = await store.rearm_alarm(ringing.id, NOW + timedelta(days=1))
+        assert rearmed.status == "scheduled" and rearmed.due_at == NOW + timedelta(days=1)
+        assert claimed[0].status == "fired"  # the snapshot the hub received is unchanged
+        assert await store.rearm_alarm(silent.id, NOW + timedelta(days=1)) is not None and (await store.claim_due_alarms(NOW)) == []
+        back = await store.update_alarm(silent.id, {"enabled": True, "due_at": NOW - timedelta(seconds=1)})
+        assert back.status == "scheduled" and [a.id for a in await store.claim_due_alarms(NOW)] == [silent.id]
+
+    asyncio.run(run())
+
+
+def test_the_due_route_re_arms_repeating_alarms_and_returns_the_one_that_rang() -> None:
+    client = make_client()
+    client.put("/settings/persona", json={"timezone": "UTC"})
+    past = datetime.now(UTC) - timedelta(minutes=1)
+    store = client.app.state.planner_store
+    daily = asyncio.run(store.add_alarm("daily", past, repeat=list(range(7))))
+    once = asyncio.run(store.add_alarm("once", past))
+    rang = {a["id"]: a for a in client.get("/alarms/due").json()}
+    assert set(rang) == {daily.id, once.id} and all(a["status"] == "fired" for a in rang.values())
+    after = {a["id"]: a for a in client.get("/alarms").json()}
+    assert after[daily.id]["status"] == "scheduled" and datetime.fromisoformat(after[daily.id]["due_at"]) > datetime.now(UTC)
+    assert datetime.fromisoformat(after[daily.id]["due_at"]).time() == past.time().replace(second=0, microsecond=0)
+    assert after[once.id]["status"] == "fired"
+    assert client.get("/alarms/due").json() == []
+    # a finished one-time alarm is switched back on for its next occurrence
+    again = client.patch(f"/alarms/{once.id}", json={"enabled": True}).json()
+    assert again["status"] == "scheduled" and datetime.fromisoformat(again["due_at"]) > datetime.now(UTC)

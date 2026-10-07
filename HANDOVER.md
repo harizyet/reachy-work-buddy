@@ -6,6 +6,8 @@ The [documentation index](docs/README.md) defines ownership;
 
 ## Current work
 
+**Alarm clock screens (2026-10-07, uncommitted, migration 024, not yet deployed):** web Alarms tab and a new Android Alarms tab (0.8.0) in the iPhone Clock style; backend `repeat`/`enabled`, `PATCH /alarms/{id}` (hub `PATCH /planner/alarms/{id}`), re-arm in `/alarms/due`; ADR 0027 addendum, phase-38 row 38.8. Emulator-verified add/toggle against a throwaway hub; not run against the production stack or a physical alarm ring. Times are interpreted in the persona time zone.
+
 **Recording-gap flag (2026-10-07, uncommitted, migration 023, not yet deployed):** `meetings/silence.py` + worker `audio check` stage store `audio_gaps` ({spans, segments, seconds}) for completed meetings; web/Android show a yellow warning on the list, a banner and per-line flags. Checked on the owner's real recording: three gaps totalling 511 s of 758 s (the phone supplied exact zeros); the cause (lock-screen background capture) is not fixed. Core now depends on `av` (uv.lock updated).
 
 **Meeting alignment (27.4, 2026-10-07, uncommitted):** `meetings/align.py` + worker `alignment` stage store `aligned_segments` (migration 022) and complete meetings; web transcript shows speaker chips with click-to-rename, Android (0.5.0) uses the stored alignment. Not yet judged on real multi-speaker audio quality. Existing `aligning` meetings complete on the first poll after deploy.

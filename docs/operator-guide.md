@@ -73,13 +73,23 @@ All text is shown literally. Requests go through owner-authenticated
 
 ## Alarms
 
-The **Alarms** tab lists every alarm with its status and how it was delivered.
-Add one with a label and a date and time in your browser's time zone, optionally
-choosing a saved radio station. Search TuneIn by name, save a station (only its
-guide id is stored) and remove it again. **Cancel** drops a scheduled alarm;
-**Stop** silences an alarm that is playing now. The **Volume** slider (10-400%, default 100%) sets the loudness of each new alarm; above 100% boosts the audio and can distort. Playback follows privacy mode and
-room presence (ADR 0027); otherwise the alarm goes to Telegram. Requests use
-owner-authenticated `/planner/alarms*` and `/planner/stations*` hub routes.
+The **Alarms** tab (web) and the **Alarms** tab in the Android app work like a
+phone's Clock app. Each alarm shows its time large, with its label and repeat days
+(Weekdays, Weekends, Every day, or the day names) and an on/off switch; a finished
+one-time alarm shows off, and switching it on rings it again at the next occurrence
+of that time. **Edit** shows a delete control on every row; **+** opens **Add
+Alarm** and selecting an alarm opens **Edit Alarm**. The sheet has time wheels
+(hour, minute, AM/PM), **Repeat** (tap the days; none rings once), **Label**,
+**Sound** (the chime or a saved radio station) and **Volume** (10-400%, default
+100%; above 100% boosts the audio and can distort), plus **Delete Alarm** when
+editing. There is no Snooze. Times are in the time zone set in Settings (the
+assistant's persona time zone), which is also what the alarm sentences use;
+the screens show them in the device's own zone, so keep the two the same.
+Search TuneIn by name on the web tab, save a station (only its guide id is stored)
+and remove it again. **Stop alarm** silences an alarm that is playing now.
+Playback follows privacy mode and room presence (ADR 0027); otherwise the alarm
+goes to Telegram. Requests use owner-authenticated `/planner/alarms*` and
+`/planner/stations*` hub routes.
 
 The **Activity** tab lists recent action receipts: what the assistant actually
 changed (alarms, tasks, reminders, memory) and whether an alarm was delivered,

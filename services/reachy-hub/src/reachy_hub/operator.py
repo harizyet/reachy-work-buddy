@@ -117,9 +117,20 @@ class PlannerReminderBody(BaseModel):
 
 class PlannerAlarmBody(BaseModel):
     label: str = Field(min_length=1, max_length=200)
-    due_at: datetime
+    due_at: datetime | None = None
+    time: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    repeat: list[int] = Field(default_factory=list, max_length=7)
     station_id: str | None = Field(default=None, max_length=100)
     volume: int = Field(default=100, ge=10, le=400)
+
+
+class PlannerAlarmPatchBody(BaseModel):
+    label: str | None = Field(default=None, min_length=1, max_length=200)
+    time: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    repeat: list[int] | None = Field(default=None, max_length=7)
+    station_id: str | None = Field(default=None, max_length=100)
+    volume: int | None = Field(default=None, ge=10, le=400)
+    enabled: bool | None = None
 
 
 class PlannerStationBody(BaseModel):
@@ -474,7 +485,12 @@ def install_operator_routes(
 
     @app.post(PLANNER_ALARMS, dependencies=dependencies)
     async def planner_add_alarm(body: PlannerAlarmBody) -> dict:
-        return await planner("POST", "/alarms", json=body.model_dump(mode="json"))
+        return await planner("POST", "/alarms", json=body.model_dump(mode="json", exclude_none=True))
+
+    @app.patch(PLANNER_ALARM, dependencies=dependencies)
+    async def planner_update_alarm(item_id: str, body: PlannerAlarmPatchBody) -> dict:
+        # Only what was sent changes; an explicit null station means "chime".
+        return await planner("PATCH", f"/alarms/{quote(item_id, safe='')}", json=body.model_dump(mode="json", exclude_unset=True))
 
     @app.post(PLANNER_ALARMS_STOP, dependencies=dependencies)
     async def planner_stop_alarm() -> dict:

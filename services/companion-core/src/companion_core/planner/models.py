@@ -10,7 +10,7 @@ import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 def _now() -> datetime:
@@ -60,6 +60,16 @@ class Alarm(BaseModel):
     fired_at: datetime | None = None
     delivery: str | None = None
     volume: int = Field(default=100, ge=10, le=400)
+    # Weekdays (0 = Monday … 6 = Sunday) the alarm repeats on; empty rings once. `enabled` is the clock's on/off switch.
+    repeat: list[int] = Field(default_factory=list)
+    enabled: bool = True
+
+    @field_validator("repeat")
+    @classmethod
+    def _valid_days(cls, days: list[int]) -> list[int]:
+        if any(not 0 <= d <= 6 for d in days):
+            raise ValueError("repeat days are 0 (Monday) to 6 (Sunday)")
+        return sorted(set(days))
 
 
 class Station(BaseModel):

@@ -39,7 +39,7 @@ def _reminder(row: tuple) -> Reminder:
         notified_at=row[6],
     )
 
-_ALARM_COLUMNS = "id, label, due_at, reminder_id, station_id, status, created_at, fired_at, delivery, volume"
+_ALARM_COLUMNS = "id, label, due_at, reminder_id, station_id, status, created_at, fired_at, delivery, volume, repeat, enabled"
 
 
 def _alarm(row: tuple) -> Alarm:
@@ -54,6 +54,8 @@ def _alarm(row: tuple) -> Alarm:
         fired_at=row[7],
         delivery=row[8],
         volume=row[9],
+        repeat=list(row[10] or []),
+        enabled=row[11],
     )
 
 _RECEIPT_COLUMNS = (
@@ -199,11 +201,14 @@ class PostgresPlannerStore:
         reminder_id: str | None = None,
         station_id: str | None = None,
         volume: int = 100,
+        repeat: list[int] | None = None,
     ) -> Alarm:
-        alarm = Alarm(label=label, due_at=due_at, reminder_id=reminder_id, station_id=station_id, volume=volume)
+        alarm = Alarm(
+            label=label, due_at=due_at, reminder_id=reminder_id, station_id=station_id, volume=volume, repeat=repeat or []
+        )
         async with self._pool.connection() as conn:
             await conn.execute(
-                f"INSERT INTO alarms ({_ALARM_COLUMNS}) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                f"INSERT INTO alarms ({_ALARM_COLUMNS}) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     alarm.id,
                     alarm.label,
@@ -215,15 +220,45 @@ class PostgresPlannerStore:
                     alarm.fired_at,
                     alarm.delivery,
                     alarm.volume,
+                    Jsonb(alarm.repeat),
+                    alarm.enabled,
                 ),
             )
         return alarm
 
+    async def update_alarm(self, alarm_id: str, changes: dict) -> Alarm | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(f"SELECT {_ALARM_COLUMNS} FROM alarms WHERE id = %s FOR UPDATE", (alarm_id,))
+            row = await cur.fetchone()
+            if row is None or row[5] == AlarmStatus.CANCELLED.value:
+                return _alarm(row) if row else None
+            updated = Alarm.model_validate({**_alarm(row).model_dump(), **changes})
+            if "due_at" in changes or changes.get("enabled") is True:
+                updated.status, updated.fired_at = AlarmStatus.SCHEDULED, None
+            await conn.execute(
+                "UPDATE alarms SET label = %s, due_at = %s, station_id = %s, status = %s, fired_at = %s, volume = %s, "
+                "repeat = %s, enabled = %s WHERE id = %s",
+                (updated.label, updated.due_at, updated.station_id, updated.status.value, updated.fired_at,
+                 updated.volume, Jsonb(updated.repeat), updated.enabled, alarm_id),
+            )
+            return updated
+
+    async def rearm_alarm(self, alarm_id: str, due_at: datetime) -> Alarm | None:
+        async with self._pool.connection() as conn:
+            await conn.execute(
+                "UPDATE alarms SET status = %s, due_at = %s WHERE id = %s AND status = %s AND enabled "
+                "AND jsonb_array_length(repeat) > 0",
+                (AlarmStatus.SCHEDULED.value, due_at, alarm_id, AlarmStatus.FIRED.value),
+            )
+            cur = await conn.execute(f"SELECT {_ALARM_COLUMNS} FROM alarms WHERE id = %s", (alarm_id,))
+            row = await cur.fetchone()
+            return _alarm(row) if row else None
+
     async def cancel_alarm(self, alarm_id: str) -> Alarm | None:
         async with self._pool.connection() as conn:
             await conn.execute(
-                "UPDATE alarms SET status = %s WHERE id = %s AND status = %s",
-                (AlarmStatus.CANCELLED.value, alarm_id, AlarmStatus.SCHEDULED.value),
+                "UPDATE alarms SET status = %s WHERE id = %s AND status IN (%s, %s)",
+                (AlarmStatus.CANCELLED.value, alarm_id, AlarmStatus.SCHEDULED.value, AlarmStatus.FIRED.value),
             )
             cur = await conn.execute(f"SELECT {_ALARM_COLUMNS} FROM alarms WHERE id = %s", (alarm_id,))
             row = await cur.fetchone()
@@ -232,7 +267,7 @@ class PostgresPlannerStore:
     async def claim_due_alarms(self, now: datetime) -> list[Alarm]:
         async with self._pool.connection() as conn:
             cur = await conn.execute(
-                f"UPDATE alarms SET status = %s, fired_at = %s WHERE status = %s AND due_at <= %s "
+                f"UPDATE alarms SET status = %s, fired_at = %s WHERE status = %s AND enabled AND due_at <= %s "
                 f"RETURNING {_ALARM_COLUMNS}",
                 (AlarmStatus.FIRED.value, now, AlarmStatus.SCHEDULED.value, now),
             )

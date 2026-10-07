@@ -147,6 +147,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun deleteTask(task: Task) = load { api.deleteTask(task.id); loadTasksNow() }
     private suspend fun loadTasksNow() { tasks.replace(api.tasks().sortedBy { it.done }) }
 
+    val alarms = mutableStateListOf<app.reachy.companion.data.Alarm>()
+    val stations = mutableStateListOf<app.reachy.companion.data.Station>()
+    private suspend fun loadAlarmsNow() { alarms.replace(api.alarms()); stations.replace(api.stations()) }
+    fun loadAlarms() = load { loadAlarmsNow() }
+    fun setAlarmOn(id: String, on: Boolean) = load { api.setAlarmEnabled(id, on); loadAlarmsNow() }
+    fun deleteAlarm(id: String) = load { api.deleteAlarm(id); loadAlarmsNow() }
+    fun saveAlarm(id: String?, label: String, time: String, repeat: List<Int>, stationId: String?, volume: Int) = load {
+        if (id == null) api.addAlarm(label.trim(), time, repeat, stationId, volume) else api.updateAlarm(id, label.trim(), time, repeat, stationId, volume)
+        loadAlarmsNow()
+    }
+
     fun loadNotes() = load { notes.replace(api.notes()) }
     fun saveNote(id: String?, title: String, body: String) = load { api.saveNote(id, title.trim(), body); notes.replace(api.notes()) }
     fun deleteNote(note: Note) = load { api.deleteNote(note.id); notes.replace(api.notes()) }

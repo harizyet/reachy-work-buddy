@@ -157,6 +157,7 @@ import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
+from datetime import time as dtime
 from pathlib import Path
 from typing import Literal
 from zoneinfo import ZoneInfo
@@ -258,6 +259,7 @@ from companion_core.persona.context import context_message
 from companion_core.persona.postgres_store import PostgresPersonaStore
 from companion_core.persona.render import render
 from companion_core.persona.store import PersonaStore
+from companion_core.planner import alarm_schedule
 from companion_core.planner.models import Alarm, Note, Reminder, Station
 from companion_core.planner.postgres_store import PostgresPlannerStore
 from companion_core.planner.store import PlannerStore
@@ -371,11 +373,28 @@ class CreateReminderRequest(BaseModel):
 
 
 class CreateAlarmRequest(BaseModel):
+    """Either a full `due_at`, or the clock `time` ("HH:MM", the owner's time zone) which rings at its next occurrence
+    on one of the `repeat` weekdays (0 = Monday … 6 = Sunday; none rings once)."""
+
     label: str = Field(min_length=1, max_length=500)
-    due_at: datetime
+    due_at: datetime | None = None
+    time: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    repeat: list[int] = Field(default_factory=list, max_length=7)
     reminder_id: str | None = Field(default=None, max_length=100)
     station_id: str | None = Field(default=None, max_length=100)
     volume: int = Field(default=100, ge=10, le=400)
+
+
+class UpdateAlarmRequest(BaseModel):
+    """Only the fields sent change. `time` or `repeat` re-schedule to the next matching occurrence; turning an alarm
+    on re-arms one that has already rung."""
+
+    label: str | None = Field(default=None, min_length=1, max_length=500)
+    time: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    repeat: list[int] | None = Field(default=None, max_length=7)
+    station_id: str | None = Field(default=None, max_length=100)
+    volume: int | None = Field(default=None, ge=10, le=400)
+    enabled: bool | None = None
 
 
 class CreateStationRequest(BaseModel):
@@ -1877,11 +1896,21 @@ def create_app(
 
     @app.post("/alarms")
     async def create_alarm(request: CreateAlarmRequest) -> Alarm:
-        if request.due_at.tzinfo is None:
+        if (request.due_at is None) == (request.time is None):
+            raise HTTPException(status_code=422, detail="send either due_at or time")
+        if request.due_at is not None and request.due_at.tzinfo is None:
             raise HTTPException(status_code=422, detail="due_at must include a time zone")
+        if any(not 0 <= d <= 6 for d in request.repeat):
+            raise HTTPException(status_code=422, detail="repeat days are 0 (Monday) to 6 (Sunday)")
+        zone = (await app.state.persona_store.get()).timezone
+        repeat = sorted(set(request.repeat))
+        due_at = request.due_at
+        if request.time is not None or repeat:
+            clock = dtime.fromisoformat(request.time) if request.time else alarm_schedule.clock_of(due_at, zone)
+            due_at = alarm_schedule.next_occurrence(clock, repeat, zone, datetime.now(UTC))
         alarm = await app.state.planner_store.add_alarm(
-            request.label.strip(), request.due_at, reminder_id=request.reminder_id, station_id=request.station_id,
-            volume=request.volume,
+            request.label.strip(), due_at, reminder_id=request.reminder_id, station_id=request.station_id,
+            volume=request.volume, repeat=repeat,
         )
         await action_receipts.record(
             app.state.planner_store,
@@ -1892,11 +1921,54 @@ def create_app(
         )
         return alarm
 
+    @app.patch("/alarms/{alarm_id}")
+    async def update_alarm(alarm_id: str, request: UpdateAlarmRequest) -> Alarm:
+        store = app.state.planner_store
+        alarm = next((a for a in await store.list_alarms() if a.id == alarm_id), None)
+        if alarm is None:
+            raise HTTPException(status_code=404, detail=f"no alarm '{alarm_id}'")
+        if alarm.status == "cancelled":
+            raise HTTPException(status_code=409, detail="this alarm was deleted")
+        sent = request.model_fields_set
+        changes: dict = {}
+        if request.label is not None:
+            changes["label"] = request.label.strip()
+        if "station_id" in sent:
+            changes["station_id"] = request.station_id
+        if request.volume is not None:
+            changes["volume"] = request.volume
+        if request.enabled is not None:
+            changes["enabled"] = request.enabled
+        if request.repeat is not None:
+            if any(not 0 <= d <= 6 for d in request.repeat):
+                raise HTTPException(status_code=422, detail="repeat days are 0 (Monday) to 6 (Sunday)")
+            changes["repeat"] = sorted(set(request.repeat))
+        zone = (await app.state.persona_store.get()).timezone
+        now = datetime.now(UTC)
+        repeat = changes.get("repeat", alarm.repeat)
+        turning_on = request.enabled is True and (alarm.status == "fired" or alarm.due_at <= now or not alarm.enabled)
+        if request.time is not None or "repeat" in changes or turning_on:
+            clock = dtime.fromisoformat(request.time) if request.time else alarm_schedule.clock_of(alarm.due_at, zone)
+            changes["due_at"] = alarm_schedule.next_occurrence(clock, repeat, zone, now)
+        updated = await store.update_alarm(alarm_id, changes)
+        return updated
+
     @app.get("/alarms/due")
     async def alarms_due_now() -> list[Alarm]:
         """Claim-once, same shape as /reminders/due: the hub polls this and
-        applies the ADR 0027 delivery policy."""
-        return await app.state.planner_store.claim_due_alarms(datetime.now(UTC))
+        applies the ADR 0027 delivery policy. A repeating alarm is re-armed for its next day straight away, so the
+        returned alarm is the one that just rang."""
+        now = datetime.now(UTC)
+        claimed = await app.state.planner_store.claim_due_alarms(now)
+        if any(a.repeat for a in claimed):
+            zone = (await app.state.persona_store.get()).timezone
+            for alarm in claimed:
+                if alarm.repeat:
+                    clock = alarm_schedule.clock_of(alarm.due_at, zone)
+                    await app.state.planner_store.rearm_alarm(
+                        alarm.id, alarm_schedule.next_occurrence(clock, alarm.repeat, zone, now)
+                    )
+        return claimed
 
     @app.post("/alarms/{alarm_id}/delivery")
     async def record_alarm_delivery(alarm_id: str, request: AlarmDeliveryRequest) -> Alarm:

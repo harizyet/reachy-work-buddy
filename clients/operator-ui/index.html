@@ -8,6 +8,20 @@
   <header><div><span class="eyebrow">WORK COMPANION</span><h1>Reachy operator</h1></div><nav id="nav" hidden><a href="../app/telepresence.html">Telepresence ↗</a><button id="logout" class="secondary">Log out</button></nav></header>
   <p id="notice" role="status" aria-live="polite"></p>
   <div id="deep-banner" class="deep-banner" role="status" aria-live="polite" hidden><strong>Reachy is unavailable: deep review in progress.</strong> <span id="deep-banner-stage"></span></div>
+  <dialog id="alarm-dialog" class="alarm-sheet" aria-labelledby="alarm-dialog-title">
+    <form id="alarm-form">
+      <div class="sheet-bar"><button type="button" id="alarm-cancel" class="sheet-link">Cancel</button><h3 id="alarm-dialog-title">Add Alarm</h3><button type="submit" id="alarm-save" class="sheet-link sheet-strong">Save</button></div>
+      <div class="wheels" role="group" aria-label="Alarm time"><select id="alarm-hour" size="5" aria-label="Hour"></select><select id="alarm-minute" size="5" aria-label="Minute"></select><select id="alarm-ampm" size="5" aria-label="AM or PM"><option value="AM">AM</option><option value="PM">PM</option></select></div>
+      <div class="sheet-group">
+        <div class="sheet-row"><span>Repeat</span><span id="alarm-repeat-text" class="muted">Never</span></div>
+        <div id="alarm-days" class="day-toggles" role="group" aria-label="Repeat on"></div>
+        <label class="sheet-row">Label<input id="alarm-label" maxlength="200" required autocomplete="off" value="Alarm"></label>
+        <label class="sheet-row">Sound<select id="alarm-station"><option value="">Chime (no station)</option></select></label>
+        <label class="sheet-row">Volume <output id="alarm-volume-value">100%</output><input id="alarm-volume" type="range" min="10" max="400" step="10" value="100"></label>
+      </div>
+      <button type="button" id="alarm-delete" class="sheet-delete" hidden>Delete Alarm</button>
+    </form>
+  </dialog>
   <dialog id="line-dialog" aria-labelledby="line-dialog-title">
     <h3 id="line-dialog-title">Edit line</h3>
     <p id="line-dialog-original" class="muted"></p>
@@ -231,7 +245,7 @@
       <div id="todo-pane" class="workspace planner-workspace" hidden>
         <section class="card planner-wide"><div class="section-title"><div><span class="eyebrow">YOUR LISTS</span><h2>To-do</h2></div><button type="button" class="secondary planner-refresh">Refresh</button></div><p class="planner-status" role="status"></p></section>
         <section class="card" aria-labelledby="planner-task-title"><h3 id="planner-task-title">To-do</h3>
-          <form id="planner-task-form" class="planner-form"><label>New to-do<input id="planner-task-text" maxlength="2000" required autocomplete="off"></label><label>Volume <output id="alarm-volume-value">100%</output><input id="alarm-volume" type="range" min="10" max="400" step="10" value="100"></label><button>Add</button></form>
+          <form id="planner-task-form" class="planner-form"><label>New to-do<input id="planner-task-text" maxlength="2000" required autocomplete="off"></label><button>Add</button></form>
           <ul id="planner-task-list" class="planner-list"></ul><p id="planner-task-empty" class="muted">Nothing to do yet.</p></section>
       </div>
       <div id="reminders-pane" class="workspace planner-workspace" hidden>
@@ -242,9 +256,9 @@
       </div>
       <div id="alarms-pane" class="workspace planner-workspace" hidden>
         <section class="card planner-wide"><div class="section-title"><div><span class="eyebrow">YOUR LISTS</span><h2>Alarms</h2></div><span><button type="button" id="alarm-stop">Stop alarm</button> <button type="button" id="alarm-refresh" class="secondary">Refresh</button></span></div><p id="alarm-status" role="status"></p><p class="muted">Alarms play only when Reachy is listening for you and someone is detected in the room; otherwise you get a Telegram message instead.</p></section>
-        <section class="card" aria-labelledby="alarm-title"><h3 id="alarm-title">Alarms</h3>
-          <form id="alarm-form" class="planner-form"><label>Label<input id="alarm-label" maxlength="200" required autocomplete="off"></label><label>When<input id="alarm-due" type="datetime-local" required></label><label>Sound<select id="alarm-station"><option value="">Chime (no station)</option></select></label><button>Add</button></form>
-          <ul id="alarm-list" class="planner-list"></ul><p id="alarm-empty" class="muted">No alarms.</p></section>
+        <section class="card alarm-clock" aria-labelledby="alarm-title">
+          <div class="alarm-toolbar"><button type="button" id="alarm-edit" class="secondary">Edit</button><h3 id="alarm-title">Alarms</h3><button type="button" id="alarm-add" class="alarm-plus" aria-label="Add alarm">+</button></div>
+          <ul id="alarm-list" class="alarm-clock-list"></ul><p id="alarm-empty" class="muted">No alarms.</p></section>
         <section class="card" aria-labelledby="alarm-station-title"><h3 id="alarm-station-title">Radio stations (TuneIn)</h3>
           <form id="alarm-search-form" class="planner-form"><label>Find a station<input id="alarm-search" type="search" minlength="2" maxlength="100" autocomplete="off"></label><button>Search</button></form>
           <ul id="alarm-search-results" class="planner-list"></ul><p id="alarm-search-empty" class="muted" hidden>No stations found.</p>

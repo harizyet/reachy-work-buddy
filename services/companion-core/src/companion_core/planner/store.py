@@ -36,7 +36,10 @@ class PlannerStore(Protocol):
         reminder_id: str | None = None,
         station_id: str | None = None,
         volume: int = 100,
+        repeat: list[int] | None = None,
     ) -> Alarm: ...
+    async def update_alarm(self, alarm_id: str, changes: dict) -> Alarm | None: ...
+    async def rearm_alarm(self, alarm_id: str, due_at: datetime) -> Alarm | None: ...
     async def cancel_alarm(self, alarm_id: str) -> Alarm | None: ...
     async def claim_due_alarms(self, now: datetime) -> list[Alarm]: ...
     async def record_alarm_delivery(self, alarm_id: str, delivery: str) -> Alarm | None: ...
@@ -124,24 +127,46 @@ class InMemoryPlannerStore:
         reminder_id: str | None = None,
         station_id: str | None = None,
         volume: int = 100,
+        repeat: list[int] | None = None,
     ) -> Alarm:
-        alarm = Alarm(label=label, due_at=due_at, reminder_id=reminder_id, station_id=station_id, volume=volume)
+        alarm = Alarm(
+            label=label, due_at=due_at, reminder_id=reminder_id, station_id=station_id, volume=volume, repeat=repeat or []
+        )
         self._alarms[alarm.id] = alarm
+        return alarm
+
+    async def update_alarm(self, alarm_id: str, changes: dict) -> Alarm | None:
+        """Apply the given fields. A new time or switching the alarm on makes a finished alarm ring again."""
+        alarm = self._alarms.get(alarm_id)
+        if alarm is None or alarm.status is AlarmStatus.CANCELLED:
+            return alarm
+        updated = Alarm.model_validate({**alarm.model_dump(), **changes})
+        if "due_at" in changes or changes.get("enabled") is True:
+            updated.status, updated.fired_at = AlarmStatus.SCHEDULED, None
+        self._alarms[alarm_id] = updated
+        return updated
+
+    async def rearm_alarm(self, alarm_id: str, due_at: datetime) -> Alarm | None:
+        alarm = self._alarms.get(alarm_id)
+        if alarm is not None and alarm.status is AlarmStatus.FIRED and alarm.repeat and alarm.enabled:
+            alarm.status, alarm.due_at = AlarmStatus.SCHEDULED, due_at
         return alarm
 
     async def cancel_alarm(self, alarm_id: str) -> Alarm | None:
         alarm = self._alarms.get(alarm_id)
         if alarm is None:
             return None
-        if alarm.status is AlarmStatus.SCHEDULED:
+        if alarm.status in (AlarmStatus.SCHEDULED, AlarmStatus.FIRED):  # a finished alarm can be removed from the clock too
             alarm.status = AlarmStatus.CANCELLED
         return alarm
 
     async def claim_due_alarms(self, now: datetime) -> list[Alarm]:
-        due = [a for a in self._alarms.values() if a.status is AlarmStatus.SCHEDULED and a.due_at <= now]
+        due = [a for a in self._alarms.values() if a.status is AlarmStatus.SCHEDULED and a.enabled and a.due_at <= now]
+        snapshots = []
         for alarm in due:
             alarm.status, alarm.fired_at = AlarmStatus.FIRED, now
-        return sorted(due, key=lambda a: a.due_at)
+            snapshots.append(alarm.model_copy())  # a repeating alarm is re-armed after this, so the caller keeps the fired state
+        return sorted(snapshots, key=lambda a: a.due_at)
 
     async def record_alarm_delivery(self, alarm_id: str, delivery: str) -> Alarm | None:
         alarm = self._alarms.get(alarm_id)

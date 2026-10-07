@@ -31,3 +31,13 @@ Nothing existed to build on for two inputs: there is no room-occupancy signal (e
 - A sweep costs a few seconds of motion before each audible alarm and runs unattended: the owner decided on 2026-10-05 that the sweep is intended design and needs no supervision or approval.
 - Camera detection on the Nano is not assumed; detection runs on the hub from a fetched frame.
 - Live playback and physical acceptance need the owner; automated tests use simulated backends and say so.
+
+## Addendum 2026-10-07: repeat and the on/off switch
+
+At the owner's request the alarm screens follow the phone Clock app, so an alarm can repeat on chosen weekdays and be switched off without deleting it. This changes what an alarm record is, not how it is delivered: every rule above (privacy, availability, do-not-disturb, occupancy, Telegram fallback, the sweep) applies unchanged to each ring.
+
+- An alarm keeps one row. `repeat` lists weekdays and an empty list means once; `enabled` is the switch. The row's `due_at` is always the next ring.
+- A due alarm is claimed once as before and, when it repeats, the same request re-arms it for its next matching day in the owner's time zone, so the hub's delivery sees the alarm that rang and a crash cannot leave a daily alarm silent for good.
+- A disabled alarm is never claimed. Switching one on, or giving it a new time or days, schedules its next occurrence.
+- Deleting removes an alarm from the clock (history stays in action receipts), including one that has already rung.
+- Snooze is not part of this change.

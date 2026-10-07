@@ -261,6 +261,30 @@ class ReachyApi(baseUrl: String, private val cookieJar: PersistentCookieJar, cli
         }
     }
 
+    suspend fun alarms(): List<Alarm> =
+        json.decodeFromString(ListSerializer(Alarm.serializer()), call(req("/planner/alarms").build()))
+
+    suspend fun stations(): List<Station> =
+        json.decodeFromString(ListSerializer(Station.serializer()), call(req("/planner/stations").build()))
+
+    /** [time] is "HH:MM" in the owner's time zone; the hub rings at its next occurrence on one of [repeat]. */
+    suspend fun addAlarm(label: String, time: String, repeat: List<Int>, stationId: String?, volume: Int): Alarm =
+        json.decodeFromString(call(req("/planner/alarms").post(jsonBody(alarmBody(label, time, repeat, stationId, volume))).build()))
+
+    suspend fun updateAlarm(id: String, label: String, time: String, repeat: List<Int>, stationId: String?, volume: Int): Alarm =
+        json.decodeFromString(call(req("/planner/alarms/$id").patch(jsonBody(alarmBody(label, time, repeat, stationId, volume))).build()))
+
+    suspend fun setAlarmEnabled(id: String, enabled: Boolean): Alarm =
+        json.decodeFromString(call(req("/planner/alarms/$id").patch(jsonBody(buildJsonObject { put("enabled", enabled) })).build()))
+
+    suspend fun deleteAlarm(id: String) { call(req("/planner/alarms/$id").delete().build()) }
+
+    private fun alarmBody(label: String, time: String, repeat: List<Int>, stationId: String?, volume: Int) = buildJsonObject {
+        put("label", label); put("time", time); put("volume", volume)
+        put("repeat", kotlinx.serialization.json.JsonArray(repeat.map { JsonPrimitive(it) }))
+        put("station_id", stationId?.let { JsonPrimitive(it) } ?: kotlinx.serialization.json.JsonNull)
+    }
+
     suspend fun clearCorrection(id: String, segment: Int): Meeting =
         json.decodeFromString(call(req("/meetings/$id/corrections/$segment").delete().build()))
 
