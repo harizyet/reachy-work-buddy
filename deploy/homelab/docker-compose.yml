@@ -167,6 +167,11 @@ services:
       HF_HUB_DISABLE_XET: "1"
     command:
       - ${VLLM_MODEL:-Qwen/Qwen2.5-7B-Instruct-AWQ}
+      # Every local tier is served under one stable API name (ADR 0031), so
+      # companion-core's local provider never changes when the model manager
+      # swaps the underlying model. Point Settings > LLM > local at this name.
+      - --served-model-name
+      - reachy-local
       - --max-model-len
       - "${VLLM_MAX_MODEL_LEN:-8192}"
       - --gpu-memory-utilization
@@ -359,7 +364,16 @@ services:
     restart: unless-stopped
     secrets:
       - credential_keys
+    # Phase 42C: the model manager runs on the host (scripts/start-model-manager.sh
+    # --bridge) and its token lives in this optional file. Without it the Deep
+    # Local option reports that the manager is not configured.
+    env_file:
+      - path: ./.env.model-manager
+        required: false
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
+      MODEL_MANAGER_URL: ${MODEL_MANAGER_URL:-http://host.docker.internal:8090}
       ACCOUNTS_SERVICE_TOKEN: ${ACCOUNTS_SERVICE_TOKEN:?set ACCOUNTS_SERVICE_TOKEN in .env}
       OWNER_USER_ID: ${OWNER_USER_ID:-default-user}
       SECRET_KEY_FILE: /run/secrets/credential_keys

@@ -1,0 +1,31 @@
+# ADR 0031: Three-tier model escalation with a task-scoped deep local tier
+
+- Status: **Proposed 2026-10-07** for [Phase 42](../phase-42.md); the lifecycle manager (decisions 4 and 7 to 11) is **accepted and built as Phase 42B**, tier routing and scheduling remain proposed. Extends [ADR 0018](0018-hybrid-llm-routing.md).
+- Date: 2026-10-07
+
+## Context
+
+Reachy routes between one local model (Qwen2.5-7B-AWQ on vLLM) and an optional cloud model. A real meeting correction exposed a capability gap in the 7B: it never resolved "germanite" to "Gemini", even with vocabulary hints. The benchmark in [the verification record](../verification/meeting-corrections-benchmark-2026-10-07.md) shows a 14B model resolving it. The GPU (RTX 2000E Ada, 16 GB) cannot hold the 7B and a 12-14B model together, and a 14B decodes at about 21 tokens/s against about 40 for the 7B, so it should not replace the 7B for conversation.
+
+## Decision
+
+1. **Three tiers.** FAST_LOCAL (Qwen2.5-7B-AWQ, always on, interactive default), DEEP_LOCAL (Qwen3-14B-AWQ, loaded only for deep work; Gemma-4-12B stays a benchmark alternative) and CLOUD (Together AI, last capability tier or explicit owner choice). Only models that have been benchmarked are candidates.
+2. **Model-tier choice is separate from capability routing and from consent.** The semantic router decides what a request is (`capability`); a model-tier decision picks where it runs. Neither can bypass an action gate, and the tier never changes authorization (ADR 0001, 0011, 0026).
+3. **Escalation is task-scoped, never per turn.** A swap costs far more than an inference, so deep work is a job (review a meeting, nightly queue), not a conversational turn. Several jobs share one swap.
+4. **A model manager owns residency.** One small stateful component (SMALL_READY, SWITCHING_TO_LARGE, LARGE_READY, SWITCHING_TO_SMALL, ERROR_RECOVERY) owns vLLM lifecycle, serializes swaps, drains requests, health-checks each load, records swap timings and failures, and always restores the small model, including after a failed large load. The rest of Reachy asks for a tier and holds no Docker or vLLM logic. A failed restore is a high-priority fault and does not silently send normal traffic to the cloud.
+5. **Privacy.** Local-only data (meeting speech) goes to DEEP_LOCAL before it ever goes to cloud; cloud stays an explicit choice for such data (ADR 0030).
+6. **Automatic tier routing waits for data.** A tier router is trained from graded outcomes (run each tier, grade, label which is the cheapest adequate one), only after the manual and nightly workflows have produced real quality data. No automatic per-turn escalation before that.
+
+7. **One stable model identity.** Both tiers are served under the API name `reachy-local` (vLLM `--served-model-name`, `LOCAL_MODEL_NAME` in `shared/protocols/model_manager_api.py`). Core's local provider is configured with that name and never learns which model is loaded, so a swap cannot break a client. The real model id, launch arguments (for example Qwen3's thinking switch) and health logic belong to the manager.
+8. **Restoration is deterministic because tier 1 is never rebuilt.** Tier 1 is the compose `vllm` container, stopped and started as it was created. Tier 2 is a separate container with `--restart no` carrying the network alias `vllm`, so a host reboot can never bring the deep model back and clients keep resolving one hostname.
+9. **The manager runs as a host process** (`scripts/start-model-manager.sh`) on 127.0.0.1 with a bearer token (`deploy/homelab/.env.model-manager-token`, mode 600), using the owner's own Docker access. A container with the Docker socket mounted would hand root-equivalent control to whatever can reach it, for no benefit here.
+10. **Failure behaviour is the contract, and recovery is automatic.** Readiness means a running container, a healthy `/health` and a real one-token completion. A deep tier that fails to start is retried once (not when it merely times out, since a slow model would only time out again); if it still fails, the fast tier is loaded and stays loaded, with a visible note in `last_error`, until the owner activates the deep tier again. While the deep tier is loaded a watchdog checks it every 15 s: a dead container is acted on at once, a hung one after three consecutive failed checks, and recovery is the same bounded restart, then fallback to the fast tier, with no owner involved. Nothing re-enters the deep tier by itself. A failed restore of the fast tier is retried once and then lands in FAILED, never an endless loop, and a deep switch is refused until the owner restores manually. A deep job that fails, is cancelled or loses its model mid-run still ends on the fast tier. A deep lease (default 30 minutes, at most 6 hours) expires on its own and restores tier 1, and manager shutdown restores it too. State is learned from the host at startup (`reconcile`), never from a remembered file; the transition history is an append-only log.
+11. **Manual only in 42B.** The manager exposes `state`, `activate`, `restore`, `transitions` and `metrics` and a CLI wrapper (`run -- COMMAND`) that holds tier 2 for one command and restores afterwards. It contains no routing policy, automatic escalation or scheduling.
+
+12. **Explicit deep local review is the first user-facing use (Phase 42C).** The owner picks Deep local for a meeting review, is warned that Reachy will be unavailable, and is told by Telegram when the standard model is unloaded and again when Reachy is online. Local models now get one multiple-choice question per candidate in the suggestion pipeline (the batched JSON form stays for the cloud), following the benchmark.
+
+## Consequences
+
+- During a deep job the 7B is unavailable; interactive requests must queue, fail soft or follow the owner's policy. Swap time is measured first (Phase 42A) and gates everything else.
+- The manager needs authority over the vLLM containers: it is a loopback-only, token-protected host process and nothing else holds that authority. Anyone who can call it can take the local model offline for minutes, so the token is as sensitive as the Docker access it fronts.
+- The deterministic key-terms resolver stays: the benchmark shows the gain comes from vocabulary plus constrained choice, with the larger model improving only the final contextual decision.
