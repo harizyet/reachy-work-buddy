@@ -395,7 +395,7 @@ def utterance_fixture() -> np.ndarray:
 def test_multi_turn_conversation_through_hub_and_core() -> None:
     async def scenario():
         tts = FixedTTS()
-        hub = make_hub(ScriptedSTT("hello reachy", "what did I say"), tts)
+        hub = make_hub(ScriptedSTT("how are you today", "what did I say"), tts)
         mic = CountingMic([utterance_fixture(), utterance_fixture()])
         player = RecordingPlayer()
         robot = Robot(hub, mic, player)
@@ -404,7 +404,7 @@ def test_multi_turn_conversation_through_hub_and_core() -> None:
 
         await wait_until(lambda: len(player.played) == 2 and robot.reports.count("listening") >= 3)
         session = (await owner(hub, "GET", "/robot-voice")).json()["session"]
-        assert [t["transcript"] for t in session["turns"]] == ["hello reachy", "what did I say"]
+        assert [t["transcript"] for t in session["turns"]] == ["how are you today", "what did I say"]
         assert [t["outcome"] for t in session["turns"]] == ["spoken", "spoken"]
         assert "turn 2" in tts.spoken[1]  # one conversation across turns
         assert session["state"] == "listening"
