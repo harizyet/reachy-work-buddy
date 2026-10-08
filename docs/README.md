@@ -137,6 +137,9 @@ over the original decision where they explicitly change it.
 
 These are dated evidence, not startup instructions or current health checks.
 
+- [Phase 44A production deployment 2026-10-08](verification/phase-44a-deployment-2026-10-08.md): migration 026 on the homelab, backup
+  and restore check, rollback assets, thirteen smoke checks, downtime; the robot gate is pending.
+
 - [Phase 44A migration 026 rehearsal 2026-10-08](verification/phase-44a-rehearsal-2026-10-08.md): live read-only preflight, an isolated
   restored copy migrated with the real keyring, the rollback proven, disposal; nothing on the live stack changed.
 

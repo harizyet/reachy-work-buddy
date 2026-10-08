@@ -751,7 +751,7 @@ explicitly disposable project. Leave unrelated services such as OVMS alone.
 ## Schema upgrades and credential keys
 
 Core and hub require the revision declared in
-[`shared/database.py`](../shared/database.py) (`026_source_sensitivity` in the repository; the running homelab database is still at `025_meeting_description` until the owner approves the upgrade).
+[`shared/database.py`](../shared/database.py) (`026_source_sensitivity`; the homelab was upgraded to it on 2026-10-08).
 The ordered Alembic history ships
 in core's image; SQL stores perform compatibility checks, not startup DDL.
 Compose runs `migrate` before hub/core, including through
@@ -776,7 +776,7 @@ Revision `019_meeting_annotations` (Phase 41, [ADR 0030](adr/0030-meeting-speake
 
 Revision `020_meeting_terms` (Phase 41) adds `meetings.key_terms` and the `meeting_terms` glossary table. Deployed 2026-10-07 (backup `reachy-before-meeting-terms-20261007-1456.dump`; 5 existing meetings kept).
 
-Revision `026_source_sensitivity` ([Phase 44](phase-44.md), not yet applied to the homelab; [runbook](#applying-migration-026-phase-44a---runbook-prepared-and-not-executed)) adds `sensitivity` (`public`, `work-private` or `sensitive`, default `work-private`, check-constrained) to `document_chunks`, `notes`, `tasks`, `reminders` and `meetings`, and a nullable `project_scope` to `document_chunks`, `notes` and `tasks`. Every existing row becomes `work-private` and unscoped; nothing is inferred, and a scope that already exists (a meeting's) is untouched. `NULL` scope means unscoped, not public. Additive, with defaults, so SQL that names its columns keeps working; the old core image refuses the new revision at startup, so rebuild `migrate`, `companion-core` and `reachy-hub` together. Recovery is the pre-upgrade dump: restoring it returns the database to `025` and the same upgrade can be run again (verified on a disposable server, `test_source_sensitivity.py`). Downgrade is unsupported. Apply only after a verified dump, with the owner's approval, using the sequence above.
+Revision `026_source_sensitivity` ([Phase 44](phase-44.md), **applied to the homelab 2026-10-08**, backup `reachy-before-phase44a-20261008-111605.dump`, [record](verification/phase-44a-deployment-2026-10-08.md); [runbook](#applying-migration-026-phase-44a---runbook-prepared-and-not-executed)) adds `sensitivity` (`public`, `work-private` or `sensitive`, default `work-private`, check-constrained) to `document_chunks`, `notes`, `tasks`, `reminders` and `meetings`, and a nullable `project_scope` to `document_chunks`, `notes` and `tasks`. Every existing row becomes `work-private` and unscoped; nothing is inferred, and a scope that already exists (a meeting's) is untouched. `NULL` scope means unscoped, not public. Additive, with defaults, so SQL that names its columns keeps working; the old core image refuses the new revision at startup, so rebuild `migrate`, `companion-core` and `reachy-hub` together. Recovery is the pre-upgrade dump: restoring it returns the database to `025` and the same upgrade can be run again (verified on a disposable server, `test_source_sensitivity.py`). Downgrade is unsupported. Apply only after a verified dump, with the owner's approval, using the sequence above.
 
 Revision `025_meeting_description` adds `meetings.description` and `meetings.title_source`; existing meetings whose title is not the apps' default ("Meeting 7 Oct 12:05") are marked as owner-titled so they are never renamed. Core and hub are rebuilt together.
 
@@ -915,8 +915,7 @@ project first; only replace a production deployment after testing that restore.
 
 ### Applying migration 026 (Phase 44A) - runbook, prepared and not executed
 
-Status: **prepared 2026-10-08, not run.** Applying it to the live homelab needs the owner's separate approval of a date and a quiet
-window. The database was read once (revision only) to confirm it is at `025_meeting_description`; nothing else was touched. What the
+Status: **run 2026-10-08** (record: [deployment](verification/phase-44a-deployment-2026-10-08.md)); kept as the reference for a repeat or a rollback. Deviations from it when it was run: the images are tagged from the existing `latest` tags and also snapshotted with `docker commit`, because the containers' own image ids cannot be resolved under the containerd image store. The database was read once (revision only) to confirm it is at `025_meeting_description`; nothing else was touched. What the
 migration does is described under [Schema upgrades](#schema-upgrades-and-credential-keys); in short it adds `sensitivity` and
 `project_scope` columns with defaults and changes no existing row's meaning. It is transactional, so a failure rolls back to 025.
 There is no downgrade: recovery is the pre-upgrade dump and the old images, below.

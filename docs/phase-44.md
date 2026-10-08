@@ -287,7 +287,7 @@ Resolved 2026-10-08: `project_scope` added (D8), entity gate refined (D9), migra
 
 ## 11. 44A implementation and acceptance record (2026-10-08)
 
-Status: **committed (`bdc9efd`), not deployed; migration 026 not applied to the homelab.** Applying it needs the owner's separate approval of a date, a verified dump and the prepared [runbook](deployment.md#applying-migration-026-phase-44a---runbook-prepared-and-not-executed). The stale voice-test fixture was fixed in its own commit (`0c146f0`). 44A is closed for development. Dated evidence: [Phase 44A verification](verification/phase-44a-2026-10-08.md).
+Status: **committed (`bdc9efd`) and deployed to the homelab 2026-10-08 (migration 026 applied; [record](verification/phase-44a-deployment-2026-10-08.md)); the robot acceptance gate is pending.** Applying it needs the owner's separate approval of a date, a verified dump and the prepared [runbook](deployment.md#applying-migration-026-phase-44a---runbook-prepared-and-not-executed). The stale voice-test fixture was fixed in its own commit (`0c146f0`). 44A is closed for development. Dated evidence: [Phase 44A verification](verification/phase-44a-2026-10-08.md).
 
 | Part | Where |
 |---|---|
@@ -365,7 +365,7 @@ Both baselines left every store unchanged, and the action-boundary probes (an ob
 | Benchmark harness | Met: validated and frozen fixtures, B0 baselines on two tracks, scoring, Wilson intervals, exposed-versus-candidate leakage, probes, reproducible digest, holdout protocol, 44 harness tests (one needs Postgres) |
 | Case-level review of the holdout | Produced; labels are **provisionally reviewed, pending independent owner inspection** |
 | Repository failures kept visible | Met: 2 failing tests (one now explained as a stale fixture) plus 1 flaky, each reproduced on a clean checkout; no regression found |
-| Deployment | **Rehearsed, awaiting the owner's final go/no-go.** The [rehearsal](verification/phase-44a-rehearsal-2026-10-08.md) passed on an isolated restored copy. A [runbook](deployment.md#applying-migration-026-phase-44a---runbook-prepared-and-not-executed) is prepared, not run: rehearsal on a restored copy, verified dump, rollback images, ordered stop, backup, build, migrate, start, twelve smoke tests, rollback criteria. Gates: owner approval of a date, a verified dump, `migrate`, core and hub rebuilt together; clients do not yet set classification |
+| Deployment | **Software deployment done, passed and accepted by the owner 2026-10-08 (2 minutes' downtime; Telegram receipt confirmed); physical robot acceptance pending (the robot was offline).** The [rehearsal](verification/phase-44a-rehearsal-2026-10-08.md) passed on an isolated restored copy. A [runbook](deployment.md#applying-migration-026-phase-44a---runbook-prepared-and-not-executed) is prepared, not run: rehearsal on a restored copy, verified dump, rollback images, ordered stop, backup, build, migrate, start, twelve smoke tests, rollback criteria. Gates: owner approval of a date, a verified dump, `migrate`, core and hub rebuilt together; clients do not yet set classification |
 
 ### Readiness assessment
 
