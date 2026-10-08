@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import traceback
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -23,6 +24,21 @@ log = logging.getLogger(__name__)
 
 EmbedFn = Callable[[list[str]], list[list[float]]]
 EMBED_BATCH = 16
+
+
+def safe_reason(exc: BaseException) -> str:
+    """Describe a failure without quoting it. An exception message can carry the content being indexed (a database error names the
+    failing row), and this text is stored in the outbox and logged, so only the class, the database error code and the code location
+    are kept."""
+    parts = [type(exc).__name__]
+    code = getattr(exc, "sqlstate", None)
+    if code:
+        parts.append(f"sqlstate {code}")
+    frames = traceback.extract_tb(exc.__traceback__)
+    if frames:
+        last = frames[-1]
+        parts.append(f"at {last.filename.rsplit('/', 1)[-1]}:{last.lineno}")
+    return " ".join(parts)
 
 
 @dataclass
@@ -101,9 +117,10 @@ class IndexingWorker:
             result.processed += 1
             try:
                 done = await self.sync_source(item.source_type, item.source_id)
-            except Exception as exc:
-                log.exception("knowledge sync failed for %s:%s", item.source_type, item.source_id)
-                await self.outbox.fail(item, self.clock(), f"{type(exc).__name__}: {exc}")
+            except Exception as exc:  # noqa: BLE001  one failing source must not stop the others; it is recorded on its own row
+                reason = safe_reason(exc)
+                log.error("knowledge sync failed for %s:%s: %s", item.source_type, item.source_id, reason)
+                await self.outbox.fail(item, self.clock(), reason)
                 result.failed += 1
                 continue
             result.upserted += done.upserted

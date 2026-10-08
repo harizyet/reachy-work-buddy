@@ -685,3 +685,27 @@ def test_the_background_loop_reconciles_at_start_works_the_outbox_and_stops_on_c
             await asyncio.wait_for(task, timeout=2)
 
     run(go())
+
+
+def test_a_failure_never_copies_indexed_content_into_the_outbox_or_the_logs(caplog) -> None:
+    """Database and library errors quote the data involved. What is stored and logged about a failure is its class and location only."""
+
+    async def go():
+        w = World()
+        n = await w.planner.add_note("Private", "the launch code is 4-8-15-16-23-42")
+        original = w.adapters["note"].state
+
+        async def failing(source_id):
+            await original(source_id)
+            raise ValueError("could not index: the launch code is 4-8-15-16-23-42")
+
+        w.adapters["note"].state = failing
+        await w.outbox.enqueue("note", n.id, T0)
+        with caplog.at_level("DEBUG"):
+            assert (await w.worker.run_once()).failed == 1
+        entry = next(iter(w.outbox._entries.values()))
+        assert entry.last_error.startswith("ValueError at test_knowledge_index.py:")
+        assert "launch code" not in entry.last_error and "4-8-15" not in entry.last_error
+        assert "launch code" not in caplog.text and "4-8-15" not in caplog.text and "ValueError" in caplog.text
+
+    run(go())
