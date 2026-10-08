@@ -67,6 +67,15 @@ OPERATIONS = [
     ("get", "/planner/stations/search"),
     ("get", "/chats"), ("post", "/chats"), ("get", "/chats/{chat_id}"), ("delete", "/chats/{chat_id}"),
     ("post", "/messages"), ("get", "/sessions/{user_id}"),
+    ("get", "/meetings"), ("post", "/meetings"), ("get", "/meetings/{meeting_id}"), ("delete", "/meetings/{meeting_id}"),
+    ("post", "/meetings/{meeting_id}/cancel"), ("put", "/meetings/{meeting_id}/speakers"),
+    ("put", "/meetings/{meeting_id}/title"), ("post", "/meetings/{meeting_id}/describe"),
+    ("put", "/meetings/{meeting_id}/corrections/{segment}"), ("delete", "/meetings/{meeting_id}/corrections/{segment}"),
+    ("post", "/meetings/{meeting_id}/corrections/replace"), ("post", "/meetings/{meeting_id}/corrections/suggest"),
+    ("post", "/meetings/{meeting_id}/corrections/deep-review"),
+    ("post", "/meetings/{meeting_id}/outputs/{kind}"), ("delete", "/meetings/{meeting_id}/outputs/{kind}"),
+    ("post", "/meetings/{meeting_id}/outputs/{kind}/deep"),
+    ("get", "/deep-review/info"), ("get", "/deep-review/current"), ("get", "/deep-review/{job_id}"),
 ]
 
 
@@ -102,6 +111,7 @@ def logged_in_client(**hub_options) -> TestClient:
     # Give the LLM usage list one entry's worth of shape: an empty list proves nothing about its items.
     client.put("/settings/llm", json={"local": {"base_url": "http://ovms/v1", "model": "qwen"}}, headers=CSRF)
     seed_planner(client)
+    seed_meeting(client)
     return client
 
 
@@ -140,6 +150,23 @@ def _union(left, right):
     return f"{left}|{right}"
 
 
+def seed_meeting(client: TestClient, title: str = "Weekly sync") -> str:
+    """An uploaded recording that the (disabled) worker has since finished: transcript, speakers, a gap and a summary."""
+    from companion_core.meetings.models import MeetingJobStatus, MeetingOutput
+
+    files = {"audio": ("meeting.wav", b"RIFF....WAVEfmt ", "audio/wav")}
+    uploaded = client.post("/meetings", data={"title": title, "participants": "Hariz, Alice", "project_scope": "apollo", "context": "ctx"}, files=files, headers=CSRF)
+    meeting = client.core.state.meeting_store._meetings[uploaded.json()["id"]]
+    meeting.status = MeetingJobStatus.COMPLETE
+    meeting.duration_seconds = 6.0
+    meeting.transcript_segments = [{"start": 0.0, "end": 3.2, "text": "hello gemini"}, {"start": 3.2, "end": 6.0, "text": "we ship friday"}]
+    meeting.diarization_segments = [{"start": 0.0, "end": 3.2, "speaker": "SPEAKER_00"}, {"start": 3.2, "end": 6.0, "speaker": "SPEAKER_01"}]
+    meeting.aligned_segments = [{**t, "speaker": d["speaker"]} for t, d in zip(meeting.transcript_segments, meeting.diarization_segments, strict=True)]
+    meeting.audio_gaps = {"spans": [{"start": 4.0, "end": 5.0}], "segments": [1], "seconds": 1.0}
+    meeting.summary = MeetingOutput(text="A summary.", tier="local")
+    return meeting.id
+
+
 def shape(value):
     """Keys and JSON types, not values. A list is the union of its items' shapes (or `[]` when empty)."""
     if isinstance(value, dict):
@@ -154,6 +181,7 @@ def shape(value):
 
 def snapshot(client: TestClient) -> dict:
     chat_id = client.get("/chats", params={"user_id": "default-user"}).json()[0]["id"]
+    meeting_id = client.get("/meetings").json()[0]["id"]
     return {
         "auth_me": client.get("/auth/me").json(),
         "status": client.get("/status").json(),
@@ -167,6 +195,8 @@ def snapshot(client: TestClient) -> dict:
         "chat": client.get(f"/chats/{chat_id}", params={"user_id": "default-user"}).json(),
         "message": client.post("/messages", json={"user_id": "default-user", "channel": "web", "text": "what time is it", "input_modality": "text", "chat_id": chat_id}, headers=CSRF).json(),
         "session": client.get("/sessions/default-user").json(),
+        "meetings": client.get("/meetings").json(),
+        "meeting": client.get(f"/meetings/{meeting_id}").json(),
     }
 
 
@@ -184,7 +214,7 @@ def test_sample_responses_still_match_the_hub():
         for robot in sample["status"]["robots"]:
             robot.pop("data", None)  # embodiment state is the robot's own contract, typed loosely on purpose
     assert shape(live["status"]) == shape(saved["status"])
-    for name in ("tasks", "reminders", "notes", "receipts", "alarms", "stations", "chats", "chat", "message", "session"):
+    for name in ("tasks", "reminders", "notes", "receipts", "alarms", "stations", "chats", "chat", "message", "session", "meetings", "meeting"):
         assert live[name] and saved[name], name  # an empty list would pin no item shape
         assert shape(live[name]) == shape(saved[name]), name
 
@@ -385,6 +415,57 @@ def test_chat_behaviour():
     assert client.get("/chats", params={"user_id": "mine"}).json() == []
     # Deleting the saved record does not forget the assistant's own session.
     assert client.get("/sessions/mine").status_code == 200
+
+
+def test_meetings_behaviour():
+    client = logged_in_client()
+    meeting_id = client.get("/meetings").json()[0]["id"]
+    detail = client.get(f"/meetings/{meeting_id}").json()
+    assert detail["status"] == "complete" and detail["summary"]["tier"] == "local" and detail["minutes"] is None
+
+    # Upload validation: a title and an audio file are required; the format is checked by extension.
+    files = {"audio": ("meeting.wav", b"RIFF....WAVEfmt ", "audio/wav")}
+    assert client.post("/meetings", files=files, headers=CSRF).status_code == 422
+    assert client.post("/meetings", data={"title": "x"}, headers=CSRF).status_code == 422
+    assert client.post("/meetings", data={"title": "x"}, files={"audio": ("notes.txt", b"hi", "text/plain")}, headers=CSRF).status_code == 422
+    assert client.post("/meetings", data={"title": "x"}, files=files).status_code == 403
+
+    # Speaker names: set, and cleared with an empty string.
+    named = client.put(f"/meetings/{meeting_id}/speakers", json={"names": {"SPEAKER_00": "Hariz"}}, headers=CSRF).json()
+    assert named["speaker_names"] == {"SPEAKER_00": "Hariz"}
+    cleared = client.put(f"/meetings/{meeting_id}/speakers", json={"names": {"SPEAKER_00": ""}}, headers=CSRF).json()
+    assert cleared["speaker_names"] == {}
+
+    # Line corrections overlay the raw transcript, which is never rewritten.
+    fixed = client.put(f"/meetings/{meeting_id}/corrections/0", json={"text": "hello Gemini"}, headers=CSRF).json()
+    assert fixed["transcript_corrections"] == {"0": "hello Gemini"} and fixed["transcript_segments"][0]["text"] == "hello gemini"
+    replaced = client.post(f"/meetings/{meeting_id}/corrections/replace", json={"find": "friday", "replace": "Friday"}, headers=CSRF).json()
+    assert replaced["replaced_segments"] == 1
+    reverted = client.delete(f"/meetings/{meeting_id}/corrections/0", headers=CSRF).json()
+    assert "0" not in reverted["transcript_corrections"] and reverted["transcript_corrections"]["1"] == "we ship Friday"
+    assert client.put(f"/meetings/{meeting_id}/corrections/99", json={"text": "x"}, headers=CSRF).status_code == 404
+    assert client.put(f"/meetings/{meeting_id}/corrections/0", json={"text": ""}, headers=CSRF).status_code == 422
+
+    # No language model is configured in a test hub: generation reports it plainly instead of inventing text.
+    for call in (
+        client.post(f"/meetings/{meeting_id}/outputs/minutes", json={"model": "local"}, headers=CSRF),
+        client.post(f"/meetings/{meeting_id}/corrections/suggest", json={"model": "local"}, headers=CSRF),
+    ):
+        assert call.status_code == 503 and "language model" in call.json()["detail"]
+    assert client.post(f"/meetings/{meeting_id}/outputs/bogus", json={"model": "local"}, headers=CSRF).status_code == 422
+    assert client.get("/deep-review/info").json()["available"] is False  # no model manager here
+    assert client.get("/deep-review/current").json() is None
+    assert client.get("/deep-review/nope").status_code == 404
+
+    assert client.delete(f"/meetings/{meeting_id}/outputs/summary", headers=CSRF).json()["summary"] is None
+    assert client.delete(f"/meetings/{meeting_id}", headers=CSRF).json() == {"deleted": True}
+    assert client.get(f"/meetings/{meeting_id}").status_code == 404
+
+    # Something still being processed cannot be deleted; it is cancelled instead.
+    running = client.post("/meetings", data={"title": "Running"}, files=files, headers=CSRF).json()["id"]
+    assert client.delete(f"/meetings/{running}", headers=CSRF).status_code == 409
+    assert client.post(f"/meetings/{running}/cancel", headers=CSRF).json()["status"] == "cancelled"
+    assert client.delete(f"/meetings/{running}", headers=CSRF).status_code == 200
 
 
 def test_owner_bound_chat_is_limited_to_the_owner_account():

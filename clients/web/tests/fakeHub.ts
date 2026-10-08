@@ -15,13 +15,20 @@ export interface FakeTurn { id: string; text: string; reply: string | null; stat
 export interface FakeChat { id: string; user_id: string; title: string; created_at: string; updated_at: string; turns: FakeTurn[] }
 export type Replier = (text: string, body: any) => { reply: string; web_search?: unknown; context_meeting?: string | null };
 
+export interface FakeMeeting {
+  id: string; title: string; description?: string | null; status: string; created_at: string; project_scope?: string | null; participants?: string[];
+  context?: string | null; duration_seconds?: number | null; error_detail?: string | null; transcript_segments?: any[] | null; diarization_segments?: any[] | null;
+  aligned_segments?: any[] | null; audio_gaps?: any; speaker_names?: Record<string, string>; transcript_corrections?: Record<string, string>;
+  summary?: any; minutes?: any;
+}
+
 export interface Deferred { resolve(response: Response): void; request: { path: string; method: string; signal?: AbortSignal | null } }
 
 export function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
-export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeReminder[]; notes?: FakeNote[]; receipts?: FakeReceipt[]; alarms?: FakeAlarm[]; stations?: FakeStation[]; search?: unknown[]; chats?: FakeChat[]; reply?: Replier; status?: unknown } = {}) {
+export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeReminder[]; notes?: FakeNote[]; receipts?: FakeReceipt[]; alarms?: FakeAlarm[]; stations?: FakeStation[]; search?: unknown[]; chats?: FakeChat[]; reply?: Replier; meetings?: FakeMeeting[]; status?: unknown } = {}) {
   const data = {
     tasks: seed.tasks ?? [],
     reminders: seed.reminders ?? [],
@@ -31,7 +38,11 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
     stations: seed.stations ?? [],
     search: seed.search ?? [],
     stopped: false,
+    deepInfo: { configured: true, available: true, reason: null, eta_seconds: 330 } as any,
     chats: seed.chats ?? [],
+    meetings: (seed.meetings ?? []) as FakeMeeting[],
+    deepJobs: [] as any[],
+    suggestions: { suggestions: [], terms_used: 0, truncated: false } as any,
     sessions: new Map<string, { interaction_mode: string; dnd: boolean; active_channel: string }>(),
     messages: [] as any[],
     reply: seed.reply ?? (((text: string) => ({ reply: `Reply to: ${text}` })) as Replier),
@@ -43,6 +54,82 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
   const overrides: { matcher: (call: string) => boolean; make: () => Response }[] = [];
   let user: string | null = 'owner';
   const nextId = (p: string) => `${p}${++counter}`;
+
+  const meetingRoute = (method: string, path: string, body: any): Response => {
+    const full = (m: FakeMeeting) => ({
+      description: null, project_scope: null, participants: [], context: null, duration_seconds: null, error_detail: null, transcript_segments: null,
+      diarization_segments: null, aligned_segments: null, audio_gaps: null, speaker_names: {}, transcript_corrections: {}, summary: null, minutes: null, ...m,
+    });
+    if (path === '/meetings' && method === 'GET') return jsonResponse(data.meetings.map(full));
+    if (path === '/meetings' && method === 'POST') {
+      const m: FakeMeeting = { id: nextId('m'), title: body.title, status: 'uploaded', created_at: new Date().toISOString(), participants: String(body.participants || '').split(',').map((p: string) => p.trim()).filter(Boolean), project_scope: body.project_scope || null, context: body.context || null };
+      data.meetings.unshift(m);
+      return jsonResponse(full(m));
+    }
+    if (path === '/deep-review/info') return jsonResponse(data.deepInfo);
+    if (path === '/deep-review/current') return jsonResponse(data.deepJobs.find((j: any) => j.status !== 'done' && j.status !== 'failed') ?? null);
+    let d = path.match(/^\/deep-review\/([^/]+)$/);
+    if (d) {
+      const job = data.deepJobs.find((j: any) => j.id === d![1]);
+      return job ? jsonResponse(job) : jsonResponse({ detail: 'no such job' }, 404);
+    }
+    const m = path.match(/^\/meetings\/([^/]+)(\/.*)?$/);
+    const meeting = m && data.meetings.find((x) => x.id === decodeURIComponent(m[1]!));
+    if (!m || !meeting) return jsonResponse({ detail: 'Meeting not found' }, 404);
+    const rest = m[2] ?? '';
+    if (rest === '' && method === 'GET') return jsonResponse(full(meeting));
+    if (rest === '' && method === 'DELETE') {
+      if (!['complete', 'failed', 'cancelled', 'aligning'].includes(meeting.status)) return jsonResponse({ detail: 'Meeting is still being processed' }, 409);
+      data.meetings = data.meetings.filter((x) => x !== meeting);
+      return jsonResponse({ deleted: true });
+    }
+    if (rest === '/cancel') {
+      meeting.status = 'cancelled';
+      return jsonResponse(full(meeting));
+    }
+    if (rest === '/speakers') {
+      meeting.speaker_names = { ...(meeting.speaker_names ?? {}) };
+      for (const [k, v] of Object.entries(body.names as Record<string, string>)) (v ? (meeting.speaker_names[k] = v) : delete meeting.speaker_names[k]);
+      return jsonResponse(full(meeting));
+    }
+    if (rest === '/title') {
+      Object.assign(meeting, { title: body.title, description: body.description || null });
+      return jsonResponse(full(meeting));
+    }
+    if (rest === '/describe') {
+      Object.assign(meeting, { title: 'Generated title', description: 'Generated description.' });
+      return jsonResponse(full(meeting));
+    }
+    const c = rest.match(/^\/corrections\/(\d+)$/);
+    if (c) {
+      meeting.transcript_corrections = { ...(meeting.transcript_corrections ?? {}) };
+      if (method === 'PUT') meeting.transcript_corrections[c[1]!] = body.text;
+      else delete meeting.transcript_corrections[c[1]!];
+      return jsonResponse(full(meeting));
+    }
+    if (rest === '/corrections/replace') {
+      let n = 0;
+      meeting.transcript_corrections = { ...(meeting.transcript_corrections ?? {}) };
+      (meeting.transcript_segments ?? []).forEach((s: any, i: number) => {
+        const text = meeting.transcript_corrections![String(i)] ?? s.text;
+        if (text.includes(body.find)) { meeting.transcript_corrections![String(i)] = text.replaceAll(body.find, body.replace); n += 1; }
+      });
+      return jsonResponse({ replaced_segments: n });
+    }
+    if (rest === '/corrections/suggest') return jsonResponse(data.suggestions);
+    if (rest === '/corrections/deep-review' || /^\/outputs\/(summary|minutes)\/deep$/.test(rest)) {
+      const job = { id: nextId('job'), status: 'running', stage: 'Loading the larger model', task: rest.includes('outputs') ? rest.split('/')[2] : 'corrections', meeting_id: meeting.id, meeting_title: meeting.title, reachy_unavailable: true, reachy_online: false, error: null, result: null };
+      data.deepJobs.push(job);
+      return jsonResponse(job, 202);
+    }
+    const o = rest.match(/^\/outputs\/(summary|minutes)$/);
+    if (o) {
+      const kind = o[1] as 'summary' | 'minutes';
+      meeting[kind] = method === 'DELETE' ? null : { text: `Generated ${kind} via ${body.model}`, tier: body.model, generated_at: new Date().toISOString() };
+      return jsonResponse(full(meeting));
+    }
+    return jsonResponse({ detail: 'Not Found' }, 404);
+  };
 
   const route = (method: string, path: string, query: URLSearchParams, body: any): Response => {
     if (path === '/auth/me') return user ? jsonResponse({ username: user }) : jsonResponse({ detail: 'Login required' }, 401);
@@ -139,6 +226,7 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
       const info = data.sessions.get(decodeURIComponent(m[1]!));
       return info ? jsonResponse(info) : jsonResponse({ detail: `no session for user '${m[1]}'` }, 404);
     }
+    if (path.startsWith('/meetings') || path.startsWith('/deep-review')) return meetingRoute(method, path, body);
     if (path === '/planner/receipts') return jsonResponse(data.receipts);
     if (path === '/planner/alarms' && method === 'GET') return jsonResponse(data.alarms);
     if (path === '/planner/alarms' && method === 'POST') {
@@ -193,7 +281,13 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
       const url = new URL(String(input), 'http://hub.test');
       const method = init?.method ?? 'GET';
       const call = `${method} ${url.pathname}${url.search}`;
-      const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+      const rawBody = init?.body;
+      const body =
+        rawBody instanceof FormData
+          ? Object.fromEntries([...rawBody.entries()].map(([k, v]) => [k, v instanceof File ? `file:${v.name}` : v]))
+          : rawBody
+            ? JSON.parse(String(rawBody))
+            : undefined;
       calls.push(call);
       if (body !== undefined) bodies.push({ call, body });
       const override = overrides.find((o) => o.matcher(call));

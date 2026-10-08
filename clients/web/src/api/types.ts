@@ -395,3 +395,175 @@ export function parseSession(value: unknown): SessionInfo {
     active_channel: str(o.active_channel, 'session.active_channel'),
   };
 }
+
+// --- Meetings (Phase 47B6) -----------------------------------------------------------------
+
+export interface TranscriptSegment {
+  start: number;
+  end: number;
+  text: string;
+}
+export interface SpeakerSegment {
+  start: number;
+  end: number;
+  speaker: string;
+}
+export interface MeetingOutput {
+  text: string;
+  tier: string; // 'local' | 'deep' | 'cloud'
+  generated_at: string | null;
+}
+export interface Meeting {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  created_at: string;
+  project_scope: string | null;
+  participants: string[];
+  context: string | null;
+  duration_seconds: number | null;
+  error_detail: string | null;
+  transcript_segments: TranscriptSegment[] | null;
+  diarization_segments: SpeakerSegment[] | null;
+  aligned_speakers: (string | null)[] | null;
+  audio_gaps: { seconds: number; segments: number[] } | null;
+  speaker_names: Record<string, string>;
+  transcript_corrections: Record<string, string>;
+  summary: MeetingOutput | null;
+  minutes: MeetingOutput | null;
+}
+
+export interface Suggestion {
+  original: string;
+  suggested: string;
+  confidence: string;
+  reason: string;
+}
+export interface SuggestionResult {
+  suggestions: Suggestion[];
+  terms_used: number;
+  truncated: boolean;
+}
+export interface DeepJob {
+  id: string;
+  status: string;
+  stage: string;
+  task: string | null;
+  meeting_id: string | null;
+  meeting_title: string | null;
+  reachy_unavailable: boolean;
+  reachy_online: boolean;
+  error: string | null;
+  result: SuggestionResult | null;
+}
+export interface DeepInfo {
+  available: boolean;
+  reason: string | null;
+  eta_seconds: number;
+}
+
+function optionalNum(value: unknown, what: string): number | null {
+  return value == null ? null : num(value, what);
+}
+function optionalStr(value: unknown, what: string): string | null {
+  return value == null ? null : str(value, what);
+}
+function parseOutput(value: unknown, what: string): MeetingOutput | null {
+  if (value == null) return null;
+  const o = obj(value, what);
+  return { text: str(o.text, `${what}.text`), tier: str(o.tier, `${what}.tier`), generated_at: optionalStr(o.generated_at, `${what}.generated_at`) };
+}
+
+export function parseMeeting(value: unknown, what = 'meeting'): Meeting {
+  const o = obj(value, what);
+  const transcript =
+    o.transcript_segments == null
+      ? null
+      : list(o.transcript_segments, `${what}.transcript_segments`).map((item, i) => {
+          const s = obj(item, `${what}.transcript_segments[${i}]`);
+          return { start: num(s.start, 'segment.start'), end: num(s.end, 'segment.end'), text: s.text == null ? '' : str(s.text, 'segment.text') };
+        });
+  const diarization =
+    o.diarization_segments == null
+      ? null
+      : list(o.diarization_segments, `${what}.diarization_segments`).map((item, i) => {
+          const s = obj(item, `${what}.diarization_segments[${i}]`);
+          return { start: num(s.start, 'segment.start'), end: num(s.end, 'segment.end'), speaker: s.speaker == null ? '' : str(s.speaker, 'segment.speaker') };
+        });
+  const aligned =
+    o.aligned_segments == null
+      ? null
+      : list(o.aligned_segments, `${what}.aligned_segments`).map((item) => {
+          const s = obj(item, 'aligned segment');
+          return s.speaker == null ? null : str(s.speaker, 'aligned segment.speaker');
+        });
+  const gaps = o.audio_gaps == null ? null : obj(o.audio_gaps, `${what}.audio_gaps`);
+  const names = o.speaker_names == null ? {} : obj(o.speaker_names, `${what}.speaker_names`);
+  const corrections = o.transcript_corrections == null ? {} : obj(o.transcript_corrections, `${what}.transcript_corrections`);
+  return {
+    id: str(o.id, `${what}.id`),
+    title: str(o.title, `${what}.title`),
+    description: optionalStr(o.description, `${what}.description`),
+    status: str(o.status, `${what}.status`),
+    created_at: str(o.created_at, `${what}.created_at`),
+    project_scope: optionalStr(o.project_scope, `${what}.project_scope`),
+    participants: o.participants == null ? [] : list(o.participants, `${what}.participants`).map((p) => str(p, 'participant')),
+    context: optionalStr(o.context, `${what}.context`),
+    duration_seconds: optionalNum(o.duration_seconds, `${what}.duration_seconds`),
+    error_detail: optionalStr(o.error_detail, `${what}.error_detail`),
+    transcript_segments: transcript,
+    diarization_segments: diarization,
+    aligned_speakers: aligned,
+    audio_gaps: gaps
+      ? { seconds: gaps.seconds == null ? 0 : num(gaps.seconds, 'audio_gaps.seconds'), segments: gaps.segments == null ? [] : list(gaps.segments, 'audio_gaps.segments').map((n) => num(n, 'gap segment')) }
+      : null,
+    speaker_names: Object.fromEntries(Object.entries(names).map(([k, v]) => [k, str(v, 'speaker name')])),
+    transcript_corrections: Object.fromEntries(Object.entries(corrections).map(([k, v]) => [k, str(v, 'correction')])),
+    summary: parseOutput(o.summary, `${what}.summary`),
+    minutes: parseOutput(o.minutes, `${what}.minutes`),
+  };
+}
+export const parseMeetings = (value: unknown): Meeting[] => list(value, 'meetings').map((v, i) => parseMeeting(v, `meetings[${i}]`));
+
+export function parseSuggestionResult(value: unknown): SuggestionResult {
+  const o = obj(value, 'suggestions');
+  return {
+    suggestions: list(o.suggestions ?? [], 'suggestions.suggestions').map((item, i) => {
+      const s = obj(item, `suggestions[${i}]`);
+      return {
+        original: str(s.original, 'suggestion.original'),
+        suggested: str(s.suggested, 'suggestion.suggested'),
+        confidence: s.confidence == null ? '' : str(s.confidence, 'suggestion.confidence'),
+        reason: s.reason == null ? '' : str(s.reason, 'suggestion.reason'),
+      };
+    }),
+    terms_used: o.terms_used == null ? 0 : num(o.terms_used, 'suggestions.terms_used'),
+    truncated: o.truncated === true,
+  };
+}
+
+export function parseDeepJob(value: unknown): DeepJob {
+  const o = obj(value, 'deep review');
+  return {
+    id: str(o.id, 'job.id'),
+    status: str(o.status, 'job.status'),
+    stage: o.stage == null ? '' : str(o.stage, 'job.stage'),
+    task: optionalStr(o.task, 'job.task'),
+    meeting_id: optionalStr(o.meeting_id, 'job.meeting_id'),
+    meeting_title: optionalStr(o.meeting_title, 'job.meeting_title'),
+    reachy_unavailable: o.reachy_unavailable === true,
+    reachy_online: o.reachy_online !== false,
+    error: optionalStr(o.error, 'job.error'),
+    result: o.result == null ? null : parseSuggestionResult(o.result),
+  };
+}
+
+export function parseDeepInfo(value: unknown): DeepInfo {
+  const o = obj(value, 'deep review info');
+  return {
+    available: o.available === true,
+    reason: optionalStr(o.reason, 'info.reason'),
+    eta_seconds: o.eta_seconds == null ? 330 : num(o.eta_seconds, 'info.eta_seconds'),
+  };
+}

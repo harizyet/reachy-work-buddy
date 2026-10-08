@@ -1,11 +1,14 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
+import { NoticeProvider } from '../../components/shared/notice';
 import { ChatProvider } from '../../features/chat/ChatProvider';
+import { DeepReviewProvider } from '../../features/meetings/DeepReview';
 import { useAuth } from '../auth';
 
 const NAV = [
   { to: '/', label: 'Overview', end: true },
   { to: '/chat', label: 'Chat', end: false },
+  { to: '/meetings', label: 'Meetings', end: false },
   { to: '/todo', label: 'To Do', end: false },
   { to: '/reminders', label: 'Reminders', end: false },
   { to: '/alarms', label: 'Alarms', end: false },
@@ -49,11 +52,15 @@ export function AppLayout() {
           </div>
         </div>
       </header>
-      <main id="main" className="mx-auto max-w-5xl px-4 py-6">
-        <ChatProvider>
-          <Outlet />
-        </ChatProvider>
-      </main>
+      <NoticeProvider>
+        <DeepReviewProvider>
+          <main id="main" className="mx-auto max-w-5xl px-4 py-6">
+            <ChatProvider>
+              <Outlet />
+            </ChatProvider>
+          </main>
+        </DeepReviewProvider>
+      </NoticeProvider>
     </div>
   );
 }

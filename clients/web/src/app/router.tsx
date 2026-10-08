@@ -4,6 +4,7 @@ import { ActivityPage } from '../features/activity/ActivityPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { AlarmsPage } from '../features/alarms/AlarmsPage';
 import { ChatPage } from '../features/chat/ChatPage';
+import { MeetingsPage } from '../features/meetings/MeetingsPage';
 import { NotesPage } from '../features/notes/NotesPage';
 import { OverviewPage } from '../features/overview/OverviewPage';
 import { RemindersPage } from '../features/planner/RemindersPage';
@@ -36,6 +37,8 @@ export function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route element={<Protected />}>
         <Route index element={<OverviewPage />} />
+        <Route path="meetings" element={<MeetingsPage />} />
+        <Route path="meetings/:id" element={<MeetingsPage />} />
         <Route path="chat" element={<ChatPage />} />
         <Route path="todo" element={<TodoPage />} />
         <Route path="reminders" element={<RemindersPage />} />

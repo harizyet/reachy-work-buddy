@@ -208,6 +208,92 @@ for (const mount of MOUNTS) {
       expect(cancelled).toBe(true);
     });
 
+    test('Meetings: seeded recording opens with speakers, edits persist, recording streams, summary reports no model', async ({ page }) => {
+      await signIn(page, mount.url, '#/meetings');
+      const seeded = page.getByRole('listitem').filter({ hasText: 'Weekly sync' });
+      await expect(seeded).toBeVisible();
+      await seeded.getByRole('link', { name: 'View details' }).click();
+      await expect(page.getByText(/Status: Complete · Project: apollo/)).toBeVisible();
+      await expect(page.getByText(/0:00–0:03\s+hello gemini/)).toBeVisible();
+      await expect(page.getByText(/no audio — the phone stopped capturing sound/)).toBeVisible();
+
+      // The recording streams from the hub behind the owner cookie, with byte ranges.
+      const audio = await page.evaluate(async () => {
+        const src = document.querySelector('audio')!.getAttribute('src')!;
+        const r = await fetch(src, { headers: { Range: 'bytes=0-3' }, credentials: 'same-origin' });
+        return { status: r.status, bytes: (await r.arrayBuffer()).byteLength };
+      });
+      expect(audio).toEqual({ status: 206, bytes: 4 });
+
+      const name = `Speaker ${run}`;
+      await page.getByRole('button', { name: 'Rename Speaker 1' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Name this speaker' });
+      await dialog.getByLabel('Name').fill(name);
+      await dialog.getByRole('button', { name: 'Save' }).click();
+      await expect(page.getByRole('button', { name: `Rename ${name}` })).toBeVisible();
+
+      await page.getByRole('button', { name: 'Edit line at 0:00' }).click();
+      const line = page.getByRole('dialog', { name: 'Edit line' });
+      await line.getByLabel('Text').fill(`hello Gemini ${run}`);
+      await line.getByRole('button', { name: 'Save' }).click();
+      await expect(page.getByText(new RegExp(`hello Gemini ${run}\\s+\\(edited\\)`))).toBeVisible();
+
+      await page.reload();
+      await expect(page.getByRole('button', { name: `Rename ${name}` })).toBeVisible();
+      await expect(page.getByText(new RegExp(`hello Gemini ${run}\\s+\\(edited\\)`))).toBeVisible();
+
+      // Put the seed back: the hub keeps state for the later tests.
+      await page.getByRole('button', { name: 'Edit line at 0:00' }).click();
+      await page.getByRole('dialog', { name: 'Edit line' }).getByRole('button', { name: 'Restore original' }).click();
+      await page.getByRole('button', { name: `Rename ${name}` }).click();
+      await page.getByRole('dialog', { name: 'Name this speaker' }).getByRole('button', { name: 'Clear name' }).click();
+      await expect(page.getByRole('button', { name: 'Rename Speaker 1' })).toBeVisible();
+
+      // No model is configured on a test hub: the hub says so plainly, nothing is invented.
+      await page.getByRole('button', { name: 'Minutes' }).click();
+      await expect(page.getByText('the language model is unavailable right now')).toBeVisible();
+    });
+
+    test('Meetings: upload a file, cancel it while queued, then delete it after confirmation', async ({ page }) => {
+      const title = `Standup ${run}`;
+      await signIn(page, mount.url, '#/meetings');
+      await page.getByLabel('Title').fill(title);
+      await page.getByLabel(/Participants/).fill('Hariz, Alice');
+      await page.getByLabel(/Recording file/).setInputFiles({ name: 'meeting.wav', mimeType: 'audio/wav', buffer: Buffer.from('RIFF....WAVEfmt ') });
+      await page.getByRole('button', { name: 'Upload meeting' }).click();
+      await expect(page.getByText('Uploaded.')).toBeVisible();
+      const item = page.getByRole('listitem').filter({ hasText: title });
+      await expect(item).toContainText('Queued');
+      await expect(item.getByRole('button', { name: `Delete ${title}` })).toHaveCount(0); // not while it is queued
+      await item.getByRole('button', { name: 'Cancel processing' }).click();
+      await expect(item).toContainText('Cancelled');
+      await item.getByRole('button', { name: `Delete ${title}` }).click();
+      await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
+      await expect(item).toBeVisible();
+      await item.getByRole('button', { name: `Delete ${title}` }).click();
+      await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+      await expect(page.getByText(title)).toHaveCount(0);
+    });
+
+    test('Meetings: a clip recorded in the browser uploads', async ({ page }) => {
+      const title = `Voice memo ${run}`;
+      await signIn(page, mount.url, '#/meetings');
+      await page.getByRole('button', { name: 'Start recording' }).click();
+      await expect(page.getByText(/Recording… \d+:\d\d/)).toBeVisible();
+      await page.waitForTimeout(1200);
+      await page.getByRole('button', { name: 'Stop recording' }).click();
+      await expect(page.getByText(/Recorded clip ready/)).toBeVisible();
+      await page.getByLabel('Title').fill(title);
+      await page.getByRole('button', { name: 'Upload meeting' }).click();
+      await expect(page.getByText('Uploaded.')).toBeVisible();
+      const item = page.getByRole('listitem').filter({ hasText: title });
+      await expect(item).toBeVisible();
+      await item.getByRole('button', { name: 'Cancel processing' }).click();
+      await item.getByRole('button', { name: `Delete ${title}` }).click();
+      await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+      await expect(page.getByText(title)).toHaveCount(0);
+    });
+
     test('Activity: shows the hub receipts, failed ones struck through, text literal', async ({ page }) => {
       await signIn(page, mount.url, '#/activity');
       await expect(page.getByRole('heading', { name: 'Recent activity' })).toBeVisible();
@@ -244,7 +330,7 @@ for (const mount of MOUNTS) {
 
     test('pages fit the viewport; Notes works as list then editor then back on a narrow screen', async ({ page }, info) => {
       await signIn(page, mount.url);
-      for (const hash of ['#/todo', '#/reminders', '#/notes', '#/activity', '#/alarms', '#/chat']) {
+      for (const hash of ['#/todo', '#/reminders', '#/notes', '#/activity', '#/alarms', '#/chat', '#/meetings']) {
         await page.goto(mount.url + hash);
         await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);

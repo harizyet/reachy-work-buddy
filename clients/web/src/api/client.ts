@@ -84,9 +84,10 @@ export async function request<T = unknown>(path: string, options: RequestOptions
       signal: controller.signal,
       headers: {
         'X-Reachy-CSRF': '1',
-        ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        // A FormData body sets its own multipart boundary, so it must not be given a content type here.
+        ...(options.body === undefined || options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
       },
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body: options.body === undefined ? undefined : options.body instanceof FormData ? options.body : JSON.stringify(options.body),
     });
     if (started !== generation) throw new StaleSessionError();
     if (!response.ok) {

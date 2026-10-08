@@ -1,12 +1,12 @@
 {
   "alarms": [
     {
-      "created_at": "2026-10-08T09:45:51.977095Z",
+      "created_at": "2026-10-08T09:52:03.117164Z",
       "delivery": null,
       "due_at": "2026-10-08T21:00:00Z",
       "enabled": true,
       "fired_at": null,
-      "id": "72bb1212-d8a1-4c70-bbb1-30204c2f6c4d",
+      "id": "6c353c5e-39a5-4c15-ac27-a3324fc48bf5",
       "label": "Chime",
       "reminder_id": null,
       "repeat": [],
@@ -15,12 +15,12 @@
       "volume": 100
     },
     {
-      "created_at": "2026-10-08T09:45:51.965584Z",
+      "created_at": "2026-10-08T09:52:03.112521Z",
       "delivery": null,
       "due_at": "2026-10-09T07:30:00Z",
       "enabled": true,
       "fired_at": null,
-      "id": "a2a55b71-53d9-42f0-bdb2-acf000539962",
+      "id": "dec12009-1a8c-44e6-84a4-15d1050ec2b0",
       "label": "Wake",
       "reminder_id": null,
       "repeat": [
@@ -30,7 +30,7 @@
         3,
         4
       ],
-      "station_id": "48006477-17bb-4883-8675-fb4ea3b61a2b",
+      "station_id": "5d8b383b-c47d-4556-98f8-fdc012c5662b",
       "status": "scheduled",
       "volume": 120
     }
@@ -39,59 +39,225 @@
     "username": "owner"
   },
   "chat": {
-    "created_at": "2026-10-08T09:45:51.990282Z",
-    "id": "30668142-138a-4258-893f-0d1d0873c2b5",
+    "created_at": "2026-10-08T09:52:03.120546Z",
+    "id": "5c31fcc5-0b8e-4d8c-85c6-2c4e0f18e06f",
     "title": "Hello there",
     "turns": [
       {
-        "created_at": "2026-10-08T09:45:52.001101Z",
-        "id": "4816f951-27f3-4b86-bb53-9ad82098ae59",
-        "reply": "It's 9:45 AM.",
+        "created_at": "2026-10-08T09:52:03.123572Z",
+        "id": "f2aabb0a-e2c5-44aa-b29d-bb242d989af2",
+        "reply": "It's 9:52 AM.",
         "status": "complete",
         "text": "what time is it",
         "web_search": null
       }
     ],
-    "updated_at": "2026-10-08T09:45:52.001101Z",
+    "updated_at": "2026-10-08T09:52:03.123572Z",
     "user_id": "default-user"
   },
   "chats": [
     {
-      "created_at": "2026-10-08T09:45:51.990282Z",
-      "id": "30668142-138a-4258-893f-0d1d0873c2b5",
+      "created_at": "2026-10-08T09:52:03.120546Z",
+      "id": "5c31fcc5-0b8e-4d8c-85c6-2c4e0f18e06f",
       "title": "Hello there",
-      "updated_at": "2026-10-08T09:45:52.001101Z",
+      "updated_at": "2026-10-08T09:52:03.123572Z",
       "user_id": "default-user"
+    }
+  ],
+  "meeting": {
+    "aligned_segments": [
+      {
+        "end": 3.2,
+        "speaker": "SPEAKER_00",
+        "start": 0.0,
+        "text": "hello gemini"
+      },
+      {
+        "end": 6.0,
+        "speaker": "SPEAKER_01",
+        "start": 3.2,
+        "text": "we ship friday"
+      }
+    ],
+    "audio_gaps": {
+      "seconds": 1.0,
+      "segments": [
+        1
+      ],
+      "spans": [
+        {
+          "end": 5.0,
+          "start": 4.0
+        }
+      ]
+    },
+    "audio_path": "meeting.wav",
+    "content_type": "audio/wav",
+    "context": "ctx",
+    "created_at": "2026-10-08T09:52:03.135926Z",
+    "description": null,
+    "diarization_segments": [
+      {
+        "end": 3.2,
+        "speaker": "SPEAKER_00",
+        "start": 0.0
+      },
+      {
+        "end": 6.0,
+        "speaker": "SPEAKER_01",
+        "start": 3.2
+      }
+    ],
+    "duration_seconds": 6.0,
+    "error_detail": null,
+    "id": "a8b45b4a-255f-40d9-ad6c-bf0ab692aeea",
+    "key_terms": [],
+    "minutes": null,
+    "normalized_audio_path": null,
+    "participants": [
+      "Hariz",
+      "Alice"
+    ],
+    "project_scope": "apollo",
+    "sensitivity": "work-private",
+    "source_filename": "meeting.wav",
+    "speaker_names": {},
+    "started_at": null,
+    "status": "complete",
+    "summary": {
+      "generated_at": "2026-10-08T09:52:03.137657Z",
+      "text": "A summary.",
+      "tier": "local"
+    },
+    "title": "Weekly sync",
+    "title_source": "owner",
+    "transcript_corrections": {},
+    "transcript_segments": [
+      {
+        "end": 3.2,
+        "start": 0.0,
+        "text": "hello gemini"
+      },
+      {
+        "end": 6.0,
+        "start": 3.2,
+        "text": "we ship friday"
+      }
+    ],
+    "updated_at": "2026-10-08T09:52:03.135929Z"
+  },
+  "meetings": [
+    {
+      "aligned_segments": [
+        {
+          "end": 3.2,
+          "speaker": "SPEAKER_00",
+          "start": 0.0,
+          "text": "hello gemini"
+        },
+        {
+          "end": 6.0,
+          "speaker": "SPEAKER_01",
+          "start": 3.2,
+          "text": "we ship friday"
+        }
+      ],
+      "audio_gaps": {
+        "seconds": 1.0,
+        "segments": [
+          1
+        ],
+        "spans": [
+          {
+            "end": 5.0,
+            "start": 4.0
+          }
+        ]
+      },
+      "audio_path": "meeting.wav",
+      "content_type": "audio/wav",
+      "context": "ctx",
+      "created_at": "2026-10-08T09:52:03.135926Z",
+      "description": null,
+      "diarization_segments": [
+        {
+          "end": 3.2,
+          "speaker": "SPEAKER_00",
+          "start": 0.0
+        },
+        {
+          "end": 6.0,
+          "speaker": "SPEAKER_01",
+          "start": 3.2
+        }
+      ],
+      "duration_seconds": 6.0,
+      "error_detail": null,
+      "id": "a8b45b4a-255f-40d9-ad6c-bf0ab692aeea",
+      "key_terms": [],
+      "minutes": null,
+      "normalized_audio_path": null,
+      "participants": [
+        "Hariz",
+        "Alice"
+      ],
+      "project_scope": "apollo",
+      "sensitivity": "work-private",
+      "source_filename": "meeting.wav",
+      "speaker_names": {},
+      "started_at": null,
+      "status": "complete",
+      "summary": {
+        "generated_at": "2026-10-08T09:52:03.137657Z",
+        "text": "A summary.",
+        "tier": "local"
+      },
+      "title": "Weekly sync",
+      "title_source": "owner",
+      "transcript_corrections": {},
+      "transcript_segments": [
+        {
+          "end": 3.2,
+          "start": 0.0,
+          "text": "hello gemini"
+        },
+        {
+          "end": 6.0,
+          "start": 3.2,
+          "text": "we ship friday"
+        }
+      ],
+      "updated_at": "2026-10-08T09:52:03.135929Z"
     }
   ],
   "message": {
     "active_channel": "web",
     "context_meeting": null,
-    "conversation_id": "d821d93c-431d-44a2-98ad-33e480fc91bb",
+    "conversation_id": "a5e34e40-f908-4997-98dc-7e904c36d6d9",
     "delivery_channel": "reachy",
     "privacy": "public",
-    "reply": "It's 9:45 AM.",
-    "session_id": "0bb2f70d-0f93-4e1a-8118-1a1156b0f122",
+    "reply": "It's 9:52 AM.",
+    "session_id": "bc3e7b90-785b-468a-b474-456f541b3c82",
     "web_search": null
   },
   "notes": [
     {
       "body": "milk\neggs",
-      "created_at": "2026-10-08T09:45:51.936785Z",
-      "id": "bda16c92-dc6b-48d0-92b6-6807164b2710",
+      "created_at": "2026-10-08T09:52:03.098245Z",
+      "id": "ed4ad7fc-137d-43ec-8ad4-e31fca9afb1c",
       "project_scope": null,
       "sensitivity": "work-private",
       "title": "Groceries",
-      "updated_at": "2026-10-08T09:45:51.936789Z"
+      "updated_at": "2026-10-08T09:52:03.098248Z"
     }
   ],
   "receipts": [
     {
       "action_type": "alarm.delivered",
-      "at": "2026-10-08T09:45:52.009459Z",
+      "at": "2026-10-08T09:52:03.126943Z",
       "failure_reason": "no audio",
       "fields": {},
-      "id": "09250bf1-3d39-44e7-b295-30effa4b7cac",
+      "id": "c79c2c29-beb7-450d-97a0-dd6335e6ec3f",
       "notified_at": null,
       "notify": false,
       "object_id": null,
@@ -101,12 +267,12 @@
     },
     {
       "action_type": "task.created",
-      "at": "2026-10-08T09:45:52.009054Z",
+      "at": "2026-10-08T09:52:03.126658Z",
       "failure_reason": null,
       "fields": {
         "Task": "Water plants"
       },
-      "id": "32fa3109-ff45-49fd-bf26-dab7f4c23b8b",
+      "id": "19325046-f7cc-4725-88ca-bbf5966141fb",
       "notified_at": null,
       "notify": false,
       "object_id": null,
@@ -116,32 +282,32 @@
     },
     {
       "action_type": "alarm.created",
-      "at": "2026-10-08T09:45:51.977222Z",
+      "at": "2026-10-08T09:52:03.117207Z",
       "failure_reason": null,
       "fields": {
         "Label": "Chime",
         "When": "2026-10-08T21:00+00:00"
       },
-      "id": "aa421bf5-b494-490a-957d-4ec770ad59a5",
+      "id": "7aec3564-5ae0-4904-af89-be2e7fb33efa",
       "notified_at": null,
       "notify": false,
-      "object_id": "72bb1212-d8a1-4c70-bbb1-30204c2f6c4d",
+      "object_id": "6c353c5e-39a5-4c15-ac27-a3324fc48bf5",
       "object_type": "alarm",
       "source_channel": "web",
       "status": "success"
     },
     {
       "action_type": "alarm.created",
-      "at": "2026-10-08T09:45:51.965695Z",
+      "at": "2026-10-08T09:52:03.112572Z",
       "failure_reason": null,
       "fields": {
         "Label": "Wake",
         "When": "2026-10-09T07:30+00:00"
       },
-      "id": "e49b2daa-8079-43af-8e21-f061d97dbc73",
+      "id": "10135628-5394-4ea6-8acc-169fff28fb9d",
       "notified_at": null,
       "notify": false,
-      "object_id": "a2a55b71-53d9-42f0-bdb2-acf000539962",
+      "object_id": "dec12009-1a8c-44e6-84a4-15d1050ec2b0",
       "object_type": "alarm",
       "source_channel": "web",
       "status": "success"
@@ -149,10 +315,10 @@
   ],
   "reminders": [
     {
-      "completed_at": "2026-10-08T09:45:51.932245Z",
-      "created_at": "2026-10-08T09:45:51.924747Z",
+      "completed_at": "2026-10-08T09:52:03.093755Z",
+      "created_at": "2026-10-08T09:52:03.085984Z",
       "due_at": "2030-01-02T09:00:00Z",
-      "id": "2f112209-ca0f-4291-a32b-1c7be69e6218",
+      "id": "112612d6-4812-473a-b67b-1273661eb177",
       "notified_at": null,
       "sensitivity": "work-private",
       "status": "done",
@@ -160,9 +326,9 @@
     },
     {
       "completed_at": null,
-      "created_at": "2026-10-08T09:45:51.928865Z",
+      "created_at": "2026-10-08T09:52:03.089860Z",
       "due_at": "2030-02-02T09:00:00Z",
-      "id": "1ebd0845-dd25-4214-9ec9-2d909483c91e",
+      "id": "4f1de43c-aa34-447b-a8cf-726e49cf7a92",
       "notified_at": null,
       "sensitivity": "work-private",
       "status": "pending",
@@ -171,21 +337,21 @@
   ],
   "session": {
     "active_channel": "web",
-    "conversation_id": "d821d93c-431d-44a2-98ad-33e480fc91bb",
-    "created_at": "2026-10-08T09:45:52.001279Z",
+    "conversation_id": "a5e34e40-f908-4997-98dc-7e904c36d6d9",
+    "created_at": "2026-10-08T09:52:03.123642Z",
     "dnd": false,
     "interaction_mode": "desk",
-    "last_active_at": "2026-10-08T09:45:52.001279Z",
+    "last_active_at": "2026-10-08T09:52:03.123642Z",
     "last_interruption_at": null,
     "privacy_context": "unknown",
-    "session_id": "0bb2f70d-0f93-4e1a-8118-1a1156b0f122",
+    "session_id": "bc3e7b90-785b-468a-b474-456f541b3c82",
     "user_id": "default-user"
   },
   "stations": [
     {
-      "created_at": "2026-10-08T09:45:51.954433Z",
+      "created_at": "2026-10-08T09:52:03.106721Z",
       "guide_id": "s24896",
-      "id": "48006477-17bb-4883-8675-fb4ea3b61a2b",
+      "id": "5d8b383b-c47d-4556-98f8-fdc012c5662b",
       "name": "SWR3"
     }
   ],
@@ -262,9 +428,9 @@
   },
   "tasks": [
     {
-      "completed_at": "2026-10-08T09:45:51.915860Z",
-      "created_at": "2026-10-08T09:45:51.913709Z",
-      "id": "0504a7cb-2c09-4f02-8197-de749f8fdaef",
+      "completed_at": "2026-10-08T09:52:03.080162Z",
+      "created_at": "2026-10-08T09:52:03.077626Z",
+      "id": "dc03de79-54f9-4acc-a687-7c63262fc1a8",
       "project_scope": null,
       "sensitivity": "work-private",
       "status": "done",
@@ -272,8 +438,8 @@
     },
     {
       "completed_at": null,
-      "created_at": "2026-10-08T09:45:51.919936Z",
-      "id": "4452aae8-a0c7-4a80-a8ac-edc11a9c3ea9",
+      "created_at": "2026-10-08T09:52:03.082536Z",
+      "id": "c4c9a35d-fb43-429f-98f7-0e5d1d58c32a",
       "project_scope": null,
       "sensitivity": "work-private",
       "status": "open",

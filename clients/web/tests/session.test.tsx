@@ -275,3 +275,55 @@ describe('Chat and logout', () => {
     expect(box()).toHaveValue('');
   });
 });
+
+describe('Meetings and logout', () => {
+  const meetingHub = () =>
+    createFakeHub({
+      status: SAMPLE_STATUS,
+      meetings: [{ id: 'm1', title: SECRET, status: 'complete', created_at: '2030-01-01T00:00:00Z', transcript_segments: [{ start: 0, end: 1, text: 'private words' }] }],
+    });
+
+  it('a meeting detail requested before logout never reaches the page or the cache', async () => {
+    const hub = meetingHub();
+    const detail = hub.hold((c) => c === 'GET /meetings/m1', { ignoreAbort: true });
+    const { client } = renderApp('#/meetings/m1');
+    const user = setup();
+    await waitFor(() => expect(detail).toHaveLength(1));
+    await logout(user);
+    hub.release((c) => c === 'GET /meetings/m1');
+    await act(async () => detail[0]!.resolve(jsonResponse({ ...hub.data.meetings[0], participants: [], speaker_names: {}, transcript_corrections: {} })));
+    await wait(50);
+    expect(document.body.textContent).not.toMatch(/SECRET|private words/);
+    expect(cachedData(client)).toHaveLength(0);
+  });
+
+  it('an upload that finishes after logout does not refresh a list nobody is looking at', async () => {
+    const hub = meetingHub();
+    const post = hub.hold((c) => c === 'POST /meetings', { ignoreAbort: true });
+    renderApp('#/meetings');
+    const user = setup();
+    await user.type(await screen.findByLabelText('Title'), 'Standup');
+    await user.upload(screen.getByLabelText(/Recording file/), new File(['RIFF'], 'a.wav', { type: 'audio/wav' }));
+    await user.click(screen.getByRole('button', { name: 'Upload meeting' }));
+    await waitFor(() => expect(post).toHaveLength(1));
+    await logout(user);
+    const before = hub.calls.length;
+    await act(async () => post[0]!.resolve(jsonResponse({ id: 'm9', title: 'Standup', status: 'uploaded', created_at: '2030-01-01T00:00:00Z' })));
+    await wait(50);
+    expect(hub.calls.slice(before)).toEqual([]);
+    expect(screen.getByRole('heading', { name: 'Sign in to Reachy' })).toBeInTheDocument();
+  });
+
+  it('stops following a deep review when the owner signs out', async () => {
+    const hub = meetingHub();
+    hub.data.deepJobs.push({ id: 'job1', status: 'running', stage: 'Working', task: 'summary', meeting_id: 'm1', meeting_title: 'X', reachy_unavailable: true, reachy_online: false, error: null, result: null });
+    renderApp('#/meetings');
+    const user = setup();
+    await screen.findByText('Working');
+    await logout(user);
+    expect(screen.queryByText('Working')).not.toBeInTheDocument();
+    const before = hub.calls.length;
+    await wait(20_000);
+    expect(hub.calls.slice(before).filter((c) => c.includes('deep-review'))).toEqual([]);
+  });
+});

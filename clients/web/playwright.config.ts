@@ -9,7 +9,12 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   reporter: [['list']],
-  use: { browserName: 'chromium' },
+  use: {
+    browserName: 'chromium',
+    // A synthetic microphone, so recording a clip in the browser can be exercised without hardware.
+    launchOptions: { args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] },
+    permissions: ['microphone'],
+  },
   projects: [
     { name: 'desktop', use: { viewport: { width: 1280, height: 800 } } },
     { name: 'mobile', use: { viewport: { width: 390, height: 844 }, hasTouch: true } },
