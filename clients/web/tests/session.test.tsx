@@ -327,3 +327,25 @@ describe('Meetings and logout', () => {
     expect(hub.calls.slice(before).filter((c) => c.includes('deep-review'))).toEqual([]);
   });
 });
+
+describe('Settings secrets and logout', () => {
+  it('an API key typed but not saved is gone after logout and sign-in; a saved one is only ever shown masked', async () => {
+    const hub = createFakeHub({ status: SAMPLE_STATUS });
+    hub.data.llm.local.api_key = '********2345';
+    renderApp('#/settings/models');
+    const user = setup();
+    const field = (await screen.findAllByLabelText(/^API key/))[0] as HTMLInputElement;
+    await user.type(field, 'typed-not-saved-5555');
+    expect(field.value).toBe('typed-not-saved-5555');
+    await logout(user);
+    expect(document.body.textContent).not.toContain('typed-not-saved-5555');
+    expect(document.body.innerHTML).not.toContain('typed-not-saved-5555');
+    await signInAgain(user);
+    await user.click(await screen.findByRole('link', { name: 'Settings' }));
+    await user.click(await screen.findByRole('tab', { name: 'Models' }));
+    const again = (await screen.findAllByLabelText(/^API key/))[0] as HTMLInputElement;
+    expect(again.value).toBe('');
+    expect(screen.getByText('Saved key: ********2345')).toBeInTheDocument();
+    expect(JSON.stringify(localStorage) + JSON.stringify(sessionStorage)).toBe('{}{}');
+  });
+});

@@ -76,6 +76,9 @@ OPERATIONS = [
     ("post", "/meetings/{meeting_id}/outputs/{kind}"), ("delete", "/meetings/{meeting_id}/outputs/{kind}"),
     ("post", "/meetings/{meeting_id}/outputs/{kind}/deep"),
     ("get", "/deep-review/info"), ("get", "/deep-review/current"), ("get", "/deep-review/{job_id}"),
+    ("get", "/settings/llm"), ("put", "/settings/llm"), ("get", "/settings/persona"), ("put", "/settings/persona"),
+    ("get", "/settings/websearch"), ("put", "/settings/websearch"), ("get", "/websearch/log"),
+    ("patch", "/sessions/{user_id}/mode"), ("patch", "/sessions/{user_id}/dnd"),
 ]
 
 
@@ -195,6 +198,10 @@ def snapshot(client: TestClient) -> dict:
         "chat": client.get(f"/chats/{chat_id}", params={"user_id": "default-user"}).json(),
         "message": client.post("/messages", json={"user_id": "default-user", "channel": "web", "text": "what time is it", "input_modality": "text", "chat_id": chat_id}, headers=CSRF).json(),
         "session": client.get("/sessions/default-user").json(),
+        "llm_settings": client.get("/settings/llm").json(),
+        "persona": client.get("/settings/persona").json(),
+        "websearch_settings": client.get("/settings/websearch").json(),
+        "websearch_log": client.get("/websearch/log").json(),
         "meetings": client.get("/meetings").json(),
         "meeting": client.get(f"/meetings/{meeting_id}").json(),
     }
@@ -214,7 +221,7 @@ def test_sample_responses_still_match_the_hub():
         for robot in sample["status"]["robots"]:
             robot.pop("data", None)  # embodiment state is the robot's own contract, typed loosely on purpose
     assert shape(live["status"]) == shape(saved["status"])
-    for name in ("tasks", "reminders", "notes", "receipts", "alarms", "stations", "chats", "chat", "message", "session", "meetings", "meeting"):
+    for name in ("tasks", "reminders", "notes", "receipts", "alarms", "stations", "chats", "chat", "message", "session", "meetings", "meeting", "llm_settings", "persona", "websearch_settings", "websearch_log"):
         assert live[name] and saved[name], name  # an empty list would pin no item shape
         assert shape(live[name]) == shape(saved[name]), name
 
@@ -466,6 +473,56 @@ def test_meetings_behaviour():
     assert client.delete(f"/meetings/{running}", headers=CSRF).status_code == 409
     assert client.post(f"/meetings/{running}/cancel", headers=CSRF).json()["status"] == "cancelled"
     assert client.delete(f"/meetings/{running}", headers=CSRF).status_code == 200
+
+
+def web_period(client: TestClient) -> str:
+    return client.get("/websearch/log").json()["usage"]["period"]
+
+
+def test_settings_behaviour_and_secrets_never_come_back():
+    anonymous = make_client()
+    for path in ("/settings/llm", "/settings/persona", "/settings/websearch", "/websearch/log"):
+        assert anonymous.get(path).status_code == 401, path
+    client = logged_in_client()
+    assert client.put("/settings/persona", json={"name": "R", "system_prompt": "p"}).status_code == 403  # no CSRF header
+
+    persona = client.put("/settings/persona", json={"name": "Rex", "system_prompt": "Be brief.", "location": "Singapore", "timezone": "Asia/Singapore", "tone": "cheery"}, headers=CSRF).json()
+    assert persona == {"name": "Rex", "system_prompt": "Be brief.", "location": "Singapore", "timezone": "Asia/Singapore", "tone": "cheery"}
+    assert client.get("/settings/persona").json() == persona
+    assert client.put("/settings/persona", json={"name": ""}, headers=CSRF).status_code == 422
+
+    # A saved key is returned masked, kept when omitted, replaced when sent, and removed with an explicit null.
+    saved = client.put("/settings/llm", json={"local": {"base_url": "http://ovms/v1", "model": "qwen", "api_key": "secret-12345"}, "cloud": None, "routing": {"mode": "local_only"}}, headers=CSRF).json()
+    assert saved["local"]["api_key"] == "********2345" and "secret-12345" not in str(saved)
+    kept = client.put("/settings/llm", json={"local": {"base_url": "http://ovms/v1", "model": "qwen2"}, "cloud": None, "routing": {"mode": "local_only"}}, headers=CSRF).json()
+    assert kept["local"]["api_key"] == "********2345" and kept["local"]["model"] == "qwen2"
+    cleared = client.put("/settings/llm", json={"local": {"base_url": "http://ovms/v1", "model": "qwen2", "api_key": None}, "cloud": None, "routing": {"mode": "local_only"}}, headers=CSRF).json()
+    assert cleared["local"]["api_key"] is None
+    both = client.put("/settings/llm", json={"local": {"base_url": "http://a/v1", "model": "m"}, "cloud": {"base_url": "https://c/v1", "model": "big", "api_key": "cloud-key-9999"}, "routing": {"mode": "local_with_cloud_fallback"}}, headers=CSRF).json()
+    assert both["routing"] == {"mode": "local_with_cloud_fallback"} and both["cloud"]["api_key"] == "********9999"
+    off = client.put("/settings/llm", json={"local": None, "cloud": None, "routing": {"mode": "local_only"}}, headers=CSRF).json()
+    assert off["local"] is None and off["cloud"] is None
+    bad = client.put("/settings/llm", json={"local": {"base_url": "only-a-url"}}, headers=CSRF)
+    assert bad.status_code == 422 and bad.json() == {"detail": "Invalid provider settings"}
+    leaked = client.put("/settings/llm", json={"local": {"api_key": ["do-not-echo"]}}, headers=CSRF)
+    assert leaked.status_code == 422 and "do-not-echo" not in leaked.text
+
+    web = client.put("/settings/websearch", json={"policy": "auto", "hosted": {"brave": {"enabled": True, "api_key": "brave-key-7777", "monthly_limit": 500}}, "fallback": "builtin_searxng", "result_count": 3}, headers=CSRF).json()
+    assert web["policy"] == "auto" and web["hosted"]["brave"]["api_key"].endswith("7777") and "brave-key-7777" not in str(web)
+    assert web["hosted"]["brave"]["monthly_limit"] == 500 and web["result_count"] == 3
+    assert client.get("/settings/websearch").json()["usage"] == {"period": web_period(client), "used": {"brave": 0, "exa": 0, "tavily": 0}}
+    assert client.get("/websearch/log").json()["usage"]["limits"]["brave"] == 500  # limits and on/off are in the log's usage
+    assert client.put("/settings/websearch", json={"policy": "off"}, headers=CSRF).json()["policy"] == "off"
+    assert client.put("/settings/websearch", json={"policy": "sometimes"}, headers=CSRF).status_code == 422
+    log = client.get("/websearch/log").json()
+    assert log["entries"] == [] and set(log["usage"]) == {"period", "used", "limits", "enabled"}
+    assert log["usage"]["enabled"] == {"brave": True, "exa": False, "tavily": False}  # policy "off" leaves the provider's own switch alone
+
+    # Session controls act on the user's session.
+    assert client.patch("/sessions/default-user/mode", json={"interaction_mode": "office"}, headers=CSRF).json()["interaction_mode"] == "office"
+    assert client.patch("/sessions/default-user/dnd", json={"dnd": True}, headers=CSRF).json()["dnd"] is True
+    assert client.patch("/sessions/default-user/mode", json={"interaction_mode": "nonsense"}, headers=CSRF).status_code == 422
+    assert client.patch("/sessions/nobody/dnd", json={"dnd": True}, headers=CSRF).status_code == 404
 
 
 def test_owner_bound_chat_is_limited_to_the_owner_account():

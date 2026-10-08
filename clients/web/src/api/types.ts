@@ -567,3 +567,152 @@ export function parseDeepInfo(value: unknown): DeepInfo {
     eta_seconds: o.eta_seconds == null ? 330 : num(o.eta_seconds, 'info.eta_seconds'),
   };
 }
+
+// --- Settings (Phase 47B7) -----------------------------------------------------------------
+// API keys never come back from the hub: a saved key is shown as a masked tail ("********2345") and sent only when changed.
+
+export interface ProviderConfig {
+  base_url: string;
+  model: string;
+  api_key: string | null; // masked
+}
+export interface LlmConfig {
+  local: ProviderConfig | null;
+  cloud: ProviderConfig | null;
+  routing: string; // 'local_only' | 'local_with_cloud_fallback' | 'cloud_only'
+}
+export interface Persona {
+  name: string;
+  system_prompt: string;
+  location: string | null;
+  timezone: string;
+  tone: string;
+}
+export interface HostedSearch {
+  enabled: boolean;
+  api_key: string | null; // masked
+  monthly_limit: number | null;
+}
+export interface SearchUsage {
+  period: string;
+  used: Record<string, number>;
+  limits: Record<string, number>;
+  enabled: Record<string, boolean>;
+}
+export interface WebSearchConfig {
+  policy: string; // 'off' | 'auto' | 'always'
+  hosted: Record<string, HostedSearch>;
+  fallback: string; // 'builtin_searxng' | 'searxng' | 'none'
+  base_url: string | null;
+  api_key: string | null; // masked
+  result_count: number;
+  usage: SearchUsage | null;
+}
+export interface SearchLogEntry {
+  at: string;
+  served_by: string | null;
+  total_ms: number;
+  policy: string;
+  query: string;
+  attempts: { provider: string; outcome: string; ms: number }[];
+  results: SearchSource[];
+}
+export interface SearchLog {
+  usage: SearchUsage | null;
+  entries: SearchLogEntry[];
+}
+
+function provider(value: unknown, what: string): ProviderConfig | null {
+  if (value == null) return null;
+  const o = obj(value, what);
+  return { base_url: str(o.base_url, `${what}.base_url`), model: str(o.model, `${what}.model`), api_key: optionalStr(o.api_key, `${what}.api_key`) };
+}
+
+export function parseLlmConfig(value: unknown): LlmConfig {
+  const o = obj(value, 'llm settings');
+  return {
+    local: provider(o.local, 'llm.local'),
+    cloud: provider(o.cloud, 'llm.cloud'),
+    routing: o.routing == null ? 'local_only' : str(obj(o.routing, 'llm.routing').mode, 'llm.routing.mode'),
+  };
+}
+
+export function parsePersona(value: unknown): Persona {
+  const o = obj(value, 'persona');
+  return {
+    name: str(o.name, 'persona.name'),
+    system_prompt: str(o.system_prompt, 'persona.system_prompt'),
+    location: optionalStr(o.location, 'persona.location'),
+    timezone: o.timezone == null ? 'UTC' : str(o.timezone, 'persona.timezone'),
+    tone: o.tone == null ? 'default' : str(o.tone, 'persona.tone'),
+  };
+}
+
+function numberMap(value: unknown, what: string): Record<string, number> {
+  return Object.fromEntries(Object.entries(obj(value ?? {}, what)).map(([k, v]) => [k, num(v, `${what}.${k}`)]));
+}
+function parseUsage(value: unknown): SearchUsage | null {
+  if (value == null) return null;
+  const o = obj(value, 'search usage');
+  return {
+    period: str(o.period, 'usage.period'),
+    used: numberMap(o.used, 'usage.used'),
+    limits: numberMap(o.limits, 'usage.limits'),
+    enabled: Object.fromEntries(Object.entries(obj(o.enabled ?? {}, 'usage.enabled')).map(([k, v]) => [k, v === true])),
+  };
+}
+
+export function parseWebSearchSettings(value: unknown): WebSearchConfig {
+  const o = obj(value, 'web search settings');
+  const hosted: Record<string, HostedSearch> = {};
+  for (const [name, entry] of Object.entries(obj(o.hosted ?? {}, 'web search.hosted'))) {
+    const h = obj(entry, `hosted.${name}`);
+    hosted[name] = { enabled: h.enabled === true, api_key: optionalStr(h.api_key, `hosted.${name}.api_key`), monthly_limit: optionalNum(h.monthly_limit, `hosted.${name}.monthly_limit`) };
+  }
+  return {
+    policy: str(o.policy, 'web search.policy'),
+    hosted,
+    fallback: o.fallback == null ? 'builtin_searxng' : str(o.fallback, 'web search.fallback'),
+    base_url: optionalStr(o.base_url, 'web search.base_url'),
+    api_key: optionalStr(o.api_key, 'web search.api_key'),
+    result_count: o.result_count == null ? 5 : num(o.result_count, 'web search.result_count'),
+    usage: parseUsage(o.usage),
+  };
+}
+
+export function parseSearchLog(value: unknown): SearchLog {
+  const o = obj(value ?? {}, 'search log');
+  return {
+    usage: parseUsage(o.usage),
+    entries: list(o.entries ?? [], 'search log.entries').map((item, i) => {
+      const e = obj(item, `log[${i}]`);
+      return {
+        at: str(e.at, 'log.at'),
+        served_by: optionalStr(e.served_by, 'log.served_by'),
+        total_ms: e.total_ms == null ? 0 : num(e.total_ms, 'log.total_ms'),
+        policy: e.policy == null ? '' : str(e.policy, 'log.policy'),
+        query: str(e.query, 'log.query'),
+        attempts: list(e.attempts ?? [], 'log.attempts').map((a) => {
+          const at = obj(a, 'attempt');
+          return { provider: str(at.provider, 'attempt.provider'), outcome: str(at.outcome, 'attempt.outcome'), ms: at.ms == null ? 0 : num(at.ms, 'attempt.ms') };
+        }),
+        results: list(e.results ?? [], 'log.results').map((r) => {
+          const x = obj(r, 'result');
+          const text = (key: string) => (x[key] == null ? '' : str(x[key], `result.${key}`));
+          return { title: text('title'), url: text('url'), snippet: text('snippet'), source_domain: text('source_domain') };
+        }),
+      };
+    }),
+  };
+}
+
+export interface UsageEntry {
+  at: string;
+  role: string;
+  model: string;
+  success: boolean;
+  error_message: string | null;
+  prompt_tokens: number | null;
+  completion_tokens: number | null;
+  latency_ms: number;
+}

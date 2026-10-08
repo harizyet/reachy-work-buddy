@@ -294,6 +294,34 @@ for (const mount of MOUNTS) {
       await expect(page.getByText(title)).toHaveCount(0);
     });
 
+    test('Settings: persona saves; a model key is shown only masked; secrets are not left in the page or storage', async ({ page }) => {
+      await signIn(page, mount.url, '#/settings');
+      await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+      await page.getByLabel('Location').fill(`Lab ${run}`);
+      await page.getByRole('button', { name: 'Save persona' }).click();
+      await expect(page.getByText('Persona saved.')).toBeVisible();
+      await page.reload();
+      await expect(page.getByLabel('Location')).toHaveValue(`Lab ${run}`);
+      await page.getByLabel('Location').fill('');
+      await page.getByRole('button', { name: 'Save persona' }).click();
+      await expect(page.getByText('Persona saved.')).toBeVisible();
+
+      await page.getByRole('tab', { name: 'Models' }).click();
+      await page.getByLabel('Base URL', { exact: true }).fill('http://ovms.test/v1');
+      await page.getByLabel('Model name').fill('qwen');
+      const secret = `secret-${run}-4242`;
+      await page.getByLabel('API key').first().fill(secret);
+      await page.getByRole('button', { name: 'Save model' }).click();
+      await expect(page.getByText('Model settings saved.')).toBeVisible();
+      await expect(page.getByText('Saved key: ********4242')).toBeVisible();
+      expect(await page.content()).not.toContain(secret);
+      expect(await page.evaluate(() => JSON.stringify(localStorage) + JSON.stringify(sessionStorage))).toBe('{}{}');
+      await page.getByLabel('API key').first().fill('typed-and-abandoned');
+      await page.getByRole('button', { name: 'Log out' }).click();
+      await expect(page.getByRole('heading', { name: 'Sign in to Reachy' })).toBeVisible();
+      expect(await page.content()).not.toContain('typed-and-abandoned');
+    });
+
     test('Activity: shows the hub receipts, failed ones struck through, text literal', async ({ page }) => {
       await signIn(page, mount.url, '#/activity');
       await expect(page.getByRole('heading', { name: 'Recent activity' })).toBeVisible();
@@ -330,7 +358,7 @@ for (const mount of MOUNTS) {
 
     test('pages fit the viewport; Notes works as list then editor then back on a narrow screen', async ({ page }, info) => {
       await signIn(page, mount.url);
-      for (const hash of ['#/todo', '#/reminders', '#/notes', '#/activity', '#/alarms', '#/chat', '#/meetings']) {
+      for (const hash of ['#/todo', '#/reminders', '#/notes', '#/activity', '#/alarms', '#/chat', '#/meetings', '#/settings/models', '#/settings/search']) {
         await page.goto(mount.url + hash);
         await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);

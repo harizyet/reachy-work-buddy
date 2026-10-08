@@ -14,6 +14,7 @@ const NAV = [
   { to: '/alarms', label: 'Alarms', end: false },
   { to: '/notes', label: 'Notes', end: false },
   { to: '/activity', label: 'Activity', end: false },
+  { to: '/settings', label: 'Settings', end: false },
 ];
 
 export function AppLayout() {

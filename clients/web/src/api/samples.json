@@ -1,12 +1,12 @@
 {
   "alarms": [
     {
-      "created_at": "2026-10-08T09:52:03.117164Z",
+      "created_at": "2026-10-08T10:03:30.779898Z",
       "delivery": null,
       "due_at": "2026-10-08T21:00:00Z",
       "enabled": true,
       "fired_at": null,
-      "id": "6c353c5e-39a5-4c15-ac27-a3324fc48bf5",
+      "id": "6b7b4291-a48b-4a67-9a87-5fab680ee2ac",
       "label": "Chime",
       "reminder_id": null,
       "repeat": [],
@@ -15,12 +15,12 @@
       "volume": 100
     },
     {
-      "created_at": "2026-10-08T09:52:03.112521Z",
+      "created_at": "2026-10-08T10:03:30.777671Z",
       "delivery": null,
       "due_at": "2026-10-09T07:30:00Z",
       "enabled": true,
       "fired_at": null,
-      "id": "dec12009-1a8c-44e6-84a4-15d1050ec2b0",
+      "id": "6987a084-851f-4419-8837-a8f3663456cf",
       "label": "Wake",
       "reminder_id": null,
       "repeat": [
@@ -30,7 +30,7 @@
         3,
         4
       ],
-      "station_id": "5d8b383b-c47d-4556-98f8-fdc012c5662b",
+      "station_id": "6edda9cd-8f63-4a9c-a9b8-2b5281db2dcf",
       "status": "scheduled",
       "volume": 120
     }
@@ -39,31 +39,44 @@
     "username": "owner"
   },
   "chat": {
-    "created_at": "2026-10-08T09:52:03.120546Z",
-    "id": "5c31fcc5-0b8e-4d8c-85c6-2c4e0f18e06f",
+    "created_at": "2026-10-08T10:03:30.781666Z",
+    "id": "180ed405-a635-48bf-83d3-2551cd593788",
     "title": "Hello there",
     "turns": [
       {
-        "created_at": "2026-10-08T09:52:03.123572Z",
-        "id": "f2aabb0a-e2c5-44aa-b29d-bb242d989af2",
-        "reply": "It's 9:52 AM.",
+        "created_at": "2026-10-08T10:03:30.783521Z",
+        "id": "dfbf31c5-8cec-4015-b70c-323bbf0d5462",
+        "reply": "It's 10:03 AM.",
         "status": "complete",
         "text": "what time is it",
         "web_search": null
       }
     ],
-    "updated_at": "2026-10-08T09:52:03.123572Z",
+    "updated_at": "2026-10-08T10:03:30.783521Z",
     "user_id": "default-user"
   },
   "chats": [
     {
-      "created_at": "2026-10-08T09:52:03.120546Z",
-      "id": "5c31fcc5-0b8e-4d8c-85c6-2c4e0f18e06f",
+      "created_at": "2026-10-08T10:03:30.781666Z",
+      "id": "180ed405-a635-48bf-83d3-2551cd593788",
       "title": "Hello there",
-      "updated_at": "2026-10-08T09:52:03.123572Z",
+      "updated_at": "2026-10-08T10:03:30.783521Z",
       "user_id": "default-user"
     }
   ],
+  "llm_settings": {
+    "cloud": null,
+    "local": {
+      "api_key": null,
+      "base_url": "http://ovms/v1",
+      "model": "qwen",
+      "provider": "openai-compatible"
+    },
+    "routing": {
+      "mode": "local_only"
+    },
+    "updated_at": "2026-10-08T10:03:30.754814Z"
+  },
   "meeting": {
     "aligned_segments": [
       {
@@ -94,7 +107,7 @@
     "audio_path": "meeting.wav",
     "content_type": "audio/wav",
     "context": "ctx",
-    "created_at": "2026-10-08T09:52:03.135926Z",
+    "created_at": "2026-10-08T10:03:30.791009Z",
     "description": null,
     "diarization_segments": [
       {
@@ -110,7 +123,7 @@
     ],
     "duration_seconds": 6.0,
     "error_detail": null,
-    "id": "a8b45b4a-255f-40d9-ad6c-bf0ab692aeea",
+    "id": "40f44439-2fef-4165-a827-1d8852d71f51",
     "key_terms": [],
     "minutes": null,
     "normalized_audio_path": null,
@@ -125,7 +138,7 @@
     "started_at": null,
     "status": "complete",
     "summary": {
-      "generated_at": "2026-10-08T09:52:03.137657Z",
+      "generated_at": "2026-10-08T10:03:30.792336Z",
       "text": "A summary.",
       "tier": "local"
     },
@@ -144,7 +157,7 @@
         "text": "we ship friday"
       }
     ],
-    "updated_at": "2026-10-08T09:52:03.135929Z"
+    "updated_at": "2026-10-08T10:03:30.791011Z"
   },
   "meetings": [
     {
@@ -177,7 +190,7 @@
       "audio_path": "meeting.wav",
       "content_type": "audio/wav",
       "context": "ctx",
-      "created_at": "2026-10-08T09:52:03.135926Z",
+      "created_at": "2026-10-08T10:03:30.791009Z",
       "description": null,
       "diarization_segments": [
         {
@@ -193,7 +206,7 @@
       ],
       "duration_seconds": 6.0,
       "error_detail": null,
-      "id": "a8b45b4a-255f-40d9-ad6c-bf0ab692aeea",
+      "id": "40f44439-2fef-4165-a827-1d8852d71f51",
       "key_terms": [],
       "minutes": null,
       "normalized_audio_path": null,
@@ -208,7 +221,7 @@
       "started_at": null,
       "status": "complete",
       "summary": {
-        "generated_at": "2026-10-08T09:52:03.137657Z",
+        "generated_at": "2026-10-08T10:03:30.792336Z",
         "text": "A summary.",
         "tier": "local"
       },
@@ -227,37 +240,44 @@
           "text": "we ship friday"
         }
       ],
-      "updated_at": "2026-10-08T09:52:03.135929Z"
+      "updated_at": "2026-10-08T10:03:30.791011Z"
     }
   ],
   "message": {
     "active_channel": "web",
     "context_meeting": null,
-    "conversation_id": "a5e34e40-f908-4997-98dc-7e904c36d6d9",
+    "conversation_id": "15cba1ae-c7f2-424c-832a-d64f3a5de7f2",
     "delivery_channel": "reachy",
     "privacy": "public",
-    "reply": "It's 9:52 AM.",
-    "session_id": "bc3e7b90-785b-468a-b474-456f541b3c82",
+    "reply": "It's 10:03 AM.",
+    "session_id": "153ec32b-9b9f-47ca-a147-789c2ab09867",
     "web_search": null
   },
   "notes": [
     {
       "body": "milk\neggs",
-      "created_at": "2026-10-08T09:52:03.098245Z",
-      "id": "ed4ad7fc-137d-43ec-8ad4-e31fca9afb1c",
+      "created_at": "2026-10-08T10:03:30.770722Z",
+      "id": "1ce0df5a-cadf-478b-a5e4-1c9965e50951",
       "project_scope": null,
       "sensitivity": "work-private",
       "title": "Groceries",
-      "updated_at": "2026-10-08T09:52:03.098248Z"
+      "updated_at": "2026-10-08T10:03:30.770724Z"
     }
   ],
+  "persona": {
+    "location": null,
+    "name": "Reachy",
+    "system_prompt": "You are Reachy, an embodied work assistant. You help with tasks, calendar, email, reminders, and general questions. Keep replies concise and practical, and be clear when something is outside what you can do.",
+    "timezone": "UTC",
+    "tone": "default"
+  },
   "receipts": [
     {
       "action_type": "alarm.delivered",
-      "at": "2026-10-08T09:52:03.126943Z",
+      "at": "2026-10-08T10:03:30.785610Z",
       "failure_reason": "no audio",
       "fields": {},
-      "id": "c79c2c29-beb7-450d-97a0-dd6335e6ec3f",
+      "id": "22d8c57c-1f86-4f8c-8c3c-428c8aea4801",
       "notified_at": null,
       "notify": false,
       "object_id": null,
@@ -267,12 +287,12 @@
     },
     {
       "action_type": "task.created",
-      "at": "2026-10-08T09:52:03.126658Z",
+      "at": "2026-10-08T10:03:30.785463Z",
       "failure_reason": null,
       "fields": {
         "Task": "Water plants"
       },
-      "id": "19325046-f7cc-4725-88ca-bbf5966141fb",
+      "id": "05cbf15b-0d3e-4568-9823-69dc255047a9",
       "notified_at": null,
       "notify": false,
       "object_id": null,
@@ -282,32 +302,32 @@
     },
     {
       "action_type": "alarm.created",
-      "at": "2026-10-08T09:52:03.117207Z",
+      "at": "2026-10-08T10:03:30.779918Z",
       "failure_reason": null,
       "fields": {
         "Label": "Chime",
         "When": "2026-10-08T21:00+00:00"
       },
-      "id": "7aec3564-5ae0-4904-af89-be2e7fb33efa",
+      "id": "75cdc5b6-3685-4c18-af57-18053091efa5",
       "notified_at": null,
       "notify": false,
-      "object_id": "6c353c5e-39a5-4c15-ac27-a3324fc48bf5",
+      "object_id": "6b7b4291-a48b-4a67-9a87-5fab680ee2ac",
       "object_type": "alarm",
       "source_channel": "web",
       "status": "success"
     },
     {
       "action_type": "alarm.created",
-      "at": "2026-10-08T09:52:03.112572Z",
+      "at": "2026-10-08T10:03:30.777696Z",
       "failure_reason": null,
       "fields": {
         "Label": "Wake",
         "When": "2026-10-09T07:30+00:00"
       },
-      "id": "10135628-5394-4ea6-8acc-169fff28fb9d",
+      "id": "f79a580b-9c0a-4c6c-a196-65d091f83f32",
       "notified_at": null,
       "notify": false,
-      "object_id": "dec12009-1a8c-44e6-84a4-15d1050ec2b0",
+      "object_id": "6987a084-851f-4419-8837-a8f3663456cf",
       "object_type": "alarm",
       "source_channel": "web",
       "status": "success"
@@ -315,10 +335,10 @@
   ],
   "reminders": [
     {
-      "completed_at": "2026-10-08T09:52:03.093755Z",
-      "created_at": "2026-10-08T09:52:03.085984Z",
+      "completed_at": "2026-10-08T10:03:30.768537Z",
+      "created_at": "2026-10-08T10:03:30.764477Z",
       "due_at": "2030-01-02T09:00:00Z",
-      "id": "112612d6-4812-473a-b67b-1273661eb177",
+      "id": "a252e089-b01b-4ce6-846a-f35724db432e",
       "notified_at": null,
       "sensitivity": "work-private",
       "status": "done",
@@ -326,9 +346,9 @@
     },
     {
       "completed_at": null,
-      "created_at": "2026-10-08T09:52:03.089860Z",
+      "created_at": "2026-10-08T10:03:30.766630Z",
       "due_at": "2030-02-02T09:00:00Z",
-      "id": "4f1de43c-aa34-447b-a8cf-726e49cf7a92",
+      "id": "ec8384c0-231e-4a90-ab01-86f004bf68ed",
       "notified_at": null,
       "sensitivity": "work-private",
       "status": "pending",
@@ -337,21 +357,21 @@
   ],
   "session": {
     "active_channel": "web",
-    "conversation_id": "a5e34e40-f908-4997-98dc-7e904c36d6d9",
-    "created_at": "2026-10-08T09:52:03.123642Z",
+    "conversation_id": "15cba1ae-c7f2-424c-832a-d64f3a5de7f2",
+    "created_at": "2026-10-08T10:03:30.783559Z",
     "dnd": false,
     "interaction_mode": "desk",
-    "last_active_at": "2026-10-08T09:52:03.123642Z",
+    "last_active_at": "2026-10-08T10:03:30.783559Z",
     "last_interruption_at": null,
     "privacy_context": "unknown",
-    "session_id": "bc3e7b90-785b-468a-b474-456f541b3c82",
+    "session_id": "153ec32b-9b9f-47ca-a147-789c2ab09867",
     "user_id": "default-user"
   },
   "stations": [
     {
-      "created_at": "2026-10-08T09:52:03.106721Z",
+      "created_at": "2026-10-08T10:03:30.774966Z",
       "guide_id": "s24896",
-      "id": "5d8b383b-c47d-4556-98f8-fdc012c5662b",
+      "id": "6edda9cd-8f63-4a9c-a9b8-2b5281db2dcf",
       "name": "SWR3"
     }
   ],
@@ -428,9 +448,9 @@
   },
   "tasks": [
     {
-      "completed_at": "2026-10-08T09:52:03.080162Z",
-      "created_at": "2026-10-08T09:52:03.077626Z",
-      "id": "dc03de79-54f9-4acc-a687-7c63262fc1a8",
+      "completed_at": "2026-10-08T10:03:30.759968Z",
+      "created_at": "2026-10-08T10:03:30.757892Z",
+      "id": "2c7081a7-821b-45de-9bc9-8a171109a59c",
       "project_scope": null,
       "sensitivity": "work-private",
       "status": "done",
@@ -438,12 +458,67 @@
     },
     {
       "completed_at": null,
-      "created_at": "2026-10-08T09:52:03.082536Z",
-      "id": "c4c9a35d-fb43-429f-98f7-0e5d1d58c32a",
+      "created_at": "2026-10-08T10:03:30.762193Z",
+      "id": "d2fc90b2-0cdc-4240-ac0e-65bb8814beeb",
       "project_scope": null,
       "sensitivity": "work-private",
       "status": "open",
       "text": "Water plants"
     }
-  ]
+  ],
+  "websearch_log": {
+    "entries": [],
+    "usage": {
+      "enabled": {
+        "brave": false,
+        "exa": false,
+        "tavily": false
+      },
+      "limits": {
+        "brave": 900,
+        "exa": 900,
+        "tavily": 900
+      },
+      "period": "2026-10",
+      "used": {
+        "brave": 0,
+        "exa": 0,
+        "tavily": 0
+      }
+    }
+  },
+  "websearch_settings": {
+    "api_key": null,
+    "base_url": null,
+    "fallback": "builtin_searxng",
+    "hosted": {
+      "brave": {
+        "api_key": null,
+        "enabled": false,
+        "monthly_limit": 900
+      },
+      "exa": {
+        "api_key": null,
+        "enabled": false,
+        "monthly_limit": 900
+      },
+      "tavily": {
+        "api_key": null,
+        "enabled": false,
+        "monthly_limit": 900
+      }
+    },
+    "policy": "off",
+    "result_count": 5,
+    "timeout_seconds": 5.0,
+    "updated_at": null,
+    "usage": {
+      "period": "2026-10",
+      "used": {
+        "brave": 0,
+        "exa": 0,
+        "tavily": 0
+      }
+    }
+  }
 }

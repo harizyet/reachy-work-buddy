@@ -41,6 +41,12 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
     deepInfo: { configured: true, available: true, reason: null, eta_seconds: 330 } as any,
     chats: seed.chats ?? [],
     meetings: (seed.meetings ?? []) as FakeMeeting[],
+    llm: { local: { provider: 'openai-compatible', base_url: 'http://ovms/v1', model: 'qwen', api_key: null as string | null }, cloud: null as any, routing: { mode: 'local_only' } } as any,
+    persona: { name: 'Reachy', system_prompt: 'You are Reachy.', location: null, timezone: 'UTC', tone: 'default' } as any,
+    websearch: { policy: 'off', hosted: { brave: { enabled: false, api_key: null, monthly_limit: 900 }, exa: { enabled: false, api_key: null, monthly_limit: 900 }, tavily: { enabled: false, api_key: null, monthly_limit: 900 } }, fallback: 'builtin_searxng', base_url: null, api_key: null, result_count: 5 } as any,
+    searchLog: { usage: { period: '2030-01', used: { brave: 3, exa: 0, tavily: 0 }, limits: { brave: 900, exa: 900, tavily: 900 }, enabled: { brave: true, exa: false, tavily: false } }, entries: [] as any[] },
+    secrets: [] as string[], // every key the page ever sent, so a test can assert none came back
+    saves: [] as { call: string; body: any }[],
     deepJobs: [] as any[],
     suggestions: { suggestions: [], terms_used: 0, truncated: false } as any,
     sessions: new Map<string, { interaction_mode: string; dnd: boolean; active_channel: string }>(),
@@ -227,6 +233,50 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
       return info ? jsonResponse(info) : jsonResponse({ detail: `no session for user '${m[1]}'` }, 404);
     }
     if (path.startsWith('/meetings') || path.startsWith('/deep-review')) return meetingRoute(method, path, body);
+    if (path === '/settings/llm') {
+      if (method === 'PUT') {
+        data.saves.push({ call: 'llm', body });
+        const mask = (k: string) => `********${k.slice(-4)}`;
+        const apply = (name: 'local' | 'cloud') => {
+          const next = body[name];
+          if (!next) return null;
+          const old = data.llm[name];
+          const key = 'api_key' in next ? (next.api_key === null ? null : (data.secrets.push(next.api_key), mask(next.api_key))) : (old?.api_key ?? null);
+          return { provider: 'openai-compatible', base_url: next.base_url, model: next.model, api_key: key };
+        };
+        data.llm = { local: apply('local'), cloud: apply('cloud'), routing: body.routing };
+      }
+      return jsonResponse({ ...data.llm, updated_at: '2030-01-01T00:00:00Z' });
+    }
+    if (path === '/settings/persona') {
+      if (method === 'PUT') {
+        if (!body.name) return jsonResponse({ detail: [{ msg: 'too short' }] }, 422);
+        data.persona = { ...body };
+      }
+      return jsonResponse(data.persona);
+    }
+    if (path === '/settings/websearch') {
+      if (method === 'PUT') {
+        data.saves.push({ call: 'websearch', body });
+        const cfg = data.websearch;
+        for (const [name, h] of Object.entries<any>(body.hosted ?? {})) {
+          const o = cfg.hosted[name];
+          if ('api_key' in h) o.api_key = h.api_key === null ? null : (data.secrets.push(h.api_key), `********${h.api_key.slice(-4)}`);
+          o.enabled = h.enabled; if (h.monthly_limit) o.monthly_limit = h.monthly_limit;
+        }
+        for (const k of ['policy', 'fallback', 'base_url', 'result_count']) if (k in body) cfg[k] = body[k];
+        if ('api_key' in body) cfg.api_key = body.api_key === null ? null : (data.secrets.push(body.api_key), `********${body.api_key.slice(-4)}`);
+      }
+      return jsonResponse({ ...data.websearch, usage: { period: data.searchLog.usage.period, used: data.searchLog.usage.used } });
+    }
+    if (path === '/websearch/log') return jsonResponse(data.searchLog);
+    m = path.match(/^\/sessions\/([^/]+)\/(mode|dnd)$/);
+    if (m) {
+      const info = data.sessions.get(decodeURIComponent(m[1]!));
+      if (!info) return jsonResponse({ detail: `no session for user '${m[1]}'` }, 404);
+      if (m[2] === 'mode') info.interaction_mode = body.interaction_mode; else info.dnd = body.dnd;
+      return jsonResponse(info);
+    }
     if (path === '/planner/receipts') return jsonResponse(data.receipts);
     if (path === '/planner/alarms' && method === 'GET') return jsonResponse(data.alarms);
     if (path === '/planner/alarms' && method === 'POST') {
