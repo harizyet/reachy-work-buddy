@@ -37,3 +37,7 @@ The tool exited; the scratch database was dropped (`scratch_database_dropped: tr
 2. **Impact while indexing:** moderate and bounded for this synthetic worst case: chat +10%, speech p95 +28%, no errors, no health degradation. Speech was transcribing continuously, which real use does not.
 3. **Extra restrictions:** none required at 2 embed threads and nice 10 on this 20-CPU host. Keep `KNOWLEDGE_EMBED_THREADS=2`. If the owner wants speech p95 protected during conversation, the cheaper lever is pausing the worker while a voice session is open (a code change, not tested or proposed for now), rather than fewer threads. Memory is not a constraint here.
 4. **Limits of this measurement:** chat and Whisper clients, MiniLM and the worker shared one Python process (event-loop lag stayed small, but client-side GIL effects cannot be fully excluded); vLLM runs on the GPU, so chat contention here is mostly CPU-side overhead; the indexer ran against a synthetic corpus, not owner data; the production hub's speech path and the real Telegram or robot paths were not driven. This is a measurement for the go/no-go on enabling indexing, which remains off and unapproved.
+
+## Owner acceptance
+
+The owner accepted this test as passed on 2026-10-08, with the measured Whisper p95 degradation (+28% with indexing active, in a worst case where speech runs continuously) recorded as a limitation of running the indexer during speech.

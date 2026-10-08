@@ -59,14 +59,40 @@ These supersede the earlier recommendations in this page's first version where t
 | 44A | Contract models (section 4), source sensitivity/scope migration 026, pinned Ossie structural export, and the benchmark fixtures and harness (section 7) with the two Phase 43 baselines, all with tests. No index, no worker, no retrieval. Actual retrieval benchmarking starts with 44B/44D. |
 | 44B | Index table and outbox (migration 027), indexing worker, reconciliation, source adapters for memory, documents, meetings, notes, tasks and reminders, source-state resolution at retrieval. **Built locally 2026-10-08; see section 11b.** |
 | 44D | Hybrid retrieval (lexical, pgvector, metadata and temporal filters) with `AccessContext` enforcement, run against the benchmark. Intent-driven activation (section 8). |
-| 44E | Context builder: budget, dedup, sensitivity and destination filtering, provenance, current-versus-historical labelling, source diversity. Same structured bundle for FAST, DEEP and CLOUD. |
+| 44E | ([implementation plan](phase-44e-plan.md), under review) Context builder: budget, dedup, sensitivity and destination filtering, provenance, current-versus-historical labelling, source diversity. Same structured bundle for FAST, DEEP and CLOUD. |
+| 44F | Conversational memory capture through a **candidate and review mechanism** (section 3.1): casual conversation never becomes authoritative memory on its own. Plan only; no code before the revised plan is reviewed. |
 | 44H (security subset) | Adversarial and leakage tests for everything above. Runs with 44D/44E, not after. |
 
 (The proposal's stage letters are kept; 44C is conditional, below.)
 
 ### Conditional (only after the investigation and owner decision in section 7.4)
 
-44C entities, aliases, resolution and relationships; 44F extraction of facts, decisions and topics (needs 44C and owner review state).
+44C entities, aliases, resolution and relationships; 44F2 extraction of facts, decisions and topics from meetings and documents (needs 44C; it reuses 44F's candidate and review mechanism and is never automatic).
+
+### 3.1 44F: conversational memory capture (roadmap, 2026-10-08; plan only)
+
+**Rule: casual conversation must not silently become authoritative memory.** Today a memory is written only by an explicit owner act: a parsed "remember ..." phrase on the `memory.capture` handler (it stores the owner's own words with `source="conversation"`) or `POST /memories`. 44F keeps that and adds a way to *propose* memories from ordinary conversation, where every proposal is a **candidate** that does nothing until the owner accepts it.
+
+**Candidates are not memory.** A candidate lives in its own table (`memory_candidates`, a later migration). It is excluded from `recall`, from the knowledge index, from retrieval, from context bundles, from the model prompt and from Ossie export. The only thing that ever reads candidates is the review surface.
+
+| Field | Meaning |
+|---|---|
+| `text` | The proposed memory, short, in the owner's words where possible. |
+| `provenance` | Conversation id, turn index and channel, plus whether it came from a rule or a model (name and version). A pointer, not a copy of the transcript. |
+| `proposed_type`, `proposed_scope` | Profile, working or episodic; a project scope only if the conversation named one. |
+| `sensitivity` | Classified at proposal time; the stricter of the classifier and any context label wins; anything that looks sensitive is `sensitive` and local-only. Unknown is `work-private`, never `public`. The owner can raise or lower it at review, and the decision is recorded. |
+| `confidence` | Recorded for sorting the queue; it never accepts anything. |
+| `status` | `pending`, `accepted`, `edited-accepted`, `rejected`, `expired`, `suppressed`. |
+| `created_at`, `expires_at` | Pending candidates expire on their own (proposed default 14 days) and are then deleted, keeping only a count. |
+| `supersedes` | If an existing memory covers the same ground, the review shows "would replace" or "conflicts with", never overwrites. |
+
+**Owner controls (all in 44F's scope).** Capture is off by default (`MEMORY_CANDIDATES_ENABLED=false`) and has its own pause: privacy mode, a shared or non-private channel, and any turn classified `sensitive` generate no candidates at all. A review queue lists candidates with their provenance, proposed classification and expiry. The owner can accept, edit then accept, reject, or reject with "do not propose this again" (a suppression rule). "Delete all candidates" and "forget everything proposed from this conversation" exist. Review is reachable from the web UI and from text-only commands; there is no spoken accept, and nothing is accepted by default, by timeout, by silence or by confidence. Destructive confirmation stays text-only (ADR 0011).
+
+**What accepting does.** Accept calls the existing `add_memory` path with the final text, type, scope and sensitivity the owner confirmed, `source="candidate:<id>"`, and an expiry (a default for working and episodic memories; none for profile only if the owner says so). The acceptance is logged as a receipt like other memory writes. The candidate keeps its provenance link for as long as the memory exists, so "why do you know this?" has an answer, and forgetting the memory forgets the link.
+
+**How candidates are proposed.** Local-only. First deterministic patterns ("I prefer", "my X is Y", "from now on") on the final owner utterance, after the reply is sent, off the critical path, rate-limited, never from assistant text or from retrieved or attached content (so an injected instruction in a document or meeting cannot create a candidate). A model-based extractor runs only if it is evaluated first on a labelled set of conversations and the owner approves it; it uses the local 7B only, never a cloud model, and its output goes through the same candidate path. Neither can call an action, change a gate or write memory.
+
+**Gates for 44F.** Zero candidates from privacy mode, shared channels, sensitive turns, assistant text or injected content (adversarial cases); zero memories created without an explicit accept (checked by comparing the memory table before and after a long scripted conversation); candidate precision and the number of candidates per hour measured on owner-reviewed conversations, with the owner deciding if the noise is acceptable; expiry, suppression, delete-all and provenance verified; retention of candidates documented. Needs the owner's review of this section before any code. 44F does not depend on 44C and does not start before 44E is accepted.
 
 ### Deferred
 
@@ -278,6 +304,7 @@ A lightweight classifier may replace item 3 only after its own evaluation; Phase
 | 44B | **Retrieval-time source revalidation implemented and tested (non-negotiable).** Index and outbox migration 027 verified on disposable Postgres; crash-and-restart test (kill the worker mid-batch, nothing lost or duplicated); reconciliation repairs a deliberately damaged index; forget, delete and expiry are excluded immediately with the worker stopped; embedding load measured against a concurrent voice turn |
 | 44D | Section 7.4 gate; no new endpoint beyond what the owner approves |
 | 44E | Section 7.4 gate; injection and destination cases pass |
+| 44F | Section 3.1 gates: no candidate from privacy mode, shared channels, sensitive turns, assistant text or injected content; no memory without an explicit accept; candidate noise and precision reviewed by the owner |
 | 44H subset | Zero leakage and zero injection-driven actions across the security category; imported semantic data is not accepted anywhere (import deferred) |
 | Phase | Real-process check on the homelab stack (not only mocks) before any "works end to end" claim, labelled separately from simulator and fixture evidence |
 

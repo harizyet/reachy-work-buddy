@@ -91,6 +91,7 @@ correct facts or links, not to track each new phase dependency.
 - [Phase 42](phase-42.md): three-tier model escalation — stage sequence and gates; decision in [ADR 0031](adr/0031-three-tier-local-model-escalation.md).
 - [Phase 43](phase-43.md): meeting deletion, summaries, minutes and meeting context — decision in [ADR 0032](adr/0032-meeting-outputs-and-context.md).
 - [Phase 44](phase-44.md): Reachy Brain, a semantic knowledge and context layer over memory, documents, meetings and planner data (proposed; 44A schema reconciliation written, no code).
+- [Phase 44E plan](phase-44e-plan.md): context builder and end-to-end answer-quality evaluation with the local 7B (plan for review; no code).
 - [Shadow semantic router](shadow-router.md): shadow-mode router, extractor and validator that only records what it would propose; contract, flags, trial procedure, retention and evidence.
 - [Phase 30](phase-30.md): platform stabilization and acceptance — verify the
   no-alert-pose wake build, add the visible-false-activations metric, run the
@@ -150,7 +151,7 @@ These are dated evidence, not startup instructions or current health checks.
   revalidation on disposable Postgres; mutation checks; the embedding load measurement. Local only.
 
 - [Phase 44B production deployment 2026-10-08](verification/phase-44b-deployment-2026-10-08.md): migration 027 on the homelab with indexing off,
-  backup, rollback readiness and smoke tests. [Contention test plan](verification/phase-44b-contention-test-plan-2026-10-08.md) and [result](verification/phase-44b-contention-result-2026-10-08.md) (run 2026-10-08, no abort).
+  backup, rollback readiness and smoke tests. [Contention test plan](verification/phase-44b-contention-test-plan-2026-10-08.md) and [result](verification/phase-44b-contention-result-2026-10-08.md) (run 2026-10-08, no abort). [Indexing trial 2026-10-08](verification/phase-44b-indexing-trial-2026-10-08.md): production backfill, validation, early revert and the connection-limit finding.
 
 - [Phase 44A production deployment 2026-10-08](verification/phase-44a-deployment-2026-10-08.md): migration 026 on the homelab, backup
   and restore check, rollback assets, thirteen smoke checks, downtime; the robot gate is pending.
