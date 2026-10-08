@@ -44,8 +44,9 @@ view needs actual inference and usage accounting.
 
 ## Decision
 
-`reachy-hub` owns the static dashboard at `/ui/` (through Caddy:
-`/hub/ui/`), login, and authenticated proxies. `companion-core` owns LLM
+`reachy-hub` owns the static dashboard (since Phase 47F the React client at
+`/web/`, through Caddy `/hub/web/`; `/ui/` redirects there and the original
+plain HTML/JS dashboard is the `/ui-legacy/` rollback), login, and authenticated proxies. `companion-core` owns LLM
 configuration, inference, and usage. Services communicate over HTTP; shared
 models and route constants live under `shared/`. The frontend is plain
 HTML/JS/CSS, with no build step or third-party assets.

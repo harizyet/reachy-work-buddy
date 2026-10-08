@@ -430,4 +430,4 @@ else
     log_warn "ROBOT_HTTP_BASE_URL is not set — skipping legacy hub registration. Real commands will not reach this robot until command routing moves onto the WSS connection, or this is set (see deploy/reachy/.env.example)."
 fi
 
-open_browser_or_print "${HUB_WS_URL}/ui/"
+open_browser_or_print "${HUB_WS_URL}/web/"

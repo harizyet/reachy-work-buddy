@@ -414,7 +414,7 @@ def test_real_asgi_chain_strict_cookie_callback_auth_and_private_reads(replace_c
             client.cookies.delete("reachy_session")
             response = await client.get(paths.ACCOUNTS_CALLBACK, params={"state": state, "code": "fixture-code"})
             assert response.status_code == 303
-            assert response.headers["location"] == "../../../ui/?google=return"
+            assert response.headers["location"] == "../../../web/?google=return#/settings/accounts"
             assert "fixture-code" not in response.headers["location"]
             assert (await client.post(paths.COMPLETE, headers=CSRF)).status_code == 401
             client.cookies.set("reachy_session", session)

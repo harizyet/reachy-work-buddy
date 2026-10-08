@@ -451,11 +451,11 @@ for (const mount of MOUNTS) {
 }
 
 // Parity with the legacy operator UI: both clients talk to the same hub, so what one writes the other must show.
-test.describe('parity with the legacy UI (/ui/)', () => {
+test.describe('parity with the legacy UI (/ui-legacy/)', () => {
   const direct = `http://127.0.0.1:${HUB_PORT}`;
 
   async function legacyLogin(page: Page) {
-    await page.goto(`${direct}/ui/`);
+    await page.goto(`${direct}/ui-legacy/`);
     // Already signed in when the same browser context used the React client first (one shared cookie).
     if (await page.locator('#username').isVisible()) {
       await page.locator('#username').fill('owner');

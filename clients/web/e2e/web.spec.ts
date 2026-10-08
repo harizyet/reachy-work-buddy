@@ -95,11 +95,12 @@ for (const mount of MOUNTS) {
   });
 }
 
-test('legacy clients are untouched beside /web/', async ({ page, request }) => {
-  const ui = await request.get(`http://127.0.0.1:${HUB_PORT}/ui/`);
-  expect(ui.status()).toBe(200);
-  expect(await ui.text()).toContain('Reachy operator');
+test('/ui/ lands on the React client; the legacy UI and Call Reachy remain reachable', async ({ page, request }) => {
+  const legacy = await request.get(`http://127.0.0.1:${HUB_PORT}/ui-legacy/`);
+  expect(legacy.status()).toBe(200);
+  expect(await legacy.text()).toContain('Reachy operator');
   expect((await request.get(`http://127.0.0.1:${HUB_PORT}/app/`)).status()).toBe(200);
   await page.goto(`http://127.0.0.1:${HUB_PORT}/ui/`);
-  await expect(page.getByRole('heading', { name: 'Reachy operator' })).toBeVisible();
+  await expect(page).toHaveURL(/\/web\/(#\/login)?$/);
+  await expect(page.getByRole('heading', { name: 'Sign in to Reachy' })).toBeVisible();
 });

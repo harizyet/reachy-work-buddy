@@ -183,11 +183,14 @@ def test_proxy_masked_settings_and_status_real_chain():
     assert status["llm"]["configured"]
     assert not status["telegram"]["configured"]
     assert client.get("/llm/usage").json()["summary"]["calls"] == 0
-    assert client.get("/ui/").status_code == 200
-    assert client.get("/ui/app.js").status_code == 200
+    # Phase 47F: /ui/ redirects to the React client; the legacy files are the rollback path.
+    assert client.get("/ui", follow_redirects=False).headers["location"] == "web/"
+    assert client.get("/ui/", follow_redirects=False).headers["location"] == "../web/"
+    assert client.get("/ui-legacy/").status_code == 200
+    assert client.get("/ui-legacy/app.js").status_code == 200
     # A UI deploy must not leave browsers running a stale app.js.
-    assert client.get("/ui/app.js").headers["cache-control"] == "no-cache"
-    assert client.get("/ui/").headers["cache-control"] == "no-cache"
+    assert client.get("/ui-legacy/app.js").headers["cache-control"] == "no-cache"
+    assert client.get("/ui-legacy/").headers["cache-control"] == "no-cache"
 
 
 def test_meetings_proxy_upload_list_get_cancel_require_auth(monkeypatch):
@@ -300,7 +303,7 @@ def test_credential_validation_is_redacted_and_ui_redirect_is_relative():
     )
     assert response.status_code == 422 and "do-not-echo" not in response.text
     response = client.get("/ui", follow_redirects=False)
-    assert response.headers["location"] == "ui/"
+    assert response.headers["location"] == "web/"
 
 
 def test_status_exposes_poll_health_and_configured_default_user():

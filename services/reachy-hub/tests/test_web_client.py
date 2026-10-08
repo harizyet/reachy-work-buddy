@@ -288,9 +288,9 @@ def test_web_mount_serves_beside_the_legacy_clients():
         # Either the stub above or a real `npm run build`; both have the React root element.
         assert page.status_code == 200 and 'id="root"' in page.text
         assert page.headers["cache-control"] == "no-cache"
-        assert client.get("/ui/").status_code == 200
+        assert client.get("/ui/", follow_redirects=False).headers["location"] == "../web/"
         assert client.get("/app/").status_code == 200
-        assert client.get("/ui/app.js").status_code == 200
+        assert client.get("/ui-legacy/app.js").status_code == 200
     finally:
         if created:
             (dist / "index.html").unlink()

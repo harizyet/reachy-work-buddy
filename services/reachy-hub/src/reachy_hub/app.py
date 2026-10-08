@@ -1724,14 +1724,20 @@ def create_app(
     if os.path.isdir(web_pwa_dir):
         app.mount("/app", RevalidatedStaticFiles(directory=web_pwa_dir, html=True), name="web-pwa")
 
+    # Phase 47F: the React client at /web/ is the operator UI. The old
+    # /ui/ paths redirect to it (relative, so Caddy's /hub prefix survives)
+    # and the legacy files stay reachable at /ui-legacy/ as the rollback path.
     @app.get("/ui", include_in_schema=False)
     async def operator_ui_redirect():
-        # Relative location survives Caddy's stripped /hub prefix.
-        return RedirectResponse("ui/")
+        return RedirectResponse("web/")
+
+    @app.get("/ui/", include_in_schema=False)
+    async def operator_ui_slash_redirect():
+        return RedirectResponse("../web/")
 
     operator_ui_dir = os.path.join(os.path.dirname(web_pwa_dir), "operator-ui")
     if os.path.isdir(operator_ui_dir):
-        app.mount("/ui", RevalidatedStaticFiles(directory=operator_ui_dir, html=True), name="operator-ui")
+        app.mount("/ui-legacy", RevalidatedStaticFiles(directory=operator_ui_dir, html=True), name="operator-ui")
 
     # Phase 47A: the React client's built output (clients/web/dist, produced
     # by the hub image's Node build stage). Mounted beside /ui and /app, never

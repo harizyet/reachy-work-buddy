@@ -566,8 +566,7 @@ Runtime service packages never import one another. Contracts live in
 `shared/models`, route constants in `shared/protocols`. Workspace members
 are independent images even though development installs them together.
 
-[operator-ui](../../clients/operator-ui/) serves Overview, Chat (with deletable history), Meetings, To-do, Reminders, Alarms, Activity, Notes, Coding agents and Settings at
-`/ui/`; [web-pwa](../../clients/web-pwa/) serves Call Reachy/telepresence at
+[web](../../clients/web/) (React, Phase 47) is the operator UI at `/web/`: Overview, Chat (with deletable history), Meetings, To-do, Reminders, Alarms, Activity, Notes, Coding agents, Settings, Accounts, Owner recognition, voice and the Brain view. `/ui/` redirects to it; the old plain HTML/JS [operator-ui](../../clients/operator-ui/) is kept at `/ui-legacy/` as the rollback path; [web-pwa](../../clients/web-pwa/) serves Call Reachy/telepresence at
 `/app/`. Both mount under `/hub/` through Caddy. Browser API paths must stay
 relative so direct and proxied deployments work. User workflows are in the
 [operator guide](../operator-guide.md), not duplicated in client READMEs.

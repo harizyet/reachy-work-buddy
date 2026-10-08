@@ -166,7 +166,7 @@ recreating companion-core; the shadow never executes a tool or alters a reply, s
 ## Owner login
 
 Set `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and an independent random
-`SESSION_SECRET_KEY` before startup. Open `http://localhost:8080/hub/ui/`.
+`SESSION_SECRET_KEY` before startup. Open `http://localhost:8080/hub/web/`.
 The owner is created only when the users table is empty: changing the
 bootstrap password later does not reset that account. Keep the signing key
 stable across restarts; rotating it invalidates existing sessions.

@@ -1,6 +1,6 @@
 # Operator guide
 
-Open `/hub/ui/` through Caddy (direct hub: `/ui/`) after following
+Open `/hub/web/` through Caddy (direct hub: `/web/`; the old `/ui/` redirects there and the legacy UI is at `/ui-legacy/`) after following
 [deployment setup](deployment.md#owner-login). The dashboard provides
 Overview, Chat, Meetings, To-do, Reminders, Notes, Coding agents, and Settings; the navigation links to telepresence. Both frontends
 are plain HTML/JS/CSS served by hub, with no build step or external assets.

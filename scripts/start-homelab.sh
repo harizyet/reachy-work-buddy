@@ -213,4 +213,4 @@ else
     log_info "ROBOT_TOKENS is not set — no real robot can connect yet (expected if you only ran --simulation)"
 fi
 
-open_browser_or_print "http://localhost:8080/hub/ui/"
+open_browser_or_print "http://localhost:8080/hub/web/"

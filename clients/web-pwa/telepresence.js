@@ -22,7 +22,7 @@ async function apiFetch(path, options = {}) {
     headers: { "X-Reachy-CSRF": "1", ...(options.headers || {}) },
   });
   if (!resp.ok) {
-    if (resp.status === 401) window.location.href = `${HUB_BASE}/ui/`;
+    if (resp.status === 401) window.location.href = `${HUB_BASE}/web/`;
     throw new Error(`${path} -> ${resp.status}`);
   }
   return resp;

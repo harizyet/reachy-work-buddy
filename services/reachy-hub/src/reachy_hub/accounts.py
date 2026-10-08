@@ -80,8 +80,9 @@ def install_accounts(app, core, *, enabled):
                                                          "Referrer-Policy": "no-referrer"})
         await proxy("POST", paths.ACCOUNTS_CALLBACK,
                     data={"state": state, "binding": binding, "code": code, "error": error})
-        # Relative location preserves direct /ui and Caddy /hub/ui mounts.
-        return RedirectResponse("../../../ui/?google=return", status_code=303,
+        # Relative location preserves direct /web and Caddy /hub/web mounts;
+        # the React client reads ?google=return before its hash route.
+        return RedirectResponse("../../../web/?google=return#/settings/accounts", status_code=303,
                                 headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"})
 
     @app.post(paths.COMPLETE, dependencies=dependencies)

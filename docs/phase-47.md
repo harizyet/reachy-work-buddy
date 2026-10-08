@@ -1,6 +1,6 @@
 # Phase 47: React web platform modernization and Brain visualization (plan)
 
-Status: **plan approved by the owner 2026-10-08; 47A (`b5c5bd7`) and 47B (the whole operator UI in React) built, tested and merged to main; 47C (3D Brain foundation, synthetic data) built on branch `phase-47c`, not merged; nothing deployed; owner user testing is pending** (records in sections 13 and 14). Next is 47C is built on branch `phase-47c` (below). The Brain API, a WebRTC/PWA rewrite, memory and document screens and any deployment still need their own approval.
+Status: **plan approved by the owner 2026-10-08; 47A (`b5c5bd7`) and 47B (the whole operator UI in React) built, tested and merged to main; 47C (3D Brain) and 47D (real records through a read-only Brain API, bloom toggle) merged; 47D deployed to the homelab 2026-10-08 and the owner confirmed the React client works; 47F (retire `/ui/`, section 17) implemented and deployed.** Records in sections 13 to 17. The Brain API, a WebRTC/PWA rewrite, memory and document screens and any deployment still need their own approval.
 
 Numbering: the owner's brief called this "Phase 46". That number belongs to [Phase 46, least-privilege database roles](phase-46.md), so this is Phase 47 (owner decision D1, 2026-10-08: preserve Phases 44, 45 and 46).
 
@@ -309,11 +309,11 @@ Branch `phase-47d`. Evidence: [47D verification](verification/phase-47d-2026-10-
 
 Known limits and what needs a decision: each page scans the stores (cost grows with records; an index-backed adapter is the later answer, Phase 44); sensitive records are withheld by the ceiling, so a "show sensitive" mode would be a separate authorization decision; **47E** (semantic or inferred relationships) depends on Phase 44C/44F decisions; memory and document screens still wait on the backend gaps in section 7a.
 
-## 17. 47F plan (2026-10-08): retire the legacy operator UI (plan only, not started)
+## 17. 47F record (2026-10-08): retire the legacy operator UI
 
 Owner direction 2026-10-08: retire `/ui/` now that the React client has been user-tested. The roadmap row for 47F says the legacy UI is retained at a rollback path, not deleted; this plan follows that.
 
-**Changes (all small, one branch):**
+**Implemented as planned** (branch `phase-47f`; evidence in the [47F verification](verification/phase-47f-2026-10-08.md)). Also removed the "Full operator UI" sidebar link (`8835e9f`). **Changes (all small, one branch):**
 
 1. **Redirect.** `/ui` and `/ui/` redirect (relative, so Caddy's `/hub/` prefix survives) to `web/`. The legacy files stay in the image and are served at `/ui-legacy/` as the rollback path (one mount rename; no new code).
 2. **Google return.** `accounts.py` redirects to the React route instead of `ui/?google=return`: `../../../web/?google=return#/settings/accounts` (React reads the query before the hash). Update `test_google_accounts.py` and add a browser test that the return lands on Settings > Accounts and refreshes the connection status.
