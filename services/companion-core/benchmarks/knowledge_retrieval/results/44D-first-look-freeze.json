@@ -1,0 +1,64 @@
+{
+ "decision_point": "44D-first-look",
+ "frozen_at_commit": "fe2c157ba5dd0c8c6c15aadf387764ecb0f6a21d",
+ "authorised": "owner, D12, 2026-10-08",
+ "systems": {
+  "b1a": {
+   "name": "B1a",
+   "vector": false,
+   "rerank": false,
+   "limit": 10,
+   "candidates": 40,
+   "prefilter": true,
+   "rrf_k": 60,
+   "rerank_pool": 20
+  },
+  "b1b": {
+   "name": "B1b",
+   "vector": true,
+   "rerank": false,
+   "limit": 10,
+   "candidates": 40,
+   "prefilter": true,
+   "rrf_k": 60,
+   "rerank_pool": 20
+  }
+ },
+ "excluded": [
+  "b1c (not justified on the development split)",
+  "the -nofilter variants"
+ ],
+ "common": {
+  "results_returned": 10,
+  "max_query_chars": 1000,
+  "rrf_k": 60,
+  "search": "PostgreSQL full-text (OR of stemmed words, ts_rank_cd normalisation 32); pgvector cosine, hnsw.iterative_scan=relaxed_order, hnsw.ef_search=100",
+  "revalidation": "every candidate re-read from its store under the case's AccessContext (text from the source, stricter classification)",
+  "embedder": "sentence-transformers/all-MiniLM-L6-v2",
+  "embedding_threads": 2,
+  "track": "production-embedding for both (one index build serves both)",
+  "fixtures": {
+   "corpus": "1f8f50b36f37939cf9001dd6f4eaed78affb4824d8666288a5114ab91e29d849",
+   "dev": "216fd15fb023ab39e9252d2b9fa35484e8abc4a97440ebd7770c8886448fa862",
+   "holdout": "a8dad6798f48aa24590e73362a8fd9552956437120f9cf1f248b6432c2186f37",
+   "combined": "deca72b3ed08a5243c6925da1573bcfb07be08309b26e7447ac71d1d67d973f9"
+  },
+  "harness_version": "1.0.0"
+ },
+ "protocol": [
+  "each system scored once on the locked holdout under this decision point",
+  "no parameter, query handling, index content or code that affects retrieval changes after this file is committed",
+  "recorded results are preserved as produced; nothing is tuned against them",
+  "the lexical-versus-hybrid investigation uses development cases only and cannot change a frozen configuration"
+ ],
+ "report": [
+  "recall@3/5/10",
+  "MRR",
+  "full recall@5 with Wilson interval",
+  "source attribution@5",
+  "citation correctness@5",
+  "exposed and proposed unauthorised hits",
+  "latency p50/p95",
+  "paired case-level differences between B1a, B1b and the recorded b0-oracle baseline (production track)"
+ ]
+}
