@@ -1,25 +1,61 @@
 {
+  "alarms": [
+    {
+      "created_at": "2026-10-08T09:39:59.335718Z",
+      "delivery": null,
+      "due_at": "2026-10-08T21:00:00Z",
+      "enabled": true,
+      "fired_at": null,
+      "id": "caa3650c-7135-40e1-8eb5-dfa500303bc6",
+      "label": "Chime",
+      "reminder_id": null,
+      "repeat": [],
+      "station_id": null,
+      "status": "scheduled",
+      "volume": 100
+    },
+    {
+      "created_at": "2026-10-08T09:39:59.333512Z",
+      "delivery": null,
+      "due_at": "2026-10-09T07:30:00Z",
+      "enabled": true,
+      "fired_at": null,
+      "id": "19ab98a9-5313-4f64-838b-b91dd8729e8f",
+      "label": "Wake",
+      "reminder_id": null,
+      "repeat": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "station_id": "37dc3010-6e58-45d8-9082-21b62a52abd9",
+      "status": "scheduled",
+      "volume": 120
+    }
+  ],
   "auth_me": {
     "username": "owner"
   },
   "notes": [
     {
       "body": "milk\neggs",
-      "created_at": "2026-10-08T09:02:02.462902Z",
-      "id": "4f888eaf-5e4e-42be-a779-88ba7b42ba7f",
+      "created_at": "2026-10-08T09:39:59.326770Z",
+      "id": "c3b5e19c-5f8f-4055-967d-9b1e6236bf8a",
       "project_scope": null,
       "sensitivity": "work-private",
       "title": "Groceries",
-      "updated_at": "2026-10-08T09:02:02.462904Z"
+      "updated_at": "2026-10-08T09:39:59.326771Z"
     }
   ],
   "receipts": [
     {
       "action_type": "alarm.delivered",
-      "at": "2026-10-08T09:02:02.463934Z",
+      "at": "2026-10-08T09:39:59.336536Z",
       "failure_reason": "no audio",
       "fields": {},
-      "id": "03b012d6-6188-41ba-9dd0-0003bcf91b3d",
+      "id": "7a5f5d7b-9838-4725-9a91-04768297be3c",
       "notified_at": null,
       "notify": false,
       "object_id": null,
@@ -29,26 +65,58 @@
     },
     {
       "action_type": "task.created",
-      "at": "2026-10-08T09:02:02.463777Z",
+      "at": "2026-10-08T09:39:59.336395Z",
       "failure_reason": null,
       "fields": {
         "Task": "Water plants"
       },
-      "id": "e55c4205-cfc2-47d8-81c6-f167075092f2",
+      "id": "f77dedc2-75e0-4ddb-ba3f-32f9b2f75a68",
       "notified_at": null,
       "notify": false,
       "object_id": null,
       "object_type": "task",
       "source_channel": "web",
       "status": "success"
+    },
+    {
+      "action_type": "alarm.created",
+      "at": "2026-10-08T09:39:59.335737Z",
+      "failure_reason": null,
+      "fields": {
+        "Label": "Chime",
+        "When": "2026-10-08T21:00+00:00"
+      },
+      "id": "e5cae2c1-c882-437c-96cb-0366d0baddf3",
+      "notified_at": null,
+      "notify": false,
+      "object_id": "caa3650c-7135-40e1-8eb5-dfa500303bc6",
+      "object_type": "alarm",
+      "source_channel": "web",
+      "status": "success"
+    },
+    {
+      "action_type": "alarm.created",
+      "at": "2026-10-08T09:39:59.333538Z",
+      "failure_reason": null,
+      "fields": {
+        "Label": "Wake",
+        "When": "2026-10-09T07:30+00:00"
+      },
+      "id": "ef7cf5ad-5a53-481f-a171-fd790921b2c7",
+      "notified_at": null,
+      "notify": false,
+      "object_id": "19ab98a9-5313-4f64-838b-b91dd8729e8f",
+      "object_type": "alarm",
+      "source_channel": "web",
+      "status": "success"
     }
   ],
   "reminders": [
     {
-      "completed_at": "2026-10-08T09:02:02.460454Z",
-      "created_at": "2026-10-08T09:02:02.456214Z",
+      "completed_at": "2026-10-08T09:39:59.324354Z",
+      "created_at": "2026-10-08T09:39:59.320318Z",
       "due_at": "2030-01-02T09:00:00Z",
-      "id": "d147af0c-40f8-4147-9346-1d9c93314da0",
+      "id": "dff45bfb-3365-4620-aaa4-0ae608ebb830",
       "notified_at": null,
       "sensitivity": "work-private",
       "status": "done",
@@ -56,13 +124,21 @@
     },
     {
       "completed_at": null,
-      "created_at": "2026-10-08T09:02:02.458476Z",
+      "created_at": "2026-10-08T09:39:59.322447Z",
       "due_at": "2030-02-02T09:00:00Z",
-      "id": "c8e7f703-1f2c-4ec4-a2f5-fe2a72fdc0ee",
+      "id": "baf1cc6a-aefd-4667-91ef-94d10e233218",
       "notified_at": null,
       "sensitivity": "work-private",
       "status": "pending",
       "text": "Book club"
+    }
+  ],
+  "stations": [
+    {
+      "created_at": "2026-10-08T09:39:59.330843Z",
+      "guide_id": "s24896",
+      "id": "37dc3010-6e58-45d8-9082-21b62a52abd9",
+      "name": "SWR3"
     }
   ],
   "status": {
@@ -138,9 +214,9 @@
   },
   "tasks": [
     {
-      "completed_at": "2026-10-08T09:02:02.451216Z",
-      "created_at": "2026-10-08T09:02:02.448640Z",
-      "id": "ba16c329-04da-4c07-8eb5-e28a7879095e",
+      "completed_at": "2026-10-08T09:39:59.315752Z",
+      "created_at": "2026-10-08T09:39:59.313681Z",
+      "id": "2a6610bc-cc39-4be3-88fe-c3eaa7d6df3f",
       "project_scope": null,
       "sensitivity": "work-private",
       "status": "done",
@@ -148,8 +224,8 @@
     },
     {
       "completed_at": null,
-      "created_at": "2026-10-08T09:02:02.453711Z",
-      "id": "d7ceb92f-748d-4c6c-92b7-01068b98fc5b",
+      "created_at": "2026-10-08T09:39:59.317910Z",
+      "id": "4c0f5c72-833b-41df-8261-e8a4922133a4",
       "project_scope": null,
       "sensitivity": "work-private",
       "status": "open",

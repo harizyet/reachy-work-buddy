@@ -6,6 +6,7 @@ const NAV = [
   { to: '/', label: 'Overview', end: true },
   { to: '/todo', label: 'To Do', end: false },
   { to: '/reminders', label: 'Reminders', end: false },
+  { to: '/alarms', label: 'Alarms', end: false },
   { to: '/notes', label: 'Notes', end: false },
   { to: '/activity', label: 'Activity', end: false },
 ];

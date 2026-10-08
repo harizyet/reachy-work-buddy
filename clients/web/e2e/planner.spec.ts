@@ -119,6 +119,47 @@ for (const mount of MOUNTS) {
       await expect(rowButton).toHaveCount(0);
     });
 
+    test('Alarms: add with repeat, sound and volume; switch off; edit; Stop reports nothing playing; delete', async ({ page }) => {
+      const label = `alarm ${run}`;
+      await signIn(page, mount.url, '#/alarms');
+      await expect(page.getByRole('heading', { name: 'Alarms', level: 2 }).first()).toBeVisible();
+      await page.getByRole('button', { name: 'Add alarm' }).click();
+      const sheet = page.getByRole('dialog', { name: 'Add Alarm' });
+      await sheet.getByLabel('Hour').selectOption('6');
+      await sheet.getByLabel('Minute').selectOption('45');
+      await sheet.getByLabel('AM or PM').selectOption('AM');
+      await sheet.getByRole('button', { name: 'Mon' }).click();
+      await sheet.getByRole('button', { name: 'Fri' }).click();
+      await sheet.getByLabel('Label').fill(label);
+      await sheet.getByLabel('Sound').selectOption({ label: 'SWR3' });
+      await sheet.getByRole('button', { name: 'Save' }).click();
+      // The hub reads 06:45 in the assistant's time zone and this screen shows the device's, so match the label, not the hour.
+      const toggle = page.getByRole('switch', { name: new RegExp(`${label} \\d+:45`) });
+      await expect(toggle).toBeChecked();
+      const row = page.getByRole('listitem').filter({ has: toggle });
+      await expect(row).toContainText(`${label}, Mon, Fri`);
+      await expect(row).toContainText('SWR3');
+
+      await page.reload();
+      await expect(toggle).toBeChecked();
+      await toggle.click();
+      await expect(toggle).not.toBeChecked();
+
+      await row.getByRole('button').first().click();
+      const edit = page.getByRole('dialog', { name: 'Edit Alarm' });
+      await expect(edit.getByLabel('Minute')).toHaveValue('45');
+      await edit.getByLabel('Minute').selectOption('50');
+      await edit.getByRole('button', { name: 'Save' }).click();
+      await expect(page.getByRole('switch', { name: new RegExp(`${label} \\d+:50`) })).toBeVisible();
+
+      await page.getByRole('button', { name: 'Stop alarm' }).click();
+      await expect(page.getByText('No alarm is playing.')).toBeVisible();
+
+      await page.getByRole('button', { name: 'Edit', exact: true }).click();
+      await page.getByRole('button', { name: `Delete alarm ${label}` }).click();
+      await expect(page.getByText(label)).toHaveCount(0);
+    });
+
     test('Activity: shows the hub receipts, failed ones struck through, text literal', async ({ page }) => {
       await signIn(page, mount.url, '#/activity');
       await expect(page.getByRole('heading', { name: 'Recent activity' })).toBeVisible();
@@ -155,7 +196,7 @@ for (const mount of MOUNTS) {
 
     test('pages fit the viewport; Notes works as list then editor then back on a narrow screen', async ({ page }, info) => {
       await signIn(page, mount.url);
-      for (const hash of ['#/todo', '#/reminders', '#/notes', '#/activity']) {
+      for (const hash of ['#/todo', '#/reminders', '#/notes', '#/activity', '#/alarms']) {
         await page.goto(mount.url + hash);
         await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);

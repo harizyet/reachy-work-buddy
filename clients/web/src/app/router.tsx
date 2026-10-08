@@ -2,6 +2,7 @@ import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Spinner } from '../components/ui/Spinner';
 import { ActivityPage } from '../features/activity/ActivityPage';
 import { LoginPage } from '../features/auth/LoginPage';
+import { AlarmsPage } from '../features/alarms/AlarmsPage';
 import { NotesPage } from '../features/notes/NotesPage';
 import { OverviewPage } from '../features/overview/OverviewPage';
 import { RemindersPage } from '../features/planner/RemindersPage';
@@ -36,6 +37,7 @@ export function AppRoutes() {
         <Route index element={<OverviewPage />} />
         <Route path="todo" element={<TodoPage />} />
         <Route path="reminders" element={<RemindersPage />} />
+        <Route path="alarms" element={<AlarmsPage />} />
         <Route path="notes" element={<NotesPage />} />
         <Route path="activity" element={<ActivityPage />} />
         <Route path="*" element={<NotFound />} />

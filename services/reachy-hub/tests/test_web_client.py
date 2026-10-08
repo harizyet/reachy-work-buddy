@@ -61,6 +61,10 @@ OPERATIONS = [
     ("get", "/planner/notes"), ("post", "/planner/notes"), ("put", "/planner/notes/{item_id}"),
     ("delete", "/planner/notes/{item_id}"),
     ("get", "/planner/receipts"),
+    ("get", "/planner/alarms"), ("post", "/planner/alarms"), ("patch", "/planner/alarms/{item_id}"),
+    ("delete", "/planner/alarms/{item_id}"), ("post", "/planner/alarms/stop"),
+    ("get", "/planner/stations"), ("post", "/planner/stations"), ("delete", "/planner/stations/{item_id}"),
+    ("get", "/planner/stations/search"),
 ]
 
 
@@ -108,6 +112,9 @@ def seed_planner(client: TestClient) -> None:
     client.post("/planner/reminders", json={"text": "Book club", "due_at": "2030-02-02T09:00:00Z"}, headers=CSRF)
     client.post(f"/planner/reminders/{reminder['id']}/complete", headers=CSRF)
     client.post("/planner/notes", json={"title": "Groceries", "body": "milk\neggs"}, headers=CSRF)
+    station = client.post("/planner/stations", json={"name": "SWR3", "guide_id": "s24896"}, headers=CSRF).json()
+    client.post("/planner/alarms", json={"label": "Wake", "time": "07:30", "repeat": [0, 1, 2, 3, 4], "station_id": station["id"], "volume": 120}, headers=CSRF)
+    client.post("/planner/alarms", json={"label": "Chime", "time": "21:00"}, headers=CSRF)
     asyncio.run(client.core.state.planner_store.add_receipt(ActionReceipt(
         action_type="task.created", source_channel="web", object_type="task", fields={"Task": "Water plants"},
     )))
@@ -149,6 +156,8 @@ def snapshot(client: TestClient) -> dict:
         "reminders": client.get("/planner/reminders").json(),
         "notes": client.get("/planner/notes").json(),
         "receipts": client.get("/planner/receipts").json(),
+        "alarms": client.get("/planner/alarms").json(),
+        "stations": client.get("/planner/stations").json(),
     }
 
 
@@ -166,7 +175,7 @@ def test_sample_responses_still_match_the_hub():
         for robot in sample["status"]["robots"]:
             robot.pop("data", None)  # embodiment state is the robot's own contract, typed loosely on purpose
     assert shape(live["status"]) == shape(saved["status"])
-    for name in ("tasks", "reminders", "notes", "receipts"):
+    for name in ("tasks", "reminders", "notes", "receipts", "alarms", "stations"):
         assert live[name] and saved[name], name  # an empty list would pin no item shape
         assert shape(live[name]) == shape(saved[name]), name
 
@@ -210,7 +219,9 @@ def test_web_mount_serves_beside_the_legacy_clients():
             dist.rmdir()
 
 
-PLANNER_READS = ["/planner/tasks", "/planner/reminders", "/planner/notes", "/planner/receipts"]
+PLANNER_READS = [
+    "/planner/tasks", "/planner/reminders", "/planner/notes", "/planner/receipts", "/planner/alarms", "/planner/stations",
+]
 
 
 def test_planner_routes_need_the_owner_session_and_mutations_need_csrf():
@@ -290,10 +301,47 @@ def test_planner_notes_behaviour():
 def test_planner_receipts_are_read_only_and_newest_first():
     client = logged_in_client()
     receipts = client.get("/planner/receipts").json()
-    assert [r["action_type"] for r in receipts] == ["alarm.delivered", "task.created"]
+    kinds = [r["action_type"] for r in receipts]
+    # Creating an alarm records its own receipt, so the seeded alarms appear too; the seeded two keep their order.
+    assert kinds == ["alarm.delivered", "task.created", "alarm.created", "alarm.created"]  # newest first
     assert receipts[0]["status"] == "failed" and receipts[0]["failure_reason"] == "no audio"
     assert receipts[1]["fields"] == {"Task": "Water plants"}
     assert client.post("/planner/receipts", json={}, headers=CSRF).status_code in (404, 405)
+
+
+def test_planner_alarms_and_stations_behaviour():
+    client = logged_in_client()
+    station = client.get("/planner/stations").json()[0]
+    created = client.post(
+        "/planner/alarms",
+        json={"label": "<b>Gym</b>", "time": "06:15", "repeat": [0, 2, 4], "station_id": station["id"], "volume": 150},
+        headers=CSRF,
+    ).json()
+    assert created["label"] == "<b>Gym</b>" and created["status"] == "scheduled" and created["enabled"] is True
+    assert created["repeat"] == [0, 2, 4] and created["volume"] == 150 and created["station_id"] == station["id"]
+    assert datetime.fromisoformat(created["due_at"]).tzinfo is not None  # an instant: the client shows it in the device's zone
+    off = client.patch(f"/planner/alarms/{created['id']}", json={"enabled": False}, headers=CSRF).json()
+    assert off["enabled"] is False and off["label"] == "<b>Gym</b>"  # only what was sent changes
+    chime = client.patch(f"/planner/alarms/{created['id']}", json={"station_id": None}, headers=CSRF).json()
+    assert chime["station_id"] is None  # an explicit null means "chime"
+    retimed = client.patch(f"/planner/alarms/{created['id']}", json={"time": "07:45", "repeat": []}, headers=CSRF).json()
+    assert retimed["repeat"] == [] and retimed["due_at"] != created["due_at"]
+    assert client.post("/planner/alarms/stop", headers=CSRF).json() == {"stopped": False}  # nothing is playing in a test hub
+    gone = client.delete(f"/planner/alarms/{created['id']}", headers=CSRF).json()
+    assert gone["status"] == "cancelled"
+    assert any(a["id"] == created["id"] and a["status"] == "cancelled" for a in client.get("/planner/alarms").json())  # the list still carries it
+    for body in ({"label": "x", "time": "25:00"}, {"label": ""}, {"label": "x", "time": "07:00", "volume": 5},
+                 {"label": "x", "time": "07:00", "volume": 401}, {"label": "x", "time": "07:00", "repeat": list(range(8))}):
+        assert client.post("/planner/alarms", json=body, headers=CSRF).status_code == 422, body
+    assert client.patch("/planner/alarms/nope", json={"enabled": True}, headers=CSRF).status_code == 404
+    assert client.delete("/planner/alarms/nope", headers=CSRF).status_code == 404
+
+    added = client.post("/planner/stations", json={"name": "Radio <i>X</i>", "guide_id": "s111"}, headers=CSRF).json()
+    assert added["name"] == "Radio <i>X</i>"
+    assert client.post("/planner/stations", json={"name": "bad", "guide_id": "x1"}, headers=CSRF).status_code == 422
+    assert client.delete(f"/planner/stations/{added['id']}", headers=CSRF).json() == {"deleted": True}
+    assert client.get("/planner/stations/search", params={"q": "a"}).status_code == 422  # two characters minimum
+    assert client.post("/planner/alarms/stop").status_code == 403  # stopping needs the CSRF header like any mutation
 
 
 def regenerate() -> None:

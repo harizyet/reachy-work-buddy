@@ -222,3 +222,66 @@ export function parseReceipts(value: unknown): Receipt[] {
     };
   });
 }
+
+// --- Alarms and stations (Phase 47B4) ------------------------------------------------------
+
+export interface Alarm {
+  id: string;
+  label: string;
+  due_at: string;
+  station_id: string | null;
+  status: string; // 'scheduled' | 'fired' | 'cancelled'
+  volume: number;
+  repeat: number[]; // 0 = Monday, as the server counts
+  enabled: boolean;
+  delivery: string | null;
+}
+
+export interface Station {
+  id: string;
+  name: string;
+  guide_id: string;
+}
+
+export interface StationHit {
+  guide_id: string;
+  name: string;
+  detail: string;
+}
+
+export function parseAlarm(value: unknown, what = 'alarm'): Alarm {
+  const o = obj(value, what);
+  const due_at = str(o.due_at, `${what}.due_at`);
+  if (Number.isNaN(new Date(due_at).getTime())) throw new ApiShapeError(`${what}.due_at`);
+  const repeat = o.repeat == null ? [] : list(o.repeat, `${what}.repeat`).map((d) => num(d, `${what}.repeat[]`));
+  return {
+    id: str(o.id, `${what}.id`),
+    label: str(o.label, `${what}.label`),
+    due_at,
+    station_id: o.station_id == null ? null : str(o.station_id, `${what}.station_id`),
+    status: str(o.status, `${what}.status`),
+    volume: o.volume == null ? 100 : num(o.volume, `${what}.volume`),
+    repeat,
+    enabled: o.enabled == null ? true : bool(o.enabled, `${what}.enabled`),
+    delivery: o.delivery == null ? null : str(o.delivery, `${what}.delivery`),
+  };
+}
+export const parseAlarms = (value: unknown): Alarm[] => list(value, 'alarms').map((v, i) => parseAlarm(v, `alarms[${i}]`));
+
+export function parseStations(value: unknown): Station[] {
+  return list(value, 'stations').map((item, i) => {
+    const o = obj(item, `stations[${i}]`);
+    return { id: str(o.id, `stations[${i}].id`), name: str(o.name, `stations[${i}].name`), guide_id: str(o.guide_id, `stations[${i}].guide_id`) };
+  });
+}
+
+export function parseStationHits(value: unknown): StationHit[] {
+  return list(value, 'stations/search').map((item, i) => {
+    const o = obj(item, `stations/search[${i}]`);
+    return {
+      guide_id: str(o.guide_id, `stations/search[${i}].guide_id`),
+      name: str(o.name, `stations/search[${i}].name`),
+      detail: o.detail == null ? '' : str(o.detail, `stations/search[${i}].detail`),
+    };
+  });
+}

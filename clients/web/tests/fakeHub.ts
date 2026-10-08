@@ -8,18 +8,25 @@ export interface FakeReminder { id: string; text: string; due_at: string; status
 export interface FakeNote { id: string; title: string; body: string; updated_at: string }
 export interface FakeReceipt { id: string; action_type: string; status: 'success' | 'failed'; at: string; source_channel: string; fields: Record<string, string>; failure_reason: string | null }
 
+export interface FakeAlarm { id: string; label: string; due_at: string; station_id: string | null; status: string; volume: number; repeat: number[]; enabled: boolean; delivery: string | null }
+export interface FakeStation { id: string; name: string; guide_id: string }
+
 export interface Deferred { resolve(response: Response): void; request: { path: string; method: string; signal?: AbortSignal | null } }
 
 export function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
-export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeReminder[]; notes?: FakeNote[]; receipts?: FakeReceipt[]; status?: unknown } = {}) {
+export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeReminder[]; notes?: FakeNote[]; receipts?: FakeReceipt[]; alarms?: FakeAlarm[]; stations?: FakeStation[]; search?: unknown[]; status?: unknown } = {}) {
   const data = {
     tasks: seed.tasks ?? [],
     reminders: seed.reminders ?? [],
     notes: seed.notes ?? [],
     receipts: seed.receipts ?? [],
+    alarms: seed.alarms ?? [],
+    stations: seed.stations ?? [],
+    search: seed.search ?? [],
+    stopped: false,
   };
   const calls: string[] = [];
   const bodies: { call: string; body: unknown }[] = [];
@@ -91,6 +98,50 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
       return jsonResponse(note);
     }
     if (path === '/planner/receipts') return jsonResponse(data.receipts);
+    if (path === '/planner/alarms' && method === 'GET') return jsonResponse(data.alarms);
+    if (path === '/planner/alarms' && method === 'POST') {
+      const [h, min] = String(body.time).split(':').map(Number);
+      const due = new Date();
+      due.setHours(h!, min!, 0, 0);
+      if (due.getTime() <= Date.now()) due.setDate(due.getDate() + 1);
+      const alarm: FakeAlarm = { id: nextId('a'), status: 'scheduled', enabled: true, delivery: null, ...body, due_at: due.toISOString() };
+      delete (alarm as any).time;
+      data.alarms.push(alarm);
+      return jsonResponse(alarm);
+    }
+    if (path === '/planner/alarms/stop') {
+      data.stopped = true;
+      return jsonResponse({ stopped: true });
+    }
+    m = path.match(/^\/planner\/alarms\/([^/]+)$/);
+    if (m) {
+      const alarm = data.alarms.find((a) => a.id === m![1]);
+      if (!alarm) return jsonResponse({ detail: `no alarm '${m[1]}'` }, 404);
+      if (method === 'DELETE') alarm.status = 'cancelled';
+      else {
+        const { time, ...rest } = body;
+        Object.assign(alarm, rest);
+        if (time) {
+          const [h, min] = String(time).split(':').map(Number);
+          const due = new Date(alarm.due_at);
+          due.setHours(h!, min!, 0, 0);
+          alarm.due_at = due.toISOString();
+        }
+      }
+      return jsonResponse(alarm);
+    }
+    if (path === '/planner/stations' && method === 'GET') return jsonResponse(data.stations);
+    if (path === '/planner/stations' && method === 'POST') {
+      const station: FakeStation = { id: nextId('s'), name: body.name, guide_id: body.guide_id };
+      data.stations.push(station);
+      return jsonResponse(station);
+    }
+    if (path === '/planner/stations/search') return jsonResponse(data.search);
+    m = path.match(/^\/planner\/stations\/([^/]+)$/);
+    if (m) {
+      data.stations = data.stations.filter((st) => st.id !== m![1]);
+      return jsonResponse({ deleted: true });
+    }
     return jsonResponse({ detail: 'Not Found' }, 404);
   };
 
