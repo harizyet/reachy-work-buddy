@@ -22,7 +22,7 @@ Fixture hashes: `holdout` e546188ccecfc9ce, corpus 1f8f50b36f37939c, combined 5c
 
 ## Locked configuration
 
-- Code commit: adb2f8d (builder, harness and fixtures; any later change to them starts a new decision point)
+- Code commit: adb2f8d plus one import-order-only lint commit (builder, harness and fixtures; any later behavioural change starts a new decision point)
 - Model: reachy-local (Qwen2.5-7B-Instruct-AWQ) on the production vLLM, temperature 0, seed 44, max tokens 350 (voice 150), streaming
 - Prompt: production persona prompt, action-boundary instruction, dated context message (fixed 2026-10-08 12:00 UTC), spoken-reply instruction for voice; evidence as one separate user-role message before the question; no tone line
 - Conditions: none, p43 (shipped Phase 43), b1a, b1b, oracle, distractor (abstention cases only). B1c excluded. The pre-filter-off exclusion conditions (b1a_nopre, b1b_nopre) are also run on the holdout's authorization, scope, shared-speaker and cloud cases

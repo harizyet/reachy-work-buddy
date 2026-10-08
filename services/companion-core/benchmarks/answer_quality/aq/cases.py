@@ -101,6 +101,7 @@ def validate(cases_by_split: dict[str, list[dict[str, Any]]] | None = None) -> l
                 m = meta[f"{st}:{sid}"]
                 prof = profiles[c["access"]]
                 from companion_core.semantic import access as rules
+
                 from shared.models.response import Privacy
 
                 if not rules.within_ceiling(Privacy(m["sensitivity"]), Privacy(prof["ceiling"])) or (

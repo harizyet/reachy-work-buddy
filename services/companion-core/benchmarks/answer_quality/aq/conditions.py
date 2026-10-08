@@ -28,6 +28,7 @@ from companion_core.persona.context import context_message
 from companion_core.semantic.model import SourceFilters
 from kbench.fixtures import meeting_object, parse_ref, source_meta
 from kbench.security import access_context, violations
+
 from shared.models.persona import PersonaConfig
 
 NOW = datetime(2026, 10, 8, 12, 0, tzinfo=UTC)
