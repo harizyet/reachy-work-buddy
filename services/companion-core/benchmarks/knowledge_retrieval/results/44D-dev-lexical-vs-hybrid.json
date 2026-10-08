@@ -1,0 +1,982 @@
+{
+  "split": "dev",
+  "differing_cases": [
+    "D-S1",
+    "D-C1"
+  ],
+  "cases": [
+    {
+      "id": "D-S1",
+      "category": "single_source",
+      "question": "What does Priya Nair prefer for updates?",
+      "expected_in_top5": {
+        "b1a": 1,
+        "b1b": 0,
+        "of": 1
+      },
+      "differs": true,
+      "expected": [
+        {
+          "expected": "memory:mem-priya-pref",
+          "lexical_rank": 1,
+          "vector_rank": 40,
+          "fused_rank": 8,
+          "final_rank_b1a": 1,
+          "final_rank_b1b": 8
+        }
+      ],
+      "unneeded_in_fused_top5": [
+        {
+          "key": "meeting:mt-weekly#124",
+          "lexical_rank": 2,
+          "vector_rank": 1
+        },
+        {
+          "key": "meeting:mt-weekly#63",
+          "lexical_rank": 3,
+          "vector_rank": 2
+        },
+        {
+          "key": "meeting:mt-weekly#69",
+          "lexical_rank": 4,
+          "vector_rank": 3
+        },
+        {
+          "key": "meeting:mt-weekly#75",
+          "lexical_rank": 5,
+          "vector_rank": 4
+        },
+        {
+          "key": "meeting:mt-weekly#86",
+          "lexical_rank": 6,
+          "vector_rank": 5
+        }
+      ]
+    },
+    {
+      "id": "D-S2",
+      "category": "single_source",
+      "question": "When is the weekly sync reminder?",
+      "expected_in_top5": {
+        "b1a": 1,
+        "b1b": 1,
+        "of": 1
+      },
+      "differs": false,
+      "expected": [
+        {
+          "expected": "reminder:rem-sync",
+          "lexical_rank": 2,
+          "vector_rank": 1,
+          "fused_rank": 2,
+          "final_rank_b1a": 2,
+          "final_rank_b1b": 2
+        }
+      ],
+      "unneeded_in_fused_top5": [
+        {
+          "key": "meeting:mt-planning#9",
+          "lexical_rank": 1,
+          "vector_rank": 2
+        },
+        {
+          "key": "meeting:mt-weekly#124",
+          "lexical_rank": 4,
+          "vector_rank": 6
+        },
+        {
+          "key": "meeting:mt-weekly#63",
+          "lexical_rank": 6,
+          "vector_rank": 7
+        },
+        {
+          "key": "meeting:mt-weekly#138",
+          "lexical_rank": 5,
+          "vector_rank": 11
+        }
+      ]
+    },
+    {
+      "id": "D-S3",
+      "category": "single_source",
+      "question": "What does the Lantern checklist say about the script?",
+      "expected_in_top5": {
+        "b1a": 1,
+        "b1b": 1,
+        "of": 1
+      },
+      "differs": false,
+      "expected": [
+        {
+          "expected": "note:note-lantern",
+          "lexical_rank": 2,
+          "vector_rank": 1,
+          "fused_rank": 1,
+          "final_rank_b1a": 2,
+          "final_rank_b1b": 1
+        }
+      ],
+      "unneeded_in_fused_top5": [
+        {
+          "key": "document:doc-lantern-runbook#0",
+          "lexical_rank": 1,
+          "vector_rank": 5
+        },
+        {
+          "key": "meeting:mt-lantern#7",
+          "lexical_rank": 4,
+          "vector_rank": 2
+        },
+        {
+          "key": "meeting:mt-lantern#0",
+          "lexical_rank": 5,
+          "vector_rank": 3
+        },
+        {
+          "key": "document:doc-lantern-runbook#1",
+          "lexical_rank": 3,
+          "vector_rank": 7
+        }
+      ]
+    },
+    {
+      "id": "D-S4",
+      "category": "single_source",
+      "question": "What does the Harbor overview say the platform runs?",
+      "expected_in_top5": {
+        "b1a": 1,
+        "b1b": 1,
+        "of": 1
+      },
+      "differs": false,
+      "expected": [
+        {
+          "expected": "document:doc-arch#0",
+          "lexical_rank": 1,
+          "vector_rank": 1,
+          "fused_rank": 1,
+          "final_rank_b1a": 1,
+          "final_rank_b1b": 1
+        }
+      ],
+      "unneeded_in_fused_top5": [
+        {
+          "key": "document:doc-arch-v1#1",
+          "lexical_rank": 2,
+          "vector_rank": 2
+        },
+        {
+          "key": "document:doc-arch#2",
+          "lexical_rank": 3,
+          "vector_rank": 3
+        },
+        {
+          "key": "meeting:mt-planning#0",
+          "lexical_rank": 7,
+          "vector_rank": 7
+        },
+        {
+          "key": "document:doc-arch-v1#0",
+          "lexical_rank": 4,
+          "vector_rank": 11
+        }
+      ]
+    },
+    {
+      "id": "D-S5",
+      "category": "single_source",
+      "question": "What was approved for the GPU host budget?",
+      "expected_in_top5": {
+        "b1a": 1,
+        "b1b": 1,
+        "of": 1
+      },
+      "differs": false,
+      "expected": [
+        {
+          "expected": "meeting:mt-weekly#57",
+          "lexical_rank": 1,
+          "vector_rank": 1,
+          "fused_rank": 1,
+          "final_rank_b1a": 1,
+          "final_rank_b1b": 1
+        }
+      ],
+      "unneeded_in_fused_top5": [
+        {
+          "key": "document:doc-arch#2",
+          "lexical_rank": 2,
+          "vector_rank": 2
+        },
+        {
+          "key": "document:doc-arch-v1#1",
+          "lexical_rank": 3,
+          "vector_rank": 4
+        },
+        {
+          "key": "meeting:mt-planning#1",
+          "lexical_rank": null,
+          "vector_rank": 3
+        },
+        {
+          "key": "meeting:mt-lantern#0",
+          "lexical_rank": null,
+          "vector_rank": 5
+        }
+      ]
+    },
+    {
+      "id": "D-S6",
+      "category": "single_source",
+      "question": "Which task is about the Lantern rollback test?",
+      "expected_in_top5": {
+        "b1a": 1,
+        "b1b": 1,
+        "of": 1
+      },
+      "differs": false,
+      "expected": [
+        {
+          "expected": "task:task-rollback",
+          "lexical_rank": 2,
+          "vector_rank": 1,
+          "fused_rank": 1,
+          "final_rank_b1a": 2,
+          "final_rank_b1b": 1
+        }
+      ],
+      "unneeded_in_fused_top5": [
+        {
+          "key": "document:doc-lantern-runbook#1",
+          "lexical_rank": 1,
+          "vector_rank": 3
+        },
+        {
+          "key": "memory:mem-rollback-window",
+          "lexical_rank": 7,
+          "vector_rank": 2
+        },
+        {
+          "key": "meeting:mt-lantern#2",
+          "lexical_rank": 5,
+          "vector_rank": 5
+        },
+        {
+          "key": "document:doc-lantern-runbook#0",
+          "lexical_rank": 3,
+          "vector_rank": 9
+        }
+      ]
+    },
+    {
+      "id": "D-C1",
+      "category": "cross_source",
+      "question": "Which model did the planning meeting keep and what does the architecture say serves it?",
+      "expected_in_top5": {
+        "b1a": 2,
+        "b1b": 1,
+        "of": 2
+      },
+      "differs": true,
+      "expected": [
+        {
+          "expected": "meeting:mt-planning#2",
+          "lexical_rank": 4,
+          "vector_rank": 37,
+          "fused_rank": 8,
+          "final_rank_b1a": 4,
+          "final_rank_b1b": 8
+        },
+        {
+          "expected": "document:doc-arch#2",
+          "lexical_rank": 2,
+          "vector_rank": 1,
+          "fused_rank": 1,
+          "final_rank_b1a": 2,
+          "final_rank_b1b": 1
+        }
+      ],
+      "unneeded_in_fused_top5": [
+        {
+          "key": "document:doc-arch#0",
+          "lexical_rank": 3,
+          "vector_rank": 2
+        },
+        {
+          "key": "document:doc-arch-v1#1",
+          "lexical_rank": 1,
+          "vector_rank": 7
+        },
+        {
+          "key": "meeting:mt-planning#0",
+          "lexical_rank": 9,
+          "vector_rank": 3
+        },
+        {
+          "key": "document:doc-arch#1",
+          "lexical_rank": 8,
+          "vector_rank": 4
+        }
+      ]
+    },
+    {
+      "id": "D-C2",
+      "category": "cross_source",
+      "question": "What do the notes and the meeting say Tomas has to do?",
+      "expected_in_top5": {
+        "b1a": 0,
+        "b1b": 0,
+        "of": 2
+      },
+      "differs": false,
+      "expected": [
+        {
+          "expected": "note:note-actions",
+          "lexical_rank": null,
+          "vector_rank": null,
+          "fused_rank": null,
+          "final_rank_b1a": null,
+          "final_rank_b1b": null
+        },
+        {
+          "expected": "meeting:mt-planning#7",
+          "lexical_rank": 11,
+          "vector_rank": null,
+          "fused_rank": 32,
+          "final_rank_b1a": null,
+          "final_rank_b1b": null
+        }
+      ],
+      "unneeded_in_fused_top5": [
+        {
+          "key": "meeting:mt-weekly#101",
+          "lexical_rank": 1,
+          "vector_rank": 6
+        },
+        {
+          "key": "meeting:mt-weekly#35",
+          "lexical_rank": 2,
+          "vector_rank": 7
+        },
+        {
+          "key": "meeting:mt-weekly#39",
+          "lexical_rank": 3,
+          "vector_rank": 8
+        },
+        {
+          "key": "meeting:mt-weekly#85",
+          "lexical_rank": 4,
+          "vector_rank": 9
+        },
+        {
+          "key": "meeting:mt-weekly#131",
+          "lexical_rank": 20,
+          "vector_rank": 4
+        }
+      ]
+    },
+    {
+      "id": "D-C3",
+      "category": "cross_source",
+      "question": "What do the runbook and the Lantern review say about rollback timing?",
+      "expected_in_top5": {
+        "b1a": 2,
+        "b1b": 2,
+        "of": 2
+      },
+      "differs": false,
+      "expected": [
+        {
+          "expected": "document:doc-lantern-runbook#1",
+          "lexical_rank": 1,
+          "vector_rank": 2,
+          "fused_rank": 1,
+          "final_rank_b1a": 1,
+          "final_rank_b1b": 1
+        },
+        {
+          "expected": "meeting:mt-lantern#5",
+          "lexical_rank": 3,
+          "vector_rank": 1,
+          "fused_rank": 2,
+          "final_rank_b1a": 3,
+          "final_rank_b1b": 2
+        }
+      ],
+      "unneeded_in_fused_top5": [
+        {
+          "key": "memory:mem-rollback-window",
+          "lexical_rank": 7,
+          "vector_rank": 3
+        },
+        {
+          "key": "document:doc-lantern-runbook#0",
+          "lexical_rank": 2,
+          "vector_rank": 10
+        },
+        {
+          "key": "memory:mem-lantern-slip",
+          "lexical_rank": 6,
+          "vector_rank": 6
+        }
+      ]
+    },
+    {
+      "id": "D-C4",
+      "category": "cross_source",
+      "question": "Who is working on the Lantern rollback test and what is the task?",
+      "expected_in_top5": {
+        "b1a": 1,
+        "b1b": 1,
+        "of": 2
+      },
+      "differs": false,
+      "expected": [
+        {
+          "expected": "meeting:mt-lantern#3",
+          "lexical_rank": 6,
+          "vector_rank": 6,
+          "fused_rank": 7,
+          "final_rank_b1a": 6,
+          "final_rank_b1b": 7
+        },
+        {
+          "expected": "task:task-rollback",
+          "lexical_rank": 2,
+          "vector_rank": 1,
+          "fused_rank": 1,
+          "final_rank_b1a": 2,
+          "final_rank_b1b": 1
+        }
+      ],
+      "unneeded_in_fused_top5": [
+        {
+          "key": "document:doc-lantern-runbook#1",
+          "lexical_rank": 1,
+          "vector_rank": 3
+        },
+        {
+          "key": "note:note-lantern",
+          "lexical_rank": 8,
+          "vector_rank": 2
+        },
+        {
+          "key": "meeting:mt-lantern#2",
+          "lexical_rank": 5,
+          "vector_rank": 5
+        },
+        {
+          "key": "document:doc-lantern-runbook#0",
+          "lexical_rank": 3,
+          "vector_rank": 8
+        }
+      ]
+    },
+    {
+      "id": "D-C5",
+      "category": "cross_source",
+      "question": "What retry settings do the Harbor document and the planning meeting describe?",
+      "expected_in_top5": {
+        "b1a": 1,
+        "b1b": 1,
+        "of": 2
+      },
+      "differs": false,
+      "expected": [
+        {
+          "expected": "document:doc-arch#1",
+          "lexical_rank": 5,
+          "vector_rank": 4,
+          "fused_rank": 3,
+          "final_rank_b1a": 5,
+          "final_rank_b1b": 3
+        },
+        {
+          "expected": "meeting:mt-planning#6",
+          "lexical_rank": 11,
+          "vector_rank": 3,
+          "fused_rank": 7,
+          "final_rank_b1a": null,
+          "final_rank_b1b": 7
+        }
+      ],
+      "unneeded_in_fused_top5": [
+        {
+          "key": "note:note-actions",
+          "lexical_rank": 1,
+          "vector_rank": 2
+        },
+        {
+          "key": "document:doc-arch-v1#0",
+          "lexical_rank": 2,
+          "vector_rank": 6
+        },
+        {
+          "key": "memory:mem-retry-conflict",
+          "lexical_rank": 10,
+          "vector_rank": 1
+        },
+        {
+          "key": "document:doc-arch#0",
+          "lexical_rank": 4,
+          "vector_rank": 8
+        }
+      ]
+    },
+    {
+      "id": "D-R1",
+      "category": "relationship",
+      "question": "What did the PM say about the infra lead owning the nightly schedule?",
+      "expected_in_top5": {
+        "b1a": 1,
+        "b1b": 1,
+        "of": 2
+      },
+      "differs": false,
+      "expected": [
+        {
+          "expected": "meeting:mt-planning#4",
+          "lexical_rank": 1,
+          "vector_rank": 1,
+          "fused_rank": 1,
+          "final_rank_b1a": 1,
+          "final_rank_b1b": 1
+        },
+        {
+          "expected": "memory:mem-tomas-role",
+          "lexical_rank": 6,
+          "vector_rank": null,
+          "fused_rank": 10,
+          "final_rank_b1a": 6,
+          "final_rank_b1b": 10
+        }
+      ],
+      "unneeded_in_fused_top5": [
+        {
+          "key": "meeting:mt-planning#3",
+          "lexical_rank": 4,
+          "vector_rank": 13
+        },
+        {
+          "key": "meeting:mt-lantern#5",
+          "lexical_rank": 5,
+          "vector_rank": 23
+        },
+        {
+          "key": "document:doc-arch#0",
+          "lexical_rank": 2,
+          "vector_rank": null
+        },
+        {
+          "key": "reminder:rem-sync",
+          "lexical_rank": null,
+          "vector_rank": 2
+        }
+      ]
+    },
+    {
+      "id": "D-R2",
+      "category": "relationship",
+      "question": "Where is the infra lead's benchmark written down?",
+      "expected_in_top5": {
+        "b1a": 2,
+        "b1b": 2,
+        "of": 2
+      },
+      "differs": false,
+      "expected": [
+        {
+          "expected": "note:note-actions",
+          "lexical_rank": 1,
+          "vector_rank": 2,
+          "fused_rank": 1,
+          "final_rank_b1a": 1,
+          "final_rank_b1b": 1
+        },
+        {
+          "expected": "meeting:mt-planning#7",
+          "lexical_rank": 3,
+          "vector_rank": 1,
+          "fused_rank": 2,
+          "final_rank_b1a": 3,
+          "final_rank_b1b": 2
+        }
+      ],
+      "unneeded_in_fused_top5": [
+        {
+          "key": "meeting:mt-planning#1",
+          "lexical_rank": 2,
+          "vector_rank": 3
+        },
+        {
+          "key": "memory:mem-tomas-role",
+          "lexical_rank": 4,
+          "vector_rank": 4
+        },
+        {
+          "key": "reminder:rem-summary",
+          "lexical_rank": 6,
+          "vector_rank": 10
+        }
+      ]
+    },
+    {
+      "id": "D-R3",
+      "category": "relationship",
+      "question": "What does the note say the security owner reviews about the queue?",
+      "expected_in_top5": {
+        "b1a": 1,
+        "b1b": 1,
+        "of": 2
+      },
+      "differs": false,
+      "expected": [
+        {
+          "expected": "note:note-actions",
+          "lexical_rank": 24,
+          "vector_rank": 35,
+          "fused_rank": 20,
+          "final_rank_b1a": null,
+          "final_rank_b1b": null
+        },
+        {
+          "expected": "memory:mem-dana-security",
+          "lexical_rank": 4,
+          "vector_rank": 1,
+          "fused_rank": 1,
+          "final_rank_b1a": 4,
+          "final_rank_b1b": 1
+        }
+      ],
+      "unneeded_in_fused_top5": [
+        {
+          "key": "meeting:mt-weekly#71",
+          "lexical_rank": 3,
+          "vector_rank": 2
+        },
+        {
+          "key": "document:doc-arch-v1#0",
+          "lexical_rank": 1,
+          "vector_rank": 5
+        },
+        {
+          "key": "document:doc-arch#1",
+          "lexical_rank": 2,
+          "vector_rank": 4
+        },
+        {
+          "key": "document:doc-vendor#1",
+          "lexical_rank": 6,
+          "vector_rank": 10
+        }
+      ]
+    },
+    {
+      "id": "D-R4",
+      "category": "relationship",
+      "question": "What was the 7B Falcon benchmarked for?",
+      "expected_in_top5": {
+        "b1a": 2,
+        "b1b": 2,
+        "of": 2
+      },
+      "differs": false,
+      "expected": [
+        {
+          "expected": "meeting:mt-planning#1",
+          "lexical_rank": 1,
+          "vector_rank": 1,
+          "fused_rank": 1,
+          "final_rank_b1a": 1,
+          "final_rank_b1b": 1
+        },
+        {
+          "expected": "note:note-actions",
+          "lexical_rank": 3,
+          "vector_rank": 2,
+          "fused_rank": 3,
+          "final_rank_b1a": 3,
+          "final_rank_b1b": 3
+        }
+      ],
+      "unneeded_in_fused_top5": [
+        {
+          "key": "meeting:mt-planning#7",
+          "lexical_rank": 2,
+          "vector_rank": 3
+        },
+        {
+          "key": "meeting:mt-planning#2",
+          "lexical_rank": 5,
+          "vector_rank": 4
+        },
+        {
+          "key": "document:doc-arch#2",
+          "lexical_rank": 4,
+          "vector_rank": 6
+        }
+      ]
+    },
+    {
+      "id": "D-T1",
+      "category": "temporal",
+      "question": "What does Harbor use as its default model at the moment?",
+      "expected_in_top5": {
+        "b1a": 1,
+        "b1b": 1,
+        "of": 1
+      },
+      "differs": false,
+      "expected": [
+        {
+          "expected": "memory:mem-model-current",
+          "lexical_rank": 2,
+          "vector_rank": 1,
+          "fused_rank": 1,
+          "final_rank_b1a": 2,
+          "final_rank_b1b": 1
+        }
+      ],
+      "unneeded_in_fused_top5": [
+        {
+          "key": "document:doc-arch#2",
+          "lexical_rank": 1,
+          "vector_rank": 5
+        },
+        {
+          "key": "memory:mem-model-old",
+          "lexical_rank": 5,
+          "vector_rank": 2
+        },
+        {
+          "key": "document:doc-arch-v1#1",
+          "lexical_rank": 3,
+          "vector_rank": 4
+        },
+        {
+          "key": "document:doc-arch#0",
+          "lexical_rank": 6,
+          "vector_rank": 3
+        }
+      ]
+    },
+    {
+      "id": "D-T2",
+      "category": "temporal",
+      "question": "How many retries are allowed currently before a failed job is parked?",
+      "expected_in_top5": {
+        "b1a": 1,
+        "b1b": 1,
+        "of": 1
+      },
+      "differs": false,
+      "expected": [
+        {
+          "expected": "document:doc-arch#1",
+          "lexical_rank": 2,
+          "vector_rank": 3,
+          "fused_rank": 3,
+          "final_rank_b1a": 2,
+          "final_rank_b1b": 3
+        }
+      ],
+      "unneeded_in_fused_top5": [
+        {
+          "key": "document:doc-arch-v1#0",
+          "lexical_rank": 1,
+          "vector_rank": 4
+        },
+        {
+          "key": "memory:mem-retry-conflict",
+          "lexical_rank": 4,
+          "vector_rank": 1
+        },
+        {
+          "key": "meeting:mt-weekly#23",
+          "lexical_rank": 3,
+          "vector_rank": 2
+        },
+        {
+          "key": "meeting:mt-planning#6",
+          "lexical_rank": 10,
+          "vector_rank": 5
+        }
+      ]
+    },
+    {
+      "id": "D-T3",
+      "category": "temporal",
+      "question": "What did the archived architecture say about the retry limit?",
+      "expected_in_top5": {
+        "b1a": 1,
+        "b1b": 1,
+        "of": 1
+      },
+      "differs": false,
+      "expected": [
+        {
+          "expected": "document:doc-arch-v1#0",
+          "lexical_rank": 1,
+          "vector_rank": 3,
+          "fused_rank": 1,
+          "final_rank_b1a": 1,
+          "final_rank_b1b": 1
+        }
+      ],
+      "unneeded_in_fused_top5": [
+        {
+          "key": "meeting:mt-planning#6",
+          "lexical_rank": 4,
+          "vector_rank": 1
+        },
+        {
+          "key": "meeting:mt-weekly#23",
+          "lexical_rank": 5,
+          "vector_rank": 2
+        },
+        {
+          "key": "document:doc-arch#1",
+          "lexical_rank": 3,
+          "vector_rank": 5
+        },
+        {
+          "key": "meeting:mt-planning#5",
+          "lexical_rank": 8,
+          "vector_rank": 4
+        }
+      ]
+    },
+    {
+      "id": "D-X1",
+      "category": "contradiction",
+      "question": "What are the Beacon Analytics support hours?",
+      "expected_in_top5": {
+        "b1a": 2,
+        "b1b": 2,
+        "of": 2
+      },
+      "differs": false,
+      "expected": [
+        {
+          "expected": "document:doc-vendor#0",
+          "lexical_rank": 1,
+          "vector_rank": 1,
+          "fused_rank": 1,
+          "final_rank_b1a": 1,
+          "final_rank_b1b": 1
+        },
+        {
+          "expected": "memory:mem-support-hours",
+          "lexical_rank": 2,
+          "vector_rank": 2,
+          "fused_rank": 2,
+          "final_rank_b1a": 2,
+          "final_rank_b1b": 2
+        }
+      ],
+      "unneeded_in_fused_top5": [
+        {
+          "key": "document:doc-vendor#1",
+          "lexical_rank": 3,
+          "vector_rank": 3
+        },
+        {
+          "key": "note:note-lantern",
+          "lexical_rank": 4,
+          "vector_rank": 10
+        },
+        {
+          "key": "reminder:rem-sync",
+          "lexical_rank": null,
+          "vector_rank": 4
+        }
+      ]
+    },
+    {
+      "id": "D-V1",
+      "category": "provenance",
+      "question": "Which part of the weekly sync mentions the GPU budget?",
+      "expected_in_top5": {
+        "b1a": 1,
+        "b1b": 1,
+        "of": 1
+      },
+      "differs": false,
+      "expected": [
+        {
+          "expected": "meeting:mt-weekly#57",
+          "lexical_rank": 2,
+          "vector_rank": 1,
+          "fused_rank": 1,
+          "final_rank_b1a": 2,
+          "final_rank_b1b": 1
+        }
+      ],
+      "unneeded_in_fused_top5": [
+        {
+          "key": "meeting:mt-planning#9",
+          "lexical_rank": 1,
+          "vector_rank": 4
+        },
+        {
+          "key": "reminder:rem-sync",
+          "lexical_rank": 3,
+          "vector_rank": 2
+        },
+        {
+          "key": "document:doc-arch#2",
+          "lexical_rank": 4,
+          "vector_rank": 3
+        },
+        {
+          "key": "meeting:mt-weekly#124",
+          "lexical_rank": 6,
+          "vector_rank": 12
+        }
+      ]
+    },
+    {
+      "id": "D-E3",
+      "category": "security",
+      "question": "What did Priya say at the Lantern review about the tasks?",
+      "expected_in_top5": {
+        "b1a": 1,
+        "b1b": 1,
+        "of": 1
+      },
+      "differs": false,
+      "expected": [
+        {
+          "expected": "meeting:mt-lantern#4",
+          "lexical_rank": 4,
+          "vector_rank": 20,
+          "fused_rank": 4,
+          "final_rank_b1a": 4,
+          "final_rank_b1b": 4
+        }
+      ],
+      "unneeded_in_fused_top5": [
+        {
+          "key": "meeting:mt-lantern#0",
+          "lexical_rank": 1,
+          "vector_rank": 1
+        },
+        {
+          "key": "meeting:mt-planning#0",
+          "lexical_rank": 9,
+          "vector_rank": 4
+        },
+        {
+          "key": "meeting:mt-weekly#102",
+          "lexical_rank": 16,
+          "vector_rank": 5
+        },
+        {
+          "key": "meeting:mt-planning#11",
+          "lexical_rank": 10,
+          "vector_rank": 16
+        }
+      ]
+    }
+  ]
+}

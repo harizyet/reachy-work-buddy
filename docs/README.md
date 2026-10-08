@@ -137,6 +137,9 @@ over the original decision where they explicitly change it.
 
 These are dated evidence, not startup instructions or current health checks.
 
+- [Phase 44D first look at the frozen holdout 2026-10-08](verification/phase-44d-first-look-2026-10-08.md): B1a and B1b frozen then scored once each; paired
+  case-level differences, zero exposure, development-only investigation of lexical versus hybrid.
+
 - [Phase 44D development comparison 2026-10-08](verification/phase-44d-dev-2026-10-08.md): lexical, hybrid and reranked retrieval against the baselines on the
   development split, with authorization, latency, CPU and memory. Holdout not scored; nothing wired.
 

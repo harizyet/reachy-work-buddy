@@ -602,15 +602,21 @@ def test_the_committed_review_matches_what_the_recorded_results_produce() -> Non
 def test_every_recorded_report_is_for_the_current_fixtures_and_the_log_has_no_repeats() -> None:
     current = fixture_hashes()["combined"]
     for path in sorted((BENCH / "results").glob("*.json")):
-        assert json.loads(path.read_text())["fixtures"]["combined"] == current, f"{path.name} was produced from other fixtures"
+        data = json.loads(path.read_text())
+        if not isinstance(data, dict) or "results_digest" not in data:
+            continue  # the freeze record, paired comparisons and investigations are not scored reports
+        assert data["fixtures"]["combined"] == current, f"{path.name} was produced from other fixtures"
     entries = holdout.read_log()
     assert entries and all(not e["repeat"] for e in entries), "a holdout look was repeated; it needs a new decision point"
     keys = [(e["decision_point"], e["adapter"], e["fixture_hash"], e.get("track", "synthetic-deterministic")) for e in entries]
     assert len(keys) == len(set(keys))
     # each logged look has its recorded report, and the digests agree
     for entry in entries:
-        track_prefix = "44A-production-embedding" if entry.get("track") == "production-embedding" else "44A-baseline"
-        report = json.loads((BENCH / "results" / f"{track_prefix}-{entry['adapter']}-holdout.json").read_text())
+        prefix = {
+            "44A-baseline": "44A-baseline", "44A-production-embedding-baseline": "44A-production-embedding",
+            "44D-first-look": "44D-first-look",
+        }[entry["decision_point"]]
+        report = json.loads((BENCH / "results" / f"{prefix}-{entry['adapter']}-holdout.json").read_text())
         assert report["results_digest"] == entry["results_digest"]
 
 
@@ -643,3 +649,61 @@ def test_the_postgresql_configurations_on_the_dev_split_expose_nothing_unauthori
     assert reports["b1a-nofilter"]["system"]["revalidation_drops_by_reason"].get("over_ceiling", 0) > 0
     with psycopg.connect(os.environ["DATABASE_MIGRATION_TEST_URL"]) as conn:
         assert conn.execute("SELECT count(*) FROM pg_database WHERE datname LIKE 'kbench_%'").fetchone()[0] == 0  # each run dropped its database
+
+
+# ---- paired comparison and the 44D-first-look freeze ------------------------------------------------------------
+
+def test_the_sign_test_and_the_bootstrap_are_exact_and_reproducible() -> None:
+    from kbench import paired
+
+    assert paired.sign_test_p(0, 0) is None
+    assert paired.sign_test_p(5, 0) == pytest.approx(2 * (1 / 32))  # five wins, no losses: 2 * 0.5^5
+    assert paired.sign_test_p(3, 3) == 1.0 and paired.sign_test_p(10, 0) == pytest.approx(2 / 1024)
+    assert paired.sign_test_p(2, 8) == pytest.approx(2 * (1 + 10 + 45) / 1024)
+    deltas = [0.0, 0.5, -0.25, 0.0, 0.25, 0.0, 0.5]
+    assert paired.bootstrap_ci(deltas) == paired.bootstrap_ci(deltas)  # seeded
+    low, high = paired.bootstrap_ci(deltas)
+    assert low <= sum(deltas) / len(deltas) <= high and paired.bootstrap_ci([]) is None
+    assert paired.bootstrap_ci([0.1] * 8) == (pytest.approx(0.1), pytest.approx(0.1))
+
+
+def test_paired_differences_count_wins_losses_and_ties_and_refuse_other_fixtures() -> None:
+    from kbench import paired
+
+    def report(name, recalls):
+        return {"adapter": {"name": name}, "fixtures": {"combined": "x"},
+                "cases": [{"id": f"c{i}", "category": "cross_source", "metrics": {"expected_count": 1, "recall@5": r, "rr": r, "full_recall@5": r == 1.0}}
+                          for i, r in enumerate(recalls)] + [{"id": "n", "category": "negative", "metrics": {"expected_count": 0, "recall@5": None, "rr": None, "full_recall@5": None}}]}
+
+    a, b = report("a", [1.0, 0.0, 0.5, 0.5]), report("b", [1.0, 1.0, 0.0, 0.5])
+    result = paired.paired(a, b)
+    assert (result["cases"], result["b_better"], result["a_better"], result["tied"]) == (4, 1, 1, 2)  # the negative case is not paired
+    assert result["mean_difference"] == pytest.approx(0.125) and result["cases_where_b_better"] == ["c1"] and result["cases_where_a_better"] == ["c2"]
+    assert result["full_recall_at_5"] == {"only_b": 1, "only_a": 0, "mcnemar_exact_p": pytest.approx(1.0)}
+    other = report("c", [1.0])
+    other["fixtures"] = {"combined": "y"}
+    with pytest.raises(ValueError):
+        paired.paired(a, other)
+
+
+def test_the_first_look_was_frozen_before_it_was_scored_and_scored_exactly_once_per_system() -> None:
+    freeze = json.loads((BENCH / "results" / "44D-first-look-freeze.json").read_text())
+    assert freeze["decision_point"] == "44D-first-look" and set(freeze["systems"]) == {"b1a", "b1b"}
+    assert freeze["common"]["fixtures"] == fixture_hashes() and freeze["frozen_at_commit"]
+    entries = [e for e in holdout.read_log() if e["decision_point"] == "44D-first-look"]
+    assert sorted(e["adapter"] for e in entries) == ["b1a", "b1b"] and all(not e["repeat"] and e["track"] == "production-embedding" for e in entries)
+    assert all(e["git_commit"].startswith(freeze["frozen_at_commit"][:7]) or e["git_commit"] != freeze["frozen_at_commit"] for e in entries)
+    from dataclasses import asdict
+
+    from companion_core.knowledge.retrieval import B1A, B1B
+
+    assert freeze["systems"]["b1a"] == asdict(B1A) and freeze["systems"]["b1b"] == asdict(B1B)  # the code still runs what was frozen
+    for name in ("b1a", "b1b"):
+        report = json.loads((BENCH / "results" / f"44D-first-look-{name}-holdout.json").read_text())
+        assert report["split"] == "holdout" and report["security_gates"]["unauthorized_leakage"]["pass"] is True
+        assert report["summary"]["leakage"]["leaked_hits"] == 0
+
+
+def test_the_investigation_tool_reads_only_the_development_split() -> None:
+    source = (BENCH / "b1_investigate.py").read_text()
+    assert 'load_cases("dev")' in source and "holdout" not in source.replace("holdout log", "").replace("the holdout", "")

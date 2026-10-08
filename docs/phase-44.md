@@ -423,7 +423,9 @@ Status: **built and benchmarked on the development split; local; nothing wired o
 | Contract: `SourceFilters.pinned_sources` (additive) | `semantic/model.py` |
 | Benchmark adapters for the five PostgreSQL variants on a fresh database per run, with an automatic holdout guard (`KBENCH_HOLDOUT_APPROVAL`), exposure/candidate/drop accounting, CPU, memory and stage timings | `benchmarks/knowledge_retrieval/kbench/b1.py`, `pg_env.py`, `b1_sensitivity.py` |
 
-Result in one line: B1a (lexical) reaches R@5 0.86 and MRR 0.66 at 8 ms median; B1b (hybrid) R@5 0.79, MRR 0.80 at 28 ms with several times the CPU and memory; B1c is not justified; no variant exposed anything unauthorised. Gate status for 44D: authorization held in every run, the holdout is pending an approved candidate and decision point, answer quality is not evaluated, and production activation is not part of this stage.
+**First look at the frozen holdout (decision point `44D-first-look`, owner decision D12; B1a and B1b scored once each, B1c excluded):** [record](verification/phase-44d-first-look-2026-10-08.md). R@5 0.83 (B1a) and 0.86 (B1b) against 0.84 for keyword overlap over everything and 0.25 for today's lookups, with **no exposure** for either and the baselines exposing 104 and 30; B1b's MRR is 0.075 higher (interval just excluding zero), no other difference separates them. Relationship is the weak category (B1a 2 of 10, B1b 5, oracle 6). Not decided: whether vectors justify their cost.
+
+Result in one line (development split): B1a (lexical) reaches R@5 0.86 and MRR 0.66 at 8 ms median; B1b (hybrid) R@5 0.79, MRR 0.80 at 28 ms with several times the CPU and memory; B1c is not justified; no variant exposed anything unauthorised. Gate status for 44D: authorization held in every run, the holdout is pending an approved candidate and decision point, answer quality is not evaluated, and production activation is not part of this stage.
 
 ## 12. Verification of this page
 

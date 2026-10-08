@@ -87,7 +87,7 @@ and the `-nofilter` variants (access pre-filter off, so revalidation alone is wh
 a fresh database on the server in `KBENCH_DATABASE_URL` (or `DATABASE_MIGRATION_TEST_URL`; disposable, with pgvector), index it with the
 real worker, retrieve, revalidate under the case's access profile and score. The report adds `system` (stage latencies, Python CPU,
 peak memory, query-embedding time, revalidation drops by reason, index build time) and reports unauthorised *candidates* separately from
-*exposed* hits. **They refuse the frozen holdout** until `KBENCH_HOLDOUT_APPROVAL` names an approved decision point. `b1_sensitivity.py`
+*exposed* hits. **They refuse the frozen holdout** until `KBENCH_HOLDOUT_APPROVAL` names an approved decision point (`44D-first-look` scored `b1a` and `b1b` once each; `compare.py` gives paired case-level differences and `b1_investigate.py` explains differences from development cases only). `b1_sensitivity.py`
 checks the hybrid against its two free parameters on the development split only.
 
 ```bash
