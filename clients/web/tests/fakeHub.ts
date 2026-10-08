@@ -11,13 +11,17 @@ export interface FakeReceipt { id: string; action_type: string; status: 'success
 export interface FakeAlarm { id: string; label: string; due_at: string; station_id: string | null; status: string; volume: number; repeat: number[]; enabled: boolean; delivery: string | null }
 export interface FakeStation { id: string; name: string; guide_id: string }
 
+export interface FakeTurn { id: string; text: string; reply: string | null; status: 'pending' | 'complete' | 'unknown'; web_search: unknown }
+export interface FakeChat { id: string; user_id: string; title: string; created_at: string; updated_at: string; turns: FakeTurn[] }
+export type Replier = (text: string, body: any) => { reply: string; web_search?: unknown; context_meeting?: string | null };
+
 export interface Deferred { resolve(response: Response): void; request: { path: string; method: string; signal?: AbortSignal | null } }
 
 export function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
-export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeReminder[]; notes?: FakeNote[]; receipts?: FakeReceipt[]; alarms?: FakeAlarm[]; stations?: FakeStation[]; search?: unknown[]; status?: unknown } = {}) {
+export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeReminder[]; notes?: FakeNote[]; receipts?: FakeReceipt[]; alarms?: FakeAlarm[]; stations?: FakeStation[]; search?: unknown[]; chats?: FakeChat[]; reply?: Replier; status?: unknown } = {}) {
   const data = {
     tasks: seed.tasks ?? [],
     reminders: seed.reminders ?? [],
@@ -27,6 +31,10 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
     stations: seed.stations ?? [],
     search: seed.search ?? [],
     stopped: false,
+    chats: seed.chats ?? [],
+    sessions: new Map<string, { interaction_mode: string; dnd: boolean; active_channel: string }>(),
+    messages: [] as any[],
+    reply: seed.reply ?? (((text: string) => ({ reply: `Reply to: ${text}` })) as Replier),
   };
   const calls: string[] = [];
   const bodies: { call: string; body: unknown }[] = [];
@@ -96,6 +104,40 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
       }
       Object.assign(note, { title: body.title, body: body.body ?? '', updated_at: new Date().toISOString() });
       return jsonResponse(note);
+    }
+    if (path === '/chats' && method === 'GET') {
+      const mine = data.chats.filter((c) => c.user_id === query.get('user_id'));
+      return jsonResponse(mine.map(({ turns: _t, ...rest }) => rest));
+    }
+    if (path === '/chats' && method === 'POST') {
+      const now = new Date().toISOString();
+      const chat: FakeChat = { id: nextId('c'), user_id: body.user_id, title: body.title, created_at: now, updated_at: now, turns: [] };
+      data.chats.unshift(chat);
+      const { turns: _t, ...rest } = chat;
+      return jsonResponse(rest);
+    }
+    m = path.match(/^\/chats\/([^/]+)$/);
+    if (m) {
+      const chat = data.chats.find((c) => c.id === m![1] && c.user_id === query.get('user_id'));
+      if (!chat) return jsonResponse({ detail: 'Chat not found' }, 404);
+      if (method === 'DELETE') {
+        data.chats = data.chats.filter((c) => c !== chat);
+        return jsonResponse({ deleted: true });
+      }
+      return jsonResponse(chat);
+    }
+    if (path === '/messages' && method === 'POST') {
+      data.messages.push(body);
+      const out = data.reply(body.text, body);
+      const chat = data.chats.find((c) => c.id === body.chat_id);
+      chat?.turns.push({ id: nextId('turn'), text: body.text, reply: out.reply, status: 'complete', web_search: out.web_search ?? null });
+      data.sessions.set(body.user_id, { interaction_mode: 'office', dnd: true, active_channel: 'web' });
+      return jsonResponse({ web_search: null, context_meeting: null, ...out });
+    }
+    m = path.match(/^\/sessions\/([^/]+)$/);
+    if (m) {
+      const info = data.sessions.get(decodeURIComponent(m[1]!));
+      return info ? jsonResponse(info) : jsonResponse({ detail: `no session for user '${m[1]}'` }, 404);
     }
     if (path === '/planner/receipts') return jsonResponse(data.receipts);
     if (path === '/planner/alarms' && method === 'GET') return jsonResponse(data.alarms);

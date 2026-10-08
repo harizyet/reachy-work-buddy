@@ -1,9 +1,11 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
+import { ChatProvider } from '../../features/chat/ChatProvider';
 import { useAuth } from '../auth';
 
 const NAV = [
   { to: '/', label: 'Overview', end: true },
+  { to: '/chat', label: 'Chat', end: false },
   { to: '/todo', label: 'To Do', end: false },
   { to: '/reminders', label: 'Reminders', end: false },
   { to: '/alarms', label: 'Alarms', end: false },
@@ -48,7 +50,9 @@ export function AppLayout() {
         </div>
       </header>
       <main id="main" className="mx-auto max-w-5xl px-4 py-6">
-        <Outlet />
+        <ChatProvider>
+          <Outlet />
+        </ChatProvider>
       </main>
     </div>
   );

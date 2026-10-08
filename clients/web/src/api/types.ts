@@ -41,6 +41,8 @@ export interface HubStatus {
   llm: { configured: boolean | null; usage: LlmUsage | null };
   telegram: TelegramHealth;
   robots: RobotStatus[];
+  ownerBound: boolean;
+  defaultUserId: string | null;
 }
 
 type Obj = Record<string, unknown>;
@@ -123,6 +125,8 @@ export function parseStatus(value: unknown): HubStatus {
       last_poll_error:
         telegram.last_poll_error == null ? null : str(telegram.last_poll_error, 'telegram.last_poll_error'),
     },
+    ownerBound: root.owner_bound === true,
+    defaultUserId: typeof root.default_user_id === 'string' ? root.default_user_id : null,
     robots: root.robots.map((item, i) => {
       const robot = obj(item, `status.robots[${i}]`);
       const data = robot.data === undefined ? null : obj(robot.data, `status.robots[${i}].data`);
@@ -284,4 +288,110 @@ export function parseStationHits(value: unknown): StationHit[] {
       detail: o.detail == null ? '' : str(o.detail, `stations/search[${i}].detail`),
     };
   });
+}
+
+// --- Chat (Phase 47B5) ---------------------------------------------------------------------
+
+export interface SearchSource {
+  title: string;
+  url: string;
+  snippet: string;
+  source_domain: string;
+}
+
+export interface WebSearch {
+  query: string;
+  failed: boolean;
+  results: SearchSource[];
+}
+
+export interface ChatRecord {
+  id: string;
+  user_id: string;
+  title: string;
+  updated_at: string;
+}
+
+export interface ChatTurn {
+  id: string;
+  text: string;
+  reply: string | null;
+  status: string; // 'pending' | 'complete' | 'unknown'
+  web_search: WebSearch | null;
+}
+
+export interface ChatDetail extends ChatRecord {
+  turns: ChatTurn[];
+}
+
+export interface MessageResult {
+  reply: string;
+  web_search: WebSearch | null;
+  context_meeting: string | null;
+}
+
+export interface SessionInfo {
+  interaction_mode: string;
+  dnd: boolean;
+  active_channel: string;
+}
+
+function parseWebSearch(value: unknown, what: string): WebSearch | null {
+  if (value == null) return null;
+  const o = obj(value, what);
+  return {
+    query: str(o.query, `${what}.query`),
+    failed: o.failed == null ? false : bool(o.failed, `${what}.failed`),
+    results: list(o.results ?? [], `${what}.results`).map((item, i) => {
+      const r = obj(item, `${what}.results[${i}]`);
+      const text = (key: string) => (r[key] == null ? '' : str(r[key], `${what}.results[${i}].${key}`));
+      return { title: text('title'), url: text('url'), snippet: text('snippet'), source_domain: text('source_domain') };
+    }),
+  };
+}
+
+export function parseChatRecord(value: unknown, what = 'chat'): ChatRecord {
+  const o = obj(value, what);
+  return {
+    id: str(o.id, `${what}.id`),
+    user_id: str(o.user_id, `${what}.user_id`),
+    title: str(o.title, `${what}.title`),
+    updated_at: str(o.updated_at, `${what}.updated_at`),
+  };
+}
+export const parseChatRecords = (value: unknown): ChatRecord[] => list(value, 'chats').map((v, i) => parseChatRecord(v, `chats[${i}]`));
+
+export function parseChatDetail(value: unknown): ChatDetail {
+  const o = obj(value, 'chat');
+  return {
+    ...parseChatRecord(value),
+    turns: list(o.turns, 'chat.turns').map((item, i) => {
+      const t = obj(item, `chat.turns[${i}]`);
+      return {
+        id: str(t.id, `chat.turns[${i}].id`),
+        text: str(t.text, `chat.turns[${i}].text`),
+        reply: t.reply == null ? null : str(t.reply, `chat.turns[${i}].reply`),
+        status: str(t.status, `chat.turns[${i}].status`),
+        web_search: parseWebSearch(t.web_search, `chat.turns[${i}].web_search`),
+      };
+    }),
+  };
+}
+
+export function parseMessageResult(value: unknown): MessageResult {
+  const o = obj(value, 'message');
+  return {
+    reply: str(o.reply, 'message.reply'),
+    web_search: parseWebSearch(o.web_search, 'message.web_search'),
+    context_meeting: o.context_meeting == null ? null : str(o.context_meeting, 'message.context_meeting'),
+  };
+}
+
+export function parseSession(value: unknown): SessionInfo {
+  const o = obj(value, 'session');
+  return {
+    interaction_mode: str(o.interaction_mode, 'session.interaction_mode'),
+    dnd: bool(o.dnd, 'session.dnd'),
+    active_channel: str(o.active_channel, 'session.active_channel'),
+  };
 }

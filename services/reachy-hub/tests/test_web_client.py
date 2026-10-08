@@ -65,10 +65,12 @@ OPERATIONS = [
     ("delete", "/planner/alarms/{item_id}"), ("post", "/planner/alarms/stop"),
     ("get", "/planner/stations"), ("post", "/planner/stations"), ("delete", "/planner/stations/{item_id}"),
     ("get", "/planner/stations/search"),
+    ("get", "/chats"), ("post", "/chats"), ("get", "/chats/{chat_id}"), ("delete", "/chats/{chat_id}"),
+    ("post", "/messages"), ("get", "/sessions/{user_id}"),
 ]
 
 
-def make_client() -> TestClient:
+def make_client(**hub_options) -> TestClient:
     core = create_core_app(
         calendar_store=InMemoryCalendarStore(), task_store=InMemoryTaskStore(), planner_store=InMemoryPlannerStore(),
         meeting_store=InMemoryMeetingStore(), run_meeting_worker_task=False, memory_store=InMemoryMemoryStore(),
@@ -84,7 +86,7 @@ def make_client() -> TestClient:
         user_store=users, registry=InMemoryRobotRegistry(), session_store=InMemorySessionStore(),
         audit_log=InMemoryAuditLog(), notification_queue=InMemoryNotificationQueue(),
         run_heartbeat_task=False, run_telegram_poll_task=False,
-        session_secret_key="test-session-secret", remote_ui_token="test-token",
+        session_secret_key="test-session-secret", remote_ui_token="test-token", **hub_options,
         companion_core_client=CompanionCoreClient("http://core", transport=httpx.ASGITransport(app=core)),
         client_factory=lambda url: EmbodimentClient(url, transport=httpx.ASGITransport(app=embodiment)),
     ))
@@ -92,8 +94,8 @@ def make_client() -> TestClient:
     return client
 
 
-def logged_in_client() -> TestClient:
-    client = make_client()
+def logged_in_client(**hub_options) -> TestClient:
+    client = make_client(**hub_options)
     response = client.post("/auth/login", json={"username": "owner", "password": "correct-password"}, headers=CSRF)
     assert response.status_code == 200
     client.post("/robots", json={"robot_id": "desk", "base_url": "http://robot"})
@@ -115,6 +117,8 @@ def seed_planner(client: TestClient) -> None:
     station = client.post("/planner/stations", json={"name": "SWR3", "guide_id": "s24896"}, headers=CSRF).json()
     client.post("/planner/alarms", json={"label": "Wake", "time": "07:30", "repeat": [0, 1, 2, 3, 4], "station_id": station["id"], "volume": 120}, headers=CSRF)
     client.post("/planner/alarms", json={"label": "Chime", "time": "21:00"}, headers=CSRF)
+    chat = client.post("/chats", json={"user_id": "default-user", "title": "Hello there"}, headers=CSRF).json()
+    client.post("/messages", json={"user_id": "default-user", "channel": "web", "text": "what time is it", "input_modality": "text", "chat_id": chat["id"]}, headers=CSRF)
     asyncio.run(client.core.state.planner_store.add_receipt(ActionReceipt(
         action_type="task.created", source_channel="web", object_type="task", fields={"Task": "Water plants"},
     )))
@@ -149,6 +153,7 @@ def shape(value):
 
 
 def snapshot(client: TestClient) -> dict:
+    chat_id = client.get("/chats", params={"user_id": "default-user"}).json()[0]["id"]
     return {
         "auth_me": client.get("/auth/me").json(),
         "status": client.get("/status").json(),
@@ -158,6 +163,10 @@ def snapshot(client: TestClient) -> dict:
         "receipts": client.get("/planner/receipts").json(),
         "alarms": client.get("/planner/alarms").json(),
         "stations": client.get("/planner/stations").json(),
+        "chats": client.get("/chats", params={"user_id": "default-user"}).json(),
+        "chat": client.get(f"/chats/{chat_id}", params={"user_id": "default-user"}).json(),
+        "message": client.post("/messages", json={"user_id": "default-user", "channel": "web", "text": "what time is it", "input_modality": "text", "chat_id": chat_id}, headers=CSRF).json(),
+        "session": client.get("/sessions/default-user").json(),
     }
 
 
@@ -175,7 +184,7 @@ def test_sample_responses_still_match_the_hub():
         for robot in sample["status"]["robots"]:
             robot.pop("data", None)  # embodiment state is the robot's own contract, typed loosely on purpose
     assert shape(live["status"]) == shape(saved["status"])
-    for name in ("tasks", "reminders", "notes", "receipts", "alarms", "stations"):
+    for name in ("tasks", "reminders", "notes", "receipts", "alarms", "stations", "chats", "chat", "message", "session"):
         assert live[name] and saved[name], name  # an empty list would pin no item shape
         assert shape(live[name]) == shape(saved[name]), name
 
@@ -342,6 +351,56 @@ def test_planner_alarms_and_stations_behaviour():
     assert client.delete(f"/planner/stations/{added['id']}", headers=CSRF).json() == {"deleted": True}
     assert client.get("/planner/stations/search", params={"q": "a"}).status_code == 422  # two characters minimum
     assert client.post("/planner/alarms/stop").status_code == 403  # stopping needs the CSRF header like any mutation
+
+
+def test_chat_behaviour():
+    anonymous = make_client()
+    assert anonymous.get("/chats", params={"user_id": "u"}).status_code == 401
+    client = logged_in_client()
+    assert client.post("/chats", json={"user_id": "u", "title": "t"}).status_code == 403
+    created = client.post("/chats", json={"user_id": "mine", "title": "<b>Plan</b>"}, headers=CSRF).json()
+    assert created["title"] == "<b>Plan</b>" and created["user_id"] == "mine"
+    assert client.post("/chats", json={"user_id": "mine", "title": ""}, headers=CSRF).status_code == 422
+    assert client.post("/chats", json={"user_id": "mine", "title": "x" * 121}, headers=CSRF).status_code == 422
+    # Records are per user id: another id sees none of them and cannot open or delete them.
+    assert client.get("/chats", params={"user_id": "other"}).json() == []
+    assert client.get(f"/chats/{created['id']}", params={"user_id": "other"}).status_code == 404
+    assert client.delete(f"/chats/{created['id']}", params={"user_id": "other"}, headers=CSRF).status_code == 404
+    assert client.get("/chats/none", params={"user_id": "mine"}).json() == {"detail": "Chat not found"}
+
+    reply = client.post(
+        "/messages", json={"user_id": "mine", "channel": "web", "text": "what time is it", "input_modality": "text", "chat_id": created["id"]},
+        headers=CSRF,
+    ).json()
+    assert reply["reply"] and reply["active_channel"] == "web" and reply["web_search"] is None and reply["context_meeting"] is None
+    detail = client.get(f"/chats/{created['id']}", params={"user_id": "mine"}).json()
+    assert [t["status"] for t in detail["turns"]] == ["complete"] and detail["turns"][0]["text"] == "what time is it"
+    assert detail["turns"][0]["reply"] == reply["reply"]
+    session = client.get("/sessions/mine").json()
+    assert session["active_channel"] == "web" and session["dnd"] is False and session["interaction_mode"]
+    assert client.get("/sessions/nobody").status_code == 404
+    assert client.post("/messages", json={"user_id": "mine", "channel": "web", "text": "x", "chat_id": created["id"]}).status_code == 403
+
+    assert client.delete(f"/chats/{created['id']}", params={"user_id": "mine"}, headers=CSRF).status_code == 200
+    assert client.get("/chats", params={"user_id": "mine"}).json() == []
+    # Deleting the saved record does not forget the assistant's own session.
+    assert client.get("/sessions/mine").status_code == 200
+
+
+def test_owner_bound_chat_is_limited_to_the_owner_account():
+    """With an accounts service token (the deployed shape) the hub is owner-bound: `/status` says so, and
+    the private work routes need the owner session and the owner's own user id (OWNER_USER_ID, here the default)."""
+    anonymous = make_client(accounts_service_token="svc")
+    assert anonymous.get("/sessions/default-user").status_code == 401
+    assert anonymous.post("/messages", json={"user_id": "default-user", "channel": "web", "text": "x"}, headers=CSRF).status_code == 401
+    client = logged_in_client(accounts_service_token="svc")
+    assert client.get("/status").json()["owner_bound"] is True
+    assert client.get("/sessions/default-user").status_code == 200
+    assert client.get("/sessions/someone-else").status_code == 403
+    refused = client.post("/messages", json={"user_id": "someone-else", "channel": "web", "text": "x"}, headers=CSRF)
+    assert refused.status_code == 403 and refused.json()["detail"] == "This account belongs to the signed-in owner"
+    allowed = client.post("/messages", json={"user_id": "default-user", "channel": "web", "text": "what time is it"}, headers=CSRF)
+    assert allowed.status_code == 200 and allowed.headers["cache-control"] == "no-store"
 
 
 def regenerate() -> None:

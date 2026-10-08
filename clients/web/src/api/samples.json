@@ -1,12 +1,12 @@
 {
   "alarms": [
     {
-      "created_at": "2026-10-08T09:39:59.335718Z",
+      "created_at": "2026-10-08T09:45:51.977095Z",
       "delivery": null,
       "due_at": "2026-10-08T21:00:00Z",
       "enabled": true,
       "fired_at": null,
-      "id": "caa3650c-7135-40e1-8eb5-dfa500303bc6",
+      "id": "72bb1212-d8a1-4c70-bbb1-30204c2f6c4d",
       "label": "Chime",
       "reminder_id": null,
       "repeat": [],
@@ -15,12 +15,12 @@
       "volume": 100
     },
     {
-      "created_at": "2026-10-08T09:39:59.333512Z",
+      "created_at": "2026-10-08T09:45:51.965584Z",
       "delivery": null,
       "due_at": "2026-10-09T07:30:00Z",
       "enabled": true,
       "fired_at": null,
-      "id": "19ab98a9-5313-4f64-838b-b91dd8729e8f",
+      "id": "a2a55b71-53d9-42f0-bdb2-acf000539962",
       "label": "Wake",
       "reminder_id": null,
       "repeat": [
@@ -30,7 +30,7 @@
         3,
         4
       ],
-      "station_id": "37dc3010-6e58-45d8-9082-21b62a52abd9",
+      "station_id": "48006477-17bb-4883-8675-fb4ea3b61a2b",
       "status": "scheduled",
       "volume": 120
     }
@@ -38,24 +38,60 @@
   "auth_me": {
     "username": "owner"
   },
+  "chat": {
+    "created_at": "2026-10-08T09:45:51.990282Z",
+    "id": "30668142-138a-4258-893f-0d1d0873c2b5",
+    "title": "Hello there",
+    "turns": [
+      {
+        "created_at": "2026-10-08T09:45:52.001101Z",
+        "id": "4816f951-27f3-4b86-bb53-9ad82098ae59",
+        "reply": "It's 9:45 AM.",
+        "status": "complete",
+        "text": "what time is it",
+        "web_search": null
+      }
+    ],
+    "updated_at": "2026-10-08T09:45:52.001101Z",
+    "user_id": "default-user"
+  },
+  "chats": [
+    {
+      "created_at": "2026-10-08T09:45:51.990282Z",
+      "id": "30668142-138a-4258-893f-0d1d0873c2b5",
+      "title": "Hello there",
+      "updated_at": "2026-10-08T09:45:52.001101Z",
+      "user_id": "default-user"
+    }
+  ],
+  "message": {
+    "active_channel": "web",
+    "context_meeting": null,
+    "conversation_id": "d821d93c-431d-44a2-98ad-33e480fc91bb",
+    "delivery_channel": "reachy",
+    "privacy": "public",
+    "reply": "It's 9:45 AM.",
+    "session_id": "0bb2f70d-0f93-4e1a-8118-1a1156b0f122",
+    "web_search": null
+  },
   "notes": [
     {
       "body": "milk\neggs",
-      "created_at": "2026-10-08T09:39:59.326770Z",
-      "id": "c3b5e19c-5f8f-4055-967d-9b1e6236bf8a",
+      "created_at": "2026-10-08T09:45:51.936785Z",
+      "id": "bda16c92-dc6b-48d0-92b6-6807164b2710",
       "project_scope": null,
       "sensitivity": "work-private",
       "title": "Groceries",
-      "updated_at": "2026-10-08T09:39:59.326771Z"
+      "updated_at": "2026-10-08T09:45:51.936789Z"
     }
   ],
   "receipts": [
     {
       "action_type": "alarm.delivered",
-      "at": "2026-10-08T09:39:59.336536Z",
+      "at": "2026-10-08T09:45:52.009459Z",
       "failure_reason": "no audio",
       "fields": {},
-      "id": "7a5f5d7b-9838-4725-9a91-04768297be3c",
+      "id": "09250bf1-3d39-44e7-b295-30effa4b7cac",
       "notified_at": null,
       "notify": false,
       "object_id": null,
@@ -65,12 +101,12 @@
     },
     {
       "action_type": "task.created",
-      "at": "2026-10-08T09:39:59.336395Z",
+      "at": "2026-10-08T09:45:52.009054Z",
       "failure_reason": null,
       "fields": {
         "Task": "Water plants"
       },
-      "id": "f77dedc2-75e0-4ddb-ba3f-32f9b2f75a68",
+      "id": "32fa3109-ff45-49fd-bf26-dab7f4c23b8b",
       "notified_at": null,
       "notify": false,
       "object_id": null,
@@ -80,32 +116,32 @@
     },
     {
       "action_type": "alarm.created",
-      "at": "2026-10-08T09:39:59.335737Z",
+      "at": "2026-10-08T09:45:51.977222Z",
       "failure_reason": null,
       "fields": {
         "Label": "Chime",
         "When": "2026-10-08T21:00+00:00"
       },
-      "id": "e5cae2c1-c882-437c-96cb-0366d0baddf3",
+      "id": "aa421bf5-b494-490a-957d-4ec770ad59a5",
       "notified_at": null,
       "notify": false,
-      "object_id": "caa3650c-7135-40e1-8eb5-dfa500303bc6",
+      "object_id": "72bb1212-d8a1-4c70-bbb1-30204c2f6c4d",
       "object_type": "alarm",
       "source_channel": "web",
       "status": "success"
     },
     {
       "action_type": "alarm.created",
-      "at": "2026-10-08T09:39:59.333538Z",
+      "at": "2026-10-08T09:45:51.965695Z",
       "failure_reason": null,
       "fields": {
         "Label": "Wake",
         "When": "2026-10-09T07:30+00:00"
       },
-      "id": "ef7cf5ad-5a53-481f-a171-fd790921b2c7",
+      "id": "e49b2daa-8079-43af-8e21-f061d97dbc73",
       "notified_at": null,
       "notify": false,
-      "object_id": "19ab98a9-5313-4f64-838b-b91dd8729e8f",
+      "object_id": "a2a55b71-53d9-42f0-bdb2-acf000539962",
       "object_type": "alarm",
       "source_channel": "web",
       "status": "success"
@@ -113,10 +149,10 @@
   ],
   "reminders": [
     {
-      "completed_at": "2026-10-08T09:39:59.324354Z",
-      "created_at": "2026-10-08T09:39:59.320318Z",
+      "completed_at": "2026-10-08T09:45:51.932245Z",
+      "created_at": "2026-10-08T09:45:51.924747Z",
       "due_at": "2030-01-02T09:00:00Z",
-      "id": "dff45bfb-3365-4620-aaa4-0ae608ebb830",
+      "id": "2f112209-ca0f-4291-a32b-1c7be69e6218",
       "notified_at": null,
       "sensitivity": "work-private",
       "status": "done",
@@ -124,20 +160,32 @@
     },
     {
       "completed_at": null,
-      "created_at": "2026-10-08T09:39:59.322447Z",
+      "created_at": "2026-10-08T09:45:51.928865Z",
       "due_at": "2030-02-02T09:00:00Z",
-      "id": "baf1cc6a-aefd-4667-91ef-94d10e233218",
+      "id": "1ebd0845-dd25-4214-9ec9-2d909483c91e",
       "notified_at": null,
       "sensitivity": "work-private",
       "status": "pending",
       "text": "Book club"
     }
   ],
+  "session": {
+    "active_channel": "web",
+    "conversation_id": "d821d93c-431d-44a2-98ad-33e480fc91bb",
+    "created_at": "2026-10-08T09:45:52.001279Z",
+    "dnd": false,
+    "interaction_mode": "desk",
+    "last_active_at": "2026-10-08T09:45:52.001279Z",
+    "last_interruption_at": null,
+    "privacy_context": "unknown",
+    "session_id": "0bb2f70d-0f93-4e1a-8118-1a1156b0f122",
+    "user_id": "default-user"
+  },
   "stations": [
     {
-      "created_at": "2026-10-08T09:39:59.330843Z",
+      "created_at": "2026-10-08T09:45:51.954433Z",
       "guide_id": "s24896",
-      "id": "37dc3010-6e58-45d8-9082-21b62a52abd9",
+      "id": "48006477-17bb-4883-8675-fb4ea3b61a2b",
       "name": "SWR3"
     }
   ],
@@ -214,9 +262,9 @@
   },
   "tasks": [
     {
-      "completed_at": "2026-10-08T09:39:59.315752Z",
-      "created_at": "2026-10-08T09:39:59.313681Z",
-      "id": "2a6610bc-cc39-4be3-88fe-c3eaa7d6df3f",
+      "completed_at": "2026-10-08T09:45:51.915860Z",
+      "created_at": "2026-10-08T09:45:51.913709Z",
+      "id": "0504a7cb-2c09-4f02-8197-de749f8fdaef",
       "project_scope": null,
       "sensitivity": "work-private",
       "status": "done",
@@ -224,8 +272,8 @@
     },
     {
       "completed_at": null,
-      "created_at": "2026-10-08T09:39:59.317910Z",
-      "id": "4c0f5c72-833b-41df-8261-e8a4922133a4",
+      "created_at": "2026-10-08T09:45:51.919936Z",
+      "id": "4452aae8-a0c7-4a80-a8ac-edc11a9c3ea9",
       "project_scope": null,
       "sensitivity": "work-private",
       "status": "open",

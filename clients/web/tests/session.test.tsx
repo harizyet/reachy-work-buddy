@@ -218,3 +218,60 @@ describe('Notes editor and logout', () => {
     await waitFor(() => expect(hub.calls).toContain('PUT /planner/notes/n1'));
   });
 });
+
+describe('Chat and logout', () => {
+  const chatHub = () =>
+    createFakeHub({
+      status: { ...SAMPLE_STATUS, default_user_id: 'owner-user' },
+      chats: [{ id: 'c1', user_id: 'owner-user', title: SECRET, created_at: '2030-01-01T00:00:00Z', updated_at: '2030-01-01T00:00:00Z', turns: [] }],
+    });
+  const box = () => screen.getByRole('textbox', { name: 'Message' });
+
+  it('a reply that arrives after logout is not shown, even after signing back in', async () => {
+    const hub = chatHub();
+    const post = hub.hold((c) => c === 'POST /messages', { ignoreAbort: true });
+    renderApp('#/chat');
+    const user = setup();
+    await waitFor(() => expect(box()).toBeEnabled());
+    await user.type(box(), 'private question{Enter}');
+    await waitFor(() => expect(post).toHaveLength(1));
+    await logout(user);
+    hub.release((c) => c === 'POST /messages');
+    await act(async () => post[0]!.resolve(jsonResponse({ reply: 'SECRET-REPLY', web_search: null, context_meeting: null })));
+    await wait(50);
+    expect(screen.getByRole('heading', { name: 'Sign in to Reachy' })).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/SECRET-REPLY|private question/);
+
+    await signInAgain(user);
+    await user.click(await screen.findByRole('link', { name: 'Chat' }));
+    await waitFor(() => expect(box()).toBeEnabled());
+    expect(document.body.textContent).not.toMatch(/SECRET-REPLY|private question/);
+  });
+
+  it('chat history requested before logout never reaches the next session', async () => {
+    const hub = chatHub();
+    const list = hub.hold((c) => c.startsWith('GET /chats?'), { ignoreAbort: true });
+    const { client } = renderApp('#/chat');
+    const user = setup();
+    await waitFor(() => expect(list).toHaveLength(1));
+    await logout(user);
+    hub.release((c) => c.startsWith('GET /chats?'));
+    await act(async () => list[0]!.resolve(jsonResponse(hub.data.chats.map(({ turns: _t, ...c }) => c))));
+    await wait(50);
+    expect(document.body.textContent).not.toContain(SECRET);
+    expect(cachedData(client)).toHaveLength(0);
+  });
+
+  it('a message typed but not sent is gone after logout and sign-in', async () => {
+    chatHub();
+    renderApp('#/chat');
+    const user = setup();
+    await waitFor(() => expect(box()).toBeEnabled());
+    await user.type(box(), 'half-written secret');
+    await logout(user);
+    await signInAgain(user);
+    await user.click(await screen.findByRole('link', { name: 'Chat' }));
+    await waitFor(() => expect(box()).toBeEnabled());
+    expect(box()).toHaveValue('');
+  });
+});

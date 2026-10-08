@@ -160,6 +160,54 @@ for (const mount of MOUNTS) {
       await expect(page.getByText(label)).toHaveCount(0);
     });
 
+    test('Chat: owner-bound (no user form), send, reply, saved record reopens, delete after confirmation', async ({ page }) => {
+      const question = 'what time is it'; // the hub answers a clock question itself, so no model is involved
+      await signIn(page, mount.url, '#/chat');
+      await expect(page.getByLabel('User ID')).toHaveCount(0);
+      await expect(page.getByText(/User: default-user/)).toBeVisible();
+      await page.getByRole('button', { name: /New chat record/ }).click();
+      await page.getByRole('textbox', { name: 'Message' }).fill(question);
+      await page.getByRole('button', { name: 'Send' }).click();
+      await expect(page.getByRole('log').getByText(question)).toBeVisible();
+      await expect(page.getByRole('log').locator('article').nth(1)).toContainText(/\d+:\d+/);
+      await expect(page.getByText(/Active channel: web/)).toBeVisible();
+
+      await page.reload();
+      // The newest saved chat reopens by itself.
+      await expect(page.getByRole('log').getByText(question)).toBeVisible();
+      await page.getByRole('button', { name: `Delete chat: ${question}` }).click();
+      await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
+      await expect(page.getByRole('button', { name: `Delete chat: ${question}` })).toBeVisible();
+      await page.getByRole('button', { name: `Delete chat: ${question}` }).click();
+      await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+      await expect(page.getByRole('button', { name: `Delete chat: ${question}` })).toHaveCount(0);
+      expect(await page.evaluate(() => JSON.stringify(localStorage) + JSON.stringify(sessionStorage))).toBe('{}{}');
+    });
+
+    test('a reply requested before logout is cancelled and never shown', async ({ page }) => {
+      const question = `slow question ${run}`;
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      let cancelled = false;
+      page.on('requestfailed', (request) => { if (request.url().endsWith('/messages')) cancelled = true; });
+      await signIn(page, mount.url, '#/chat');
+      await page.route('**/messages', async (route) => {
+        await gate;
+        await route.fulfill({ json: { reply: `SECRET-REPLY-${run}`, web_search: null, context_meeting: null } }).catch(() => undefined);
+      });
+      await page.getByRole('button', { name: /New chat record/ }).click();
+      await page.getByRole('textbox', { name: 'Message' }).fill(question);
+      await page.getByRole('button', { name: 'Send' }).click();
+      await expect(page.getByRole('log').getByText(question)).toBeVisible();
+      await page.getByRole('button', { name: 'Log out' }).click();
+      await expect(page.getByRole('heading', { name: 'Sign in to Reachy' })).toBeVisible();
+      release();
+      await page.waitForTimeout(300);
+      await expect(page.getByText(`SECRET-REPLY-${run}`)).toHaveCount(0);
+      await expect(page.getByText(question)).toHaveCount(0);
+      expect(cancelled).toBe(true);
+    });
+
     test('Activity: shows the hub receipts, failed ones struck through, text literal', async ({ page }) => {
       await signIn(page, mount.url, '#/activity');
       await expect(page.getByRole('heading', { name: 'Recent activity' })).toBeVisible();
@@ -196,7 +244,7 @@ for (const mount of MOUNTS) {
 
     test('pages fit the viewport; Notes works as list then editor then back on a narrow screen', async ({ page }, info) => {
       await signIn(page, mount.url);
-      for (const hash of ['#/todo', '#/reminders', '#/notes', '#/activity', '#/alarms']) {
+      for (const hash of ['#/todo', '#/reminders', '#/notes', '#/activity', '#/alarms', '#/chat']) {
         await page.goto(mount.url + hash);
         await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
