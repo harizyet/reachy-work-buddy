@@ -42,6 +42,10 @@ The indexer's two extra connections (pools `1..2`) are what the first trial's fi
 - **Reconciliation against the authoritative stores:** 1 source, 80 rows expected, 80 indexed, 0 missing, 0 extra, 0 stale versions, 0 rows from another embedding model, 0 orphan sources. Identical after the flag was restored. The worker's own start-up reconcile found no drift (the outbox stayed empty and the index count did not move).
 - **Retrieval-time revalidation on the live index (library call in the container; no route, no flag, nothing given to the assistant):** owner on a private channel got the meeting for "meeting summary" and "decisions and action items", work-private and local-only; a query with no match ("budget") returned nothing; a shared (non-private) channel got nothing; with the index pre-filter switched off for a shared channel, the one candidate was dropped `over_ceiling` and none returned.
 
+## Acceptance (owner, 2026-10-08)
+
+Recorded as **passed** for: connection stability, PgBouncer behaviour, source consistency and access filtering, under an idle indexer. Production indexing stays disabled. **A separate production indexing-workload acceptance gate remains open:** the real MiniLM load and the outbox claim, lease and complete path have not run on production. It is to be satisfied by a real write once indexing is separately approved, never by a direct outbox insert or any bypass of the session's permission rules.
+
 ## Limits (what this does not show)
 
 1. **The worker did no work.** The index was already complete, so the claim, lease and complete cycle and the embedding model were not exercised on production in this trial; core never loaded MiniLM (hence 280 MB). I attempted to enqueue the existing meeting by a direct insert into `knowledge_outbox` to exercise the claim path; the action was denied by the session's permission classifier and not retried or worked around. The claim, upsert and delete paths are covered by the 44B tests, the restored-copy rehearsal and the [contention test](phase-44b-contention-result-2026-10-08.md); a real write (a new meeting, memory or document) will exercise them once indexing is on.

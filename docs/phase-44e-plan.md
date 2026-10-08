@@ -13,6 +13,17 @@ Not in 44E: turning retrieval on for the live assistant (that is a separate owne
 - **Retrieval configuration.** 44D left B1a (lexical) and B1b (hybrid) as candidates with no statistical difference on the frozen holdout (recall@5 0.83 against 0.86; paired p=1.0), B1b costing several times the CPU and latency. 44E carries both through the answer-quality study and the owner picks one (or none) from that evidence. B1c is excluded.
 - **Decisions needed from the owner before code** (proposals in brackets): token budget for the retrieved block [1,500 tokens for FAST and DEEP, the cloud tier smaller or equal, never larger]; delimiter and role placement [a fenced block in the user turn labelled as data, tested against the injection set; the system prompt states that it is data]; how long the shadow state runs before enabling [at least two weeks of real use, or a fixed number of knowledge questions]; whether a spoken answer may cite sources aloud [as a short "from your 3 March meeting" phrase, text keeps full citations].
 
+## 2a. Owner decisions (2026-10-08, evening) and scope
+
+1. **Budget:** at most 1,500 tokens for FAST and DEEP; development benchmarks compare 500, 1,000 and 1,500.
+2. **Placement:** a separate, explicitly delimited, lower-trust evidence message; never the system prompt or persona instructions. Deterministic authorisation and injection boundaries are unchanged.
+3. **Cloud:** no owner-private or local-only knowledge goes to a cloud model during 44E evaluation.
+4. **Citations:** full evidence references in text; a short natural-language source attribution in voice when useful.
+5. **Shadow-mode promotion:** at least 14 days and 50 qualifying knowledge queries, and explicit owner approval.
+6. **Retrieval compared:** B1a and B1b end to end; B1c stays excluded.
+
+Scope: builder, harness, tests and development benchmarks with the local 7B on synthetic evidence in a scratch database. Not in scope: retrieval in production conversations, permanent production indexing, 44C entities, 44F extraction. A new frozen holdout is not consumed until the owner has reviewed its composition, labels, scoring and locked configuration. The work stops at the 44E acceptance gate.
+
 ## 3. The context builder
 
 A pure function from a `ContextBundle` (already access-checked and revalidated by 44D) and a budget to a rendered block plus a manifest. It owns no retrieval logic and never reads a store.
