@@ -33,6 +33,27 @@ services:
       timeout: 3s
       retries: 10
 
+  # Phase 45B: PgBouncer in front of PostgreSQL (transaction pooling). In the "pooler" profile, so a normal `up` neither starts nor needs it
+  # until the 45E cutover points the applications at it (DB_HOST=pgbouncer DB_PORT=6432 DB_PREPARE_THRESHOLD=off in .env). Migrations, key
+  # rotation and recovery always use postgres:5432 directly. Create the auth file first: ./pgbouncer/make-userlist.sh
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.25.2-p0@sha256:7d7a27d9e90985cab5cf42256f5c13a3120baa4b055b69df37beb272b89b2340
+    profiles: ["pooler"]
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./.env.pgbouncer-userlist:/etc/pgbouncer/userlist.txt:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -q"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    cpus: 1
+    mem_limit: 256m
+
   mailpit:
     # Phase 14's SMTP target — a real local SMTP server (real protocol
     # handshake) with a web UI to inspect what got "sent", so the send
@@ -278,7 +299,9 @@ services:
       # companion-core's SECRET_KEY_FILE below, reused rather than
       # duplicated — see docs/deployment.md#key-provisioning.
       SECRET_KEY_FILE: /run/secrets/credential_keys
-      DATABASE_URL: postgresql://${POSTGRES_USER:-reachy}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-reachy_hub}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-reachy}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@${DB_HOST:-postgres}:${DB_PORT:-5432}/${POSTGRES_DB:-reachy_hub}
+      DB_PREPARE_THRESHOLD: ${DB_PREPARE_THRESHOLD:-}
+      DB_POOL_MAX_SIZE: ${DB_POOL_MAX_SIZE:-8}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       SESSION_SECRET_KEY: ${SESSION_SECRET_KEY:-}
@@ -383,7 +406,9 @@ services:
       # Shares the same Postgres instance as reachy-hub, different tables
       # (a single-tenant homelab has no reason to run two database
       # containers).
-      DATABASE_URL: postgresql://${POSTGRES_USER:-reachy}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-reachy_hub}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-reachy}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@${DB_HOST:-postgres}:${DB_PORT:-5432}/${POSTGRES_DB:-reachy_hub}
+      DB_PREPARE_THRESHOLD: ${DB_PREPARE_THRESHOLD:-}
+      DB_POOL_MAX_SIZE: ${DB_POOL_MAX_SIZE:-8}
       # Mailpit is simulation-only; production selects a relay explicitly.
       # Authenticated SMTP requires STARTTLS and resolves a core SecretStore
       # reference or an explicit environment bootstrap password.
@@ -490,7 +515,9 @@ services:
       - coding_agent_credential_key
     environment:
       CODING_AGENT_SERVICE_TOKEN: ${CODING_AGENT_SERVICE_TOKEN:?set CODING_AGENT_SERVICE_TOKEN in .env}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-reachy}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-reachy_hub}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-reachy}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@${DB_HOST:-postgres}:${DB_PORT:-5432}/${POSTGRES_DB:-reachy_hub}
+      DB_PREPARE_THRESHOLD: ${DB_PREPARE_THRESHOLD:-}
+      DB_POOL_MAX_SIZE: ${DB_POOL_MAX_SIZE:-8}
       # 29.19: a separate key file from companion-core/hub's credential_keys
       # secret above — a leaked coding-agent key must not also decrypt
       # Google account credentials, and this service's own

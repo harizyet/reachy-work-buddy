@@ -1,6 +1,6 @@
 # Phase 45: Database connection architecture and pooling
 
-Status: **audit and plan written 2026-10-08; no Phase 45 code beyond the interim helper below; nothing changed on the homelab.** Opened by owner decision on 2026-10-08, after the Phase 44B indexing trial exhausted PostgreSQL's connection limit ([trial record](verification/phase-44b-indexing-trial-2026-10-08.md)). Phase 44 work (44E, 44F, further indexing trials) waits for this phase to reach a stable database layer.
+Status: **audit, plan and disposable-infrastructure implementation done 2026-10-08 (see section 8); nothing changed on the homelab.** Opened by owner decision on 2026-10-08, after the Phase 44B indexing trial exhausted PostgreSQL's connection limit ([trial record](verification/phase-44b-indexing-trial-2026-10-08.md)). Phase 44 work (44E, 44F, further indexing trials) waits for this phase to reach a stable database layer.
 
 ## 1. Owner decisions (2026-10-08)
 
@@ -85,6 +85,19 @@ Before any cutover: a verified `pg_dump` restored into a throwaway database (as 
 
 Replacing PostgreSQL, read replicas, high availability, sharding, and any Phase 44 functionality. Raising `max_connections` is not needed by this design and is not planned; if the evidence shows a need it is a separate decision.
 
-## 8. Status and next step
+## 8. Status, results and recommendation
 
-Done: the audit above and the interim helper (`37c5d0d`). Next: 45A refactor and tests on disposable infrastructure, then 45B to 45D, with the owner reviewing the benchmark before 45E. Phase 44 is paused at the 44B production state: revision `027_knowledge_index`, `KNOWLEDGE_INDEXING_ENABLED=false`, 80 index rows, retrieval off, the 44E and 44F plans retained.
+Status 2026-10-08: **45A, 45B (repository artifacts only), 45C, 45D and 45F are done on disposable infrastructure; 45E (homelab cutover) awaits the owner.** Evidence: [verification record](verification/phase-45-2026-10-08.md). Summary: shared pools alone bring the stack to 12 to 13 backends at rest and 24 under load (92 and 98 today, 101 with the indexer); adding PgBouncer brings it to 8 and 18 with a hard cap, no measurable latency cost, every compatibility case passing, and recovery from PgBouncer and PostgreSQL restarts without manual action and without losing an acknowledged write. Both meet the provisional targets.
+
+Recommendation for 45E, applying the rule written in section 5 (PgBouncer is adopted only if it clearly improves headroom at no compatibility or latency cost): **adopt shared pools and PgBouncer together**, with `DB_PREPARE_THRESHOLD=off` and PgBouncer `max_prepared_statements = 100`. The honest margin is modest at today's single-user load (24 against 18 backends, both far inside 100); the case for PgBouncer is the hard cap and the absorption of future workers, at the price of one more container that must be up for the applications to start. If the owner prefers the smaller system, shared pools alone are sufficient and the pooler stays in its profile.
+
+Two bugs found on the way are fixed (the row-factory leak, `37cef0b`) or recorded (applications run as the superuser; the core has no model-cache volume). Phase 44 stays paused at the 44B production state (revision `027_knowledge_index`, `KNOWLEDGE_INDEXING_ENABLED=false`, 80 index rows, retrieval off, plans for 44E and 44F retained). The homelab runs the old images with the old pools; nothing from this phase is deployed.
+
+## 9. Cutover plan for 45E (for approval, nothing started)
+
+1. Verified `pg_dump` restored into a throwaway database; keyring files copied off-host by the owner; volumes untouched.
+2. Build images from a clean worktree of the pinned commit; tag the running images `reachy-rollback/*:027-pre45`.
+3. Run `./pgbouncer/make-userlist.sh`; start `pgbouncer` (`--profile pooler`); check `SHOW POOLS`.
+4. Stop core, hub, coding-agent; set `DB_HOST=pgbouncer`, `DB_PORT=6432`, `DB_PREPARE_THRESHOLD=off` in `.env`; `up -d` the three; migrations still run direct.
+5. Smoke tests as for 44B plus a connection time series (idle under 15, load under 40) and the failure probe against the live stack with the owner's approval of each fault.
+6. Rollback: unset the three variables and `up -d` (the applications reconnect directly); old images retained.
