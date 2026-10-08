@@ -426,7 +426,7 @@ for (const mount of MOUNTS) {
 
     test('pages fit the viewport; Notes works as list then editor then back on a narrow screen', async ({ page }, info) => {
       await signIn(page, mount.url);
-      for (const hash of ['#/todo', '#/reminders', '#/notes', '#/activity', '#/alarms', '#/chat', '#/meetings', '#/settings/models', '#/settings/search', '#/settings/voice', '#/settings/accounts', '#/settings/recognition', '#/coding']) {
+      for (const hash of ['#/todo', '#/reminders', '#/notes', '#/activity', '#/alarms', '#/chat', '#/meetings', '#/settings/models', '#/settings/search', '#/settings/voice', '#/settings/display', '#/settings/accounts', '#/settings/recognition', '#/coding']) {
         await page.goto(mount.url + hash);
         await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);

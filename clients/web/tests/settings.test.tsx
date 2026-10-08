@@ -15,7 +15,7 @@ describe('Settings navigation', () => {
     renderApp('#/settings');
     const user = setup();
     const tabs = await screen.findAllByRole('tab');
-    expect(tabs.map((t) => t.textContent)).toEqual(['Assistant', 'Models', 'Web search', 'Voice & motion', 'Accounts', 'Owner recognition']);
+    expect(tabs.map((t) => t.textContent)).toEqual(['Assistant', 'Models', 'Web search', 'Voice & motion', 'Display', 'Accounts', 'Owner recognition']);
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
     expect(tabs[1]).toHaveAttribute('tabindex', '-1');
     tabs[0]!.focus();

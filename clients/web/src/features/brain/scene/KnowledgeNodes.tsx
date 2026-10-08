@@ -9,6 +9,8 @@ export interface NodesProps {
   nodes: readonly BrainNode[];
   /** Ids that pass the current search and filters; the rest are dimmed, not removed, so the shape stays readable. */
   visible: ReadonlySet<string>;
+  /** With a real bloom pass the soft halos are mostly redundant, so they are dimmed. */
+  bloom?: boolean;
   selectedId: string | null;
   hoveredId: string | null;
   onSelect(id: string | null): void;
@@ -17,7 +19,7 @@ export interface NodesProps {
 
 // Real records, one instance each. Colours, sizes and dimming are written when the data or the selection changes,
 // never per frame, and the whole set is two draw calls (cores and soft halos).
-export function KnowledgeNodes({ nodes, visible, selectedId, hoveredId, onSelect, onHover }: NodesProps) {
+export function KnowledgeNodes({ nodes, visible, selectedId, hoveredId, onSelect, onHover, bloom = false }: NodesProps) {
   const cores = useRef<THREE.InstancedMesh>(null);
   const halos = useRef<THREE.InstancedMesh>(null);
   const coreGeometry = useMemo(() => new THREE.SphereGeometry(BASE, 12, 8), []);
@@ -61,7 +63,7 @@ export function KnowledgeNodes({ nodes, visible, selectedId, hoveredId, onSelect
   return (
     <group>
       <instancedMesh key={`halo-${nodes.length}`} ref={halos} args={[haloGeometry, undefined, nodes.length]} raycast={() => null} frustumCulled={false}>
-        <meshBasicMaterial transparent opacity={0.1} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} />
+        <meshBasicMaterial transparent opacity={bloom ? 0.04 : 0.1} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} />
       </instancedMesh>
       <instancedMesh
         key={`core-${nodes.length}`}

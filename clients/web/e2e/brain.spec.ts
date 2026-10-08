@@ -238,6 +238,71 @@ test.describe('Brain view', () => {
     expect(result.frames).toBeGreaterThan(10); // the page keeps responding while rendering
   });
 
+  test('the glow (bloom) is on by default, adds render passes, and is switched off in Settings · Display, and the choice sticks', async ({ page }, info) => {
+    await page.addInitScript(INSTRUMENT);
+    await openBrain(page);
+    await expect.poll(() => draws(page)).toBeGreaterThan(20);
+    const perFrame = () =>
+      page.evaluate(
+        () =>
+          new Promise<number>((resolve) => {
+            const w = window as unknown as { __draws: number };
+            const d0 = w.__draws;
+            let frames = 0;
+            const t0 = performance.now();
+            const tick = () => {
+              frames += 1;
+              if (performance.now() - t0 < 1500) requestAnimationFrame(tick);
+              else resolve((w.__draws - d0) / Math.max(1, frames));
+            };
+            requestAnimationFrame(tick);
+          }),
+      );
+    const withBloom = await perFrame();
+
+    await page.getByRole('link', { name: 'Settings' }).click();
+    await page.getByRole('tab', { name: 'Display' }).click();
+    const box = page.getByRole('checkbox', { name: 'Glow effect (bloom)' });
+    await expect(box).toBeChecked();
+    await box.uncheck();
+    await page.getByRole('link', { name: 'Brain' }).click();
+    await expect(page.getByTestId('brain-canvas').locator('canvas')).toBeVisible();
+    await expect.poll(() => draws(page)).toBeGreaterThan(20);
+    const withoutBloom = await perFrame();
+    info.annotations.push({ type: 'measurement', description: `draw calls per animation frame: ${withBloom.toFixed(1)} with bloom, ${withoutBloom.toFixed(1)} without (${info.project.name})` });
+    expect(withBloom).toBeGreaterThan(withoutBloom + 1);
+
+    await page.reload();
+    await page.getByRole('link', { name: 'Settings' }).click();
+    await page.getByRole('tab', { name: 'Display' }).click();
+    await expect(page.getByRole('checkbox', { name: 'Glow effect (bloom)' })).not.toBeChecked();
+    await page.getByRole('checkbox', { name: 'Glow effect (bloom)' }).check(); // leave it on for the other tests
+  });
+
+  test('with the glow on, the picture is not blank', async ({ page }) => {
+    await page.addInitScript(INSTRUMENT);
+    await openBrain(page);
+    await expect.poll(() => draws(page)).toBeGreaterThan(20);
+    const lit = await page.evaluate(
+      () =>
+        new Promise<number>((resolve) => {
+          requestAnimationFrame(() => {
+            const gl = document.querySelector<HTMLCanvasElement>('[data-testid=brain-canvas] canvas')!;
+            const copy = document.createElement('canvas');
+            copy.width = 160;
+            copy.height = 100;
+            const ctx = copy.getContext('2d')!;
+            ctx.drawImage(gl, 0, 0, 160, 100);
+            const px = ctx.getImageData(0, 0, 160, 100).data;
+            let n = 0;
+            for (let i = 0; i < px.length; i += 4) if (px[i]! + px[i + 1]! + px[i + 2]! > 60) n += 1;
+            resolve(n);
+          });
+        }),
+    );
+    expect(lit).toBeGreaterThan(40);
+  });
+
   test('fits the screen without horizontal scrolling', async ({ page }) => {
     await openBrain(page);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);

@@ -5,6 +5,7 @@ import { ModelsTab } from './ModelsTab';
 import { RecognitionTab } from '../recognition/RecognitionTab';
 import { AccountsTab } from '../accounts/AccountsTab';
 import { SearchTab } from './SearchTab';
+import { DisplayTab } from './DisplayTab';
 import { VoiceTab } from './VoiceTab';
 
 export interface SettingsTab {
@@ -18,6 +19,7 @@ const TABS: SettingsTab[] = [
   { id: 'models', label: 'Models', panel: <ModelsTab /> },
   { id: 'search', label: 'Web search', panel: <SearchTab /> },
   { id: 'voice', label: 'Voice & motion', panel: <VoiceTab /> },
+  { id: 'display', label: 'Display', panel: <DisplayTab /> },
   { id: 'accounts', label: 'Accounts', panel: <AccountsTab /> },
   { id: 'recognition', label: 'Owner recognition', panel: <RecognitionTab /> },
 ];

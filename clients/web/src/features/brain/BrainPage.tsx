@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { EmptyState, ErrorState } from '../../components/shared/states';
 import { Button } from '../../components/ui/Button';
+import { useBloom } from '../../app/displayPrefs';
 import { Check, selectClass } from '../settings/fields';
 import { ALL_TYPES, SOURCE_COLOR, SOURCE_LABEL, SOURCE_TYPES, applyFilters, type BrainEdge, type BrainNode, type BrainSource, type SourceType } from './model';
 import { createSyntheticSource } from './synthetic';
@@ -22,6 +23,7 @@ export default function BrainPage({ source: given }: { source?: BrainSource }) {
   const [showAllLinks, setShowAllLinks] = useState(false);
   const [resetToken, setResetToken] = useState(0);
   const [reducedMotion] = useState(prefersReducedMotion);
+  const [bloom] = useBloom(); // changed under Settings · Display
   const [webgl] = useState(webglAvailable);
   const [detail, setDetail] = useState<Detail>(() => defaultDetail(window.innerWidth, prefersReducedMotion()));
 
@@ -70,6 +72,7 @@ export default function BrainPage({ source: given }: { source?: BrainSource }) {
                       selectedId={selectedId}
                       particleCount={PARTICLES[detail]}
                       showAllLinks={showAllLinks}
+                      bloom={bloom}
                       reducedMotion={reducedMotion}
                       resetToken={resetToken}
                       onSelect={setSelectedId}
