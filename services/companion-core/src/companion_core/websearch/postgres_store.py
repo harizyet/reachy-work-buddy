@@ -1,4 +1,3 @@
-from psycopg_pool import AsyncConnectionPool
 from pydantic import ValidationError
 
 from companion_core.secrets import (
@@ -8,7 +7,7 @@ from companion_core.secrets import (
     SecretUnavailable,
 )
 from companion_core.websearch.store import merge_search_config
-from shared.database import check_schema
+from shared.database import check_schema, connection_pool
 from shared.models.websearch import (
     HostedSearchProvider,
     SearchConfig,
@@ -26,7 +25,7 @@ class PostgresSearchSettingsStore:
     @classmethod
     async def connect(cls, dsn: str, *, keyring: Keyring | None = None):
         secrets = PostgresSecretStore(keyring or Keyring.from_file())
-        pool = AsyncConnectionPool(dsn, open=False)
+        pool = connection_pool(dsn)
         await pool.open()
         try:
             async with pool.connection() as conn:

@@ -14,7 +14,7 @@ from pgvector.psycopg import register_vector_async
 from psycopg_pool import AsyncConnectionPool
 
 from companion_core.knowledge.sources import Indexable
-from shared.database import check_schema
+from shared.database import check_schema, connection_pool
 from shared.models.response import Privacy
 
 
@@ -116,7 +116,7 @@ class PostgresKnowledgeIndex:
             await check_schema(conn)
         # Small on purpose: the stack shares one PostgreSQL (max_connections 100) and every other store already holds a pool of 4. The
         # 2026-10-08 trial hit "too many clients" with default pools; the indexer is background work and needs one or two.
-        pool = AsyncConnectionPool(dsn, open=False, min_size=1, max_size=2, configure=register_vector_async)
+        pool = connection_pool(dsn, max_size=2, configure=register_vector_async)
         await pool.open()
         return cls(pool)
 

@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from psycopg_pool import AsyncConnectionPool
 
 from reachy_hub.notification_queue import QueuedNotification
-from shared.database import check_schema
+from shared.database import check_schema, connection_pool
 from shared.models.response import Privacy, Urgency
 
 _COLUMNS = "id, user_id, text, privacy, urgency, source_event_id, created_at"
@@ -33,7 +33,7 @@ class PostgresNotificationQueue:
 
     @classmethod
     async def connect(cls, dsn: str) -> PostgresNotificationQueue:
-        pool = AsyncConnectionPool(dsn, open=False)
+        pool = connection_pool(dsn)
         await pool.open()
         store = cls(pool)
         async with pool.connection() as conn:

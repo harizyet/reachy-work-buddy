@@ -17,7 +17,7 @@ from psycopg_pool import AsyncConnectionPool
 from companion_core.rag.chunking import split_into_chunks
 from companion_core.rag.embeddings import embed
 from companion_core.rag.store import EmbedFn
-from shared.database import check_schema
+from shared.database import check_schema, connection_pool
 from shared.models.rag import DocumentChunk, RetrievedChunk
 from shared.models.response import Privacy
 
@@ -50,7 +50,7 @@ class PostgresDocumentStore:
         # Check before vector registration so unversioned databases fail clearly.
         async with await psycopg.AsyncConnection.connect(dsn, connect_timeout=10) as conn:
             await check_schema(conn)
-        pool = AsyncConnectionPool(dsn, open=False, configure=register_vector_async)
+        pool = connection_pool(dsn, configure=register_vector_async)
         await pool.open()
         store = cls(pool, embed_fn=embed_fn)
         async with pool.connection() as conn:

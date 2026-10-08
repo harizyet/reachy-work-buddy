@@ -8,9 +8,8 @@ this store only checks the revision and never runs DDL.
 from __future__ import annotations
 
 from psycopg.types.json import Jsonb
-from psycopg_pool import AsyncConnectionPool
 
-from shared.database import check_schema
+from shared.database import check_schema, connection_pool
 from shared.models.coding_agent import (
     CodingAgentEvent,
     CodingAgentSession,
@@ -29,7 +28,7 @@ class PostgresCodingAgentStore:
     def __init__(self, dsn: str) -> None:
         # open=False: constructing the app must not need a reachable
         # database or a running event loop; open() runs in the app lifespan.
-        self._pool = AsyncConnectionPool(dsn, open=False)
+        self._pool = connection_pool(dsn)
 
     async def open(self) -> None:
         await self._pool.open()

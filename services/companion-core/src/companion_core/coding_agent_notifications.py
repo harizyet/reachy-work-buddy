@@ -17,7 +17,7 @@ from typing import Protocol
 
 from psycopg_pool import AsyncConnectionPool
 
-from shared.database import check_schema
+from shared.database import check_schema, connection_pool
 
 
 class CodingAgentNotificationStore(Protocol):
@@ -44,7 +44,7 @@ class PostgresCodingAgentNotificationStore:
 
     @classmethod
     async def connect(cls, dsn: str) -> PostgresCodingAgentNotificationStore:
-        pool = AsyncConnectionPool(dsn, open=False)
+        pool = connection_pool(dsn)
         await pool.open()
         try:
             async with pool.connection() as conn:

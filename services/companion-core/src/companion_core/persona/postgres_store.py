@@ -1,7 +1,6 @@
-from psycopg_pool import AsyncConnectionPool
 
 from companion_core.persona.store import merge_persona
-from shared.database import check_schema
+from shared.database import check_schema, connection_pool
 from shared.models.persona import PersonaConfig, PersonaPatch
 
 _FIELDS = ("name", "system_prompt", "location", "timezone", "tone")
@@ -14,7 +13,7 @@ class PostgresPersonaStore:
 
     @classmethod
     async def connect(cls, dsn: str):
-        pool = AsyncConnectionPool(dsn, open=False)
+        pool = connection_pool(dsn)
         await pool.open()
         try:
             async with pool.connection() as conn:

@@ -10,7 +10,7 @@ from __future__ import annotations
 from psycopg_pool import AsyncConnectionPool
 
 from reachy_hub.robot_registry import Robot
-from shared.database import check_schema
+from shared.database import check_schema, connection_pool
 
 _UPSERT_SQL = """
 INSERT INTO robots (robot_id, base_url) VALUES (%s, %s)
@@ -24,7 +24,7 @@ class PostgresRobotRegistry:
 
     @classmethod
     async def connect(cls, dsn: str) -> PostgresRobotRegistry:
-        pool = AsyncConnectionPool(dsn, open=False)
+        pool = connection_pool(dsn)
         await pool.open()
         registry = cls(pool)
         async with pool.connection() as conn:

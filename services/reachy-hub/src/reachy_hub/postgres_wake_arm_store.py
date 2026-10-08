@@ -5,7 +5,7 @@ from __future__ import annotations
 from psycopg_pool import AsyncConnectionPool
 
 from reachy_hub.wake_arm_store import WakeArm
-from shared.database import check_schema
+from shared.database import check_schema, connection_pool
 
 _COLUMNS = "robot_id, user_id, arm_id, armed_at"
 _UPSERT_SQL = f"""
@@ -21,7 +21,7 @@ class PostgresWakeArmStore:
 
     @classmethod
     async def connect(cls, dsn: str) -> PostgresWakeArmStore:
-        pool = AsyncConnectionPool(dsn, open=False)
+        pool = connection_pool(dsn)
         await pool.open()
         store = cls(pool)
         async with pool.connection() as conn:

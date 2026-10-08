@@ -2,10 +2,9 @@
 from contextlib import asynccontextmanager
 
 from psycopg.types.json import Jsonb
-from psycopg_pool import AsyncConnectionPool
 
 from companion_core.secrets import Keyring, PostgresSecretStore
-from shared.database import check_schema
+from shared.database import check_schema, connection_pool
 
 FLOW_COLUMNS = ("state_hash", "owner", "binding_hash", "capability", "generation",
                 "expires_at", "verifier_ref", "code_ref", "error", "returned", "client_type")
@@ -32,7 +31,7 @@ class PostgresAccountRepository:
 
     @classmethod
     async def connect(cls, dsn, *, keyring=None):
-        pool = AsyncConnectionPool(dsn, open=False)
+        pool = connection_pool(dsn)
         await pool.open()
         try:
             async with pool.connection() as conn:

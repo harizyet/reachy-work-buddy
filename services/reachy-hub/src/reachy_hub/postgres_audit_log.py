@@ -5,7 +5,7 @@ from __future__ import annotations
 from psycopg_pool import AsyncConnectionPool
 
 from reachy_hub.audit_log import AuditEntry, _new_entry
-from shared.database import check_schema
+from shared.database import check_schema, connection_pool
 from shared.models.interruption import InterruptionAction
 from shared.models.response import Privacy
 from shared.models.session import Channel, InteractionMode
@@ -40,7 +40,7 @@ class PostgresAuditLog:
 
     @classmethod
     async def connect(cls, dsn: str) -> PostgresAuditLog:
-        pool = AsyncConnectionPool(dsn, open=False)
+        pool = connection_pool(dsn)
         await pool.open()
         log = cls(pool)
         async with pool.connection() as conn:

@@ -14,7 +14,7 @@ from typing import Protocol
 
 from psycopg_pool import AsyncConnectionPool
 
-from shared.database import check_schema
+from shared.database import check_schema, connection_pool
 
 MAX_ATTEMPTS = 8
 
@@ -126,7 +126,7 @@ class PostgresOutbox:
 
     @classmethod
     async def connect(cls, dsn: str) -> PostgresOutbox:
-        pool = AsyncConnectionPool(dsn, open=False, min_size=1, max_size=2)  # small on purpose; see PostgresKnowledgeIndex.connect
+        pool = connection_pool(dsn, max_size=2)  # small on purpose; see PostgresKnowledgeIndex.connect
         await pool.open()
         async with pool.connection() as conn:
             await check_schema(conn)

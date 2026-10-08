@@ -30,7 +30,7 @@ from companion_core.meetings.models import (
     MeetingOutput,
 )
 from companion_core.meetings.store import MeetingNotCancellableError
-from shared.database import check_schema
+from shared.database import check_schema, connection_pool
 from shared.models.response import Privacy
 
 _COLUMNS = (
@@ -82,7 +82,7 @@ class PostgresMeetingStore:
     @classmethod
     async def connect(cls, dsn: str, *, audio_dir: str | Path | None = None) -> PostgresMeetingStore:
         resolved_dir = Path(audio_dir or os.environ.get("MEETING_AUDIO_DIR") or "./data/meeting-audio")
-        pool = AsyncConnectionPool(dsn, open=False)
+        pool = connection_pool(dsn)
         await pool.open()
         store = cls(pool, resolved_dir)
         async with pool.connection() as conn:

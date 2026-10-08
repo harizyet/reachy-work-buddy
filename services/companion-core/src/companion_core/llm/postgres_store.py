@@ -2,7 +2,6 @@ from datetime import datetime
 
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
-from psycopg_pool import AsyncConnectionPool
 from pydantic import ValidationError
 
 from companion_core.llm.store import merge_config, summarize
@@ -12,7 +11,7 @@ from companion_core.secrets import (
     SecretContext,
     SecretUnavailable,
 )
-from shared.database import check_schema
+from shared.database import check_schema, connection_pool
 from shared.models.llm import LLMConfig, LLMConfigPatch, LLMUsageEntry
 
 
@@ -24,7 +23,7 @@ class PostgresLLMSettingsStore:
     @classmethod
     async def connect(cls, dsn: str, *, keyring: Keyring | None = None):
         secrets = PostgresSecretStore(keyring or Keyring.from_file())
-        pool = AsyncConnectionPool(dsn, open=False)
+        pool = connection_pool(dsn)
         await pool.open()
         try:
             async with pool.connection() as conn:
@@ -103,7 +102,7 @@ class PostgresLLMUsageStore:
 
     @classmethod
     async def connect(cls, dsn: str):
-        pool = AsyncConnectionPool(dsn, open=False)
+        pool = connection_pool(dsn)
         await pool.open()
         async with pool.connection() as conn:
             await check_schema(conn)

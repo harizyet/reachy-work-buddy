@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from psycopg_pool import AsyncConnectionPool
 
 from companion_core.email.models import DraftStatus, EmailDraft, EmailMessage
-from shared.database import check_schema
+from shared.database import check_schema, connection_pool
 
 _RECEIVED_COLUMNS = "id, sender, subject, body, received_at"
 _DRAFT_COLUMNS = '"to", subject, body, in_reply_to, status, created_at, approved_at, dispatch_at, sent_at'
@@ -40,7 +40,7 @@ class PostgresEmailStore:
 
     @classmethod
     async def connect(cls, dsn: str) -> PostgresEmailStore:
-        pool = AsyncConnectionPool(dsn, open=False)
+        pool = connection_pool(dsn)
         await pool.open()
         store = cls(pool)
         async with pool.connection() as conn:
