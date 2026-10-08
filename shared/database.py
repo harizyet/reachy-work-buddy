@@ -22,6 +22,9 @@ def connection_pool(dsn: str, *, min_size: int | None = None, max_size: int | No
 
     from psycopg_pool import AsyncConnectionPool
 
+    if os.environ.get("DB_PREPARE_THRESHOLD", "").lower() in ("off", "none", "never"):
+        # Server-side prepared statements live on one backend; behind a transaction-pooling intermediary that does not track them, turn them off.
+        kwargs.setdefault("kwargs", {})["prepare_threshold"] = None
     low = min_size if min_size is not None else int(os.environ.get("DB_POOL_MIN_SIZE", "1"))
     high = max_size if max_size is not None else int(os.environ.get("DB_POOL_MAX_SIZE", "8"))
     return AsyncConnectionPool(
