@@ -90,7 +90,7 @@ async def run(args) -> dict:
                         "evidence_tokens": prep.rendered.tokens if prep.rendered else (llm.count_tokens(prep.text) if prep.text else 0),
                         "finish": done.finish_reason,
                     },
-                    "context": {"text": prep.text, "entries": prep.entries, "dropped": prep.dropped, "candidates": prep.candidates,
+                    "context": {"text": prep.text, "entries": prep.entries, "dropped": prep.dropped, "retrieval_dropped": prep.retrieval_dropped, "candidates": prep.candidates,
                                 "local_only": prep.rendered.local_only if prep.rendered else None,
                                 "max_sensitivity": prep.rendered.max_sensitivity.value if prep.rendered else None},
                 })

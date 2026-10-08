@@ -28,11 +28,11 @@ from companion_core.persona.context import context_message
 from companion_core.semantic.model import SourceFilters
 from kbench.fixtures import meeting_object, parse_ref, source_meta
 from kbench.security import access_context, violations
-
 from shared.models.persona import PersonaConfig
 
 NOW = datetime(2026, 10, 8, 12, 0, tzinfo=UTC)
 CONDITIONS = ("none", "p43", "b1a", "b1b", "oracle", "distractor")
+EXTRA_CONDITIONS = ("b1a_nopre", "b1b_nopre")  # exclusion tests, run on request
 
 
 @dataclass
@@ -46,6 +46,7 @@ class Prepared:
     build_ms: float = 0.0
     candidates: int = 0
     dropped: dict[str, int] = field(default_factory=dict)
+    retrieval_dropped: dict[str, int] = field(default_factory=dict)  # what revalidation refused before the builder saw the bundle
     prompt_violations: list[str] = field(default_factory=list)
     skipped: str | None = None
 
@@ -68,10 +69,14 @@ class Conditions:
         self.embed = minilm_embed
 
     def retriever(self, name: str) -> Retriever:
+        from dataclasses import replace
+
         from companion_core.knowledge.retrieval import B1A, B1B
 
         if name not in self.retrievers:
-            cfg = {"b1a": B1A, "b1b": B1B}[name]
+            base = {"b1a": B1A, "b1b": B1B}[name.removesuffix("_nopre")]
+            # "_nopre": the index pre-filter is off, so revalidation alone has to keep unauthorised rows out (the exclusion test)
+            cfg = replace(base, name=name, prefilter=False) if name.endswith("_nopre") else base
             self.retrievers[name] = Retriever(search=self.env.search, adapters=self.env.adapters, config=cfg, embed_fn=self.embed, clock=lambda: NOW)
         return self.retrievers[name]
 
@@ -128,7 +133,7 @@ class Conditions:
                 prepared.entries = []
                 prepared.has_ids = False
             return prepared
-        if name in ("b1a", "b1b"):
+        if name in ("b1a", "b1b", "b1a_nopre", "b1b_nopre"):
             pinned = None
             if case["attached_meeting"]:
                 pinned = SourceFilters(pinned_sources=frozenset({("meeting", self.env.store_id[f"meeting:{case['attached_meeting']}"])}))
@@ -136,6 +141,7 @@ class Conditions:
             result = await self.retriever(name).retrieve(case["question"], access, pinned, temporal=case["temporal"], limit=10)
             prepared.retrieval_ms = (time.perf_counter() - t) * 1000
             prepared.candidates = len(result.trace.candidates)
+            prepared.retrieval_dropped = dict(result.bundle.dropped)
             pins = pinned.pinned_sources if pinned else frozenset()
             return self._finish(case, prepared, list(result.bundle.items), access, pinned=frozenset(pins), candidates=len(result.bundle.items))
         if name == "oracle":
