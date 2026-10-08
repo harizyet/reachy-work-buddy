@@ -33,12 +33,12 @@ services:
       timeout: 3s
       retries: 10
 
-  # Phase 45B: PgBouncer in front of PostgreSQL (transaction pooling). In the "pooler" profile, so a normal `up` neither starts nor needs it
-  # until the 45E cutover points the applications at it (DB_HOST=pgbouncer DB_PORT=6432 DB_PREPARE_THRESHOLD=off in .env). Migrations, key
-  # rotation and recovery always use postgres:5432 directly. Create the auth file first: ./pgbouncer/make-userlist.sh
+  # Phase 45: PgBouncer in front of PostgreSQL (transaction pooling). The applications reach the database through it when .env sets
+  # DB_HOST=pgbouncer DB_PORT=6432 DB_PREPARE_THRESHOLD=off; with those unset they connect to postgres:5432 directly (the documented rollback).
+  # Migrations, key rotation and recovery always use postgres:5432. No published port: reachable only on the compose network, with credentials.
+  # Create the auth file first: ./pgbouncer/make-userlist.sh (compose would otherwise create a directory in its place).
   pgbouncer:
     image: edoburu/pgbouncer:v1.25.2-p0@sha256:7d7a27d9e90985cab5cf42256f5c13a3120baa4b055b69df37beb272b89b2340
-    profiles: ["pooler"]
     restart: unless-stopped
     depends_on:
       postgres:
@@ -372,6 +372,8 @@ services:
         condition: service_completed_successfully
       postgres:
         condition: service_healthy
+      pgbouncer:
+        condition: service_healthy
     # No depends_on companion-core here: companion-core depends_on
     # reachy-hub already, and Compose doesn't allow a startup cycle. The
     # reachy-hub -> companion-core call only happens per-request (POST
@@ -437,6 +439,7 @@ services:
       # meetings volume below is always mounted, not gated behind an unset
       # env var falling back to in-memory.
       MEETING_AUDIO_DIR: ${MEETING_AUDIO_DIR:-/data/meeting-audio}
+      HF_HOME: /data/model-cache
       MEETING_INFERENCE_TIMEOUT_SECONDS: ${MEETING_INFERENCE_TIMEOUT_SECONDS:-21600}
       # Phase 27.2/27.3 (ADR 0025): the transcription/diarization sidecars'
       # internal DNS names — matching their service names below, so these
@@ -482,11 +485,15 @@ services:
       SHADOW_ROUTER_QUEUE_SIZE: ${SHADOW_ROUTER_QUEUE_SIZE:-0}
     volumes:
       - meeting-audio:/data/meeting-audio
+      # Phase 45E: the sentence-transformers embedding model downloads once and survives container recreation.
+      - model-cache:/data/model-cache
       - shadow-router:/data/shadow-router
     depends_on:
       migrate:
         condition: service_completed_successfully
       postgres:
+        condition: service_healthy
+      pgbouncer:
         condition: service_healthy
       reachy-hub:
         condition: service_started
@@ -547,6 +554,8 @@ services:
         condition: service_completed_successfully
       postgres:
         condition: service_healthy
+      pgbouncer:
+        condition: service_healthy
     expose:
       - "8000"
     # Attaching this service to `restricted-network` is what makes Compose
@@ -590,6 +599,8 @@ volumes:
   # privacy control is about outbound processing (never leaving the
   # homelab by default), not encryption of this volume.
   meeting-audio:
+  # Phase 45E: companion-core's Hugging Face cache (the embedding model), so recreating the container does not download it again.
+  model-cache:
   # Shadow router records (see SHADOW_ROUTER_LOG_PATH above); empty unless the shadow router is enabled. Utterance text only if SHADOW_ROUTER_LOG_TEXT=true.
   shadow-router:
   # Phase 27.3: the diarization service's downloaded HF weights and
