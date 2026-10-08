@@ -123,6 +123,18 @@ class PostgresDocumentStore:
             rows = await cur.fetchall()
         return [RetrievedChunk(chunk=_from_row(row[:_CHUNK_WIDTH]), score=row[_CHUNK_WIDTH]) for row in rows]
 
+    async def get_document(self, document_id: str) -> list[DocumentChunk]:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"SELECT {_COLUMNS} FROM document_chunks WHERE document_id = %s ORDER BY chunk_index", (document_id,)
+            )
+            return [_from_row(row) for row in await cur.fetchall()]
+
+    async def list_document_ids(self) -> list[str]:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute("SELECT DISTINCT document_id FROM document_chunks ORDER BY document_id")
+            return [row[0] for row in await cur.fetchall()]
+
     async def list_documents(self) -> list[str]:
         async with self._pool.connection() as conn:
             cur = await conn.execute("SELECT DISTINCT document_title FROM document_chunks ORDER BY document_title")

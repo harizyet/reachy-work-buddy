@@ -61,6 +61,12 @@ class PostgresTaskStore:
             rows = await cur.fetchall()
             return [_from_row(row) for row in rows]
 
+    async def get_task(self, task_id: str) -> Task | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(f"SELECT {_COLUMNS} FROM tasks WHERE id = %s", (task_id,))
+            row = await cur.fetchone()
+            return _from_row(row) if row else None
+
     async def complete_task(self, task_id: str) -> Task | None:
         now = datetime.now(UTC)
         async with self._pool.connection() as conn:

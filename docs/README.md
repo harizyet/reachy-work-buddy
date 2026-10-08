@@ -137,6 +137,9 @@ over the original decision where they explicitly change it.
 
 These are dated evidence, not startup instructions or current health checks.
 
+- [Phase 44B 2026-10-08](verification/phase-44b-2026-10-08.md): the knowledge index, transactional outbox, worker, reconciliation and retrieval-time
+  revalidation on disposable Postgres; mutation checks; the embedding load measurement. Local only; migration 027 not applied.
+
 - [Phase 44A production deployment 2026-10-08](verification/phase-44a-deployment-2026-10-08.md): migration 026 on the homelab, backup
   and restore check, rollback assets, thirteen smoke checks, downtime; the robot gate is pending.
 

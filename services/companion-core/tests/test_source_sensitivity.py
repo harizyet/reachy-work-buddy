@@ -311,6 +311,10 @@ def test_recovery_from_a_dump_taken_before_the_upgrade(database):
     upgrade(database, KEYS)
     with psycopg.connect(database) as conn:
         assert conn.execute("SELECT version_num FROM alembic_version").fetchone() == (SCHEMA_REVISION,)
+    # Since revision 027 the derived knowledge tables depend on the vector type, which a --clean restore tries to drop. The documented
+    # recovery therefore removes them first (deploy/homelab/rollback-027.sql); they are rebuilt from the stores afterwards.
+    with psycopg.connect(database) as conn:
+        conn.execute((Path(__file__).parents[3] / "deploy" / "homelab" / "rollback-027.sql").read_text())
     subprocess.run(
         ["docker", "exec", "-i", container, "pg_restore", "-U", "fixture", "--clean", "--if-exists", "--no-owner", "-d", name],
         input=backup, check=True, capture_output=True,

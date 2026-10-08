@@ -230,6 +230,7 @@ from companion_core.email.workflow import (
     run_dispatch_loop,
 )
 from companion_core.hub_client import HubClient
+from companion_core.knowledge import runtime as knowledge_runtime
 from companion_core.llm.client import ProviderUnavailable
 from companion_core.llm.postgres_store import (
     PostgresLLMSettingsStore,
@@ -762,9 +763,18 @@ def create_app(
             if run_meeting_worker_task
             else None
         )
+        # Phase 44B: the knowledge index worker. Off by default (KNOWLEDGE_INDEXING_ENABLED); nothing here searches or returns knowledge.
+        knowledge_indexing = None
+        if owns_meeting_store and knowledge_runtime.indexing_enabled():
+            knowledge_indexing = await knowledge_runtime.start_indexing(
+                dsn=database_url or os.environ["DATABASE_URL"], memory=app.state.memory_store, documents=app.state.rag_store,
+                meetings=app.state.meeting_store, planner=app.state.planner_store, tasks=app.state.task_store,
+            )
         try:
             yield
         finally:
+            if knowledge_indexing is not None:
+                await knowledge_indexing.stop()
             if dispatch_task is not None:
                 dispatch_task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):

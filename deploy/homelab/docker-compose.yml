@@ -439,6 +439,8 @@ services:
       # on, it only appends records to SHADOW_ROUTER_LOG_PATH after each reply
       # is final; it never executes a tool or changes any reply or state.
       # SHADOW_ROUTER_URL points at the separate semantic-router sidecar.
+      # Phase 44B: the knowledge index worker (builds a derived index from the stores; nothing searches it yet). Off by default.
+      KNOWLEDGE_INDEXING_ENABLED: ${KNOWLEDGE_INDEXING_ENABLED:-false}
       SHADOW_ROUTER_ENABLED: ${SHADOW_ROUTER_ENABLED:-false}
       SHADOW_ROUTER_URL: ${SHADOW_ROUTER_URL:-http://semantic-router:8012}
       SHADOW_ROUTER_LOG_PATH: ${SHADOW_ROUTER_LOG_PATH:-/data/shadow-router/shadow.jsonl}

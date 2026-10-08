@@ -20,6 +20,8 @@ from shared.models.response import Privacy
 
 class PlannerStore(Protocol):
     async def list_notes(self, query: str | None = None) -> list[Note]: ...
+    async def get_note(self, note_id: str) -> Note | None: ...
+    async def get_reminder(self, reminder_id: str) -> Reminder | None: ...
     async def add_note(
         self, title: str, body: str, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, project_scope: str | None = None
     ) -> Note: ...
@@ -74,6 +76,12 @@ class InMemoryPlannerStore:
                 if lowered in n.title.lower() or lowered in n.body.lower()
             ]
         return sorted(notes, key=lambda n: n.updated_at, reverse=True)
+
+    async def get_note(self, note_id: str) -> Note | None:
+        return self._notes.get(note_id)
+
+    async def get_reminder(self, reminder_id: str) -> Reminder | None:
+        return self._reminders.get(reminder_id)
 
     async def add_note(
         self, title: str, body: str, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, project_scope: str | None = None

@@ -115,6 +115,18 @@ class PostgresPlannerStore:
                 )
             return [_note(row) for row in await cur.fetchall()]
 
+    async def get_note(self, note_id: str) -> Note | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(f"SELECT {_NOTE_COLUMNS} FROM notes WHERE id = %s", (note_id,))
+            row = await cur.fetchone()
+            return _note(row) if row else None
+
+    async def get_reminder(self, reminder_id: str) -> Reminder | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(f"SELECT {_REMINDER_COLUMNS} FROM reminders WHERE id = %s", (reminder_id,))
+            row = await cur.fetchone()
+            return _reminder(row) if row else None
+
     async def add_note(
         self, title: str, body: str, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, project_scope: str | None = None
     ) -> Note:

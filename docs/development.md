@@ -213,6 +213,8 @@ against a golden file; regenerate the golden file after an intended mapping chan
 backfill, SQL that ignores the new columns, store round trips, a dump-and-restore recovery, and the export's columns against the
 real tables); they use the same disposable-server variables as below.
 
+Phase 44B adds `test_knowledge_index.py` (adapters, worker, reconciliation and revalidation with in-memory stores, index and outbox; no database) and `test_knowledge_postgres.py` (opt-in: migration 027 and its undo, the triggers, the worker on real stores, concurrent workers, lease recovery, the generation guard, a damaged index, revalidation against a stale index). The Postgres stores open their pools inside each test's own event loop, as the other durability tests do. `benchmarks/knowledge_retrieval/indexing_load.py` measures the embedding load.
+
 The retrieval benchmark has its own harness tests (`test_knowledge_benchmark.py`: fixtures, scoring, isolation, reproducibility,
 the Phase 43 baselines, the holdout protocol); how to run the benchmark itself is in its
 [README](../services/companion-core/benchmarks/knowledge_retrieval/README.md).

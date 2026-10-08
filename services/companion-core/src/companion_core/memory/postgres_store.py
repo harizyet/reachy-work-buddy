@@ -143,6 +143,12 @@ class PostgresMemoryStore:
             row = await cur.fetchone()
             return _from_row(row) if row else None
 
+    async def get_any(self, memory_id: str) -> MemoryRecord | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(f"SELECT {_COLUMNS} FROM memories WHERE id = %s", (memory_id,))
+            row = await cur.fetchone()
+            return _from_row(row) if row else None
+
     async def forget(self, memory_id: str) -> MemoryRecord | None:
         now = datetime.now(UTC)
         async with self._pool.connection() as conn:

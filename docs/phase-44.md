@@ -57,7 +57,7 @@ These supersede the earlier recommendations in this page's first version where t
 | Stage | Delivers |
 |---|---|
 | 44A | Contract models (section 4), source sensitivity/scope migration 026, pinned Ossie structural export, and the benchmark fixtures and harness (section 7) with the two Phase 43 baselines, all with tests. No index, no worker, no retrieval. Actual retrieval benchmarking starts with 44B/44D. |
-| 44B | Index table and outbox (migration 027), indexing worker, reconciliation, source adapters for memory, documents, meetings, notes, tasks and reminders, source-state resolution at retrieval. |
+| 44B | Index table and outbox (migration 027), indexing worker, reconciliation, source adapters for memory, documents, meetings, notes, tasks and reminders, source-state resolution at retrieval. **Built locally 2026-10-08; see section 11b.** |
 | 44D | Hybrid retrieval (lexical, pgvector, metadata and temporal filters) with `AccessContext` enforcement, run against the benchmark. Intent-driven activation (section 8). |
 | 44E | Context builder: budget, dedup, sensitivity and destination filtering, provenance, current-versus-historical labelling, source diversity. Same structured bundle for FAST, DEEP and CLOUD. |
 | 44H (security subset) | Adversarial and leakage tests for everything above. Runs with 44D/44E, not after. |
@@ -379,6 +379,37 @@ Remaining risks and limits:
 - **The holdout is the first version and will be outgrown.** Ten relationship and ten cross-source cases are an initial gate, not a basis for an architecture decision. Planned additions, as new fixture versions that start new baselines rather than edits to this one: paraphrased queries, ambiguous entities (two people with one first name), noisy ASR transcripts, and distractor documents that are related but wrong. Case sets should grow from real, redacted questions with the owner's approval.
 - No answer-quality evaluation exists; the cases carry `expected_facts` for it.
 - The golden file guards against drift, not against a wrong mapping.
+
+## 11b. 44B: unified index, outbox and revalidation (2026-10-08)
+
+Status: **built and tested locally; not committed, not deployed.** The homelab database is at 026; this work moves the repository to revision `027_knowledge_index`, so an image built from it refuses to start against the live database until 027 is applied (same pattern as 026, with the [runbook](deployment.md#applying-migration-026-phase-44a---runbook-prepared-and-not-executed) and the extra notes under [Schema upgrades](deployment.md#schema-upgrades-and-credential-keys)). Nothing searches the index and no retrieval flag exists yet; the worker is off unless `KNOWLEDGE_INDEXING_ENABLED` is true (compose default `false`). Evidence: [Phase 44B verification](verification/phase-44b-2026-10-08.md).
+
+**One design change from section 6.** The outbox is filled by database triggers on the source tables rather than by a helper called from every store method. A trigger runs in the same transaction as the change, cannot be forgotten by a new code path, and also covers any other writer; it let the stores stay untouched except for read-by-id methods. Triggers also delete a record's index rows in the same transaction when it is forgotten, deleted, cancelled or failed, so exclusion never waits for the worker. Expiry (the passage of time) is handled by revalidation and reconciliation. A trigger fires only for columns that affect the index, so a read that stamps `last_accessed` or a reminder's `notified_at` queues nothing.
+
+| Part | Where |
+|---|---|
+| Migration 027: `knowledge_items` (match text, `tsvector`, `vector(384)` with GIN and HNSW indexes, classification, scope, validity), `knowledge_outbox` (one row per source, with a generation counter), the triggers, a backfill that queues existing records. Undoable and safe to apply again (`rollback-027.sql`, `downgrade`). | `migrations/versions/027_knowledge_index.py`, `deploy/homelab/rollback-027.sql` |
+| Source adapters: how memory, documents, meetings (corrected text and speaker names, never the raw transcript; summaries marked model-written at confidence 0.5), notes, tasks and reminders describe themselves, with a version hash of everything an index row or a retrieval depends on | `companion_core/knowledge/sources.py` |
+| Index and outbox, in memory and on Postgres (`SKIP LOCKED` claims, leases, backoff, set-aside after 8 failures, revived by a new change) | `knowledge/index.py`, `knowledge/outbox.py` |
+| Worker: change detection by version, embedding only changed text in batches of 16 on a worker thread, reconciliation (missing, stale, orphaned, expired, wrong embedding model), a loop that reconciles at start and hourly, start-up behind the flag | `knowledge/worker.py`, `knowledge/runtime.py` |
+| **Retrieval-time revalidation**: each candidate is re-read from its store; existence, visibility, the stricter of the index and source classification, scope, destination and ceiling are applied; text and provenance come from the source; drops are counted by reason | `knowledge/revalidate.py` |
+| Store additions (read by id): `MemoryStore.get_any`, `DocumentStore.get_document` and `list_document_ids`, `TaskStore.get_task`, `PlannerStore.get_note` and `get_reminder` | the stores |
+| Measurement of the indexing load | `benchmarks/knowledge_retrieval/indexing_load.py` |
+
+Bugs the tests found while building it: the worker loop swallowed cancellation and could not be stopped; a `--clean` restore of a pre-027 dump fails once the index tables exist (so the recovery order is now: run `rollback-027.sql`, then restore); and a change arriving while a source is being synced would have been deleted by that sync's completion (hence the generation counter).
+
+### 44B acceptance (section 9 gates)
+
+| Gate | Status |
+|---|---|
+| Retrieval-time revalidation implemented and tested (non-negotiable) | **Met.** Parametrised stale-index cases (forgotten, deleted, expired, cancelled, part removed), reclassification the index has not seen, stricter label wins, scope, destination, ceiling, historical mode, unknown parts, one read per source; the same against a stale Postgres index. Three deliberate breakages of the module (skip visibility, trust the index label, skip the access context) are each caught by the tests. |
+| Migration 027 verified on disposable Postgres | **Met.** Applied on a seeded 026 database, repeated, undone two ways (alembic and the SQL file) and applied again, applied over leftovers, and the 026 recovery test still passes with the new recovery order. Not yet rehearsed on a restored production copy or applied to the homelab. |
+| Crash-and-restart: nothing lost or duplicated | **Met.** A claim abandoned by a dead worker is retried after its lease; a concurrent change during a sync is not lost (generation guard); 24 sources processed by two concurrent workers are each synced exactly once. |
+| Reconciliation repairs a deliberately damaged index | **Met** (deleted row, stale version, orphan, expiry, empty index after a restore), in memory and on Postgres. |
+| Forget, delete and expiry excluded immediately with the worker stopped | **Met** for forget, delete and cancel (the trigger removes the rows in the same transaction) and for expiry and reclassification (revalidation), on Postgres. |
+| Embedding load measured against a concurrent voice turn | **Partly met.** Measured: 400 segments with the real MiniLM embedded in about 1 to 2 s, event-loop stall under 2 ms while embedding, and torch's default 14 threads were slower than 2 on the development host, so core now sets 2 (`KNOWLEDGE_EMBED_THREADS`). Not measured: contention with the speech, language and diarization services on the homelab; that needs a deployment and the owner's approval. |
+
+Not built in 44B, by design: search or candidate generation (44D), the context builder (44E), entities, any retrieval flag or route, a UI. Indexing the homelab's real records has not been run.
 
 ## 12. Verification of this page
 

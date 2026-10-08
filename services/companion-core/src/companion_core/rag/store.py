@@ -37,6 +37,12 @@ class DocumentStore(Protocol):
 
     async def list_documents(self) -> list[str]: ...
 
+    async def get_document(self, document_id: str) -> list[DocumentChunk]:
+        """Every chunk of one document in order; empty if there is no such document."""
+        ...
+
+    async def list_document_ids(self) -> list[str]: ...
+
 
 def _cosine(a: list[float], b: list[float]) -> float:
     dot = sum(x * y for x, y in zip(a, b, strict=True))
@@ -96,3 +102,9 @@ class InMemoryDocumentStore:
 
     async def list_documents(self) -> list[str]:
         return sorted({chunk.document_title for chunk in self._chunks.values()})
+
+    async def get_document(self, document_id: str) -> list[DocumentChunk]:
+        return sorted((c for c in self._chunks.values() if c.document_id == document_id), key=lambda c: c.chunk_index)
+
+    async def list_document_ids(self) -> list[str]:
+        return sorted({chunk.document_id for chunk in self._chunks.values()})
