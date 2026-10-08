@@ -23,6 +23,7 @@ from companion_core.knowledge.context import (
 )
 from companion_core.knowledge.retrieval import Retriever
 from companion_core.knowledge.revalidate import _knowledge_item
+from companion_core.knowledge.routing import choose_path, route_status
 from companion_core.meetings import outputs as meeting_outputs
 from companion_core.persona.context import context_message
 from companion_core.semantic.model import SourceFilters
@@ -65,6 +66,7 @@ class Conditions:
     def __init__(self, env, built_spec, llm, *, budget: int, minilm_embed=None, flag_instructions: bool = True) -> None:
         self.env, self.spec, self.llm, self.budget = env, built_spec, llm, budget
         self.flag_instructions = flag_instructions
+        self.header, self.note, self.conflicts = "v1", None, False
         self.meta = source_meta(built_spec)
         self.retrievers: dict[str, Retriever] = {}
         self.embed = minilm_embed
@@ -87,7 +89,7 @@ class Conditions:
         rendered = build_context(
             items, access, destination=destination, budget_tokens=self.budget, count_tokens=self.llm.count_tokens, now=NOW,
             include_historical=case["temporal"] == "include_historical", pinned=pinned, modality=case["modality"],
-            candidate_count=candidates, flag_instructions=self.flag_instructions,
+            candidate_count=candidates, flag_instructions=self.flag_instructions, header_version=self.header, note=self.note, flag_conflicts=self.conflicts,
         )
         prepared.build_ms = (time.perf_counter() - t) * 1000
         prepared.rendered = rendered
@@ -119,6 +121,36 @@ class Conditions:
         return out
 
     async def prepare(self, name: str, case: dict[str, Any]) -> Prepared:
+        """`name` is a base condition plus optional modifiers: `+routed` (attached meeting keeps Phase 43, status questions read the stores),
+        `+v2` (the claim/conflict header), `+cf` (hint when two items give different numbers)."""
+        base, *mods = name.split("+")
+        self.header = "v2" if "v2" in mods else "v1"
+        self.conflicts = "cf" in mods
+        if "routed" in mods:
+            path = choose_path(case["question"], attached_meeting=bool(case["attached_meeting"]))
+            if path == "phase43":
+                return await self.prepare("p43", case)
+            if path == "status":
+                return await self._status(case)
+        return await self._prepare_base(base, case)
+
+    async def _status(self, case: dict[str, Any]) -> Prepared:
+        profile = self.spec["access_profiles"][case["access"]]
+        access = access_context(profile)
+        prepared = Prepared(messages=base_messages(case))
+        planner, tasks = self.env.stores[1], self.env.stores[2]
+        t = time.perf_counter()
+        routed = await route_status(case["question"], access, tasks=tasks, planner=planner, now=NOW)
+        prepared.retrieval_ms = (time.perf_counter() - t) * 1000
+        prepared.retrieval_dropped = dict(routed.dropped)
+        prepared.candidates = routed.total
+        self.note = routed.note
+        try:
+            return self._finish(case, prepared, list(routed.items), access, candidates=routed.total)
+        finally:
+            self.note = None
+
+    async def _prepare_base(self, name: str, case: dict[str, Any]) -> Prepared:
         profile = self.spec["access_profiles"][case["access"]]
         access = access_context(profile)
         prepared = Prepared(messages=base_messages(case))

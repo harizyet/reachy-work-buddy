@@ -109,7 +109,10 @@ def build(report: dict, cases: list[dict]) -> dict:
             cats[r["category"]].append(r)
         result["by_category"][cond] = {cat: {"n": len(v), "full": sum(r["score"]["correctness"] == "full" for r in v)} for cat, v in sorted(cats.items())}
     idx = {c: {r["id"]: r for r in rows} for c, rows in by_cond.items()}
-    for a, b in (("none", "b1a"), ("none", "b1b"), ("p43", "b1a"), ("p43", "b1b"), ("b1a", "b1b"), ("b1a", "oracle"), ("b1b", "oracle")):
+    for a, b in (("none", "b1a"), ("none", "b1b"), ("p43", "b1a"), ("p43", "b1b"), ("b1a", "b1b"), ("b1a", "oracle"), ("b1b", "oracle"),
+                 ("b1a", "b1a+v2"), ("b1a", "b1a+routed"), ("b1a", "b1a+routed+v2"), ("b1a+routed", "b1a+routed+v2"), ("b1a+v2", "b1a+routed+v2"),
+                 ("b1a+routed+v2", "oracle"), ("none", "b1a+routed+v2"),
+                 ("b1a", "b1a+cf"), ("b1a+routed", "b1a+routed+cf"), ("b1a", "b1a+routed+cf"), ("b1a+routed+cf", "oracle")):
         if a in idx and b in idx:
             result["paired"].append(paired(idx[a], idx[b], f"{a} -> {b}"))
     return result

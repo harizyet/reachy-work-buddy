@@ -91,11 +91,12 @@ HOLD = [
     case("B-A2", "attached_meeting", "What was decided about retries in this meeting?", attached="mt-weekly", gold=["meeting:mt-weekly#23"], required=[[r"five", r"\b5\b"], [r"park"]]),
     case("B-V1", "voice", "Who owns the Quill queue?", modality="voice", gold=["memory:mem-quill-owner"], required=[[r"tomas"]]),
 ]
-MODEL_STATED = {"B-C1": [1], "B-I2": [2]}  # facts the model words itself (where it found them, or what it cannot do), not text in a source
-for c in DEV + HOLD:
-    if c["id"] in MODEL_STATED:
-        c["model_stated"] = MODEL_STATED[c["id"]]
-here = Path(__file__).parent
-for name, cases, purpose in (("dev", DEV, "development: inspect and iterate freely"), ("holdout", HOLD, "frozen: scored once per decision point after owner review")):
-    (here / f"cases_{name}.json").write_text(json.dumps({"version": 1, "split": name, "purpose": purpose, "cases": cases}, indent=1) + "\n")
-    print(name, len(cases))
+if __name__ == "__main__":
+    MODEL_STATED = {"B-C1": [1], "B-I2": [2]}  # facts the model words itself (where it found them, or what it cannot do), not text in a source
+    for c in DEV + HOLD:
+        if c["id"] in MODEL_STATED:
+            c["model_stated"] = MODEL_STATED[c["id"]]
+    here = Path(__file__).parent
+    for name, cases, purpose in (("dev", DEV, "development: inspect and iterate freely"), ("holdout", HOLD, "frozen: scored once per decision point after owner review")):
+        (here / f"cases_{name}.json").write_text(json.dumps({"version": 1, "split": name, "purpose": purpose, "cases": cases}, indent=1) + "\n")
+        print(name, len(cases))

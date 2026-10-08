@@ -151,6 +151,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import logging
 import os
 import re
 import time
@@ -231,6 +232,13 @@ from companion_core.email.workflow import (
 )
 from companion_core.hub_client import HubClient
 from companion_core.knowledge import runtime as knowledge_runtime
+from companion_core.knowledge.retrieval import B1A, Retriever
+from companion_core.knowledge.search import PostgresSearch
+from companion_core.knowledge.shadow import KnowledgeShadow
+from companion_core.knowledge.shadow import ShadowTurn as KnowledgeShadowTurn
+from companion_core.knowledge.shadow import shadow_enabled as knowledge_shadow_enabled
+from companion_core.knowledge.shadow import shadow_from_env as knowledge_shadow_from_env
+from companion_core.knowledge.sources import build_adapters
 from companion_core.llm.client import ProviderUnavailable
 from companion_core.llm.postgres_store import (
     PostgresLLMSettingsStore,
@@ -613,6 +621,7 @@ def create_app(
     coding_agent_service_token: str | None = None,
     coding_agent_notification_store: CodingAgentNotificationStore | None = None,
     shadow_router: ShadowPipeline | None = None,
+    knowledge_shadow: KnowledgeShadow | None = None,
 ) -> FastAPI:
     hub_base_url = hub_base_url or os.environ.get("REACHY_HUB_URL", "http://reachy-hub:8000")
     coding_agent_base_url = coding_agent_base_url or os.environ.get(
@@ -767,9 +776,22 @@ def create_app(
                 dsn=db, memory=app.state.memory_store, documents=app.state.rag_store,
                 meetings=app.state.meeting_store, planner=app.state.planner_store, tasks=app.state.task_store,
             )
+        # Measure-only knowledge shadow (Phase 44E follow-up). Off by default; it reads the index and the stores and writes numbers only.
+        if app.state.knowledge_shadow is None and knowledge_shadow_enabled() and db is not None and owns_meeting_store:
+            app.state.knowledge_shadow = knowledge_shadow_from_env(
+                retriever=Retriever(
+                    search=PostgresSearch(db.pool), config=B1A, clock=lambda: datetime.now(UTC),
+                    adapters=build_adapters(memory=app.state.memory_store, documents=app.state.rag_store, meetings=app.state.meeting_store,
+                                            planner=app.state.planner_store, tasks=app.state.task_store),
+                ),
+                tasks=app.state.task_store, planner=app.state.planner_store,
+            )
         try:
             yield
         finally:
+            if app.state.knowledge_shadow is not None:
+                await app.state.knowledge_shadow.drain()
+                logging.getLogger("companion_core.knowledge_shadow").info("knowledge shadow summary: %s", app.state.knowledge_shadow.summary())
             if knowledge_indexing is not None:
                 await knowledge_indexing.stop()
             if dispatch_task is not None:
@@ -851,6 +873,7 @@ def create_app(
 
     app.state.conversation_store = conversation_store
     app.state.shadow_router = shadow_router
+    app.state.knowledge_shadow = knowledge_shadow  # measure-only; None unless KNOWLEDGE_SHADOW_ENABLED (see knowledge/shadow.py)
     if llm_settings_store is not None:
         app.state.llm_settings_store = llm_settings_store
     if llm_usage_store is not None:
@@ -1601,6 +1624,13 @@ def create_app(
                     privacy=str(privacy.value), production_handler=production_handler, production_suggestion=production_suggestion,
                     # Only the live extract mode needs the provider; offline mode touches nothing but the router sidecar.
                     llm=await app.state.llm_settings_store.get() if shadow.extract_mode == "live" else None,
+                ))
+        kshadow = app.state.knowledge_shadow
+        if kshadow is not None and not slash_input:
+            with contextlib.suppress(Exception):  # measure-only: nothing in it may reach the production turn
+                kshadow.submit(KnowledgeShadowTurn(
+                    session_id=turn.session_id, text=turn.text, modality=str(turn.input_modality.value), privacy=str(privacy.value),
+                    production_handler=production_handler, attached_meeting=bool(turn.context_meeting_id),
                 ))
         return ConversationTurnResponse(
             reply=reply, turn_count=len(history), privacy=privacy, web_search=web_search, context_meeting=context_title,

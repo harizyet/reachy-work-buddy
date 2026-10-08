@@ -24,7 +24,8 @@ sys.path.insert(0, str(HERE))
 from aq import cases as caselib
 from aq import llm as llmlib
 from aq.conditions import CONDITIONS, Conditions
-from aq.scoring import score_answer
+from aq.scoring import score_answer as score_v1
+from aq.scoring_v2 import score_answer as score_v2
 
 STOP_FILE = HERE / "STOP"
 HOLDOUT_LOG = HERE / "holdout_runs.jsonl"
@@ -79,7 +80,7 @@ async def run(args) -> dict:
                 if prep.skipped:
                     continue
                 done = llm.complete(prep.messages, max_tokens=150 if case["modality"] == "voice" else 350)
-                scored = score_answer(case, done.text, {
+                scored = (score_v1 if args.scorer == "v1" else score_v2)(case, done.text, {
                     "entries": prep.entries, "has_ids": prep.has_ids, "text": prep.text, "prompt_violations": prep.prompt_violations,
                 })
                 rows.append({
@@ -99,7 +100,7 @@ async def run(args) -> dict:
         await env.close()
     hashes = caselib.case_hashes()
     return {
-        "split": args.split, "conditions": conditions, "budget": args.budget, "instruction_flag": not args.no_instruction_flag, "decision_point": args.decision_point, "hashes": hashes,
+        "split": args.split, "conditions": conditions, "budget": args.budget, "instruction_flag": not args.no_instruction_flag, "scorer": args.scorer, "decision_point": args.decision_point, "hashes": hashes,
         "model": llmlib.MODEL, "seed": llmlib.SEED, "git_commit": git_commit(), "load_avg_start": os.getloadavg()[0],
         "at": datetime.now(UTC).isoformat(timespec="seconds"), "wall_seconds": round(time.monotonic() - started, 1), "rows": rows,
     }
@@ -107,11 +108,12 @@ async def run(args) -> dict:
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--split", choices=("dev", "holdout"), default="dev")
+    p.add_argument("--split", choices=("dev", "dev2", "holdout"), default="dev")
     p.add_argument("--conditions", default=",".join(CONDITIONS))
     p.add_argument("--budget", type=int, default=1500, choices=(500, 1000, 1500))
     p.add_argument("--decision-point")
     p.add_argument("--no-instruction-flag", action="store_true", help="ablation: do not label instruction-like passages")
+    p.add_argument("--scorer", choices=("v1", "v2"), default="v2", help="v1 reproduces the first-look scoring; v2 (default) has the 2026-10-09 corrections")
     p.add_argument("--only", help="comma-separated case ids")
     p.add_argument("--out")
     p.add_argument("--time-cap", type=float, default=2400.0)

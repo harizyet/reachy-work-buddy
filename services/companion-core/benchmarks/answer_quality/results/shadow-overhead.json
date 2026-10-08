@@ -1,0 +1,37 @@
+{
+ "jobs": 90,
+ "job_ms": {
+  "p50": 6.89,
+  "p95": 17.18,
+  "max": 26.2,
+  "mean": 7.4
+ },
+ "retrieval_path_ms": {
+  "n": 75,
+  "p50": 7.91,
+  "p95": 18.51
+ },
+ "status_path_ms": {
+  "n": 15,
+  "p50": 1.38,
+  "p95": 6.89
+ },
+ "cpu_ms_per_job": 5.75,
+ "submit_microseconds_on_request_path": 0.7,
+ "peak_rss_mb": 85,
+ "embedding_or_torch_modules_loaded_by_the_shadow": [],
+ "burst_of_50": {
+  "dropped_busy": 47,
+  "queue_limit": 3,
+  "measured_after_burst": 3
+ },
+ "telemetry_bytes_per_job": 507.1,
+ "telemetry_file_mode": "0o600",
+ "counters": {
+  "path:retrieval": 78,
+  "measured": 93,
+  "path:status": 15,
+  "empty": 1,
+  "dropped_busy": 47
+ }
+}
