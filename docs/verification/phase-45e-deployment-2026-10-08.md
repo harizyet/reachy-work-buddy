@@ -61,3 +61,13 @@ PgBouncer statistics since its restart in the drill (3,134 transactions, 6,300 q
 - The hub's speech model cache has the same re-download behaviour core's embedding model had; adding a volume is a small separate change.
 - Follow-up item: replace application superuser access with least-privilege roles ([Phase 45 section 10](../phase-45.md#10-follow-up-least-privilege-database-roles)).
 - Phase 44 stays paused; the repeat indexing trial can now be planned against the new connection budget when the owner chooses.
+
+## Acceptance (owner, 2026-10-08)
+
+Accepted at the infrastructure level: the connection reduction (98 to 8 at rest, 19 at 32 workers), the concurrency tests, PgBouncer restart recovery, the verified backup and the unchanged authoritative data satisfy the infrastructure acceptance criteria. **Kept open:** browser UI interaction, Telegram reminder delivery confirmation, voice integration, and physical robot testing. The cutover is not to be rolled back solely because these remain pending. Phase 44 indexing and retrieval stay disabled until these and the performance gates are reviewed. Next: [Phase 46, least-privilege database roles](../phase-46.md) (plan only; no credential changes or deployment yet).
+
+## Availability observation: the 7.4 second call during the PgBouncer restart
+
+Recorded as an availability observation, not a defect and not a rollback trigger. During the restart drill one hub call took 7.4 s while the rest were fast; nothing failed, nothing was lost or duplicated, and the hub's pool timeout (10 s) was not reached.
+
+Evidence: the container restart took 11 s; PgBouncer logged `got SIGTERM, shutting down, waiting for all clients disconnect`; the image's entrypoint `exec`s PgBouncer, so it received the signal directly; the three services hold idle client connections in their pools, so a graceful shutdown waits for clients that never leave until Docker's 10 s stop timeout kills it. While PgBouncer was shutting down it accepted no new work, so a request that needed a connection waited for the restart. That explains an interruption of up to about 10 s on a planned restart; it is an interpretation of the evidence, not a measured proof. A second consecutive wait would run into the 10 s acquisition timeout and surface as an error rather than a hang. Options to evaluate on a disposable stack, none applied: a shorter `stop_grace_period`, a different stop signal (PgBouncer treats the signals differently, to be confirmed against the 1.25 documentation and by test), and a `reload` instead of a restart for configuration changes. Measure the interruption before and after; production stays as it is.
