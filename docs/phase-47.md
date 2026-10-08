@@ -308,3 +308,21 @@ Branch `phase-47d`. Evidence: [47D verification](verification/phase-47d-2026-10-
 **Client.** `#/brain` defaults to "Your records (read-only)"; "Synthetic demonstration" remains a labelled option. Each selection is re-read; a record that has gone says so and the list refreshes. "Open in ..." links to the owning screen. Live mode works without WebGL (list only).
 
 Known limits and what needs a decision: each page scans the stores (cost grows with records; an index-backed adapter is the later answer, Phase 44); sensitive records are withheld by the ceiling, so a "show sensitive" mode would be a separate authorization decision; **47E** (semantic or inferred relationships) depends on Phase 44C/44F decisions; memory and document screens still wait on the backend gaps in section 7a.
+
+## 17. 47F plan (2026-10-08): retire the legacy operator UI (plan only, not started)
+
+Owner direction 2026-10-08: retire `/ui/` now that the React client has been user-tested. The roadmap row for 47F says the legacy UI is retained at a rollback path, not deleted; this plan follows that.
+
+**Changes (all small, one branch):**
+
+1. **Redirect.** `/ui` and `/ui/` redirect (relative, so Caddy's `/hub/` prefix survives) to `web/`. The legacy files stay in the image and are served at `/ui-legacy/` as the rollback path (one mount rename; no new code).
+2. **Google return.** `accounts.py` redirects to the React route instead of `ui/?google=return`: `../../../web/?google=return#/settings/accounts` (React reads the query before the hash). Update `test_google_accounts.py` and add a browser test that the return lands on Settings > Accounts and refreshes the connection status.
+3. **Entry points.** `scripts/start-homelab.sh`, `scripts/start-reachy.sh`, `docs/deployment.md` and `docs/operator-guide.md` open `/hub/web/`. `clients/web-pwa/telepresence.js` sends a 401 to `/web/` (URL only; D5 still holds, no PWA rewrite).
+4. **Tests.** `test_operator.py` asserts the redirect and the `/ui-legacy/` rollback mount instead of the old paths; the e2e parity tests that open `/ui/` use `/ui-legacy/`.
+5. **Docs.** ADR 0016 gets a note that `/web/` is the operator UI and `/ui-legacy/` is the rollback; Phase 47, HANDOVER and the services reference are updated.
+
+**Not changed:** `/app/` (Call Reachy), auth, any backend route, flags, schema, the Android app.
+
+**Gates:** full hub suite and Playwright pass; the hub image builds; after deployment the owner confirms `/hub/ui/` lands on `/web/`, a Google connect round trip returns to Accounts (needs your Google test account; if untested it stays an open item), and `/hub/ui-legacy/` still loads. Rollback: revert the commit, or switch the mount name back.
+
+**Later, separate decision:** deleting `clients/operator-ui` and `/ui-legacy/` after a settled period.
