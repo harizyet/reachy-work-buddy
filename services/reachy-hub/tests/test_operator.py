@@ -627,3 +627,46 @@ def test_a_saved_chat_can_be_deleted_by_its_owner_only():
     assert client.delete(f"/chats/{gone['id']}?user_id=default-user", headers=CSRF).status_code == 404
     assert [c['id'] for c in client.get('/chats?user_id=default-user').json()] == [keep['id']]
     assert client.get(f"/chats/{gone['id']}?user_id=default-user").status_code == 404
+
+
+def test_classification_is_forwarded_on_create_and_refused_on_edit():
+    """Phase 44A: the hub neither discards the classification nor lets an edit change it silently."""
+    client = make_client()
+    login(client)
+    task = client.post(
+        "/planner/tasks", json={"text": "t", "sensitivity": "sensitive", "project_scope": "alpha"}, headers=CSRF
+    ).json()
+    assert (task["sensitivity"], task["project_scope"]) == ("sensitive", "alpha")
+    assert client.post("/planner/tasks", json={"text": "plain"}, headers=CSRF).json()["sensitivity"] == "work-private"
+    assert client.post("/planner/tasks", json={"text": "bad", "sensitivity": "secret"}, headers=CSRF).status_code == 422
+
+    note = client.post(
+        "/planner/notes", json={"title": "N", "sensitivity": "public", "project_scope": "beta"}, headers=CSRF
+    ).json()
+    assert (note["sensitivity"], note["project_scope"]) == ("public", "beta")
+    edited = client.put(f"/planner/notes/{note['id']}", json={"title": "N2"}, headers=CSRF).json()
+    assert (edited["sensitivity"], edited["project_scope"]) == ("public", "beta")
+
+    reminder = client.post(
+        "/planner/reminders", json={"text": "r", "due_at": "2030-01-01T00:00:00Z", "sensitivity": "sensitive"}, headers=CSRF
+    ).json()
+    assert reminder["sensitivity"] == "sensitive"
+
+    # An edit that tries to reclassify is a 422, not a silent no-op.
+    assert client.put(f"/planner/notes/{note['id']}", json={"title": "N3", "sensitivity": "public"}, headers=CSRF).status_code == 422
+    assert client.put(f"/planner/tasks/{task['id']}", json={"text": "t2", "project_scope": "x"}, headers=CSRF).status_code == 422
+    assert client.get("/planner/notes").json()[0]["title"] == "N2"
+
+    files = {"audio": ("meeting.wav", b"RIFFxxxx", "audio/wav")}
+    meeting = client.post("/meetings", data={"title": "Sync", "sensitivity": "sensitive"}, files=files, headers=CSRF).json()
+    assert meeting["sensitivity"] == "sensitive" and meeting["project_scope"] is None
+    plain = client.post("/meetings", data={"title": "Sync 2"}, files=files, headers=CSRF).json()
+    assert plain["sensitivity"] == "work-private" and plain["project_scope"] is None
+    assert client.post("/meetings", data={"title": "x", "sensitivity": "secret"}, files=files, headers=CSRF).status_code == 422
+
+
+def test_documents_are_core_only_by_design():
+    """Documents are ingested through core's operator/setup API only; the hub exposes no route, so there is nothing to forward."""
+    client = make_client()
+    paths = client.app.openapi()["paths"]
+    assert not [p for p in paths if "document" in p]

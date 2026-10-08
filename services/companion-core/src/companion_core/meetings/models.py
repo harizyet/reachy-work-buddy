@@ -25,6 +25,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from shared.models.response import Privacy
+
 
 class MeetingJobStatus(StrEnum):
     UPLOADED = "uploaded"
@@ -97,6 +99,8 @@ class Meeting(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     title: str
     project_scope: str | None = None
+    # Phase 44A: unclassified means work-private (meeting speech is never public); project_scope None means unscoped.
+    sensitivity: Privacy = Privacy.WORK_PRIVATE
     context: str | None = None
     participants: list[str] = Field(default_factory=list)
     # Owner-supplied meeting date/time (27.1 "Owner supplies optional

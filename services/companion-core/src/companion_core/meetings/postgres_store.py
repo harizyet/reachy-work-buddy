@@ -31,12 +31,13 @@ from companion_core.meetings.models import (
 )
 from companion_core.meetings.store import MeetingNotCancellableError
 from shared.database import check_schema
+from shared.models.response import Privacy
 
 _COLUMNS = (
     "id, title, project_scope, context, participants, started_at, source_filename, content_type, "
     "audio_path, normalized_audio_path, duration_seconds, transcript_segments, diarization_segments, "
     "status, error_detail, created_at, updated_at, speaker_names, transcript_corrections, key_terms, summary, minutes, "
-    "aligned_segments, audio_gaps, description, title_source"
+    "aligned_segments, audio_gaps, description, title_source, sensitivity"
 )
 
 
@@ -68,6 +69,7 @@ def _from_row(row: tuple) -> Meeting:
         audio_gaps=row[23],
         description=row[24],
         title_source=row[25],
+        sensitivity=Privacy(row[26]),
     )
 
 
@@ -107,8 +109,10 @@ class PostgresMeetingStore:
         context: str | None = None,
         participants: list[str] | None = None,
         started_at: datetime | None = None,
+        sensitivity: Privacy = Privacy.WORK_PRIVATE,
     ) -> Meeting:
         meeting = Meeting(
+            sensitivity=sensitivity,
             title=title,
             title_source="default" if describe.looks_default(title) else "owner",
             source_filename=source_filename,
@@ -132,13 +136,14 @@ class PostgresMeetingStore:
         async with self._pool.connection() as conn:
             await conn.execute(
                 f"INSERT INTO meetings ({_COLUMNS}) VALUES "
-                "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     meeting.id, meeting.title, meeting.project_scope, meeting.context, meeting.participants,
                     meeting.started_at, meeting.source_filename, meeting.content_type, meeting.audio_path,
                     meeting.normalized_audio_path, meeting.duration_seconds, None, None,
                     meeting.status.value, meeting.error_detail, meeting.created_at, meeting.updated_at,
                     Json({}), Json({}), Json([]), None, None, None, None, None, meeting.title_source,
+                    meeting.sensitivity.value,
                 ),
             )
         return meeting

@@ -2,7 +2,7 @@
 
 import asyncio
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from urllib.parse import quote
 
 import httpx
@@ -10,12 +10,13 @@ from fastapi import Depends, File, Form, HTTPException, Query, Request, UploadFi
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response, StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from starlette.background import BackgroundTask
 
 from reachy_hub import alarm_audio
 from shared.models.llm import LLMConfigPatch
 from shared.models.persona import PersonaPatch
+from shared.models.response import Privacy
 from shared.models.websearch import SearchConfigPatch
 from shared.protocols.operator_api import (
     AUTH_LOGIN,
@@ -70,8 +71,25 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=4096, repr=False)
 
 
-class PlannerTextBody(BaseModel):
+class _NoReclassification(BaseModel):
+    """Classification is set when a record is created (Phase 44A). An edit that carries it is refused, not ignored."""
+
+    @model_validator(mode="before")
+    @classmethod
+    def _refuse(cls, data: Any) -> Any:
+        if isinstance(data, dict) and ({"sensitivity", "project_scope"} & data.keys()):
+            raise ValueError("sensitivity and project_scope are set when a record is created and cannot be edited")
+        return data
+
+
+class PlannerTextBody(_NoReclassification):
     text: str = Field(min_length=1, max_length=2000)
+
+
+class PlannerTaskCreateBody(BaseModel):
+    text: str = Field(min_length=1, max_length=2000)
+    sensitivity: Privacy = Privacy.WORK_PRIVATE
+    project_scope: str | None = Field(default=None, max_length=200)
 
 
 class SpeechBody(BaseModel):
@@ -112,14 +130,22 @@ class MeetingReplaceBody(BaseModel):
     replace: str = Field(min_length=1, max_length=100)
 
 
-class PlannerNoteBody(BaseModel):
+class PlannerNoteBody(_NoReclassification):
     title: str = Field(min_length=1, max_length=200)
     body: str = Field(default="", max_length=20000)
+
+
+class PlannerNoteCreateBody(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    body: str = Field(default="", max_length=20000)
+    sensitivity: Privacy = Privacy.WORK_PRIVATE
+    project_scope: str | None = Field(default=None, max_length=200)
 
 
 class PlannerReminderBody(BaseModel):
     text: str = Field(min_length=1, max_length=500)
     due_at: datetime
+    sensitivity: Privacy = Privacy.WORK_PRIVATE
 
 
 class PlannerAlarmBody(BaseModel):
@@ -256,6 +282,7 @@ def install_operator_routes(
     async def upload_meeting(
         title: str = Form(...),
         project_scope: str | None = Form(None),
+        sensitivity: Privacy = Form(Privacy.WORK_PRIVATE),  # noqa: B008
         context: str | None = Form(None),
         participants: str = Form(""),
         started_at: str | None = Form(None),
@@ -268,6 +295,7 @@ def install_operator_routes(
                 filename=audio.filename or "recording",
                 content_type=audio.content_type or "application/octet-stream",
                 project_scope=project_scope,
+                sensitivity=sensitivity.value,
                 context=context,
                 participants=participants,
                 started_at=started_at,
@@ -452,8 +480,8 @@ def install_operator_routes(
         return await planner("GET", "/tasks", params={"status": status} if status else None)
 
     @app.post(PLANNER_TASKS, dependencies=dependencies)
-    async def planner_add_task(body: PlannerTextBody) -> dict:
-        return await planner("POST", "/tasks", json={"text": body.text})
+    async def planner_add_task(body: PlannerTaskCreateBody) -> dict:
+        return await planner("POST", "/tasks", json=body.model_dump(mode="json"))
 
     @app.put(PLANNER_TASK, dependencies=dependencies)
     async def planner_edit_task(item_id: str, body: PlannerTextBody) -> dict:
@@ -476,8 +504,8 @@ def install_operator_routes(
         return await planner("GET", "/notes", params={"q": q} if q else None)
 
     @app.post(PLANNER_NOTES, dependencies=dependencies)
-    async def planner_add_note(body: PlannerNoteBody) -> dict:
-        return await planner("POST", "/notes", json=body.model_dump())
+    async def planner_add_note(body: PlannerNoteCreateBody) -> dict:
+        return await planner("POST", "/notes", json=body.model_dump(mode="json"))
 
     @app.put(PLANNER_NOTE, dependencies=dependencies)
     async def planner_edit_note(item_id: str, body: PlannerNoteBody) -> dict:

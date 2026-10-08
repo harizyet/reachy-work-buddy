@@ -18,6 +18,7 @@ from companion_core.meetings.models import (
     MeetingJobStatus,
     MeetingOutput,
 )
+from shared.models.response import Privacy
 
 
 class MeetingNotCancellableError(Exception):
@@ -36,6 +37,7 @@ class MeetingStore(Protocol):
         context: str | None = None,
         participants: list[str] | None = None,
         started_at: datetime | None = None,
+        sensitivity: Privacy = Privacy.WORK_PRIVATE,
     ) -> Meeting: ...
 
     async def get_meeting(self, meeting_id: str) -> Meeting | None: ...
@@ -152,8 +154,10 @@ class InMemoryMeetingStore:
         context: str | None = None,
         participants: list[str] | None = None,
         started_at: datetime | None = None,
+        sensitivity: Privacy = Privacy.WORK_PRIVATE,
     ) -> Meeting:
         meeting = Meeting(
+            sensitivity=sensitivity,
             title=title,
             title_source="default" if describe.looks_default(title) else "owner",
             source_filename=source_filename,

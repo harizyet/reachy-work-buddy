@@ -22,7 +22,7 @@ browser/channel transport. Debug robot calls go through hub.
 | `POST /conversation` | Session/conversation IDs, opaque channel, text, input modality, optional `force_frontier`; returns reply, turn count, privacy |
 | `POST /calendar/events` | Operator seeding, not agent calendar writes or external sync |
 | `GET /calendar/events`, `/calendar/next`, `/calendar/free-busy`, `/calendar/reminders/due` | Read-only calendar; free/busy exposes blocks rather than event details |
-| `GET`, `POST /tasks`; `POST /tasks/{id}/complete`; `GET /tasks/search` | Capture, list, complete, search follow-ups |
+| `GET`, `POST /tasks`; `POST /tasks/{id}/complete`; `GET /tasks/search` | Capture, list, complete, search follow-ups. `POST /tasks`, `/notes`, `/documents` and `/reminders` (and the `POST /meetings` form) take an optional `sensitivity` (default `work-private`) and, except for reminders, `project_scope` (default none = unscoped); editing never changes them (Phase 44A, migration 026). |
 | `GET`, `POST /memories`; `GET /memories/recall` | Durable targeted work-memory retrieval, separate from transcript |
 | `POST /memories/{id}/request-forget`, `/forget/confirm`, `/restore` | Text-confirmed soft deletion and undo |
 | `GET`, `POST /documents`; `GET /documents/search` | Operator ingestion and document/section retrieval |

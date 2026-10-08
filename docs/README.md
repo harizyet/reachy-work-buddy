@@ -90,6 +90,7 @@ correct facts or links, not to track each new phase dependency.
 - [Phase 41](phase-41.md): meeting speaker names and reviewed transcript corrections — stage sequence and gates; decision in [ADR 0030](adr/0030-meeting-speaker-names-and-reviewed-corrections.md).
 - [Phase 42](phase-42.md): three-tier model escalation — stage sequence and gates; decision in [ADR 0031](adr/0031-three-tier-local-model-escalation.md).
 - [Phase 43](phase-43.md): meeting deletion, summaries, minutes and meeting context — decision in [ADR 0032](adr/0032-meeting-outputs-and-context.md).
+- [Phase 44](phase-44.md): Reachy Brain, a semantic knowledge and context layer over memory, documents, meetings and planner data (proposed; 44A schema reconciliation written, no code).
 - [Shadow semantic router](shadow-router.md): shadow-mode router, extractor and validator that only records what it would propose; contract, flags, trial procedure, retention and evidence.
 - [Phase 30](phase-30.md): platform stabilization and acceptance — verify the
   no-alert-pose wake build, add the visible-false-activations metric, run the
@@ -135,6 +136,10 @@ over the original decision where they explicitly change it.
 ## Verification records
 
 These are dated evidence, not startup instructions or current health checks.
+
+- [Phase 44A 2026-10-08](verification/phase-44a-2026-10-08.md): knowledge-layer contracts, migration 026 on a disposable database,
+  the pinned Ossie export, hub forwarding of classification and the retrieval benchmark baseline; the failing tests
+  classified as baseline or regression. Fixture evidence only; nothing deployed.
 
 - [Android, meetings and alarms 2026-10-07/08](verification/clients-meetings-alarms-2026-10-07.md):
   deploys with their backups, the real silent recording, emulator checks (including the

@@ -162,12 +162,16 @@ class CompanionCoreClient:
         filename: str,
         content_type: str,
         project_scope: str | None = None,
+        sensitivity: str = "work-private",
         context: str | None = None,
         participants: str = "",
         started_at: str | None = None,
     ) -> dict[str, Any]:
         """Forward the spooled upload without buffering the recording in RAM."""
-        data = {"title": title, "project_scope": project_scope or "", "context": context or "", "participants": participants}
+        data = {
+            "title": title, "project_scope": project_scope or "", "sensitivity": sensitivity, "context": context or "",
+            "participants": participants,
+        }
         if started_at:
             data["started_at"] = started_at
         resp = await self._client.post(

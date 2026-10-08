@@ -15,15 +15,20 @@ from companion_core.planner.models import (
     Station,
 )
 from shared.models.receipt import ActionReceipt
+from shared.models.response import Privacy
 
 
 class PlannerStore(Protocol):
     async def list_notes(self, query: str | None = None) -> list[Note]: ...
-    async def add_note(self, title: str, body: str) -> Note: ...
+    async def add_note(
+        self, title: str, body: str, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, project_scope: str | None = None
+    ) -> Note: ...
     async def update_note(self, note_id: str, title: str, body: str) -> Note | None: ...
     async def delete_note(self, note_id: str) -> bool: ...
     async def list_reminders(self) -> list[Reminder]: ...
-    async def add_reminder(self, text: str, due_at: datetime) -> Reminder: ...
+    async def add_reminder(
+        self, text: str, due_at: datetime, *, sensitivity: Privacy = Privacy.WORK_PRIVATE
+    ) -> Reminder: ...
     async def complete_reminder(self, reminder_id: str) -> Reminder | None: ...
     async def delete_reminder(self, reminder_id: str) -> bool: ...
     async def claim_due(self, now: datetime) -> list[Reminder]: ...
@@ -70,8 +75,10 @@ class InMemoryPlannerStore:
             ]
         return sorted(notes, key=lambda n: n.updated_at, reverse=True)
 
-    async def add_note(self, title: str, body: str) -> Note:
-        note = Note(title=title, body=body)
+    async def add_note(
+        self, title: str, body: str, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, project_scope: str | None = None
+    ) -> Note:
+        note = Note(title=title, body=body, sensitivity=sensitivity, project_scope=project_scope)
         self._notes[note.id] = note
         return note
 
@@ -88,8 +95,10 @@ class InMemoryPlannerStore:
     async def list_reminders(self) -> list[Reminder]:
         return sorted(self._reminders.values(), key=lambda r: r.due_at)
 
-    async def add_reminder(self, text: str, due_at: datetime) -> Reminder:
-        reminder = Reminder(text=text, due_at=due_at)
+    async def add_reminder(
+        self, text: str, due_at: datetime, *, sensitivity: Privacy = Privacy.WORK_PRIVATE
+    ) -> Reminder:
+        reminder = Reminder(text=text, due_at=due_at, sensitivity=sensitivity)
         self._reminders[reminder.id] = reminder
         return reminder
 

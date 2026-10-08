@@ -16,6 +16,8 @@ from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
 
+from shared.models.response import Privacy
+
 
 class DocumentChunk(BaseModel):
     id: str
@@ -25,6 +27,10 @@ class DocumentChunk(BaseModel):
     content: str
     source: str
     chunk_index: int
+    # Phase 44A: set once at ingest and shared by every chunk of a document. Unclassified means work-private; project_scope
+    # None means unscoped (not public).
+    sensitivity: Privacy = Privacy.WORK_PRIVATE
+    project_scope: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 

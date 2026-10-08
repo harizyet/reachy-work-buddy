@@ -203,6 +203,20 @@ runtime with injected faults and a fake clock, and its Docker layer against a fa
 real-hardware acceptance run is described in [Phase 42](phase-42.md#phase-42b-acceptance); it swaps the production
 model and needs the owner's permission.
 
+## Knowledge-layer tests (Phase 44A)
+
+`test_semantic_contract.py` and `test_ossie_export.py` need no database. The export is checked against the Ossie JSON
+Schema vendored at a pinned commit (`companion_core/semantic/ossie/SOURCE.md`) with `jsonschema` (a runtime dependency of companion-core), and
+against a golden file; regenerate the golden file after an intended mapping change with
+`python -c "from companion_core.semantic.ossie import export; print(export.export_json(), end='')" > services/companion-core/tests/fixtures/ossie_structural_export.json`.
+`test_source_sensitivity.py` adds opt-in Postgres checks for migration 026 (upgrade from 025 with seeded rows, conservative
+backfill, SQL that ignores the new columns, store round trips, a dump-and-restore recovery, and the export's columns against the
+real tables); they use the same disposable-server variables as below.
+
+The retrieval benchmark has its own harness tests (`test_knowledge_benchmark.py`: fixtures, scoring, isolation, reproducibility,
+the Phase 43 baselines, the holdout protocol); how to run the benchmark itself is in its
+[README](../services/companion-core/benchmarks/knowledge_retrieval/README.md).
+
 ## Migration and SecretStore tests
 
 `test_database_migrations.py` is opt-in and creates/drops uniquely named

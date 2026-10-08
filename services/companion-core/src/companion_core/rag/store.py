@@ -17,12 +17,21 @@ from typing import Protocol
 from companion_core.rag.chunking import split_into_chunks
 from companion_core.rag.embeddings import embed
 from shared.models.rag import DocumentChunk, RetrievedChunk
+from shared.models.response import Privacy
 
 EmbedFn = Callable[[list[str]], list[list[float]]]
 
 
 class DocumentStore(Protocol):
-    async def ingest_document(self, *, title: str, content: str, source: str) -> list[DocumentChunk]: ...
+    async def ingest_document(
+        self,
+        *,
+        title: str,
+        content: str,
+        source: str,
+        sensitivity: Privacy = Privacy.WORK_PRIVATE,
+        project_scope: str | None = None,
+    ) -> list[DocumentChunk]: ...
 
     async def search(self, query: str, *, top_k: int = 3) -> list[RetrievedChunk]: ...
 
@@ -44,7 +53,15 @@ class InMemoryDocumentStore:
         self._chunks: dict[str, DocumentChunk] = {}
         self._embeddings: dict[str, list[float]] = {}
 
-    async def ingest_document(self, *, title: str, content: str, source: str) -> list[DocumentChunk]:
+    async def ingest_document(
+        self,
+        *,
+        title: str,
+        content: str,
+        source: str,
+        sensitivity: Privacy = Privacy.WORK_PRIVATE,
+        project_scope: str | None = None,
+    ) -> list[DocumentChunk]:
         document_id = str(uuid.uuid4())
         pieces = split_into_chunks(content)
         vectors = self._embed_fn([text for _, text in pieces])
@@ -58,6 +75,8 @@ class InMemoryDocumentStore:
                 content=text,
                 source=source,
                 chunk_index=index,
+                sensitivity=sensitivity,
+                project_scope=project_scope,
             )
             self._chunks[chunk.id] = chunk
             self._embeddings[chunk.id] = vector

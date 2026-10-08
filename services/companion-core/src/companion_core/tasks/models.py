@@ -15,6 +15,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
+from shared.models.response import Privacy
+
 
 class TaskStatus(StrEnum):
     OPEN = "open"
@@ -27,3 +29,6 @@ class Task(BaseModel):
     status: TaskStatus = TaskStatus.OPEN
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     completed_at: datetime | None = None
+    # Phase 44A: unclassified means work-private; project_scope None means unscoped (not public).
+    sensitivity: Privacy = Privacy.WORK_PRIVATE
+    project_scope: str | None = None

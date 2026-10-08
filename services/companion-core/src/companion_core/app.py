@@ -159,7 +159,7 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from datetime import time as dtime
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -167,7 +167,7 @@ from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFi
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, model_validator
 
 from companion_core import (
     alarm_intent,
@@ -357,20 +357,42 @@ class ReminderPayload(BaseModel):
 
 class CreateTaskRequest(BaseModel):
     text: str
+    # Phase 44A: optional classification at creation; omitted means work-private, unscoped.
+    sensitivity: Privacy = Privacy.WORK_PRIVATE
+    project_scope: str | None = Field(default=None, max_length=200)
 
 
-class TaskTextRequest(BaseModel):
+class _NoReclassification(BaseModel):
+    """An edit never changes a record's classification (Phase 44A). A client that sends one is told, not ignored."""
+
+    @model_validator(mode="before")
+    @classmethod
+    def _refuse(cls, data: Any) -> Any:
+        if isinstance(data, dict) and ({"sensitivity", "project_scope"} & data.keys()):
+            raise ValueError("sensitivity and project_scope are set when a record is created and cannot be edited")
+        return data
+
+
+class TaskTextRequest(_NoReclassification):
     text: str = Field(min_length=1, max_length=2000)
 
 
-class NoteRequest(BaseModel):
+class NoteRequest(_NoReclassification):
     title: str = Field(min_length=1, max_length=200)
     body: str = Field(default="", max_length=20000)
+
+
+class CreateNoteRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    body: str = Field(default="", max_length=20000)
+    sensitivity: Privacy = Privacy.WORK_PRIVATE
+    project_scope: str | None = Field(default=None, max_length=200)
 
 
 class CreateReminderRequest(BaseModel):
     text: str = Field(min_length=1, max_length=500)
     due_at: datetime
+    sensitivity: Privacy = Privacy.WORK_PRIVATE
 
 
 class CreateAlarmRequest(BaseModel):
@@ -485,6 +507,8 @@ class CreateDocumentRequest(BaseModel):
     title: str
     content: str
     source: str = "api"
+    sensitivity: Privacy = Privacy.WORK_PRIVATE
+    project_scope: str | None = Field(default=None, max_length=200)
 
 
 class ReceiveEmailRequest(BaseModel):
@@ -1730,7 +1754,8 @@ def create_app(
         """Operator/setup API, not an agent tool — nothing here crawls or
         pulls in documents on its own; this is how they get in at all."""
         return await app.state.rag_store.ingest_document(
-            title=request.title, content=request.content, source=request.source
+            title=request.title, content=request.content, source=request.source,
+            sensitivity=request.sensitivity, project_scope=request.project_scope,
         )
 
     @app.get("/documents")
@@ -1814,7 +1839,9 @@ def create_app(
         """Direct/API capture, alongside the conversational path in
         /conversation — e.g. for a future web UI that isn't going through a
         chat turn at all."""
-        return await app.state.task_store.add_task(request.text)
+        return await app.state.task_store.add_task(
+            request.text, sensitivity=request.sensitivity, project_scope=request.project_scope
+        )
 
     @app.post("/tasks/{task_id}/complete")
     async def complete_task_by_id(task_id: str) -> Task:
@@ -1852,8 +1879,10 @@ def create_app(
         return await app.state.planner_store.list_notes(q)
 
     @app.post("/notes")
-    async def create_note(request: NoteRequest) -> Note:
-        return await app.state.planner_store.add_note(request.title.strip(), request.body)
+    async def create_note(request: CreateNoteRequest) -> Note:
+        return await app.state.planner_store.add_note(
+            request.title.strip(), request.body, sensitivity=request.sensitivity, project_scope=request.project_scope
+        )
 
     @app.put("/notes/{note_id}")
     async def update_note(note_id: str, request: NoteRequest) -> Note:
@@ -1876,7 +1905,9 @@ def create_app(
     async def create_reminder(request: CreateReminderRequest) -> Reminder:
         if request.due_at.tzinfo is None:
             raise HTTPException(status_code=422, detail="due_at must include a time zone")
-        return await app.state.planner_store.add_reminder(request.text.strip(), request.due_at)
+        return await app.state.planner_store.add_reminder(
+            request.text.strip(), request.due_at, sensitivity=request.sensitivity
+        )
 
     @app.get("/reminders/due")
     async def reminders_due_now() -> list[Reminder]:
@@ -2040,6 +2071,7 @@ def create_app(
     async def upload_meeting(
         title: str = Form(...),
         project_scope: str | None = Form(None),
+        sensitivity: Privacy = Form(Privacy.WORK_PRIVATE),  # noqa: B008
         context: str | None = Form(None),
         # Comma-separated rather than a repeated form field: simpler for
         # both the multipart client below and a future browser <form>.
@@ -2056,12 +2088,15 @@ def create_app(
         if not await audio.read(1):
             raise HTTPException(422, "uploaded audio file is empty")
         await audio.seek(0)
+        # Clients send an empty field for "no scope"; unscoped is None, never an empty-named project.
+        project_scope = (project_scope or "").strip() or None
         return await app.state.meeting_store.create_meeting(
             title=title,
             audio=audio.file,
             source_filename=audio.filename or f"recording{suffix}",
             content_type=audio.content_type or "application/octet-stream",
             project_scope=project_scope,
+            sensitivity=sensitivity,
             context=context,
             participants=[p.strip() for p in participants.split(",") if p.strip()],
             started_at=started_at,

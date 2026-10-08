@@ -751,7 +751,7 @@ explicitly disposable project. Leave unrelated services such as OVMS alone.
 ## Schema upgrades and credential keys
 
 Core and hub require the revision declared in
-[`shared/database.py`](../shared/database.py) (`025_meeting_description` at this snapshot).
+[`shared/database.py`](../shared/database.py) (`026_source_sensitivity` in the repository; the running homelab database is still at `025_meeting_description` until the owner approves the upgrade).
 The ordered Alembic history ships
 in core's image; SQL stores perform compatibility checks, not startup DDL.
 Compose runs `migrate` before hub/core, including through
@@ -775,6 +775,8 @@ Revision `018_action_receipts` (Phase 39, [ADR 0028](adr/0028-persona-responses-
 Revision `019_meeting_annotations` (Phase 41, [ADR 0030](adr/0030-meeting-speaker-names-and-reviewed-corrections.md)) adds `meetings.speaker_names` and `meetings.transcript_corrections`. Deployed 2026-10-07 (backup `reachy-before-phase41-20261007-1333.dump`; 5 existing meetings kept). Rebuild `migrate`, `companion-core`, `reachy-hub` and `coding-agent-service` together.
 
 Revision `020_meeting_terms` (Phase 41) adds `meetings.key_terms` and the `meeting_terms` glossary table. Deployed 2026-10-07 (backup `reachy-before-meeting-terms-20261007-1456.dump`; 5 existing meetings kept).
+
+Revision `026_source_sensitivity` ([Phase 44](phase-44.md), not yet applied to the homelab) adds `sensitivity` (`public`, `work-private` or `sensitive`, default `work-private`, check-constrained) to `document_chunks`, `notes`, `tasks`, `reminders` and `meetings`, and a nullable `project_scope` to `document_chunks`, `notes` and `tasks`. Every existing row becomes `work-private` and unscoped; nothing is inferred, and a scope that already exists (a meeting's) is untouched. `NULL` scope means unscoped, not public. Additive, with defaults, so SQL that names its columns keeps working; the old core image refuses the new revision at startup, so rebuild `migrate`, `companion-core` and `reachy-hub` together. Recovery is the pre-upgrade dump: restoring it returns the database to `025` and the same upgrade can be run again (verified on a disposable server, `test_source_sensitivity.py`). Downgrade is unsupported. Apply only after a verified dump, with the owner's approval, using the sequence above.
 
 Revision `025_meeting_description` adds `meetings.description` and `meetings.title_source`; existing meetings whose title is not the apps' default ("Meeting 7 Oct 12:05") are marked as owner-titled so they are never renamed. Core and hub are rebuilt together.
 

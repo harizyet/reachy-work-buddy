@@ -8,12 +8,16 @@ from psycopg_pool import AsyncConnectionPool
 
 from companion_core.tasks.models import Task, TaskStatus
 from shared.database import check_schema
+from shared.models.response import Privacy
 
-_COLUMNS = "id, text, status, created_at, completed_at"
+_COLUMNS = "id, text, status, created_at, completed_at, sensitivity, project_scope"
 
 
 def _from_row(row: tuple) -> Task:
-    return Task(id=row[0], text=row[1], status=TaskStatus(row[2]), created_at=row[3], completed_at=row[4])
+    return Task(
+        id=row[0], text=row[1], status=TaskStatus(row[2]), created_at=row[3], completed_at=row[4],
+        sensitivity=Privacy(row[5]), project_scope=row[6],
+    )
 
 
 class PostgresTaskStore:
@@ -32,12 +36,17 @@ class PostgresTaskStore:
     async def close(self) -> None:
         await self._pool.close()
 
-    async def add_task(self, text: str) -> Task:
-        task = Task(text=text)
+    async def add_task(
+        self, text: str, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, project_scope: str | None = None
+    ) -> Task:
+        task = Task(text=text, sensitivity=sensitivity, project_scope=project_scope)
         async with self._pool.connection() as conn:
             await conn.execute(
-                f"INSERT INTO tasks ({_COLUMNS}) VALUES (%s, %s, %s, %s, %s)",
-                (task.id, task.text, task.status.value, task.created_at, task.completed_at),
+                f"INSERT INTO tasks ({_COLUMNS}) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                (
+                    task.id, task.text, task.status.value, task.created_at, task.completed_at,
+                    task.sensitivity.value, task.project_scope,
+                ),
             )
         return task
 

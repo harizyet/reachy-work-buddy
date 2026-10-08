@@ -12,6 +12,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field, field_validator
 
+from shared.models.response import Privacy
+
 
 def _now() -> datetime:
     return datetime.now(UTC)
@@ -23,6 +25,10 @@ class Note(BaseModel):
     body: str = ""
     created_at: datetime = Field(default_factory=_now)
     updated_at: datetime = Field(default_factory=_now)
+    # Phase 44A: unclassified means work-private; project_scope None means unscoped (not public). Editing a note never
+    # changes either.
+    sensitivity: Privacy = Privacy.WORK_PRIVATE
+    project_scope: str | None = None
 
 
 class ReminderStatus(StrEnum):
@@ -38,6 +44,7 @@ class Reminder(BaseModel):
     created_at: datetime = Field(default_factory=_now)
     completed_at: datetime | None = None
     notified_at: datetime | None = None
+    sensitivity: Privacy = Privacy.WORK_PRIVATE
 
 
 class AlarmStatus(StrEnum):

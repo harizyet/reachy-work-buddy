@@ -17,14 +17,16 @@ from companion_core.planner.models import (
 )
 from shared.database import check_schema
 from shared.models.receipt import ActionReceipt
+from shared.models.response import Privacy
 
-_NOTE_COLUMNS = "id, title, body, created_at, updated_at"
-_REMINDER_COLUMNS = "id, text, due_at, status, created_at, completed_at, notified_at"
+_NOTE_COLUMNS = "id, title, body, created_at, updated_at, sensitivity, project_scope"
+_REMINDER_COLUMNS = "id, text, due_at, status, created_at, completed_at, notified_at, sensitivity"
 
 
 def _note(row: tuple) -> Note:
     return Note(
-        id=row[0], title=row[1], body=row[2], created_at=row[3], updated_at=row[4]
+        id=row[0], title=row[1], body=row[2], created_at=row[3], updated_at=row[4],
+        sensitivity=Privacy(row[5]), project_scope=row[6],
     )
 
 
@@ -37,6 +39,7 @@ def _reminder(row: tuple) -> Reminder:
         created_at=row[4],
         completed_at=row[5],
         notified_at=row[6],
+        sensitivity=Privacy(row[7]),
     )
 
 _ALARM_COLUMNS = "id, label, due_at, reminder_id, station_id, status, created_at, fired_at, delivery, volume, repeat, enabled"
@@ -112,12 +115,17 @@ class PostgresPlannerStore:
                 )
             return [_note(row) for row in await cur.fetchall()]
 
-    async def add_note(self, title: str, body: str) -> Note:
-        note = Note(title=title, body=body)
+    async def add_note(
+        self, title: str, body: str, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, project_scope: str | None = None
+    ) -> Note:
+        note = Note(title=title, body=body, sensitivity=sensitivity, project_scope=project_scope)
         async with self._pool.connection() as conn:
             await conn.execute(
-                f"INSERT INTO notes ({_NOTE_COLUMNS}) VALUES (%s, %s, %s, %s, %s)",
-                (note.id, note.title, note.body, note.created_at, note.updated_at),
+                f"INSERT INTO notes ({_NOTE_COLUMNS}) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                (
+                    note.id, note.title, note.body, note.created_at, note.updated_at,
+                    note.sensitivity.value, note.project_scope,
+                ),
             )
         return note
 
@@ -142,11 +150,13 @@ class PostgresPlannerStore:
             )
             return [_reminder(row) for row in await cur.fetchall()]
 
-    async def add_reminder(self, text: str, due_at: datetime) -> Reminder:
-        reminder = Reminder(text=text, due_at=due_at)
+    async def add_reminder(
+        self, text: str, due_at: datetime, *, sensitivity: Privacy = Privacy.WORK_PRIVATE
+    ) -> Reminder:
+        reminder = Reminder(text=text, due_at=due_at, sensitivity=sensitivity)
         async with self._pool.connection() as conn:
             await conn.execute(
-                f"INSERT INTO reminders ({_REMINDER_COLUMNS}) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                f"INSERT INTO reminders ({_REMINDER_COLUMNS}) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     reminder.id,
                     reminder.text,
@@ -155,6 +165,7 @@ class PostgresPlannerStore:
                     reminder.created_at,
                     reminder.completed_at,
                     reminder.notified_at,
+                    reminder.sensitivity.value,
                 ),
             )
         return reminder

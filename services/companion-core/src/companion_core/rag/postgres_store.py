@@ -19,8 +19,10 @@ from companion_core.rag.embeddings import embed
 from companion_core.rag.store import EmbedFn
 from shared.database import check_schema
 from shared.models.rag import DocumentChunk, RetrievedChunk
+from shared.models.response import Privacy
 
-_COLUMNS = "id, document_id, document_title, section, content, source, chunk_index, created_at"
+_COLUMNS = "id, document_id, document_title, section, content, source, chunk_index, created_at, sensitivity, project_scope"
+_CHUNK_WIDTH = 10
 
 
 def _from_row(row: tuple) -> DocumentChunk:
@@ -33,6 +35,8 @@ def _from_row(row: tuple) -> DocumentChunk:
         source=row[5],
         chunk_index=row[6],
         created_at=row[7],
+        sensitivity=Privacy(row[8]),
+        project_scope=row[9],
     )
 
 
@@ -56,7 +60,15 @@ class PostgresDocumentStore:
     async def close(self) -> None:
         await self._pool.close()
 
-    async def ingest_document(self, *, title: str, content: str, source: str) -> list[DocumentChunk]:
+    async def ingest_document(
+        self,
+        *,
+        title: str,
+        content: str,
+        source: str,
+        sensitivity: Privacy = Privacy.WORK_PRIVATE,
+        project_scope: str | None = None,
+    ) -> list[DocumentChunk]:
         document_id = str(uuid.uuid4())
         pieces = split_into_chunks(content)
         vectors = self._embed_fn([text for _, text in pieces])
@@ -71,10 +83,12 @@ class PostgresDocumentStore:
                     content=text,
                     source=source,
                     chunk_index=index,
+                    sensitivity=sensitivity,
+                    project_scope=project_scope,
                 )
                 await conn.execute(
                     f"INSERT INTO document_chunks ({_COLUMNS}, embedding) "
-                    f"VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    f"VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                     (
                         chunk.id,
                         chunk.document_id,
@@ -84,6 +98,8 @@ class PostgresDocumentStore:
                         chunk.source,
                         chunk.chunk_index,
                         chunk.created_at,
+                        chunk.sensitivity.value,
+                        chunk.project_scope,
                         vector,
                     ),
                 )
@@ -105,7 +121,7 @@ class PostgresDocumentStore:
                 (query_vector, query_vector, top_k),
             )
             rows = await cur.fetchall()
-        return [RetrievedChunk(chunk=_from_row(row[:8]), score=row[8]) for row in rows]
+        return [RetrievedChunk(chunk=_from_row(row[:_CHUNK_WIDTH]), score=row[_CHUNK_WIDTH]) for row in rows]
 
     async def list_documents(self) -> list[str]:
         async with self._pool.connection() as conn:

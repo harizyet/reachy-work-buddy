@@ -1,0 +1,824 @@
+{
+  "version": "0.2.0.dev0",
+  "name": "reachy_work_buddy",
+  "description": "Structure of Reachy's authoritative stores (memory, documents, meetings, notes, tasks, reminders).",
+  "datasets": [
+    {
+      "name": "memories",
+      "source": "public.memories",
+      "primary_key": [
+        "id"
+      ],
+      "description": "Work memory: profile, working and episodic facts with provenance (source), confidence and expiry.",
+      "fields": [
+        {
+          "name": "id",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "id"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "type",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "type"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "content",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "content"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "source",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "source"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "project_scope",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "project_scope"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "confidence",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "confidence"
+              }
+            ]
+          },
+          "datatype": "Float"
+        },
+        {
+          "name": "sensitivity",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "sensitivity"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "created_at",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "created_at"
+              }
+            ]
+          },
+          "datatype": "DateTimeTz"
+        },
+        {
+          "name": "last_accessed",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "last_accessed"
+              }
+            ]
+          },
+          "datatype": "DateTimeTz"
+        },
+        {
+          "name": "expires_at",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "expires_at"
+              }
+            ]
+          },
+          "datatype": "DateTimeTz"
+        },
+        {
+          "name": "forgotten_at",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "forgotten_at"
+              }
+            ]
+          },
+          "datatype": "DateTimeTz"
+        }
+      ],
+      "custom_extensions": [
+        {
+          "vendor_name": "REACHY",
+          "data": "{\"authoritative_store\":true,\"default_sensitivity\":\"work-private\",\"scope_column\":\"project_scope\",\"sensitivity_column\":\"sensitivity\",\"unscoped_means\":\"unscoped, neither public nor every project\"}"
+        }
+      ]
+    },
+    {
+      "name": "document_chunks",
+      "source": "public.document_chunks",
+      "primary_key": [
+        "id"
+      ],
+      "description": "Chunks of ingested documents. Every chunk of one document carries the document's classification and scope.",
+      "fields": [
+        {
+          "name": "id",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "id"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "document_id",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "document_id"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "document_title",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "document_title"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "section",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "section"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "content",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "content"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "source",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "source"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "chunk_index",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "chunk_index"
+              }
+            ]
+          },
+          "datatype": "Integer"
+        },
+        {
+          "name": "sensitivity",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "sensitivity"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "project_scope",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "project_scope"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "created_at",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "created_at"
+              }
+            ]
+          },
+          "datatype": "DateTimeTz"
+        }
+      ],
+      "custom_extensions": [
+        {
+          "vendor_name": "REACHY",
+          "data": "{\"authoritative_store\":true,\"default_sensitivity\":\"work-private\",\"scope_column\":\"project_scope\",\"sensitivity_column\":\"sensitivity\",\"unscoped_means\":\"unscoped, neither public nor every project\"}"
+        }
+      ]
+    },
+    {
+      "name": "meetings",
+      "source": "public.meetings",
+      "primary_key": [
+        "id"
+      ],
+      "description": "Recorded meetings. Transcript segments, speaker data and generated summaries are stored on the row but are not exported here.",
+      "fields": [
+        {
+          "name": "id",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "id"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "title",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "title"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "project_scope",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "project_scope"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "sensitivity",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "sensitivity"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "started_at",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "started_at"
+              }
+            ]
+          },
+          "datatype": "DateTimeTz"
+        },
+        {
+          "name": "duration_seconds",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "duration_seconds"
+              }
+            ]
+          },
+          "datatype": "Float"
+        },
+        {
+          "name": "description",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "description"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "title_source",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "title_source"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "status",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "status"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "created_at",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "created_at"
+              }
+            ]
+          },
+          "datatype": "DateTimeTz"
+        },
+        {
+          "name": "updated_at",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "updated_at"
+              }
+            ]
+          },
+          "datatype": "DateTimeTz"
+        }
+      ],
+      "custom_extensions": [
+        {
+          "vendor_name": "REACHY",
+          "data": "{\"authoritative_store\":true,\"default_sensitivity\":\"work-private\",\"scope_column\":\"project_scope\",\"sensitivity_column\":\"sensitivity\",\"unscoped_means\":\"unscoped, neither public nor every project\"}"
+        }
+      ]
+    },
+    {
+      "name": "notes",
+      "source": "public.notes",
+      "primary_key": [
+        "id"
+      ],
+      "description": "Owner notes.",
+      "fields": [
+        {
+          "name": "id",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "id"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "title",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "title"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "body",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "body"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "created_at",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "created_at"
+              }
+            ]
+          },
+          "datatype": "DateTimeTz"
+        },
+        {
+          "name": "updated_at",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "updated_at"
+              }
+            ]
+          },
+          "datatype": "DateTimeTz"
+        },
+        {
+          "name": "sensitivity",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "sensitivity"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "project_scope",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "project_scope"
+              }
+            ]
+          },
+          "datatype": "String"
+        }
+      ],
+      "custom_extensions": [
+        {
+          "vendor_name": "REACHY",
+          "data": "{\"authoritative_store\":true,\"default_sensitivity\":\"work-private\",\"scope_column\":\"project_scope\",\"sensitivity_column\":\"sensitivity\",\"unscoped_means\":\"unscoped, neither public nor every project\"}"
+        }
+      ]
+    },
+    {
+      "name": "tasks",
+      "source": "public.tasks",
+      "primary_key": [
+        "id"
+      ],
+      "description": "Owner tasks.",
+      "fields": [
+        {
+          "name": "id",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "id"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "text",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "text"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "status",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "status"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "created_at",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "created_at"
+              }
+            ]
+          },
+          "datatype": "DateTimeTz"
+        },
+        {
+          "name": "completed_at",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "completed_at"
+              }
+            ]
+          },
+          "datatype": "DateTimeTz"
+        },
+        {
+          "name": "sensitivity",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "sensitivity"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "project_scope",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "project_scope"
+              }
+            ]
+          },
+          "datatype": "String"
+        }
+      ],
+      "custom_extensions": [
+        {
+          "vendor_name": "REACHY",
+          "data": "{\"authoritative_store\":true,\"default_sensitivity\":\"work-private\",\"scope_column\":\"project_scope\",\"sensitivity_column\":\"sensitivity\",\"unscoped_means\":\"unscoped, neither public nor every project\"}"
+        }
+      ]
+    },
+    {
+      "name": "reminders",
+      "source": "public.reminders",
+      "primary_key": [
+        "id"
+      ],
+      "description": "Timed reminders.",
+      "fields": [
+        {
+          "name": "id",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "id"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "text",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "text"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "due_at",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "due_at"
+              }
+            ]
+          },
+          "datatype": "DateTimeTz"
+        },
+        {
+          "name": "status",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "status"
+              }
+            ]
+          },
+          "datatype": "String"
+        },
+        {
+          "name": "created_at",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "created_at"
+              }
+            ]
+          },
+          "datatype": "DateTimeTz"
+        },
+        {
+          "name": "completed_at",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "completed_at"
+              }
+            ]
+          },
+          "datatype": "DateTimeTz"
+        },
+        {
+          "name": "notified_at",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "notified_at"
+              }
+            ]
+          },
+          "datatype": "DateTimeTz"
+        },
+        {
+          "name": "sensitivity",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "sensitivity"
+              }
+            ]
+          },
+          "datatype": "String"
+        }
+      ],
+      "custom_extensions": [
+        {
+          "vendor_name": "REACHY",
+          "data": "{\"authoritative_store\":true,\"default_sensitivity\":\"work-private\",\"scope_column\":null,\"sensitivity_column\":\"sensitivity\",\"unscoped_means\":\"unscoped, neither public nor every project\"}"
+        }
+      ]
+    }
+  ],
+  "metrics": [
+    {
+      "name": "open_tasks",
+      "expression": {
+        "dialects": [
+          {
+            "dialect": "ANSI_SQL",
+            "expression": "COUNT(CASE WHEN tasks.status = 'open' THEN 1 END)"
+          }
+        ]
+      },
+      "description": "Tasks that are not done.",
+      "datatype": "Integer"
+    },
+    {
+      "name": "pending_reminders",
+      "expression": {
+        "dialects": [
+          {
+            "dialect": "ANSI_SQL",
+            "expression": "COUNT(CASE WHEN reminders.status = 'pending' THEN 1 END)"
+          }
+        ]
+      },
+      "description": "Reminders not yet completed.",
+      "datatype": "Integer"
+    },
+    {
+      "name": "active_memories",
+      "expression": {
+        "dialects": [
+          {
+            "dialect": "ANSI_SQL",
+            "expression": "COUNT(CASE WHEN memories.forgotten_at IS NULL AND (memories.expires_at IS NULL OR memories.expires_at > CURRENT_TIMESTAMP) THEN 1 END)"
+          }
+        ]
+      },
+      "description": "Memories that are neither forgotten nor expired.",
+      "datatype": "Integer"
+    },
+    {
+      "name": "meetings_total",
+      "expression": {
+        "dialects": [
+          {
+            "dialect": "ANSI_SQL",
+            "expression": "COUNT(meetings.id)"
+          }
+        ]
+      },
+      "description": "All stored meetings, whatever their processing state.",
+      "datatype": "Integer"
+    },
+    {
+      "name": "document_chunks_total",
+      "expression": {
+        "dialects": [
+          {
+            "dialect": "ANSI_SQL",
+            "expression": "COUNT(document_chunks.id)"
+          }
+        ]
+      },
+      "description": "All stored document chunks.",
+      "datatype": "Integer"
+    }
+  ],
+  "custom_extensions": [
+    {
+      "vendor_name": "REACHY",
+      "data": "{\"not_expressed\":[\"entities\",\"typed relationships\",\"provenance\",\"confidence\",\"temporal validity and supersession\",\"evidence links\"],\"note\":\"Structural description only. Reachy's knowledge ontology is not represented in this model.\"}"
+    }
+  ]
+}

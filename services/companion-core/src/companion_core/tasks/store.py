@@ -16,10 +16,13 @@ from datetime import UTC, datetime
 from typing import Protocol
 
 from companion_core.tasks.models import Task, TaskStatus
+from shared.models.response import Privacy
 
 
 class TaskStore(Protocol):
-    async def add_task(self, text: str) -> Task: ...
+    async def add_task(
+        self, text: str, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, project_scope: str | None = None
+    ) -> Task: ...
     async def list_tasks(self, status: TaskStatus | None = None) -> list[Task]: ...
     async def complete_task(self, task_id: str) -> Task | None: ...
     async def search_tasks(self, query: str) -> list[Task]: ...
@@ -32,8 +35,10 @@ class InMemoryTaskStore:
     def __init__(self) -> None:
         self._tasks: dict[str, Task] = {}
 
-    async def add_task(self, text: str) -> Task:
-        task = Task(text=text)
+    async def add_task(
+        self, text: str, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, project_scope: str | None = None
+    ) -> Task:
+        task = Task(text=text, sensitivity=sensitivity, project_scope=project_scope)
         self._tasks[task.id] = task
         return task
 

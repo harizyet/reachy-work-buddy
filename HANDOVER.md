@@ -26,6 +26,14 @@ The [documentation index](docs/README.md) defines ownership;
 | Hub routes: `/speech`, `/meetings/{id}/audio`, `PUT /meetings/{id}/title`, `POST /meetings/{id}/describe`, `PATCH /planner/alarms/{id}`, `DELETE /chats/{id}`; alarm creation by clock time; wake-phrase acknowledgement mid-conversation | [services reference](docs/reference/services.md), [operator guide](docs/operator-guide.md) |
 | Migrations 022 to 025 | [deployment](docs/deployment.md#schema-upgrades-and-credential-keys) |
 
+### Phase 44 (proposed; 44A implemented locally, 2026-10-08)
+
+[docs/phase-44.md](docs/phase-44.md) holds decisions D1 to D11, the 44A acceptance table and the readiness assessment; dated evidence is in [the verification record](docs/verification/phase-44a-2026-10-08.md) and the [case-level review of the 44 holdout cases](docs/verification/phase-44a-holdout-case-review-2026-10-08.md). Built, **uncommitted and not deployed**: contracts (`companion_core/semantic/`), migration `026_source_sensitivity` (`SCHEMA_REVISION` bumped; the homelab database is still at 025, so an image built now refuses to start against it), optional `sensitivity`/`project_scope` through the stores, core API and hub create routes (edits that carry them get 422; documents are core-only), the export-only Ossie adapter pinned to upstream `8dd6732` with `jsonschema` as a runtime dependency, and the retrieval benchmark (`services/companion-core/benchmarks/knowledge_retrieval/`: 25 dev and 44 frozen holdout cases, baselines `b0` and `b0-oracle`, two tracks, exposed-versus-candidate leakage). The holdout was scored once on the synthetic track (`44A-baseline`); the production-embedding (real MiniLM) track has been run on the dev set only, and scoring its holdout needs a new decision point and the owner's go-ahead. Not built: the index, outbox, retrieval, flags, entities (44B onward).
+
+**Open for the next session:** the owner's review of the case-level report; approval to commit; approval to apply 026 (verified dump first, then the deployment sequence, rebuilding `migrate`, core and hub together); no UI control for classification yet; 44B only with approval, and retrieval-time source revalidation is non-negotiable for it. 44E must add action-boundary probes for every new path that puts retrieved text in a prompt.
+
+Tests (disposable `pgvector/pgvector:pg16` container, removed afterwards): `pytest services shared` 1565 passed, 22 skipped, 2 failed; `ruff check .` clean. Both failures reproduce on a clean `ad69d1a` worktree: hub `test_spoken_command_text_does_not_actuate_the_robot` (known) and embodiment `test_voice::test_multi_turn_conversation_through_hub_and_core`, now explained as a **stale test fixture** (since `a1843a3` a lone "hello reachy" mid-conversation is acknowledged by design; the hub's copy of the test was updated, the embodiment's was not; two script lines fix it, not yet changed). Embodiment `test_wake.py` is timing-flaky on both trees. `jsonschema` was installed into `.venv` with `uv pip`, not `uv sync`.
+
 ### Open, unverified or worth watching
 
 - **Spoken replies on the owner's phone.** After app 0.12.1 the owner reported replies not playing at all. It could not be reproduced (emulator: reply detected, voice fetched, playback started;
@@ -35,7 +43,7 @@ The [documentation index](docs/README.md) defines ownership;
 - **Alarm time zone:** the server reads clock times in the assistant's (persona) time zone; the screens show the device's. Keep them the same.
 - **Summaries and minutes** were lengthened but not rerun on the real 7B; a deep-tier run on the GPU is unverified. Reminders cannot be reopened (no hub route).
 - **Not exercised against production:** the web UI (no owner session in development) and the app on a physical phone or Fold.
-- **Failing before this work, still failing:** hub `test_spoken_command_text_does_not_actuate_the_robot` and the browser fixture "Hey Reachy" label test (`voice.test.cjs`).
+- **Failing before this work, still failing:** hub `test_spoken_command_text_does_not_actuate_the_robot`, embodiment `test_voice::test_multi_turn_conversation_through_hub_and_core` (stale fixture, see the Phase 44 entry) and the browser fixture "Hey Reachy" label test (`voice.test.cjs`); embodiment `test_wake.py` is timing-flaky.
 
 ### Cautions for the next session
 
