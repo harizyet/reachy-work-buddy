@@ -1,6 +1,6 @@
 # Phase 47: React web platform modernization and Brain visualization (plan)
 
-Status: **plan approved by the owner 2026-10-08; 47A committed (`b5c5bd7`, branch `phase-47a`, pushed, not merged, not deployed); 47B1 to B3 (Planner, Notes, Activity) built on branch `phase-47b`, not merged, not deployed** (records in sections 13 and 14). B4 (alarms), WebRTC, the Brain API and any deployment need separate approval.
+Status: **plan approved by the owner 2026-10-08; 47A (`b5c5bd7`) and 47B (the whole operator UI in React) built, tested and merged to main; not deployed; owner user testing is pending** (records in sections 13 and 14). Next is 47C (the 3D Brain foundation, frontend only, synthetic data). The Brain API, a WebRTC/PWA rewrite, memory and document screens and any deployment still need their own approval.
 
 Numbering: the owner's brief called this "Phase 46". That number belongs to [Phase 46, least-privilege database roles](phase-46.md), so this is Phase 47 (owner decision D1, 2026-10-08: preserve Phases 44, 45 and 46).
 
@@ -221,41 +221,51 @@ Planning only, no code run. Facts were taken from `HANDOVER.md`, `AGENTS.md`, `d
 
 Built on branch `phase-47a` in a separate worktree; nothing deployed. Layout as built: `clients/web/` with `src/{app,api,components,features,styles}`, `tests/` (Vitest), `e2e/` (Playwright against a real in-process hub); one hub change (the `/web` mount in `app.py`), the Dockerfile Node stage, `.dockerignore` entries, and `services/reachy-hub/tests/test_web_client.py`. Only login, guard, logout and Overview exist; every other matrix row is still **not started**. Results, bundle sizes and the API compatibility check are in the [47A verification record](verification/phase-47a-2026-10-08.md). Deviations from the plan: `openapi-typescript` was dropped (section 5); shadcn/Radix were not adopted because 47A needs only a button, card, pill and spinner (they remain the intended primitive source once dialogs and menus arrive in 47B); the Overview shows components and model-usage totals but not the per-call usage table, sessions, DND, audit or notifications, which belong with the chat/session work.
 
-## 14. 47B record (2026-10-08): B1 Planner, B2 Notes, B3 Activity
+## 14. 47B record (2026-10-08): the operator UI in React
 
-Authorized by the owner on 2026-10-08 as local development only: B1 tasks and reminders, B2 notes, B3 activity. Branch `phase-47b`, from the pushed 47A commit. Not B4 (alarms), not WebRTC, not the Brain API, no deployment, no backend authorization or knowledge-flag change. Evidence: [47B verification](verification/phase-47b-2026-10-08.md).
+Authorized by the owner on 2026-10-08, in steps: B1 to B3 first (local development), then alarms and "do what you can to complete the task" with user testing at the end, then merge to main once 47B was complete. Not authorized and not done: deployment, a Brain API, a WebRTC/PWA rewrite, memory and document screens, backend changes. Evidence: [47B verification](verification/phase-47b-2026-10-08.md).
 
-Method for each feature: (1) pin the hub behaviour with tests through the real owner-session chain (`test_web_client.py::test_planner_*`), next to the existing legacy fixture tests; (2) implement the React page; (3) hold it to the same cases with component tests (the legacy cases are reproduced one for one) and Playwright against the real hub; (4) cross-check with the legacy UI on the same hub.
+Method for each feature: (1) pin the hub behaviour with tests through the real owner-session chain (`test_web_client.py`), next to the legacy fixture tests; (2) implement the React page; (3) hold it to the legacy cases with component tests and to the real hub with Playwright; (4) cross-check with the legacy UI on the same hub where the legacy UI can do the same thing.
 
 ### Feature-parity status
 
-| Matrix row | React | Parity evidence | Status |
+Everything in the legacy operator UI is rebuilt at `/web/`. "Built" means implemented and tested; **nothing is owner-accepted** (the owner tests once at the end) and the legacy `/ui/` remains the fallback until 47F.
+
+| Legacy feature | React route | Tests beyond component level | Status |
 |---|---|---|---|
-| To Do (open list, round check, completed section, inline add that stays open, inline rename, delete, refresh, empty and error states, literal text) | `/todo` | `planner.test.tsx`; `planner.spec.ts` (both mounts, both widths); legacy `planner.test.cjs` cases reproduced; legacy-to-React round trip | **Migrated, pending owner acceptance** |
-| Reminders (earliest first, due text, overdue marker, completed section with disabled tick, New Reminder sheet with next whole hour, delete) | `/reminders` | same; due text compared with the legacy row for the same record | **Migrated, pending owner acceptance** |
-| Notes (date sections, preview, search on the server, debounced autosave, serialised save, no blank note, title fallback, flush on switch, delete with confirmation, narrow-screen list/editor/back) | `/notes` | `notes.test.tsx`; `planner.spec.ts`; legacy-note round trip | **Migrated, pending owner acceptance** |
-| Recent activity (receipts newest first, failed struck through with reason, fields, empty and error states) | `/activity` | `activity.test.tsx`; `planner.spec.ts` against hub receipts | **Migrated, pending owner acceptance** |
+| Login, logout, expiry, protected routes | `#/login` | real hub, both mounts, both widths | Built |
+| Overview: components, model-call table, usage by role, search usage meters, recent deliveries, queued notifications | `#/` | real hub | Built (the legacy per-user session picker lives in Settings) |
+| Chat: records, history search/delete, citations and sources, suggested commands, frontier override, meeting context, voice turns | `#/chat` | real hub, owner-bound | Built |
+| Meetings: list/search/cancel/delete, upload and browser recording, speakers, line edit, title, summary/minutes, suggestions, deep local review | `#/meetings`, `#/meetings/:id` | real hub incl. a Chromium fake microphone | Built (deep review is fixture-tested only: no model manager on a test hub) |
+| To Do, Reminders, Notes, Activity, Alarms with stations | `#/todo`, `#/reminders`, `#/notes`, `#/activity`, `#/alarms` | real hub; legacy round trips | Built |
+| Settings: Assistant (session, persona), Models, Web search (and the debug log) | `#/settings/assistant`, `models`, `search` | real hub | Built |
+| Settings: Voice and motion (robot microphone, privacy mode, animations) | `#/settings/voice` | simulated robot only | Built (no real robot commanded) |
+| Settings: Accounts (Google, coding-agent credentials) | `#/settings/accounts` | fixture only (no Google); credentials fixture | Built; **sign-in return lands on `/ui/` until 47F** (see below) |
+| Settings: Owner recognition benchmark dataset | `#/settings/recognition` | real hub incl. fake microphone | Built |
+| Coding agents | `#/coding` | fixture; real hub shows the service as unavailable | Built |
+| Telepresence link, Call Reachy (`clients/web-pwa`) | unchanged `/app/` | n/a | **Not migrated** (D5) |
+| Memory and Document management | none | n/a | **Not built** (new features, backend gaps in section 7a) |
 
-"Migrated" here means built and tested, not owner-accepted: the legacy tabs stay the fallback and nothing is deployed.
+### Where the React app deliberately differs from the legacy UI
 
-### Deliberate differences from the legacy UI
-
-- Navigation is links in the app header, not tab buttons; the legacy workspace tab bar is unchanged.
-- The Notes toolbar spans the top of the page rather than sitting in the editor pane, so New note is reachable on a narrow screen while the list is showing. This was found by the browser suite: the component tests (jsdom, no CSS) passed while the button was hidden at phone width.
-- Leaving the Notes page while signed in saves a pending edit; the legacy tab kept its timer running instead. On sign-out, session expiry or a new sign-in an unsaved edit is dropped, not sent.
-- Deleting a task or reminder has no confirmation, as in the legacy UI (only notes confirm). Not changed in a parity migration; see the gaps below.
+- Navigation is links in a header; Settings tabs keep the ARIA tabs keyboard behaviour; the Notes toolbar spans the page so New note is reachable on a phone.
+- Leaving the Notes page while signed in saves a pending edit; on sign-out, expiry or a new sign-in an unsaved edit is dropped, not sent.
+- A **wrong re-confirmation password** in Owner recognition no longer signs the owner out. The legacy page treats every 401 as a lost session; the hub also answers 401 for a wrong or expired confirmation. The React calls treat it as an ordinary refusal and re-read the status to learn which it was.
+- **Voice samples upload with the bare media type.** A browser recorder reports `audio/webm;codecs=opus`, which the hub rejects (it matches `audio/webm` exactly), so the legacy page's voice-sample upload fails in Chromium. The React page sends `audio/webm`. (The hub is unchanged.)
+- Secrets (model, search and coding-agent keys, the Google client secret) are write-only in the page: only the hub's masked tail is shown, nothing is sent unless typed, and **every form resets after a save**. This last point was a real bug in the first React version: a second save that produced the same masked tail left the typed key in the password field.
+- The Overview, Chat and Voice providers live above the pages, so a request in flight, the open conversation and the robot-microphone lease survive moving between pages and stop on sign-out.
+- Deleting a task or reminder is still immediate (the legacy behaviour); every other destructive action, and starting a coding session, asks first.
 
 ### Authentication-generation isolation
 
-`api/client.ts` keeps a generation counter. Sign-in, sign-out and a 401 advance it; every request records the generation it started in and aborts with `StaleSessionError` if it finishes in a later one, before any caller sees the answer. Advancing also aborts everything in flight. A 401 for an older generation never runs the sign-out handler, so a late 401 cannot end a newer sign-in. The Notes editor ties "still the same session" to the generation rather than to React state, because state lags the unmount that triggers its last flush (a mutation test showed an unsaved edit being sent after sign-out began until this was fixed). Regression tests: `session.test.tsx` (10 cases, 11 runs: list answered after logout, with and without the abort taking effect; answered after a 401 expiry; slow `/auth/me` against an expiry; late 401 against a newer sign-in; late success against a different owner's session; the next session's empty cache while loading; a mutation answered after logout; unsaved and in-flight note saves at logout; the save-on-leave case), `client.test.ts` (request-layer cases), and `planner.spec.ts` (a real browser: the in-flight list request is cancelled, its late answer is ignored, back-navigation shows nothing). Each of the five protections was broken on purpose and a test failed.
+`api/client.ts` keeps a generation counter. Sign-in, sign-out and a 401 advance it; every request records the generation it started in and fails with `StaleSessionError` if it finishes in a later one, before any caller sees the answer. Advancing also aborts everything in flight. A 401 for an older generation never runs the sign-out handler. Long-lived pieces (the Notes editor, chat, voice, deep-review following, the coding poll) either check the generation or are unmounted by sign-out. Regression tests: `session.test.tsx` (17 cases covering lists, expiry, `/auth/me`, newer sign-ins, mutations, notes, chat, meetings, deep review, settings secrets), `client.test.ts`, and browser tests that cancel an in-flight list and chat reply at logout. Each protection was broken on purpose and a test failed.
 
-### API gaps and decisions needing separate approval
+### Known limits and API gaps (none changed)
 
-1. Operator routes return bare dicts, so OpenAPI has no response fields (47A finding). The planner responses are checked by parsers and a hub drift test. Typed response models in the hub would remove the hand-written layer; that is a backend change.
-2. Hub validation errors for bodies (422) return `detail` as a list, which the client shows as "Request failed (422)", as the legacy UI does. A readable message needs a hub change.
-3. Reminders cannot be edited or reopened (no hub route). Notes and tasks have no reclassification route by design (`_NoReclassification`).
-4. Deleting tasks and reminders is immediate in both UIs. Whether to add the confirmation ADR 0011 describes for destructive actions is an owner decision, not a parity task.
-5. Hub receipts are read-only and only the 100 newest are returned by default; there is no paging route.
-6. Notes search is a server call on every pause; there is no result limit parameter.
-
-None of these was changed. The 47B stage added no hub route, no schema change and no flag change.
+1. **Google sign-in return.** The hub redirects the owner back to `../../../ui/?google=return`. The React page already completes the sign-in when it sees `?google=return`, so it works as soon as `/ui/` serves the React app (47F); until then a web-client sign-in finishes in the legacy page. The desktop-helper flow does not use the redirect. Changing the redirect now would break the legacy page, so it was left alone.
+2. Operator routes return bare dicts, so OpenAPI has no response fields; every response is checked by a hand-written parser, and `test_web_client.py` fails when a response drifts from the committed sample.
+3. A hub 422 on a body returns `detail` as a list, shown as "Request failed (422)" (as in the legacy UI).
+4. Reminders cannot be edited or reopened; there is no document deletion or classification route; the hub has no memory or document routes (section 7a).
+5. Alarm times: the hub reads "07:30" in the assistant's time zone and the page shows the device's. Keep them the same (HANDOVER already notes it).
+6. Receipts are limited to the newest 100; note search has no limit parameter.
+7. Several account, coding-agent and deep-review paths can only be exercised against fixtures here; they need the owner's user test against the real services.
