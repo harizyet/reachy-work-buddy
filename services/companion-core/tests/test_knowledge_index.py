@@ -767,10 +767,30 @@ def test_the_contention_tool_stops_on_errors_and_on_the_stop_file(tmp_path) -> N
     out = tmp_path / "failed.json"
     assert tool.main(["--self-test", "--self-test-fail-chat", "--seconds", "3", "--out", str(out)]) == 0
     failed = json.loads(out.read_text())
-    assert failed["aborted"]["reason"] == "chat error rate above the limit"
+    assert failed["aborted"]["reason"] == "chat failed repeatedly"
     assert "B_foreground_plus_indexing" not in failed and "C_indexing_only" not in failed  # later phases never start
     stop = tmp_path / "stop"
     stop.write_text("")
     out2 = tmp_path / "stopped.json"
     assert tool.main(["--self-test", "--seconds", "3", "--stop-file", str(stop), "--out", str(out2)]) == 0
     assert json.loads(out2.read_text())["aborted"]["reason"] == "stop file present"
+
+
+def test_the_contention_tool_stops_on_a_failing_production_service_and_reports_resources(tmp_path) -> None:
+    import json
+
+    tool = _contention_tool()
+    bad, bad_url = tool.start_stub(0.0, fail=True)  # stands in for a production health endpoint that answers 500
+    try:
+        out = tmp_path / "unhealthy.json"
+        assert tool.main(["--self-test", "--seconds", "12", "--health-url", bad_url, "--out", str(out)]) == 0
+    finally:
+        bad.shutdown()
+    report = json.loads(out.read_text())
+    assert report["aborted"]["reason"] == "production service unhealthy or slow twice in a row"
+    assert "B_foreground_plus_indexing" not in report
+    ok = tmp_path / "ok.json"
+    assert tool.main(["--self-test", "--seconds", "2", "--out", str(ok)]) == 0
+    good = json.loads(ok.read_text())
+    assert {"load1", "mem_available_gb", "proc_cpu_cores", "threads", "rss_mb", "loop_lag_ms"} <= set(good["A_foreground_only"]["resources"])
+    assert "ttft_p50_s" in good["A_foreground_only"]["chat"] and "R_recovery" in good and "recovery_vs_baseline" in good
