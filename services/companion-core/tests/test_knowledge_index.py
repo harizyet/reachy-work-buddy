@@ -709,3 +709,43 @@ def test_a_failure_never_copies_indexed_content_into_the_outbox_or_the_logs(capl
         assert "launch code" not in caplog.text and "4-8-15" not in caplog.text and "ValueError" in caplog.text
 
     run(go())
+
+
+def test_expired_text_lingers_in_the_index_only_until_the_next_reconcile_and_is_never_returned() -> None:
+    """The one deletion that no event can announce is the passage of time. Retention is bounded by the reconcile interval."""
+
+    async def go():
+        w = World()
+        m = await w.memory.add_memory(content="freeze until the third", source="s", expires_at=T0 + timedelta(minutes=30))
+        await w.sync("memory", m.id)
+        w.clock.now = T0 + timedelta(minutes=31)
+        assert await w.index.get(f"memory:{m.id}") is not None  # the text is still in the index...
+        bundle = await revalidate([cand("memory", m.id)], w.ctx(), w.adapters, now=w.clock.now)
+        assert bundle.items == [] and bundle.dropped == {"expired": 1}  # ...but cannot be returned
+        await w.worker.reconcile()
+        await w.worker.drain()
+        assert await w.index.get(f"memory:{m.id}") is None  # and one reconcile pass removes it
+
+    run(go())
+
+
+# ---- the prepared contention test -------------------------------------------------------------------------------
+
+def test_the_contention_tool_refuses_to_touch_real_services_without_approval_and_works_against_stubs(tmp_path, capsys) -> None:
+    import importlib.util
+    import json
+    from pathlib import Path
+
+    spec = importlib.util.spec_from_file_location("contention", Path(__file__).parents[3] / "tools" / "knowledge_contention_test.py")
+    tool = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(tool)
+    assert tool.main(["--stt-url", "http://localhost:9/x", "--chat-url", "http://localhost:9/y"]) == 2  # no --confirm-owner-approved
+    assert tool.main([]) == 2
+    out = tmp_path / "report.json"
+    assert tool.main(["--self-test", "--seconds", "1", "--out", str(out)]) == 0
+    report = json.loads(out.read_text())
+    assert report["embed"] == "burn" and report["targets"]["stt"].startswith("http://127.0.0.1")
+    for phase in ("A_foreground_only", "B_foreground_plus_indexing"):
+        assert report[phase]["speech"]["requests"] > 0 and report[phase]["chat"]["errors"] == 0 and "p95_s" in report[phase]["speech"]
+    assert report["B_foreground_plus_indexing"]["indexing"]["items"] > 0 and report["C_indexing_only"]["indexing"]["items"] > 0
+    assert set(report["change_from_A_to_B"]) == {"speech", "chat"}

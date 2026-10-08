@@ -436,3 +436,98 @@ def test_the_background_loop_keeps_the_index_in_step_and_stops_cleanly(env):
         assert handle.task.done()
 
     asyncio.run(go())
+
+
+def test_the_real_application_write_paths_keep_the_index_right(env):
+    """Through core's HTTP API (the paths the web UI, the apps and Telegram use), with the Postgres stores, the triggers and a worker:
+    what each write does to the index, and how fast the exclusions take effect."""
+    import httpx
+    from companion_core.app import create_app
+    from companion_core.calendar.store import InMemoryCalendarStore
+    from companion_core.consent.store import InMemoryConfirmationStore
+    from companion_core.email.store import InMemoryEmailStore
+    from companion_core.llm.store import InMemoryLLMSettingsStore, InMemoryLLMUsageStore
+    from companion_core.persona.store import InMemoryPersonaStore
+    from companion_core.websearch.store import InMemorySearchSettingsStore
+
+    async def go(stack):
+        app = create_app(
+            calendar_store=InMemoryCalendarStore(), task_store=stack.tasks, planner_store=stack.planner, meeting_store=stack.meetings,
+            run_meeting_worker_task=False, memory_store=stack.memory, rag_store=stack.documents, email_store=InMemoryEmailStore(),
+            confirmation_store=InMemoryConfirmationStore(), llm_settings_store=InMemoryLLMSettingsStore(),
+            llm_usage_store=InMemoryLLMUsageStore(), persona_store=InMemoryPersonaStore(),
+            search_settings_store=InMemorySearchSettingsStore(), run_email_dispatch_task=False,
+        )
+        client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://core")
+        index = stack.index
+
+        async def present(key):
+            return await index.get(key) is not None
+
+        async def match(key):
+            row = await index.get(key)
+            return row.match_text if row else None
+
+        # notes: create, edit, delete
+        note = (await client.post("/notes", json={"title": "Plan", "body": "alpha zebra"})).json()
+        await stack.worker.drain()
+        assert "zebra" in await match(f"note:{note['id']}")
+        await client.put(f"/notes/{note['id']}", json={"title": "Plan", "body": "alpha giraffe"})
+        await stack.worker.drain()
+        assert "giraffe" in await match(f"note:{note['id']}")
+        assert (await client.delete(f"/notes/{note['id']}")).status_code == 200
+        assert not await present(f"note:{note['id']}")  # gone with no worker pass in between
+
+        # memories: forgetting is a two-step flow and removes the row at once; restoring brings it back
+        mem = (await client.post("/memories", json={"content": "quartz is the codeword", "source": "api"})).json()
+        await stack.worker.drain()
+        assert await present(f"memory:{mem['id']}")
+        pending = (await client.post(f"/memories/{mem['id']}/request-forget")).json()
+        assert await present(f"memory:{mem['id']}")  # requesting a confirmation changes nothing
+        assert (await client.post(f"/memories/{mem['id']}/forget/confirm", json={"confirmation_id": pending["id"]})).status_code == 200
+        assert not await present(f"memory:{mem['id']}")
+        assert (await client.post(f"/memories/{mem['id']}/restore")).status_code == 200
+        await stack.worker.drain()
+        assert await present(f"memory:{mem['id']}")
+
+        # tasks: classification is carried; completing changes the indexed text; deleting removes the row
+        task = (await client.post("/tasks", json={"text": "ship it", "sensitivity": "sensitive", "project_scope": "harbor"})).json()
+        await stack.worker.drain()
+        row = await index.get(f"task:{task['id']}")
+        assert (row.sensitivity, row.project_scope) == (Privacy.SENSITIVE, "harbor")
+        await client.post(f"/tasks/{task['id']}/complete")
+        await stack.worker.drain()
+        assert "(done" in await match(f"task:{task['id']}")
+        await client.delete(f"/tasks/{task['id']}")
+        assert not await present(f"task:{task['id']}")
+
+        # documents: ingestion indexes every chunk with its classification
+        chunks = (await client.post("/documents", json={"title": "Guide", "content": "# One\nfirst\n\n# Two\nsecond", "sensitivity": "public"})).json()
+        await stack.worker.drain()
+        doc = chunks[0]["document_id"]
+        assert [await present(f"document:{doc}#{i}") for i in (0, 1)] == [True, True]
+        assert (await index.get(f"document:{doc}#0")).sensitivity == Privacy.PUBLIC
+
+        # meetings: a correction reaches the index (not the raw transcript); a reclassification does too; deleting removes everything
+        mid = await stack.meeting(["falcon seven bee restarts", "retries are five"], scope="harbor")
+        await stack.worker.drain()
+        assert (await client.put(f"/meetings/{mid}/corrections/0", json={"text": "Falcon-7B restarts"})).status_code == 200
+        await stack.worker.drain()
+        assert "Falcon-7B" in await match(f"meeting:{mid}#0")
+        assert sql(stack.dsn, "SELECT transcript_segments->0->>'text' FROM meetings WHERE id = %s", (mid,))[0][0] == "falcon seven bee restarts"
+        sql(stack.dsn, "UPDATE meetings SET status = 'complete' WHERE id = %s", (mid,))
+        await stack.worker.drain()
+        sql(stack.dsn, "UPDATE meetings SET sensitivity = 'sensitive' WHERE id = %s", (mid,))
+        stale = await index.get(f"meeting:{mid}#1")
+        assert stale.sensitivity == Privacy.WORK_PRIVATE  # the worker has not run yet...
+        bundle = await revalidate([Candidate(SourceRef(source_type="meeting", source_id=mid, locator="1"))], ctx(), stack.adapters)
+        assert bundle.items == [] and bundle.dropped == {"over_ceiling": 1}  # ...and revalidation already enforces the new label
+        await stack.worker.drain()
+        assert (await index.get(f"meeting:{mid}#1")).sensitivity == Privacy.SENSITIVE
+        assert (await client.delete(f"/meetings/{mid}")).status_code == 200
+        assert [await present(f"meeting:{mid}#{i}") for i in (0, 1)] == [False, False]
+        await client.aclose()
+        status = await stack.outbox.status(datetime.now(UTC))
+        assert status.failed == 0
+
+    run_stack(env, go)

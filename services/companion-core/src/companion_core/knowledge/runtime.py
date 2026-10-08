@@ -35,8 +35,10 @@ class IndexingHandle:
 
 async def start_indexing(
     *, dsn: str, memory, documents, meetings, planner, tasks, embed_fn=None, embedding_model=None,
-    interval: float = 5.0, reconcile_every: float = 3600.0,
+    interval: float = 5.0, reconcile_every: float | None = None,
 ) -> IndexingHandle:
+    # How long text from an expired memory can linger in the index before reconciliation removes it (revalidation hides it at once).
+    reconcile_every = reconcile_every or float(os.environ.get("KNOWLEDGE_RECONCILE_SECONDS", "3600"))
     if embed_fn is None:
         from companion_core.rag import embeddings
 

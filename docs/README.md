@@ -137,6 +137,9 @@ over the original decision where they explicitly change it.
 
 These are dated evidence, not startup instructions or current health checks.
 
+- [Phase 44B rehearsal 2026-10-08](verification/phase-44b-rehearsal-2026-10-08.md): migration 027 on a restored production copy, trigger overhead,
+  storage, rollback, the real write paths and the retention review. Nothing deployed.
+
 - [Phase 44B 2026-10-08](verification/phase-44b-2026-10-08.md): the knowledge index, transactional outbox, worker, reconciliation and retrieval-time
   revalidation on disposable Postgres; mutation checks; the embedding load measurement. Local only; migration 027 not applied.
 
