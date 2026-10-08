@@ -114,7 +114,9 @@ class PostgresKnowledgeIndex:
         # Same ordering as PostgresDocumentStore: check the revision before registering the vector type.
         async with await psycopg.AsyncConnection.connect(dsn, connect_timeout=10) as conn:
             await check_schema(conn)
-        pool = AsyncConnectionPool(dsn, open=False, configure=register_vector_async)
+        # Small on purpose: the stack shares one PostgreSQL (max_connections 100) and every other store already holds a pool of 4. The
+        # 2026-10-08 trial hit "too many clients" with default pools; the indexer is background work and needs one or two.
+        pool = AsyncConnectionPool(dsn, open=False, min_size=1, max_size=2, configure=register_vector_async)
         await pool.open()
         return cls(pool)
 

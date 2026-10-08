@@ -126,7 +126,7 @@ class PostgresOutbox:
 
     @classmethod
     async def connect(cls, dsn: str) -> PostgresOutbox:
-        pool = AsyncConnectionPool(dsn, open=False)
+        pool = AsyncConnectionPool(dsn, open=False, min_size=1, max_size=2)  # small on purpose; see PostgresKnowledgeIndex.connect
         await pool.open()
         async with pool.connection() as conn:
             await check_schema(conn)
