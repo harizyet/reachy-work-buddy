@@ -40,6 +40,8 @@ services:
   pgbouncer:
     image: edoburu/pgbouncer:v1.25.2-p0@sha256:7d7a27d9e90985cab5cf42256f5c13a3120baa4b055b69df37beb272b89b2340
     restart: unless-stopped
+    # Runs as the host user that owns the 0600 auth file, so the file does not have to be readable by anyone else.
+    user: "${PGBOUNCER_UID:-1000}:${PGBOUNCER_GID:-1000}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -47,7 +49,7 @@ services:
       - ./pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
       - ./.env.pgbouncer-userlist:/etc/pgbouncer/userlist.txt:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -q"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U reachy -d reachy_hub -q"]
       interval: 5s
       timeout: 3s
       retries: 10
