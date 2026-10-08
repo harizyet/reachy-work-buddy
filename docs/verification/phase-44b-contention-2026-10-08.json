@@ -1,0 +1,365 @@
+{
+  "limits": {
+    "seconds": 90.0,
+    "embed_threads": 2,
+    "nice": 10,
+    "cpus": 0,
+    "stt_threads": 4,
+    "chat_max_tokens": 64,
+    "abort_load": 14.0,
+    "abort_min_available_gb": 3.0,
+    "abort_error_rate": 0.05,
+    "abort_consecutive_failures": 2,
+    "abort_phase_errors": 3,
+    "abort_health_seconds": 3.0,
+    "recovery_seconds": 20,
+    "health_url": [
+      "http://localhost:8080/hub/health",
+      "http://localhost:8080/core/health",
+      "http://localhost:8003/health"
+    ],
+    "abort_chat_p95_ratio": 3.0,
+    "max_total_seconds": 720.0,
+    "scale": 2000
+  },
+  "workloads": {
+    "speech": "local",
+    "chat": "http://localhost:8003/v1/chat/completions",
+    "indexing": "worker",
+    "embedder": "minilm"
+  },
+  "host": {
+    "cpus": 20,
+    "load_average_start": 2.36,
+    "memory_available_gb_start": 8.5
+  },
+  "cleanup": {
+    "scratch_database": "contention_24bff58e5f",
+    "scratch_database_dropped": true
+  },
+  "A_foreground_only": {
+    "phase": "A",
+    "speech": {
+      "requests": 73,
+      "errors": 0,
+      "p50_s": 1.246,
+      "p95_s": 1.327,
+      "max_s": 1.358
+    },
+    "chat": {
+      "requests": 72,
+      "errors": 0,
+      "p50_s": 1.51,
+      "p95_s": 1.623,
+      "max_s": 1.726,
+      "completion_tokens_per_s": 40.8,
+      "ttft_p50_s": 0.038,
+      "ttft_p95_s": 0.141
+    },
+    "resources": {
+      "load1": {
+        "mean": 5.08,
+        "max": 5.39
+      },
+      "mem_available_gb": {
+        "min": 6.83,
+        "max": 7.52
+      },
+      "proc_cpu_cores": {
+        "mean": 4.79,
+        "max": 5.44
+      },
+      "threads": {
+        "mean": 71,
+        "max": 71
+      },
+      "rss_mb": {
+        "mean": 1200.11,
+        "max": 1277
+      },
+      "host_cpu_pct": {
+        "mean": 31.28,
+        "max": 41.3
+      },
+      "loop_lag_ms": {
+        "mean": 8.71,
+        "max": 124
+      }
+    },
+    "production_health": {
+      "http://localhost:8080/hub/health": {
+        "checks": 18,
+        "failed": 0,
+        "max_s": 0.015
+      },
+      "http://localhost:8080/core/health": {
+        "checks": 18,
+        "failed": 0,
+        "max_s": 0.008
+      },
+      "http://localhost:8003/health": {
+        "checks": 18,
+        "failed": 0,
+        "max_s": 0.014
+      }
+    },
+    "seconds": 91.2,
+    "load_average_start": 2.43,
+    "load_average_end": 5.25,
+    "memory_available_gb_end": 7.3
+  },
+  "B_foreground_plus_indexing": {
+    "phase": "B",
+    "speech": {
+      "requests": 66,
+      "errors": 0,
+      "p50_s": 1.338,
+      "p95_s": 1.703,
+      "max_s": 1.767
+    },
+    "chat": {
+      "requests": 67,
+      "errors": 0,
+      "p50_s": 1.663,
+      "p95_s": 1.766,
+      "max_s": 1.82,
+      "completion_tokens_per_s": 37.9,
+      "ttft_p50_s": 0.037,
+      "ttft_p95_s": 0.06
+    },
+    "indexing": {
+      "items": 2750,
+      "items_per_s": 30.6
+    },
+    "resources": {
+      "load1": {
+        "mean": 5.97,
+        "max": 6.77
+      },
+      "mem_available_gb": {
+        "min": 6.76,
+        "max": 7.53
+      },
+      "proc_cpu_cores": {
+        "mean": 6.09,
+        "max": 7.01
+      },
+      "threads": {
+        "mean": 73.97,
+        "max": 74
+      },
+      "rss_mb": {
+        "mean": 1215.55,
+        "max": 1289
+      },
+      "host_cpu_pct": {
+        "mean": 38.43,
+        "max": 46.6
+      },
+      "loop_lag_ms": {
+        "mean": 6.46,
+        "max": 132
+      },
+      "queue": {
+        "pending_first": 6270,
+        "pending_last": 3852,
+        "indexed_first": 170,
+        "indexed_last": 2588
+      }
+    },
+    "production_health": {
+      "http://localhost:8080/hub/health": {
+        "checks": 17,
+        "failed": 0,
+        "max_s": 0.014
+      },
+      "http://localhost:8080/core/health": {
+        "checks": 17,
+        "failed": 0,
+        "max_s": 0.006
+      },
+      "http://localhost:8003/health": {
+        "checks": 17,
+        "failed": 0,
+        "max_s": 0.008
+      }
+    },
+    "seconds": 91.7,
+    "load_average_start": 5.25,
+    "load_average_end": 6.38,
+    "memory_available_gb_end": 7.5
+  },
+  "C_indexing_only": {
+    "phase": "C",
+    "indexing": {
+      "items": 6650,
+      "items_per_s": 71.5
+    },
+    "resources": {
+      "load1": {
+        "mean": 4.68,
+        "max": 6.38
+      },
+      "mem_available_gb": {
+        "min": 7.34,
+        "max": 7.7
+      },
+      "proc_cpu_cores": {
+        "mean": 1.63,
+        "max": 1.83
+      },
+      "threads": {
+        "mean": 73,
+        "max": 73
+      },
+      "rss_mb": {
+        "mean": 1196.73,
+        "max": 1216
+      },
+      "host_cpu_pct": {
+        "mean": 14.45,
+        "max": 19.8
+      },
+      "loop_lag_ms": {
+        "mean": 1.1,
+        "max": 3
+      },
+      "queue": {
+        "pending_first": 3361,
+        "pending_last": 34,
+        "indexed_first": 3079,
+        "indexed_last": 8840
+      }
+    },
+    "production_health": {
+      "http://localhost:8080/hub/health": {
+        "checks": 18,
+        "failed": 0,
+        "max_s": 0.014
+      },
+      "http://localhost:8080/core/health": {
+        "checks": 18,
+        "failed": 0,
+        "max_s": 0.005
+      },
+      "http://localhost:8003/health": {
+        "checks": 18,
+        "failed": 0,
+        "max_s": 0.007
+      }
+    },
+    "seconds": 93.1,
+    "load_average_start": 6.38,
+    "load_average_end": 3.5,
+    "memory_available_gb_end": 7.5
+  },
+  "R_recovery": {
+    "phase": "R",
+    "speech": {
+      "requests": 17,
+      "errors": 0,
+      "p50_s": 1.245,
+      "p95_s": 1.418,
+      "max_s": 1.418
+    },
+    "chat": {
+      "requests": 17,
+      "errors": 0,
+      "p50_s": 1.496,
+      "p95_s": 1.588,
+      "max_s": 1.588,
+      "completion_tokens_per_s": 42.0,
+      "ttft_p50_s": 0.049,
+      "ttft_p95_s": 0.175
+    },
+    "resources": {
+      "load1": {
+        "mean": 3.74,
+        "max": 4.03
+      },
+      "mem_available_gb": {
+        "min": 7.14,
+        "max": 7.46
+      },
+      "proc_cpu_cores": {
+        "mean": 4.79,
+        "max": 5.33
+      },
+      "threads": {
+        "mean": 71,
+        "max": 71
+      },
+      "rss_mb": {
+        "mean": 1253.86,
+        "max": 1320
+      },
+      "host_cpu_pct": {
+        "mean": 30.8,
+        "max": 34.4
+      },
+      "loop_lag_ms": {
+        "mean": 3.57,
+        "max": 40
+      }
+    },
+    "production_health": {
+      "http://localhost:8080/hub/health": {
+        "checks": 4,
+        "failed": 0,
+        "max_s": 0.031
+      },
+      "http://localhost:8080/core/health": {
+        "checks": 4,
+        "failed": 0,
+        "max_s": 0.015
+      },
+      "http://localhost:8003/health": {
+        "checks": 4,
+        "failed": 0,
+        "max_s": 0.014
+      }
+    },
+    "seconds": 21.5,
+    "load_average_start": 3.5,
+    "load_average_end": 4.03,
+    "memory_available_gb_end": 7.3
+  },
+  "aborted": null,
+  "process_after": {
+    "threads": 70,
+    "load_average": 4.03,
+    "memory_available_gb": 7.3
+  },
+  "recovery_vs_baseline": {
+    "speech": {
+      "p50_change_pct": -0.1,
+      "p95_change_pct": 6.9,
+      "errors_added": 0
+    },
+    "chat": {
+      "p50_change_pct": -0.9,
+      "p95_change_pct": -2.2,
+      "errors_added": 0,
+      "ttft_p50_change_pct": 28.9,
+      "throughput_change_pct": 2.9
+    }
+  },
+  "change_from_A_to_B": {
+    "speech": {
+      "p50_change_pct": 7.4,
+      "p95_change_pct": 28.3,
+      "errors_added": 0
+    },
+    "chat": {
+      "p50_change_pct": 10.1,
+      "p95_change_pct": 8.8,
+      "errors_added": 0,
+      "ttft_p50_change_pct": -2.6,
+      "throughput_change_pct": -7.1
+    }
+  },
+  "indexing_throughput_items_per_s": {
+    "with_foreground": 30.6,
+    "alone": 71.5
+  }
+}

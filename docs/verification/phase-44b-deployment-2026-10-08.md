@@ -17,7 +17,7 @@ Code: the pinned commit `5f7f3ab` (main, pushed). The shared checkout holds anot
 | 13:20:38 | `up -d --no-build` for core, hub and coding-agent |
 | 13:20:46 | Hub and core healthy |
 
-**Downtime of core, hub and coding-agent: about 77 seconds.** The hub's speech model was loaded 1:45 after start (reminder polling began then; see smoke test 10).
+**Downtime of core, hub and coding-agent: about 77 seconds.** The reminder lateness seen afterwards is a reliability issue, not a deployment fault (smoke test 10).
 
 ## Preflight
 
@@ -44,7 +44,7 @@ Images tagged `reachy-rollback/{migrate,companion-core,reachy-hub,coding-agent-s
 | 7 | Web UI and bearer API | `/hub/ui/` serves (200); owner-bearer API calls work |
 | 8 | Trigger firing | a to-do created through the hub queued exactly one outbox row for it; its edit and delete queued more; no index row was ever written |
 | 9 | Classification round-trip | created as `sensitive` with scope `smoke`; a text edit kept both; an edit carrying `sensitivity` returned 422; an invalid value returned 422 |
-| 10 | Reminder continuity | a reminder due in two minutes was claimed at 13:24:44, 57 s after it fell due, because the hub's voice provider finished loading at 13:22:30 and its minute poll ran after that. No alarm fired and none is scheduled-and-overdue (0 and 0). Telegram receipt of that push is not confirmed by me |
+| 10 | Reminder continuity | a reminder due in two minutes (13:23:47) was claimed at 13:24:44, 57 s late. Analysis afterwards: the hub's reminder loop sleeps first and then polls once every 60 s (`reminder_notify_loop`, interval `coding_agent_notify_interval`), and the hub started at about 13:20:41, so its polls fell at :41 each minute and the next one after 13:23:47 was 13:24:41. That is the poll cadence, not the voice-provider warm-up (which I first suspected; the warm-up runs in a separate thread task). Recorded as a [reliability issue](../../HANDOVER.md#open-unverified-or-worth-watching). No alarm fired and none is scheduled-and-overdue (0 and 0). Telegram receipt of that push is not confirmed by me |
 | 11 | Command turn through core | `/conversation` with `/help` returned 200 (1,069 characters). A model-backed turn was not sent |
 | 12 | Robot | not tested; `nano-1` is still listed by the hub; nothing was sent to the robot |
 

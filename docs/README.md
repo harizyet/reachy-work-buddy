@@ -150,7 +150,7 @@ These are dated evidence, not startup instructions or current health checks.
   revalidation on disposable Postgres; mutation checks; the embedding load measurement. Local only.
 
 - [Phase 44B production deployment 2026-10-08](verification/phase-44b-deployment-2026-10-08.md): migration 027 on the homelab with indexing off,
-  backup, rollback readiness and smoke tests. [Contention test plan](verification/phase-44b-contention-test-plan-2026-10-08.md): prepared, not run.
+  backup, rollback readiness and smoke tests. [Contention test plan](verification/phase-44b-contention-test-plan-2026-10-08.md) and [result](verification/phase-44b-contention-result-2026-10-08.md) (run 2026-10-08, no abort).
 
 - [Phase 44A production deployment 2026-10-08](verification/phase-44a-deployment-2026-10-08.md): migration 026 on the homelab, backup
   and restore check, rollback assets, thirteen smoke checks, downtime; the robot gate is pending.
