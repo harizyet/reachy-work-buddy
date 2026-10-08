@@ -731,21 +731,46 @@ def test_expired_text_lingers_in_the_index_only_until_the_next_reconcile_and_is_
 
 # ---- the prepared contention test -------------------------------------------------------------------------------
 
-def test_the_contention_tool_refuses_to_touch_real_services_without_approval_and_works_against_stubs(tmp_path, capsys) -> None:
+def _contention_tool():
     import importlib.util
-    import json
+    import sys
     from pathlib import Path
 
     spec = importlib.util.spec_from_file_location("contention", Path(__file__).parents[3] / "tools" / "knowledge_contention_test.py")
     tool = importlib.util.module_from_spec(spec)
+    sys.modules["contention"] = tool  # dataclasses look the module up by name
     spec.loader.exec_module(tool)
-    assert tool.main(["--stt-url", "http://localhost:9/x", "--chat-url", "http://localhost:9/y"]) == 2  # no --confirm-owner-approved
+    return tool
+
+
+def test_the_contention_tool_refuses_to_touch_real_services_without_approval_and_works_against_stubs(tmp_path) -> None:
+    import json
+
+    tool = _contention_tool()
+    assert tool.main(["--chat-url", "http://localhost:9/y"]) == 2  # no --confirm-owner-approved
     assert tool.main([]) == 2
+    assert tool.main(["--chat-url", "http://localhost:9/y", "--confirm-owner-approved"]) == 2  # worker mode needs a scratch server
     out = tmp_path / "report.json"
     assert tool.main(["--self-test", "--seconds", "1", "--out", str(out)]) == 0
     report = json.loads(out.read_text())
-    assert report["embed"] == "burn" and report["targets"]["stt"].startswith("http://127.0.0.1")
+    assert report["aborted"] is None and report["workloads"]["embedder"] == "burn"
     for phase in ("A_foreground_only", "B_foreground_plus_indexing"):
-        assert report[phase]["speech"]["requests"] > 0 and report[phase]["chat"]["errors"] == 0 and "p95_s" in report[phase]["speech"]
+        assert report[phase]["chat"]["requests"] > 0 and report[phase]["chat"]["errors"] == 0
     assert report["B_foreground_plus_indexing"]["indexing"]["items"] > 0 and report["C_indexing_only"]["indexing"]["items"] > 0
-    assert set(report["change_from_A_to_B"]) == {"speech", "chat"}
+    assert "chat" in report["change_from_A_to_B"]
+
+
+def test_the_contention_tool_stops_on_errors_and_on_the_stop_file(tmp_path) -> None:
+    import json
+
+    tool = _contention_tool()
+    out = tmp_path / "failed.json"
+    assert tool.main(["--self-test", "--self-test-fail-chat", "--seconds", "3", "--out", str(out)]) == 0
+    failed = json.loads(out.read_text())
+    assert failed["aborted"]["reason"] == "chat error rate above the limit"
+    assert "B_foreground_plus_indexing" not in failed and "C_indexing_only" not in failed  # later phases never start
+    stop = tmp_path / "stop"
+    stop.write_text("")
+    out2 = tmp_path / "stopped.json"
+    assert tool.main(["--self-test", "--seconds", "3", "--stop-file", str(stop), "--out", str(out2)]) == 0
+    assert json.loads(out2.read_text())["aborted"]["reason"] == "stop file present"
