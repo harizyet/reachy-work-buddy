@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
+import android.media.AudioFormat
+import android.media.AudioTrack
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.MediaRecorder
@@ -15,7 +17,15 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import java.io.File
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** One-shot dictation using the phone's own recognizer. Must be used from the main thread. */
 class SpeechInput(
@@ -23,6 +33,7 @@ class SpeechInput(
     private val onPartial: (String) -> Unit,
     private val onFinal: (String) -> Unit,
     private val onEnd: (error: String?) -> Unit,
+    private val onLevel: (Float) -> Unit = {},
 ) {
     private var recognizer: SpeechRecognizer? = null
 
@@ -46,7 +57,7 @@ class SpeechInput(
                 }
                 override fun onReadyForSpeech(params: Bundle?) {}
                 override fun onBeginningOfSpeech() {}
-                override fun onRmsChanged(rmsdB: Float) {}
+                override fun onRmsChanged(rmsdB: Float) { onLevel(((rmsdB + 2f) / 12f).coerceIn(0f, 1f)) }
                 override fun onBufferReceived(buffer: ByteArray?) {}
                 override fun onEndOfSpeech() {}
                 override fun onEvent(eventType: Int, params: Bundle?) {}
@@ -72,40 +83,107 @@ class SpeechOutput(private val context: Context) {
         // A freshly opened Talk screen can have a reply to read before the phone's engine is up; read it as soon as it is.
         waiting?.let { text -> waiting = null; if (ready) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "reply") }
     }
+    private var spokenDone: (() -> Unit)? = null   // runs once when the phone's voice finishes; dropped when it is interrupted
     private var player: MediaPlayer? = null
     private val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private var focus: AudioFocusRequest? = null
 
-    /** The phone's own voice: the fallback when Reachy's voice cannot be fetched or played. */
-    fun speak(text: String) {
+    init {
+        val finished = { Handler(Looper.getMainLooper()).post { spokenDone?.let { spokenDone = null; it() } }; Unit }
+        tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) {}
+            override fun onDone(utteranceId: String?) { finished() }
+            @Deprecated("Deprecated in Java") override fun onError(utteranceId: String?) { finished() }
+        })
+    }
+
+    /** The phone's own voice: the fallback when Reachy's voice cannot be fetched or played. [onDone] runs when it has finished. */
+    fun speak(text: String, onDone: () -> Unit = {}) {
         stopPlayer()
+        spokenDone = onDone
         if (ready) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "reply") else waiting = text
     }
 
-    /** Plays a WAV in Reachy's voice; false when it cannot be played. [onError] runs if playback fails once it has started. */
-    fun play(file: File, onError: () -> Unit = {}): Boolean {
+    private var pcm: PcmPlayer? = null
+
+    /**
+     * Plays Reachy's voice as it arrives from the hub, so speech starts after the first sentence rather than the whole reply.
+     * [fetch] reports the sample rate, then raw 16-bit mono PCM, and returns false if the hub could not speak. When nothing
+     * could be played, [onFallback] runs (the caller then uses the phone's own voice); [onDone] runs once the audio has finished.
+     */
+    fun playStream(
+        scope: CoroutineScope,
+        fetch: suspend (onRate: (Int) -> Unit, onPcm: (ByteArray, Int) -> Unit) -> Boolean,
+        onFallback: () -> Unit,
+        onDone: () -> Unit,
+    ) {
         stop()
-        return try {
-            val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
-            focus = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(attributes).build()
-                .also { audio.requestAudioFocus(it) }
-            player = MediaPlayer().apply {
-                setAudioAttributes(attributes)
-                setDataSource(file.absolutePath)
-                setOnCompletionListener { stopPlayer() }
-                setOnErrorListener { _, _, _ -> stopPlayer(); onError(); true }
-                prepare(); start()
-            }
-            true
-        } catch (e: Exception) { stopPlayer(); false }
+        focus = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(speechAttributes).build()
+            .also { audio.requestAudioFocus(it) }
+        pcm = PcmPlayer(speechAttributes).also { it.play(scope, fetch, { stopPlayer(); onFallback() }, { stopPlayer(); onDone() }) }
     }
 
+    private val speechAttributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
+
     private fun stopPlayer() {
+        pcm?.stop(); pcm = null
         player?.release(); player = null
         focus?.let { audio.abandonAudioFocusRequest(it) }; focus = null
     }
-    fun stop() { tts.stop(); stopPlayer() }
+    fun stop() { spokenDone = null; tts.stop(); stopPlayer() }
     fun shutdown() { stopPlayer(); tts.shutdown() }
+}
+
+/** Plays a stream of raw 16-bit mono PCM through an AudioTrack while it is still downloading. Main thread only. */
+class PcmPlayer(private val attributes: AudioAttributes) {
+    private var track: AudioTrack? = null
+    private var job: Job? = null
+
+    fun play(
+        scope: CoroutineScope,
+        fetch: suspend (onRate: (Int) -> Unit, onPcm: (ByteArray, Int) -> Unit) -> Boolean,
+        onFallback: () -> Unit,
+        onDone: () -> Unit,
+    ) {
+        job = scope.launch(Dispatchers.IO) {
+            var frames = 0L
+            var carry: Byte? = null   // a network read can end in the middle of a 16-bit sample
+            var ok = false
+            try {
+                ok = fetch(
+                    { rate ->
+                        val minimum = AudioTrack.getMinBufferSize(rate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
+                        track = AudioTrack.Builder()
+                            .setAudioAttributes(attributes)
+                            .setAudioFormat(AudioFormat.Builder().setSampleRate(rate).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
+                            .setBufferSizeInBytes(maxOf(minimum, rate * 2))   // about a second, to ride out a slow sentence
+                            .setTransferMode(AudioTrack.MODE_STREAM)
+                            .build().also { it.play() }
+                    },
+                    { buffer, count ->
+                        val t = track
+                        if (t != null && isActive) {
+                            val data = if (carry == null) buffer.copyOf(count) else byteArrayOf(carry!!) + buffer.copyOf(count)
+                            val usable = data.size - data.size % 2
+                            carry = if (usable < data.size) data[usable] else null
+                            if (usable > 0 && t.write(data, 0, usable) > 0) frames += usable / 2
+                        }
+                    },
+                )
+            } catch (e: Exception) { /* a stream that breaks after audio has started simply ends */ }
+            val t = track
+            if (!isActive) return@launch
+            if (t == null || frames == 0L) { withContext(Dispatchers.Main) { if (isActive) onFallback() }; return@launch }
+            // Everything is written; wait for the speaker to play it out.
+            while (isActive && t.playbackHeadPosition < frames) delay(50)
+            if (isActive) withContext(Dispatchers.Main) { if (isActive) onDone() }
+        }
+    }
+
+    fun stop() {
+        job?.cancel(); job = null
+        track?.let { runCatching { it.pause(); it.flush(); it.release() } }; track = null
+    }
 }
 
 /** Records one AAC/m4a clip for the meeting uploader (the hub accepts .m4a). */

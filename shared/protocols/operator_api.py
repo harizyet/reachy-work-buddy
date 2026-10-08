@@ -55,6 +55,8 @@ MEETING_TITLE = "/meetings/{meeting_id}/title"
 MEETING_DESCRIBE = "/meetings/{meeting_id}/describe"
 # Reachy's own synthesized voice for a piece of text (WAV), so a client can speak a reply the way the robot does.
 SPEECH = "/speech"
+# The same voice as raw 16-bit mono PCM sent a sentence at a time, so playback starts before the whole reply is synthesized.
+SPEECH_STREAM = "/speech/stream"
 MEETING_CORRECTIONS_SUGGEST = "/meetings/{meeting_id}/corrections/suggest"
 MEETING_TERMS = "/meetings/{meeting_id}/terms"
 MEETING_GLOSSARY = "/meeting-terms"

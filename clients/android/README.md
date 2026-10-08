@@ -1,6 +1,6 @@
 # Reachy Android companion app
 
-A user-centred phone client for reachy-hub (version 0.14.0): **Talk** (voice and chat, with previous
+A user-centred phone client for reachy-hub (version 0.15.1): **Talk** (voice and chat, with previous
 chats), **Reminders** (To Do and timed reminders), **Notes**, **Meetings** (record, review, play back, edit) and
 **Alarms**. Settings and configuration stay in the [web control panel](../operator-ui/README.md).
 Decision: [ADR 0029](../../docs/adr/0029-android-companion-app.md); stages:
@@ -8,7 +8,7 @@ Decision: [ADR 0029](../../docs/adr/0029-android-companion-app.md); stages:
 
 ## What it does
 
-- **Talk:** type or speak; replies are read aloud in Reachy's own voice (the phone's voice if the hub cannot speak), once each.
+- **Talk:** type, or tap the voice button for a full-screen voice mode (an animated ball, hands-free: it listens, sends, speaks the reply, then listens again; a voice-source choice, Mute and Close buttons). Replies are streamed and read aloud in Reachy's own voice (the phone's voice if the hub cannot speak), once each.
   Chat text is selectable. A history button (a side panel when unfolded) lists saved chats to open, start or delete.
 - **Reminders:** an Apple-Reminders-style home with **To Do** and **Scheduled**; round check circles, inline add and rename,
   a collapsed Completed section, swipe left to delete, and a New Reminder sheet (title, date, time). A reminder cannot be reopened.

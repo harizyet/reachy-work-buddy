@@ -25,6 +25,10 @@ class Prefs(context: Context) {
     var scheduledAlarmIds: Set<String>
         get() = store.getStringSet("scheduled_alarm_ids", emptySet()) ?: emptySet()
         set(value) = store.edit().putStringSet("scheduled_alarm_ids", value).apply()
+    /** Read replies in the phone's own voice instead of Reachy's streamed voice (chosen in voice mode). */
+    var phoneVoice: Boolean
+        get() = store.getBoolean("phone_voice", false)
+        set(value) = store.edit().putBoolean("phone_voice", value).apply()
     var speakReplies: Boolean
         get() = store.getBoolean("speak_replies", true)
         set(value) = store.edit().putBoolean("speak_replies", value).apply()

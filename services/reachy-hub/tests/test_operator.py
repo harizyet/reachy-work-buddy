@@ -614,6 +614,59 @@ def test_speech_returns_reachys_voice_for_the_owner_only_and_strips_markup():
     assert client.post("/speech", json={"text": "x" * 3001}, headers=CSRF).status_code == 422
 
 
+class _ToneVoice:
+    """Returns a real WAV per call (22.05 kHz, the sample's value is the call number) so streamed PCM can be told apart."""
+
+    def __init__(self, fail_from=None):
+        self.said, self.fail_from = [], fail_from
+
+    def synthesize(self, text):
+        import io
+        import wave
+        if self.fail_from is not None and len(self.said) >= self.fail_from:
+            raise RuntimeError("engine failed")
+        self.said.append(text)
+        out = io.BytesIO()
+        with wave.open(out, "wb") as wav:
+            wav.setnchannels(1); wav.setsampwidth(2); wav.setframerate(22050)
+            wav.writeframes(bytes([len(self.said), 0]) * 4)
+        return out.getvalue()
+
+
+def test_speech_stream_sends_pcm_a_sentence_at_a_time_for_the_owner_only():
+    voice = _ToneVoice()
+    client = make_client(tts=voice)
+    text = "The weather today is mild and dry across the region. Tomorrow it will rain from the early morning onward. Bring an umbrella with you [S1]."
+    assert client.post("/speech/stream", json={"text": text}, headers=CSRF).status_code == 401
+    login(client)
+    assert client.post("/speech/stream", json={"text": text}).status_code in (401, 403)
+    ok = client.post("/speech/stream", json={"text": text}, headers=CSRF)
+    assert ok.status_code == 200 and ok.headers["content-type"] == "audio/L16"
+    assert ok.headers["x-sample-rate"] == "22050"
+    assert voice.said == ["The weather today is mild and dry across the region.", "Tomorrow it will rain from the early morning onward.", "Bring an umbrella with you."]
+    assert ok.content == b"".join(bytes([n, 0]) * 4 for n in (1, 2, 3))   # raw PCM, no WAV header, in order
+    assert client.post("/speech/stream", json={"text": ""}, headers=CSRF).status_code == 422
+
+
+def test_speech_stream_is_a_clean_503_when_the_first_sentence_fails_and_ends_early_after_that():
+    client = make_client(tts=_ToneVoice(fail_from=0))
+    login(client)
+    assert client.post("/speech/stream", json={"text": "Hello there, this is a test of speech."}, headers=CSRF).status_code == 503
+    assert client.post("/speech/stream", json={"text": "[S1]"}, headers=CSRF).status_code == 503   # nothing speakable
+    later = make_client(tts=_ToneVoice(fail_from=1))
+    login(later)
+    partial = later.post("/speech/stream", json={"text": "The first sentence is long enough. The second one is also long enough."}, headers=CSRF)
+    assert partial.status_code == 200 and partial.content == bytes([1, 0]) * 4   # what was made before the failure
+
+
+def test_speech_chunks_join_short_sentences_and_split_lines():
+    from reachy_hub.tts import speech_chunks
+    assert speech_chunks("Yes. No. Maybe so, we will see about that later. Done.") == ["Yes. No. Maybe so, we will see about that later.", "Done."]
+    assert speech_chunks("First line is here and is long enough for one chunk\nSecond line is also long enough for one") == [
+        "First line is here and is long enough for one chunk", "Second line is also long enough for one"]
+    assert speech_chunks("   ") == []
+
+
 def test_a_saved_chat_can_be_deleted_by_its_owner_only():
     client = make_client()
     assert client.delete('/chats/x?user_id=default-user').status_code in (401, 403)

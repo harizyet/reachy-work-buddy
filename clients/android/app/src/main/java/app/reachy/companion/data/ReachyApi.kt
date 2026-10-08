@@ -262,11 +262,17 @@ class ReachyApi(baseUrl: String, private val cookieJar: PersistentCookieJar, cli
         }
     }
 
-    /** Reachy's own synthesized voice for [text] (the hub's TTS, as the robot uses), written to [target]; false when unavailable. */
-    suspend fun speech(text: String, target: File): Boolean = withContext(Dispatchers.IO) {
-        http.newCall(req("/speech").post(jsonBody(buildJsonObject { put("text", text.take(3000)) })).build()).execute().use { response ->
-            if (!response.isSuccessful) return@use false
-            response.body!!.byteStream().use { input -> target.outputStream().use { input.copyTo(it) } }
+    /** Reachy's voice as raw 16-bit mono PCM, delivered while the hub is still synthesizing; false when the hub cannot speak. */
+    suspend fun speechStream(text: String, onRate: (Int) -> Unit, onPcm: (ByteArray, Int) -> Unit): Boolean = withContext(Dispatchers.IO) {
+        val slow = http.newBuilder().readTimeout(60, TimeUnit.SECONDS).build()
+        slow.newCall(req("/speech/stream").post(jsonBody(buildJsonObject { put("text", text.take(3000)) })).build()).execute().use { response ->
+            val rate = response.header("X-Sample-Rate")?.toIntOrNull()
+            if (!response.isSuccessful || rate == null) return@use false
+            onRate(rate)
+            val buffer = ByteArray(8192)
+            response.body!!.byteStream().use { input ->
+                while (true) { val n = input.read(buffer); if (n < 0) break; if (n > 0) onPcm(buffer, n) }
+            }
             true
         }
     }

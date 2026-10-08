@@ -36,13 +36,17 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeFloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -71,18 +75,42 @@ fun TalkScreen(model: AppViewModel, speakReplies: Boolean, modifier: Modifier = 
 private fun TalkContent(model: AppViewModel, speakReplies: Boolean) {
     val context = LocalContext.current
     var draft by remember { mutableStateOf("") }
-    var listening by remember { mutableStateOf(false) }
     var micError by remember { mutableStateOf<String?>(null) }
+    // Full-screen voice conversation: listen, send, speak the reply, listen again, until it is closed.
+    var voiceMode by remember { mutableStateOf(false) }
+    var muted by remember { mutableStateOf(false) }
+    var phase by remember { mutableStateOf(VoicePhase.Listening) }
+    var heard by remember { mutableStateOf("") }
+    var level by remember { mutableFloatStateOf(0f) }
+    var seqAtSend by remember { mutableIntStateOf(0) }
+    val scope = rememberCoroutineScope()
     val output = remember { SpeechOutput(context) }
+    val listenAgain = remember { mutableStateOf({}) }
     val input = remember {
         SpeechInput(
             context,
-            onPartial = { draft = it },
-            onFinal = { draft = ""; model.send(it, spoken = true) },
-            onEnd = { error -> listening = false; micError = error },
+            onPartial = { heard = it },
+            onFinal = { heard = ""; seqAtSend = model.replySeq; phase = VoicePhase.Thinking; model.send(it, spoken = true) },
+            onEnd = { error ->
+                level = 0f
+                if (error != null) { micError = error; muted = true; phase = VoicePhase.Muted }
+                // Silence or no match is not an error: keep listening, unless the text was just sent.
+                else if (voiceMode && phase == VoicePhase.Listening) listenAgain.value()
+            },
+            onLevel = { level = it },
         )
     }
     DisposableEffect(Unit) { onDispose { input.stop(); output.shutdown() } }
+    fun startListening() { output.stop(); micError = null; heard = ""; phase = VoicePhase.Listening; muted = false; input.start() }
+    listenAgain.value = { scope.launch { delay(300); if (voiceMode && phase == VoicePhase.Listening && !muted) input.start() } }
+    // After Reachy has spoken (or a turn failed) the conversation carries on, unless the microphone was switched off.
+    fun afterReply() { if (!voiceMode) return; if (muted) phase = VoicePhase.Muted else startListening() }
+    // The hub streams its voice sentence by sentence; the phone's own voice covers a hub that cannot speak.
+    var phoneVoice by remember { mutableStateOf(model.prefs.phoneVoice) }
+    fun speakReply(reply: String, done: () -> Unit) {
+        if (phoneVoice) { output.speak(reply, done); return }
+        output.playStream(scope, { onRate, onPcm -> model.replyStream(reply, onRate, onPcm) }, { output.speak(reply, done) }, done)
+    }
     LaunchedEffect(model.replySeq, speakReplies) {
         val reply = model.lastReply
         val seq = model.replySeq
@@ -90,21 +118,38 @@ private fun TalkContent(model: AppViewModel, speakReplies: Boolean) {
         // phone, toggling the setting), and must not read an old reply again.
         val fresh = seq > model.spokenSeq
         model.spokenSeq = seq
-        if (speakReplies && reply != null && fresh) {
+        if (voiceMode) {
+            // Replies are always spoken in voice mode, and the loop resumes when the voice has finished.
+            if (reply != null && fresh) {
+                phase = VoicePhase.Speaking
+                speakReply(reply) { afterReply() }
+            }
+        } else if (speakReplies && reply != null && fresh) {
             // Reachy's own voice first, so replies sound like the robot; the phone's voice when the hub cannot speak or the
             // audio cannot be played.
-            val voice = model.replyVoice(reply)
-            if (voice == null || !output.play(voice) { output.speak(reply) }) output.speak(reply)
+            speakReply(reply) {}
         } else if (!speakReplies) output.stop()
     }
-    fun startListening() { output.stop(); micError = null; listening = true; input.start() }
-    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) startListening() else micError = "Microphone permission is needed to talk"
+    // A turn that failed produces no reply to wait for: go back to listening.
+    LaunchedEffect(model.sending) {
+        if (!model.sending && voiceMode && phase == VoicePhase.Thinking && model.replySeq == seqAtSend) afterReply()
     }
-    fun toggleMic() {
-        if (listening) { input.stop(); listening = false; return }
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startListening()
+    fun openVoice() { voiceMode = true; startListening() }
+    fun closeVoice() { voiceMode = false; input.stop(); output.stop(); heard = ""; level = 0f }
+    fun toggleMute() {
+        if (muted) { muted = false; if (phase == VoicePhase.Muted) startListening() }
+        else { muted = true; if (phase == VoicePhase.Listening) { input.stop(); phase = VoicePhase.Muted; heard = "" } }
+    }
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) openVoice() else micError = "Microphone permission is needed to talk"
+    }
+    fun openVoiceChecked() {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) openVoice()
         else permission.launch(Manifest.permission.RECORD_AUDIO)
+    }
+
+    if (voiceMode) {
+        VoiceModeScreen(phase, heard, level, micError ?: model.chatStatus, muted, phoneVoice, { phoneVoice = it; model.prefs.phoneVoice = it; output.stop() }, { toggleMute() }, { closeVoice() })
     }
 
     val listState = rememberLazyListState()
@@ -116,7 +161,7 @@ private fun TalkContent(model: AppViewModel, speakReplies: Boolean) {
                 Column(Modifier.align(Alignment.Center).padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Talk to Reachy", style = MaterialTheme.typography.headlineSmall)
                     Text(
-                        "Tap the microphone and speak, or type below. Ask it to add a task, set an alarm or remember something.",
+                        "Tap the voice button to talk with Reachy, or type below. Ask it to add a task, set an alarm or remember something.",
                         style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp),
                     )
                 }
@@ -146,17 +191,12 @@ private fun TalkContent(model: AppViewModel, speakReplies: Boolean) {
         (micError ?: model.chatStatus)?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 16.dp)) }
         Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
-                draft, { draft = it }, Modifier.weight(1f), placeholder = { Text(if (listening) "Listening…" else "Message Reachy") }, maxLines = 4,
+                draft, { draft = it }, Modifier.weight(1f), placeholder = { Text("Message Reachy") }, maxLines = 4,
             )
             IconButton(
-                { model.send(draft); draft = "" }, enabled = draft.isNotBlank() && !model.sending && !listening,
+                { model.send(draft); draft = "" }, enabled = draft.isNotBlank() && !model.sending,
             ) { Icon(Icons.AutoMirrored.Filled.Send, "Send") }
-        }
-        Box(Modifier.fillMaxWidth().padding(bottom = 12.dp), contentAlignment = Alignment.Center) {
-            LargeFloatingActionButton(
-                { toggleMic() },
-                containerColor = if (listening) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
-            ) { Icon(if (listening) Icons.Default.Stop else Icons.Default.Mic, if (listening) "Stop listening" else "Talk to Reachy") }
+            FilledIconButton({ openVoiceChecked() }, enabled = !model.sending) { Icon(Icons.Default.GraphicEq, "Voice mode") }
         }
     }
 }

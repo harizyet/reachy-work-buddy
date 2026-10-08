@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, model_validator
 from starlette.background import BackgroundTask
 
 from reachy_hub import alarm_audio
+from reachy_hub.tts import speech_chunks, spoken_text, wav_to_pcm
 from shared.models.llm import LLMConfigPatch
 from shared.models.persona import PersonaPatch
 from shared.models.response import Privacy
@@ -60,6 +61,7 @@ from shared.protocols.operator_api import (
     PLANNER_TASK_REOPEN,
     PLANNER_TASKS,
     SPEECH,
+    SPEECH_STREAM,
     STATUS,
     WEBSEARCH_LOG,
     WEBSEARCH_SETTINGS,
@@ -331,6 +333,38 @@ def install_operator_routes(
         except Exception:  # noqa: BLE001 - the engine is a local subprocess/model; the client falls back to its own voice
             raise HTTPException(503, "Speech is not available") from None
         return Response(audio, media_type="audio/wav", headers={"Cache-Control": "no-store"})
+
+    @app.post(SPEECH_STREAM, dependencies=dependencies)
+    async def speech_stream(body: SpeechBody) -> Response:
+        """Reachy's voice as raw 16-bit mono PCM, one sentence at a time (rate in X-Sample-Rate)."""
+        if synthesize is None:
+            raise HTTPException(503, "Speech is not available")
+        chunks = speech_chunks(spoken_text(body.text))
+
+        async def pcm(index: int) -> tuple[int, bytes]:
+            return wav_to_pcm(await synthesize(chunks[index]))
+
+        # The first sentence is made before the response starts, so a broken engine is a clean 503 (the client then uses its
+        # own voice) and the sample rate is known for the header.
+        try:
+            if not chunks:
+                raise ValueError("nothing to say")
+            rate, first = await pcm(0)
+        except Exception:  # noqa: BLE001 - local engine failure; same contract as /speech
+            raise HTTPException(503, "Speech is not available") from None
+
+        async def body_stream():
+            yield first
+            # Synthesis of the next sentence runs while the client is still playing the previous one.
+            for index in range(1, len(chunks)):
+                try:
+                    yield (await pcm(index))[1]
+                except Exception:  # noqa: BLE001 - end the stream early rather than fail mid-reply; the client keeps what it has
+                    return
+
+        return StreamingResponse(
+            body_stream(), media_type="audio/L16", headers={"X-Sample-Rate": str(rate), "Cache-Control": "no-store"},
+        )
 
     @app.get(MEETING_AUDIO, dependencies=dependencies)
     async def meeting_audio(meeting_id: str, request: Request):

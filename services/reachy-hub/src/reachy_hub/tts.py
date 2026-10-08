@@ -39,6 +39,33 @@ def spoken_text(text: str) -> str:
     return _MARKDOWN_EMPHASIS.sub("", text).strip()
 
 
+_SENTENCE_END = re.compile(r"(?<=[.!?])\s+|\n+")
+
+
+def speech_chunks(text: str, min_chars: int = 40) -> list[str]:
+    """Splits cleaned reply text into pieces to synthesize one at a time, so a client can start playing after the first.
+    Very short sentences are joined to the next (many tiny clips sound choppy and each costs a synthesis call)."""
+    chunks: list[str] = []
+    pending = ""
+    for part in _SENTENCE_END.split(text):
+        part = part.strip()
+        if not part:
+            continue
+        pending = f"{pending} {part}".strip()
+        if len(pending) >= min_chars:
+            chunks.append(pending)
+            pending = ""
+    if pending:
+        chunks.append(pending)
+    return chunks
+
+
+def wav_to_pcm(wav_bytes: bytes) -> tuple[int, bytes]:
+    """Sample rate and raw 16-bit mono PCM of a WAV from a TextToSpeech provider."""
+    with wave.open(io.BytesIO(wav_bytes), "rb") as source:
+        return source.getframerate(), source.readframes(source.getnframes())
+
+
 class EspeakTTS:
     """Wraps the espeak-ng CLI (not the shared library) for simplicity.
 
