@@ -66,6 +66,10 @@ PgBouncer statistics since its restart in the drill (3,134 transactions, 6,300 q
 
 Accepted at the infrastructure level: the connection reduction (98 to 8 at rest, 19 at 32 workers), the concurrency tests, PgBouncer restart recovery, the verified backup and the unchanged authoritative data satisfy the infrastructure acceptance criteria. **Kept open:** browser UI interaction, Telegram reminder delivery confirmation, voice integration, and physical robot testing. The cutover is not to be rolled back solely because these remain pending. Phase 44 indexing and retrieval stay disabled until these and the performance gates are reviewed. Next: [Phase 46, least-privilege database roles](../phase-46.md) (plan only; no credential changes or deployment yet).
 
+## Telegram delivery confirmed
+
+The owner confirmed on 2026-10-08 that the Telegram push for the smoke reminder (claimed 21 s after it fell due) arrived, closing that acceptance item. Still open: browser UI interaction, voice integration, physical robot testing.
+
 ## Availability observation: the 7.4 second call during the PgBouncer restart
 
 Recorded as an availability observation, not a defect and not a rollback trigger. During the restart drill one hub call took 7.4 s while the rest were fast; nothing failed, nothing was lost or duplicated, and the hub's pool timeout (10 s) was not reached.
