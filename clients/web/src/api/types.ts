@@ -135,3 +135,90 @@ export function parseStatus(value: unknown): HubStatus {
     }),
   };
 }
+
+// --- Planner (Phase 47B) ---------------------------------------------------------------
+// Tasks, reminders, notes and receipts come back from the hub as bare dicts, like /status.
+// Status strings are kept as the hub sends them; the views filter on the values they know,
+// as the legacy UI does, so a status the client has not heard of hides a record rather than
+// failing the whole list.
+
+export interface Task {
+  id: string;
+  text: string;
+  status: string; // 'open' | 'done'
+}
+
+export interface Reminder {
+  id: string;
+  text: string;
+  due_at: string; // an ISO instant in whatever offset the hub echoes; always parse as a Date
+  status: string; // 'pending' | 'done'
+}
+
+export interface Note {
+  id: string;
+  title: string;
+  body: string;
+  updated_at: string;
+}
+
+export interface Receipt {
+  id: string;
+  action_type: string;
+  status: string; // 'success' | 'failed'
+  at: string;
+  source_channel: string;
+  fields: Record<string, string>;
+  failure_reason: string | null;
+}
+
+function list(value: unknown, what: string): unknown[] {
+  if (!Array.isArray(value)) throw new ApiShapeError(what);
+  return value;
+}
+
+export function parseTask(value: unknown, what = 'task'): Task {
+  const o = obj(value, what);
+  return { id: str(o.id, `${what}.id`), text: str(o.text, `${what}.text`), status: str(o.status, `${what}.status`) };
+}
+export const parseTasks = (value: unknown): Task[] => list(value, 'tasks').map((v, i) => parseTask(v, `tasks[${i}]`));
+
+export function parseReminder(value: unknown, what = 'reminder'): Reminder {
+  const o = obj(value, what);
+  const due_at = str(o.due_at, `${what}.due_at`);
+  if (Number.isNaN(new Date(due_at).getTime())) throw new ApiShapeError(`${what}.due_at`);
+  return { id: str(o.id, `${what}.id`), text: str(o.text, `${what}.text`), due_at, status: str(o.status, `${what}.status`) };
+}
+export const parseReminders = (value: unknown): Reminder[] =>
+  list(value, 'reminders').map((v, i) => parseReminder(v, `reminders[${i}]`));
+
+export function parseNote(value: unknown, what = 'note'): Note {
+  const o = obj(value, what);
+  const updated_at = str(o.updated_at, `${what}.updated_at`);
+  if (Number.isNaN(new Date(updated_at).getTime())) throw new ApiShapeError(`${what}.updated_at`);
+  return {
+    id: str(o.id, `${what}.id`),
+    title: str(o.title, `${what}.title`),
+    body: o.body == null ? '' : str(o.body, `${what}.body`),
+    updated_at,
+  };
+}
+export const parseNotes = (value: unknown): Note[] => list(value, 'notes').map((v, i) => parseNote(v, `notes[${i}]`));
+
+export function parseReceipts(value: unknown): Receipt[] {
+  return list(value, 'receipts').map((item, i) => {
+    const o = obj(item, `receipts[${i}]`);
+    const rawFields = o.fields == null ? {} : obj(o.fields, `receipts[${i}].fields`);
+    const fields: Record<string, string> = {};
+    for (const [key, v] of Object.entries(rawFields)) fields[key] = String(v);
+    return {
+      id: str(o.id, `receipts[${i}].id`),
+      action_type: str(o.action_type, `receipts[${i}].action_type`),
+      status: str(o.status, `receipts[${i}].status`),
+      at: str(o.at, `receipts[${i}].at`),
+      source_channel: str(o.source_channel, `receipts[${i}].source_channel`),
+      fields,
+      failure_reason: o.failure_reason == null ? null : str(o.failure_reason, `receipts[${i}].failure_reason`),
+    };
+  });
+}

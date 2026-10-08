@@ -1,0 +1,256 @@
+import { expect, test, type Page } from '@playwright/test';
+import { HUB_PORT, PROXY_PORT } from './global';
+
+// Phase 47B against the real hub (in-memory stores): To Do, Reminders, Notes, Activity at both mounts and widths.
+const MOUNTS = [
+  { name: 'direct /web/', url: `http://127.0.0.1:${HUB_PORT}/web/` },
+  { name: 'proxied /hub/web/', url: `http://127.0.0.1:${PROXY_PORT}/hub/web/` },
+];
+const run = Date.now().toString(36); // the hub keeps state across tests; every record name carries this
+
+async function signIn(page: Page, url: string, hash = '') {
+  await page.goto(url + hash);
+  // The browser context may already hold the owner session (the legacy UI shares the cookie), so wait for
+  // whichever the app settles on before acting.
+  const loginHeading = page.getByRole('heading', { name: 'Sign in to Reachy' });
+  const nav = page.getByRole('navigation', { name: 'Main' });
+  await expect(loginHeading.or(nav)).toBeVisible();
+  if (await loginHeading.isVisible()) {
+    await page.getByLabel('Username').fill('owner');
+    await page.getByLabel('Password').fill('correct-password');
+    await page.getByRole('button', { name: 'Sign in' }).click();
+  }
+  await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
+  if (hash) await page.goto(url + hash);
+}
+
+for (const mount of MOUNTS) {
+  test.describe(`planner · ${mount.name}`, () => {
+    test('To Do: add, persist across reload, complete, reopen, rename, delete; text stays literal', async ({ page }) => {
+      const text = `<b>task ${run}</b>`;
+      await signIn(page, mount.url, '#/todo');
+      await expect(page.getByRole('heading', { name: 'To Do' })).toBeVisible();
+      await page.getByRole('button', { name: /New Reminder/ }).click();
+      await page.getByRole('textbox', { name: 'New to-do' }).fill(text);
+      await page.keyboard.press('Enter');
+      await page.keyboard.press('Escape');
+      await expect(page.getByText(text, { exact: true })).toBeVisible();
+      expect(await page.locator('b').count()).toBe(0);
+
+      await page.reload();
+      await expect(page.getByText(text, { exact: true })).toBeVisible();
+
+      await page.getByRole('checkbox', { name: `Complete: ${text}` }).click();
+      await expect(page.getByText(text, { exact: true })).toHaveCount(0);
+      await page.getByRole('button', { name: /\d+ Completed · Show/ }).click();
+      await expect(page.getByText(text, { exact: true })).toBeVisible();
+      await page.getByRole('checkbox', { name: `Reopen: ${text}` }).click();
+      await expect(page.getByRole('checkbox', { name: `Complete: ${text}` })).toBeVisible();
+
+      await page.getByRole('button', { name: `Edit: ${text}` }).click();
+      await page.getByRole('textbox', { name: 'Edit to-do' }).fill(`renamed ${run}`);
+      await page.keyboard.press('Enter');
+      await expect(page.getByText(`renamed ${run}`, { exact: true })).toBeVisible();
+
+      await page.getByRole('button', { name: `Delete: renamed ${run}` }).click();
+      await expect(page.getByText(`renamed ${run}`, { exact: true })).toHaveCount(0);
+      expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0);
+    });
+
+    test('Reminders: new reminder sheet, due text, complete (stays ticked), delete', async ({ page }) => {
+      const text = `call ${run}`;
+      await signIn(page, mount.url, '#/reminders');
+      await page.getByRole('button', { name: /New Reminder/ }).click();
+      const sheet = page.getByRole('dialog', { name: 'New Reminder' });
+      await sheet.getByLabel('Title').fill(text);
+      await sheet.getByLabel('Date').fill('2031-05-06');
+      await sheet.getByLabel('Time').fill('17:30');
+      await sheet.getByRole('button', { name: 'Add' }).click();
+      const row = page.getByRole('listitem').filter({ hasText: text });
+      await expect(row).toBeVisible();
+      await expect(row).toContainText(/5\/6\/31|6\/5\/31|06\/05\/2031|05\/06\/2031|2031/); // locale short date
+      await expect(row).toContainText(/5:30\s?PM/);
+      await page.reload();
+      await expect(row).toBeVisible();
+
+      await page.getByRole('checkbox', { name: `Complete: ${text}` }).click();
+      await expect(row).toHaveCount(0);
+      await page.getByRole('button', { name: /\d+ Completed · Show/ }).click();
+      const done = page.getByRole('checkbox', { name: `Completed: ${text}` });
+      await expect(done).toBeChecked();
+      await expect(done).toBeDisabled(); // the hub cannot reopen a reminder
+      await page.getByRole('button', { name: `Delete: ${text}` }).click();
+      await expect(page.getByText(text)).toHaveCount(0);
+    });
+
+    test('Notes: create autosaves, survives reload, is searchable, edits, and deletes after confirmation', async ({ page }) => {
+      const title = `<i>note ${run}</i>`;
+      await signIn(page, mount.url, '#/notes');
+      await page.getByRole('button', { name: 'New note' }).click();
+      await page.getByLabel('Title').fill(title);
+      await page.getByRole('textbox', { name: 'Note' }).fill('first line\nsecond line');
+      await expect(page.getByRole('status').filter({ hasText: 'Saved' })).toBeVisible({ timeout: 5000 });
+      expect(await page.locator('i').count()).toBe(0);
+
+      await page.reload();
+      const rowButton = page.getByRole('button', { name: new RegExp(`note ${run}`) });
+      await expect(rowButton).toBeVisible();
+
+      await page.getByLabel('Search all notes').fill(`zzz-none-${run}`);
+      await expect(page.getByText('No notes.')).toBeVisible();
+      await page.getByLabel('Search all notes').fill(`second line`);
+      await expect(rowButton).toBeVisible();
+      await page.getByLabel('Search all notes').fill('');
+
+      await rowButton.click();
+      await page.getByRole('textbox', { name: 'Note' }).fill('first line\nsecond line\nthird');
+      await expect(page.getByRole('status').filter({ hasText: 'Saved' })).toBeVisible({ timeout: 5000 });
+      await page.reload();
+      await rowButton.click();
+      await expect(page.getByRole('textbox', { name: 'Note' })).toHaveValue('first line\nsecond line\nthird');
+
+      await page.getByRole('button', { name: 'Delete note' }).click();
+      const dialog = page.getByRole('dialog');
+      await dialog.getByRole('button', { name: 'Cancel' }).click();
+      await expect(page.getByRole('button', { name: new RegExp(`note ${run}`), includeHidden: true })).toBeAttached(); // on a narrow screen the list is hidden behind the open editor
+      await expect(page.getByRole('textbox', { name: 'Note' })).toHaveValue('first line\nsecond line\nthird');
+      await page.getByRole('button', { name: 'Delete note' }).click();
+      await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+      await expect(rowButton).toHaveCount(0);
+    });
+
+    test('Activity: shows the hub receipts, failed ones struck through, text literal', async ({ page }) => {
+      await signIn(page, mount.url, '#/activity');
+      await expect(page.getByRole('heading', { name: 'Recent activity' })).toBeVisible();
+      await expect(page.getByText('Task · created')).toBeVisible();
+      await expect(page.getByText('Alarm · delivered')).toHaveClass(/line-through/);
+      await expect(page.getByText(/failed: no audio/)).toBeVisible();
+      await expect(page.getByRole('alert')).toHaveCount(0);
+    });
+
+    test('a list requested before logout is cancelled and its late answer never reaches the page', async ({ page }) => {
+      const secret = `SECRET-${run}`;
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      let cancelled = false;
+      page.on('requestfailed', (request) => { if (request.url().endsWith('/planner/tasks')) cancelled = true; });
+      await signIn(page, mount.url);
+      await page.route('**/planner/tasks', async (route) => {
+        await gate;
+        // The browser has already abandoned this request; answering is harmless and must not matter.
+        await route.fulfill({ json: [{ id: 'z', text: secret, status: 'open' }] }).catch(() => undefined);
+      });
+      await page.getByRole('link', { name: 'To Do' }).click();
+      await page.getByRole('button', { name: 'Log out' }).click();
+      await expect(page.getByRole('heading', { name: 'Sign in to Reachy' })).toBeVisible();
+      release();
+      await page.waitForTimeout(300);
+      await expect(page.getByRole('heading', { name: 'Sign in to Reachy' })).toBeVisible();
+      await expect(page.getByText(secret)).toHaveCount(0);
+      expect(cancelled).toBe(true);
+      await page.goBack();
+      await expect(page.getByText(secret)).toHaveCount(0);
+      await expect(page.getByRole('heading', { name: 'Sign in to Reachy' })).toBeVisible();
+    });
+
+    test('pages fit the viewport; Notes works as list then editor then back on a narrow screen', async ({ page }, info) => {
+      await signIn(page, mount.url);
+      for (const hash of ['#/todo', '#/reminders', '#/notes', '#/activity']) {
+        await page.goto(mount.url + hash);
+        await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+      }
+      if (info.project.name === 'mobile') {
+        const title = `mobile ${run}`;
+        await page.goto(mount.url + '#/notes');
+        await page.getByRole('button', { name: 'New note' }).click();
+        await expect(page.getByLabel('Search all notes')).toBeHidden(); // editor replaces the list
+        await page.getByLabel('Title').fill(title);
+        await page.getByRole('textbox', { name: 'Note' }).fill('x');
+        await expect(page.getByRole('status').filter({ hasText: 'Saved' })).toBeVisible({ timeout: 5000 });
+        await page.getByRole('button', { name: '‹ Notes' }).click();
+        await expect(page.getByRole('button', { name: new RegExp(title) })).toBeVisible();
+        await page.getByRole('button', { name: new RegExp(title) }).click();
+        await page.getByRole('button', { name: 'Delete note' }).click();
+        await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+        await expect(page.getByRole('button', { name: new RegExp(title) })).toHaveCount(0);
+      }
+    });
+  });
+}
+
+// Parity with the legacy operator UI: both clients talk to the same hub, so what one writes the other must show.
+test.describe('parity with the legacy UI (/ui/)', () => {
+  const direct = `http://127.0.0.1:${HUB_PORT}`;
+
+  async function legacyLogin(page: Page) {
+    await page.goto(`${direct}/ui/`);
+    // Already signed in when the same browser context used the React client first (one shared cookie).
+    if (await page.locator('#username').isVisible()) {
+      await page.locator('#username').fill('owner');
+      await page.locator('#password').fill('correct-password');
+      await page.getByRole('button', { name: 'Log in' }).click();
+    }
+    await page.locator('#todo-tab').waitFor();
+  }
+
+  test('a task written in the legacy UI shows in the React To Do, and the reverse', async ({ page }) => {
+    const legacy = `legacy task ${run}`, modern = `react task ${run}`;
+    await legacyLogin(page);
+    await page.locator('#todo-tab').click();
+    await page.locator('#planner-task-new').click();
+    await page.locator('#planner-task-list .rl-new-row .rl-edit').fill(legacy);
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#planner-task-list .rl-text', { hasText: legacy })).toBeVisible();
+
+    await signIn(page, `${direct}/web/`, '#/todo');
+    await expect(page.getByText(legacy, { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: /New Reminder/ }).click();
+    await page.getByRole('textbox', { name: 'New to-do' }).fill(modern);
+    await page.keyboard.press('Enter');
+    await expect(page.getByText(modern, { exact: true })).toBeVisible();
+
+    await legacyLogin(page);
+    await page.locator('#todo-tab').click();
+    await expect(page.locator('#planner-task-list .rl-text', { hasText: modern })).toBeVisible();
+    // tidy up through the legacy delete buttons
+    for (const t of [legacy, modern]) await page.locator('#planner-task-list .rl-row', { hasText: t }).locator('.rl-delete').click();
+  });
+
+  test('a reminder shows the same due text in both clients', async ({ page }) => {
+    const text = `parity reminder ${run}`;
+    await signIn(page, `${direct}/web/`, '#/reminders');
+    await page.getByRole('button', { name: /New Reminder/ }).click();
+    const sheet = page.getByRole('dialog', { name: 'New Reminder' });
+    await sheet.getByLabel('Title').fill(text);
+    await sheet.getByLabel('Date').fill('2031-07-08');
+    await sheet.getByLabel('Time').fill('09:15');
+    await sheet.getByRole('button', { name: 'Add' }).click();
+    const modernSub = (await page.getByRole('listitem').filter({ hasText: text }).innerText()).split('\n').find((l) => /9:15/.test(l));
+
+    await legacyLogin(page);
+    await page.locator('#reminders-tab').click();
+    const legacyRow = page.locator('#planner-reminder-list .rl-row', { hasText: text });
+    await expect(legacyRow).toBeVisible();
+    expect((await legacyRow.locator('.rl-sub').innerText()).trim()).toBe((modernSub ?? '').trim());
+    await legacyRow.locator('.rl-delete').click();
+  });
+
+  test('a note written in React opens in the legacy Notes tab with the same title and text', async ({ page }) => {
+    const title = `parity note ${run}`;
+    await signIn(page, `${direct}/web/`, '#/notes');
+    await page.getByRole('button', { name: 'New note' }).click();
+    await page.getByLabel('Title').fill(title);
+    await page.getByRole('textbox', { name: 'Note' }).fill('shared body\nline two');
+    await expect(page.getByRole('status').filter({ hasText: 'Saved' })).toBeVisible({ timeout: 5000 });
+
+    await legacyLogin(page);
+    await page.locator('#notes-tab').click();
+    await page.locator('#notes-list .notes-row', { hasText: title }).click();
+    expect(await page.inputValue('#notes-title')).toBe(title);
+    expect(await page.inputValue('#notes-body')).toBe('shared body\nline two');
+    await page.locator('#notes-delete').click();
+    await page.locator('#confirm-ok').click();
+    await expect(page.locator('#notes-list .notes-row', { hasText: title })).toHaveCount(0);
+  });
+});

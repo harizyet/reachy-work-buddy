@@ -25,6 +25,32 @@ export function hubBase(href: string = window.location.href): string {
   return new URL('../', href).pathname.replace(/\/$/, '');
 }
 
+// Authentication generation. Every sign-in, sign-out and session expiry advances it,
+// and every request remembers the generation it started in. A response that arrives
+// in a later generation is discarded (StaleSessionError) before any caller sees it, so
+// a request begun before logout can never restore signed-in UI state or put the old
+// owner's data into the cache the next session reads. Advancing also aborts whatever is
+// still in flight, which stops the transfer as well as ignoring its result.
+let generation = 0;
+const inFlight = new Set<AbortController>();
+
+export class StaleSessionError extends Error {
+  constructor() {
+    super('The session changed while this request was in progress');
+    this.name = 'StaleSessionError';
+  }
+}
+
+export function currentGeneration(): number {
+  return generation;
+}
+
+export function advanceGeneration(): void {
+  generation += 1;
+  for (const controller of inFlight) controller.abort();
+  inFlight.clear();
+}
+
 let unauthorizedHandler: (() => void) | null = null;
 
 /** Registers the single callback run on any 401. Returns an unregister function. */
@@ -44,29 +70,47 @@ export interface RequestOptions {
 }
 
 export async function request<T = unknown>(path: string, options: RequestOptions = {}): Promise<T> {
-  const response = await fetch(hubBase() + path, {
-    method: options.method ?? 'GET',
-    cache: 'no-store',
-    credentials: 'same-origin',
-    signal: options.signal,
-    headers: {
-      'X-Reachy-CSRF': '1',
-      ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
-    },
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
-  });
-  if (!response.ok) {
-    if (response.status === 401 && !options.expectUnauthorized) unauthorizedHandler?.();
-    let detail: unknown;
-    try {
-      detail = ((await response.json()) as { detail?: unknown }).detail;
-    } catch {
-      // A gateway failure is not JSON.
+  const started = generation;
+  const controller = new AbortController();
+  inFlight.add(controller);
+  const caller = options.signal;
+  if (caller?.aborted) controller.abort();
+  else caller?.addEventListener('abort', () => controller.abort(), { once: true });
+  try {
+    const response = await fetch(hubBase() + path, {
+      method: options.method ?? 'GET',
+      cache: 'no-store',
+      credentials: 'same-origin',
+      signal: controller.signal,
+      headers: {
+        'X-Reachy-CSRF': '1',
+        ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      },
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    });
+    if (started !== generation) throw new StaleSessionError();
+    if (!response.ok) {
+      let detail: unknown;
+      try {
+        detail = ((await response.json()) as { detail?: unknown }).detail;
+      } catch {
+        // A gateway failure is not JSON.
+      }
+      if (started !== generation) throw new StaleSessionError();
+      // Only a 401 for the current session ends it; a late 401 for an older one must not sign out a newer login.
+      if (response.status === 401 && !options.expectUnauthorized) unauthorizedHandler?.();
+      throw new ApiError(
+        typeof detail === 'string' && detail ? detail : `Request failed (${response.status})`,
+        response.status,
+      );
     }
-    throw new ApiError(
-      typeof detail === 'string' && detail ? detail : `Request failed (${response.status})`,
-      response.status,
-    );
+    const data = (await response.json()) as T;
+    if (started !== generation) throw new StaleSessionError();
+    return data;
+  } catch (error) {
+    if (started !== generation && !(error instanceof ApiError)) throw new StaleSessionError();
+    throw error;
+  } finally {
+    inFlight.delete(controller);
   }
-  return (await response.json()) as T;
 }

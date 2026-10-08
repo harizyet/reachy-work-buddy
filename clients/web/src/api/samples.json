@@ -2,6 +2,69 @@
   "auth_me": {
     "username": "owner"
   },
+  "notes": [
+    {
+      "body": "milk\neggs",
+      "created_at": "2026-10-08T09:02:02.462902Z",
+      "id": "4f888eaf-5e4e-42be-a779-88ba7b42ba7f",
+      "project_scope": null,
+      "sensitivity": "work-private",
+      "title": "Groceries",
+      "updated_at": "2026-10-08T09:02:02.462904Z"
+    }
+  ],
+  "receipts": [
+    {
+      "action_type": "alarm.delivered",
+      "at": "2026-10-08T09:02:02.463934Z",
+      "failure_reason": "no audio",
+      "fields": {},
+      "id": "03b012d6-6188-41ba-9dd0-0003bcf91b3d",
+      "notified_at": null,
+      "notify": false,
+      "object_id": null,
+      "object_type": "alarm",
+      "source_channel": "system",
+      "status": "failed"
+    },
+    {
+      "action_type": "task.created",
+      "at": "2026-10-08T09:02:02.463777Z",
+      "failure_reason": null,
+      "fields": {
+        "Task": "Water plants"
+      },
+      "id": "e55c4205-cfc2-47d8-81c6-f167075092f2",
+      "notified_at": null,
+      "notify": false,
+      "object_id": null,
+      "object_type": "task",
+      "source_channel": "web",
+      "status": "success"
+    }
+  ],
+  "reminders": [
+    {
+      "completed_at": "2026-10-08T09:02:02.460454Z",
+      "created_at": "2026-10-08T09:02:02.456214Z",
+      "due_at": "2030-01-02T09:00:00Z",
+      "id": "d147af0c-40f8-4147-9346-1d9c93314da0",
+      "notified_at": null,
+      "sensitivity": "work-private",
+      "status": "done",
+      "text": "Call Lisa"
+    },
+    {
+      "completed_at": null,
+      "created_at": "2026-10-08T09:02:02.458476Z",
+      "due_at": "2030-02-02T09:00:00Z",
+      "id": "c8e7f703-1f2c-4ec4-a2f5-fe2a72fdc0ee",
+      "notified_at": null,
+      "sensitivity": "work-private",
+      "status": "pending",
+      "text": "Book club"
+    }
+  ],
   "status": {
     "companion_core": {
       "data": {
@@ -72,5 +135,25 @@
       "last_poll_at": null,
       "last_poll_error": null
     }
-  }
+  },
+  "tasks": [
+    {
+      "completed_at": "2026-10-08T09:02:02.451216Z",
+      "created_at": "2026-10-08T09:02:02.448640Z",
+      "id": "ba16c329-04da-4c07-8eb5-e28a7879095e",
+      "project_scope": null,
+      "sensitivity": "work-private",
+      "status": "done",
+      "text": "Write report"
+    },
+    {
+      "completed_at": null,
+      "created_at": "2026-10-08T09:02:02.453711Z",
+      "id": "d7ceb92f-748d-4c6c-92b7-01068b98fc5b",
+      "project_scope": null,
+      "sensitivity": "work-private",
+      "status": "open",
+      "text": "Water plants"
+    }
+  ]
 }

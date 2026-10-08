@@ -1,6 +1,6 @@
 # Phase 47: React web platform modernization and Brain visualization (plan)
 
-Status: **plan approved by the owner 2026-10-08; 47A built and verified on branch `phase-47a`, not merged, not deployed** (record in section 13 and [the 47A verification](verification/phase-47a-2026-10-08.md)). 47B and later stages need separate approval.
+Status: **plan approved by the owner 2026-10-08; 47A committed (`b5c5bd7`, branch `phase-47a`, pushed, not merged, not deployed); 47B1 to B3 (Planner, Notes, Activity) built on branch `phase-47b`, not merged, not deployed** (records in sections 13 and 14). B4 (alarms), WebRTC, the Brain API and any deployment need separate approval.
 
 Numbering: the owner's brief called this "Phase 46". That number belongs to [Phase 46, least-privilege database roles](phase-46.md), so this is Phase 47 (owner decision D1, 2026-10-08: preserve Phases 44, 45 and 46).
 
@@ -220,3 +220,42 @@ Planning only, no code run. Facts were taken from `HANDOVER.md`, `AGENTS.md`, `d
 ## 13. 47A record (2026-10-08)
 
 Built on branch `phase-47a` in a separate worktree; nothing deployed. Layout as built: `clients/web/` with `src/{app,api,components,features,styles}`, `tests/` (Vitest), `e2e/` (Playwright against a real in-process hub); one hub change (the `/web` mount in `app.py`), the Dockerfile Node stage, `.dockerignore` entries, and `services/reachy-hub/tests/test_web_client.py`. Only login, guard, logout and Overview exist; every other matrix row is still **not started**. Results, bundle sizes and the API compatibility check are in the [47A verification record](verification/phase-47a-2026-10-08.md). Deviations from the plan: `openapi-typescript` was dropped (section 5); shadcn/Radix were not adopted because 47A needs only a button, card, pill and spinner (they remain the intended primitive source once dialogs and menus arrive in 47B); the Overview shows components and model-usage totals but not the per-call usage table, sessions, DND, audit or notifications, which belong with the chat/session work.
+
+## 14. 47B record (2026-10-08): B1 Planner, B2 Notes, B3 Activity
+
+Authorized by the owner on 2026-10-08 as local development only: B1 tasks and reminders, B2 notes, B3 activity. Branch `phase-47b`, from the pushed 47A commit. Not B4 (alarms), not WebRTC, not the Brain API, no deployment, no backend authorization or knowledge-flag change. Evidence: [47B verification](verification/phase-47b-2026-10-08.md).
+
+Method for each feature: (1) pin the hub behaviour with tests through the real owner-session chain (`test_web_client.py::test_planner_*`), next to the existing legacy fixture tests; (2) implement the React page; (3) hold it to the same cases with component tests (the legacy cases are reproduced one for one) and Playwright against the real hub; (4) cross-check with the legacy UI on the same hub.
+
+### Feature-parity status
+
+| Matrix row | React | Parity evidence | Status |
+|---|---|---|---|
+| To Do (open list, round check, completed section, inline add that stays open, inline rename, delete, refresh, empty and error states, literal text) | `/todo` | `planner.test.tsx`; `planner.spec.ts` (both mounts, both widths); legacy `planner.test.cjs` cases reproduced; legacy-to-React round trip | **Migrated, pending owner acceptance** |
+| Reminders (earliest first, due text, overdue marker, completed section with disabled tick, New Reminder sheet with next whole hour, delete) | `/reminders` | same; due text compared with the legacy row for the same record | **Migrated, pending owner acceptance** |
+| Notes (date sections, preview, search on the server, debounced autosave, serialised save, no blank note, title fallback, flush on switch, delete with confirmation, narrow-screen list/editor/back) | `/notes` | `notes.test.tsx`; `planner.spec.ts`; legacy-note round trip | **Migrated, pending owner acceptance** |
+| Recent activity (receipts newest first, failed struck through with reason, fields, empty and error states) | `/activity` | `activity.test.tsx`; `planner.spec.ts` against hub receipts | **Migrated, pending owner acceptance** |
+
+"Migrated" here means built and tested, not owner-accepted: the legacy tabs stay the fallback and nothing is deployed.
+
+### Deliberate differences from the legacy UI
+
+- Navigation is links in the app header, not tab buttons; the legacy workspace tab bar is unchanged.
+- The Notes toolbar spans the top of the page rather than sitting in the editor pane, so New note is reachable on a narrow screen while the list is showing. This was found by the browser suite: the component tests (jsdom, no CSS) passed while the button was hidden at phone width.
+- Leaving the Notes page while signed in saves a pending edit; the legacy tab kept its timer running instead. On sign-out, session expiry or a new sign-in an unsaved edit is dropped, not sent.
+- Deleting a task or reminder has no confirmation, as in the legacy UI (only notes confirm). Not changed in a parity migration; see the gaps below.
+
+### Authentication-generation isolation
+
+`api/client.ts` keeps a generation counter. Sign-in, sign-out and a 401 advance it; every request records the generation it started in and aborts with `StaleSessionError` if it finishes in a later one, before any caller sees the answer. Advancing also aborts everything in flight. A 401 for an older generation never runs the sign-out handler, so a late 401 cannot end a newer sign-in. The Notes editor ties "still the same session" to the generation rather than to React state, because state lags the unmount that triggers its last flush (a mutation test showed an unsaved edit being sent after sign-out began until this was fixed). Regression tests: `session.test.tsx` (10 cases, 11 runs: list answered after logout, with and without the abort taking effect; answered after a 401 expiry; slow `/auth/me` against an expiry; late 401 against a newer sign-in; late success against a different owner's session; the next session's empty cache while loading; a mutation answered after logout; unsaved and in-flight note saves at logout; the save-on-leave case), `client.test.ts` (request-layer cases), and `planner.spec.ts` (a real browser: the in-flight list request is cancelled, its late answer is ignored, back-navigation shows nothing). Each of the five protections was broken on purpose and a test failed.
+
+### API gaps and decisions needing separate approval
+
+1. Operator routes return bare dicts, so OpenAPI has no response fields (47A finding). The planner responses are checked by parsers and a hub drift test. Typed response models in the hub would remove the hand-written layer; that is a backend change.
+2. Hub validation errors for bodies (422) return `detail` as a list, which the client shows as "Request failed (422)", as the legacy UI does. A readable message needs a hub change.
+3. Reminders cannot be edited or reopened (no hub route). Notes and tasks have no reclassification route by design (`_NoReclassification`).
+4. Deleting tasks and reminders is immediate in both UIs. Whether to add the confirmation ADR 0011 describes for destructive actions is an owner decision, not a parity task.
+5. Hub receipts are read-only and only the 100 newest are returned by default; there is no paging route.
+6. Notes search is a server call on every pause; there is no result limit parameter.
+
+None of these was changed. The 47B stage added no hub route, no schema change and no flag change.

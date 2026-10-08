@@ -1,7 +1,11 @@
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Spinner } from '../components/ui/Spinner';
+import { ActivityPage } from '../features/activity/ActivityPage';
 import { LoginPage } from '../features/auth/LoginPage';
+import { NotesPage } from '../features/notes/NotesPage';
 import { OverviewPage } from '../features/overview/OverviewPage';
+import { RemindersPage } from '../features/planner/RemindersPage';
+import { TodoPage } from '../features/planner/TodoPage';
 import { useAuth } from './auth';
 import { AppLayout } from './layout/AppLayout';
 
@@ -30,6 +34,10 @@ export function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route element={<Protected />}>
         <Route index element={<OverviewPage />} />
+        <Route path="todo" element={<TodoPage />} />
+        <Route path="reminders" element={<RemindersPage />} />
+        <Route path="notes" element={<NotesPage />} />
+        <Route path="activity" element={<ActivityPage />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

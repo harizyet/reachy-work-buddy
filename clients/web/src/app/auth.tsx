@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { fetchMe, login as apiLogin, logout as apiLogout } from '../api/auth';
-import { onUnauthorized } from '../api/client';
+import { advanceGeneration, currentGeneration, onUnauthorized, StaleSessionError } from '../api/client';
 
 type AuthState =
   | { status: 'loading' }
@@ -36,7 +36,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchMe(controller.signal)
       .then((user) => setState({ status: 'authenticated', username: user.username }))
       .catch((error: unknown) => {
-        if (!controller.signal.aborted) {
+        // An aborted or stale check says nothing about the session; only a current answer does.
+        if (!controller.signal.aborted && !(error instanceof StaleSessionError)) {
           setState({ status: 'anonymous', notice: error instanceof Error && !('status' in error && error.status === 401) ? error.message : undefined });
         }
       });
@@ -44,26 +45,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(
-    () => onUnauthorized(() => clear({ status: 'anonymous', notice: 'Your session has ended. Sign in again.' })),
+    () =>
+      onUnauthorized(() => {
+        advanceGeneration();
+        clear({ status: 'anonymous', notice: 'Your session has ended. Sign in again.' });
+      }),
     [clear],
   );
 
   const login = useCallback(
     async (username: string, password: string) => {
       const user = await apiLogin(username, password);
-      queryClient.clear(); // never carry a previous identity's cache into a new session
+      advanceGeneration(); // a new identity starts a new generation, so nothing begun before it can land in it
+      queryClient.clear();
       setState({ status: 'authenticated', username: user.username });
     },
     [queryClient],
   );
 
   const logout = useCallback(async () => {
+    advanceGeneration(); // abort everything in flight and disown it before the hub is even told
+    const mine = currentGeneration();
+    clear({ status: 'anonymous' });
     try {
       await apiLogout();
     } catch {
       // Local state goes even if the request failed; the cookie then expires on its own.
     }
-    clear({ status: 'anonymous' });
+    // Only if nothing newer (a fresh sign-in made while this request was slow) has taken over since.
+    if (currentGeneration() === mine) clear({ status: 'anonymous' });
   }, [clear]);
 
   const value = useMemo(() => ({ state, login, logout }), [state, login, logout]);

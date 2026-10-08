@@ -2,7 +2,13 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../auth';
 
-const NAV = [{ to: '/', label: 'Overview', end: true }];
+const NAV = [
+  { to: '/', label: 'Overview', end: true },
+  { to: '/todo', label: 'To Do', end: false },
+  { to: '/reminders', label: 'Reminders', end: false },
+  { to: '/notes', label: 'Notes', end: false },
+  { to: '/activity', label: 'Activity', end: false },
+];
 
 export function AppLayout() {
   const { state, logout } = useAuth();
@@ -17,7 +23,7 @@ export function AppLayout() {
             <span className="block text-[0.7rem] font-medium tracking-widest text-[var(--muted)]">WORK COMPANION</span>
             <span className="text-lg font-semibold">Reachy</span>
           </div>
-          <nav aria-label="Main" className="flex flex-1 gap-1">
+          <nav aria-label="Main" className="flex flex-1 flex-wrap gap-1">
             {NAV.map((item) => (
               <NavLink
                 key={item.to}

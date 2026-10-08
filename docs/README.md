@@ -93,7 +93,7 @@ correct facts or links, not to track each new phase dependency.
 - [Phase 44](phase-44.md): Reachy Brain, a semantic knowledge and context layer over memory, documents, meetings and planner data (proposed; 44A schema reconciliation written, no code).
 - [Phase 45](phase-45.md): database connection architecture and pooling (shared pools, PgBouncer evaluation, direct admin path); audit, shared-pool refactor, PgBouncer evaluation and failure exercises done on disposable infrastructure ([evidence](verification/phase-45-2026-10-08.md)); homelab cutover done ([deployment record](verification/phase-45e-deployment-2026-10-08.md)).
 - [Phase 46](phase-46.md): least-privilege database roles (plan only, written 2026-10-08; no credential or production change authorised).
-- [Phase 47](phase-47.md): React web platform and Brain visualization. Owner decisions D1 to D6 recorded 2026-10-08; 47A (React foundation at `/web/`) built and verified on branch `phase-47a`, not deployed; 47B onward needs approval.
+- [Phase 47](phase-47.md): React web platform and Brain visualization. Owner decisions D1 to D6 recorded 2026-10-08; 47A (React foundation at `/web/`, commit `b5c5bd7`) and 47B1 to B3 (Planner, Notes, Activity, local development) built, not merged or deployed; B4 onward needs approval.
 - [Phase 44E plan](phase-44e-plan.md): context builder and end-to-end answer-quality evaluation with the local 7B (plan for review; no code).
 - [Shadow semantic router](shadow-router.md): shadow-mode router, extractor and validator that only records what it would propose; contract, flags, trial procedure, retention and evidence.
 - [Phase 30](phase-30.md): platform stabilization and acceptance — verify the
@@ -140,6 +140,8 @@ over the original decision where they explicitly change it.
 ## Verification records
 
 These are dated evidence, not startup instructions or current health checks.
+
+- [Phase 47B 2026-10-08](verification/phase-47b-2026-10-08.md): Planner, Notes and Activity in React, hub characterisation tests, session-isolation regression tests and mutation checks, bundle growth. Not deployed.
 
 - [Phase 47A 2026-10-08](verification/phase-47a-2026-10-08.md): React foundation tests (Vitest, Playwright against a real hub), hub image build, bundle sizes, API compatibility. Not deployed.
 
