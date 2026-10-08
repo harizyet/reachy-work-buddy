@@ -20,6 +20,7 @@ export interface LlmUsage {
   summary: UsageCounts;
   by_role: Partial<Record<'local' | 'cloud', UsageCounts>>;
   latest_escalation: { reason: string; at: string } | null;
+  entries: UsageEntry[];
 }
 
 export interface TelegramHealth {
@@ -100,6 +101,19 @@ export function parseStatus(value: unknown): HubStatus {
         ...(byRole.local === undefined ? {} : { local: counts(byRole.local, 'usage.by_role.local') }),
         ...(byRole.cloud === undefined ? {} : { cloud: counts(byRole.cloud, 'usage.by_role.cloud') }),
       },
+      entries: list(data.entries ?? [], 'usage.entries').map((item, i) => {
+        const e = obj(item, `usage.entries[${i}]`);
+        return {
+          at: str(e.at, 'entry.at'),
+          role: e.role == null ? '' : str(e.role, 'entry.role'),
+          model: e.model == null ? '' : str(e.model, 'entry.model'),
+          success: e.success === true,
+          error_message: optionalStr(e.error_message, 'entry.error_message'),
+          prompt_tokens: optionalNum(e.prompt_tokens, 'entry.prompt_tokens'),
+          completion_tokens: optionalNum(e.completion_tokens, 'entry.completion_tokens'),
+          latency_ms: e.latency_ms == null ? 0 : num(e.latency_ms, 'entry.latency_ms'),
+        };
+      }),
       latest_escalation:
         escalation == null
           ? null
@@ -952,3 +966,132 @@ export function parseRecognitionStatus(value: unknown): RecognitionStatus {
     face_total_bytes: typeof o.face_total_bytes === 'number' ? o.face_total_bytes : 0,
   };
 }
+
+// --- Coding agents (Phase 47B11) ----------------------------------------------------------
+
+export interface Dimension {
+  name: string;
+  value: number | string;
+  unit: string;
+  resets_at: string | null;
+}
+export interface Allowance {
+  source: string;
+  windows: Dimension[];
+}
+export interface CodingProject {
+  id: string;
+  name: string;
+  repository_path: string;
+  default_branch: string;
+  provider: string;
+}
+export interface CodingSession {
+  id: string;
+  project_id: string;
+  status: string;
+  task_summary: string;
+  started_at: string | null;
+  last_activity_at: string | null;
+  branch: string | null;
+  last_event: string | null;
+}
+export interface CodingEvent {
+  timestamp: string | null;
+  type: string;
+  summary: string;
+}
+export interface TerminalSession {
+  session_id: string;
+  title: string | null;
+  active: boolean;
+  project_path: string | null;
+  git_branch: string | null;
+  last_activity_at: string | null;
+  last_prompt: string | null;
+}
+
+function dimensions(value: unknown, what: string): Dimension[] {
+  return list(value ?? [], what).map((item, i) => {
+    const d = obj(item, `${what}[${i}]`);
+    return {
+      name: str(d.name, 'dimension.name'),
+      value: typeof d.value === 'number' ? d.value : str(d.value, 'dimension.value'),
+      unit: d.unit == null ? '' : str(d.unit, 'dimension.unit'),
+      resets_at: optionalStr(d.resets_at, 'dimension.resets_at'),
+    };
+  });
+}
+
+export function parseAllowance(value: unknown): Allowance {
+  const o = obj(value, 'allowance');
+  return { source: o.source == null ? '' : str(o.source, 'allowance.source'), windows: dimensions(o.windows, 'allowance.windows') };
+}
+export const parseUsageDimensions = (value: unknown): Dimension[] => dimensions(obj(value, 'usage').dimensions, 'usage.dimensions');
+
+export const parseCodingProjects = (value: unknown): CodingProject[] =>
+  list(value, 'projects').map((item, i) => {
+    const p = obj(item, `projects[${i}]`);
+    return {
+      id: str(p.id, 'project.id'),
+      name: str(p.name, 'project.name'),
+      repository_path: str(p.repository_path, 'project.repository_path'),
+      default_branch: p.default_branch == null ? 'main' : str(p.default_branch, 'project.default_branch'),
+      provider: p.provider == null ? '' : str(p.provider, 'project.provider'),
+    };
+  });
+
+export const parseCodingSessions = (value: unknown): CodingSession[] =>
+  list(value, 'sessions').map((item, i) => {
+    const s = obj(item, `sessions[${i}]`);
+    return {
+      id: str(s.id, 'session.id'),
+      project_id: str(s.project_id, 'session.project_id'),
+      status: str(s.status, 'session.status'),
+      task_summary: s.task_summary == null ? '' : str(s.task_summary, 'session.task_summary'),
+      started_at: optionalStr(s.started_at, 'session.started_at'),
+      last_activity_at: optionalStr(s.last_activity_at, 'session.last_activity_at'),
+      branch: optionalStr(s.branch, 'session.branch'),
+      last_event: optionalStr(s.last_event, 'session.last_event'),
+    };
+  });
+
+export const parseCodingEvents = (value: unknown): CodingEvent[] =>
+  list(value, 'events').map((item, i) => {
+    const e = obj(item, `events[${i}]`);
+    return { timestamp: optionalStr(e.timestamp, 'event.timestamp'), type: str(e.type, 'event.type'), summary: e.summary == null ? '' : str(e.summary, 'event.summary') };
+  });
+
+export const parseTerminalSessions = (value: unknown): TerminalSession[] =>
+  list(value, 'terminal sessions').map((item, i) => {
+    const s = obj(item, `terminal[${i}]`);
+    return {
+      session_id: str(s.session_id, 'terminal.session_id'),
+      title: optionalStr(s.title, 'terminal.title'),
+      active: s.active === true,
+      project_path: optionalStr(s.project_path, 'terminal.project_path'),
+      git_branch: optionalStr(s.git_branch, 'terminal.git_branch'),
+      last_activity_at: optionalStr(s.last_activity_at, 'terminal.last_activity_at'),
+      last_prompt: optionalStr(s.last_prompt, 'terminal.last_prompt'),
+    };
+  });
+
+export interface AuditEntry {
+  action: string | null;
+  reason: string | null;
+  delivery_channel: string | null;
+}
+export interface QueuedNotification {
+  text: string | null;
+  reason: string | null;
+}
+export const parseAudit = (value: unknown): AuditEntry[] =>
+  list(value, 'audit').map((item, i) => {
+    const e = obj(item, `audit[${i}]`);
+    return { action: optionalStr(e.action, 'audit.action'), reason: optionalStr(e.reason, 'audit.reason'), delivery_channel: optionalStr(e.delivery_channel, 'audit.delivery_channel') };
+  });
+export const parseNotifications = (value: unknown): QueuedNotification[] =>
+  list(value, 'notifications').map((item, i) => {
+    const e = obj(item, `notifications[${i}]`);
+    return { text: optionalStr(e.text, 'notification.text'), reason: optionalStr(e.reason, 'notification.reason') };
+  });

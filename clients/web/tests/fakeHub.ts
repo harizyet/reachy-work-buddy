@@ -38,6 +38,9 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
     stations: seed.stations ?? [],
     search: seed.search ?? [],
     stopped: false,
+    audit: [] as any[],
+    queued: [] as any[],
+    coding: { projects: [] as any[], sessions: [] as any[], terminal: [] as any[], allowance: { source: '', windows: [] as any[] }, events: {} as Record<string, any[]>, usage: {} as Record<string, any[]>, starts: [] as any[] },
     recognition: { benchmark_enabled: false, reauthenticated: false, reauth_expires_in_seconds: 0, voice_samples: [] as any[], face_samples: [] as any[] } as any,
     google: { configured: false, client_type: null as string | null, identity: null as any, capabilities: { gmail: { status: 'disconnected', enabled: false, last_success: null }, calendar: { status: 'disconnected', enabled: false, last_success: null } }, scopes: [] as string[], selected_calendars: [] as string[] } as any,
     googleCalls: [] as { call: string; body: any }[],
@@ -346,6 +349,27 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
       }
       data.credentials = data.credentials.filter((c: any) => c.provider !== m![1]);
       return jsonResponse({ deleted: true });
+    }
+    m = path.match(/^\/(audit|notifications)\/([^/]+)$/);
+    if (m) return jsonResponse(m[1] === 'audit' ? data.audit : data.queued);
+    if (path.startsWith('/coding-agents/')) {
+      const sub = path.slice('/coding-agents'.length);
+      const cd = data.coding;
+      if (sub === '/allowance/claude-code') return jsonResponse(cd.allowance);
+      if (sub === '/projects' && method === 'GET') return jsonResponse(cd.projects);
+      if (sub === '/projects') { cd.projects.push({ id: nextId('p'), ...body }); return jsonResponse(cd.projects.at(-1)); }
+      if (sub === '/sessions' && method === 'GET') return jsonResponse(cd.sessions);
+      if (sub === '/sessions') { cd.starts.push(body); return jsonResponse({ id: nextId('s'), status: 'starting', started_at: null, last_activity_at: null, last_event: null, ...body }); }
+      if (sub === '/terminal-sessions') return jsonResponse(cd.terminal);
+      const ss = sub.match(/^\/sessions\/([^/]+)\/(events|usage|refresh|stop)$/);
+      if (ss) {
+        if (ss[2] === 'events') return jsonResponse(cd.events[ss[1]!] ?? []);
+        if (ss[2] === 'usage') return jsonResponse({ dimensions: cd.usage[ss[1]!] ?? [] });
+        const sess = cd.sessions.find((x: any) => x.id === ss[1]);
+        if (sess && ss[2] === 'stop') sess.status = 'stopped';
+        return jsonResponse(sess ?? {});
+      }
+      return jsonResponse({ detail: 'Not Found' }, 404);
     }
     if (path.startsWith('/owner-recognition')) {
       const rc = data.recognition;

@@ -3,6 +3,11 @@ import { EmptyState, ErrorState } from '../../components/shared/states';
 import { Card } from '../../components/ui/Card';
 import { Spinner } from '../../components/ui/Spinner';
 import { StatusPill, type Tone } from '../../components/ui/StatusPill';
+import { useQuery } from '@tanstack/react-query';
+import { fetchAudit, fetchNotifications } from '../../api/status';
+import { useChat } from '../chat/ChatProvider';
+import { Meters } from '../settings/SearchTab';
+import { useSearchLog } from '../settings/useSettings';
 import { useStatus } from './useStatus';
 
 interface Row {
@@ -81,16 +86,88 @@ export function OverviewPage() {
                   const counts = data.llm.usage?.by_role[role];
                   return counts ? <p key={role}>{role}: {usageLine(counts)}</p> : null;
                 })}
-                {data.llm.usage.summary.calls === 0 && (
-                  <EmptyState>No model calls yet. Usage appears after a conversation uses the configured model.</EmptyState>
-                )}
               </div>
             ) : (
               <EmptyState>Usage unavailable — companion core is not responding.</EmptyState>
             )}
           </Card>
+          <Card eyebrow="GROUNDING" title="Search API usage">
+            <SearchUsage />
+          </Card>
+          <ActivityCards />
+          <div className="md:col-span-2">
+            <UsageTable usage={data.llm.usage} />
+          </div>
         </div>
       )}
     </div>
+  );
+}
+
+function SearchUsage() {
+  const log = useSearchLog(true);
+  if (log.error) return <EmptyState>{log.error.message}</EmptyState>;
+  return <Meters usage={log.data?.usage ?? null} />;
+}
+
+// Delivery decisions and notifications waiting for the owner's user.
+function ActivityCards() {
+  const chat = useChat();
+  const audit = useQuery({ queryKey: ['overview', 'audit', chat.user], queryFn: ({ signal }) => fetchAudit(chat.user as string, signal), enabled: chat.user !== null, retry: false });
+  const queued = useQuery({ queryKey: ['overview', 'notifications', chat.user], queryFn: ({ signal }) => fetchNotifications(chat.user as string, signal), enabled: chat.user !== null, retry: false });
+  return (
+    <>
+      <Card title="Recent activity">
+        <ul className="text-sm">
+          {(audit.data ?? []).map((e, i) => <li key={i}>{`${e.action || 'response'} · ${e.reason || e.delivery_channel || ''}`}</li>)}
+          {audit.data?.length === 0 && <li>Nothing here yet.</li>}
+          {audit.error && <li>{audit.error.message}</li>}
+        </ul>
+      </Card>
+      <Card title="Queued notifications">
+        <ul className="text-sm">
+          {(queued.data ?? []).map((e, i) => <li key={i}>{e.text || e.reason || 'Queued notification'}</li>)}
+          {queued.data?.length === 0 && <li>Nothing here yet.</li>}
+          {queued.error && <li>{queued.error.message}</li>}
+        </ul>
+      </Card>
+    </>
+  );
+}
+
+function UsageTable({ usage }: { usage: HubStatus['llm']['usage'] }) {
+  return (
+    <Card eyebrow="LAST 24 HOURS" title="LLM utilization">
+      {!usage ? (
+        <EmptyState>Usage unavailable — companion core is not responding.</EmptyState>
+      ) : (
+        <>
+          {usage.latest_escalation && (
+            <p className="mb-2 text-sm">{`Latest escalation: ${usage.latest_escalation.reason === 'manual' ? 'manual request' : 'local error'} · ${new Date(usage.latest_escalation.at).toLocaleString()}`}</p>
+          )}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr><th className="pr-3">Time</th><th className="pr-3">Role / model</th><th className="pr-3">Result</th><th className="pr-3">Input / output tokens</th><th>Latency</th></tr>
+              </thead>
+              <tbody>
+                {usage.entries.map((e, i) => (
+                  <tr key={i} className="border-t border-[var(--border)]">
+                    <td className="pr-3">{new Date(e.at).toLocaleString()}</td>
+                    <td className="pr-3 break-words">{`${e.role} / ${e.model}`}</td>
+                    <td className="pr-3 break-words">{e.success ? 'Success' : (e.error_message ?? 'Failed')}</td>
+                    <td className="pr-3">{`${e.prompt_tokens ?? '—'} / ${e.completion_tokens ?? '—'}`}</td>
+                    <td>{`${Math.round(e.latency_ms)} ms`}</td>
+                  </tr>
+                ))}
+                {usage.entries.length === 0 && (
+                  <tr><td colSpan={5}>No model calls yet. Usage appears after a conversation uses the configured model.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </Card>
   );
 }

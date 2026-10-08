@@ -4,6 +4,7 @@ import { ActivityPage } from '../features/activity/ActivityPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { AlarmsPage } from '../features/alarms/AlarmsPage';
 import { ChatPage } from '../features/chat/ChatPage';
+import { CodingPage } from '../features/coding/CodingPage';
 import { MeetingsPage } from '../features/meetings/MeetingsPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { NotesPage } from '../features/notes/NotesPage';
@@ -40,6 +41,7 @@ export function AppRoutes() {
         <Route index element={<OverviewPage />} />
         <Route path="meetings" element={<MeetingsPage />} />
         <Route path="meetings/:id" element={<MeetingsPage />} />
+        <Route path="coding" element={<CodingPage />} />
         <Route path="chat" element={<ChatPage />} />
         <Route path="todo" element={<TodoPage />} />
         <Route path="reminders" element={<RemindersPage />} />

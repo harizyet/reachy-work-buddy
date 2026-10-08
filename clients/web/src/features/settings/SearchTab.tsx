@@ -120,7 +120,7 @@ function SearchForm({ initial, onSaved }: { initial: WebSearchConfig; onSaved: (
   );
 }
 
-function Meters({ usage }: { usage: SearchUsage | null }) {
+export function Meters({ usage }: { usage: SearchUsage | null }) {
   return (
     <div>
       <p className="mb-1 text-sm text-[var(--muted)]">{usage?.period ? `This month (${usage.period}, UTC)` : 'No usage data'}</p>

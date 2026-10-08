@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createFakeHub } from './fakeHub';
 import { json, renderApp, SAMPLE_STATUS, stubHub } from './helpers';
 
 afterEach(() => vi.unstubAllGlobals());
@@ -149,5 +150,61 @@ describe('Overview', () => {
     await client.refetchQueries({ queryKey: ['status'] }).catch(() => undefined);
     expect(await screen.findByText(/status may be stale/)).toBeInTheDocument();
     expect(screen.getByText('Reachy hub')).toBeInTheDocument();
+  });
+});
+
+describe('Overview extras', () => {
+  const withUsage = {
+    ...SAMPLE_STATUS,
+    llm: {
+      ...SAMPLE_STATUS.llm,
+      usage: {
+        status: 'ok',
+        data: {
+          ...SAMPLE_STATUS.llm.usage.data,
+          latest_escalation: { reason: 'manual', at: '2030-01-02T07:00:00Z' },
+          entries: [
+            { at: '2030-01-02T07:00:00Z', role: 'local', model: 'qwen', success: true, error_message: null, prompt_tokens: 12, completion_tokens: 3, latency_ms: 840.4 },
+            { at: '2030-01-02T06:00:00Z', role: 'cloud', model: '<b>big</b>', success: false, error_message: 'timeout <i>x</i>', prompt_tokens: null, completion_tokens: null, latency_ms: 5000 },
+          ],
+        },
+      },
+    },
+  };
+
+  it('shows the model-call table with literal text, an escalation note and missing token counts as dashes', async () => {
+    stubHub({ '/auth/me': () => json({ username: 'owner' }), '/status': () => json(withUsage), '/websearch/log': () => json({ usage: null, entries: [] }) });
+    const { container } = renderApp('#/');
+    const table = within(await screen.findByRole('table'));
+    expect(table.getByText('local / qwen')).toBeInTheDocument();
+    expect(table.getByText('12 / 3')).toBeInTheDocument();
+    expect(table.getByText('840 ms')).toBeInTheDocument();
+    expect(table.getByText('cloud / <b>big</b>')).toBeInTheDocument();
+    expect(table.getByText('timeout <i>x</i>')).toBeInTheDocument();
+    expect(table.getByText('— / —')).toBeInTheDocument();
+    expect(screen.getByText(/Latest escalation: manual request/)).toBeInTheDocument();
+    expect(container.querySelector('table b, table i')).toBeNull();
+  });
+
+  it('shows search usage meters and the owner’s recent deliveries and queued notifications', async () => {
+    const hub = createFakeHub({ status: { ...SAMPLE_STATUS, default_user_id: 'owner-user' } });
+    hub.data.audit = [{ action: null, reason: null, delivery_channel: 'reachy' }, { action: 'dnd', reason: 'do not disturb' }];
+    hub.data.queued = [{ text: 'Reminder: call <b>Lisa</b>' }, { reason: 'policy' }, {}];
+    renderApp('#/');
+    expect(await screen.findByText('This month (2030-01, UTC)')).toBeInTheDocument();
+    expect(screen.getByText('brave', { exact: false })).toBeInTheDocument();
+    expect(await screen.findByText('response · reachy')).toBeInTheDocument();
+    expect(screen.getByText('dnd · do not disturb')).toBeInTheDocument();
+    expect(screen.getByText('Reminder: call <b>Lisa</b>')).toBeInTheDocument();
+    expect(screen.getByText('policy')).toBeInTheDocument();
+    expect(screen.getByText('Queued notification')).toBeInTheDocument();
+    expect(hub.calls).toContain('GET /audit/owner-user?limit=10');
+  });
+
+  it('says so when companion core cannot report usage', async () => {
+    const degraded = { ...SAMPLE_STATUS, llm: { ...SAMPLE_STATUS.llm, usage: { status: 'unavailable' } } };
+    stubHub({ '/auth/me': () => json({ username: 'owner' }), '/status': () => json(degraded), '/websearch/log': () => json({ usage: null, entries: [] }) });
+    renderApp('#/');
+    expect((await screen.findAllByText('Usage unavailable — companion core is not responding.')).length).toBeGreaterThan(0);
   });
 });

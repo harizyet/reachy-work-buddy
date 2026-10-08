@@ -376,6 +376,20 @@ for (const mount of MOUNTS) {
       await expect(page.getByText(/Off by default/)).toBeVisible();
     });
 
+    test('Coding agents and Overview render against a hub with no coding-agent service, without breaking', async ({ page }) => {
+      await signIn(page, mount.url, '#/');
+      await expect(page.getByRole('heading', { name: 'LLM utilization' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Search API usage' })).toBeVisible();
+      await expect(page.getByText('This month')).toBeVisible();
+      await expect(page.getByText('response · reachy').first()).toBeVisible(); // the seeded chat turn's delivery record
+      await page.getByRole('link', { name: 'Coding agents' }).click();
+      await expect(page.getByRole('heading', { name: 'Coding agents' }).first()).toBeVisible();
+      await expect(page.getByText('Terminal sessions').first()).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Start session' })).toBeVisible();
+      // Nothing was started, and the page is still usable.
+      await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
+    });
+
     test('Activity: shows the hub receipts, failed ones struck through, text literal', async ({ page }) => {
       await signIn(page, mount.url, '#/activity');
       await expect(page.getByRole('heading', { name: 'Recent activity' })).toBeVisible();
@@ -412,7 +426,7 @@ for (const mount of MOUNTS) {
 
     test('pages fit the viewport; Notes works as list then editor then back on a narrow screen', async ({ page }, info) => {
       await signIn(page, mount.url);
-      for (const hash of ['#/todo', '#/reminders', '#/notes', '#/activity', '#/alarms', '#/chat', '#/meetings', '#/settings/models', '#/settings/search', '#/settings/voice', '#/settings/accounts', '#/settings/recognition']) {
+      for (const hash of ['#/todo', '#/reminders', '#/notes', '#/activity', '#/alarms', '#/chat', '#/meetings', '#/settings/models', '#/settings/search', '#/settings/voice', '#/settings/accounts', '#/settings/recognition', '#/coding']) {
         await page.goto(mount.url + hash);
         await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
