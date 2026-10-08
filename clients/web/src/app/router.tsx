@@ -1,4 +1,5 @@
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import { Spinner } from '../components/ui/Spinner';
 import { ActivityPage } from '../features/activity/ActivityPage';
 import { LoginPage } from '../features/auth/LoginPage';
@@ -13,6 +14,9 @@ import { RemindersPage } from '../features/planner/RemindersPage';
 import { TodoPage } from '../features/planner/TodoPage';
 import { useAuth } from './auth';
 import { AppLayout } from './layout/AppLayout';
+
+// The 3D view and its libraries load only when this route is opened.
+const BrainPage = lazy(() => import('../features/brain/BrainPage'));
 
 function Protected() {
   const { state } = useAuth();
@@ -41,6 +45,7 @@ export function AppRoutes() {
         <Route index element={<OverviewPage />} />
         <Route path="meetings" element={<MeetingsPage />} />
         <Route path="meetings/:id" element={<MeetingsPage />} />
+        <Route path="brain" element={<Suspense fallback={<Spinner label="Loading the Brain view" />}><BrainPage /></Suspense>} />
         <Route path="coding" element={<CodingPage />} />
         <Route path="chat" element={<ChatPage />} />
         <Route path="todo" element={<TodoPage />} />

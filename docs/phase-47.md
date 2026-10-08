@@ -1,6 +1,6 @@
 # Phase 47: React web platform modernization and Brain visualization (plan)
 
-Status: **plan approved by the owner 2026-10-08; 47A (`b5c5bd7`) and 47B (the whole operator UI in React) built, tested and merged to main; not deployed; owner user testing is pending** (records in sections 13 and 14). Next is 47C (the 3D Brain foundation, frontend only, synthetic data). The Brain API, a WebRTC/PWA rewrite, memory and document screens and any deployment still need their own approval.
+Status: **plan approved by the owner 2026-10-08; 47A (`b5c5bd7`) and 47B (the whole operator UI in React) built, tested and merged to main; 47C (3D Brain foundation, synthetic data) built on branch `phase-47c`, not merged; nothing deployed; owner user testing is pending** (records in sections 13 and 14). Next is 47C is built on branch `phase-47c` (below). The Brain API, a WebRTC/PWA rewrite, memory and document screens and any deployment still need their own approval.
 
 Numbering: the owner's brief called this "Phase 46". That number belongs to [Phase 46, least-privilege database roles](phase-46.md), so this is Phase 47 (owner decision D1, 2026-10-08: preserve Phases 44, 45 and 46).
 
@@ -269,3 +269,25 @@ Everything in the legacy operator UI is rebuilt at `/web/`. "Built" means implem
 5. Alarm times: the hub reads "07:30" in the assistant's time zone and the page shows the device's. Keep them the same (HANDOVER already notes it).
 6. Receipts are limited to the newest 100; note search has no limit parameter.
 7. Several account, coding-agent and deep-review paths can only be exercised against fixtures here; they need the owner's user test against the real services.
+
+## 15. 47C record (2026-10-08): Brain 3D foundation
+
+Branch `phase-47c`, from main after 47B. Frontend only: no backend route, no hub change, no schema, no flag, no network request for Brain data. The records are **synthetic** and say so on screen. Evidence: [47C verification](verification/phase-47c-2026-10-08.md).
+
+What exists at `#/brain` (`clients/web/src/features/brain`):
+
+| Part | Built |
+|---|---|
+| Data contract | `BrainSource` (list a bounded page of nodes with an opaque cursor, get a node, list the explicit edges among given nodes, summary) in `model.ts`, the shape decision D4 asked for; only a seeded synthetic implementation exists. A live source (47D) plugs in without the view changing |
+| Scene (React Three Fiber, lazy chunk) | decorative particle field (one draw call, never selectable), instanced knowledge nodes with soft halos (two draw calls), explicit link lines (the selected record's by default, all on request), six cluster labels, orbit/zoom/pan with damping, focus on selection, reset |
+| Overlay | search, kind filters with colour legend, statistics that separate records, links and decorative particles, detail level (low / normal / high particle ceiling), record list, details panel (kind, observed date, source reference, classification, excerpt, connected records with the reason for each link), a "not available yet" note |
+| Honesty rules | decorative particles are not records; links are `explicit` only (a task from a meeting, a reminder for a task) and carry their basis; position means grouping only (stated on screen); inferred, reviewed and disputed relationships and a real activity feed are shown as unavailable, not simulated |
+| Resource behaviour | the 3D code (three.js and friends, 938 kB, 247 kB gzip) is a separate chunk fetched only on opening the page with WebGL present; rendering stops while the tab is hidden and runs on demand when motion is reduced; phones and reduced-motion users start at the low particle ceiling; geometries are disposed and the WebGL context is lost on leaving the page |
+| Fallback | without WebGL the same list, filters and details are the whole page, and the 3D code is never fetched |
+
+Deliberate choices and limits:
+
+- No post-processing bloom library: the glow is additive halo instances plus additive particles. A true bloom pass would add a dependency and per-frame cost for a decorative effect; revisit if the owner wants it after seeing the view.
+- Measurements were taken with Chromium's **software** WebGL renderer in a headless browser (about 56 frames per second, no accumulation across ten visits). That is a baseline, not evidence about integrated graphics or a phone; the owner's test on real hardware is the acceptance for performance.
+- The scene is a picture of the list, not a second source of truth: every action available in 3D (select, focus) is also available from the list, which is the keyboard and screen-reader path.
+- 47D (real knowledge) is **not** started. It needs the read-only Brain API (a backend change) and was not part of this authorization.

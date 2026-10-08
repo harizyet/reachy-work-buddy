@@ -12,7 +12,7 @@ export default defineConfig({
   use: {
     browserName: 'chromium',
     // A synthetic microphone, so recording a clip in the browser can be exercised without hardware.
-    launchOptions: { args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] },
+    launchOptions: { args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--enable-precise-memory-info', '--js-flags=--expose-gc'] },
     permissions: ['microphone'],
   },
   projects: [
