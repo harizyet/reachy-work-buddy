@@ -137,6 +137,9 @@ over the original decision where they explicitly change it.
 
 These are dated evidence, not startup instructions or current health checks.
 
+- [Phase 44A migration 026 rehearsal 2026-10-08](verification/phase-44a-rehearsal-2026-10-08.md): live read-only preflight, an isolated
+  restored copy migrated with the real keyring, the rollback proven, disposal; nothing on the live stack changed.
+
 - [Phase 44A 2026-10-08](verification/phase-44a-2026-10-08.md): knowledge-layer contracts, migration 026 on a disposable database,
   the pinned Ossie export, hub forwarding of classification and the retrieval benchmark baseline; the failing tests
   classified as baseline or regression. Fixture evidence only; nothing deployed.

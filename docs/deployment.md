@@ -947,14 +947,41 @@ in the window fire late, when the loops resume); plan for 10 to 15 minutes.
 3. Record the starting state in the deployment notes: `select version_num from alembic_version` is `025_meeting_description`; row counts of
    `memories`, `document_chunks`, `notes`, `tasks`, `reminders`, `meetings`, `secrets`, `llm_config`; `docker inspect --format '{{.Name}} {{.Image}}' reachy-homelab-companion-core-1 reachy-homelab-reachy-hub-1 reachy-homelab-coding-agent-service-1`;
    `df -h /` and the backup directory's free space (the Nano's disk filled once; check the homelab's too).
-4. **Rehearse on a copy.** `$DC exec -T postgres pg_dump -U reachy -d reachy_hub -Fc > ~/reachy-backups/rehearsal-$(date +%Y%m%d-%H%M%S).dump` (with `umask 077`) is a read-only snapshot that
-   does not stop anything. Restore it into a throwaway `pgvector/pgvector:pg16` container (own name, loopback port, removed afterwards),
-   check revision 025 and the same row counts, then run the real upgrade against the copy with the real key file mounted read-only:
-   `python -m companion_core.migrations upgrade` with `DATABASE_URL` pointing at the copy and `SECRET_KEY_FILE` at the production keyring.
-   Expected: revision `026_source_sensitivity`, every row `work-private`, no scope set, all stored credentials decrypt (the job checks
-   that), and the counts unchanged. Remove the container and shred the rehearsal dump.
+4. **Rehearse on a copy; the live services are not stopped or changed until it has passed.** If any rehearsal step fails, stop the
+   deployment and investigate on the copy; do not improvise fixes on the live database. The copy holds personal data and the production
+   keyring is mounted to open it, so treat it as production: a directory with mode 0700 under `~/reachy-backups`, files at 0600 (`umask 077`),
+   a throwaway `pgvector/pgvector:pg16` container (the production image) on a Docker network created with `--internal` (no egress), **no
+   published ports**, a random password in a 0600 env file, and the keyring mounted `:ro` and never copied or printed. Steps (done 2026-10-08,
+   record in [the rehearsal record](verification/phase-44a-rehearsal-2026-10-08.md)):
+   1. Snapshot: `pg_dump -Fc` through `docker exec` on the running Postgres (read-only; nothing stops). Take per-table row counts before and
+      after and confirm they are equal, so the dump is a consistent picture of a quiet database.
+   2. Restore into the throwaway container; confirm revision 025 and identical per-table counts for every public table.
+   3. Build the images ahead under a separate project name (`$DC` with `-p reachy-44a-rehearsal build migrate companion-core reachy-hub
+      coding-agent-service`); this proves the build and leaves the production image tags untouched.
+   4. Migrate the copy with the **built migrate image and an explicit command** (`docker run --rm --network <internal net> --env-file <env>
+      -v <keyring>:/run/secrets/credential_keys:ro <migrate image> /app/.venv/bin/python -m companion_core.migrations upgrade`). The image's
+      default command is the web application, which refuses to start without service tokens; always pass the command. Run it twice: the first
+      applies 026, the second is a no-op that re-checks that every stored credential decrypts with the keyring.
+   5. Verify 026: revision, the nine new columns with their defaults, the backfill (all `work-private`, no scope set, existing meeting scopes
+      untouched), per-table counts still equal, and the check constraint rejecting an invalid value.
+   6. Boot the new core image against the migrated copy (same network, a random service token) and exercise the classification paths through its API
+      (create with classification, edit that carries it refused with 422, defaults for an old-style client, an invalid value refused); confirm
+      the Ossie export validates inside the image.
+   7. Prove the revision gate and the way back: the **current production core image refuses** the 026 copy; restore the pre-upgrade dump over the
+      copy with `pg_restore --clean --if-exists --no-owner`; confirm revision 025 and the original counts; the current production core image
+      **starts and serves** the restored copy; the new image refuses it until migrated; migrating again succeeds.
+   8. Dispose of it all: `docker rm -fv` the containers, `docker network rm`, `shred -u -z` every file in the rehearsal directory (dump, env, password),
+      remove the directory and the rehearsal image tags, then confirm nothing named for the rehearsal remains and the production containers are
+      unchanged.
+5. **Missed alarms and reminders.** Both are claim-once rows in the database (`alarms`: `status='scheduled' and enabled and due_at <= now`;
+   `reminders`: `status='pending' and notified_at is null and due_at <= now`) and the hub polls for them (alarms every 5 s, reminders every
+   minute). Nothing is dropped during downtime: whatever fell due is claimed and delivered on the first poll after the hub is back, **late and
+   with no staleness cutoff**, so a long outage would ring an old alarm at restart; a repeating alarm rings late and is then re-armed. Two gaps
+   remain, both closed by timing rather than code: an alarm already claimed but not yet delivered when the hub is killed is lost (its claim is
+   spent), and a robot or phone deliverer that was offline falls back as usual. Mitigations: the window has no alarm or reminder due within 45
+   minutes (Stage 0.2), the core is stopped **before** the hub so no claim can start with the hub down, and Stage 6 includes a continuity check.
 
-**Stage 1 - freeze the writers.** `$DC stop companion-core reachy-hub coding-agent-service`. Confirm no remaining client:
+**Stage 1 - freeze the writers.** Stop core first, then the hub and coding-agent: `$DC stop companion-core`, then `$DC stop reachy-hub coding-agent-service`. Confirm no remaining client:
 `select count(*) from pg_stat_activity where datname = 'reachy_hub' and pid <> pg_backend_pid()` is 0 (the migration job also refuses to run
 otherwise). Stopping before the dump means the dump has no gap. Non-terminal coding-agent sessions are reconciled when the service returns.
 
@@ -976,7 +1003,7 @@ that decrypt its credentials. If any check fails, run `$DC start companion-core 
 `docker tag <image id from Stage 0> reachy-rollback/companion-core:025` (likewise `reachy-hub` and `coding-agent-service`; the previous
 `migrate` image is not needed). Note the compose image names with `$DC images`.
 
-**Stage 4 - build.** `$DC build migrate companion-core reachy-hub coding-agent-service`. The core image now installs `jsonschema` from the
+**Stage 4 - build.** `$DC build migrate companion-core reachy-hub coding-agent-service` (a layer-cached repeat of the rehearsal build, about a minute and a half). The core image now installs `jsonschema` from the
 lock, so the build needs network access to PyPI. If the build fails, nothing has changed: `$DC start companion-core reachy-hub coding-agent-service`.
 
 **Stage 5 - migrate (go/no-go).** `$DC run --rm migrate /app/.venv/bin/python -m companion_core.migrations upgrade`. Expect it to finish
@@ -988,7 +1015,7 @@ old images) and stop; investigate on a copy.
 Wait for `http://localhost:8080/hub/health` and `http://localhost:8080/core/health`. The hub may re-download `small.en` (about 2 minutes)
 before voice works. Core's in-memory shadow-router queue and deep-review job table are dropped by the restart.
 
-**Stage 7 - post-deployment smoke tests.** All must pass.
+**Stage 7 - post-deployment smoke tests.** All of the first twelve must pass; the thirteenth is a report of what ran late.
 
 | # | Check | Expected |
 |---|---|---|
@@ -1004,6 +1031,7 @@ before voice works. Core's in-memory shadow-router queue and deep-review job tab
 | 10 | A reminder due in two minutes | the Telegram push arrives (the notify loop is running) |
 | 11 | Hub shows the robot connected, or reconnects within a minute; one spoken test question if the owner is present | unchanged behaviour |
 | 12 | Core logs show the meeting worker polling and no failed jobs | as before |
+| 13 | Continuity: `select label, due_at, fired_at, delivery from alarms where fired_at >= '<Stage 1 time>'` and `select text, due_at, notified_at from reminders where notified_at >= '<Stage 1 time>'` | anything that fell due during the downtime was claimed once and delivered (compare with the Stage 0 list); nothing is still `scheduled` with a past `due_at` |
 
 Delete any smoke-test records afterwards. Record the dump name and checksum, the commit, the image ids and the results in a new dated
 verification record and in HANDOVER.

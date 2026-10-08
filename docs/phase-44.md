@@ -365,7 +365,7 @@ Both baselines left every store unchanged, and the action-boundary probes (an ob
 | Benchmark harness | Met: validated and frozen fixtures, B0 baselines on two tracks, scoring, Wilson intervals, exposed-versus-candidate leakage, probes, reproducible digest, holdout protocol, 44 harness tests (one needs Postgres) |
 | Case-level review of the holdout | Produced; labels are **provisionally reviewed, pending independent owner inspection** |
 | Repository failures kept visible | Met: 2 failing tests (one now explained as a stale fixture) plus 1 flaky, each reproduced on a clean checkout; no regression found |
-| Deployment | **Not authorized.** A [runbook](deployment.md#applying-migration-026-phase-44a---runbook-prepared-and-not-executed) is prepared, not run: rehearsal on a restored copy, verified dump, rollback images, ordered stop, backup, build, migrate, start, twelve smoke tests, rollback criteria. Gates: owner approval of a date, a verified dump, `migrate`, core and hub rebuilt together; clients do not yet set classification |
+| Deployment | **Rehearsed, awaiting the owner's final go/no-go.** The [rehearsal](verification/phase-44a-rehearsal-2026-10-08.md) passed on an isolated restored copy. A [runbook](deployment.md#applying-migration-026-phase-44a---runbook-prepared-and-not-executed) is prepared, not run: rehearsal on a restored copy, verified dump, rollback images, ordered stop, backup, build, migrate, start, twelve smoke tests, rollback criteria. Gates: owner approval of a date, a verified dump, `migrate`, core and hub rebuilt together; clients do not yet set classification |
 
 ### Readiness assessment
 

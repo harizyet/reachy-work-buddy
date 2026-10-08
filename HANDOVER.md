@@ -38,6 +38,8 @@ Tests (disposable `pgvector/pgvector:pg16` container, removed afterwards): final
 
 ### Open, unverified or worth watching
 
+- **Alarm delivery gap (technical debt, found 2026-10-08, deliberately not fixed in 44A).** `claim_due_alarms` marks an alarm fired before the hub delivers it, and there is no staleness cutoff. An alarm claimed but not yet delivered when the hub stops is lost, and after a long outage old alarms ring at restart. Deployments avoid it by timing (nothing due within 45 minutes, core stopped before hub); a real fix is a separate change to the delivery semantics (claim with a lease, then confirm; skip or label alarms that are hours late).
+
 - **Spoken replies on the owner's phone.** After app 0.12.1 the owner reported replies not playing at all. It could not be reproduced (emulator: reply detected, voice fetched, playback started;
   production Piper works). Version 0.12.2 hardened playback (audio focus, fallback to the phone voice, recogniser released). Ask the owner whether it was the typed or mic path, whether any voice is heard, and the media volume.
 - **Silent recordings.** The one real recording is two thirds silent; the old build without a foreground service is the likely cause but this is unconfirmed on the current build. Test: record five minutes with the screen locked and look for the yellow warning.
