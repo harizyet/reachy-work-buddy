@@ -808,3 +808,147 @@ export function parseMotion(value: unknown): MotionSettings {
 
 export const parseRobotRefs = (value: unknown): RobotRef[] =>
   list(value, 'robots').map((item, i) => ({ robot_id: str(obj(item, `robots[${i}]`).robot_id, 'robot.robot_id') }));
+
+// --- Connected accounts and coding-agent credentials (Phase 47B9) -----------------------------
+
+export interface CapabilityState {
+  status: string;
+  enabled: boolean;
+  last_success: string | null;
+}
+export interface GoogleStatus {
+  configured: boolean;
+  client_type: string | null;
+  identity: { email: string } | null;
+  capabilities: { gmail: CapabilityState; calendar: CapabilityState };
+  scopes: string[];
+  selected_calendars: string[];
+}
+export interface CalendarInfo {
+  id: string;
+  name: string;
+  timezone: string;
+}
+export interface CalendarEvent {
+  title: string;
+  all_day: boolean;
+  start: string;
+}
+export interface MailMessage {
+  id: string;
+  sender: string;
+  subject: string;
+}
+export interface DesktopStart {
+  client_id: string;
+  scope: string;
+  state: string;
+  binding: string;
+  code_challenge: string;
+}
+export interface CredentialRecord {
+  provider: string;
+  last_four: string;
+  updated_at: string;
+}
+
+function capability(value: unknown, what: string): CapabilityState {
+  const o = obj(value, what);
+  return { status: str(o.status, `${what}.status`), enabled: o.enabled === true, last_success: optionalStr(o.last_success, `${what}.last_success`) };
+}
+
+export function parseGoogleStatus(value: unknown): GoogleStatus {
+  const o = obj(value, 'google status');
+  const caps = obj(o.capabilities, 'google.capabilities');
+  return {
+    configured: o.configured === true,
+    client_type: optionalStr(o.client_type, 'google.client_type'),
+    identity: o.identity == null ? null : { email: str(obj(o.identity, 'google.identity').email, 'google.identity.email') },
+    capabilities: { gmail: capability(caps.gmail, 'capabilities.gmail'), calendar: capability(caps.calendar, 'capabilities.calendar') },
+    scopes: list(o.scopes ?? [], 'google.scopes').map((s) => str(s, 'scope')),
+    selected_calendars: list(o.selected_calendars ?? [], 'google.selected_calendars').map((s) => str(s, 'calendar id')),
+  };
+}
+
+export const parseCalendars = (value: unknown): CalendarInfo[] =>
+  list(obj(value, 'calendars').calendars, 'calendars.calendars').map((item, i) => {
+    const c = obj(item, `calendars[${i}]`);
+    return { id: str(c.id, 'calendar.id'), name: str(c.name, 'calendar.name'), timezone: c.timezone == null ? '' : str(c.timezone, 'calendar.timezone') };
+  });
+
+export const parseEvents = (value: unknown): CalendarEvent[] =>
+  list(obj(value, 'events').events, 'events.events').map((item, i) => {
+    const e = obj(item, `events[${i}]`);
+    return { title: str(e.title, 'event.title'), all_day: e.all_day === true, start: str(e.start, 'event.start') };
+  });
+
+export const parseBusy = (value: unknown): { start: string; end: string }[] =>
+  list(obj(value, 'free-busy').busy, 'free-busy.busy').map((item, i) => {
+    const b = obj(item, `busy[${i}]`);
+    return { start: str(b.start, 'busy.start'), end: str(b.end, 'busy.end') };
+  });
+
+export const parseMessages = (value: unknown): MailMessage[] =>
+  list(obj(value, 'messages').messages, 'messages.messages').map((item, i) => {
+    const m = obj(item, `messages[${i}]`);
+    return { id: str(m.id, 'message.id'), sender: m.sender == null ? '' : str(m.sender, 'message.sender'), subject: m.subject == null ? '' : str(m.subject, 'message.subject') };
+  });
+
+export const parseMessageBody = (value: unknown): string => {
+  const o = obj(value, 'message');
+  return o.body ? str(o.body, 'message.body') : o.snippet == null ? '' : str(o.snippet, 'message.snippet');
+};
+
+export function parseDesktopStart(value: unknown): DesktopStart {
+  const o = obj(value, 'desktop start');
+  return {
+    client_id: str(o.client_id, 'desktop.client_id'),
+    scope: str(o.scope, 'desktop.scope'),
+    state: str(o.state, 'desktop.state'),
+    binding: str(o.binding, 'desktop.binding'),
+    code_challenge: str(o.code_challenge, 'desktop.code_challenge'),
+  };
+}
+
+export const parseCredentials = (value: unknown): CredentialRecord[] =>
+  list(value, 'credentials').map((item, i) => {
+    const c = obj(item, `credentials[${i}]`);
+    return { provider: str(c.provider, 'credential.provider'), last_four: str(c.last_four, 'credential.last_four'), updated_at: str(c.updated_at, 'credential.updated_at') };
+  });
+
+// --- Owner recognition benchmark dataset (Phase 47B10) --------------------------------------
+
+export interface RecognitionSample {
+  sample_id: string;
+  captured_at: string;
+  size_bytes: number;
+}
+export interface RecognitionStatus {
+  benchmark_enabled: boolean;
+  reauthenticated: boolean;
+  reauth_expires_in_seconds: number;
+  voice_samples: RecognitionSample[];
+  face_samples: RecognitionSample[];
+  voice_total_bytes: number;
+  face_total_bytes: number;
+}
+
+function samples(value: unknown, what: string): RecognitionSample[] {
+  return list(value ?? [], what).map((item, i) => {
+    const s = obj(item, `${what}[${i}]`);
+    return { sample_id: str(s.sample_id, 'sample.sample_id'), captured_at: str(s.captured_at, 'sample.captured_at'), size_bytes: num(s.size_bytes, 'sample.size_bytes') };
+  });
+}
+
+export function parseRecognitionStatus(value: unknown): RecognitionStatus {
+  const o = obj(value, 'recognition status');
+  return {
+    benchmark_enabled: o.benchmark_enabled === true,
+    reauthenticated: o.reauthenticated === true,
+    reauth_expires_in_seconds: typeof o.reauth_expires_in_seconds === 'number' ? o.reauth_expires_in_seconds : 0,
+    voice_samples: samples(o.voice_samples, 'voice_samples'),
+    face_samples: samples(o.face_samples, 'face_samples'),
+    voice_total_bytes: typeof o.voice_total_bytes === 'number' ? o.voice_total_bytes : 0,
+    face_total_bytes: typeof o.face_total_bytes === 'number' ? o.face_total_bytes : 0,
+  };
+}

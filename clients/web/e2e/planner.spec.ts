@@ -343,6 +343,39 @@ for (const mount of MOUNTS) {
       await expect(gestures).not.toBeChecked();
     });
 
+    test('Owner recognition: needs the password again; a wrong one does not sign out; a voice sample records, exports and deletes', async ({ page }) => {
+      await signIn(page, mount.url, '#/settings/recognition');
+      await expect(page.getByText('Confirm your password to change benchmark collection or manage samples.')).toBeVisible();
+      await expect(page.getByRole('checkbox', { name: 'Enable benchmark dataset collection' })).toBeDisabled();
+      await page.getByLabel('Password').fill('not-the-password');
+      await page.getByRole('button', { name: 'Confirm password' }).click();
+      await expect(page.getByText('Invalid password')).toBeVisible();
+      await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible(); // still signed in
+
+      await page.getByLabel('Password').fill('correct-password');
+      await page.getByRole('button', { name: 'Confirm password' }).click();
+      await expect(page.getByText(/Password confirmed — expires in about \d+ minute/)).toBeVisible();
+      await page.getByRole('checkbox', { name: 'Enable benchmark dataset collection' }).click();
+      await expect(page.getByText(/Benchmark dataset collection is on/)).toBeVisible();
+
+      await page.getByRole('button', { name: 'Start recording' }).click();
+      await expect(page.getByRole('button', { name: 'Stop recording' })).toBeVisible();
+      await page.waitForTimeout(1200);
+      await page.getByRole('button', { name: 'Stop recording' }).click();
+      await expect(page.getByText('Voice sample saved.')).toBeVisible();
+      await expect(page.getByText(/\d+ sample\(s\), .+ total/)).toBeVisible();
+
+      const download = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Export voice dataset' }).click();
+      expect((await download).suggestedFilename()).toBe('voice-benchmark-dataset.zip');
+
+      await page.getByRole('button', { name: 'Delete all voice samples' }).click();
+      await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+      await expect(page.getByText('No samples recorded yet.').first()).toBeVisible();
+      await page.getByRole('checkbox', { name: 'Enable benchmark dataset collection' }).click(); // leave the dataset switched off
+      await expect(page.getByText(/Off by default/)).toBeVisible();
+    });
+
     test('Activity: shows the hub receipts, failed ones struck through, text literal', async ({ page }) => {
       await signIn(page, mount.url, '#/activity');
       await expect(page.getByRole('heading', { name: 'Recent activity' })).toBeVisible();
@@ -379,7 +412,7 @@ for (const mount of MOUNTS) {
 
     test('pages fit the viewport; Notes works as list then editor then back on a narrow screen', async ({ page }, info) => {
       await signIn(page, mount.url);
-      for (const hash of ['#/todo', '#/reminders', '#/notes', '#/activity', '#/alarms', '#/chat', '#/meetings', '#/settings/models', '#/settings/search', '#/settings/voice']) {
+      for (const hash of ['#/todo', '#/reminders', '#/notes', '#/activity', '#/alarms', '#/chat', '#/meetings', '#/settings/models', '#/settings/search', '#/settings/voice', '#/settings/accounts', '#/settings/recognition']) {
         await page.goto(mount.url + hash);
         await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);

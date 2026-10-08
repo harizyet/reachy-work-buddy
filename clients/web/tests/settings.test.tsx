@@ -15,7 +15,7 @@ describe('Settings navigation', () => {
     renderApp('#/settings');
     const user = setup();
     const tabs = await screen.findAllByRole('tab');
-    expect(tabs.map((t) => t.textContent)).toEqual(['Assistant', 'Models', 'Web search', 'Voice & motion']);
+    expect(tabs.map((t) => t.textContent)).toEqual(['Assistant', 'Models', 'Web search', 'Voice & motion', 'Accounts', 'Owner recognition']);
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
     expect(tabs[1]).toHaveAttribute('tabindex', '-1');
     tabs[0]!.focus();
@@ -23,11 +23,11 @@ describe('Settings navigation', () => {
     expect(screen.getByRole('tab', { name: 'Models' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Models' })).toHaveFocus();
     await user.keyboard('{End}');
-    expect(screen.getByRole('tab', { name: 'Voice & motion' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Owner recognition' })).toHaveAttribute('aria-selected', 'true');
     await user.keyboard('{ArrowRight}');
     expect(screen.getByRole('tab', { name: 'Assistant' })).toHaveAttribute('aria-selected', 'true');
     await user.keyboard('{ArrowLeft}');
-    expect(screen.getByRole('tab', { name: 'Voice & motion' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Owner recognition' })).toHaveAttribute('aria-selected', 'true');
     await user.keyboard('{Home}');
     expect(screen.getByRole('tab', { name: 'Assistant' })).toHaveFocus();
     expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', 'settings-assistant-tab');

@@ -38,10 +38,21 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
     stations: seed.stations ?? [],
     search: seed.search ?? [],
     stopped: false,
+    recognition: { benchmark_enabled: false, reauthenticated: false, reauth_expires_in_seconds: 0, voice_samples: [] as any[], face_samples: [] as any[] } as any,
+    google: { configured: false, client_type: null as string | null, identity: null as any, capabilities: { gmail: { status: 'disconnected', enabled: false, last_success: null }, calendar: { status: 'disconnected', enabled: false, last_success: null } }, scopes: [] as string[], selected_calendars: [] as string[] } as any,
+    googleCalls: [] as { call: string; body: any }[],
+    calendars: [{ id: 'cal1', name: 'Work', timezone: 'Asia/Singapore' }, { id: 'cal2', name: 'Home', timezone: 'UTC' }] as any[],
+    events: [] as any[],
+    busy: [] as any[],
+    mail: [] as any[],
+    mailBodies: {} as Record<string, any>,
+    credentials: [] as any[],
+    revoked: true,
     robots: [{ robot_id: 'desk', online: true, voice_capable: true, wake_capable: true, wake_armed: false, wake_counts: { candidates: 0, admitted: 0, rejected: {} } }] as any[],
     voiceSession: null as any,
     motion: { conversation_motion: false, speech_wobble: false, conversation_active: false } as any,
     motionWrites: [] as any[],
+    authUrl: null as string | null,
     deepInfo: { configured: true, available: true, reason: null, eta_seconds: 330 } as any,
     chats: seed.chats ?? [],
     meetings: (seed.meetings ?? []) as FakeMeeting[],
@@ -304,6 +315,65 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
       if (method === 'PUT') { data.motionWrites.push(body); Object.assign(data.motion, body); }
       return jsonResponse(data.motion);
     }
+    if (path.startsWith('/settings/accounts/google')) {
+      const sub = path.slice('/settings/accounts/google'.length);
+      data.googleCalls.push({ call: `${method} ${sub || '/'}`, body });
+      const g = data.google;
+      if (sub === '' && method === 'GET') return jsonResponse(g);
+      if (sub === '/configure') { Object.assign(g, { configured: true, client_type: body.client_type }); return jsonResponse(g); }
+      if (sub === '/connect') return jsonResponse({ authorization_url: data.authUrl ?? 'https://accounts.google.com/o/oauth2/auth?x=1' });
+      if (sub === '/desktop/start') return jsonResponse({ client_id: "id'with'quotes", scope: 'gmail', state: 'st', binding: 'b'.repeat(24), code_challenge: 'cc' });
+      if (sub === '/complete') { g.identity = { email: 'me@example.com' }; g.capabilities.calendar = { status: 'connected', enabled: true, last_success: '2030-01-01T00:00:00Z' }; return jsonResponse(g); }
+      if (sub === '/test') { g.capabilities[body.capability].status = 'connected'; g.capabilities[body.capability].last_success = '2030-01-02T00:00:00Z'; return jsonResponse(g); }
+      if (sub === '/disconnect') { Object.assign(g, { identity: null, scopes: [], selected_calendars: [] }); g.capabilities.gmail.enabled = false; g.capabilities.calendar.enabled = false; return jsonResponse({ status: g, revocation: data.revoked ? 'revoked' : 'failed' }); }
+      if (sub === '/calendars') return jsonResponse({ calendars: data.calendars });
+      if (sub === '/selection') { g.selected_calendars = body.calendar_ids; return jsonResponse(g); }
+      if (sub.startsWith('/events')) return jsonResponse({ events: data.events });
+      if (sub.startsWith('/free-busy')) return jsonResponse({ busy: data.busy });
+      if (sub === '/messages') return jsonResponse({ messages: data.mail });
+      const mm = sub.match(/^\/messages\/(.+)$/);
+      if (mm) return jsonResponse(data.mailBodies[decodeURIComponent(mm[1]!)] ?? { body: '', snippet: '' });
+      return jsonResponse({ detail: 'Not Found' }, 404);
+    }
+    if (path === '/providers/credentials') return jsonResponse(data.credentials);
+    m = path.match(/^\/providers\/([^/]+)\/credential$/);
+    if (m) {
+      if (method === 'PUT') {
+        data.secrets.push(body.value);
+        data.credentials = [...data.credentials.filter((c: any) => c.provider !== m![1]), { provider: m[1], last_four: String(body.value).slice(-4), updated_at: '2030-01-03T00:00:00Z' }];
+        data.saves.push({ call: `credential ${m[1]}`, body });
+        return jsonResponse({ provider: m[1], last_four: String(body.value).slice(-4) });
+      }
+      data.credentials = data.credentials.filter((c: any) => c.provider !== m![1]);
+      return jsonResponse({ deleted: true });
+    }
+    if (path.startsWith('/owner-recognition')) {
+      const rc = data.recognition;
+      const sub = path.slice('/owner-recognition'.length);
+      data.saves.push({ call: `${method} ${sub}`, body });
+      const totals = () => ({ ...rc, voice_total_bytes: rc.voice_samples.reduce((a: number, x: any) => a + x.size_bytes, 0), face_total_bytes: rc.face_samples.reduce((a: number, x: any) => a + x.size_bytes, 0) });
+      if (sub === '/status') return jsonResponse(totals());
+      if (sub === '/reauth') {
+        if (body.password !== 'correct-password') return jsonResponse({ detail: 'Invalid password' }, 401);
+        rc.reauthenticated = true; rc.reauth_expires_in_seconds = 300;
+        return jsonResponse({ ok: true });
+      }
+      if (!rc.reauthenticated) return jsonResponse({ detail: 'Confirm your password first' }, 403);
+      if (sub === '/benchmark/enabled') { rc.benchmark_enabled = body.enabled; return jsonResponse({ ok: true }); }
+      const k = sub.match(/^\/benchmark\/(voice|face)\/(samples|export)(?:\/(.+))?$/);
+      if (k) {
+        const list = rc[`${k[1]}_samples`];
+        if (k[2] === 'export') return new Response('zipbytes', { status: 200, headers: { 'Content-Type': 'application/zip' } });
+        if (method === 'POST') {
+          if (!rc.benchmark_enabled) return jsonResponse({ detail: 'Benchmark collection is off' }, 403);
+          list.push({ sample_id: nextId('smp'), kind: k[1], captured_at: '2030-01-02T03:04:05Z', content_type: body.blob.type, size_bytes: body.blob.size });
+          return jsonResponse(list.at(-1));
+        }
+        if (method === 'DELETE' && k[3]) { rc[`${k[1]}_samples`] = list.filter((x: any) => x.sample_id !== decodeURIComponent(k[3]!)); return jsonResponse({ deleted: true }); }
+        if (method === 'DELETE') { rc[`${k[1]}_samples`] = []; return jsonResponse({ deleted: true }); }
+      }
+      return jsonResponse({ detail: 'Not Found' }, 404);
+    }
     if (path === '/planner/receipts') return jsonResponse(data.receipts);
     if (path === '/planner/alarms' && method === 'GET') return jsonResponse(data.alarms);
     if (path === '/planner/alarms' && method === 'POST') {
@@ -360,7 +430,9 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
       const call = `${method} ${url.pathname}${url.search}`;
       const rawBody = init?.body;
       const body =
-        rawBody instanceof FormData
+        rawBody instanceof Blob
+          ? { blob: { size: rawBody.size, type: rawBody.type } }
+          : rawBody instanceof FormData
           ? Object.fromEntries([...rawBody.entries()].map(([k, v]) => [k, v instanceof File ? `file:${v.name}` : v]))
           : rawBody
             ? JSON.parse(String(rawBody))

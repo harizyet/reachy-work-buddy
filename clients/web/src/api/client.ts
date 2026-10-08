@@ -67,6 +67,8 @@ export interface RequestOptions {
   signal?: AbortSignal;
   /** Login failures are 401s that must not look like an expired session. */
   expectUnauthorized?: boolean;
+  /** Read the answer as a file (an export) instead of JSON. */
+  asBlob?: boolean;
 }
 
 export async function request<T = unknown>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -85,9 +87,10 @@ export async function request<T = unknown>(path: string, options: RequestOptions
       headers: {
         'X-Reachy-CSRF': '1',
         // A FormData body sets its own multipart boundary, so it must not be given a content type here.
-        ...(options.body === undefined || options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+        // A Blob (a captured sample) goes up as it is, with its own type.
+        ...(options.body === undefined || options.body instanceof FormData ? {} : options.body instanceof Blob ? { 'Content-Type': options.body.type || 'application/octet-stream' } : { 'Content-Type': 'application/json' }),
       },
-      body: options.body === undefined ? undefined : options.body instanceof FormData ? options.body : JSON.stringify(options.body),
+      body: options.body === undefined ? undefined : options.body instanceof FormData || options.body instanceof Blob ? options.body : JSON.stringify(options.body),
     });
     if (started !== generation) throw new StaleSessionError();
     if (!response.ok) {
@@ -105,7 +108,7 @@ export async function request<T = unknown>(path: string, options: RequestOptions
         response.status,
       );
     }
-    const data = (await response.json()) as T;
+    const data = (options.asBlob ? await response.blob() : await response.json()) as T;
     if (started !== generation) throw new StaleSessionError();
     return data;
   } catch (error) {

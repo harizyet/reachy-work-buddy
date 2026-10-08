@@ -2,6 +2,8 @@ import { useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { AssistantTab } from './AssistantTab';
 import { ModelsTab } from './ModelsTab';
+import { RecognitionTab } from '../recognition/RecognitionTab';
+import { AccountsTab } from '../accounts/AccountsTab';
 import { SearchTab } from './SearchTab';
 import { VoiceTab } from './VoiceTab';
 
@@ -16,6 +18,8 @@ const TABS: SettingsTab[] = [
   { id: 'models', label: 'Models', panel: <ModelsTab /> },
   { id: 'search', label: 'Web search', panel: <SearchTab /> },
   { id: 'voice', label: 'Voice & motion', panel: <VoiceTab /> },
+  { id: 'accounts', label: 'Accounts', panel: <AccountsTab /> },
+  { id: 'recognition', label: 'Owner recognition', panel: <RecognitionTab /> },
 ];
 
 // Settings tabs follow the WAI-ARIA tabs pattern (arrow keys, Home and End move focus and selection) like the legacy page.

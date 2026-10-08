@@ -19,6 +19,8 @@ spec.loader.exec_module(module)
 
 if __name__ == "__main__":
     # Owner-bound, as deployed: the chat is fixed to the owner and private routes need the owner session.
-    client = module.logged_in_client(accounts_service_token="e2e-service")
+    from reachy_hub.enrollment_store import InMemoryEnrollmentStore
+
+    client = module.logged_in_client(accounts_service_token="e2e-service", enrollment_store=InMemoryEnrollmentStore())
     client.cookies.clear()
     uvicorn.run(client.app, host="127.0.0.1", port=int(sys.argv[1]), log_level="warning")
