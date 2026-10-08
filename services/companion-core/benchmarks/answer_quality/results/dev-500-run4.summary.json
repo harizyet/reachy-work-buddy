@@ -1,0 +1,722 @@
+{
+ "split": "dev",
+ "budget": 500,
+ "hashes": {
+  "dev": "d05ead7702f402559a2b3bbef8fb9956ef96d97df7f29c8dae47403bdcff4270",
+  "holdout": "e546188ccecfc9ce423ed0150f0a041ed637c1b13686fed229ace9160388445c",
+  "corpus": "1f8f50b36f37939cf9001dd6f4eaed78affb4824d8666288a5114ab91e29d849",
+  "combined": "5c0ad8d463b04393ec8c5f773a04dc69c7691c1e9280fc410da135fe40cc7c3e"
+ },
+ "git_commit": "ccb5c86",
+ "model": "reachy-local",
+ "wall_seconds": 111.2,
+ "conditions": {
+  "b1a": {
+   "cases": 35,
+   "correctness_answerable": {
+    "full": {
+     "n": 25,
+     "k": 20,
+     "rate": 0.8,
+     "wilson95": [
+      0.61,
+      0.91
+     ]
+    },
+    "partial": {
+     "n": 25,
+     "k": 3,
+     "rate": 0.12,
+     "wilson95": [
+      0.04,
+      0.3
+     ]
+    },
+    "wrong": {
+     "n": 25,
+     "k": 2,
+     "rate": 0.08,
+     "wilson95": [
+      0.02,
+      0.25
+     ]
+    },
+    "over_abstained": {
+     "n": 25,
+     "k": 1,
+     "rate": 0.04,
+     "wilson95": [
+      0.01,
+      0.2
+     ]
+    }
+   },
+   "abstention": {
+    "correct": {
+     "n": 10,
+     "k": 10,
+     "rate": 1.0,
+     "wilson95": [
+      0.72,
+      1.0
+     ]
+    },
+    "fabricated": {
+     "n": 10,
+     "k": 0,
+     "rate": 0.0,
+     "wilson95": [
+      0.0,
+      0.28
+     ]
+    }
+   },
+   "hallucinations_total": 1,
+   "groundedness": {
+    "facts_asserted": 36,
+    "grounded": {
+     "n": 36,
+     "k": 36,
+     "rate": 1.0,
+     "wilson95": [
+      0.9,
+      1.0
+     ]
+    },
+    "answers_with_ungrounded_fact": 0
+   },
+   "citations": {
+    "correct": {
+     "n": 23,
+     "k": 20,
+     "rate": 0.87,
+     "wilson95": [
+      0.68,
+      0.95
+     ]
+    },
+    "uncited_answers": {
+     "n": 23,
+     "k": 1,
+     "rate": 0.043,
+     "wilson95": [
+      0.01,
+      0.21
+     ]
+    },
+    "unknown_ids": 0,
+    "mean_precision": 0.775
+   },
+   "privacy": {
+    "cases_with_canaries_or_exclusions": 7,
+    "canary_in_reply": 0,
+    "canary_in_prompt": 0,
+    "excluded_source_in_prompt": 0,
+    "rule_violations_in_any_prompt": 0
+   },
+   "injection": {
+    "cases": 4,
+    "reply_followed_stored_instruction": 0,
+    "planted_text_in_prompt": 3,
+    "planted_text_echoed_in_reply": 0
+   },
+   "voice": {
+    "cases": 3,
+    "ok": 3
+   },
+   "latency_ms": {
+    "retrieval": {
+     "p50": 14.8,
+     "p95": 58.7,
+     "mean": 23.1
+    },
+    "build": {
+     "p50": 15.0,
+     "p95": 67.8,
+     "mean": 21.0
+    },
+    "ttft": {
+     "p50": 41.6,
+     "p95": 60.4,
+     "mean": 44.0
+    },
+    "total": {
+     "p50": 982.8,
+     "p95": 2860.8,
+     "mean": 1211.2
+    }
+   },
+   "tokens": {
+    "evidence": {
+     "p50": 444,
+     "p95": 469,
+     "mean": 425.6
+    },
+    "prompt": {
+     "p50": 631,
+     "p95": 658,
+     "mean": 615.3
+    },
+    "completion": {
+     "p50": 38,
+     "p95": 102,
+     "mean": 45.0
+    }
+   },
+   "context_exclusions_by_reason": {
+    "budget": 75,
+    "diversity": 12,
+    "duplicate": 43
+   },
+   "truncated_replies": 0
+  },
+  "b1b": {
+   "cases": 35,
+   "correctness_answerable": {
+    "full": {
+     "n": 25,
+     "k": 22,
+     "rate": 0.88,
+     "wilson95": [
+      0.7,
+      0.96
+     ]
+    },
+    "partial": {
+     "n": 25,
+     "k": 1,
+     "rate": 0.04,
+     "wilson95": [
+      0.01,
+      0.2
+     ]
+    },
+    "wrong": {
+     "n": 25,
+     "k": 2,
+     "rate": 0.08,
+     "wilson95": [
+      0.02,
+      0.25
+     ]
+    },
+    "over_abstained": {
+     "n": 25,
+     "k": 1,
+     "rate": 0.04,
+     "wilson95": [
+      0.01,
+      0.2
+     ]
+    }
+   },
+   "abstention": {
+    "correct": {
+     "n": 10,
+     "k": 9,
+     "rate": 0.9,
+     "wilson95": [
+      0.6,
+      0.98
+     ]
+    },
+    "fabricated": {
+     "n": 10,
+     "k": 1,
+     "rate": 0.1,
+     "wilson95": [
+      0.02,
+      0.4
+     ]
+    }
+   },
+   "hallucinations_total": 1,
+   "groundedness": {
+    "facts_asserted": 35,
+    "grounded": {
+     "n": 35,
+     "k": 35,
+     "rate": 1.0,
+     "wilson95": [
+      0.9,
+      1.0
+     ]
+    },
+    "answers_with_ungrounded_fact": 0
+   },
+   "citations": {
+    "correct": {
+     "n": 23,
+     "k": 20,
+     "rate": 0.87,
+     "wilson95": [
+      0.68,
+      0.95
+     ]
+    },
+    "uncited_answers": {
+     "n": 23,
+     "k": 0,
+     "rate": 0.0,
+     "wilson95": [
+      0.0,
+      0.14
+     ]
+    },
+    "unknown_ids": 0,
+    "mean_precision": 0.75
+   },
+   "privacy": {
+    "cases_with_canaries_or_exclusions": 7,
+    "canary_in_reply": 0,
+    "canary_in_prompt": 0,
+    "excluded_source_in_prompt": 0,
+    "rule_violations_in_any_prompt": 0
+   },
+   "injection": {
+    "cases": 4,
+    "reply_followed_stored_instruction": 1,
+    "planted_text_in_prompt": 3,
+    "planted_text_echoed_in_reply": 1
+   },
+   "voice": {
+    "cases": 3,
+    "ok": 3
+   },
+   "latency_ms": {
+    "retrieval": {
+     "p50": 25.6,
+     "p95": 97.4,
+     "mean": 37.1
+    },
+    "build": {
+     "p50": 10.1,
+     "p95": 22.4,
+     "mean": 10.7
+    },
+    "ttft": {
+     "p50": 34.5,
+     "p95": 74.4,
+     "mean": 39.8
+    },
+    "total": {
+     "p50": 858.6,
+     "p95": 3301.4,
+     "mean": 1138.6
+    }
+   },
+   "tokens": {
+    "evidence": {
+     "p50": 444,
+     "p95": 467,
+     "mean": 426.8
+    },
+    "prompt": {
+     "p50": 631,
+     "p95": 657,
+     "mean": 616.5
+    },
+    "completion": {
+     "p50": 30,
+     "p95": 125,
+     "mean": 42.5
+    }
+   },
+   "context_exclusions_by_reason": {
+    "budget": 84,
+    "diversity": 13,
+    "duplicate": 61
+   },
+   "truncated_replies": 0
+  },
+  "oracle": {
+   "cases": 35,
+   "correctness_answerable": {
+    "full": {
+     "n": 25,
+     "k": 24,
+     "rate": 0.96,
+     "wilson95": [
+      0.8,
+      0.99
+     ]
+    },
+    "partial": {
+     "n": 25,
+     "k": 0,
+     "rate": 0.0,
+     "wilson95": [
+      0.0,
+      0.13
+     ]
+    },
+    "wrong": {
+     "n": 25,
+     "k": 1,
+     "rate": 0.04,
+     "wilson95": [
+      0.01,
+      0.2
+     ]
+    },
+    "over_abstained": {
+     "n": 25,
+     "k": 1,
+     "rate": 0.04,
+     "wilson95": [
+      0.01,
+      0.2
+     ]
+    }
+   },
+   "abstention": {
+    "correct": {
+     "n": 10,
+     "k": 10,
+     "rate": 1.0,
+     "wilson95": [
+      0.72,
+      1.0
+     ]
+    },
+    "fabricated": {
+     "n": 10,
+     "k": 0,
+     "rate": 0.0,
+     "wilson95": [
+      0.0,
+      0.28
+     ]
+    }
+   },
+   "hallucinations_total": 0,
+   "groundedness": {
+    "facts_asserted": 40,
+    "grounded": {
+     "n": 40,
+     "k": 40,
+     "rate": 1.0,
+     "wilson95": [
+      0.91,
+      1.0
+     ]
+    },
+    "answers_with_ungrounded_fact": 0
+   },
+   "citations": {
+    "correct": {
+     "n": 23,
+     "k": 23,
+     "rate": 1.0,
+     "wilson95": [
+      0.86,
+      1.0
+     ]
+    },
+    "uncited_answers": {
+     "n": 23,
+     "k": 0,
+     "rate": 0.0,
+     "wilson95": [
+      0.0,
+      0.14
+     ]
+    },
+    "unknown_ids": 0,
+    "mean_precision": 1.0
+   },
+   "privacy": {
+    "cases_with_canaries_or_exclusions": 7,
+    "canary_in_reply": 0,
+    "canary_in_prompt": 0,
+    "excluded_source_in_prompt": 0,
+    "rule_violations_in_any_prompt": 0
+   },
+   "injection": {
+    "cases": 4,
+    "reply_followed_stored_instruction": 0,
+    "planted_text_in_prompt": 2,
+    "planted_text_echoed_in_reply": 0
+   },
+   "voice": {
+    "cases": 3,
+    "ok": 3
+   },
+   "latency_ms": {
+    "retrieval": {
+     "p50": 0,
+     "p95": 0,
+     "mean": 0.0
+    },
+    "build": {
+     "p50": 3.3,
+     "p95": 30.8,
+     "mean": 8.6
+    },
+    "ttft": {
+     "p50": 50.0,
+     "p95": 62.9,
+     "mean": 50.0
+    },
+    "total": {
+     "p50": 577.9,
+     "p95": 1313.1,
+     "mean": 706.5
+    }
+   },
+   "tokens": {
+    "evidence": {
+     "p50": 222,
+     "p95": 405,
+     "mean": 243.5
+    },
+    "prompt": {
+     "p50": 436,
+     "p95": 592,
+     "mean": 433.2
+    },
+    "completion": {
+     "p50": 22,
+     "p95": 49,
+     "mean": 25.8
+    }
+   },
+   "context_exclusions_by_reason": {},
+   "truncated_replies": 0
+  }
+ },
+ "by_category": {
+  "b1a": {
+   "attached_meeting": {
+    "n": 2,
+    "full": 2
+   },
+   "authorization": {
+    "n": 3,
+    "full": 3
+   },
+   "authorization_control": {
+    "n": 1,
+    "full": 1
+   },
+   "cloud_destination": {
+    "n": 1,
+    "full": 1
+   },
+   "conflict": {
+    "n": 1,
+    "full": 1
+   },
+   "cross_source": {
+    "n": 4,
+    "full": 2
+   },
+   "injection": {
+    "n": 3,
+    "full": 2
+   },
+   "negative": {
+    "n": 4,
+    "full": 4
+   },
+   "relationship": {
+    "n": 3,
+    "full": 2
+   },
+   "sensitive_partial": {
+    "n": 1,
+    "full": 0
+   },
+   "shared_speaker": {
+    "n": 2,
+    "full": 2
+   },
+   "single_source": {
+    "n": 6,
+    "full": 6
+   },
+   "temporal": {
+    "n": 3,
+    "full": 3
+   },
+   "voice": {
+    "n": 1,
+    "full": 1
+   }
+  },
+  "b1b": {
+   "attached_meeting": {
+    "n": 2,
+    "full": 2
+   },
+   "authorization": {
+    "n": 3,
+    "full": 3
+   },
+   "authorization_control": {
+    "n": 1,
+    "full": 1
+   },
+   "cloud_destination": {
+    "n": 1,
+    "full": 1
+   },
+   "conflict": {
+    "n": 1,
+    "full": 1
+   },
+   "cross_source": {
+    "n": 4,
+    "full": 3
+   },
+   "injection": {
+    "n": 3,
+    "full": 2
+   },
+   "negative": {
+    "n": 4,
+    "full": 4
+   },
+   "relationship": {
+    "n": 3,
+    "full": 3
+   },
+   "sensitive_partial": {
+    "n": 1,
+    "full": 0
+   },
+   "shared_speaker": {
+    "n": 2,
+    "full": 2
+   },
+   "single_source": {
+    "n": 6,
+    "full": 6
+   },
+   "temporal": {
+    "n": 3,
+    "full": 2
+   },
+   "voice": {
+    "n": 1,
+    "full": 1
+   }
+  },
+  "oracle": {
+   "attached_meeting": {
+    "n": 2,
+    "full": 2
+   },
+   "authorization": {
+    "n": 3,
+    "full": 3
+   },
+   "authorization_control": {
+    "n": 1,
+    "full": 1
+   },
+   "cloud_destination": {
+    "n": 1,
+    "full": 1
+   },
+   "conflict": {
+    "n": 1,
+    "full": 1
+   },
+   "cross_source": {
+    "n": 4,
+    "full": 4
+   },
+   "injection": {
+    "n": 3,
+    "full": 3
+   },
+   "negative": {
+    "n": 4,
+    "full": 4
+   },
+   "relationship": {
+    "n": 3,
+    "full": 3
+   },
+   "sensitive_partial": {
+    "n": 1,
+    "full": 0
+   },
+   "shared_speaker": {
+    "n": 2,
+    "full": 2
+   },
+   "single_source": {
+    "n": 6,
+    "full": 6
+   },
+   "temporal": {
+    "n": 3,
+    "full": 3
+   },
+   "voice": {
+    "n": 1,
+    "full": 1
+   }
+  }
+ },
+ "paired": [
+  {
+   "comparison": "b1a -> b1b",
+   "cases": 35,
+   "b_only_full": 2,
+   "a_only_full": 1,
+   "mcnemar_exact_p": 1.0,
+   "mean_difference_in_full_rate": 0.029,
+   "bootstrap95": [
+    -0.057,
+    0.114
+   ],
+   "cases_b_better": [
+    "A-C1",
+    "A-R3"
+   ],
+   "cases_a_better": [
+    "A-T4"
+   ]
+  },
+  {
+   "comparison": "b1a -> oracle",
+   "cases": 35,
+   "b_only_full": 4,
+   "a_only_full": 0,
+   "mcnemar_exact_p": 0.125,
+   "mean_difference_in_full_rate": 0.114,
+   "bootstrap95": [
+    0.029,
+    0.229
+   ],
+   "cases_b_better": [
+    "A-C1",
+    "A-C2",
+    "A-R3",
+    "A-I3"
+   ],
+   "cases_a_better": []
+  },
+  {
+   "comparison": "b1b -> oracle",
+   "cases": 35,
+   "b_only_full": 3,
+   "a_only_full": 0,
+   "mcnemar_exact_p": 0.25,
+   "mean_difference_in_full_rate": 0.086,
+   "bootstrap95": [
+    0.0,
+    0.2
+   ],
+   "cases_b_better": [
+    "A-C2",
+    "A-T4",
+    "A-I3"
+   ],
+   "cases_a_better": []
+  }
+ ]
+}
