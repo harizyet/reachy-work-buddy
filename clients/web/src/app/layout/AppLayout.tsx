@@ -46,9 +46,6 @@ export function AppLayout() {
                 {item.label}
               </NavLink>
             ))}
-            <a className="rounded-md px-3 py-1.5 text-sm hover:bg-[var(--hover)]" href="../ui/">
-              Full operator UI ↗
-            </a>
           </nav>
           <div className="flex items-center gap-3 text-sm">
             {state.status === 'authenticated' && <span className="text-[var(--muted)]">{state.username}</span>}
