@@ -1,0 +1,76 @@
+{
+  "auth_me": {
+    "username": "owner"
+  },
+  "status": {
+    "companion_core": {
+      "data": {
+        "status": "ok"
+      },
+      "status": "ok"
+    },
+    "default_user_id": "default-user",
+    "llm": {
+      "configured": true,
+      "status": "ok",
+      "usage": {
+        "data": {
+          "by_role": {
+            "cloud": {
+              "avg_latency_ms": 0,
+              "calls": 0,
+              "completion_tokens": 0,
+              "errors": 0,
+              "prompt_tokens": 0,
+              "unreported_token_calls": 0
+            },
+            "local": {
+              "avg_latency_ms": 0,
+              "calls": 0,
+              "completion_tokens": 0,
+              "errors": 0,
+              "prompt_tokens": 0,
+              "unreported_token_calls": 0
+            }
+          },
+          "entries": [],
+          "latest_escalation": null,
+          "summary": {
+            "avg_latency_ms": 0,
+            "calls": 0,
+            "completion_tokens": 0,
+            "errors": 0,
+            "prompt_tokens": 0,
+            "unreported_token_calls": 0
+          }
+        },
+        "status": "ok"
+      }
+    },
+    "owner_bound": false,
+    "reachy_hub": {
+      "status": "ok"
+    },
+    "robots": [
+      {
+        "data": {
+          "connected": true,
+          "embodiment_state": "idle",
+          "last_behaviour": null,
+          "last_behaviour_at": null,
+          "last_heartbeat_at": null,
+          "remote_active": false,
+          "sim": true
+        },
+        "robot_id": "desk",
+        "status": "ok"
+      }
+    ],
+    "telegram": {
+      "configured": false,
+      "healthy": false,
+      "last_poll_at": null,
+      "last_poll_error": null
+    }
+  }
+}

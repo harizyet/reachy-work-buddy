@@ -1731,4 +1731,18 @@ def create_app(
     if os.path.isdir(operator_ui_dir):
         app.mount("/ui", RevalidatedStaticFiles(directory=operator_ui_dir, html=True), name="operator-ui")
 
+    # Phase 47A: the React client's built output (clients/web/dist, produced
+    # by the hub image's Node build stage). Mounted beside /ui and /app, never
+    # in place of them, and only when it exists, so a source checkout without
+    # a build serves exactly what it did before. Hashed asset filenames plus
+    # RevalidatedStaticFiles keep a deploy from running new code against a
+    # stale index.html.
+    @app.get("/web", include_in_schema=False)
+    async def web_redirect():
+        return RedirectResponse("web/")
+
+    web_dist_dir = os.path.join(os.path.dirname(web_pwa_dir), "web", "dist")
+    if os.path.isdir(web_dist_dir):
+        app.mount("/web", RevalidatedStaticFiles(directory=web_dist_dir, html=True), name="web")
+
     return app

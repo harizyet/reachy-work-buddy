@@ -32,3 +32,9 @@ docs/
 .env.*
 **/.env
 **/.env.*
+# Phase 47A: the web client is built inside the image's Node stage from source.
+# Host-side installs and builds must not enter the context or shadow that build.
+clients/web/node_modules/
+clients/web/dist/
+clients/web/test-results/
+clients/web/playwright-report/

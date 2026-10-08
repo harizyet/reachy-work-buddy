@@ -100,7 +100,23 @@ node --check clients/operator-ui/chat.js
 ```
 
 Set `NODE_PATH` to the external installation's `node_modules` if necessary.
-No frontend build dependency is required. The committed browser regression
+The legacy operator UI and `clients/web-pwa` need no build step. The React client
+(Phase 47, `clients/web`) does: Node 22 and `npm ci`, then:
+
+```bash
+cd clients/web
+npm ci && npm run build        # tsc --noEmit, then vite build into dist/
+npx vitest run                 # component and unit tests (fixture fetch)
+HUB_PYTHON=<repo>/.venv/bin/python PYTHONPATH=<repo>/services/reachy-hub/src:<repo> npx playwright test
+```
+
+The Playwright suite starts a real in-process hub (`e2e/hub_server.py`) serving the
+build and needs Chromium. After changing a hub response the client reads, run
+`python services/reachy-hub/tests/test_web_client.py` to refresh the API snapshot in
+`clients/web/src/api/`. The hub image builds the client in a pinned Node stage; the
+runtime image has no Node. Details: [Phase 47](phase-47.md#13-47a-record-2026-10-08).
+
+The legacy browser regression below needs no frontend build dependency. The committed browser regression
 uses a local HTTP fixture: direct/proxied mounts, literal text, duplicate
 send prevention, failed drafts, user switches, expired login, late replies,
 fresh tabs, frontier override/reset, settings navigation, saved chat records,

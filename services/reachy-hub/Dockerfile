@@ -3,6 +3,18 @@
 # `--mount=type=cache` below requires — building this file needs BuildKit
 # (the `docker buildx` CLI plugin; see AGENTS.md's Dev setup section for
 # how to install it without root if it's missing).
+# Phase 47A: the React client (clients/web) is built here and only its static
+# output reaches the runtime image below, so the runtime has no Node.js. The
+# tag is pinned and the digest makes it immutable; npm ci installs exactly the
+# versions in package-lock.json (and fails if the lockfile and package.json
+# disagree).
+FROM node:22.22.1-slim@sha256:4f77a690f2f8946ab16fe1e791a3ac0667ae1c3575c3e4d0d4589e9ed5bfaf3d AS web-build
+WORKDIR /web
+COPY clients/web/package.json clients/web/package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
+COPY clients/web/ ./
+RUN npm run build
+
 FROM python:3.13-slim
 
 # libgles2, libegl1: MediaPipe's native library (open-palm stop, Phase 24e
@@ -59,6 +71,8 @@ COPY services/reachy-hub/ services/reachy-hub/
 # 0001: reachy-hub owns web UI), see app.py's StaticFiles mount.
 COPY clients/web-pwa/ clients/web-pwa/
 COPY clients/operator-ui/ clients/operator-ui/
+# Built React client, served at /web by app.py (Phase 47A).
+COPY --from=web-build /web/dist/ clients/web/dist/
 
 # Cache-mounted uv/pip download cache: `uv sync` re-downloads every wheel
 # from the index on every build without this — a source change in
