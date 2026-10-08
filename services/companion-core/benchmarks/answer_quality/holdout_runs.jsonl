@@ -1,0 +1,1 @@
+{"decision_point": "44E-first-look", "combined_hash": "5c0ad8d463b04393ec8c5f773a04dc69c7691c1e9280fc410da135fe40cc7c3e", "conditions": ["none", "p43", "b1a", "b1b", "oracle", "distractor", "b1a_nopre", "b1b_nopre"], "budget": 1500, "git_commit": "8b34719", "at": "2026-10-08T23:21:38+00:00"}
