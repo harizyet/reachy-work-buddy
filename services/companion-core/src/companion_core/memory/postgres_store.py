@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 
 from psycopg_pool import AsyncConnectionPool
 
-from shared.database import check_schema, connection_pool
+from shared.database import check_schema, close_pool, open_pool
 from shared.models.memory import MemoryRecord, MemoryType
 from shared.models.response import Privacy
 
@@ -42,15 +42,14 @@ class PostgresMemoryStore:
 
     @classmethod
     async def connect(cls, dsn: str) -> PostgresMemoryStore:
-        pool = connection_pool(dsn)
-        await pool.open()
+        pool = await open_pool(dsn)
         store = cls(pool)
         async with pool.connection() as conn:
             await check_schema(conn)
         return store
 
     async def close(self) -> None:
-        await self._pool.close()
+        await close_pool(self._pool)
 
     async def add_memory(
         self,

@@ -11,7 +11,7 @@ from companion_core.secrets import (
     SecretContext,
     SecretUnavailable,
 )
-from shared.database import check_schema, connection_pool
+from shared.database import check_schema, close_pool, open_pool
 from shared.models.llm import LLMConfig, LLMConfigPatch, LLMUsageEntry
 
 
@@ -23,18 +23,17 @@ class PostgresLLMSettingsStore:
     @classmethod
     async def connect(cls, dsn: str, *, keyring: Keyring | None = None):
         secrets = PostgresSecretStore(keyring or Keyring.from_file())
-        pool = connection_pool(dsn)
-        await pool.open()
+        pool = await open_pool(dsn)
         try:
             async with pool.connection() as conn:
                 await check_schema(conn)
             return cls(pool, secrets)
         except BaseException:
-            await pool.close()
+            await close_pool(pool)
             raise
 
     async def close(self):
-        await self._pool.close()
+        await close_pool(self._pool)
 
     @staticmethod
     def _context(role):
@@ -102,14 +101,13 @@ class PostgresLLMUsageStore:
 
     @classmethod
     async def connect(cls, dsn: str):
-        pool = connection_pool(dsn)
-        await pool.open()
+        pool = await open_pool(dsn)
         async with pool.connection() as conn:
             await check_schema(conn)
         return cls(pool)
 
     async def close(self):
-        await self._pool.close()
+        await close_pool(self._pool)
 
     async def append(self, entry: LLMUsageEntry):
         async with self._pool.connection() as conn:

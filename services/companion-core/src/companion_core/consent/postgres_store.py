@@ -11,7 +11,7 @@ from companion_core.consent.models import (
     ConfirmationRequest,
     ConfirmationStatus,
 )
-from shared.database import check_schema, connection_pool
+from shared.database import check_schema, close_pool, open_pool
 
 _COLUMNS = "id, action_type, target_id, description, scope, status, created_at, expires_at, confirmed_at"
 
@@ -36,15 +36,14 @@ class PostgresConfirmationStore:
 
     @classmethod
     async def connect(cls, dsn: str) -> PostgresConfirmationStore:
-        pool = connection_pool(dsn)
-        await pool.open()
+        pool = await open_pool(dsn)
         store = cls(pool)
         async with pool.connection() as conn:
             await check_schema(conn)
         return store
 
     async def close(self) -> None:
-        await self._pool.close()
+        await close_pool(self._pool)
 
     async def create(
         self, *, action_type: str, target_id: str, description: str, scope: ActionScope, ttl_seconds: int

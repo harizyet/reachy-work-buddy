@@ -10,14 +10,12 @@ from __future__ import annotations
 
 import uuid
 
-import psycopg
-from pgvector.psycopg import register_vector_async
 from psycopg_pool import AsyncConnectionPool
 
 from companion_core.rag.chunking import split_into_chunks
 from companion_core.rag.embeddings import embed
 from companion_core.rag.store import EmbedFn
-from shared.database import check_schema, connection_pool
+from shared.database import check_schema, close_pool, open_pool
 from shared.models.rag import DocumentChunk, RetrievedChunk
 from shared.models.response import Privacy
 
@@ -47,18 +45,14 @@ class PostgresDocumentStore:
 
     @classmethod
     async def connect(cls, dsn: str, *, embed_fn: EmbedFn = embed) -> PostgresDocumentStore:
-        # Check before vector registration so unversioned databases fail clearly.
-        async with await psycopg.AsyncConnection.connect(dsn, connect_timeout=10) as conn:
-            await check_schema(conn)
-        pool = connection_pool(dsn, configure=register_vector_async)
-        await pool.open()
+        pool = await open_pool(dsn, vector=True)
         store = cls(pool, embed_fn=embed_fn)
         async with pool.connection() as conn:
             await check_schema(conn)
         return store
 
     async def close(self) -> None:
-        await self._pool.close()
+        await close_pool(self._pool)
 
     async def ingest_document(
         self,

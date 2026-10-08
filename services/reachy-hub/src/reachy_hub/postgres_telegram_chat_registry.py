@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from psycopg_pool import AsyncConnectionPool
 
-from shared.database import check_schema, connection_pool
+from shared.database import check_schema, close_pool, open_pool
 
 _UPSERT_SQL = """
 INSERT INTO telegram_chats (user_id, chat_id) VALUES (%s, %s)
@@ -18,15 +18,14 @@ class PostgresTelegramChatRegistry:
 
     @classmethod
     async def connect(cls, dsn: str) -> PostgresTelegramChatRegistry:
-        pool = connection_pool(dsn)
-        await pool.open()
+        pool = await open_pool(dsn)
         registry = cls(pool)
         async with pool.connection() as conn:
             await check_schema(conn)
         return registry
 
     async def close(self) -> None:
-        await self._pool.close()
+        await close_pool(self._pool)
 
     async def get_chat_id(self, user_id: str) -> int | None:
         async with self._pool.connection() as conn:

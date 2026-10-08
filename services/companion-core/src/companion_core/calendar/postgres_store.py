@@ -14,7 +14,7 @@ from datetime import datetime
 from psycopg_pool import AsyncConnectionPool
 
 from companion_core.calendar.models import CalendarEvent
-from shared.database import check_schema, connection_pool
+from shared.database import check_schema, close_pool, open_pool
 
 _COLUMNS = "id, title, start_at, end_at, location"
 
@@ -29,15 +29,14 @@ class PostgresCalendarStore:
 
     @classmethod
     async def connect(cls, dsn: str) -> PostgresCalendarStore:
-        pool = connection_pool(dsn)
-        await pool.open()
+        pool = await open_pool(dsn)
         store = cls(pool)
         async with pool.connection() as conn:
             await check_schema(conn)
         return store
 
     async def close(self) -> None:
-        await self._pool.close()
+        await close_pool(self._pool)
 
     async def add_event(self, event: CalendarEvent) -> CalendarEvent:
         async with self._pool.connection() as conn:

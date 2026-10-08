@@ -17,7 +17,7 @@ from typing import Protocol
 
 from psycopg_pool import AsyncConnectionPool
 
-from shared.database import check_schema, connection_pool
+from shared.database import check_schema, close_pool, open_pool
 
 
 class CodingAgentNotificationStore(Protocol):
@@ -44,18 +44,17 @@ class PostgresCodingAgentNotificationStore:
 
     @classmethod
     async def connect(cls, dsn: str) -> PostgresCodingAgentNotificationStore:
-        pool = connection_pool(dsn)
-        await pool.open()
+        pool = await open_pool(dsn)
         try:
             async with pool.connection() as conn:
                 await check_schema(conn)
             return cls(pool)
         except BaseException:
-            await pool.close()
+            await close_pool(pool)
             raise
 
     async def close(self) -> None:
-        await self._pool.close()
+        await close_pool(self._pool)
 
     async def claim(self, session_id: str) -> bool:
         # The insert itself is the atomic claim: concurrent pollers cannot

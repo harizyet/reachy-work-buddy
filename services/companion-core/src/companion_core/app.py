@@ -307,6 +307,7 @@ from companion_core.websearch.store import (
     masked_search_config,
     usage_period,
 )
+from shared.database import DatabaseManager
 from shared.models.deep_review import DeepReviewInfo, DeepReviewJob
 from shared.models.llm import LLMConfigPatch, LLMRoutingMode
 from shared.models.memory import MemoryRecord, MemoryType
@@ -687,48 +688,44 @@ def create_app(
         app.state.coding_agent_client = CodingAgentServiceClient(
             coding_agent_base_url, transport=coding_agent_transport, service_token=coding_agent_service_token
         )
+        # Phase 45: one pool for the whole service (vector type registered for the stores that need it), shared by every Postgres-backed
+        # store and by the knowledge indexer, and closed after all of them.
+        db = None
+        if any((owns_coding_agent_notifications, owns_llm_settings, owns_llm_usage, owns_persona_store, owns_search_settings, owns_calendar_store,
+                owns_task_store, owns_planner_store, owns_memory_store, owns_rag_store, owns_email_store, owns_confirmation_store,
+                owns_meeting_store, owns_accounts)):
+            db = await DatabaseManager(database_url or os.environ["DATABASE_URL"], vector=True).start()
         if owns_coding_agent_notifications:
-            app.state.coding_agent_notification_store = await PostgresCodingAgentNotificationStore.connect(
-                database_url or os.environ["DATABASE_URL"]
-            )
+            app.state.coding_agent_notification_store = await PostgresCodingAgentNotificationStore.connect(db)
         else:
             app.state.coding_agent_notification_store = coding_agent_notification_store
         if owns_llm_settings:
-            app.state.llm_settings_store = await PostgresLLMSettingsStore.connect(database_url or os.environ["DATABASE_URL"])
+            app.state.llm_settings_store = await PostgresLLMSettingsStore.connect(db)
         if owns_llm_usage:
-            app.state.llm_usage_store = await PostgresLLMUsageStore.connect(database_url or os.environ["DATABASE_URL"])
+            app.state.llm_usage_store = await PostgresLLMUsageStore.connect(db)
         if owns_persona_store:
-            app.state.persona_store = await PostgresPersonaStore.connect(database_url or os.environ["DATABASE_URL"])
+            app.state.persona_store = await PostgresPersonaStore.connect(db)
         if owns_search_settings:
-            app.state.search_settings_store = await PostgresSearchSettingsStore.connect(database_url or os.environ["DATABASE_URL"])
+            app.state.search_settings_store = await PostgresSearchSettingsStore.connect(db)
         if owns_calendar_store:
-            dsn = database_url or os.environ["DATABASE_URL"]
-            app.state.calendar_store = await PostgresCalendarStore.connect(dsn)
+            app.state.calendar_store = await PostgresCalendarStore.connect(db)
         if owns_task_store:
-            dsn = database_url or os.environ["DATABASE_URL"]
-            app.state.task_store = await PostgresTaskStore.connect(dsn)
+            app.state.task_store = await PostgresTaskStore.connect(db)
         if owns_planner_store:
-            dsn = database_url or os.environ["DATABASE_URL"]
-            app.state.planner_store = await PostgresPlannerStore.connect(dsn)
+            app.state.planner_store = await PostgresPlannerStore.connect(db)
         if owns_memory_store:
-            dsn = database_url or os.environ["DATABASE_URL"]
-            app.state.memory_store = await PostgresMemoryStore.connect(dsn)
+            app.state.memory_store = await PostgresMemoryStore.connect(db)
         if owns_rag_store:
-            dsn = database_url or os.environ["DATABASE_URL"]
-            app.state.rag_store = await PostgresDocumentStore.connect(dsn)
+            app.state.rag_store = await PostgresDocumentStore.connect(db)
         if owns_email_store:
-            dsn = database_url or os.environ["DATABASE_URL"]
-            app.state.email_store = await PostgresEmailStore.connect(dsn)
+            app.state.email_store = await PostgresEmailStore.connect(db)
         if owns_confirmation_store:
-            dsn = database_url or os.environ["DATABASE_URL"]
-            app.state.confirmation_store = await PostgresConfirmationStore.connect(dsn)
+            app.state.confirmation_store = await PostgresConfirmationStore.connect(db)
         if owns_meeting_store:
-            dsn = database_url or os.environ["DATABASE_URL"]
-            app.state.meeting_store = await PostgresMeetingStore.connect(dsn)
+            app.state.meeting_store = await PostgresMeetingStore.connect(db)
 
         if owns_accounts:
-            app.state.accounts = AccountService(await PostgresAccountRepository.connect(
-                database_url or os.environ["DATABASE_URL"]))
+            app.state.accounts = AccountService(await PostgresAccountRepository.connect(db))
         if getattr(app.state, "accounts", None) and not isinstance(app.state.calendar_store, AccountCalendar):
             app.state.calendar_store = AccountCalendar(app.state.calendar_store, app.state.accounts)
             app.state.email_store = AccountEmail(app.state.email_store, app.state.accounts)
@@ -767,7 +764,7 @@ def create_app(
         knowledge_indexing = None
         if owns_meeting_store and knowledge_runtime.indexing_enabled():
             knowledge_indexing = await knowledge_runtime.start_indexing(
-                dsn=database_url or os.environ["DATABASE_URL"], memory=app.state.memory_store, documents=app.state.rag_store,
+                dsn=db, memory=app.state.memory_store, documents=app.state.rag_store,
                 meetings=app.state.meeting_store, planner=app.state.planner_store, tasks=app.state.task_store,
             )
         try:
@@ -818,6 +815,8 @@ def create_app(
                 await app.state.confirmation_store.close()
             if owns_meeting_store:
                 await app.state.meeting_store.close()
+            if db is not None:
+                await db.stop()  # after every store and the indexer: they only hold the shared pool
 
     app = FastAPI(title="companion-core", lifespan=lifespan)
 

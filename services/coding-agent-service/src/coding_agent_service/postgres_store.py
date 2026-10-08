@@ -26,8 +26,8 @@ class PostgresCodingAgentStore:
     durable = True
 
     def __init__(self, dsn: str) -> None:
-        # open=False: constructing the app must not need a reachable
-        # database or a running event loop; open() runs in the app lifespan.
+        # This service has exactly one store, so its one pool is already the service's shared pool. Nothing connects here:
+        # constructing the app must not need a reachable database or a running event loop; open() runs in the app lifespan.
         self._pool = connection_pool(dsn)
 
     async def open(self) -> None:

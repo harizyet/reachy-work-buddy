@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from psycopg_pool import AsyncConnectionPool
 
 from companion_core.tasks.models import Task, TaskStatus
-from shared.database import check_schema, connection_pool
+from shared.database import check_schema, close_pool, open_pool
 from shared.models.response import Privacy
 
 _COLUMNS = "id, text, status, created_at, completed_at, sensitivity, project_scope"
@@ -26,15 +26,14 @@ class PostgresTaskStore:
 
     @classmethod
     async def connect(cls, dsn: str) -> PostgresTaskStore:
-        pool = connection_pool(dsn)
-        await pool.open()
+        pool = await open_pool(dsn)
         store = cls(pool)
         async with pool.connection() as conn:
             await check_schema(conn)
         return store
 
     async def close(self) -> None:
-        await self._pool.close()
+        await close_pool(self._pool)
 
     async def add_task(
         self, text: str, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, project_scope: str | None = None

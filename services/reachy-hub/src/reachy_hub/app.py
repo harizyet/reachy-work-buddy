@@ -211,6 +211,7 @@ from reachy_hub.tts import TextToSpeech, default_tts, spoken_text
 from reachy_hub.user_store import PostgresUserStore, UserStore
 from reachy_hub.wake_arm_store import WakeArmStore
 from reachy_hub.webrtc import CallTurnHandler, negotiate_call, negotiate_telepresence
+from shared.database import DatabaseManager
 from shared.models.embodiment import Behaviour
 from shared.models.interruption import InterruptionAction
 from shared.models.motion import MotionSettings, MotionSettingsStatus
@@ -756,30 +757,29 @@ def create_app(
         # usable even without startup/shutdown events running (e.g. a bare
         # httpx.ASGITransport). Only the Postgres-backed defaults need an
         # async connect at startup.
+        # Phase 45: one pool for the whole service, shared by every Postgres-backed store below and closed last.
+        db = None
+        if any((owns_user_store, owns_registry, owns_chat_store, owns_session_store, owns_telegram_chat_registry, owns_audit_log,
+                owns_notification_queue, owns_wake_arm_store)):
+            db = await DatabaseManager(database_url or os.environ["DATABASE_URL"]).start()
         if owns_user_store:
-            app.state.user_store = await PostgresUserStore.connect(database_url or os.environ["DATABASE_URL"])
+            app.state.user_store = await PostgresUserStore.connect(db)
         if session_secret_key and admin_username and admin_password:
             await app.state.user_store.bootstrap(admin_username, admin_password)
         if owns_registry:
-            dsn = database_url or os.environ["DATABASE_URL"]
-            app.state.registry = await PostgresRobotRegistry.connect(dsn)
+            app.state.registry = await PostgresRobotRegistry.connect(db)
         if owns_chat_store:
-            app.state.chat_store = await PostgresChatStore.connect(database_url or os.environ["DATABASE_URL"])
+            app.state.chat_store = await PostgresChatStore.connect(db)
         if owns_session_store:
-            dsn = database_url or os.environ["DATABASE_URL"]
-            app.state.session_store = await PostgresSessionStore.connect(dsn)
+            app.state.session_store = await PostgresSessionStore.connect(db)
         if owns_telegram_chat_registry:
-            dsn = database_url or os.environ["DATABASE_URL"]
-            app.state.telegram_chat_registry = await PostgresTelegramChatRegistry.connect(dsn)
+            app.state.telegram_chat_registry = await PostgresTelegramChatRegistry.connect(db)
         if owns_audit_log:
-            dsn = database_url or os.environ["DATABASE_URL"]
-            app.state.audit_log = await PostgresAuditLog.connect(dsn)
+            app.state.audit_log = await PostgresAuditLog.connect(db)
         if owns_notification_queue:
-            dsn = database_url or os.environ["DATABASE_URL"]
-            app.state.notification_queue = await PostgresNotificationQueue.connect(dsn)
+            app.state.notification_queue = await PostgresNotificationQueue.connect(db)
         if owns_wake_arm_store:
-            dsn = database_url or os.environ["DATABASE_URL"]
-            robot_voice_manager.wake_store = await PostgresWakeArmStore.connect(dsn)
+            robot_voice_manager.wake_store = await PostgresWakeArmStore.connect(db)
         elif wake_arm_store is not None:
             robot_voice_manager.wake_store = wake_arm_store
         await robot_voice_manager.load_arms()
@@ -868,6 +868,8 @@ def create_app(
                 await robot_voice_manager.wake_store.close()
             if owns_notification_queue:
                 await app.state.notification_queue.close()
+            if db is not None:
+                await db.stop()  # after every store: they only hold the shared pool
 
     app = FastAPI(title="reachy-hub", lifespan=lifespan)
     app.state.telegram_poll_health = TelegramPollHealth()

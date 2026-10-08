@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from psycopg.types.json import Jsonb
 
 from companion_core.secrets import Keyring, PostgresSecretStore
-from shared.database import check_schema, connection_pool
+from shared.database import check_schema, close_pool, open_pool
 
 FLOW_COLUMNS = ("state_hash", "owner", "binding_hash", "capability", "generation",
                 "expires_at", "verifier_ref", "code_ref", "error", "returned", "client_type")
@@ -31,14 +31,13 @@ class PostgresAccountRepository:
 
     @classmethod
     async def connect(cls, dsn, *, keyring=None):
-        pool = connection_pool(dsn)
-        await pool.open()
+        pool = await open_pool(dsn)
         try:
             async with pool.connection() as conn:
                 await check_schema(conn)
             return cls(pool, PostgresSecretStore(keyring or Keyring.from_file()))
         except BaseException:
-            await pool.close()
+            await close_pool(pool)
             raise
 
     async def close(self):

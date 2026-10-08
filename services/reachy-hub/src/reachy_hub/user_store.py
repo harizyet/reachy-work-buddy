@@ -5,7 +5,7 @@ import hashlib
 import secrets
 from typing import Protocol
 
-from shared.database import check_schema, connection_pool
+from shared.database import check_schema, close_pool, open_pool
 
 _ITERATIONS = 600_000
 
@@ -61,14 +61,13 @@ class PostgresUserStore:
 
     @classmethod
     async def connect(cls, dsn: str):
-        pool = connection_pool(dsn)
-        await pool.open()
+        pool = await open_pool(dsn)
         async with pool.connection() as conn:
             await check_schema(conn)
         return cls(pool)
 
     async def close(self):
-        await self._pool.close()
+        await close_pool(self._pool)
 
     async def owner(self) -> str | None:
         async with self._pool.connection() as conn:

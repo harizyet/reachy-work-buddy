@@ -3,7 +3,7 @@ from typing import Protocol
 
 from psycopg.types.json import Jsonb
 
-from shared.database import check_schema, connection_pool
+from shared.database import check_schema, open_pool
 from shared.models.web_chat import ChatDetail, ChatRecord, ChatTurn
 
 
@@ -58,8 +58,7 @@ class PostgresChatStore:
 
     @classmethod
     async def connect(cls, dsn):
-        pool = connection_pool(dsn)
-        await pool.open()
+        pool = await open_pool(dsn)
         async with pool.connection() as conn:
             await check_schema(conn)
         return cls(pool)

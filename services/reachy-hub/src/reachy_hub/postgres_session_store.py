@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from psycopg_pool import AsyncConnectionPool
 
 from reachy_hub.session_store import _new_session
-from shared.database import check_schema, connection_pool
+from shared.database import check_schema, close_pool, open_pool
 from shared.models.session import AgentSession, Channel, InteractionMode, PrivacyContext
 
 _COLUMNS = (
@@ -43,15 +43,14 @@ class PostgresSessionStore:
 
     @classmethod
     async def connect(cls, dsn: str) -> PostgresSessionStore:
-        pool = connection_pool(dsn)
-        await pool.open()
+        pool = await open_pool(dsn)
         store = cls(pool)
         async with pool.connection() as conn:
             await check_schema(conn)
         return store
 
     async def close(self) -> None:
-        await self._pool.close()
+        await close_pool(self._pool)
 
     async def get_by_user(self, user_id: str) -> AgentSession | None:
         async with self._pool.connection() as conn:

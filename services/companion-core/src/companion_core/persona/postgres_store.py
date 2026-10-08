@@ -1,6 +1,6 @@
 
 from companion_core.persona.store import merge_persona
-from shared.database import check_schema, connection_pool
+from shared.database import check_schema, close_pool, open_pool
 from shared.models.persona import PersonaConfig, PersonaPatch
 
 _FIELDS = ("name", "system_prompt", "location", "timezone", "tone")
@@ -13,18 +13,17 @@ class PostgresPersonaStore:
 
     @classmethod
     async def connect(cls, dsn: str):
-        pool = connection_pool(dsn)
-        await pool.open()
+        pool = await open_pool(dsn)
         try:
             async with pool.connection() as conn:
                 await check_schema(conn)
             return cls(pool)
         except BaseException:
-            await pool.close()
+            await close_pool(pool)
             raise
 
     async def close(self):
-        await self._pool.close()
+        await close_pool(self._pool)
 
     async def get(self) -> PersonaConfig:
         async with self._pool.connection() as conn:
