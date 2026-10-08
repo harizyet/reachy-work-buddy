@@ -776,7 +776,7 @@ Revision `019_meeting_annotations` (Phase 41, [ADR 0030](adr/0030-meeting-speake
 
 Revision `020_meeting_terms` (Phase 41) adds `meetings.key_terms` and the `meeting_terms` glossary table. Deployed 2026-10-07 (backup `reachy-before-meeting-terms-20261007-1456.dump`; 5 existing meetings kept).
 
-Revision `026_source_sensitivity` ([Phase 44](phase-44.md), not yet applied to the homelab) adds `sensitivity` (`public`, `work-private` or `sensitive`, default `work-private`, check-constrained) to `document_chunks`, `notes`, `tasks`, `reminders` and `meetings`, and a nullable `project_scope` to `document_chunks`, `notes` and `tasks`. Every existing row becomes `work-private` and unscoped; nothing is inferred, and a scope that already exists (a meeting's) is untouched. `NULL` scope means unscoped, not public. Additive, with defaults, so SQL that names its columns keeps working; the old core image refuses the new revision at startup, so rebuild `migrate`, `companion-core` and `reachy-hub` together. Recovery is the pre-upgrade dump: restoring it returns the database to `025` and the same upgrade can be run again (verified on a disposable server, `test_source_sensitivity.py`). Downgrade is unsupported. Apply only after a verified dump, with the owner's approval, using the sequence above.
+Revision `026_source_sensitivity` ([Phase 44](phase-44.md), not yet applied to the homelab; [runbook](#applying-migration-026-phase-44a---runbook-prepared-and-not-executed)) adds `sensitivity` (`public`, `work-private` or `sensitive`, default `work-private`, check-constrained) to `document_chunks`, `notes`, `tasks`, `reminders` and `meetings`, and a nullable `project_scope` to `document_chunks`, `notes` and `tasks`. Every existing row becomes `work-private` and unscoped; nothing is inferred, and a scope that already exists (a meeting's) is untouched. `NULL` scope means unscoped, not public. Additive, with defaults, so SQL that names its columns keeps working; the old core image refuses the new revision at startup, so rebuild `migrate`, `companion-core` and `reachy-hub` together. Recovery is the pre-upgrade dump: restoring it returns the database to `025` and the same upgrade can be run again (verified on a disposable server, `test_source_sensitivity.py`). Downgrade is unsupported. Apply only after a verified dump, with the owner's approval, using the sequence above.
 
 Revision `025_meeting_description` adds `meetings.description` and `meetings.title_source`; existing meetings whose title is not the apps' default ("Meeting 7 Oct 12:05") are marked as owner-titled so they are never renamed. Core and hub are rebuilt together.
 
@@ -912,6 +912,112 @@ that all stored credentials decrypt with the supplied keyring.
 No automatic downgrade is provided. Prefer a reviewed forward fix or restore
 the pre-upgrade dump with its matching application revision into an isolated
 project first; only replace a production deployment after testing that restore.
+
+### Applying migration 026 (Phase 44A) - runbook, prepared and not executed
+
+Status: **prepared 2026-10-08, not run.** Applying it to the live homelab needs the owner's separate approval of a date and a quiet
+window. The database was read once (revision only) to confirm it is at `025_meeting_description`; nothing else was touched. What the
+migration does is described under [Schema upgrades](#schema-upgrades-and-credential-keys); in short it adds `sensitivity` and
+`project_scope` columns with defaults and changes no existing row's meaning. It is transactional, so a failure rolls back to 025.
+There is no downgrade: recovery is the pre-upgrade dump and the old images, below.
+
+Run everything from `deploy/homelab`, with the project name and env file on **every** Compose command, and never print
+`docker compose config` (it expands secrets). Manual Compose needs `SEARXNG_SECRET_KEY` in its environment without printing it:
+
+```bash
+cd deploy/homelab
+export SEARXNG_SECRET_KEY="$(cat .env.searxng-secret)"
+DC="docker compose -p reachy-homelab --env-file .env"
+```
+
+Only `companion-core`, `reachy-hub` and `coding-agent-service` are stopped and rebuilt. Postgres, vLLM, the model manager (a host
+process), the semantic-router sidecar, transcription, SearXNG, Caddy, the diarization container and the robot are not touched. While
+core and hub are down the web UI, Telegram, the voice path, alarm delivery and reminder pushes pause (alarms and reminders that fall due
+in the window fire late, when the loops resume); plan for 10 to 15 minutes.
+
+**Stage 0 - preconditions (changes nothing).** Stop here if any line fails.
+
+1. Owner approval recorded, with the date and window. The tree to build is committed and clean (`git status` empty; note
+   `git rev-parse HEAD`). The test results for that commit are the ones in the [verification record](verification/phase-44a-2026-10-08.md).
+2. Nothing is about to happen. In the database: no scheduled alarm or reminder falls due in the next 30 minutes
+   (`$DC exec -T postgres psql -U reachy -d reachy_hub -Atc "select label, due_at from alarms where status='scheduled' and enabled and due_at < now() + interval '30 minutes'"`
+   returns no rows; the same for `reminders` with `status='pending'`); no meeting is mid-upload or at `preprocessing`, `transcribing` or
+   `diarizing` (`select status, count(*) from meetings group by 1`); no deep-review job is running on the model manager; the robot is
+   idle and no voice conversation is open.
+3. Record the starting state in the deployment notes: `select version_num from alembic_version` is `025_meeting_description`; row counts of
+   `memories`, `document_chunks`, `notes`, `tasks`, `reminders`, `meetings`, `secrets`, `llm_config`; `docker inspect --format '{{.Name}} {{.Image}}' reachy-homelab-companion-core-1 reachy-homelab-reachy-hub-1 reachy-homelab-coding-agent-service-1`;
+   `df -h /` and the backup directory's free space (the Nano's disk filled once; check the homelab's too).
+4. **Rehearse on a copy.** `$DC exec -T postgres pg_dump -U reachy -d reachy_hub -Fc > ~/reachy-backups/rehearsal-$(date +%Y%m%d-%H%M%S).dump` (with `umask 077`) is a read-only snapshot that
+   does not stop anything. Restore it into a throwaway `pgvector/pgvector:pg16` container (own name, loopback port, removed afterwards),
+   check revision 025 and the same row counts, then run the real upgrade against the copy with the real key file mounted read-only:
+   `python -m companion_core.migrations upgrade` with `DATABASE_URL` pointing at the copy and `SECRET_KEY_FILE` at the production keyring.
+   Expected: revision `026_source_sensitivity`, every row `work-private`, no scope set, all stored credentials decrypt (the job checks
+   that), and the counts unchanged. Remove the container and shred the rehearsal dump.
+
+**Stage 1 - freeze the writers.** `$DC stop companion-core reachy-hub coding-agent-service`. Confirm no remaining client:
+`select count(*) from pg_stat_activity where datname = 'reachy_hub' and pid <> pg_backend_pid()` is 0 (the migration job also refuses to run
+otherwise). Stopping before the dump means the dump has no gap. Non-terminal coding-agent sessions are reconciled when the service returns.
+
+**Stage 2 - verified backup (go/no-go).**
+
+```bash
+umask 077
+STAMP=$(date +%Y%m%d-%H%M%S)
+$DC exec -T postgres pg_dump -U reachy -d reachy_hub -Fc > ~/reachy-backups/reachy-before-phase44a-$STAMP.dump
+sha256sum ~/reachy-backups/reachy-before-phase44a-$STAMP.dump
+```
+
+Verify it before going on: non-zero size and mode 0600; `pg_restore --list` succeeds and shows `alembic_version`, `memories` and `meetings`;
+restore it into a second throwaway container and compare revision (025) and the row counts from Stage 0; confirm the key file
+`.env.secret-keys.json` (and `.env.coding-agent-secret-key.json`) has a separate secure backup, because a dump is useless without the keys
+that decrypt its credentials. If any check fails, run `$DC start companion-core reachy-hub coding-agent-service` and stop.
+
+**Stage 3 - keep the way back.** Tag the images the stopped containers use so they survive the rebuild:
+`docker tag <image id from Stage 0> reachy-rollback/companion-core:025` (likewise `reachy-hub` and `coding-agent-service`; the previous
+`migrate` image is not needed). Note the compose image names with `$DC images`.
+
+**Stage 4 - build.** `$DC build migrate companion-core reachy-hub coding-agent-service`. The core image now installs `jsonschema` from the
+lock, so the build needs network access to PyPI. If the build fails, nothing has changed: `$DC start companion-core reachy-hub coding-agent-service`.
+
+**Stage 5 - migrate (go/no-go).** `$DC run --rm migrate /app/.venv/bin/python -m companion_core.migrations upgrade`. Expect it to finish
+in seconds. Then `select version_num from alembic_version` is `026_source_sensitivity`. If it fails, the transaction has rolled back:
+confirm the revision is still 025, then `$DC start companion-core reachy-hub coding-agent-service` (the stopped containers still carry the
+old images) and stop; investigate on a copy.
+
+**Stage 6 - start.** `$DC up -d companion-core reachy-hub coding-agent-service` (this re-runs `migrate` as a no-op; do not use `--no-deps`).
+Wait for `http://localhost:8080/hub/health` and `http://localhost:8080/core/health`. The hub may re-download `small.en` (about 2 minutes)
+before voice works. Core's in-memory shadow-router queue and deep-review job table are dropped by the restart.
+
+**Stage 7 - post-deployment smoke tests.** All must pass.
+
+| # | Check | Expected |
+|---|---|---|
+| 1 | `select version_num from alembic_version` | `026_source_sensitivity` |
+| 2 | `information_schema.columns` for `sensitivity` on `document_chunks`, `notes`, `tasks`, `reminders`, `meetings`; `project_scope` on `document_chunks`, `notes`, `tasks` | all present |
+| 3 | `select sensitivity, count(*) from <table> group by 1` for the five tables | only `work-private`; counts equal Stage 0 |
+| 4 | `select count(*) from <table> where project_scope is not null` for `document_chunks`, `notes`, `tasks`; meetings with a scope | 0 for the first three; meetings unchanged from Stage 0 |
+| 5 | Hub and core health; `$DC logs --since 5m companion-core reachy-hub coding-agent-service` filtered for `error` and `Traceback` | healthy; nothing but expected start-up lines |
+| 6 | Owner opens the web UI: Notes, To-do, Meetings (an old meeting opens with its transcript and plays), Alarms | all earlier records present and unchanged |
+| 7 | Create a note and a to-do in the UI | saved; both `work-private`, no scope in the database |
+| 8 | Hub API with the owner session: create a to-do with `"sensitivity": "sensitive"`; read it back; then an edit that sends `sensitivity` | created as `sensitive`; the edit returns 422; then delete the to-do |
+| 9 | A chat turn, and a Telegram message | answered as before |
+| 10 | A reminder due in two minutes | the Telegram push arrives (the notify loop is running) |
+| 11 | Hub shows the robot connected, or reconnects within a minute; one spoken test question if the owner is present | unchanged behaviour |
+| 12 | Core logs show the meeting worker polling and no failed jobs | as before |
+
+Delete any smoke-test records afterwards. Record the dump name and checksum, the commit, the image ids and the results in a new dated
+verification record and in HANDOVER.
+
+**Rollback and recovery.**
+
+- *Before Stage 5 completes:* nothing changed in the database; `$DC start` the old containers (above).
+- *Migration succeeded but the new stack misbehaves:* prefer a forward fix, because the old images refuse revision 026 and rolling back
+  only the application is unsupported. For a full rollback, accept that anything written since Stage 6 is lost, then:
+  `$DC stop companion-core reachy-hub coding-agent-service`; restore the dump with
+  `$DC exec -T postgres pg_restore -U reachy -d reachy_hub --clean --if-exists --no-owner < ~/reachy-backups/reachy-before-phase44a-$STAMP.dump`
+  (tested at Stage 2); confirm revision 025 and the Stage 0 counts; retag the saved images to the compose image names from Stage 3 and
+  `$DC up -d --no-build --force-recreate companion-core reachy-hub coding-agent-service`; repeat the health and smoke checks that apply to 025.
+- Never delete the Postgres volume, and keep the dump and the tagged images until the owner accepts the deployment.
 
 ### Key rotation and recovery
 
