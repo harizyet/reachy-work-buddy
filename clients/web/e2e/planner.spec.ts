@@ -322,6 +322,27 @@ for (const mount of MOUNTS) {
       expect(await page.content()).not.toContain('typed-and-abandoned');
     });
 
+    test('Voice & motion: the offline robot cannot be started; animation switches apply and are restored (simulated robot)', async ({ page }) => {
+      await signIn(page, mount.url, '#/settings/voice');
+      await expect(page.getByText('Off', { exact: true })).toBeVisible();
+      await expect(page.getByRole('option', { name: 'desk (offline)' })).toBeAttached();
+      await expect(page.getByRole('button', { name: 'Start listening' })).toBeDisabled();
+      await expect(page.getByRole('button', { name: 'Stop' })).toBeDisabled();
+      await expect(page.getByText('Privacy mode on: not listening for “Hey Reachy”')).toBeVisible();
+
+      const gestures = page.getByRole('checkbox', { name: 'Listening and thinking gestures' });
+      await expect(gestures).toBeEnabled();
+      await gestures.click();
+      await page.getByRole('button', { name: 'Apply animation settings' }).click();
+      await expect(page.getByText('Animation settings applied for the next conversation.')).toBeVisible();
+      await page.reload();
+      await expect(gestures).toBeChecked();
+      await gestures.click(); // restore the simulated robot's default
+      await page.getByRole('button', { name: 'Apply animation settings' }).click();
+      await expect(page.getByText('Animation settings applied for the next conversation.')).toBeVisible();
+      await expect(gestures).not.toBeChecked();
+    });
+
     test('Activity: shows the hub receipts, failed ones struck through, text literal', async ({ page }) => {
       await signIn(page, mount.url, '#/activity');
       await expect(page.getByRole('heading', { name: 'Recent activity' })).toBeVisible();
@@ -358,7 +379,7 @@ for (const mount of MOUNTS) {
 
     test('pages fit the viewport; Notes works as list then editor then back on a narrow screen', async ({ page }, info) => {
       await signIn(page, mount.url);
-      for (const hash of ['#/todo', '#/reminders', '#/notes', '#/activity', '#/alarms', '#/chat', '#/meetings', '#/settings/models', '#/settings/search']) {
+      for (const hash of ['#/todo', '#/reminders', '#/notes', '#/activity', '#/alarms', '#/chat', '#/meetings', '#/settings/models', '#/settings/search', '#/settings/voice']) {
         await page.goto(mount.url + hash);
         await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);

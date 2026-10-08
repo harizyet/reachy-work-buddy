@@ -716,3 +716,95 @@ export interface UsageEntry {
   completion_tokens: number | null;
   latency_ms: number;
 }
+
+// --- Voice and robot settings (Phase 47B8) --------------------------------------------------
+
+export interface VoiceTurn {
+  turn: number;
+  transcript: string;
+  outcome: string; // 'spoken' | 'withheld' | 'no_speech' | 'failed' | 'cancelled' | ...
+  reply: string;
+  reason: string;
+  web_search: WebSearch | null;
+}
+export interface VoiceSession {
+  voice_session_id: string;
+  state: string; // 'starting' | 'listening' | 'thinking' | 'speaking' | 'stopped'
+  stop_reason: string | null;
+  last_error: string | null;
+  wake_started: boolean;
+  turns: VoiceTurn[];
+}
+export interface VoiceRobot {
+  robot_id: string;
+  online: boolean;
+  voice_capable: boolean;
+  wake_capable: boolean;
+  wake_armed: boolean;
+  wake_counts: { candidates: number; admitted: number };
+}
+export interface VoiceOverview {
+  robots: VoiceRobot[];
+  session: VoiceSession | null;
+}
+export interface MotionSettings {
+  conversation_motion: boolean;
+  speech_wobble: boolean;
+  conversation_active: boolean;
+}
+export interface RobotRef {
+  robot_id: string;
+}
+
+export function parseVoiceSession(value: unknown, what = 'voice session'): VoiceSession {
+  const o = obj(value, what);
+  return {
+    voice_session_id: str(o.voice_session_id, `${what}.voice_session_id`),
+    state: str(o.state, `${what}.state`),
+    stop_reason: optionalStr(o.stop_reason, `${what}.stop_reason`),
+    last_error: optionalStr(o.last_error, `${what}.last_error`),
+    wake_started: o.wake_started === true,
+    turns: list(o.turns ?? [], `${what}.turns`).map((item, i) => {
+      const t = obj(item, `${what}.turns[${i}]`);
+      return {
+        turn: num(t.turn, 'turn.turn'),
+        transcript: t.transcript == null ? '' : str(t.transcript, 'turn.transcript'),
+        outcome: str(t.outcome, 'turn.outcome'),
+        reply: t.reply == null ? '' : str(t.reply, 'turn.reply'),
+        reason: t.reason == null ? '' : str(t.reason, 'turn.reason'),
+        web_search: parseWebSearch(t.web_search, 'turn.web_search'),
+      };
+    }),
+  };
+}
+
+export function parseVoiceOverview(value: unknown): VoiceOverview {
+  const o = obj(value, 'robot voice');
+  return {
+    robots: list(o.robots ?? [], 'robot voice.robots').map((item, i) => {
+      const r = obj(item, `robots[${i}]`);
+      const counts = r.wake_counts == null ? {} : obj(r.wake_counts, 'wake_counts');
+      return {
+        robot_id: str(r.robot_id, 'robot.robot_id'),
+        online: r.online === true,
+        voice_capable: r.voice_capable === true,
+        wake_capable: r.wake_capable === true,
+        wake_armed: r.wake_armed === true,
+        wake_counts: { candidates: typeof counts.candidates === 'number' ? counts.candidates : 0, admitted: typeof counts.admitted === 'number' ? counts.admitted : 0 },
+      };
+    }),
+    session: o.session == null ? null : parseVoiceSession(o.session),
+  };
+}
+
+export function parseMotion(value: unknown): MotionSettings {
+  const o = obj(value, 'motion settings');
+  // A robot that does not support animation settings answers with something else; refuse to show it as editable.
+  if (typeof o.conversation_motion !== 'boolean' || typeof o.speech_wobble !== 'boolean' || typeof o.conversation_active !== 'boolean') {
+    throw new ApiShapeError('This robot does not support animation settings.');
+  }
+  return { conversation_motion: o.conversation_motion, speech_wobble: o.speech_wobble, conversation_active: o.conversation_active };
+}
+
+export const parseRobotRefs = (value: unknown): RobotRef[] =>
+  list(value, 'robots').map((item, i) => ({ robot_id: str(obj(item, `robots[${i}]`).robot_id, 'robot.robot_id') }));

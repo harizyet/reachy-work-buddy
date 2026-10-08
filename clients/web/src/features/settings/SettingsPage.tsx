@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { AssistantTab } from './AssistantTab';
 import { ModelsTab } from './ModelsTab';
 import { SearchTab } from './SearchTab';
+import { VoiceTab } from './VoiceTab';
 
 export interface SettingsTab {
   id: string;
@@ -14,6 +15,7 @@ const TABS: SettingsTab[] = [
   { id: 'assistant', label: 'Assistant', panel: <AssistantTab /> },
   { id: 'models', label: 'Models', panel: <ModelsTab /> },
   { id: 'search', label: 'Web search', panel: <SearchTab /> },
+  { id: 'voice', label: 'Voice & motion', panel: <VoiceTab /> },
 ];
 
 // Settings tabs follow the WAI-ARIA tabs pattern (arrow keys, Home and End move focus and selection) like the legacy page.

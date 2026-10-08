@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { NoticeProvider } from '../../components/shared/notice';
 import { ChatProvider } from '../../features/chat/ChatProvider';
+import { VoiceProvider } from '../../features/voice/VoiceProvider';
 import { DeepReviewProvider } from '../../features/meetings/DeepReview';
 import { useAuth } from '../auth';
 
@@ -57,7 +58,9 @@ export function AppLayout() {
         <DeepReviewProvider>
           <main id="main" className="mx-auto max-w-5xl px-4 py-6">
             <ChatProvider>
-              <Outlet />
+              <VoiceProvider>
+                <Outlet />
+              </VoiceProvider>
             </ChatProvider>
           </main>
         </DeepReviewProvider>

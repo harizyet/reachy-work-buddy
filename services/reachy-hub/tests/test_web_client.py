@@ -79,6 +79,9 @@ OPERATIONS = [
     ("get", "/settings/llm"), ("put", "/settings/llm"), ("get", "/settings/persona"), ("put", "/settings/persona"),
     ("get", "/settings/websearch"), ("put", "/settings/websearch"), ("get", "/websearch/log"),
     ("patch", "/sessions/{user_id}/mode"), ("patch", "/sessions/{user_id}/dnd"),
+    ("get", "/robot-voice"), ("post", "/robot-voice/start"), ("post", "/robot-voice/renew"), ("post", "/robot-voice/stop"),
+    ("post", "/robot-voice/wake"), ("get", "/robots"),
+    ("get", "/robots/{robot_id}/settings/motion"), ("put", "/robots/{robot_id}/settings/motion"),
 ]
 
 
@@ -202,6 +205,9 @@ def snapshot(client: TestClient) -> dict:
         "persona": client.get("/settings/persona").json(),
         "websearch_settings": client.get("/settings/websearch").json(),
         "websearch_log": client.get("/websearch/log").json(),
+        "voice_overview": client.get("/robot-voice").json(),
+        "robots": client.get("/robots").json(),
+        "motion": client.get("/robots/desk/settings/motion").json(),
         "meetings": client.get("/meetings").json(),
         "meeting": client.get(f"/meetings/{meeting_id}").json(),
     }
@@ -221,7 +227,7 @@ def test_sample_responses_still_match_the_hub():
         for robot in sample["status"]["robots"]:
             robot.pop("data", None)  # embodiment state is the robot's own contract, typed loosely on purpose
     assert shape(live["status"]) == shape(saved["status"])
-    for name in ("tasks", "reminders", "notes", "receipts", "alarms", "stations", "chats", "chat", "message", "session", "meetings", "meeting", "llm_settings", "persona", "websearch_settings", "websearch_log"):
+    for name in ("tasks", "reminders", "notes", "receipts", "alarms", "stations", "chats", "chat", "message", "session", "meetings", "meeting", "llm_settings", "persona", "websearch_settings", "websearch_log", "voice_overview", "robots", "motion"):
         assert live[name] and saved[name], name  # an empty list would pin no item shape
         assert shape(live[name]) == shape(saved[name]), name
 
@@ -523,6 +529,39 @@ def test_settings_behaviour_and_secrets_never_come_back():
     assert client.patch("/sessions/default-user/dnd", json={"dnd": True}, headers=CSRF).json()["dnd"] is True
     assert client.patch("/sessions/default-user/mode", json={"interaction_mode": "nonsense"}, headers=CSRF).status_code == 422
     assert client.patch("/sessions/nobody/dnd", json={"dnd": True}, headers=CSRF).status_code == 404
+
+
+def test_robot_voice_and_motion_behaviour_without_a_robot():
+    """The test hub has a registered but unconnected robot, so nothing here can reach hardware."""
+    anonymous = make_client()
+    assert anonymous.get("/robot-voice").status_code == 401
+    assert anonymous.get("/robots/desk/settings/motion").status_code == 401
+    client = logged_in_client(accounts_service_token="svc")
+    overview = client.get("/robot-voice").json()
+    assert overview["session"] is None and overview["robots"][0] == {
+        "robot_id": "desk", "online": False, "voice_capable": False, "wake_capable": False, "wake_armed": False,
+        "wake_counts": {"candidates": 0, "admitted": 0, "rejected": {}},
+    }
+    # Listening cannot start for a robot that is not connected, and unknown sessions are refused.
+    assert client.post("/robot-voice/start", json={"robot_id": "desk", "user_id": "default-user"}, headers=CSRF).status_code == 409
+    for path in ("/robot-voice/renew", "/robot-voice/stop"):
+        assert client.post(path, json={"voice_session_id": "nope"}, headers=CSRF).status_code == 404
+    assert client.post("/robot-voice/start", json={"robot_id": "desk", "user_id": "default-user"}).status_code == 403
+    # Owner-bound: the user id must be the owner's.
+    assert client.post("/robot-voice/start", json={"robot_id": "desk", "user_id": "someone-else"}, headers=CSRF).status_code == 403
+    # The arm is stored per robot and can be switched off again.
+    armed = client.post("/robot-voice/wake", json={"robot_id": "desk", "armed": True, "user_id": "default-user"}, headers=CSRF).json()
+    assert armed["robots"][0]["wake_armed"] is True
+    disarmed = client.post("/robot-voice/wake", json={"robot_id": "desk", "armed": False, "user_id": "default-user"}, headers=CSRF).json()
+    assert disarmed["robots"][0]["wake_armed"] is False
+
+    assert client.get("/robots").json() == [{"robot_id": "desk", "base_url": "http://robot"}]
+    motion = client.get("/robots/desk/settings/motion").json()
+    assert motion == {"conversation_motion": False, "speech_wobble": False, "conversation_active": False}
+    assert client.put("/robots/desk/settings/motion", json={"conversation_motion": True, "speech_wobble": True}, headers=CSRF).json()["speech_wobble"] is True
+    assert client.put("/robots/desk/settings/motion", json={"conversation_motion": "yes"}, headers=CSRF).status_code == 422
+    assert client.get("/robots/nope/settings/motion").status_code == 404
+    client.put("/robots/desk/settings/motion", json={"conversation_motion": False, "speech_wobble": False}, headers=CSRF)
 
 
 def test_owner_bound_chat_is_limited_to_the_owner_account():

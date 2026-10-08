@@ -38,6 +38,10 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
     stations: seed.stations ?? [],
     search: seed.search ?? [],
     stopped: false,
+    robots: [{ robot_id: 'desk', online: true, voice_capable: true, wake_capable: true, wake_armed: false, wake_counts: { candidates: 0, admitted: 0, rejected: {} } }] as any[],
+    voiceSession: null as any,
+    motion: { conversation_motion: false, speech_wobble: false, conversation_active: false } as any,
+    motionWrites: [] as any[],
     deepInfo: { configured: true, available: true, reason: null, eta_seconds: 330 } as any,
     chats: seed.chats ?? [],
     meetings: (seed.meetings ?? []) as FakeMeeting[],
@@ -276,6 +280,29 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
       if (!info) return jsonResponse({ detail: `no session for user '${m[1]}'` }, 404);
       if (m[2] === 'mode') info.interaction_mode = body.interaction_mode; else info.dnd = body.dnd;
       return jsonResponse(info);
+    }
+    if (path === '/robots' && method === 'GET') return jsonResponse(data.robots.map((r: any) => ({ robot_id: r.robot_id, base_url: 'http://robot' })));
+    if (path === '/robot-voice') return jsonResponse({ robots: data.robots, session: data.voiceSession });
+    if (path === '/robot-voice/start') {
+      const robot = data.robots.find((r: any) => r.robot_id === body.robot_id);
+      if (!robot?.online) return jsonResponse({ detail: 'Robot is not connected to the hub' }, 409);
+      data.voiceSession = { voice_session_id: 'vs1', state: 'listening', stop_reason: null, last_error: null, wake_started: false, turns: [], started_for: body.user_id };
+      return jsonResponse(data.voiceSession);
+    }
+    if (path === '/robot-voice/renew' || path === '/robot-voice/stop') {
+      if (!data.voiceSession || data.voiceSession.voice_session_id !== body.voice_session_id) return jsonResponse({ detail: 'Unknown voice session' }, 404);
+      if (path.endsWith('stop')) Object.assign(data.voiceSession, { state: 'stopped', stop_reason: 'Stopped by owner' });
+      return jsonResponse(data.voiceSession);
+    }
+    if (path === '/robot-voice/wake') {
+      const robot = data.robots.find((r: any) => r.robot_id === body.robot_id);
+      if (robot) robot.wake_armed = body.armed;
+      return jsonResponse({ robots: data.robots, session: data.voiceSession });
+    }
+    m = path.match(/^\/robots\/([^/]+)\/settings\/motion$/);
+    if (m) {
+      if (method === 'PUT') { data.motionWrites.push(body); Object.assign(data.motion, body); }
+      return jsonResponse(data.motion);
     }
     if (path === '/planner/receipts') return jsonResponse(data.receipts);
     if (path === '/planner/alarms' && method === 'GET') return jsonResponse(data.alarms);
