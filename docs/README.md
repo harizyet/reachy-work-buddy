@@ -91,7 +91,7 @@ correct facts or links, not to track each new phase dependency.
 - [Phase 42](phase-42.md): three-tier model escalation — stage sequence and gates; decision in [ADR 0031](adr/0031-three-tier-local-model-escalation.md).
 - [Phase 43](phase-43.md): meeting deletion, summaries, minutes and meeting context — decision in [ADR 0032](adr/0032-meeting-outputs-and-context.md).
 - [Phase 44](phase-44.md): Reachy Brain, a semantic knowledge and context layer over memory, documents, meetings and planner data (proposed; 44A schema reconciliation written, no code).
-- [Phase 45](phase-45.md): database connection architecture and pooling (shared pools, PgBouncer evaluation, direct admin path); audit, shared-pool refactor, PgBouncer evaluation and failure exercises done on disposable infrastructure ([evidence](verification/phase-45-2026-10-08.md)); homelab cutover (45E) awaits approval.
+- [Phase 45](phase-45.md): database connection architecture and pooling (shared pools, PgBouncer evaluation, direct admin path); audit, shared-pool refactor, PgBouncer evaluation and failure exercises done on disposable infrastructure ([evidence](verification/phase-45-2026-10-08.md)); homelab cutover done ([deployment record](verification/phase-45e-deployment-2026-10-08.md)).
 - [Phase 44E plan](phase-44e-plan.md): context builder and end-to-end answer-quality evaluation with the local 7B (plan for review; no code).
 - [Shadow semantic router](shadow-router.md): shadow-mode router, extractor and validator that only records what it would propose; contract, flags, trial procedure, retention and evidence.
 - [Phase 30](phase-30.md): platform stabilization and acceptance — verify the
