@@ -1095,3 +1095,73 @@ export const parseNotifications = (value: unknown): QueuedNotification[] =>
     const e = obj(item, `notifications[${i}]`);
     return { text: optionalStr(e.text, 'notification.text'), reason: optionalStr(e.reason, 'notification.reason') };
   });
+
+// --- Brain (Phase 47D) ----------------------------------------------------------------------
+
+export interface BrainNodeDto {
+  id: string;
+  type: string;
+  title: string;
+  excerpt: string;
+  observed_at: string | null;
+  source_ref: { kind: string; id: string };
+  sensitivity: string;
+  project_scope: string | null;
+}
+export interface BrainPageDto {
+  nodes: BrainNodeDto[];
+  next: string | null;
+  truncated: boolean;
+}
+export interface BrainSummaryDto {
+  total: number;
+  by_type: Record<string, number>;
+  edges: number;
+  truncated: boolean;
+}
+export interface BrainEdgesDto {
+  edges: { id: string; from: string; to: string; basis: string }[];
+  note: string;
+}
+
+export function parseBrainNode(value: unknown, what = 'brain node'): BrainNodeDto {
+  const o = obj(value, what);
+  const ref = obj(o.source_ref, `${what}.source_ref`);
+  return {
+    id: str(o.id, `${what}.id`),
+    type: str(o.type, `${what}.type`),
+    title: str(o.title, `${what}.title`),
+    excerpt: o.excerpt == null ? '' : str(o.excerpt, `${what}.excerpt`),
+    observed_at: optionalStr(o.observed_at, `${what}.observed_at`),
+    source_ref: { kind: str(ref.kind, 'source_ref.kind'), id: str(ref.id, 'source_ref.id') },
+    sensitivity: o.sensitivity == null ? '' : str(o.sensitivity, `${what}.sensitivity`),
+    project_scope: optionalStr(o.project_scope, `${what}.project_scope`),
+  };
+}
+export function parseBrainPage(value: unknown): BrainPageDto {
+  const o = obj(value, 'brain page');
+  return {
+    nodes: list(o.nodes, 'brain page.nodes').map((n, i) => parseBrainNode(n, `nodes[${i}]`)),
+    next: optionalStr(o.next, 'brain page.next'),
+    truncated: o.truncated === true,
+  };
+}
+export function parseBrainSummary(value: unknown): BrainSummaryDto {
+  const o = obj(value, 'brain summary');
+  return {
+    total: num(o.total, 'summary.total'),
+    by_type: Object.fromEntries(Object.entries(obj(o.by_type, 'summary.by_type')).map(([k, v]) => [k, num(v, `summary.by_type.${k}`)])),
+    edges: num(o.edges, 'summary.edges'),
+    truncated: o.truncated === true,
+  };
+}
+export function parseBrainEdges(value: unknown): BrainEdgesDto {
+  const o = obj(value, 'brain edges');
+  return {
+    edges: list(o.edges ?? [], 'edges.edges').map((item, i) => {
+      const e = obj(item, `edges[${i}]`);
+      return { id: str(e.id, 'edge.id'), from: str(e.from, 'edge.from'), to: str(e.to, 'edge.to'), basis: e.basis == null ? '' : str(e.basis, 'edge.basis') };
+    }),
+    note: o.note == null ? '' : str(o.note, 'edges.note'),
+  };
+}

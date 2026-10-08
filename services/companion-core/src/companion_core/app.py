@@ -1758,6 +1758,61 @@ def create_app(
             raise HTTPException(status_code=404, detail=f"no forgotten memory '{memory_id}'")
         return record
 
+    # Phase 47D: the read-only Brain view. Computed from the stores through the knowledge layer's adapters and access rules;
+    # needs no index and no flag; writes nothing. The caller's rights are decided here, not by anything in the request.
+    def brain_adapters():
+        from companion_core.knowledge.sources import build_adapters
+
+        return build_adapters(
+            memory=app.state.memory_store, documents=app.state.rag_store, meetings=app.state.meeting_store,
+            planner=app.state.planner_store, tasks=app.state.task_store,
+        )
+
+    def brain_access():
+        from companion_core import brain
+
+        return brain.owner_access(os.environ.get("OWNER_USER_ID", "default-user"))
+
+    @app.get("/brain/summary")
+    async def brain_summary():
+        from companion_core import brain
+
+        return await brain.summarise(brain_adapters(), brain_access())
+
+    @app.get("/brain/nodes")
+    async def brain_nodes(
+        types: str | None = Query(default=None, max_length=100),
+        q: str = Query(default="", max_length=200),
+        limit: int = Query(default=100, ge=1, le=200),
+        cursor: str | None = Query(default=None, max_length=512),
+    ):
+        from companion_core import brain
+
+        wanted = None
+        if types:
+            wanted = {t for t in types.split(",") if t}
+            if not wanted <= set(brain.SOURCE_TYPES):
+                raise HTTPException(422, "Unknown record type")
+        try:
+            return await brain.list_page(brain_adapters(), brain_access(), types=wanted, query=q, limit=limit, cursor=cursor)
+        except brain.InvalidCursor:
+            raise HTTPException(422, "Invalid cursor") from None
+
+    @app.get("/brain/nodes/{source_type}/{source_id}")
+    async def brain_node(source_type: str, source_id: str):
+        from companion_core import brain
+
+        node = await brain.get_node(brain_adapters(), brain_access(), source_type, source_id)
+        if node is None:  # absent, forgotten, deleted, hidden and over-ceiling all answer the same
+            raise HTTPException(404, "Record not found")
+        return node
+
+    @app.get("/brain/edges")
+    async def brain_edges(ids: str = Query(default="", max_length=20000)):
+        from companion_core import brain
+
+        return await brain.edges_among([i for i in ids.split(",") if i][:1000])
+
     @app.post("/documents")
     async def ingest_document(request: CreateDocumentRequest) -> list[DocumentChunk]:
         """Operator/setup API, not an agent tool — nothing here crawls or

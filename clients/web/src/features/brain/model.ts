@@ -67,7 +67,7 @@ export interface BrainSource {
   readonly label: string;
   summary(): Promise<BrainSummary>;
   /** A bounded page; `cursor` is opaque. */
-  listNodes(filters: BrainFilters, cursor: string | null, limit: number): Promise<{ nodes: BrainNode[]; next: string | null }>;
+  listNodes(filters: BrainFilters, cursor: string | null, limit: number): Promise<{ nodes: BrainNode[]; next: string | null; truncated?: boolean }>;
   getNode(id: string): Promise<BrainNode | null>;
   /** Only edges whose two ends are both in `nodeIds`. */
   listEdges(nodeIds: readonly string[]): Promise<BrainEdge[]>;

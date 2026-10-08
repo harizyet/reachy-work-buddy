@@ -25,6 +25,7 @@ browser/channel transport. Debug robot calls go through hub.
 | `GET`, `POST /tasks`; `POST /tasks/{id}/complete`; `GET /tasks/search` | Capture, list, complete, search follow-ups. `POST /tasks`, `/notes`, `/documents` and `/reminders` (and the `POST /meetings` form) take an optional `sensitivity` (default `work-private`) and, except for reminders, `project_scope` (default none = unscoped); editing never changes them (Phase 44A, migration 026). |
 | `GET`, `POST /memories`; `GET /memories/recall` | Durable targeted work-memory retrieval, separate from transcript |
 | `POST /memories/{id}/request-forget`, `/forget/confirm`, `/restore` | Text-confirmed soft deletion and undo |
+| `GET /brain/summary`, `/brain/nodes`, `/brain/nodes/{type}/{id}`, `/brain/edges` | Phase 47D read-only Brain view over the source adapters (owner principal from config, private/non-sensitive ceiling, whole-record withholding, keyset pagination, edges always empty today). reachy-hub proxies the same paths, owner session only, no-store |
 | `GET`, `POST /documents`; `GET /documents/search` | Operator ingestion and document/section retrieval |
 | `GET`, `POST /emails/received`; `GET`, `POST /emails/drafts` | Seeded inbox and deterministic drafts, no production mailbox sync yet |
 | `POST /emails/drafts/{id}/approve`, `/send`, `/cancel-send` | Text approval/send, delayed dispatch, cancellation |

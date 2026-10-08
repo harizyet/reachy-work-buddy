@@ -290,4 +290,21 @@ Deliberate choices and limits:
 - No post-processing bloom library: the glow is additive halo instances plus additive particles. A true bloom pass would add a dependency and per-frame cost for a decorative effect; revisit if the owner wants it after seeing the view.
 - Measurements were taken with Chromium's **software** WebGL renderer in a headless browser (about 56 frames per second, no accumulation across ten visits). That is a baseline, not evidence about integrated graphics or a phone; the owner's test on real hardware is the acceptance for performance.
 - The scene is a picture of the list, not a second source of truth: every action available in 3D (select, focus) is also available from the list, which is the keyboard and screen-reader path.
-- 47D (real knowledge) is **not** started. It needs the read-only Brain API (a backend change) and was not part of this authorization.
+- 47D (real knowledge) followed; see section 16.
+
+## 16. 47D record (2026-10-08): real records in the Brain view, and bloom
+
+Branch `phase-47d`. Evidence: [47D verification](verification/phase-47d-2026-10-08.md). No schema, no flag (`KNOWLEDGE_INDEXING_ENABLED` untouched), no deploy, no robot.
+
+**Bloom.** A real post-processing glow (`@react-three/postprocessing` 3.1.3, `postprocessing` 6.39.5) is a toggle at Settings > Display ("Glow effect (bloom)"). It is stored per browser (`reachy.web.brain.bloom`), on by default unless the system asks for reduced motion, and the scene falls back to additive halos when off. Cost on software WebGL: about 21 draw calls per frame against 3.8, and roughly 28 to 37 fps against 56. The 3D chunk grew to 1,021 kB (272 kB gzip); the main bundle is unchanged in kind (about 479 kB, 142 kB gzip).
+
+**Brain API (read-only, owner-session only).** companion-core `GET /brain/summary`, `/brain/nodes`, `/brain/nodes/{type}/{id}`, `/brain/edges`; reachy-hub proxies the same paths (`reachy_hub/brain.py`) with no-store caching. Built on the Phase 44 `SourceAdapter`s directly, so it works with indexing off and can later read the index through the same contract.
+
+- Authorization: the principal is the configured owner, never taken from the request; the access ceiling is private channel, no sensitive records, destination local. Request parameters cannot widen it.
+- A record is shown only if its source state is visible (not forgotten, expired, deleted or cancelled) and every part passes `access.decide`; otherwise it is withheld whole. Absent, forgotten and hidden records give the same 404, and counts, pages, edges and by-id reads agree with visibility. Each read re-reads the source, so a change shows on the next request.
+- Bounded: limit 1 to 200, opaque keyset cursor (newest first, stable across deletions), titles 90 and excerpts 280 characters, search 200, at most 5,000 records scanned per request.
+- Edges: no structured links exist between these kinds of record yet, so `/brain/edges` returns an empty list with that reason. Nothing is inferred.
+
+**Client.** `#/brain` defaults to "Your records (read-only)"; "Synthetic demonstration" remains a labelled option. Each selection is re-read; a record that has gone says so and the list refreshes. "Open in ..." links to the owning screen. Live mode works without WebGL (list only).
+
+Known limits and what needs a decision: each page scans the stores (cost grows with records; an index-backed adapter is the later answer, Phase 44); sensitive records are withheld by the ceiling, so a "show sensitive" mode would be a separate authorization decision; **47E** (semantic or inferred relationships) depends on Phase 44C/44F decisions; memory and document screens still wait on the backend gaps in section 7a.

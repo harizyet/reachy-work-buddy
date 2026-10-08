@@ -20,8 +20,9 @@ export async function loadBrain(source: BrainSource): Promise<BrainData> {
   let cursor: string | null = null;
   let truncated = false;
   do {
-    const page: { nodes: BrainNode[]; next: string | null } = await source.listNodes(filters, cursor, PAGE);
+    const page: { nodes: BrainNode[]; next: string | null; truncated?: boolean } = await source.listNodes(filters, cursor, PAGE);
     nodes.push(...page.nodes);
+    if (page.truncated) truncated = true;
     cursor = page.next;
     if (nodes.length >= MAX_NODES && cursor !== null) {
       truncated = true;
@@ -34,6 +35,15 @@ export async function loadBrain(source: BrainSource): Promise<BrainData> {
 }
 
 export function useBrainData(source: BrainSource) {
-  // Nothing here touches the hub: the synthetic source is in memory.
-  return useQuery({ queryKey: ['brain', source.kind, source.label], queryFn: () => loadBrain(source), staleTime: Infinity, retry: false });
+  // The synthetic source is in memory and never changes. The live source is read afresh every time the page opens, so a
+  // record that was forgotten or deleted since the last visit is gone.
+  const live = source.kind === 'live';
+  return useQuery({
+    queryKey: ['brain', source.kind, source.label],
+    queryFn: () => loadBrain(source),
+    staleTime: live ? 0 : Infinity,
+    refetchOnMount: live ? 'always' : true,
+    gcTime: live ? 0 : undefined, // nothing from the owner's records lingers in the cache once the page is left
+    retry: false,
+  });
 }

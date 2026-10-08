@@ -15,10 +15,17 @@ from __future__ import annotations
 import os
 from datetime import datetime, timedelta
 from typing import Any, BinaryIO
+from urllib.parse import quote
 
 import httpx
 
 from shared.protocols.accounts import SERVICE_HEADER
+from shared.protocols.brain_api import (
+    BRAIN_EDGES,
+    BRAIN_NODE,
+    BRAIN_NODES,
+    BRAIN_SUMMARY,
+)
 from shared.protocols.operator_api import (
     LLM_SETTINGS,
     LLM_USAGE,
@@ -180,6 +187,32 @@ class CompanionCoreClient:
             files={"audio": (filename, audio_bytes, content_type)},
             timeout=httpx.Timeout(600.0, connect=10.0, pool=10.0),
         )
+        resp.raise_for_status()
+        return resp.json()
+
+    # Phase 47D: the read-only Brain view. Only these named parameters are ever sent; what the owner may see is decided in core.
+    async def get_brain_summary(self) -> dict[str, Any]:
+        resp = await self._client.get(BRAIN_SUMMARY, timeout=30.0)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def list_brain_nodes(self, *, types: str | None, q: str, limit: int, cursor: str | None) -> dict[str, Any]:
+        params: dict[str, Any] = {"q": q, "limit": limit}
+        if types:
+            params["types"] = types
+        if cursor:
+            params["cursor"] = cursor
+        resp = await self._client.get(BRAIN_NODES, params=params, timeout=30.0)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get_brain_node(self, source_type: str, source_id: str) -> dict[str, Any]:
+        resp = await self._client.get(BRAIN_NODE.format(source_type=quote(source_type, safe=""), source_id=quote(source_id, safe="")), timeout=10.0)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get_brain_edges(self, ids: str) -> dict[str, Any]:
+        resp = await self._client.get(BRAIN_EDGES, params={"ids": ids}, timeout=10.0)
         resp.raise_for_status()
         return resp.json()
 

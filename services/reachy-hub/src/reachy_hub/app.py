@@ -153,6 +153,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from reachy_hub import alarm_audio
 from reachy_hub.alarm_delivery import AlarmContext, AlarmDeliverer
 from reachy_hub.audit_log import AuditEntry, AuditLog
+from reachy_hub.brain import install_brain_routes
 from reachy_hub.chat_store import ChatStore, InMemoryChatStore, PostgresChatStore
 from reachy_hub.coding_agent_client import CodingAgentServiceClient
 from reachy_hub.companion_core_client import CompanionCoreClient
@@ -916,7 +917,7 @@ def create_app(
             except (ValueError, KeyError):
                 return JSONResponse(status_code=422, content={"detail": "Invalid request"})
         response = await call_next(request)
-        if work_path or path.startswith((CHATS, "/settings/accounts/", ROBOT_VOICE)):
+        if work_path or path.startswith((CHATS, "/settings/accounts/", ROBOT_VOICE, "/brain/")):
             response.headers["Cache-Control"] = "no-store"
             response.headers["Referrer-Policy"] = "no-referrer"
         if path == ACCOUNTS_CALLBACK:
@@ -971,6 +972,7 @@ def create_app(
         FilesystemEnrollmentStore(capture_dir, Keyring.from_file()) if capture_dir else InMemoryEnrollmentStore()
     )
     install_owner_recognition_routes(app, require_owner_session, app.state.enrollment_store)
+    install_brain_routes(app, require_owner_session, companion_core_client)  # Phase 47D: read-only, owner session only
 
     async def stop_voice_on_logout() -> None:
         await robot_voice_manager.stop_all("Owner logged out")

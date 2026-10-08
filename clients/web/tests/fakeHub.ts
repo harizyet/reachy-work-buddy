@@ -38,6 +38,7 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
     stations: seed.stations ?? [],
     search: seed.search ?? [],
     stopped: false,
+    brain: { nodes: [] as any[], hidden: new Set<string>() },
     audit: [] as any[],
     queued: [] as any[],
     coding: { projects: [] as any[], sessions: [] as any[], terminal: [] as any[], allowance: { source: '', windows: [] as any[] }, events: {} as Record<string, any[]>, usage: {} as Record<string, any[]>, starts: [] as any[] },
@@ -349,6 +350,30 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
       }
       data.credentials = data.credentials.filter((c: any) => c.provider !== m![1]);
       return jsonResponse({ deleted: true });
+    }
+    if (path.startsWith('/brain/')) {
+      const b = data.brain;
+      const visible = () => b.nodes.filter((n: any) => !b.hidden.has(n.id));
+      if (path === '/brain/summary') {
+        const by_type: Record<string, number> = { memory: 0, document: 0, meeting: 0, note: 0, task: 0, reminder: 0 };
+        for (const n of visible()) by_type[n.type] = (by_type[n.type] ?? 0) + 1;
+        return jsonResponse({ total: visible().length, by_type, edges: 0, truncated: false });
+      }
+      if (path === '/brain/nodes') {
+        const types = query.get('types')?.split(',');
+        const q = (query.get('q') ?? '').toLowerCase();
+        const limit = Number(query.get('limit') ?? 100);
+        const start = Number(query.get('cursor') ?? 0);
+        const rows = visible().filter((n: any) => (!types || types.includes(n.type)) && (!q || n.title.toLowerCase().includes(q)));
+        const page = rows.slice(start, start + limit);
+        return jsonResponse({ nodes: page, next: start + limit < rows.length ? String(start + limit) : null, truncated: false });
+      }
+      if (path === '/brain/edges') return jsonResponse({ edges: [], note: 'No structured links between these kinds of record exist yet, so none are drawn. Nothing is inferred.' });
+      const bn = path.match(/^\/brain\/nodes\/([^/]+)\/(.+)$/);
+      if (bn) {
+        const found = visible().find((n: any) => n.id === `${bn[1]}:${decodeURIComponent(bn[2]!)}`);
+        return found ? jsonResponse(found) : jsonResponse({ detail: 'Record not found' }, 404);
+      }
     }
     m = path.match(/^\/(audit|notifications)\/([^/]+)$/);
     if (m) return jsonResponse(m[1] === 'audit' ? data.audit : data.queued);

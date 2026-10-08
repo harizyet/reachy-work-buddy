@@ -28,7 +28,7 @@ const INSTRUMENT = () => {
   } as typeof HTMLCanvasElement.prototype.getContext;
 };
 
-async function openBrain(page: Page) {
+async function openBrain(page: Page, data: 'synthetic' | 'live' = 'synthetic') {
   await page.goto(URL_ROOT);
   const login = page.getByRole('heading', { name: 'Sign in to Reachy' });
   await expect(login.or(page.getByRole('navigation', { name: 'Main' }))).toBeVisible();
@@ -40,12 +40,36 @@ async function openBrain(page: Page) {
   await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
   await page.getByRole('link', { name: 'Brain' }).click();
   await expect(page.getByRole('heading', { name: 'Brain' })).toBeVisible();
+  if (data === 'synthetic') await page.getByRole('radio', { name: 'Synthetic demonstration' }).check();
+  await expect(page.getByText(/Showing \d+ of \d+ records/)).toBeVisible();
 }
+
+
+// How many of a downscaled copy of the canvas are brighter than the near-black background, read in the same frame the
+// scene is drawn so the buffer is still valid.
+const litPixels = (page: Page) =>
+  page.evaluate(
+    () =>
+      new Promise<number>((resolve) => {
+        requestAnimationFrame(() => {
+          const gl = document.querySelector<HTMLCanvasElement>('[data-testid=brain-canvas] canvas')!;
+          const copy = document.createElement('canvas');
+          copy.width = 160;
+          copy.height = 100;
+          const ctx = copy.getContext('2d')!;
+          ctx.drawImage(gl, 0, 0, 160, 100);
+          const px = ctx.getImageData(0, 0, 160, 100).data;
+          let n = 0;
+          for (let i = 0; i < px.length; i += 4) if (px[i]! + px[i + 1]! + px[i + 2]! > 60) n += 1;
+          resolve(n);
+        });
+      }),
+  );
 
 const draws = (page: Page) => page.evaluate(() => (window as unknown as { __draws: number }).__draws);
 
 test.describe('Brain view', () => {
-  test('renders real WebGL: a canvas, non-blank, lazy-loaded, labelled synthetic, no hub data requests', async ({ page }) => {
+  test('renders real WebGL: a canvas, non-blank, lazy-loaded, labelled synthetic', async ({ page }) => {
     await page.addInitScript(INSTRUMENT);
     const requests: string[] = [];
     page.on('request', (r) => requests.push(new URL(r.url()).pathname));
@@ -57,31 +81,13 @@ test.describe('Brain view', () => {
     expect(requests.some((p) => /BrainScene/.test(p))).toBe(false); // the 3D code is not loaded until asked for
     requests.length = 0;
     await page.getByRole('link', { name: 'Brain' }).click();
+    await page.getByRole('radio', { name: 'Synthetic demonstration' }).check();
     await expect(page.getByTestId('brain-canvas').locator('canvas')).toBeVisible();
     await expect(page.getByText(/Synthetic demonstration data\./)).toBeVisible();
     expect(requests.some((p) => /BrainScene/.test(p))).toBe(true);
-    // Nothing about the synthetic records was asked of the hub (the shell's own status polling is unrelated).
-    expect(requests.filter((p) => /\/(memories|documents|brain|planner\/notes|meetings)/.test(p))).toEqual([]);
 
     await expect.poll(() => draws(page), { timeout: 5000 }).toBeGreaterThan(20);
-    const lit = await page.evaluate(
-      () =>
-        new Promise<number>((resolve) => {
-          requestAnimationFrame(() => {
-            const gl = document.querySelector<HTMLCanvasElement>('[data-testid=brain-canvas] canvas')!;
-            const copy = document.createElement('canvas');
-            copy.width = 160;
-            copy.height = 100;
-            const ctx = copy.getContext('2d')!;
-            ctx.drawImage(gl, 0, 0, 160, 100);
-            const px = ctx.getImageData(0, 0, 160, 100).data;
-            let n = 0;
-            for (let i = 0; i < px.length; i += 4) if (px[i]! + px[i + 1]! + px[i + 2]! > 60) n += 1; // brighter than the near-black background
-            resolve(n);
-          });
-        }),
-    );
-    expect(lit).toBeGreaterThan(40);
+    await expect.poll(() => litPixels(page), { timeout: 8000 }).toBeGreaterThan(40);
   });
 
   test('the list is a full keyboard path: search, filter, select, reset', async ({ page }) => {
@@ -283,29 +289,73 @@ test.describe('Brain view', () => {
     await page.addInitScript(INSTRUMENT);
     await openBrain(page);
     await expect.poll(() => draws(page)).toBeGreaterThan(20);
-    const lit = await page.evaluate(
-      () =>
-        new Promise<number>((resolve) => {
-          requestAnimationFrame(() => {
-            const gl = document.querySelector<HTMLCanvasElement>('[data-testid=brain-canvas] canvas')!;
-            const copy = document.createElement('canvas');
-            copy.width = 160;
-            copy.height = 100;
-            const ctx = copy.getContext('2d')!;
-            ctx.drawImage(gl, 0, 0, 160, 100);
-            const px = ctx.getImageData(0, 0, 160, 100).data;
-            let n = 0;
-            for (let i = 0; i < px.length; i += 4) if (px[i]! + px[i + 1]! + px[i + 2]! > 60) n += 1;
-            resolve(n);
-          });
-        }),
-    );
-    expect(lit).toBeGreaterThan(40);
+    await expect.poll(() => litPixels(page), { timeout: 8000 }).toBeGreaterThan(40);
   });
 
   test('fits the screen without horizontal scrolling', async ({ page }) => {
     await openBrain(page);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
     await expect(page.getByLabel('Search records')).toBeVisible();
+  });
+});
+
+test.describe('Brain with the owner’s records (real hub, real core, in-memory stores)', () => {
+  test('shows what the owner may see, hides forgotten and sensitive records, and only ever reads', async ({ page }) => {
+    const requests: { method: string; path: string; query: string }[] = [];
+    page.on('request', (r) => {
+      const u = new URL(r.url());
+      if (u.pathname.includes('/brain')) requests.push({ method: r.method(), path: u.pathname, query: u.search });
+    });
+    const responses: { path: string; cache: string | undefined }[] = [];
+    page.on('response', (r) => {
+      const u = new URL(r.url());
+      if (u.pathname.includes('/brain')) responses.push({ path: u.pathname, cache: r.headers()['cache-control'] });
+    });
+    await openBrain(page, 'live');
+    await expect(page.getByText(/Your records\./)).toBeVisible();
+    await expect(page.getByText(/Synthetic demonstration data/)).toHaveCount(0);
+    const list = page.getByRole('region', { name: 'Records' });
+    await expect(list.getByRole('button', { name: /Falcon-7B is the default model/ })).toBeVisible();
+    await expect(list.getByRole('button', { name: /Send the summary/ })).toBeVisible();
+    await expect(list.getByRole('button', { name: /Weekly sync/ })).toBeVisible();
+    // Withheld by the server: sensitive, and forgotten.
+    await page.getByLabel('Search records').fill('medical');
+    await expect(page.getByText('No records match.')).toBeVisible();
+    await page.getByLabel('Search records').fill('forgotten fact');
+    await expect(page.getByText('No records match.')).toBeVisible();
+    await page.getByLabel('Search records').fill('');
+
+    await list.getByRole('button', { name: /Weekly sync/ }).click();
+    const details = page.getByRole('region', { name: 'Record details' });
+    await expect(details.getByRole('link', { name: 'Open in Meetings' })).toBeVisible();
+    await expect(details.getByText('Classification')).toBeVisible();
+    await expect(details.getByText(/No structured links between these kinds of record exist yet/)).toBeVisible();
+    await page.getByRole('button', { name: 'Refresh records' }).click();
+
+    // The browser asked for nothing but reads, and named no access level of its own.
+    expect(requests.length).toBeGreaterThan(2);
+    expect(requests.every((r) => r.method === 'GET')).toBe(true);
+    expect(requests.some((r) => /sensitiv|principal|ceiling|destination/i.test(r.query))).toBe(false);
+    expect(responses.every((r) => r.cache === 'no-store')).toBe(true);
+    await expect(page.getByTestId('brain-canvas').locator('canvas')).toBeVisible();
+  });
+
+  test('a record opened from the Brain page opens in its own screen', async ({ page }) => {
+    await openBrain(page, 'live');
+    await page.getByRole('region', { name: 'Records' }).getByRole('button', { name: /Weekly sync/ }).click();
+    await page.getByRole('region', { name: 'Record details' }).getByRole('link', { name: 'Open in Meetings' }).click();
+    await expect(page.getByText(/Status: Complete/)).toBeVisible();
+  });
+
+  test('the live view is usable without WebGL', async ({ page }) => {
+    await page.addInitScript(() => {
+      const original = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, type: string, ...rest: unknown[]) {
+        return /webgl/.test(type) ? null : (original as (...a: unknown[]) => RenderingContext | null).call(this, type, ...rest);
+      } as typeof HTMLCanvasElement.prototype.getContext;
+    });
+    await openBrain(page, 'live');
+    await expect(page.getByTestId('brain-fallback')).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Records' }).getByRole('button', { name: /Send the summary/ })).toBeVisible();
   });
 });

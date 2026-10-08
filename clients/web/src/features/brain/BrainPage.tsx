@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button';
 import { useBloom } from '../../app/displayPrefs';
 import { Check, selectClass } from '../settings/fields';
 import { ALL_TYPES, SOURCE_COLOR, SOURCE_LABEL, SOURCE_TYPES, applyFilters, type BrainEdge, type BrainNode, type BrainSource, type SourceType } from './model';
+import { createLiveSource, openHref } from './live';
 import { createSyntheticSource } from './synthetic';
 import { useBrainData } from './useBrainData';
 import { PARTICLES, defaultDetail, prefersReducedMotion, webglAvailable, type Detail } from './webgl';
@@ -15,7 +16,9 @@ const BrainScene = lazy(() => import('./BrainScene'));
 const LIST_LIMIT = 40;
 
 export default function BrainPage({ source: given }: { source?: BrainSource }) {
-  const source = useMemo(() => given ?? createSyntheticSource(), [given]);
+  // The owner's own records by default; the generated demonstration is one switch away.
+  const [mode, setMode] = useState<'live' | 'demo'>('live');
+  const source = useMemo(() => given ?? (mode === 'live' ? createLiveSource() : createSyntheticSource()), [given, mode]);
   const data = useBrainData(source);
   const [query, setQuery] = useState('');
   const [types, setTypes] = useState<ReadonlySet<SourceType>>(ALL_TYPES);
@@ -33,6 +36,26 @@ export default function BrainPage({ source: given }: { source?: BrainSource }) {
   const visible = useMemo(() => new Set(matches.map((n) => n.id)), [matches]);
   const byId = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
   const selected = selectedId ? (byId.get(selectedId) ?? null) : null;
+  // Choosing a record asks its store again: one forgotten or deleted since the list was read is dropped, not shown from memory.
+  const [gone, setGone] = useState(false);
+  useEffect(() => {
+    if (selectedId) setGone(false);
+    if (!selectedId || source.kind !== 'live') return;
+    let current = true;
+    source
+      .getNode(selectedId)
+      .then((node) => {
+        if (current && node === null) {
+          setGone(true);
+          setSelectedId(null);
+          void data.refetch();
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      current = false;
+    };
+  }, [selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
   // A selection that the filters now hide is dropped rather than left pointing at something off screen.
   useEffect(() => {
     if (selectedId && !visible.has(selectedId)) setSelectedId(null);
@@ -52,10 +75,32 @@ export default function BrainPage({ source: given }: { source?: BrainSource }) {
         <span className="block text-[0.7rem] font-medium tracking-widest text-[var(--muted)]">KNOWLEDGE</span>
         <h1 className="text-2xl font-semibold">Brain</h1>
       </div>
-      <p role="note" className="mb-3 rounded border border-[var(--warn)] bg-[var(--warn-bg)] p-2 text-sm text-[var(--warn)]">
-        <strong>{source.label}.</strong> {source.kind === 'synthetic' ? 'These records are generated for this demonstration and stand for none of Reachy’s real memories, documents, meetings, notes, tasks or reminders. Nothing here is read from your data.' : ''}
-      </p>
+      {!given && (
+        <fieldset className="mb-3 flex flex-wrap gap-4 text-sm">
+          <legend className="mb-1 font-medium">Data</legend>
+          <label className="flex items-center gap-2">
+            <input type="radio" name="brain-source" checked={mode === 'live'} onChange={() => { setSelectedId(null); setMode('live'); }} />
+            Your records (read-only)
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="radio" name="brain-source" checked={mode === 'demo'} onChange={() => { setSelectedId(null); setMode('demo'); }} />
+            Synthetic demonstration
+          </label>
+        </fieldset>
+      )}
+      {source.kind === 'synthetic' ? (
+        <p role="note" className="mb-3 rounded border border-[var(--warn)] bg-[var(--warn-bg)] p-2 text-sm text-[var(--warn)]">
+          <strong>{source.label}.</strong> These records are generated for this demonstration and stand for none of Reachy’s real memories, documents, meetings, notes, tasks or reminders. Nothing here is read from your data.
+        </p>
+      ) : (
+        <p role="note" className="mb-3 rounded border border-[var(--border)] p-2 text-sm text-[var(--muted)]">
+          <strong>{source.label}.</strong> Read from each record’s own store every time this page opens, for you only. Forgotten, expired, deleted and sensitive records are not shown or counted. Nothing here can be changed from this page.
+        </p>
+      )}
       {data.isPending && <p role="status" className="text-[var(--muted)]">Loading…</p>}
+      {data.data && data.data.nodes.length === 0 && source.kind === 'live' && (
+        <EmptyState>There are no records to show yet. Memories, documents, meetings, notes, tasks and reminders appear here as they are created.</EmptyState>
+      )}
       {data.error && <ErrorState message={data.error.message} onRetry={() => void data.refetch()} />}
       {data.data && (
         <div className="grid gap-4 lg:grid-cols-[1fr_22rem]">
@@ -63,7 +108,7 @@ export default function BrainPage({ source: given }: { source?: BrainSource }) {
             <div className="relative h-[26rem] overflow-hidden rounded-lg border border-[var(--border)] bg-[#05070d] sm:h-[32rem]" data-testid="brain-view">
               {webgl ? (
                 <Suspense fallback={<p role="status" className="p-4 text-sm text-[#9aa4b2]">Loading the 3D view…</p>}>
-                  <div role="img" aria-label={`3D view of ${matches.length} of ${nodes.length} synthetic records in six groups. The list beside it offers the same records for keyboard and screen reader use.`} className="h-full w-full" data-testid="brain-canvas">
+                  <div role="img" aria-label={`3D view of ${matches.length} of ${nodes.length} ${source.kind === 'synthetic' ? 'synthetic ' : ''}records in six groups. The list beside it offers the same records for keyboard and screen reader use.`} className="h-full w-full" data-testid="brain-canvas">
                     <BrainScene
                       nodes={nodes}
                       edges={edges}
@@ -110,6 +155,7 @@ export default function BrainPage({ source: given }: { source?: BrainSource }) {
             </p>
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="secondary" onClick={() => setResetToken((n) => n + 1)}>Reset view</Button>
+              {source.kind === 'live' && <Button variant="secondary" onClick={() => void data.refetch()}>Refresh records</Button>}
               <Check label="Show all links" checked={showAllLinks} onChange={setShowAllLinks} />
             </div>
             {webgl && (
@@ -122,8 +168,10 @@ export default function BrainPage({ source: given }: { source?: BrainSource }) {
                 </select>
               </label>
             )}
+            {gone && <p role="status" className="text-sm text-[var(--warn)]">That record is no longer available; it may have been forgotten or deleted. The list has been refreshed.</p>}
             <RecordList matches={matches} selectedId={selectedId} onSelect={setSelectedId} />
             <DetailsPanel
+              live={source.kind === 'live'}
               node={selected}
               edges={edges}
               byId={byId}
@@ -172,7 +220,7 @@ function RecordList({ matches, selectedId, onSelect }: { matches: BrainNode[]; s
   );
 }
 
-function DetailsPanel({ node, edges, byId, onSelect }: { node: BrainNode | null; edges: BrainEdge[]; byId: Map<string, BrainNode>; onSelect(id: string): void }) {
+function DetailsPanel({ live, node, edges, byId, onSelect }: { live: boolean; node: BrainNode | null; edges: BrainEdge[]; byId: Map<string, BrainNode>; onSelect(id: string): void }) {
   if (!node) {
     return (
       <section aria-label="Record details" className="rounded border border-[var(--border)] p-2 text-sm text-[var(--muted)]">
@@ -181,6 +229,7 @@ function DetailsPanel({ node, edges, byId, onSelect }: { node: BrainNode | null;
     );
   }
   const links = edges.filter((e) => e.from === node.id || e.to === node.id);
+  const open = live ? openHref(node) : null;
   return (
     <section aria-label="Record details" className="rounded border border-[var(--border)] p-2 text-sm">
       <h3 className="break-words font-semibold">{node.title}</h3>
@@ -188,15 +237,20 @@ function DetailsPanel({ node, edges, byId, onSelect }: { node: BrainNode | null;
         <dt className="text-[var(--muted)]">Kind</dt>
         <dd>{SOURCE_LABEL[node.type]}</dd>
         <dt className="text-[var(--muted)]">Observed</dt>
-        <dd>{new Date(node.observedAt).toLocaleDateString()}</dd>
+        <dd>{node.observedAt ? new Date(node.observedAt).toLocaleDateString() : 'Unknown'}</dd>
         <dt className="text-[var(--muted)]">Source</dt>
         <dd className="break-all">{`${node.sourceRef.kind}:${node.sourceRef.id}`}</dd>
         <dt className="text-[var(--muted)]">Classification</dt>
         <dd>{node.sensitivity}</dd>
       </dl>
       <p className="mt-2 break-words">{node.excerpt}</p>
+      {open && <a className="mt-1 inline-block underline" href={open.href}>{open.label}</a>}
       <h4 className="mt-2 font-medium">Connected records</h4>
-      {links.length === 0 && <p className="text-[var(--muted)]">No explicit links.</p>}
+      {links.length === 0 && (
+        <p className="text-[var(--muted)]">
+          {live ? 'No structured links between these kinds of record exist yet, so none are drawn. Nothing is inferred.' : 'No explicit links.'}
+        </p>
+      )}
       <ul>
         {links.map((e) => {
           const otherId = e.from === node.id ? e.to : e.from;

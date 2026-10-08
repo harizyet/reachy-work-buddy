@@ -22,7 +22,7 @@ import BrainPage from '../src/features/brain/BrainPage';
 import { createSyntheticSource } from '../src/features/brain/synthetic';
 
 const setup = () => userEvent.setup();
-const mount = (props: Parameters<typeof BrainPage>[0] = {}) => {
+const mount = (props: Parameters<typeof BrainPage>[0] = { source: createSyntheticSource() }) => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(<QueryClientProvider client={client}><BrainPage {...props} /></QueryClientProvider>);
 };
@@ -177,6 +177,7 @@ describe('Brain route', () => {
     createFakeHub({ status: SAMPLE_STATUS });
     renderApp('#/brain');
     expect(await screen.findByRole('heading', { name: 'Brain' })).toBeInTheDocument();
+    await userEvent.setup().click(await screen.findByRole('radio', { name: 'Synthetic demonstration' }));
     expect(await screen.findByText(/Showing 600 of 600/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Brain' })).toHaveAttribute('aria-current', 'page');
   });

@@ -46,6 +46,7 @@ from reachy_hub.session_store import InMemorySessionStore
 from reachy_hub.user_store import InMemoryUserStore
 
 from shared.models.receipt import ActionReceipt
+from shared.models.response import Privacy
 
 CSRF = {"X-Reachy-CSRF": "1"}
 ROOT = Path(__file__).resolve().parents[3]
@@ -82,6 +83,7 @@ OPERATIONS = [
     ("get", "/robot-voice"), ("post", "/robot-voice/start"), ("post", "/robot-voice/renew"), ("post", "/robot-voice/stop"),
     ("post", "/robot-voice/wake"), ("get", "/robots"),
     ("get", "/robots/{robot_id}/settings/motion"), ("put", "/robots/{robot_id}/settings/motion"),
+    ("get", "/brain/summary"), ("get", "/brain/nodes"), ("get", "/brain/nodes/{source_type}/{source_id}"), ("get", "/brain/edges"),
 ]
 
 
@@ -97,12 +99,13 @@ def make_client(**hub_options) -> TestClient:
     embodiment = create_embodiment_app(SimulatedRobotBackend(), run_presence_loop=False)
     users = InMemoryUserStore()
     asyncio.run(users.bootstrap("owner", "correct-password"))
+    core_client = hub_options.pop("companion_core_client", None) or CompanionCoreClient("http://core", transport=httpx.ASGITransport(app=core))
     client = TestClient(create_app(
         user_store=users, registry=InMemoryRobotRegistry(), session_store=InMemorySessionStore(),
         audit_log=InMemoryAuditLog(), notification_queue=InMemoryNotificationQueue(),
         run_heartbeat_task=False, run_telegram_poll_task=False,
         session_secret_key="test-session-secret", remote_ui_token="test-token", **hub_options,
-        companion_core_client=CompanionCoreClient("http://core", transport=httpx.ASGITransport(app=core)),
+        companion_core_client=core_client,
         client_factory=lambda url: EmbodimentClient(url, transport=httpx.ASGITransport(app=embodiment)),
     ))
     client.core = core  # tests seed records the hub cannot create (action receipts) straight into core's store
@@ -118,6 +121,7 @@ def logged_in_client(**hub_options) -> TestClient:
     client.put("/settings/llm", json={"local": {"base_url": "http://ovms/v1", "model": "qwen"}}, headers=CSRF)
     seed_planner(client)
     seed_meeting(client)
+    client.brain_ids = seed_brain(client)
     return client
 
 
@@ -154,6 +158,24 @@ def _union(left, right):
     if isinstance(left, str) and isinstance(right, str):
         return "|".join(sorted(set(left.split("|")) | set(right.split("|"))))
     return f"{left}|{right}"
+
+
+def seed_brain(client: TestClient) -> dict[str, str]:
+    """One record of each kind the owner may see, plus ones that must stay out of the Brain view."""
+
+    state = client.core.state
+    ids: dict[str, str] = {}
+
+    async def go():
+        ids["memory"] = (await state.memory_store.add_memory(content="Falcon-7B is the default model", source="chat")).id
+        ids["sensitive_memory"] = (await state.memory_store.add_memory(content="medical detail", source="chat", sensitivity=Privacy.SENSITIVE)).id
+        forgotten = await state.memory_store.add_memory(content="a forgotten fact", source="chat")
+        await state.memory_store.forget(forgotten.id)
+        ids["forgotten"] = forgotten.id
+        ids["task"] = (await state.task_store.add_task("Send the summary")).id
+
+    asyncio.run(go())
+    return ids
 
 
 def seed_meeting(client: TestClient, title: str = "Weekly sync") -> str:
@@ -208,6 +230,10 @@ def snapshot(client: TestClient) -> dict:
         "voice_overview": client.get("/robot-voice").json(),
         "robots": client.get("/robots").json(),
         "motion": client.get("/robots/desk/settings/motion").json(),
+        "brain_summary": client.get("/brain/summary").json(),
+        "brain_nodes": client.get("/brain/nodes").json(),
+        "brain_node": client.get(f"/brain/nodes/memory/{client.brain_ids['memory']}").json(),
+        "brain_edges": client.get("/brain/edges", params={"ids": "memory:1"}).json(),
         "meetings": client.get("/meetings").json(),
         "meeting": client.get(f"/meetings/{meeting_id}").json(),
     }
@@ -227,7 +253,7 @@ def test_sample_responses_still_match_the_hub():
         for robot in sample["status"]["robots"]:
             robot.pop("data", None)  # embodiment state is the robot's own contract, typed loosely on purpose
     assert shape(live["status"]) == shape(saved["status"])
-    for name in ("tasks", "reminders", "notes", "receipts", "alarms", "stations", "chats", "chat", "message", "session", "meetings", "meeting", "llm_settings", "persona", "websearch_settings", "websearch_log", "voice_overview", "robots", "motion"):
+    for name in ("tasks", "reminders", "notes", "receipts", "alarms", "stations", "chats", "chat", "message", "session", "meetings", "meeting", "llm_settings", "persona", "websearch_settings", "websearch_log", "voice_overview", "robots", "motion", "brain_summary", "brain_nodes", "brain_node", "brain_edges"):
         assert live[name] and saved[name], name  # an empty list would pin no item shape
         assert shape(live[name]) == shape(saved[name]), name
 
@@ -562,6 +588,60 @@ def test_robot_voice_and_motion_behaviour_without_a_robot():
     assert client.put("/robots/desk/settings/motion", json={"conversation_motion": "yes"}, headers=CSRF).status_code == 422
     assert client.get("/robots/nope/settings/motion").status_code == 404
     client.put("/robots/desk/settings/motion", json={"conversation_motion": False, "speech_wobble": False}, headers=CSRF)
+
+
+def test_brain_is_owner_session_only_read_only_and_shows_only_what_core_allows():
+    anonymous = make_client()
+    for path in ("/brain/summary", "/brain/nodes", "/brain/nodes/memory/x", "/brain/edges"):
+        assert anonymous.get(path).status_code == 401, path
+    # A bearer token (a robot-control credential) does not open a full view of personal records.
+    assert anonymous.get("/brain/nodes", headers={"Authorization": "Bearer test-token"}).status_code == 401
+
+    client = logged_in_client(accounts_service_token="svc")
+    ids = client.brain_ids
+    nodes = client.get("/brain/nodes", params={"limit": 200})
+    assert nodes.status_code == 200 and nodes.headers["cache-control"] == "no-store"
+    shown = {n["id"] for n in nodes.json()["nodes"]}
+    assert f"memory:{ids['memory']}" in shown and f"task:{ids['task']}" in shown
+    for hidden in (ids["sensitive_memory"], ids["forgotten"]):
+        assert f"memory:{hidden}" not in shown  # over the ceiling, forgotten
+    assert client.get("/brain/summary").json()["by_type"]["memory"] == 1  # counts follow what is visible
+
+    # By id, a withheld record answers exactly like one that never existed.
+    missing = client.get("/brain/nodes/memory/no-such-id")
+    for hidden in (ids["sensitive_memory"], ids["forgotten"]):
+        withheld = client.get(f"/brain/nodes/memory/{hidden}")
+        assert (withheld.status_code, withheld.json()) == (missing.status_code, missing.json()) == (404, {"detail": "Record not found"})
+    assert client.get(f"/brain/nodes/memory/{ids['memory']}").json()["title"].startswith("Falcon-7B")
+
+    # Nothing in the request widens what the owner may see.
+    widened = client.get("/brain/nodes", params={"sensitivity": "sensitive", "allow_sensitive": "true", "principal": "x", "limit": 200})
+    assert f"memory:{ids['sensitive_memory']}" not in {n["id"] for n in widened.json()["nodes"]}
+
+    # Inputs are validated at the hub before core sees them.
+    assert client.get("/brain/nodes", params={"limit": 0}).status_code == 422
+    assert client.get("/brain/nodes", params={"limit": 201}).status_code == 422
+    assert client.get("/brain/nodes", params={"types": "memory,spreadsheet"}).status_code == 422
+    assert client.get("/brain/nodes", params={"cursor": "bad cursor!"}).status_code == 422
+    assert client.get("/brain/nodes", params={"q": "x" * 201}).status_code == 422
+    assert client.get("/brain/nodes/mem%2Fory/x").status_code in (404, 422)
+    assert client.get("/brain/nodes", params={"cursor": "e30"}).status_code == 422  # a well-formed but meaningless cursor
+
+    # Read-only.
+    for method in (client.post, client.put, client.delete, client.patch):
+        assert method("/brain/nodes", headers=CSRF).status_code in (404, 405)
+    assert client.get("/brain/edges", params={"ids": "memory:1"}).json()["edges"] == []
+
+
+def test_brain_reports_when_core_is_unavailable_without_leaking_details():
+    def down(request):
+        raise httpx.ConnectError("private connection details", request=request)
+
+    client = make_client(companion_core_client=CompanionCoreClient("http://core", transport=httpx.MockTransport(down)))
+    client.post("/auth/login", json={"username": "owner", "password": "correct-password"}, headers=CSRF)
+    response = client.get("/brain/nodes")
+    assert response.status_code == 502 and response.json() == {"detail": "Knowledge view unavailable"}
+    assert "private connection details" not in response.text
 
 
 def test_owner_bound_chat_is_limited_to_the_owner_account():
