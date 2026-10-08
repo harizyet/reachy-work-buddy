@@ -124,16 +124,13 @@ class PostgresLLMUsageStore:
 
     async def list_recent(self, limit: int) -> list[LLMUsageEntry]:
         async with self._pool.connection() as conn:
-            conn.row_factory = dict_row
-            cur = await conn.execute(
-                "SELECT * FROM llm_usage_log ORDER BY at DESC LIMIT %s", (limit,)
-            )
+            # A cursor-level row factory: setting it on the connection would leak into every other store that borrows it from the shared pool.
+            cur = conn.cursor(row_factory=dict_row)
+            await cur.execute("SELECT * FROM llm_usage_log ORDER BY at DESC LIMIT %s", (limit,))
             return self._entries(await cur.fetchall())
 
     async def summary(self, since: datetime) -> dict:
         async with self._pool.connection() as conn:
-            conn.row_factory = dict_row
-            cur = await conn.execute(
-                "SELECT * FROM llm_usage_log WHERE at >= %s", (since,)
-            )
+            cur = conn.cursor(row_factory=dict_row)
+            await cur.execute("SELECT * FROM llm_usage_log WHERE at >= %s", (since,))
             return summarize(self._entries(await cur.fetchall()))

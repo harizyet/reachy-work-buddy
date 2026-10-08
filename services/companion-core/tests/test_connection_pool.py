@@ -184,3 +184,29 @@ def test_vector_stores_require_a_vector_manager_and_an_unmigrated_database_fails
 
     asyncio.run(wrong_manager())
     assert backends(root, dsn) == 0
+
+
+@needs_db
+def test_no_store_leaves_state_on_a_connection_it_returns_to_the_shared_pool(database) -> None:
+    """The LLM usage store once set conn.row_factory = dict_row and never reset it, so every later borrower got dict rows. With one shared
+    pool that is a cross-store bug; with a transaction-pooling intermediary it would be worse. Exercise the store, then check a neighbour."""
+    from datetime import UTC, datetime
+
+    from companion_core.llm.postgres_store import PostgresLLMUsageStore
+
+    dsn, _ = database
+    migrate(dsn)
+
+    async def go():
+        manager = await DatabaseManager(dsn, vector=True, max_size=1).start()  # one connection: every borrower gets the same one
+        usage = await PostgresLLMUsageStore.connect(manager)
+        tasks = await PostgresTaskStore.connect(manager)
+        await usage.list_recent(5)
+        await usage.summary(datetime(2020, 1, 1, tzinfo=UTC))
+        await tasks.add_task(text="after the usage store")
+        assert [t.text for t in await tasks.list_tasks(None)] == ["after the usage store"]
+        async with manager.pool.connection() as conn:
+            assert conn.row_factory.__name__ == "tuple_row"
+        await manager.stop()
+
+    asyncio.run(go())
