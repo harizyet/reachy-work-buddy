@@ -147,7 +147,10 @@ These are dated evidence, not startup instructions or current health checks.
   storage, rollback, the real write paths and the retention review. Nothing deployed.
 
 - [Phase 44B 2026-10-08](verification/phase-44b-2026-10-08.md): the knowledge index, transactional outbox, worker, reconciliation and retrieval-time
-  revalidation on disposable Postgres; mutation checks; the embedding load measurement. Local only; migration 027 not applied.
+  revalidation on disposable Postgres; mutation checks; the embedding load measurement. Local only.
+
+- [Phase 44B production deployment 2026-10-08](verification/phase-44b-deployment-2026-10-08.md): migration 027 on the homelab with indexing off,
+  backup, rollback readiness and smoke tests. [Contention test plan](verification/phase-44b-contention-test-plan-2026-10-08.md): prepared, not run.
 
 - [Phase 44A production deployment 2026-10-08](verification/phase-44a-deployment-2026-10-08.md): migration 026 on the homelab, backup
   and restore check, rollback assets, thirteen smoke checks, downtime; the robot gate is pending.
