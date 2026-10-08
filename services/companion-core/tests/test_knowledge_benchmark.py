@@ -4,6 +4,7 @@ measured without being changed. The harness is the measuring instrument; nothing
 
 import asyncio
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -420,7 +421,7 @@ def test_b0_oracle_searches_every_source_and_ranks_by_overlap() -> None:
 
 def test_measuring_the_baselines_does_not_change_them() -> None:
     """A baseline run must leave every store as it found it, except the read stamp MemoryStore.recall writes by design."""
-    for name in ADAPTERS:
+    for name in ("b0", "b0-oracle"):  # the baselines only: the PostgreSQL configurations may not touch the holdout without approval
         report = run(evaluate(ADAPTERS[name](), "holdout", probes=False))
         assert report["security_gates"]["retrieval_modified_a_store"]["pass"] is True, name
         assert report["security_gates"]["unknown_hits"]["pass"] is True, name
@@ -611,3 +612,34 @@ def test_every_recorded_report_is_for_the_current_fixtures_and_the_log_has_no_re
         track_prefix = "44A-production-embedding" if entry.get("track") == "production-embedding" else "44A-baseline"
         report = json.loads((BENCH / "results" / f"{track_prefix}-{entry['adapter']}-holdout.json").read_text())
         assert report["results_digest"] == entry["results_digest"]
+
+
+# ---- the PostgreSQL retrieval configurations (Phase 44D) --------------------------------------------------------
+
+def test_the_postgresql_configurations_may_not_score_the_frozen_holdout_without_approval(monkeypatch) -> None:
+    monkeypatch.delenv("KBENCH_HOLDOUT_APPROVAL", raising=False)
+    for name in ("b1a", "b1b", "b1c", "b1a-nofilter", "b1b-nofilter"):
+        adapter = ADAPTERS[name]()
+        with pytest.raises(FixtureError, match="frozen holdout"):
+            run(evaluate(adapter, "holdout", probes=False))
+    assert not adapter.env  # refused before anything was built
+
+
+@pytest.mark.skipif(not os.environ.get("DATABASE_MIGRATION_TEST_URL"), reason="requires explicitly disposable Postgres with pgvector")
+def test_the_postgresql_configurations_on_the_dev_split_expose_nothing_unauthorized_and_change_nothing() -> None:
+    import psycopg
+
+    reports = {name: run(evaluate(ADAPTERS[name](), "dev", probes=True)) for name in ("b1a", "b1a-nofilter", "b1b")}
+    for name, report in reports.items():
+        gates = report["security_gates"]
+        assert report["summary"]["leakage"]["leaked_hits"] == 0, name  # nothing unauthorized reached the caller
+        assert all(gates[g]["pass"] for g in ("unauthorized_leakage", "injection_driven_actions", "retrieval_modified_a_store", "unknown_hits")), name
+        assert report["system"]["queries"] == 25 and report["summary"]["leakage_candidates"]["reported"]
+        assert report["summary"]["recall@5"] > 0.7, name  # a regression guard on a number measured at 0.79 to 0.86
+    # with the access pre-filters off the search proposes unauthorized rows, and revalidation alone keeps them out
+    proposed = reports["b1a-nofilter"]["summary"]["leakage_candidates"]
+    assert proposed["violating_candidates"] > 0 and proposed["rejected_before_exposure"] == proposed["violating_candidates"]
+    assert reports["b1a"]["summary"]["leakage_candidates"]["violating_candidates"] == 0
+    assert reports["b1a-nofilter"]["system"]["revalidation_drops_by_reason"].get("over_ceiling", 0) > 0
+    with psycopg.connect(os.environ["DATABASE_MIGRATION_TEST_URL"]) as conn:
+        assert conn.execute("SELECT count(*) FROM pg_database WHERE datname LIKE 'kbench_%'").fetchone()[0] == 0  # each run dropped its database

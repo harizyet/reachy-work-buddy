@@ -80,6 +80,21 @@ control.
 - `b0-oracle`: a ceiling for today's mechanisms, not shipped behaviour. The same lookups once per content word, every source, every
   meeting treated as attached, ranked by Phase 43's word-overlap measure.
 
+## The PostgreSQL configurations (44D)
+
+`b1a` (full-text), `b1b` (full-text + pgvector, reciprocal rank fusion), `b1c` (b1b + cross-encoder rerank of the authorised survivors)
+and the `-nofilter` variants (access pre-filter off, so revalidation alone is what keeps unauthorised rows out). They build the corpus into
+a fresh database on the server in `KBENCH_DATABASE_URL` (or `DATABASE_MIGRATION_TEST_URL`; disposable, with pgvector), index it with the
+real worker, retrieve, revalidate under the case's access profile and score. The report adds `system` (stage latencies, Python CPU,
+peak memory, query-embedding time, revalidation drops by reason, index build time) and reports unauthorised *candidates* separately from
+*exposed* hits. **They refuse the frozen holdout** until `KBENCH_HOLDOUT_APPROVAL` names an approved decision point. `b1_sensitivity.py`
+checks the hybrid against its two free parameters on the development split only.
+
+```bash
+DATABASE_MIGRATION_TEST_URL=postgresql://... python run.py --adapter b1a --split dev
+DATABASE_MIGRATION_TEST_URL=postgresql://... python run.py --adapter b1b --split dev --embedder minilm
+```
+
 ## Tracks
 
 - `synthetic-deterministic` (default, `--embedder hashing`): document scores use a deterministic bag-of-words embedding, so runs are

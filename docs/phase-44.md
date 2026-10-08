@@ -412,6 +412,19 @@ Bugs the tests found while building it: the worker loop swallowed cancellation a
 
 Not built in 44B, by design: search or candidate generation (44D), the context builder (44E), entities, any retrieval flag or route, a UI. Indexing the homelab's real records has not been run.
 
+## 11c. 44D: retrieval configurations (development, 2026-10-08)
+
+Status: **built and benchmarked on the development split; local; nothing wired or deployed; the frozen holdout not scored.** Evidence: [Phase 44D development comparison](verification/phase-44d-dev-2026-10-08.md).
+
+| Part | Where |
+|---|---|
+| Candidate search: PostgreSQL full-text (OR of stemmed words, `ts_rank_cd`) and pgvector cosine (HNSW with iterative scan), with the caller's access applied as a pre-filter from the index labels (never relied on) and an in-memory test double | `knowledge/search.py` |
+| Retriever: B1a lexical, B1b lexical + vector fused by reciprocal rank (k = 60), B1c cross-encoder reranking of the **authorised** survivors; every configuration revalidates against the stores under the trusted `AccessContext`; pinned sources (an attached meeting) as an extra candidate list; query cleaning (NUL, length); the 44A `ContextRetriever` call with a token cap; a trace of candidates and per-stage timings | `knowledge/retrieval.py` |
+| Contract: `SourceFilters.pinned_sources` (additive) | `semantic/model.py` |
+| Benchmark adapters for the five PostgreSQL variants on a fresh database per run, with an automatic holdout guard (`KBENCH_HOLDOUT_APPROVAL`), exposure/candidate/drop accounting, CPU, memory and stage timings | `benchmarks/knowledge_retrieval/kbench/b1.py`, `pg_env.py`, `b1_sensitivity.py` |
+
+Result in one line: B1a (lexical) reaches R@5 0.86 and MRR 0.66 at 8 ms median; B1b (hybrid) R@5 0.79, MRR 0.80 at 28 ms with several times the CPU and memory; B1c is not justified; no variant exposed anything unauthorised. Gate status for 44D: authorization held in every run, the holdout is pending an approved candidate and decision point, answer quality is not evaluated, and production activation is not part of this stage.
+
 ## 12. Verification of this page
 
 Documentation checks: facts read from the repository on 2026-10-08 (stores, models, `baseline.sql`, migrations 001 to 026, `shared/database.py`, the meeting store's `updated_at` writes, the `/conversation` meeting-context branch, the Phase 43 helpers the baselines call, ADRs 0001, 0011, 0030 and 0032) and the Ossie spec and schema at the pinned commit; relative links and heading anchors were checked by script. Automated results and the baseline-versus-regression evidence are in the [verification record](verification/phase-44a-2026-10-08.md). All of it is fixture and disposable-Postgres evidence: nothing was run against the homelab database, the robot or a model.

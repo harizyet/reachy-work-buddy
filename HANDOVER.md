@@ -42,6 +42,10 @@ The unified index, transactional outbox (filled by database triggers), indexing 
 
 **Shared checkout:** another session is working in this tree (Android voice mode, hub `/speech/stream`) and its uncommitted edits sit beside mine; it once committed and pushed my uncommitted 44B work in one commit. Stage files explicitly (never `git add -A`) and commit promptly.
 
+### Phase 44D (local development authorised 2026-10-08; benchmarked on the development split only)
+
+Three retrieval configurations over the 44B index, each ending in retrieval-time revalidation under the trusted `AccessContext`: B1a lexical (PostgreSQL full-text), B1b lexical + pgvector fused by reciprocal rank, B1c with a cross-encoder rerank of the authorised survivors. Code in `companion_core/knowledge/search.py` and `retrieval.py`, benchmark adapters in `benchmarks/knowledge_retrieval/kbench/b1.py`; comparison in [the 44D record](docs/verification/phase-44d-dev-2026-10-08.md). On the dev split B1a reaches R@5 0.86 (MRR 0.66, 8 ms median), B1b R@5 0.79 (MRR 0.80, 28 ms, several times the CPU and memory), B1c is not justified; **no variant exposed anything unauthorised** (with the pre-filter off, revalidation alone dropped every proposed row). Nothing is wired into a route, the conversation or a flag. **The frozen holdout has not been scored for any B1 variant and the harness refuses to until a candidate and decision point are approved** (`KBENCH_HOLDOUT_APPROVAL`). Answer quality is not evaluated. Not started: entities, extraction, production activation, the context builder (44E).
+
 ### Open, unverified or worth watching
 
 - **Alarm delivery gap (technical debt, found 2026-10-08, deliberately not fixed in 44A).** `claim_due_alarms` marks an alarm fired before the hub delivers it, and there is no staleness cutoff. An alarm claimed but not yet delivered when the hub stops is lost, and after a long outage old alarms ring at restart. Deployments avoid it by timing (nothing due within 45 minutes, core stopped before hub); a real fix is a separate change to the delivery semantics (claim with a lease, then confirm; skip or label alarms that are hours late).

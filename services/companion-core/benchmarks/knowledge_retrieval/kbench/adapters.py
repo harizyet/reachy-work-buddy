@@ -131,4 +131,19 @@ class B0Oracle(_Base):
         return [Hit(h.key, h.text, float(overlap)) for overlap, _, h in ranked]
 
 
-ADAPTERS: dict[str, type] = {B0Shipped.name: B0Shipped, B0Oracle.name: B0Oracle}
+ADAPTERS: dict[str, Any] = {B0Shipped.name: B0Shipped, B0Oracle.name: B0Oracle}
+
+
+def _b1(name: str):
+    def factory():
+        from kbench.b1 import (
+            B1Adapter,  # imported on use: it needs PostgreSQL and the knowledge package
+        )
+
+        return B1Adapter(name)
+
+    return factory
+
+
+for _name in ("b1a", "b1b", "b1c", "b1a-nofilter", "b1b-nofilter"):
+    ADAPTERS[_name] = _b1(_name)

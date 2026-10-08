@@ -137,6 +137,9 @@ over the original decision where they explicitly change it.
 
 These are dated evidence, not startup instructions or current health checks.
 
+- [Phase 44D development comparison 2026-10-08](verification/phase-44d-dev-2026-10-08.md): lexical, hybrid and reranked retrieval against the baselines on the
+  development split, with authorization, latency, CPU and memory. Holdout not scored; nothing wired.
+
 - [Phase 44B rehearsal 2026-10-08](verification/phase-44b-rehearsal-2026-10-08.md): migration 027 on a restored production copy, trigger overhead,
   storage, rollback, the real write paths and the retention review. Nothing deployed.
 

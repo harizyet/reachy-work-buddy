@@ -160,12 +160,20 @@ async def evaluate(adapter: RetrievalAdapter, split: str, *, embedder: str = "ha
     problems = validate_fixtures()
     if problems:
         raise FixtureError("fixtures are inconsistent:\n  " + "\n  ".join(problems))
+    if split == "holdout" and getattr(adapter, "holdout_requires_approval", False) and not os.environ.get("KBENCH_HOLDOUT_APPROVAL"):
+        raise FixtureError(
+            f"{adapter.name} may not be scored on the frozen holdout until a candidate and decision point are approved; "
+            "set KBENCH_HOLDOUT_APPROVAL to the approved decision point's name once they are"
+        )
     corpus = load_corpus()
     texts, meta = source_texts(corpus), source_meta(corpus)
     cases = load_cases(split)
     built = await build_corpus(hashing_embed if embedder == "hashing" else _production_embed())
+    if hasattr(adapter, "configure"):
+        adapter.configure(embedder)
     await adapter.load(built)
     base_state = await fingerprint(built)
+    own_state = await adapter.state_fingerprint() if hasattr(adapter, "state_fingerprint") else None
 
     rows = []
     for case in cases:
@@ -177,6 +185,7 @@ async def evaluate(adapter: RetrievalAdapter, split: str, *, embedder: str = "ha
         keys = [h.key for h in hits]
         unknown = [k for k in dict.fromkeys(keys) if k not in texts]
         state_after = await fingerprint(built)
+        own_after = await adapter.state_fingerprint() if own_state is not None else None
         case_leaks = leaks(keys, meta, profile, case.get("forbidden_refs", []))
         canaries = case.get("injection_canaries", [])
         rows.append({
@@ -184,14 +193,17 @@ async def evaluate(adapter: RetrievalAdapter, split: str, *, embedder: str = "ha
             "hits": [{"key": h.key, "score": h.score} for h in hits],
             "metrics": _score_case(case, keys, texts, [h.text for h in hits]),
             "leaks": case_leaks, "canaries": canaries, "canaries_returned": exposed_canaries([h.text for h in hits], canaries),
-            "unknown_hits": unknown, "store_modified": state_after != base_state, "latency_ms": round(latency_ms, 3),
+            "unknown_hits": unknown, "store_modified": state_after != base_state or own_after != own_state, "latency_ms": round(latency_ms, 3),
         })
         if candidates is not None:
             candidate_keys = [h.key for h in candidates]
             rows[-1]["candidates"] = list(dict.fromkeys(candidate_keys))
             rows[-1]["candidate_leaks"] = leaks(candidate_keys, meta, profile, case.get("forbidden_refs", []))
-        base_state = state_after
+        base_state, own_state = state_after, own_after
 
+    telemetry = adapter.telemetry() if hasattr(adapter, "telemetry") else None
+    if hasattr(adapter, "close"):
+        await adapter.close()
     by_category = {c: _aggregate([r for r in rows if r["category"] == c]) for c in CATEGORIES if any(r["category"] == c for r in rows)}
     overall = _aggregate(rows)
     stamped = await memory_access_stamps(built)
@@ -243,6 +255,7 @@ async def evaluate(adapter: RetrievalAdapter, split: str, *, embedder: str = "ha
         "digest_covers": "hits, ranks, scores, leaks and probe outcomes; not timings or the environment",
         "summary": _round(overall), "by_category": _round(by_category), "security_gates": gates,
         "action_boundary_probes": probe_results,
+        **({"system": telemetry} if telemetry else {}),
         "read_side_effects": {
             "memories_stamped_last_accessed": stamped,
             "note": "MemoryStore.recall writes last_accessed on every read; the store fingerprint excludes it. A retrieval path that "

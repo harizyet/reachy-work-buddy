@@ -89,6 +89,9 @@ class SourceFilters(BaseModel):
 
     source_types: frozenset[SourceType] | None = None
     kinds: frozenset[ItemKind] | None = None
+    # Sources the owner has pointed at (an attached meeting, Phase 43): their best matches are always among the candidates, in
+    # addition to whatever the whole index offers. It widens nothing: access, scope and revalidation apply to them like any other.
+    pinned_sources: frozenset[tuple[SourceType, str]] | None = None
 
 
 class AccessContext(BaseModel):

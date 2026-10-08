@@ -1,0 +1,13 @@
+{"k": 10, "candidates": 20, "recall@3": 0.761905, "recall@5": 0.785714, "recall@10": 0.928571, "mrr": 0.797619, "full_recall@5": 14, "exposed_leaks": 0}
+{"k": 10, "candidates": 40, "recall@3": 0.761905, "recall@5": 0.785714, "recall@10": 0.928571, "mrr": 0.797619, "full_recall@5": 14, "exposed_leaks": 0}
+{"k": 10, "candidates": 100, "recall@3": 0.785714, "recall@5": 0.785714, "recall@10": 0.928571, "mrr": 0.81746, "full_recall@5": 14, "exposed_leaks": 0}
+{"k": 30, "candidates": 20, "recall@3": 0.785714, "recall@5": 0.785714, "recall@10": 0.928571, "mrr": 0.800454, "full_recall@5": 14, "exposed_leaks": 0}
+{"k": 30, "candidates": 40, "recall@3": 0.785714, "recall@5": 0.785714, "recall@10": 0.928571, "mrr": 0.816327, "full_recall@5": 14, "exposed_leaks": 0}
+{"k": 30, "candidates": 100, "recall@3": 0.785714, "recall@5": 0.809524, "recall@10": 0.928571, "mrr": 0.816327, "full_recall@5": 15, "exposed_leaks": 0}
+{"k": 60, "candidates": 20, "recall@3": 0.785714, "recall@5": 0.785714, "recall@10": 0.880952, "mrr": 0.793651, "full_recall@5": 14, "exposed_leaks": 0}
+{"k": 60, "candidates": 40, "recall@3": 0.785714, "recall@5": 0.785714, "recall@10": 0.928571, "mrr": 0.800454, "full_recall@5": 14, "exposed_leaks": 0}
+{"k": 60, "candidates": 100, "recall@3": 0.785714, "recall@5": 0.809524, "recall@10": 0.928571, "mrr": 0.815476, "full_recall@5": 15, "exposed_leaks": 0}
+{"k": 100, "candidates": 20, "recall@3": 0.785714, "recall@5": 0.785714, "recall@10": 0.928571, "mrr": 0.800454, "full_recall@5": 14, "exposed_leaks": 0}
+{"k": 100, "candidates": 40, "recall@3": 0.785714, "recall@5": 0.785714, "recall@10": 0.928571, "mrr": 0.798942, "full_recall@5": 14, "exposed_leaks": 0}
+{"k": 100, "candidates": 100, "recall@3": 0.785714, "recall@5": 0.809524, "recall@10": 0.928571, "mrr": 0.814815, "full_recall@5": 15, "exposed_leaks": 0}
+{"summary": {"recall@5_range": [0.785714, 0.809524], "mrr_range": [0.793651, 0.81746], "exposed_leaks_total": 0}}
