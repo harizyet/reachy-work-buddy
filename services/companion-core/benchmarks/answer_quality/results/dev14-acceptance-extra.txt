@@ -1,0 +1,46 @@
+UNSEEN-PARAPHRASE RECALL (relation recognised as the registry relation; C1 gold retention), design relations only, ESTABLISHED and CONFLICTED questions
+  bank B phrasings 2/3 (unseen) on design relations and design projects: n=32; relation recognised 27/32 = 84%; gold retained by revised C1 23/32 vs B1a top 10 22/32 (+3.1%)
+  all of the above: n=38; relation recognised 33/38 = 87%; gold retained by revised C1 28/38 vs B1a top 10 26/38 (+5.3%)
+  new held-out relations (generic path), answerable: n=6; gold retained 1/6 vs B1a 5/6; fully correct 3 vs B1a 5 vs frozen v1 4
+
+PAIRED vs baseline (fully correct), wins / losses / ties; and vs the frozen v1 comparator
+  b1a+c1f+c2n          vs B0: 15/5/81 losses ['D14-001', 'D14-004', 'D14-005', 'D14-006', 'D14-020'] | vs v1: 0/0
+  b1a+r1q              vs B0: 12/6/83 losses ['D14-001', 'D14-005', 'D14-015', 'D14-055', 'D14-061', 'D14-076'] | vs v1: 7/11
+  b1a+r2               vs B0: 4/2/95 losses ['D14-012', 'D14-091'] | vs v1: 6/14
+  b1a+r1q+r2           vs B0: 19/6/76 losses ['D14-001', 'D14-005', 'D14-015', 'D14-055', 'D14-061', 'D14-076'] | vs v1: 11/8
+  b1a+r1q+r2+c3        vs B0: 19/6/76 losses ['D14-001', 'D14-005', 'D14-015', 'D14-055', 'D14-061', 'D14-076'] | vs v1: 11/8
+  oracle               vs B0: 25/3/73 losses ['D14-011', 'D14-027', 'D14-087'] | vs v1: 18/6
+
+C2 CALIBRATION on the candidate arm (state vs registry label)
+  confusion {('CONFLICTED', 'CONFLICTED'): 7, ('CONFLICTED', 'ESTABLISHED'): 1, ('CONFLICTED', 'UNESTABLISHED'): 2, ('ESTABLISHED', 'ESTABLISHED'): 22, ('ESTABLISHED', 'UNESTABLISHED'): 12, ('PARTIAL', 'PARTIAL'): 3, ('PARTIAL', 'UNESTABLISHED'): 15, ('UNESTABLISHED', 'ESTABLISHED'): 7, ('UNESTABLISHED', 'UNESTABLISHED'): 32}
+  precision per predicted state {'UNESTABLISHED': '32/61', 'ESTABLISHED': '22/30', 'CONFLICTED': '7/7', 'PARTIAL': '3/3'} | recall per gold label {'ESTABLISHED': '22/34', 'CONFLICTED': '7/10', 'UNESTABLISHED': '32/39', 'PARTIAL': '3/18'}
+  UNESTABLISHED labels called UNESTABLISHED 32/39; answerable labels wrongly called UNESTABLISHED 29/62
+
+TIMING OF THE COMPLETE PATH (ms; medians and p95) per arm: preparation, model call, end to end; stages for the revised arms
+  b1a                  prepare median   29.6 | model median   1151 | end-to-end median   1169 p95   2433 | prompt tokens 911
+  b1a+c1f+c2n          prepare median   23.7 | model median    941 | end-to-end median    957 p95   2055 | prompt tokens 537
+  b1a+r1q              prepare median   22.9 | model median    886 | end-to-end median    899 p95   1610 | retrieval30 16.4 select 2.66 (p95 7.3) c2 0.01 build 2.8 | prompt tokens 414
+  b1a+r2               prepare median   24.6 | model median   1155 | end-to-end median   1180 p95   2840 | retrieval30 17.2 select 2.88 (p95 6.1) c2 0.01 build 4.2 | prompt tokens 927
+  b1a+r1q+r2           prepare median   18.6 | model median    932 | end-to-end median    954 p95   1984 | retrieval30 14.9 select 2.46 (p95 4.9) c2 0.01 build 2.4 | prompt tokens 437
+  b1a+r1q+r2+c3        prepare median   20.4 | model median    898 | end-to-end median    907 p95   1948 | retrieval30 17.2 select 2.72 (p95 7.2) c2 0.01 build 0.1 | prompt tokens 437
+  oracle               prepare median    2.5 | model median    579 | end-to-end median    584 p95   1159 | prompt tokens 396
+
+REGRESSIONS of the candidate against the baseline, with the shown records
+- D14-001 [ESTABLISHED] relation=owner bank=B gold True->False state=UNESTABLISHED | Who is accountable for keeping the Hopper ingest service running?
+    B: 'According to the records, Pablo Reyes is accountable for keeping the Hopper ingest service running. This is supported by'
+    C: 'I do not have any records stating who is accountable for keeping the Hopper ingest service running. The provided context only mentions that jobs flow through th'
+- D14-005 [ESTABLISHED] relation=release_day bank=A gold True->False state=UNESTABLISHED | On which weekday do Cedar releases ship?
+    B: 'Cedar releases ship on Monday, according to the record [E5].'
+    C: 'I do not have any records stating the weekday on which Cedar releases ship. The provided context does not include this information.'
+- D14-015 [ESTABLISHED] relation=escalation_contact bank=A gold True->False state=UNESTABLISHED | Who is the escalation contact for Quartz?
+    B: 'The escalation contact for Quartz is Rania Said, as noted in the entry [E1].'
+    C: 'I do not have any records stating who the escalation contact for Quartz is. The provided context mentions that Quartz is an internal platform and refers to "Qua'
+- D14-055 [UNESTABLISHED:wrong_entity] relation=decision bank=A gold None->None state=ESTABLISHED | What was decided about Willow's default model?
+    B: "The owner's records do not specify a default model for Willow. The records indicate that Willow serves Heron-4B on the G"
+    C: 'Willow serves Heron-4B on the GPU host. This information is from the document dated 2026-10-09 [E1].'
+- D14-061 [UNESTABLISHED:wrong_entity] relation=owner bank=B gold None->None state=ESTABLISHED | Whose job is it to look after the Mosaic search index?
+    B: "Based on the information provided in the owner's records, the Mosaic search index is managed according to the Marlin arc"
+    C: "According to the owner's records [E1], Elena Marsh will own the Mosaic search index schedule."
+- D14-076 [UNESTABLISHED:no_record] relation=vacation bank=A gold None->None state=ESTABLISHED | When will the Quartz lead be away next?
+    B: "The owner's records do not provide specific information about when Bruno Keller, the Quartz lead, will be away next. The"
+    C: "I do not have information about future events or schedules from the owner's records. The record I have is from May 1, 2026, stating that Bruno Keller is the Qua"

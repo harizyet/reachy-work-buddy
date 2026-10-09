@@ -1,0 +1,1 @@
+{"decision_point": "44-scoped-readiness-dev14", "conditions": ["b1a", "b1a+c1f+c2n", "b1a+r1q", "b1a+r2", "b1a+r1q+r2", "b1a+r1q+r2+c3", "oracle"], "git_commit": "c5f1ebd", "at": "2026-10-09T09:23:37+00:00"}

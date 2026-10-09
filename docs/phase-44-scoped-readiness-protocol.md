@@ -1,4 +1,6 @@
-# Phase 44: scoped integration-readiness review of the revised C1 + C2, protocol (frozen 2026-10-12; dev14 acceptance)
+# Phase 44: scoped integration-readiness review of the revised C1 + C2, protocol (frozen 2026-10-12; dev14 RUN ONCE and CONSUMED 2026-10-12)
+
+**Result: [dev14 acceptance record](verification/phase-44-scoped-readiness-dev14-2026-10-12.md): the revised candidate fails guardrails 2 and 5 and does not qualify as built.** The protocol below is as frozen.
 
 Owner decisions after dev12 (2026-10-12): C1 + C2 qualifies for a scoped integration-readiness review, **not** production deployment. Address: (1) remove or quarantine the related-record fallback; (2) a recall target on genuinely unseen paraphrases; (3) timing of the complete path; (4) fix the generator's duplicate-gold defect; (5) evaluate the frozen revised candidate on a new untouched set without retuning on dev12; (6) keep C1, C2, C3 separate; (7) C2 is a calibrated annotation, not a gate; (8) keep the original dev12 statistics and claim no significance from post-hoc exclusions. Nothing here is activated: the 7B is the default, 44H is active, indexing is `false`, retrieval and shadow are off.
 
