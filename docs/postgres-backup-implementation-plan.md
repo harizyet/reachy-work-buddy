@@ -1,5 +1,21 @@
 # PostgreSQL backup: implementation plan (PLAN ONLY, 2026-10-12)
 
+> **Owner direction (2026-10-12): backup and recovery becomes its own, larger phase** (number to be assigned; the highest existing phase is 47) and is no longer part of Phase 44. This page, the [hardening proposal](postgres-backup-hardening-proposal.md) and the Stage 0 findings below are its starting inputs; the roadmap entry is for the owner to place.
+>
+> **PAUSED (owner, 2026-10-12): "for now lets not spend time on backup since the implementation is not in production."** Only the Stage 0 findings below were recorded. No Stage 1 code is committed (a partial, untested draft in `tools/reachy_backup/` is deliberately left uncommitted), no credential exists, nothing is scheduled, and the 44H dump and rollback image are kept.
+
+## Stage 0 findings: read-only assessment of `localnas` (2026-10-12; no login, no changes)
+
+| Question | Finding |
+|---|---|
+| Is `localnas` the Synology? | Owner-confirmed. The device answers on the LAN as `localnas.local` (`10.180.1.101`, also `10.180.1.100`); its unauthenticated web redirect identifies a **Synology DS920+ running DSM 7.3 (build 86009)**. (The redirect also contains the device serial number; it is deliberately not copied here.) |
+| Reachable how? | LAN: DSM web (5000/5001), SMB 445, AFP 548, NFS 2049, Synology Drive 6690, HTTP/HTTPS open. **Tailscale: the node key has expired** (`localnas` shows offline and `tailscale ping` reports "peer's node key has expired"), so it cannot be reached over the tailnet until the owner re-authenticates it. |
+| SFTP available? | **No. Port 22 refuses connections and rsync (873) is closed**: the DSM SFTP service is disabled. Enabling it (Control Panel > File Services > FTP > SFTP) is a NAS configuration change and was not made. |
+| Immutable snapshots? | **Unknown, to be verified by the owner in DSM.** A DS920+ supports Btrfs and DSM 7.3 offers Snapshot Replication, which provides immutable (locked) snapshots on Btrfs shared folders, so support is plausible, but it needs: the volume formatted Btrfs, the Snapshot Replication package installed, and a retention lock option available on the target folder. Not assumed. |
+| Same failure domain as the host? | Not established: location, power circuit and enclosure are unknown to me. |
+
+Still open for whenever this resumes: immutable-snapshot confirmation, SFTP enablement and access boundaries, and **key custody**. Threat-model recommendation recorded for that decision: encrypt each artifact to **two recipients**, an **offline recovery key** (owner-held, never on the host, tested by a periodic manual decrypt) and an **on-host verification key** (lets the monthly restore test run unattended; adds no exposure beyond what a compromised host already has, because the host holds the plaintext database). The NAS then sees only ciphertext, a lost host does not lose decryptability, and the recovery key never touches the host.
+
 Status: **plan for owner review. Nothing is built, installed, scheduled or changed.** No production backup behaviour changes, no credential is created or stored, and the existing 44H dump (`reachy-before-phase44h-boundary-*.dump`) and the `reachy-rollback/companion-core:pre-44h-boundary` image stay untouched until this plan, its credential handling and its storage handling are reviewed and approved. It implements the owner's choices of 2026-10-12 on top of the [hardening proposal](postgres-backup-hardening-proposal.md).
 
 ## 1. Owner choices this plan implements

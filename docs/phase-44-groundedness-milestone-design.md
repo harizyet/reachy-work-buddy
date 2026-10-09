@@ -1,6 +1,6 @@
 # Phase 44: groundedness milestone, evidence selection and answerability (DESIGN ONLY, 2026-10-12)
 
-Status: **design for owner review. Nothing here is implemented, scheduled or deployed.** Production is unchanged: the 7B is the default model, the 44H unclaimed-action boundary is active, indexing is `false`, retrieval and shadow are off, Phase 44F is unimplemented. Requested by the owner on 2026-10-12 after the dev10 negative result ([record](verification/phase-44e-section-coverage-2026-10-12.md)).
+Status (2026-10-12, updated): **design approved by the owner in principle** (C1 to C5 decomposition; local invented-corpus development; schema-constrained JSON generation for local experiments, voice rendering deferred; acceptance guardrails fixed below). Local development proceeds on an invented corpus only. **Nothing is deployed or integrated into any answer path;** the dev12 one-shot evaluation and any production change each need a separate owner decision. Production is unchanged: the 7B is the default model, the 44H unclaimed-action boundary is active, indexing is `false`, retrieval and shadow are off, Phase 44F is unimplemented. Requested by the owner on 2026-10-12 after the dev10 negative result ([record](verification/phase-44e-section-coverage-2026-10-12.md)).
 
 ## 1. Why this milestone, and what the evidence says
 
@@ -24,6 +24,13 @@ So the open problems are **(a) selection**: which passages are shown and whether
 - **Separable.** Each component has its own switch, its own offline test, and an ablation arm. No component's evaluation depends on another's being on.
 - **Invented corpus only**, no owner data, no cloud model, until a later, separate decision.
 - **Production touchpoints: none in this milestone.** Everything runs in the benchmark harness first; an answer-path integration is a later owner decision.
+
+### 2a. Owner decisions and refinements (2026-10-12)
+
+- **C2 must not depend on the generator.** The answerability state is computed from the question's proposition and the authorised retrieved evidence (or an authoritative store), never from the generator's confidence, its proposed answer, or its wording. A generator-proposed answer may be *checked against* the state (an answer proposed while the state is UNESTABLISHED is suppressed and reported), but it can never upgrade a state. C2 is therefore evaluated with a **null generator** (no model in the loop) against gold labels.
+- **C5 verifies four things independently of the model, and none of them is a model's say-so.** (1) *Source identity:* the cited id exists in this turn's evidence manifest and resolves to a logical source reference (code-side lookup). (2) *Authorization:* that reference is re-checked against the turn's `AccessContext` (ceiling, scope, destination) by the same code that builds the context; a citation to an item that is not in the manifest, was dropped, or is not authorised is rejected. (3) *Exact evidence span:* the quote must be a verbatim, non-trivial span of the stored text of that exact item; offsets are computed by code, never accepted from the model. (4) *Supported relation:* the claim's subject, relation cue and value tokens must co-occur in the span's sentence (C1's matcher). **A model-generated citation or quote is not independently sufficient proof.** An **empty or trivial quote is never accepted as factual support** (non-empty, at least 3 tokens and 12 characters, and it must contain the claim's key tokens); an `unknown` entry needs no quote and asserts nothing.
+- **Schema-constrained JSON generation** is approved for local experiments only; empty quotes are rejected by C5 and prohibited by the schema (`minLength`), and no voice rendering is built.
+- **Lexical coverage variants** stay a documented negative result and are not reactivated as enforcement; they appear only as a frozen comparator if needed.
 
 ## 3. The five components
 
@@ -104,15 +111,25 @@ C2 consumes C1's output; C5 consumes C4's; C3 stands alone; C1 and C4/C5 are ind
 
 **Staged, so each stage answers one question and the expensive stage only runs what earned it.**
 
-0. *Corpus v2 and labels (no model).* The 30-record invented corpus is too small to stress selection. Extend it deterministically (same generator style, still invented) to about 300 records with near-duplicate entities, shared words across projects, archived versions and sibling relations; every question gets gold passages and a gold answerability label (ESTABLISHED, PARTIAL, CONFLICTED, UNESTABLISHED). Questions are generated from templates for the **component-level** stages (hundreds, cheap) and hand-written for the end-to-end stages (dozens).
+0. *Corpus v2 and labels (no model; local invented data only).* Specification: a deterministic generator (fixed seed) in `benchmarks/answer_quality/corpus_v2/` producing the same JSON shape as the 44A corpus so the existing harness loads it, about 300 records over 24 people, 12 projects, 10 systems, 8 models: documents with several sections and archived versions, memories (profile, working, episodic), notes, tasks, reminders, alarms, meetings with speakers, authorised and sensitive tiers, scopes, planted instruction text, conflicting and superseding records (dated and undated), near-duplicate sibling entities, and shared words across projects. A **fact registry** (subject, relation, value, source reference, validity) is the ground truth from which every gold passage, every answerability label and every generated question is derived, so no label is hand-typed twice. **Held-out design:** three relations and four entities are withheld from everything used to design the C1 lexicon and the matcher, and appear only in dev12, so a lexicon that encodes the author's phrasing is detected. The 30-record invented corpus is too small to stress selection. Extend it deterministically (same generator style, still invented) to about 300 records with near-duplicate entities, shared words across projects, archived versions and sibling relations; every question gets gold passages and a gold answerability label (ESTABLISHED, PARTIAL, CONFLICTED, UNESTABLISHED). Questions are generated from templates for the **component-level** stages (hundreds, cheap) and hand-written for the end-to-end stages (dozens).
 1. *Component evaluations with no model.* C1: precision and recall of gold passages against B1a at equal budget, and non-gold items shown (the diagnosed 5.1 vs 9.3 quantity). C2: confusion matrix against the gold labels (false-UNESTABLISHED rate on answerable questions is the conservatism measure). C3: coverage (share of mapped questions routed) and exactness of routed answers. C5: false-drop rate on gold-valid claims written by hand, and catch rate on seeded invalid claims (cross-section, wrong entity, invented value).
 2. *End-to-end ablation on a new design set (dev11), 7B, identical evidence and prompts across arms.* Arms: B0 baseline; B0+C1b; B0+C2-note; B0+C2-template; B0+C3; B0+C4; B0+C4+C5; C1b+C2-template; C1b+C2-template+C3; the full stack; and oracle evidence with and without C4/C5 to separate generation from selection. Each arm turns on exactly the named components.
-3. *Freeze.* Components, thresholds, lexicon, scorer, cases and the pre-registered reading are hashed (the `freeze_check` pattern), with an untouched acceptance set (dev12) authored before stage 2 results are seen.
+3. *Freeze (dev12 authored and hashed before the dev11 ablation results are read; never tuned against).* Components, thresholds, lexicon, scorer, cases and the pre-registered reading are hashed (the `freeze_check` pattern), with an untouched acceptance set (dev12) authored before stage 2 results are seen.
 4. *One-shot acceptance (dev12),* comparing B0, the best single component, and the best combination chosen on dev11 only.
 
-## 7. Metrics and the "not unusably conservative" guardrails
+## 7. Metrics and the fixed acceptance guardrails
 
-Primary: **unsupported material claims** per answer, and per atomic claim for C4/C5 arms. Reported with it, always: fully correct; **false abstention** (answerable questions answered with an abstention); **answerable-completeness** (share of answerable questions fully answered); correct abstention; and separately wrong-entity, partial-evidence, conflict, invented temporal, negative-claim, cross-section and mixed-answer outcomes; plus latency, tokens and the cost of each component. Pre-registered guardrails (numbers to be fixed by the owner before stage 3, proposed here): false abstention on answerable questions no higher than baseline plus 1 case or 3 percentage points, whichever is larger; answerable fully-correct no lower than baseline minus 1 case; and any arm that reduces unsupported claims only by raising false abstention beyond that is reported as a failure, not a win. Statistics: paired comparisons with the number of discordant cases shown; no superiority claim from fewer than about 12 discordant pairs; acceptance sets of at least 80 cases, of which at least 25 fail under the baseline, so that a halving of unsupported claims is detectable; component-level stages use their hundreds of generated questions, not the small end-to-end set, to carry the statistical weight.
+Primary: **unsupported material claims**, per answer and (for C4/C5 arms) per atomic claim. Always reported with it: fully correct; false abstention; answerable-completeness; correct abstention; separately wrong-entity, partial-evidence, conflict, invented temporal, negative-claim, cross-section and mixed-answer outcomes; latency, tokens and component cost; every regression and every paired outcome (better, worse, tie, listed by case id).
+
+**Acceptance guardrails (fixed by the owner on 2026-10-12, before dev12 is frozen; a candidate arm must satisfy all of them on dev12):**
+1. **Fewer unsupported material claims than the baseline** (strictly fewer).
+2. **False abstention among answerable cases rises by no more than one case AND no more than three percentage points.**
+3. **No more than one net loss of fully correct answerable cases** (losses minus gains, answerable cases only).
+4. **At least one unsupported answer is corrected without a blanket refusal.** Defined now: the baseline's unsupported answer to a case becomes an answer with no unsupported claim that is *specific*: it states at least one required fact, or (for a case labelled unanswerable) it names the specific unknown part and any authorised related fact, rather than a context-free "I don't know" or a fixed refusal.
+5. **Zero accepted citations pointing to a nonexistent or unauthorised source span,** checked by code over every citation of every arm, including seeded invalid citations (an id not in the turn, an id of an excluded item, a quote not in the item).
+6. **Everything is reported transparently,** including regressions.
+
+An arm that lowers unsupported claims only by abstaining beyond guardrails 2 and 3 fails. Statistics: paired comparisons with the discordant cases shown; no superiority claim from fewer than about 12 discordant pairs; dev12 has at least 80 cases, at least 50 answerable and at least 25 failing under the baseline; component-level stages carry statistical weight with their hundreds of generated questions.
 
 ## 8. When a graph would be justified, and not before
 
@@ -122,10 +139,10 @@ Revisit only if stage 1 or 2 shows that the dominant remaining misses need joins
 
 Overfitting to the invented corpus (hence corpus v2, generated questions and a frozen acceptance set); a hand-written relation lexicon that encodes the author's phrasing (hence recall measured against questions written by someone other than the lexicon author, and a review gate); a 7B that will not quote faithfully (C4 then fails cleanly and is dropped, leaving C1 to C3); abstention that sounds unhelpful (the guardrails and a usefulness check on the owner's reading of sample replies); and information leakage through an abstention message (a test that the reply is identical for absent and for unauthorised facts is part of every arm).
 
-## 10. Decisions requested before any work starts
+## 10. Decisions (all taken 2026-10-12 except the last)
 
-1. Approve this decomposition (C1 to C5) and the staged plan, or remove components.
-2. Approve building corpus v2 (invented only) and the dev11/dev12 sets.
-3. Fix the conservatism guardrail numbers in section 7.
-4. Confirm that structured (JSON-schema) generation on the 7B is acceptable for experiments, with voice rendering deferred.
-5. Confirm that nothing in this milestone touches a production answer path until a separate decision.
+1. C1 to C5 decomposition and the staged plan: **approved.**
+2. Local invented-corpus development, dev11 for ablations, a separately frozen dev12 one-shot: **approved.**
+3. Conservatism guardrails: **fixed** (section 7).
+4. Schema-constrained generation for local experiments: **approved**; voice rendering deferred; empty quotes never count as support.
+5. Nothing in this milestone touches a production answer path: **unchanged.** The dev12 one-shot run, and any integration, **still need a separate owner decision.**
