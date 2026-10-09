@@ -74,3 +74,7 @@ By the groups the owner listed (B1a conditions, fresh sets; oracle in brackets; 
 ## Decision input
 
 The comparison supports **keeping the 7B as the production conversational model** and spending the quality effort on evidence sufficiency, retrieval and contamination handling. A 14B would cost about 0.5 s median latency and a 3.3-minute swap for a small, not significant gain on perfect evidence, and it would raise the risk of fluent fabrication whenever evidence is missing. Deep local review remains the right use of the 14B (batch meeting work, ADR 0031), not routine chat.
+
+## Owner decision (2026-10-12)
+
+**The comparison is recorded as complete. Qwen2.5-7B stays the default chat model and a larger-model change is not pursued now:** the 14B's better behaviour on perfect evidence does not compensate for its significantly worse no-record fabrication, its higher latency and the swap cost. The 14B stays available only for deep batch review (ADR 0031).

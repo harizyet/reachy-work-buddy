@@ -82,3 +82,11 @@ At 19% precision a flag-then-regenerate rule would re-ask the model on about one
 ## Reproducing
 
 `python benchmarks/answer_quality/make_cases_dev6.py` and `make_cases_dev7.py`; `run.py --split dev6|dev7 --conditions b1a+routed,b1a+routed+suff,b1a+routed+gate,b1a+routed+suff+cf,oracle,distractor,none`; `summarize_sufficiency.py`, `sufficiency_eval.py`, `postcheck_eval.py`. Results are under `benchmarks/answer_quality/results/` (`dev6-7b-*.json`, `dev7-7b.json`, `suffreg-*.json`, `sufficiency-summary.txt`, `postcheck-eval.json`).
+
+## Owner decision (2026-10-12) and frozen status
+
+- The sufficiency work is an **experimental evidence-coverage signal, not an accepted hard gate.** The deterministic-abstention **gate is preserved as a negative experiment** (no gain over the note on the fresh sets; one answerable case lost on the older splits; it cannot tell a corpus gap from a retrieval miss).
+- **Do not wire the coverage note or the retry into production.** The deployed core contains `knowledge/sufficiency.py` as unreferenced source only ([deployment record](phase-44h-boundary-deployment-2026-10-12.md)).
+- The 19%-precision **post-generation checks stay measurement-only**; no regenerate or replace rule is to be built on them.
+- The retrospective action-claim problem ("Did you finish X?" answered "Yes") stays open for the receipt-backed Phase 44H work and is not to be solved with another free-text enforcement classifier.
+- The mechanism is **frozen** for the acceptance set: `knowledge/sufficiency.py` blob `65e4512b19b18a20e8f4eb9ed5938ef72d0011ef` (unchanged since dev7). See [the dev8 acceptance protocol](../phase-44e-dev8-acceptance-protocol.md).

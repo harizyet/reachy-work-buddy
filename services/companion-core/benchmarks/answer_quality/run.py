@@ -29,6 +29,7 @@ from aq.scoring_v2 import score_answer as score_v2
 
 STOP_FILE = HERE / "STOP"
 HOLDOUT_LOG = HERE / "holdout_runs.jsonl"
+DEV8_LOG = HERE / "dev8_runs.jsonl"
 
 
 def git_commit() -> str:
@@ -49,6 +50,23 @@ def check_holdout(decision_point: str | None, hashes: dict, conditions: list[str
             e = json.loads(line)
             if e["decision_point"] == decision_point and e["combined_hash"] == hashes["combined"]:
                 raise SystemExit(f"decision point {decision_point!r} was already scored on these fixtures ({e['at']}); a decision point gets one look")
+
+
+def check_dev8(decision_point: str | None, hashes: dict) -> None:
+    """dev8 is the untouched one-shot acceptance set for the frozen evidence-coverage mechanism: it is scored once, after an explicit approval, against the frozen files in dev8_freeze.json."""
+    if not decision_point:
+        raise SystemExit("scoring dev8 needs --decision-point NAME")
+    if os.environ.get("AQ_DEV8_APPROVAL") != decision_point:
+        raise SystemExit("dev8 is evaluated once, after the owner approves the protocol: set AQ_DEV8_APPROVAL to the approved decision point name")
+    from freeze_check import verify
+
+    problems = verify()
+    if problems:
+        raise SystemExit("the frozen files changed since dev8 was frozen: " + "; ".join(problems))
+    if DEV8_LOG.exists():
+        for line in DEV8_LOG.read_text().splitlines():
+            e = json.loads(line)
+            raise SystemExit(f"dev8 was already evaluated ({e['at']}, decision point {e['decision_point']!r}); it gets one look")
 
 
 async def run(args) -> dict:
@@ -112,7 +130,7 @@ async def run(args) -> dict:
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--split", choices=("dev", "dev2", "dev3", "dev4", "dev5", "dev6", "dev7", "holdout"), default="dev")
+    p.add_argument("--split", choices=("dev", "dev2", "dev3", "dev4", "dev5", "dev6", "dev7", "dev8", "holdout"), default="dev")
     p.add_argument("--conditions", default=",".join(CONDITIONS))
     p.add_argument("--budget", type=int, default=1500, choices=(500, 1000, 1500))
     p.add_argument("--decision-point")
@@ -132,7 +150,12 @@ def main() -> int:
         return 0
     if args.split == "holdout":
         check_holdout(args.decision_point, caselib.case_hashes(), args.conditions.split(","), args.budget)
+    if args.split == "dev8":
+        check_dev8(args.decision_point, caselib.case_hashes())
     report = asyncio.run(run(args))
+    if args.split == "dev8":
+        with DEV8_LOG.open("a") as log:
+            log.write(json.dumps({"decision_point": args.decision_point, "cases_sha256": report["hashes"]["dev8"], "conditions": report["conditions"], "git_commit": report["git_commit"], "at": report["at"]}) + "\n")
     if args.split == "holdout":
         with HOLDOUT_LOG.open("a") as log:
             log.write(json.dumps({"decision_point": args.decision_point, "combined_hash": report["hashes"]["combined"],
