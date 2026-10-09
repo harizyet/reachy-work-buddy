@@ -1,0 +1,6687 @@
+[
+{
+"id": "A0001",
+"status": "SUPPORTED",
+"relation": "retry_limit",
+"subject": "Relay gateway",
+"subject_re": "\\brelay",
+"cue_re": "retr|attempt|tried",
+"kind": "number",
+"severe": false,
+"values": [
+[
+"\\b6\\b",
+"\\bsix\\b"
+]
+],
+"display": [
+"6"
+],
+"sources": [
+"document:doc-pinnacle-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Pinnacle",
+"pretty": "Relay gateway",
+"held_out": true
+},
+{
+"id": "A0002",
+"status": "SUPPORTED",
+"relation": "retry_limit",
+"subject": "Conduit stream",
+"subject_re": "\\bconduit",
+"cue_re": "retr|attempt|tried",
+"kind": "number",
+"severe": false,
+"values": [
+[
+"\\b4\\b",
+"\\bfour\\b"
+]
+],
+"display": [
+"4"
+],
+"sources": [
+"document:doc-quartz-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Quartz",
+"pretty": "Conduit stream",
+"held_out": false
+},
+{
+"id": "A0003",
+"status": "SUPPORTED",
+"relation": "retry_limit",
+"subject": "Ferry queue",
+"subject_re": "\\bferry",
+"cue_re": "retr|attempt|tried",
+"kind": "number",
+"severe": false,
+"values": [
+[
+"\\b7\\b",
+"\\bseven\\b"
+]
+],
+"display": [
+"7"
+],
+"sources": [
+"document:doc-sable-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Sable",
+"pretty": "Ferry queue",
+"held_out": false
+},
+{
+"id": "A0004",
+"status": "SUPPORTED",
+"relation": "retry_limit",
+"subject": "Lattice store",
+"subject_re": "\\blattice",
+"cue_re": "retr|attempt|tried",
+"kind": "number",
+"severe": false,
+"values": [
+[
+"\\b5\\b",
+"\\bfive\\b"
+]
+],
+"display": [
+"5"
+],
+"sources": [
+"document:doc-thistle-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Thistle",
+"pretty": "Lattice store",
+"held_out": true
+},
+{
+"id": "A0005",
+"status": "SUPPORTED",
+"relation": "retry_limit",
+"subject": "Mosaic search index",
+"subject_re": "\\bmosaic",
+"cue_re": "retr|attempt|tried",
+"kind": "number",
+"severe": false,
+"values": [
+[
+"\\b3\\b",
+"\\bthree\\b"
+]
+],
+"display": [
+"3"
+],
+"sources": [
+"document:doc-umbra-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Umbra",
+"pretty": "Mosaic search index",
+"held_out": true
+},
+{
+"id": "A0006",
+"status": "SUPPORTED",
+"relation": "retry_limit",
+"subject": "Cobalt auth service",
+"subject_re": "\\bcobalt",
+"cue_re": "retr|attempt|tried",
+"kind": "number",
+"severe": false,
+"values": [
+[
+"\\b6\\b",
+"\\bsix\\b"
+]
+],
+"display": [
+"6"
+],
+"sources": [
+"document:doc-willow-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Willow",
+"pretty": "Cobalt auth service",
+"held_out": false
+},
+{
+"id": "A0007",
+"status": "SUPPORTED",
+"relation": "default_model",
+"subject": "Cedar",
+"subject_re": "\\bcedar",
+"cue_re": "default|model",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"swift\\-20b"
+]
+],
+"display": [
+"Swift-20B"
+],
+"sources": [
+"document:doc-cedar-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Cedar",
+"pretty": "Cedar",
+"held_out": false
+},
+{
+"id": "A0008",
+"status": "SUPPORTED",
+"relation": "default_model",
+"subject": "Marlin",
+"subject_re": "\\bmarlin",
+"cue_re": "default|model",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"heron\\-12b"
+]
+],
+"display": [
+"Heron-12B"
+],
+"sources": [
+"document:doc-marlin-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Marlin",
+"pretty": "Marlin",
+"held_out": false
+},
+{
+"id": "A0009",
+"status": "SUPPORTED",
+"relation": "default_model",
+"subject": "Juniper",
+"subject_re": "\\bjuniper",
+"cue_re": "default|model",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"merlin\\-7b"
+]
+],
+"display": [
+"Merlin-7B"
+],
+"sources": [
+"document:doc-juniper-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Juniper",
+"pretty": "Juniper",
+"held_out": true
+},
+{
+"id": "A0010",
+"status": "SUPPORTED",
+"relation": "default_model",
+"subject": "Osprey",
+"subject_re": "\\bosprey",
+"cue_re": "default|model",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"swift\\-6b"
+]
+],
+"display": [
+"Swift-6B"
+],
+"sources": [
+"document:doc-osprey-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Osprey",
+"pretty": "Osprey",
+"held_out": false
+},
+{
+"id": "A0011",
+"status": "SUPPORTED",
+"relation": "default_model",
+"subject": "Tamarind",
+"subject_re": "\\btamarind",
+"cue_re": "default|model",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"kestrel\\-3b"
+]
+],
+"display": [
+"Kestrel-3B"
+],
+"sources": [
+"document:doc-tamarind-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Tamarind",
+"pretty": "Tamarind",
+"held_out": false
+},
+{
+"id": "A0012",
+"status": "SUPPORTED",
+"relation": "default_model",
+"subject": "Vesper",
+"subject_re": "\\bvesper",
+"cue_re": "default|model",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"kestrel\\-9b"
+]
+],
+"display": [
+"Kestrel-9B"
+],
+"sources": [
+"document:doc-vesper-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Vesper",
+"pretty": "Vesper",
+"held_out": false
+},
+{
+"id": "A0013",
+"status": "SUPPORTED",
+"relation": "default_model",
+"subject": "Pinnacle",
+"subject_re": "\\bpinnacle",
+"cue_re": "default|model",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"heron\\-4b"
+]
+],
+"display": [
+"Heron-4B"
+],
+"sources": [
+"document:doc-pinnacle-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Pinnacle",
+"pretty": "Pinnacle",
+"held_out": true
+},
+{
+"id": "A0014",
+"status": "SUPPORTED",
+"relation": "default_model",
+"subject": "Quartz",
+"subject_re": "\\bquartz",
+"cue_re": "default|model",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"merlin\\-2b"
+]
+],
+"display": [
+"Merlin-2B"
+],
+"sources": [
+"document:doc-quartz-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Quartz",
+"pretty": "Quartz",
+"held_out": false
+},
+{
+"id": "A0015",
+"status": "SUPPORTED",
+"relation": "default_model",
+"subject": "Sable",
+"subject_re": "\\bsable",
+"cue_re": "default|model",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"swift\\-20b"
+]
+],
+"display": [
+"Swift-20B"
+],
+"sources": [
+"document:doc-sable-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Sable",
+"pretty": "Sable",
+"held_out": false
+},
+{
+"id": "A0016",
+"status": "SUPPORTED",
+"relation": "default_model",
+"subject": "Thistle",
+"subject_re": "\\bthistle",
+"cue_re": "default|model",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"heron\\-12b"
+]
+],
+"display": [
+"Heron-12B"
+],
+"sources": [
+"document:doc-thistle-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Thistle",
+"pretty": "Thistle",
+"held_out": true
+},
+{
+"id": "A0017",
+"status": "SUPPORTED",
+"relation": "default_model",
+"subject": "Umbra",
+"subject_re": "\\bumbra",
+"cue_re": "default|model",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"merlin\\-7b"
+]
+],
+"display": [
+"Merlin-7B"
+],
+"sources": [
+"document:doc-umbra-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Umbra",
+"pretty": "Umbra",
+"held_out": true
+},
+{
+"id": "A0018",
+"status": "SUPPORTED",
+"relation": "default_model",
+"subject": "Willow",
+"subject_re": "\\bwillow",
+"cue_re": "default|model",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"swift\\-6b"
+]
+],
+"display": [
+"Swift-6B"
+],
+"sources": [
+"document:doc-willow-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Willow",
+"pretty": "Willow",
+"held_out": false
+},
+{
+"id": "A0019",
+"status": "SUPPORTED",
+"relation": "runs_on",
+"subject": "Swift-20B",
+"subject_re": "\\bswift\\-20b",
+"cue_re": "\\bhost|serv|\\brun|hardware|machine|deploy",
+"kind": "host",
+"severe": false,
+"values": [
+[
+"batch\\ host"
+]
+],
+"display": [
+"batch host"
+],
+"sources": [
+"document:doc-cedar-arch",
+"document:doc-sable-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Swift-20B",
+"held_out": false
+},
+{
+"id": "A0020",
+"status": "SUPPORTED",
+"relation": "runs_on",
+"subject": "Heron-12B",
+"subject_re": "\\bheron\\-12b",
+"cue_re": "\\bhost|serv|\\brun|hardware|machine|deploy",
+"kind": "host",
+"severe": false,
+"values": [
+[
+"\\bcpu\\b",
+"cpu\\ host"
+]
+],
+"display": [
+"CPU host"
+],
+"sources": [
+"document:doc-marlin-arch",
+"document:doc-thistle-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Heron-12B",
+"held_out": false
+},
+{
+"id": "A0021",
+"status": "SUPPORTED",
+"relation": "runs_on",
+"subject": "Merlin-7B",
+"subject_re": "\\bmerlin\\-7b",
+"cue_re": "\\bhost|serv|\\brun|hardware|machine|deploy",
+"kind": "host",
+"severe": false,
+"values": [
+[
+"batch\\ host"
+]
+],
+"display": [
+"batch host"
+],
+"sources": [
+"document:doc-juniper-arch",
+"document:doc-umbra-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Merlin-7B",
+"held_out": false
+},
+{
+"id": "A0022",
+"status": "SUPPORTED",
+"relation": "runs_on",
+"subject": "Swift-6B",
+"subject_re": "\\bswift\\-6b",
+"cue_re": "\\bhost|serv|\\brun|hardware|machine|deploy",
+"kind": "host",
+"severe": false,
+"values": [
+[
+"edge\\ host"
+]
+],
+"display": [
+"edge host"
+],
+"sources": [
+"document:doc-osprey-arch",
+"document:doc-willow-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Swift-6B",
+"held_out": false
+},
+{
+"id": "A0023",
+"status": "SUPPORTED",
+"relation": "runs_on",
+"subject": "Kestrel-3B",
+"subject_re": "\\bkestrel\\-3b",
+"cue_re": "\\bhost|serv|\\brun|hardware|machine|deploy",
+"kind": "host",
+"severe": false,
+"values": [
+[
+"\\bgpu\\b",
+"gpu\\ host"
+]
+],
+"display": [
+"GPU host"
+],
+"sources": [
+"document:doc-tamarind-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Kestrel-3B",
+"held_out": false
+},
+{
+"id": "A0024",
+"status": "SUPPORTED",
+"relation": "runs_on",
+"subject": "Kestrel-9B",
+"subject_re": "\\bkestrel\\-9b",
+"cue_re": "\\bhost|serv|\\brun|hardware|machine|deploy",
+"kind": "host",
+"severe": false,
+"values": [
+[
+"\\bcpu\\b",
+"cpu\\ host"
+]
+],
+"display": [
+"CPU host"
+],
+"sources": [
+"document:doc-vesper-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Kestrel-9B",
+"held_out": false
+},
+{
+"id": "A0025",
+"status": "SUPPORTED",
+"relation": "runs_on",
+"subject": "Heron-4B",
+"subject_re": "\\bheron\\-4b",
+"cue_re": "\\bhost|serv|\\brun|hardware|machine|deploy",
+"kind": "host",
+"severe": false,
+"values": [
+[
+"\\bgpu\\b",
+"gpu\\ host"
+]
+],
+"display": [
+"GPU host"
+],
+"sources": [
+"document:doc-pinnacle-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Heron-4B",
+"held_out": false
+},
+{
+"id": "A0026",
+"status": "SUPPORTED",
+"relation": "runs_on",
+"subject": "Merlin-2B",
+"subject_re": "\\bmerlin\\-2b",
+"cue_re": "\\bhost|serv|\\brun|hardware|machine|deploy",
+"kind": "host",
+"severe": false,
+"values": [
+[
+"edge\\ host"
+]
+],
+"display": [
+"edge host"
+],
+"sources": [
+"document:doc-quartz-arch"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Merlin-2B",
+"held_out": false
+},
+{
+"id": "A0027",
+"status": "SUPPORTED",
+"relation": "rollback_window",
+"subject": "Cedar",
+"subject_re": "\\bcedar",
+"cue_re": "roll\\s?back|undo|revert",
+"kind": "number",
+"severe": false,
+"values": [
+[
+"\\b15\\b",
+"\\bfifteen\\b"
+]
+],
+"display": [
+"15"
+],
+"sources": [
+"document:doc-cedar-runbook"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Cedar",
+"pretty": "Cedar",
+"held_out": false
+},
+{
+"id": "A0028",
+"status": "SUPPORTED",
+"relation": "rollback_window",
+"subject": "Marlin",
+"subject_re": "\\bmarlin",
+"cue_re": "roll\\s?back|undo|revert",
+"kind": "number",
+"severe": false,
+"values": [
+[
+"\\b40\\b",
+"\\bforty\\b"
+]
+],
+"display": [
+"40"
+],
+"sources": [
+"document:doc-marlin-runbook"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Marlin",
+"pretty": "Marlin",
+"held_out": false
+},
+{
+"id": "A0029",
+"status": "SUPPORTED",
+"relation": "rollback_window",
+"subject": "Juniper",
+"subject_re": "\\bjuniper",
+"cue_re": "roll\\s?back|undo|revert",
+"kind": "number",
+"severe": false,
+"values": [
+[
+"\\b35\\b",
+"\\bthirty-five\\b"
+]
+],
+"display": [
+"35"
+],
+"sources": [
+"document:doc-juniper-runbook"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Juniper",
+"pretty": "Juniper",
+"held_out": true
+},
+{
+"id": "A0030",
+"status": "SUPPORTED",
+"relation": "rollback_window",
+"subject": "Sable",
+"subject_re": "\\bsable",
+"cue_re": "roll\\s?back|undo|revert",
+"kind": "number",
+"severe": false,
+"values": [
+[
+"\\b35\\b",
+"\\bthirty-five\\b"
+]
+],
+"display": [
+"35"
+],
+"sources": [
+"document:doc-sable-runbook"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Sable",
+"pretty": "Sable",
+"held_out": false
+},
+{
+"id": "A0031",
+"status": "SUPPORTED",
+"relation": "rollback_window",
+"subject": "Thistle",
+"subject_re": "\\bthistle",
+"cue_re": "roll\\s?back|undo|revert",
+"kind": "number",
+"severe": false,
+"values": [
+[
+"\\b30\\b",
+"\\bthirty\\b"
+]
+],
+"display": [
+"30"
+],
+"sources": [
+"document:doc-thistle-runbook"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Thistle",
+"pretty": "Thistle",
+"held_out": true
+},
+{
+"id": "A0032",
+"status": "SUPPORTED",
+"relation": "rollback_window",
+"subject": "Umbra",
+"subject_re": "\\bumbra",
+"cue_re": "roll\\s?back|undo|revert",
+"kind": "number",
+"severe": false,
+"values": [
+[
+"\\b25\\b",
+"\\btwenty-five\\b"
+]
+],
+"display": [
+"25"
+],
+"sources": [
+"document:doc-umbra-runbook"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Umbra",
+"pretty": "Umbra",
+"held_out": true
+},
+{
+"id": "A0033",
+"status": "SUPPORTED",
+"relation": "rollback_window",
+"subject": "Willow",
+"subject_re": "\\bwillow",
+"cue_re": "roll\\s?back|undo|revert",
+"kind": "number",
+"severe": false,
+"values": [
+[
+"\\b20\\b",
+"\\btwenty\\b"
+]
+],
+"display": [
+"20"
+],
+"sources": [
+"document:doc-willow-runbook"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Willow",
+"pretty": "Willow",
+"held_out": false
+},
+{
+"id": "A0034",
+"status": "SUPPORTED",
+"relation": "owner",
+"subject": "Gantry scheduler",
+"subject_re": "\\bgantry",
+"cue_re": "\\bown|responsib|accountab|in charge|look(?:s|ing)? after|maintain",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bines\\b",
+"ines\\ duarte"
+]
+],
+"display": [
+"Ines Duarte"
+],
+"sources": [
+"memory:m001"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Cedar",
+"pretty": "Gantry scheduler",
+"held_out": false
+},
+{
+"id": "A0035",
+"status": "SUPPORTED",
+"relation": "owner",
+"subject": "Anvil builder",
+"subject_re": "\\banvil",
+"cue_re": "\\bown|responsib|accountab|in charge|look(?:s|ing)? after|maintain",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bumar\\b",
+"umar\\ bello"
+]
+],
+"display": [
+"Umar Bello"
+],
+"sources": [
+"memory:m010"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Marlin",
+"pretty": "Anvil builder",
+"held_out": false
+},
+{
+"id": "A0036",
+"status": "UNSUPPORTED",
+"relation": "owner",
+"subject": "Prism dashboard",
+"subject_re": "\\bprism",
+"cue_re": "\\bown|responsib|accountab|in charge|look(?:s|ing)? after|maintain",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Juniper",
+"pretty": "Prism dashboard",
+"held_out": true
+},
+{
+"id": "A0037",
+"status": "SUPPORTED",
+"relation": "owner",
+"subject": "Hopper ingest service",
+"subject_re": "\\bhopper",
+"cue_re": "\\bown|responsib|accountab|in charge|look(?:s|ing)? after|maintain",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bwen\\b",
+"wen\\ zhao"
+]
+],
+"display": [
+"Wen Zhao"
+],
+"sources": [
+"memory:m025"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Osprey",
+"pretty": "Hopper ingest service",
+"held_out": false
+},
+{
+"id": "A0038",
+"status": "SUPPORTED",
+"relation": "owner",
+"subject": "Sluice cache",
+"subject_re": "\\bsluice",
+"cue_re": "\\bown|responsib|accountab|in charge|look(?:s|ing)? after|maintain",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bamara\\b",
+"amara\\ osei"
+]
+],
+"display": [
+"Amara Osei"
+],
+"sources": [
+"memory:m034"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Tamarind",
+"pretty": "Sluice cache",
+"held_out": false
+},
+{
+"id": "A0039",
+"status": "SUPPORTED",
+"relation": "owner",
+"subject": "Turret API",
+"subject_re": "\\bturret",
+"cue_re": "\\bown|responsib|accountab|in charge|look(?:s|ing)? after|maintain",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bbruno\\b",
+"bruno\\ keller"
+]
+],
+"display": [
+"Bruno Keller"
+],
+"sources": [
+"memory:m043"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Vesper",
+"pretty": "Turret API",
+"held_out": false
+},
+{
+"id": "A0040",
+"status": "SUPPORTED",
+"relation": "owner",
+"subject": "Relay gateway",
+"subject_re": "\\brelay",
+"cue_re": "\\bown|responsib|accountab|in charge|look(?:s|ing)? after|maintain",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bjonas\\b",
+"jonas\\ weiss"
+]
+],
+"display": [
+"Jonas Weiss"
+],
+"sources": [
+"memory:m050"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Pinnacle",
+"pretty": "Relay gateway",
+"held_out": true
+},
+{
+"id": "A0041",
+"status": "UNSUPPORTED",
+"relation": "owner",
+"subject": "Conduit stream",
+"subject_re": "\\bconduit",
+"cue_re": "\\bown|responsib|accountab|in charge|look(?:s|ing)? after|maintain",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Quartz",
+"pretty": "Conduit stream",
+"held_out": false
+},
+{
+"id": "A0042",
+"status": "SUPPORTED",
+"relation": "owner",
+"subject": "Ferry queue",
+"subject_re": "\\bferry",
+"cue_re": "\\bown|responsib|accountab|in charge|look(?:s|ing)? after|maintain",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bchiara\\b",
+"chiara\\ rossi"
+]
+],
+"display": [
+"Chiara Rossi"
+],
+"sources": [
+"memory:m064"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Sable",
+"pretty": "Ferry queue",
+"held_out": false
+},
+{
+"id": "A0043",
+"status": "SUPPORTED",
+"relation": "owner",
+"subject": "Lattice store",
+"subject_re": "\\blattice",
+"cue_re": "\\bown|responsib|accountab|in charge|look(?:s|ing)? after|maintain",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bdmitri\\b",
+"dmitri\\ volkov"
+]
+],
+"display": [
+"Dmitri Volkov"
+],
+"sources": [
+"memory:m070"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Thistle",
+"pretty": "Lattice store",
+"held_out": true
+},
+{
+"id": "A0044",
+"status": "UNSUPPORTED",
+"relation": "owner",
+"subject": "Mosaic search index",
+"subject_re": "\\bmosaic",
+"cue_re": "\\bown|responsib|accountab|in charge|look(?:s|ing)? after|maintain",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Umbra",
+"pretty": "Mosaic search index",
+"held_out": true
+},
+{
+"id": "A0045",
+"status": "SUPPORTED",
+"relation": "owner",
+"subject": "Cobalt auth service",
+"subject_re": "\\bcobalt",
+"cue_re": "\\bown|responsib|accountab|in charge|look(?:s|ing)? after|maintain",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\btara\\b",
+"tara\\ brennan"
+]
+],
+"display": [
+"Tara Brennan"
+],
+"sources": [
+"memory:m083"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Willow",
+"pretty": "Cobalt auth service",
+"held_out": false
+},
+{
+"id": "A0046",
+"status": "SUPPORTED",
+"relation": "lead",
+"subject": "Cedar",
+"subject_re": "\\bcedar",
+"cue_re": "\\blead|\\bhead|in charge|manag",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bliam\\b",
+"liam\\ oconnor"
+]
+],
+"display": [
+"Liam Oconnor"
+],
+"sources": [
+"memory:m002"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Cedar",
+"pretty": "Cedar",
+"held_out": false
+},
+{
+"id": "A0047",
+"status": "UNSUPPORTED",
+"relation": "lead",
+"subject": "Marlin",
+"subject_re": "\\bmarlin",
+"cue_re": "\\blead|\\bhead|in charge|manag",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Marlin",
+"pretty": "Marlin",
+"held_out": false
+},
+{
+"id": "A0048",
+"status": "SUPPORTED",
+"relation": "lead",
+"subject": "Juniper",
+"subject_re": "\\bjuniper",
+"cue_re": "\\blead|\\bhead|in charge|manag",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bquinn\\b",
+"quinn\\ abbott"
+]
+],
+"display": [
+"Quinn Abbott"
+],
+"sources": [
+"memory:m018"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Juniper",
+"pretty": "Juniper",
+"held_out": true
+},
+{
+"id": "A0049",
+"status": "SUPPORTED",
+"relation": "lead",
+"subject": "Osprey",
+"subject_re": "\\bosprey",
+"cue_re": "\\blead|\\bhead|in charge|manag",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bfarid\\b",
+"farid\\ haddad"
+]
+],
+"display": [
+"Farid Haddad"
+],
+"sources": [
+"memory:m026"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Osprey",
+"pretty": "Osprey",
+"held_out": false
+},
+{
+"id": "A0050",
+"status": "SUPPORTED",
+"relation": "lead",
+"subject": "Tamarind",
+"subject_re": "\\btamarind",
+"cue_re": "\\blead|\\bhead|in charge|manag",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\brania\\b",
+"rania\\ said"
+]
+],
+"display": [
+"Rania Said"
+],
+"sources": [
+"memory:m035"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Tamarind",
+"pretty": "Tamarind",
+"held_out": false
+},
+{
+"id": "A0051",
+"status": "SUPPORTED",
+"relation": "lead",
+"subject": "Vesper",
+"subject_re": "\\bvesper",
+"cue_re": "\\blead|\\bhead|in charge|manag",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bkavya\\b",
+"kavya\\ menon"
+]
+],
+"display": [
+"Kavya Menon"
+],
+"sources": [
+"memory:m044"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Vesper",
+"pretty": "Vesper",
+"held_out": false
+},
+{
+"id": "A0052",
+"status": "UNSUPPORTED",
+"relation": "lead",
+"subject": "Pinnacle",
+"subject_re": "\\bpinnacle",
+"cue_re": "\\blead|\\bhead|in charge|manag",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Pinnacle",
+"pretty": "Pinnacle",
+"held_out": true
+},
+{
+"id": "A0053",
+"status": "SUPPORTED",
+"relation": "lead",
+"subject": "Quartz",
+"subject_re": "\\bquartz",
+"cue_re": "\\blead|\\bhead|in charge|manag",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bpablo\\b",
+"pablo\\ reyes"
+]
+],
+"display": [
+"Pablo Reyes"
+],
+"sources": [
+"memory:m057"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Quartz",
+"pretty": "Quartz",
+"held_out": false
+},
+{
+"id": "A0054",
+"status": "SUPPORTED",
+"relation": "lead",
+"subject": "Sable",
+"subject_re": "\\bsable",
+"cue_re": "\\blead|\\bhead|in charge|manag",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bvera\\b",
+"vera\\ kovac"
+]
+],
+"display": [
+"Vera Kovac"
+],
+"sources": [
+"memory:m065"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Sable",
+"pretty": "Sable",
+"held_out": false
+},
+{
+"id": "A0055",
+"status": "SUPPORTED",
+"relation": "lead",
+"subject": "Thistle",
+"subject_re": "\\bthistle",
+"cue_re": "\\blead|\\bhead|in charge|manag",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bhiro\\b",
+"hiro\\ tanaka"
+]
+],
+"display": [
+"Hiro Tanaka"
+],
+"sources": [
+"memory:m071"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Thistle",
+"pretty": "Thistle",
+"held_out": true
+},
+{
+"id": "A0056",
+"status": "SUPPORTED",
+"relation": "lead",
+"subject": "Umbra",
+"subject_re": "\\bumbra",
+"cue_re": "\\blead|\\bhead|in charge|manag",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bsven\\b",
+"sven\\ larsen"
+]
+],
+"display": [
+"Sven Larsen"
+],
+"sources": [
+"memory:m077"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Umbra",
+"pretty": "Umbra",
+"held_out": true
+},
+{
+"id": "A0057",
+"status": "UNSUPPORTED",
+"relation": "lead",
+"subject": "Willow",
+"subject_re": "\\bwillow",
+"cue_re": "\\blead|\\bhead|in charge|manag",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Willow",
+"pretty": "Willow",
+"held_out": false
+},
+{
+"id": "A0058",
+"status": "SUPPORTED",
+"relation": "on_call",
+"subject": "Cedar",
+"subject_re": "\\bcedar",
+"cue_re": "on[- ]?call|paged|cover",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bumar\\b",
+"umar\\ bello"
+]
+],
+"display": [
+"Umar Bello"
+],
+"sources": [
+"note:note-cedar-oncall"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Cedar",
+"pretty": "Cedar",
+"held_out": false
+},
+{
+"id": "A0059",
+"status": "SUPPORTED",
+"relation": "on_call",
+"subject": "Marlin",
+"subject_re": "\\bmarlin",
+"cue_re": "on[- ]?call|paged|cover",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bsven\\b",
+"sven\\ larsen"
+]
+],
+"display": [
+"Sven Larsen"
+],
+"sources": [
+"note:note-marlin-oncall"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Marlin",
+"pretty": "Marlin",
+"held_out": false
+},
+{
+"id": "A0060",
+"status": "SUPPORTED",
+"relation": "on_call",
+"subject": "Juniper",
+"subject_re": "\\bjuniper",
+"cue_re": "on[- ]?call|paged|cover",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bumar\\b",
+"umar\\ bello"
+]
+],
+"display": [
+"Umar Bello"
+],
+"sources": [
+"note:note-juniper-oncall"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Juniper",
+"pretty": "Juniper",
+"held_out": true
+},
+{
+"id": "A0061",
+"status": "SUPPORTED",
+"relation": "on_call",
+"subject": "Osprey",
+"subject_re": "\\bosprey",
+"cue_re": "on[- ]?call|paged|cover",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bdmitri\\b",
+"dmitri\\ volkov"
+]
+],
+"display": [
+"Dmitri Volkov"
+],
+"sources": [
+"note:note-osprey-oncall"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Osprey",
+"pretty": "Osprey",
+"held_out": false
+},
+{
+"id": "A0062",
+"status": "SUPPORTED",
+"relation": "on_call",
+"subject": "Tamarind",
+"subject_re": "\\btamarind",
+"cue_re": "on[- ]?call|paged|cover",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bquinn\\b",
+"quinn\\ abbott"
+]
+],
+"display": [
+"Quinn Abbott"
+],
+"sources": [
+"note:note-tamarind-oncall"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Tamarind",
+"pretty": "Tamarind",
+"held_out": false
+},
+{
+"id": "A0063",
+"status": "SUPPORTED",
+"relation": "on_call",
+"subject": "Vesper",
+"subject_re": "\\bvesper",
+"cue_re": "on[- ]?call|paged|cover",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bines\\b",
+"ines\\ duarte"
+]
+],
+"display": [
+"Ines Duarte"
+],
+"sources": [
+"note:note-vesper-oncall"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Vesper",
+"pretty": "Vesper",
+"held_out": false
+},
+{
+"id": "A0064",
+"status": "SUPPORTED",
+"relation": "on_call",
+"subject": "Pinnacle",
+"subject_re": "\\bpinnacle",
+"cue_re": "on[- ]?call|paged|cover",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\btara\\b",
+"tara\\ brennan"
+]
+],
+"display": [
+"Tara Brennan"
+],
+"sources": [
+"note:note-pinnacle-oncall"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Pinnacle",
+"pretty": "Pinnacle",
+"held_out": true
+},
+{
+"id": "A0065",
+"status": "SUPPORTED",
+"relation": "on_call",
+"subject": "Quartz",
+"subject_re": "\\bquartz",
+"cue_re": "on[- ]?call|paged|cover",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bpablo\\b",
+"pablo\\ reyes"
+]
+],
+"display": [
+"Pablo Reyes"
+],
+"sources": [
+"note:note-quartz-oncall"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Quartz",
+"pretty": "Quartz",
+"held_out": false
+},
+{
+"id": "A0066",
+"status": "SUPPORTED",
+"relation": "on_call",
+"subject": "Sable",
+"subject_re": "\\bsable",
+"cue_re": "on[- ]?call|paged|cover",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bquinn\\b",
+"quinn\\ abbott"
+]
+],
+"display": [
+"Quinn Abbott"
+],
+"sources": [
+"note:note-sable-oncall"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Sable",
+"pretty": "Sable",
+"held_out": false
+},
+{
+"id": "A0067",
+"status": "SUPPORTED",
+"relation": "on_call",
+"subject": "Thistle",
+"subject_re": "\\bthistle",
+"cue_re": "on[- ]?call|paged|cover",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bines\\b",
+"ines\\ duarte"
+]
+],
+"display": [
+"Ines Duarte"
+],
+"sources": [
+"note:note-thistle-oncall"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Thistle",
+"pretty": "Thistle",
+"held_out": true
+},
+{
+"id": "A0068",
+"status": "SUPPORTED",
+"relation": "on_call",
+"subject": "Umbra",
+"subject_re": "\\bumbra",
+"cue_re": "on[- ]?call|paged|cover",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bdmitri\\b",
+"dmitri\\ volkov"
+]
+],
+"display": [
+"Dmitri Volkov"
+],
+"sources": [
+"note:note-umbra-oncall"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Umbra",
+"pretty": "Umbra",
+"held_out": true
+},
+{
+"id": "A0069",
+"status": "SUPPORTED",
+"relation": "on_call",
+"subject": "Willow",
+"subject_re": "\\bwillow",
+"cue_re": "on[- ]?call|paged|cover",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bdmitri\\b",
+"dmitri\\ volkov"
+]
+],
+"display": [
+"Dmitri Volkov"
+],
+"sources": [
+"note:note-willow-oncall"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Willow",
+"pretty": "Willow",
+"held_out": false
+},
+{
+"id": "A0070",
+"status": "SUPPORTED",
+"relation": "escalation_contact",
+"subject": "Cedar",
+"subject_re": "\\bcedar",
+"cue_re": "escalat",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bvera\\b",
+"vera\\ kovac"
+]
+],
+"display": [
+"Vera Kovac"
+],
+"sources": [
+"note:note-cedar-escalation"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Cedar",
+"pretty": "Cedar",
+"held_out": true
+},
+{
+"id": "A0071",
+"status": "SUPPORTED",
+"relation": "escalation_contact",
+"subject": "Marlin",
+"subject_re": "\\bmarlin",
+"cue_re": "escalat",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bsven\\b",
+"sven\\ larsen"
+]
+],
+"display": [
+"Sven Larsen"
+],
+"sources": [
+"note:note-marlin-escalation"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Marlin",
+"pretty": "Marlin",
+"held_out": true
+},
+{
+"id": "A0072",
+"status": "SUPPORTED",
+"relation": "escalation_contact",
+"subject": "Juniper",
+"subject_re": "\\bjuniper",
+"cue_re": "escalat",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bliam\\b",
+"liam\\ oconnor"
+]
+],
+"display": [
+"Liam Oconnor"
+],
+"sources": [
+"note:note-juniper-escalation"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Juniper",
+"pretty": "Juniper",
+"held_out": true
+},
+{
+"id": "A0073",
+"status": "SUPPORTED",
+"relation": "escalation_contact",
+"subject": "Osprey",
+"subject_re": "\\bosprey",
+"cue_re": "escalat",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\byusuf\\b",
+"yusuf\\ demir"
+]
+],
+"display": [
+"Yusuf Demir"
+],
+"sources": [
+"note:note-osprey-escalation"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Osprey",
+"pretty": "Osprey",
+"held_out": true
+},
+{
+"id": "A0074",
+"status": "SUPPORTED",
+"relation": "escalation_contact",
+"subject": "Tamarind",
+"subject_re": "\\btamarind",
+"cue_re": "escalat",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bvera\\b",
+"vera\\ kovac"
+]
+],
+"display": [
+"Vera Kovac"
+],
+"sources": [
+"note:note-tamarind-escalation"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Tamarind",
+"pretty": "Tamarind",
+"held_out": true
+},
+{
+"id": "A0075",
+"status": "SUPPORTED",
+"relation": "escalation_contact",
+"subject": "Vesper",
+"subject_re": "\\bvesper",
+"cue_re": "escalat",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bolga\\b",
+"olga\\ petrova"
+]
+],
+"display": [
+"Olga Petrova"
+],
+"sources": [
+"note:note-vesper-escalation"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Vesper",
+"pretty": "Vesper",
+"held_out": true
+},
+{
+"id": "A0076",
+"status": "SUPPORTED",
+"relation": "escalation_contact",
+"subject": "Pinnacle",
+"subject_re": "\\bpinnacle",
+"cue_re": "escalat",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bgreta\\b",
+"greta\\ lindqvist"
+]
+],
+"display": [
+"Greta Lindqvist"
+],
+"sources": [
+"note:note-pinnacle-escalation"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Pinnacle",
+"pretty": "Pinnacle",
+"held_out": true
+},
+{
+"id": "A0077",
+"status": "SUPPORTED",
+"relation": "escalation_contact",
+"subject": "Quartz",
+"subject_re": "\\bquartz",
+"cue_re": "escalat",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bjonas\\b",
+"jonas\\ weiss"
+]
+],
+"display": [
+"Jonas Weiss"
+],
+"sources": [
+"note:note-quartz-escalation"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Quartz",
+"pretty": "Quartz",
+"held_out": true
+},
+{
+"id": "A0078",
+"status": "SUPPORTED",
+"relation": "release_day",
+"subject": "Cedar",
+"subject_re": "\\bcedar",
+"cue_re": "release|ship|deploy",
+"kind": "day",
+"severe": false,
+"values": [
+[
+"monday"
+]
+],
+"display": [
+"Monday"
+],
+"sources": [
+"memory:m003"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Cedar",
+"pretty": "Cedar",
+"held_out": true
+},
+{
+"id": "A0079",
+"status": "SUPPORTED",
+"relation": "release_day",
+"subject": "Marlin",
+"subject_re": "\\bmarlin",
+"cue_re": "release|ship|deploy",
+"kind": "day",
+"severe": false,
+"values": [
+[
+"wednesday"
+]
+],
+"display": [
+"Wednesday"
+],
+"sources": [
+"memory:m011"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Marlin",
+"pretty": "Marlin",
+"held_out": true
+},
+{
+"id": "A0080",
+"status": "SUPPORTED",
+"relation": "release_day",
+"subject": "Juniper",
+"subject_re": "\\bjuniper",
+"cue_re": "release|ship|deploy",
+"kind": "day",
+"severe": false,
+"values": [
+[
+"friday"
+]
+],
+"display": [
+"Friday"
+],
+"sources": [
+"memory:m019"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Juniper",
+"pretty": "Juniper",
+"held_out": true
+},
+{
+"id": "A0081",
+"status": "SUPPORTED",
+"relation": "release_day",
+"subject": "Osprey",
+"subject_re": "\\bosprey",
+"cue_re": "release|ship|deploy",
+"kind": "day",
+"severe": false,
+"values": [
+[
+"tuesday"
+]
+],
+"display": [
+"Tuesday"
+],
+"sources": [
+"memory:m027"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Osprey",
+"pretty": "Osprey",
+"held_out": true
+},
+{
+"id": "A0082",
+"status": "SUPPORTED",
+"relation": "release_day",
+"subject": "Tamarind",
+"subject_re": "\\btamarind",
+"cue_re": "release|ship|deploy",
+"kind": "day",
+"severe": false,
+"values": [
+[
+"thursday"
+]
+],
+"display": [
+"Thursday"
+],
+"sources": [
+"memory:m036"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Tamarind",
+"pretty": "Tamarind",
+"held_out": true
+},
+{
+"id": "A0083",
+"status": "SUPPORTED",
+"relation": "release_day",
+"subject": "Vesper",
+"subject_re": "\\bvesper",
+"cue_re": "release|ship|deploy",
+"kind": "day",
+"severe": false,
+"values": [
+[
+"monday"
+]
+],
+"display": [
+"Monday"
+],
+"sources": [
+"memory:m045"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Vesper",
+"pretty": "Vesper",
+"held_out": true
+},
+{
+"id": "A0084",
+"status": "SUPPORTED",
+"relation": "release_day",
+"subject": "Pinnacle",
+"subject_re": "\\bpinnacle",
+"cue_re": "release|ship|deploy",
+"kind": "day",
+"severe": false,
+"values": [
+[
+"wednesday"
+]
+],
+"display": [
+"Wednesday"
+],
+"sources": [
+"memory:m051"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Pinnacle",
+"pretty": "Pinnacle",
+"held_out": true
+},
+{
+"id": "A0085",
+"status": "SUPPORTED",
+"relation": "release_day",
+"subject": "Quartz",
+"subject_re": "\\bquartz",
+"cue_re": "release|ship|deploy",
+"kind": "day",
+"severe": false,
+"values": [
+[
+"friday"
+]
+],
+"display": [
+"Friday"
+],
+"sources": [
+"memory:m058"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Quartz",
+"pretty": "Quartz",
+"held_out": true
+},
+{
+"id": "A0086",
+"status": "SUPPORTED",
+"relation": "staging_env",
+"subject": "Cedar",
+"subject_re": "\\bcedar",
+"cue_re": "stag",
+"kind": "bool",
+"severe": false,
+"values": [
+[
+"yes"
+]
+],
+"display": [
+"yes"
+],
+"sources": [
+"memory:m004"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Cedar",
+"pretty": "Cedar",
+"held_out": false
+},
+{
+"id": "A0087",
+"status": "NEGATIVE_SUPPORTED",
+"relation": "staging_env",
+"subject": "Marlin",
+"subject_re": "\\bmarlin",
+"cue_re": "stag",
+"kind": "bool",
+"severe": false,
+"values": [
+[
+"\\bno staging|has no staging|not have a staging|without a staging|there is no staging"
+]
+],
+"display": [],
+"sources": [
+"memory:m012"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Marlin",
+"pretty": "Marlin",
+"held_out": false
+},
+{
+"id": "A0088",
+"status": "NEGATIVE_UNSUPPORTED",
+"relation": "staging_env",
+"subject": "Juniper",
+"subject_re": "\\bjuniper",
+"cue_re": "stag",
+"kind": "bool",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Juniper",
+"pretty": "Juniper",
+"held_out": true
+},
+{
+"id": "A0089",
+"status": "SUPPORTED",
+"relation": "staging_env",
+"subject": "Osprey",
+"subject_re": "\\bosprey",
+"cue_re": "stag",
+"kind": "bool",
+"severe": false,
+"values": [
+[
+"yes"
+]
+],
+"display": [
+"yes"
+],
+"sources": [
+"memory:m028"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Osprey",
+"pretty": "Osprey",
+"held_out": false
+},
+{
+"id": "A0090",
+"status": "NEGATIVE_SUPPORTED",
+"relation": "staging_env",
+"subject": "Tamarind",
+"subject_re": "\\btamarind",
+"cue_re": "stag",
+"kind": "bool",
+"severe": false,
+"values": [
+[
+"\\bno staging|has no staging|not have a staging|without a staging|there is no staging"
+]
+],
+"display": [],
+"sources": [
+"memory:m037"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Tamarind",
+"pretty": "Tamarind",
+"held_out": false
+},
+{
+"id": "A0091",
+"status": "NEGATIVE_UNSUPPORTED",
+"relation": "staging_env",
+"subject": "Vesper",
+"subject_re": "\\bvesper",
+"cue_re": "stag",
+"kind": "bool",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Vesper",
+"pretty": "Vesper",
+"held_out": false
+},
+{
+"id": "A0092",
+"status": "SUPPORTED",
+"relation": "staging_env",
+"subject": "Pinnacle",
+"subject_re": "\\bpinnacle",
+"cue_re": "stag",
+"kind": "bool",
+"severe": false,
+"values": [
+[
+"yes"
+]
+],
+"display": [
+"yes"
+],
+"sources": [
+"memory:m052"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Pinnacle",
+"pretty": "Pinnacle",
+"held_out": true
+},
+{
+"id": "A0093",
+"status": "NEGATIVE_SUPPORTED",
+"relation": "staging_env",
+"subject": "Quartz",
+"subject_re": "\\bquartz",
+"cue_re": "stag",
+"kind": "bool",
+"severe": false,
+"values": [
+[
+"\\bno staging|has no staging|not have a staging|without a staging|there is no staging"
+]
+],
+"display": [],
+"sources": [
+"memory:m059"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Quartz",
+"pretty": "Quartz",
+"held_out": false
+},
+{
+"id": "A0094",
+"status": "NEGATIVE_UNSUPPORTED",
+"relation": "staging_env",
+"subject": "Sable",
+"subject_re": "\\bsable",
+"cue_re": "stag",
+"kind": "bool",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Sable",
+"pretty": "Sable",
+"held_out": false
+},
+{
+"id": "A0095",
+"status": "SUPPORTED",
+"relation": "staging_env",
+"subject": "Thistle",
+"subject_re": "\\bthistle",
+"cue_re": "stag",
+"kind": "bool",
+"severe": false,
+"values": [
+[
+"yes"
+]
+],
+"display": [
+"yes"
+],
+"sources": [
+"memory:m072"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Thistle",
+"pretty": "Thistle",
+"held_out": true
+},
+{
+"id": "A0096",
+"status": "NEGATIVE_SUPPORTED",
+"relation": "staging_env",
+"subject": "Umbra",
+"subject_re": "\\bumbra",
+"cue_re": "stag",
+"kind": "bool",
+"severe": false,
+"values": [
+[
+"\\bno staging|has no staging|not have a staging|without a staging|there is no staging"
+]
+],
+"display": [],
+"sources": [
+"memory:m078"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Umbra",
+"pretty": "Umbra",
+"held_out": true
+},
+{
+"id": "A0097",
+"status": "NEGATIVE_UNSUPPORTED",
+"relation": "staging_env",
+"subject": "Willow",
+"subject_re": "\\bwillow",
+"cue_re": "stag",
+"kind": "bool",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Willow",
+"pretty": "Willow",
+"held_out": false
+},
+{
+"id": "A0098",
+"status": "CONFLICTED",
+"relation": "standup",
+"subject": "Cedar",
+"subject_re": "\\bcedar",
+"cue_re": "stand-?up",
+"kind": "number",
+"severe": true,
+"values": [
+[
+"\\b9\\b",
+"\\bnine\\b"
+],
+[
+"\\b11\\b",
+"\\beleven\\b"
+]
+],
+"display": [
+"9",
+"11"
+],
+"sources": [
+"memory:m005",
+"memory:m006"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Cedar",
+"pretty": "Cedar",
+"held_out": false
+},
+{
+"id": "A0099",
+"status": "CONFLICTED",
+"relation": "standup",
+"subject": "Marlin",
+"subject_re": "\\bmarlin",
+"cue_re": "stand-?up",
+"kind": "number",
+"severe": true,
+"values": [
+[
+"\\b10\\b",
+"\\bten\\b"
+],
+[
+"\\b12\\b",
+"\\btwelve\\b"
+]
+],
+"display": [
+"10",
+"12"
+],
+"sources": [
+"memory:m013",
+"memory:m014"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Marlin",
+"pretty": "Marlin",
+"held_out": false
+},
+{
+"id": "A0100",
+"status": "CONFLICTED",
+"relation": "standup",
+"subject": "Juniper",
+"subject_re": "\\bjuniper",
+"cue_re": "stand-?up",
+"kind": "number",
+"severe": true,
+"values": [
+[
+"\\b9\\b",
+"\\bnine\\b"
+],
+[
+"\\b11\\b",
+"\\beleven\\b"
+]
+],
+"display": [
+"9",
+"11"
+],
+"sources": [
+"memory:m020",
+"memory:m021"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Juniper",
+"pretty": "Juniper",
+"held_out": true
+},
+{
+"id": "A0101",
+"status": "CONFLICTED",
+"relation": "standup",
+"subject": "Osprey",
+"subject_re": "\\bosprey",
+"cue_re": "stand-?up",
+"kind": "number",
+"severe": true,
+"values": [
+[
+"\\b10\\b",
+"\\bten\\b"
+],
+[
+"\\b12\\b",
+"\\btwelve\\b"
+]
+],
+"display": [
+"10",
+"12"
+],
+"sources": [
+"memory:m029",
+"memory:m030"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Osprey",
+"pretty": "Osprey",
+"held_out": false
+},
+{
+"id": "A0102",
+"status": "CONFLICTED",
+"relation": "standup",
+"subject": "Tamarind",
+"subject_re": "\\btamarind",
+"cue_re": "stand-?up",
+"kind": "number",
+"severe": true,
+"values": [
+[
+"\\b9\\b",
+"\\bnine\\b"
+],
+[
+"\\b11\\b",
+"\\beleven\\b"
+]
+],
+"display": [
+"9",
+"11"
+],
+"sources": [
+"memory:m038",
+"memory:m039"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Tamarind",
+"pretty": "Tamarind",
+"held_out": false
+},
+{
+"id": "A0103",
+"status": "CONFLICTED",
+"relation": "standup",
+"subject": "Vesper",
+"subject_re": "\\bvesper",
+"cue_re": "stand-?up",
+"kind": "number",
+"severe": true,
+"values": [
+[
+"\\b10\\b",
+"\\bten\\b"
+],
+[
+"\\b12\\b",
+"\\btwelve\\b"
+]
+],
+"display": [
+"10",
+"12"
+],
+"sources": [
+"memory:m046",
+"memory:m047"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Vesper",
+"pretty": "Vesper",
+"held_out": false
+},
+{
+"id": "A0104",
+"status": "CONFLICTED",
+"relation": "standup",
+"subject": "Pinnacle",
+"subject_re": "\\bpinnacle",
+"cue_re": "stand-?up",
+"kind": "number",
+"severe": true,
+"values": [
+[
+"\\b9\\b",
+"\\bnine\\b"
+],
+[
+"\\b11\\b",
+"\\beleven\\b"
+]
+],
+"display": [
+"9",
+"11"
+],
+"sources": [
+"memory:m053",
+"memory:m054"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Pinnacle",
+"pretty": "Pinnacle",
+"held_out": true
+},
+{
+"id": "A0105",
+"status": "CONFLICTED",
+"relation": "standup",
+"subject": "Quartz",
+"subject_re": "\\bquartz",
+"cue_re": "stand-?up",
+"kind": "number",
+"severe": true,
+"values": [
+[
+"\\b10\\b",
+"\\bten\\b"
+],
+[
+"\\b12\\b",
+"\\btwelve\\b"
+]
+],
+"display": [
+"10",
+"12"
+],
+"sources": [
+"memory:m060",
+"memory:m061"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Quartz",
+"pretty": "Quartz",
+"held_out": false
+},
+{
+"id": "A0106",
+"status": "CONFLICTED",
+"relation": "standup",
+"subject": "Sable",
+"subject_re": "\\bsable",
+"cue_re": "stand-?up",
+"kind": "number",
+"severe": true,
+"values": [
+[
+"\\b9\\b",
+"\\bnine\\b"
+],
+[
+"\\b11\\b",
+"\\beleven\\b"
+]
+],
+"display": [
+"9",
+"11"
+],
+"sources": [
+"memory:m066",
+"memory:m067"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Sable",
+"pretty": "Sable",
+"held_out": false
+},
+{
+"id": "A0107",
+"status": "CONFLICTED",
+"relation": "standup",
+"subject": "Thistle",
+"subject_re": "\\bthistle",
+"cue_re": "stand-?up",
+"kind": "number",
+"severe": true,
+"values": [
+[
+"\\b10\\b",
+"\\bten\\b"
+],
+[
+"\\b12\\b",
+"\\btwelve\\b"
+]
+],
+"display": [
+"10",
+"12"
+],
+"sources": [
+"memory:m073",
+"memory:m074"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Thistle",
+"pretty": "Thistle",
+"held_out": true
+},
+{
+"id": "A0108",
+"status": "CONFLICTED",
+"relation": "standup",
+"subject": "Umbra",
+"subject_re": "\\bumbra",
+"cue_re": "stand-?up",
+"kind": "number",
+"severe": true,
+"values": [
+[
+"\\b9\\b",
+"\\bnine\\b"
+],
+[
+"\\b11\\b",
+"\\beleven\\b"
+]
+],
+"display": [
+"9",
+"11"
+],
+"sources": [
+"memory:m079",
+"memory:m080"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Umbra",
+"pretty": "Umbra",
+"held_out": true
+},
+{
+"id": "A0109",
+"status": "CONFLICTED",
+"relation": "standup",
+"subject": "Willow",
+"subject_re": "\\bwillow",
+"cue_re": "stand-?up",
+"kind": "number",
+"severe": true,
+"values": [
+[
+"\\b10\\b",
+"\\bten\\b"
+],
+[
+"\\b12\\b",
+"\\btwelve\\b"
+]
+],
+"display": [
+"10",
+"12"
+],
+"sources": [
+"memory:m084",
+"memory:m085"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Willow",
+"pretty": "Willow",
+"held_out": false
+},
+{
+"id": "A0110",
+"status": "CONFLICTED",
+"relation": "review_day",
+"subject": "Cedar",
+"subject_re": "\\bcedar",
+"cue_re": "design review|review",
+"kind": "day",
+"severe": true,
+"values": [
+[
+"monday"
+],
+[
+"thursday"
+]
+],
+"display": [
+"Monday",
+"Thursday"
+],
+"sources": [
+"memory:m007",
+"memory:m008"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Cedar",
+"pretty": "Cedar",
+"held_out": false
+},
+{
+"id": "A0111",
+"status": "CONFLICTED",
+"relation": "review_day",
+"subject": "Marlin",
+"subject_re": "\\bmarlin",
+"cue_re": "design review|review",
+"kind": "day",
+"severe": true,
+"values": [
+[
+"tuesday"
+],
+[
+"friday"
+]
+],
+"display": [
+"Tuesday",
+"Friday"
+],
+"sources": [
+"memory:m015",
+"memory:m016"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Marlin",
+"pretty": "Marlin",
+"held_out": false
+},
+{
+"id": "A0112",
+"status": "CONFLICTED",
+"relation": "review_day",
+"subject": "Juniper",
+"subject_re": "\\bjuniper",
+"cue_re": "design review|review",
+"kind": "day",
+"severe": true,
+"values": [
+[
+"wednesday"
+],
+[
+"thursday"
+]
+],
+"display": [
+"Wednesday",
+"Thursday"
+],
+"sources": [
+"memory:m022",
+"memory:m023"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Juniper",
+"pretty": "Juniper",
+"held_out": true
+},
+{
+"id": "A0113",
+"status": "CONFLICTED",
+"relation": "review_day",
+"subject": "Osprey",
+"subject_re": "\\bosprey",
+"cue_re": "design review|review",
+"kind": "day",
+"severe": true,
+"values": [
+[
+"monday"
+],
+[
+"friday"
+]
+],
+"display": [
+"Monday",
+"Friday"
+],
+"sources": [
+"memory:m031",
+"memory:m032"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Osprey",
+"pretty": "Osprey",
+"held_out": false
+},
+{
+"id": "A0114",
+"status": "CONFLICTED",
+"relation": "review_day",
+"subject": "Tamarind",
+"subject_re": "\\btamarind",
+"cue_re": "design review|review",
+"kind": "day",
+"severe": true,
+"values": [
+[
+"tuesday"
+],
+[
+"thursday"
+]
+],
+"display": [
+"Tuesday",
+"Thursday"
+],
+"sources": [
+"memory:m040",
+"memory:m041"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Tamarind",
+"pretty": "Tamarind",
+"held_out": false
+},
+{
+"id": "A0115",
+"status": "CONFLICTED",
+"relation": "review_day",
+"subject": "Vesper",
+"subject_re": "\\bvesper",
+"cue_re": "design review|review",
+"kind": "day",
+"severe": true,
+"values": [
+[
+"wednesday"
+],
+[
+"friday"
+]
+],
+"display": [
+"Wednesday",
+"Friday"
+],
+"sources": [
+"memory:m048",
+"memory:m049"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Vesper",
+"pretty": "Vesper",
+"held_out": false
+},
+{
+"id": "A0116",
+"status": "CONFLICTED",
+"relation": "review_day",
+"subject": "Pinnacle",
+"subject_re": "\\bpinnacle",
+"cue_re": "design review|review",
+"kind": "day",
+"severe": true,
+"values": [
+[
+"monday"
+],
+[
+"thursday"
+]
+],
+"display": [
+"Monday",
+"Thursday"
+],
+"sources": [
+"memory:m055",
+"memory:m056"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Pinnacle",
+"pretty": "Pinnacle",
+"held_out": true
+},
+{
+"id": "A0117",
+"status": "CONFLICTED",
+"relation": "review_day",
+"subject": "Quartz",
+"subject_re": "\\bquartz",
+"cue_re": "design review|review",
+"kind": "day",
+"severe": true,
+"values": [
+[
+"tuesday"
+],
+[
+"friday"
+]
+],
+"display": [
+"Tuesday",
+"Friday"
+],
+"sources": [
+"memory:m062",
+"memory:m063"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Quartz",
+"pretty": "Quartz",
+"held_out": false
+},
+{
+"id": "A0118",
+"status": "CONFLICTED",
+"relation": "review_day",
+"subject": "Sable",
+"subject_re": "\\bsable",
+"cue_re": "design review|review",
+"kind": "day",
+"severe": true,
+"values": [
+[
+"wednesday"
+],
+[
+"thursday"
+]
+],
+"display": [
+"Wednesday",
+"Thursday"
+],
+"sources": [
+"memory:m068",
+"memory:m069"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Sable",
+"pretty": "Sable",
+"held_out": false
+},
+{
+"id": "A0119",
+"status": "CONFLICTED",
+"relation": "review_day",
+"subject": "Thistle",
+"subject_re": "\\bthistle",
+"cue_re": "design review|review",
+"kind": "day",
+"severe": true,
+"values": [
+[
+"monday"
+],
+[
+"friday"
+]
+],
+"display": [
+"Monday",
+"Friday"
+],
+"sources": [
+"memory:m075",
+"memory:m076"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Thistle",
+"pretty": "Thistle",
+"held_out": true
+},
+{
+"id": "A0120",
+"status": "CONFLICTED",
+"relation": "review_day",
+"subject": "Umbra",
+"subject_re": "\\bumbra",
+"cue_re": "design review|review",
+"kind": "day",
+"severe": true,
+"values": [
+[
+"tuesday"
+],
+[
+"thursday"
+]
+],
+"display": [
+"Tuesday",
+"Thursday"
+],
+"sources": [
+"memory:m081",
+"memory:m082"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Umbra",
+"pretty": "Umbra",
+"held_out": true
+},
+{
+"id": "A0121",
+"status": "CONFLICTED",
+"relation": "review_day",
+"subject": "Willow",
+"subject_re": "\\bwillow",
+"cue_re": "design review|review",
+"kind": "day",
+"severe": true,
+"values": [
+[
+"wednesday"
+],
+[
+"friday"
+]
+],
+"display": [
+"Wednesday",
+"Friday"
+],
+"sources": [
+"memory:m086",
+"memory:m087"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Willow",
+"pretty": "Willow",
+"held_out": false
+},
+{
+"id": "A0122",
+"status": "SUPPORTED",
+"relation": "approver",
+"subject": "Cedar",
+"subject_re": "\\bcedar",
+"cue_re": "approv|sign(?:ed)? off|go-ahead",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bdmitri\\b",
+"dmitri\\ volkov"
+]
+],
+"display": [
+"Dmitri Volkov"
+],
+"sources": [
+"memory:m009"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Cedar",
+"pretty": "Cedar",
+"held_out": true
+},
+{
+"id": "A0123",
+"status": "SUPPORTED",
+"relation": "approver",
+"subject": "Marlin",
+"subject_re": "\\bmarlin",
+"cue_re": "approv|sign(?:ed)? off|go-ahead",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bumar\\b",
+"umar\\ bello"
+]
+],
+"display": [
+"Umar Bello"
+],
+"sources": [
+"memory:m017"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Marlin",
+"pretty": "Marlin",
+"held_out": true
+},
+{
+"id": "A0124",
+"status": "SUPPORTED",
+"relation": "approver",
+"subject": "Juniper",
+"subject_re": "\\bjuniper",
+"cue_re": "approv|sign(?:ed)? off|go-ahead",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bfarid\\b",
+"farid\\ haddad"
+]
+],
+"display": [
+"Farid Haddad"
+],
+"sources": [
+"memory:m024"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Juniper",
+"pretty": "Juniper",
+"held_out": true
+},
+{
+"id": "A0125",
+"status": "SUPPORTED",
+"relation": "approver",
+"subject": "Osprey",
+"subject_re": "\\bosprey",
+"cue_re": "approv|sign(?:ed)? off|go-ahead",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bpablo\\b",
+"pablo\\ reyes"
+]
+],
+"display": [
+"Pablo Reyes"
+],
+"sources": [
+"memory:m033"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Osprey",
+"pretty": "Osprey",
+"held_out": true
+},
+{
+"id": "A0126",
+"status": "SUPPORTED",
+"relation": "approver",
+"subject": "Tamarind",
+"subject_re": "\\btamarind",
+"cue_re": "approv|sign(?:ed)? off|go-ahead",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bgreta\\b",
+"greta\\ lindqvist"
+]
+],
+"display": [
+"Greta Lindqvist"
+],
+"sources": [
+"memory:m042"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Tamarind",
+"pretty": "Tamarind",
+"held_out": true
+},
+{
+"id": "A0127",
+"status": "UNSUPPORTED",
+"relation": "approver",
+"subject": "Vesper",
+"subject_re": "\\bvesper",
+"cue_re": "approv|sign(?:ed)? off|go-ahead",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Vesper",
+"pretty": "Vesper",
+"held_out": true
+},
+{
+"id": "A0128",
+"status": "UNSUPPORTED",
+"relation": "approver",
+"subject": "Pinnacle",
+"subject_re": "\\bpinnacle",
+"cue_re": "approv|sign(?:ed)? off|go-ahead",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Pinnacle",
+"pretty": "Pinnacle",
+"held_out": true
+},
+{
+"id": "A0129",
+"status": "UNSUPPORTED",
+"relation": "approver",
+"subject": "Quartz",
+"subject_re": "\\bquartz",
+"cue_re": "approv|sign(?:ed)? off|go-ahead",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Quartz",
+"pretty": "Quartz",
+"held_out": true
+},
+{
+"id": "A0130",
+"status": "UNSUPPORTED",
+"relation": "approver",
+"subject": "Sable",
+"subject_re": "\\bsable",
+"cue_re": "approv|sign(?:ed)? off|go-ahead",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Sable",
+"pretty": "Sable",
+"held_out": true
+},
+{
+"id": "A0131",
+"status": "UNSUPPORTED",
+"relation": "approver",
+"subject": "Thistle",
+"subject_re": "\\bthistle",
+"cue_re": "approv|sign(?:ed)? off|go-ahead",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Thistle",
+"pretty": "Thistle",
+"held_out": true
+},
+{
+"id": "A0132",
+"status": "UNSUPPORTED",
+"relation": "approver",
+"subject": "Umbra",
+"subject_re": "\\bumbra",
+"cue_re": "approv|sign(?:ed)? off|go-ahead",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Umbra",
+"pretty": "Umbra",
+"held_out": true
+},
+{
+"id": "A0133",
+"status": "UNSUPPORTED",
+"relation": "approver",
+"subject": "Willow",
+"subject_re": "\\bwillow",
+"cue_re": "approv|sign(?:ed)? off|go-ahead",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Willow",
+"pretty": "Willow",
+"held_out": true
+},
+{
+"id": "A0134",
+"status": "SUPPORTED",
+"relation": "support_hours",
+"subject": "Quarry Data",
+"subject_re": "\\bquarry",
+"cue_re": "hours|support|staffed|\\bopen|reach",
+"kind": "hours",
+"severe": false,
+"values": [
+[
+"9\\ to\\ 6"
+]
+],
+"display": [
+"9 to 6"
+],
+"sources": [
+"document:doc-vendor-quarry-data"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Quarry Data",
+"held_out": false
+},
+{
+"id": "A0135",
+"status": "SUPPORTED",
+"relation": "support_hours",
+"subject": "Tidewater Pay",
+"subject_re": "\\btidewater",
+"cue_re": "hours|support|staffed|\\bopen|reach",
+"kind": "hours",
+"severe": false,
+"values": [
+[
+"9\\ to\\ 5"
+]
+],
+"display": [
+"9 to 5"
+],
+"sources": [
+"document:doc-vendor-tidewater-pay"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Tidewater Pay",
+"held_out": false
+},
+{
+"id": "A0136",
+"status": "SUPPORTED",
+"relation": "support_hours",
+"subject": "Ironside Backup",
+"subject_re": "\\bironside",
+"cue_re": "hours|support|staffed|\\bopen|reach",
+"kind": "hours",
+"severe": false,
+"values": [
+[
+"9\\ to\\ 7"
+]
+],
+"display": [
+"9 to 7"
+],
+"sources": [
+"document:doc-vendor-ironside-backup"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Ironside Backup",
+"held_out": false
+},
+{
+"id": "A0137",
+"status": "SUPPORTED",
+"relation": "decision",
+"subject": "Cedar",
+"subject_re": "\\bcedar",
+"cue_re": "decid|decision|agree|\\bkeep",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"keep\\ swift\\-20b\\ as\\ the\\ default\\ model"
+]
+],
+"display": [
+"keep Swift-20B as the default model"
+],
+"sources": [
+"meeting:mt-cedar#2"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Cedar",
+"pretty": "Cedar",
+"held_out": false
+},
+{
+"id": "A0138",
+"status": "SUPPORTED",
+"relation": "decision",
+"subject": "Marlin",
+"subject_re": "\\bmarlin",
+"cue_re": "decid|decision|agree|\\bkeep",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"keep\\ heron\\-12b\\ as\\ the\\ default\\ model"
+]
+],
+"display": [
+"keep Heron-12B as the default model"
+],
+"sources": [
+"meeting:mt-marlin#2"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Marlin",
+"pretty": "Marlin",
+"held_out": false
+},
+{
+"id": "A0139",
+"status": "SUPPORTED",
+"relation": "decision",
+"subject": "Juniper",
+"subject_re": "\\bjuniper",
+"cue_re": "decid|decision|agree|\\bkeep",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"keep\\ merlin\\-7b\\ as\\ the\\ default\\ model"
+]
+],
+"display": [
+"keep Merlin-7B as the default model"
+],
+"sources": [
+"meeting:mt-juniper#2"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Juniper",
+"pretty": "Juniper",
+"held_out": true
+},
+{
+"id": "A0140",
+"status": "SUPPORTED",
+"relation": "decision",
+"subject": "Osprey",
+"subject_re": "\\bosprey",
+"cue_re": "decid|decision|agree|\\bkeep",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"keep\\ swift\\-6b\\ as\\ the\\ default\\ model"
+]
+],
+"display": [
+"keep Swift-6B as the default model"
+],
+"sources": [
+"meeting:mt-osprey#2"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Osprey",
+"pretty": "Osprey",
+"held_out": false
+},
+{
+"id": "A0141",
+"status": "SUPPORTED",
+"relation": "decision",
+"subject": "Tamarind",
+"subject_re": "\\btamarind",
+"cue_re": "decid|decision|agree|\\bkeep",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"keep\\ kestrel\\-3b\\ as\\ the\\ default\\ model"
+]
+],
+"display": [
+"keep Kestrel-3B as the default model"
+],
+"sources": [
+"meeting:mt-tamarind#2"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Tamarind",
+"pretty": "Tamarind",
+"held_out": false
+},
+{
+"id": "A0142",
+"status": "SUPPORTED",
+"relation": "decision",
+"subject": "Vesper",
+"subject_re": "\\bvesper",
+"cue_re": "decid|decision|agree|\\bkeep",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"keep\\ kestrel\\-9b\\ as\\ the\\ default\\ model"
+]
+],
+"display": [
+"keep Kestrel-9B as the default model"
+],
+"sources": [
+"meeting:mt-vesper#2"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Vesper",
+"pretty": "Vesper",
+"held_out": false
+},
+{
+"id": "A0143",
+"status": "SUPPORTED",
+"relation": "decision",
+"subject": "Pinnacle",
+"subject_re": "\\bpinnacle",
+"cue_re": "decid|decision|agree|\\bkeep",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"keep\\ heron\\-4b\\ as\\ the\\ default\\ model"
+]
+],
+"display": [
+"keep Heron-4B as the default model"
+],
+"sources": [
+"meeting:mt-pinnacle#2"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Pinnacle",
+"pretty": "Pinnacle",
+"held_out": true
+},
+{
+"id": "A0144",
+"status": "SUPPORTED",
+"relation": "decision",
+"subject": "Quartz",
+"subject_re": "\\bquartz",
+"cue_re": "decid|decision|agree|\\bkeep",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"keep\\ merlin\\-2b\\ as\\ the\\ default\\ model"
+]
+],
+"display": [
+"keep Merlin-2B as the default model"
+],
+"sources": [
+"meeting:mt-quartz#2"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Quartz",
+"pretty": "Quartz",
+"held_out": false
+},
+{
+"id": "A0145",
+"status": "SUPPORTED",
+"relation": "budget_through",
+"subject": "Cedar",
+"subject_re": "\\bcedar",
+"cue_re": "budget|fund|approved through",
+"kind": "month",
+"severe": false,
+"values": [
+[
+"april"
+]
+],
+"display": [
+"April"
+],
+"sources": [
+"meeting:mt-cedar#3"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Cedar",
+"pretty": "Cedar",
+"held_out": false
+},
+{
+"id": "A0146",
+"status": "SUPPORTED",
+"relation": "budget_through",
+"subject": "Marlin",
+"subject_re": "\\bmarlin",
+"cue_re": "budget|fund|approved through",
+"kind": "month",
+"severe": false,
+"values": [
+[
+"may"
+]
+],
+"display": [
+"May"
+],
+"sources": [
+"meeting:mt-marlin#3"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Marlin",
+"pretty": "Marlin",
+"held_out": false
+},
+{
+"id": "A0147",
+"status": "SUPPORTED",
+"relation": "budget_through",
+"subject": "Juniper",
+"subject_re": "\\bjuniper",
+"cue_re": "budget|fund|approved through",
+"kind": "month",
+"severe": false,
+"values": [
+[
+"june"
+]
+],
+"display": [
+"June"
+],
+"sources": [
+"meeting:mt-juniper#3"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Juniper",
+"pretty": "Juniper",
+"held_out": true
+},
+{
+"id": "A0148",
+"status": "SUPPORTED",
+"relation": "budget_through",
+"subject": "Osprey",
+"subject_re": "\\bosprey",
+"cue_re": "budget|fund|approved through",
+"kind": "month",
+"severe": false,
+"values": [
+[
+"july"
+]
+],
+"display": [
+"July"
+],
+"sources": [
+"meeting:mt-osprey#3"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Osprey",
+"pretty": "Osprey",
+"held_out": false
+},
+{
+"id": "A0149",
+"status": "SUPPORTED",
+"relation": "budget_through",
+"subject": "Tamarind",
+"subject_re": "\\btamarind",
+"cue_re": "budget|fund|approved through",
+"kind": "month",
+"severe": false,
+"values": [
+[
+"august"
+]
+],
+"display": [
+"August"
+],
+"sources": [
+"meeting:mt-tamarind#3"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Tamarind",
+"pretty": "Tamarind",
+"held_out": false
+},
+{
+"id": "A0150",
+"status": "SUPPORTED",
+"relation": "budget_through",
+"subject": "Vesper",
+"subject_re": "\\bvesper",
+"cue_re": "budget|fund|approved through",
+"kind": "month",
+"severe": false,
+"values": [
+[
+"september"
+]
+],
+"display": [
+"September"
+],
+"sources": [
+"meeting:mt-vesper#3"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Vesper",
+"pretty": "Vesper",
+"held_out": false
+},
+{
+"id": "A0151",
+"status": "SUPPORTED",
+"relation": "budget_through",
+"subject": "Pinnacle",
+"subject_re": "\\bpinnacle",
+"cue_re": "budget|fund|approved through",
+"kind": "month",
+"severe": false,
+"values": [
+[
+"october"
+]
+],
+"display": [
+"October"
+],
+"sources": [
+"meeting:mt-pinnacle#3"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Pinnacle",
+"pretty": "Pinnacle",
+"held_out": true
+},
+{
+"id": "A0152",
+"status": "SUPPORTED",
+"relation": "budget_through",
+"subject": "Quartz",
+"subject_re": "\\bquartz",
+"cue_re": "budget|fund|approved through",
+"kind": "month",
+"severe": false,
+"values": [
+[
+"november"
+]
+],
+"display": [
+"November"
+],
+"sources": [
+"meeting:mt-quartz#3"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Quartz",
+"pretty": "Quartz",
+"held_out": false
+},
+{
+"id": "A0153",
+"status": "SUPPORTED",
+"relation": "attends",
+"subject": "Cedar",
+"subject_re": "\\bcedar",
+"cue_re": "attend|speak|took part|joined|\\bin the",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bliam\\b",
+"liam\\ oconnor"
+],
+[
+"\\bines\\b",
+"ines\\ duarte"
+]
+],
+"display": [
+"Liam Oconnor",
+"Ines Duarte"
+],
+"sources": [
+"meeting:mt-cedar"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Cedar",
+"pretty": "Cedar",
+"held_out": false
+},
+{
+"id": "A0154",
+"status": "SUPPORTED",
+"relation": "attends",
+"subject": "Marlin",
+"subject_re": "\\bmarlin",
+"cue_re": "attend|speak|took part|joined|\\bin the",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\byusuf\\b",
+"yusuf\\ demir"
+],
+[
+"\\bumar\\b",
+"umar\\ bello"
+]
+],
+"display": [
+"Yusuf Demir",
+"Umar Bello"
+],
+"sources": [
+"meeting:mt-marlin"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Marlin",
+"pretty": "Marlin",
+"held_out": false
+},
+{
+"id": "A0155",
+"status": "SUPPORTED",
+"relation": "attends",
+"subject": "Juniper",
+"subject_re": "\\bjuniper",
+"cue_re": "attend|speak|took part|joined|\\bin the",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bquinn\\b",
+"quinn\\ abbott"
+],
+[
+"\\belena\\b",
+"elena\\ marsh"
+]
+],
+"display": [
+"Quinn Abbott",
+"Elena Marsh"
+],
+"sources": [
+"meeting:mt-juniper"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Juniper",
+"pretty": "Juniper",
+"held_out": true
+},
+{
+"id": "A0156",
+"status": "SUPPORTED",
+"relation": "attends",
+"subject": "Osprey",
+"subject_re": "\\bosprey",
+"cue_re": "attend|speak|took part|joined|\\bin the",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bfarid\\b",
+"farid\\ haddad"
+],
+[
+"\\bwen\\b",
+"wen\\ zhao"
+]
+],
+"display": [
+"Farid Haddad",
+"Wen Zhao"
+],
+"sources": [
+"meeting:mt-osprey"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Osprey",
+"pretty": "Osprey",
+"held_out": false
+},
+{
+"id": "A0157",
+"status": "SUPPORTED",
+"relation": "attends",
+"subject": "Tamarind",
+"subject_re": "\\btamarind",
+"cue_re": "attend|speak|took part|joined|\\bin the",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\brania\\b",
+"rania\\ said"
+],
+[
+"\\bamara\\b",
+"amara\\ osei"
+]
+],
+"display": [
+"Rania Said",
+"Amara Osei"
+],
+"sources": [
+"meeting:mt-tamarind"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Tamarind",
+"pretty": "Tamarind",
+"held_out": false
+},
+{
+"id": "A0158",
+"status": "SUPPORTED",
+"relation": "attends",
+"subject": "Vesper",
+"subject_re": "\\bvesper",
+"cue_re": "attend|speak|took part|joined|\\bin the",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bkavya\\b",
+"kavya\\ menon"
+],
+[
+"\\bbruno\\b",
+"bruno\\ keller"
+]
+],
+"display": [
+"Kavya Menon",
+"Bruno Keller"
+],
+"sources": [
+"meeting:mt-vesper"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Vesper",
+"pretty": "Vesper",
+"held_out": false
+},
+{
+"id": "A0159",
+"status": "SUPPORTED",
+"relation": "attends",
+"subject": "Pinnacle",
+"subject_re": "\\bpinnacle",
+"cue_re": "attend|speak|took part|joined|\\bin the",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bmila\\b",
+"mila\\ novak"
+],
+[
+"\\bjonas\\b",
+"jonas\\ weiss"
+]
+],
+"display": [
+"Mila Novak",
+"Jonas Weiss"
+],
+"sources": [
+"meeting:mt-pinnacle"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Pinnacle",
+"pretty": "Pinnacle",
+"held_out": true
+},
+{
+"id": "A0160",
+"status": "SUPPORTED",
+"relation": "attends",
+"subject": "Quartz",
+"subject_re": "\\bquartz",
+"cue_re": "attend|speak|took part|joined|\\bin the",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bpablo\\b",
+"pablo\\ reyes"
+],
+[
+"\\bolga\\b",
+"olga\\ petrova"
+]
+],
+"display": [
+"Pablo Reyes",
+"Olga Petrova"
+],
+"sources": [
+"meeting:mt-quartz"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Quartz",
+"pretty": "Quartz",
+"held_out": false
+},
+{
+"id": "A0161",
+"status": "SUPPORTED",
+"relation": "test_fixer",
+"subject": "Cedar",
+"subject_re": "\\bcedar",
+"cue_re": "\\bfix|rollback test",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bliam\\b",
+"liam\\ oconnor"
+]
+],
+"display": [
+"Liam Oconnor"
+],
+"sources": [
+"meeting:mt-cedar#10"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Cedar",
+"pretty": "Cedar",
+"held_out": false
+},
+{
+"id": "A0162",
+"status": "SUPPORTED",
+"relation": "test_fixer",
+"subject": "Marlin",
+"subject_re": "\\bmarlin",
+"cue_re": "\\bfix|rollback test",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\byusuf\\b",
+"yusuf\\ demir"
+]
+],
+"display": [
+"Yusuf Demir"
+],
+"sources": [
+"meeting:mt-marlin#16"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Marlin",
+"pretty": "Marlin",
+"held_out": false
+},
+{
+"id": "A0163",
+"status": "SUPPORTED",
+"relation": "test_fixer",
+"subject": "Juniper",
+"subject_re": "\\bjuniper",
+"cue_re": "\\bfix|rollback test",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bquinn\\b",
+"quinn\\ abbott"
+]
+],
+"display": [
+"Quinn Abbott"
+],
+"sources": [
+"meeting:mt-juniper#16"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Juniper",
+"pretty": "Juniper",
+"held_out": true
+},
+{
+"id": "A0164",
+"status": "SUPPORTED",
+"relation": "test_fixer",
+"subject": "Osprey",
+"subject_re": "\\bosprey",
+"cue_re": "\\bfix|rollback test",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bfarid\\b",
+"farid\\ haddad"
+]
+],
+"display": [
+"Farid Haddad"
+],
+"sources": [
+"meeting:mt-osprey#9"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Osprey",
+"pretty": "Osprey",
+"held_out": false
+},
+{
+"id": "A0165",
+"status": "SUPPORTED",
+"relation": "test_fixer",
+"subject": "Tamarind",
+"subject_re": "\\btamarind",
+"cue_re": "\\bfix|rollback test",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\brania\\b",
+"rania\\ said"
+]
+],
+"display": [
+"Rania Said"
+],
+"sources": [
+"meeting:mt-tamarind#11"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Tamarind",
+"pretty": "Tamarind",
+"held_out": false
+},
+{
+"id": "A0166",
+"status": "SUPPORTED",
+"relation": "test_fixer",
+"subject": "Vesper",
+"subject_re": "\\bvesper",
+"cue_re": "\\bfix|rollback test",
+"kind": "person",
+"severe": false,
+"values": [
+[
+"\\bkavya\\b",
+"kavya\\ menon"
+]
+],
+"display": [
+"Kavya Menon"
+],
+"sources": [
+"meeting:mt-vesper#17"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Vesper",
+"pretty": "Vesper",
+"held_out": false
+},
+{
+"id": "A0167",
+"status": "UNSUPPORTED",
+"relation": "test_fixer",
+"subject": "Pinnacle",
+"subject_re": "\\bpinnacle",
+"cue_re": "\\bfix|rollback test",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Pinnacle",
+"pretty": "Pinnacle",
+"held_out": true
+},
+{
+"id": "A0168",
+"status": "UNSUPPORTED",
+"relation": "test_fixer",
+"subject": "Quartz",
+"subject_re": "\\bquartz",
+"cue_re": "\\bfix|rollback test",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Quartz",
+"pretty": "Quartz",
+"held_out": false
+},
+{
+"id": "A0169",
+"status": "UNSUPPORTED",
+"relation": "test_fixer",
+"subject": "Sable",
+"subject_re": "\\bsable",
+"cue_re": "\\bfix|rollback test",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Sable",
+"pretty": "Sable",
+"held_out": false
+},
+{
+"id": "A0170",
+"status": "UNSUPPORTED",
+"relation": "test_fixer",
+"subject": "Thistle",
+"subject_re": "\\bthistle",
+"cue_re": "\\bfix|rollback test",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Thistle",
+"pretty": "Thistle",
+"held_out": true
+},
+{
+"id": "A0171",
+"status": "UNSUPPORTED",
+"relation": "test_fixer",
+"subject": "Umbra",
+"subject_re": "\\bumbra",
+"cue_re": "\\bfix|rollback test",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Umbra",
+"pretty": "Umbra",
+"held_out": true
+},
+{
+"id": "A0172",
+"status": "UNSUPPORTED",
+"relation": "test_fixer",
+"subject": "Willow",
+"subject_re": "\\bwillow",
+"cue_re": "\\bfix|rollback test",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Willow",
+"pretty": "Willow",
+"held_out": false
+},
+{
+"id": "A0173",
+"status": "SUPPORTED",
+"relation": "deadline",
+"subject": "Sven Larsen",
+"subject_re": "\\bsven",
+"cue_re": "deadline|\\bdue\\b|circulate|summary",
+"kind": "day",
+"severe": false,
+"values": [
+[
+"monday"
+]
+],
+"display": [
+"Monday"
+],
+"sources": [
+"note:note-cedar-actions"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Sven Larsen",
+"held_out": false
+},
+{
+"id": "A0174",
+"status": "SUPPORTED",
+"relation": "deadline",
+"subject": "Elena Marsh",
+"subject_re": "\\belena",
+"cue_re": "deadline|\\bdue\\b|circulate|summary",
+"kind": "day",
+"severe": false,
+"values": [
+[
+"tuesday"
+]
+],
+"display": [
+"Tuesday"
+],
+"sources": [
+"note:note-marlin-actions"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Elena Marsh",
+"held_out": false
+},
+{
+"id": "A0175",
+"status": "SUPPORTED",
+"relation": "deadline",
+"subject": "Amara Osei",
+"subject_re": "\\bamara",
+"cue_re": "deadline|\\bdue\\b|circulate|summary",
+"kind": "day",
+"severe": false,
+"values": [
+[
+"wednesday"
+]
+],
+"display": [
+"Wednesday"
+],
+"sources": [
+"note:note-juniper-actions"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Amara Osei",
+"held_out": false
+},
+{
+"id": "A0176",
+"status": "SUPPORTED",
+"relation": "deadline",
+"subject": "Olga Petrova",
+"subject_re": "\\bolga",
+"cue_re": "deadline|\\bdue\\b|circulate|summary",
+"kind": "day",
+"severe": false,
+"values": [
+[
+"thursday"
+]
+],
+"display": [
+"Thursday"
+],
+"sources": [
+"note:note-osprey-actions"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Olga Petrova",
+"held_out": false
+},
+{
+"id": "A0177",
+"status": "SUPPORTED",
+"relation": "deadline",
+"subject": "Umar Bello",
+"subject_re": "\\bumar",
+"cue_re": "deadline|\\bdue\\b|circulate|summary",
+"kind": "day",
+"severe": false,
+"values": [
+[
+"friday"
+]
+],
+"display": [
+"Friday"
+],
+"sources": [
+"note:note-tamarind-actions"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Umar Bello",
+"held_out": false
+},
+{
+"id": "A0178",
+"status": "SUPPORTED",
+"relation": "deadline",
+"subject": "Pablo Reyes",
+"subject_re": "\\bpablo",
+"cue_re": "deadline|\\bdue\\b|circulate|summary",
+"kind": "day",
+"severe": false,
+"values": [
+[
+"monday"
+]
+],
+"display": [
+"Monday"
+],
+"sources": [
+"note:note-vesper-actions"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Pablo Reyes",
+"held_out": false
+},
+{
+"id": "A0179",
+"status": "SUPPORTED",
+"relation": "deadline",
+"subject": "Quinn Abbott",
+"subject_re": "\\bquinn",
+"cue_re": "deadline|\\bdue\\b|circulate|summary",
+"kind": "day",
+"severe": false,
+"values": [
+[
+"tuesday"
+]
+],
+"display": [
+"Tuesday"
+],
+"sources": [
+"note:note-pinnacle-actions"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Quinn Abbott",
+"held_out": false
+},
+{
+"id": "A0180",
+"status": "SUPPORTED",
+"relation": "deadline",
+"subject": "Vera Kovac",
+"subject_re": "\\bvera",
+"cue_re": "deadline|\\bdue\\b|circulate|summary",
+"kind": "day",
+"severe": false,
+"values": [
+[
+"wednesday"
+]
+],
+"display": [
+"Wednesday"
+],
+"sources": [
+"note:note-quartz-actions"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Vera Kovac",
+"held_out": false
+},
+{
+"id": "A0181",
+"status": "SUPPORTED",
+"relation": "reviews",
+"subject": "Jonas Weiss",
+"subject_re": "\\bjonas",
+"cue_re": "review",
+"kind": "text",
+"severe": false,
+"values": [
+[
+"the\\ gantry\\ settings"
+]
+],
+"display": [
+"the Gantry settings"
+],
+"sources": [
+"note:note-cedar-actions"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Jonas Weiss",
+"held_out": false
+},
+{
+"id": "A0182",
+"status": "SUPPORTED",
+"relation": "reviews",
+"subject": "Bruno Keller",
+"subject_re": "\\bbruno",
+"cue_re": "review",
+"kind": "text",
+"severe": false,
+"values": [
+[
+"the\\ anvil\\ settings"
+]
+],
+"display": [
+"the Anvil settings"
+],
+"sources": [
+"note:note-marlin-actions"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Bruno Keller",
+"held_out": false
+},
+{
+"id": "A0183",
+"status": "SUPPORTED",
+"relation": "reviews",
+"subject": "Wen Zhao",
+"subject_re": "\\bwen",
+"cue_re": "review",
+"kind": "text",
+"severe": false,
+"values": [
+[
+"the\\ prism\\ settings"
+]
+],
+"display": [
+"the Prism settings"
+],
+"sources": [
+"note:note-juniper-actions"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Wen Zhao",
+"held_out": false
+},
+{
+"id": "A0184",
+"status": "SUPPORTED",
+"relation": "reviews",
+"subject": "Dmitri Volkov",
+"subject_re": "\\bdmitri",
+"cue_re": "review",
+"kind": "text",
+"severe": false,
+"values": [
+[
+"the\\ hopper\\ settings"
+]
+],
+"display": [
+"the Hopper settings"
+],
+"sources": [
+"note:note-osprey-actions"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Dmitri Volkov",
+"held_out": false
+},
+{
+"id": "A0185",
+"status": "SUPPORTED",
+"relation": "reviews",
+"subject": "Nikhil Rao",
+"subject_re": "\\bnikhil",
+"cue_re": "review",
+"kind": "text",
+"severe": false,
+"values": [
+[
+"the\\ sluice\\ settings"
+]
+],
+"display": [
+"the Sluice settings"
+],
+"sources": [
+"note:note-tamarind-actions"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Nikhil Rao",
+"held_out": false
+},
+{
+"id": "A0186",
+"status": "SUPPORTED",
+"relation": "reviews",
+"subject": "Kavya Menon",
+"subject_re": "\\bkavya",
+"cue_re": "review",
+"kind": "text",
+"severe": false,
+"values": [
+[
+"the\\ turret\\ settings"
+]
+],
+"display": [
+"the Turret settings"
+],
+"sources": [
+"note:note-vesper-actions"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Kavya Menon",
+"held_out": false
+},
+{
+"id": "A0187",
+"status": "SUPPORTED",
+"relation": "reviews",
+"subject": "Yusuf Demir",
+"subject_re": "\\byusuf",
+"cue_re": "review",
+"kind": "text",
+"severe": false,
+"values": [
+[
+"the\\ relay\\ settings"
+]
+],
+"display": [
+"the Relay settings"
+],
+"sources": [
+"note:note-pinnacle-actions"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Yusuf Demir",
+"held_out": false
+},
+{
+"id": "A0188",
+"status": "SUPPORTED",
+"relation": "reviews",
+"subject": "Ines Duarte",
+"subject_re": "\\bines",
+"cue_re": "review",
+"kind": "text",
+"severe": false,
+"values": [
+[
+"the\\ conduit\\ settings"
+]
+],
+"display": [
+"the Conduit settings"
+],
+"sources": [
+"note:note-quartz-actions"
+],
+"needs_citation": true,
+"canary": null,
+"project": "",
+"pretty": "Ines Duarte",
+"held_out": false
+},
+{
+"id": "A0189",
+"status": "UNSUPPORTED",
+"relation": "security_reviewer",
+"subject": "Cedar",
+"subject_re": "\\bcedar",
+"cue_re": "security",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Cedar",
+"pretty": "Cedar",
+"held_out": false
+},
+{
+"id": "A0190",
+"status": "UNSUPPORTED",
+"relation": "security_reviewer",
+"subject": "Marlin",
+"subject_re": "\\bmarlin",
+"cue_re": "security",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Marlin",
+"pretty": "Marlin",
+"held_out": false
+},
+{
+"id": "A0191",
+"status": "UNSUPPORTED",
+"relation": "security_reviewer",
+"subject": "Juniper",
+"subject_re": "\\bjuniper",
+"cue_re": "security",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Juniper",
+"pretty": "Juniper",
+"held_out": true
+},
+{
+"id": "A0192",
+"status": "UNSUPPORTED",
+"relation": "security_reviewer",
+"subject": "Osprey",
+"subject_re": "\\bosprey",
+"cue_re": "security",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Osprey",
+"pretty": "Osprey",
+"held_out": false
+},
+{
+"id": "A0193",
+"status": "UNSUPPORTED",
+"relation": "security_reviewer",
+"subject": "Tamarind",
+"subject_re": "\\btamarind",
+"cue_re": "security",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Tamarind",
+"pretty": "Tamarind",
+"held_out": false
+},
+{
+"id": "A0194",
+"status": "UNSUPPORTED",
+"relation": "security_reviewer",
+"subject": "Vesper",
+"subject_re": "\\bvesper",
+"cue_re": "security",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Vesper",
+"pretty": "Vesper",
+"held_out": false
+},
+{
+"id": "A0195",
+"status": "UNSUPPORTED",
+"relation": "security_reviewer",
+"subject": "Pinnacle",
+"subject_re": "\\bpinnacle",
+"cue_re": "security",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Pinnacle",
+"pretty": "Pinnacle",
+"held_out": true
+},
+{
+"id": "A0196",
+"status": "UNSUPPORTED",
+"relation": "security_reviewer",
+"subject": "Quartz",
+"subject_re": "\\bquartz",
+"cue_re": "security",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Quartz",
+"pretty": "Quartz",
+"held_out": false
+},
+{
+"id": "A0197",
+"status": "UNSUPPORTED",
+"relation": "security_reviewer",
+"subject": "Sable",
+"subject_re": "\\bsable",
+"cue_re": "security",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Sable",
+"pretty": "Sable",
+"held_out": false
+},
+{
+"id": "A0198",
+"status": "UNSUPPORTED",
+"relation": "security_reviewer",
+"subject": "Thistle",
+"subject_re": "\\bthistle",
+"cue_re": "security",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Thistle",
+"pretty": "Thistle",
+"held_out": true
+},
+{
+"id": "A0199",
+"status": "UNSUPPORTED",
+"relation": "security_reviewer",
+"subject": "Umbra",
+"subject_re": "\\bumbra",
+"cue_re": "security",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Umbra",
+"pretty": "Umbra",
+"held_out": true
+},
+{
+"id": "A0200",
+"status": "UNSUPPORTED",
+"relation": "security_reviewer",
+"subject": "Willow",
+"subject_re": "\\bwillow",
+"cue_re": "security",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Willow",
+"pretty": "Willow",
+"held_out": false
+},
+{
+"id": "A0201",
+"status": "UNSUPPORTED",
+"relation": "max_message_size",
+"subject": "Gantry scheduler",
+"subject_re": "\\bgantry",
+"cue_re": "message|size",
+"kind": "number",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Cedar",
+"pretty": "Cedar",
+"held_out": false
+},
+{
+"id": "A0202",
+"status": "UNSUPPORTED",
+"relation": "max_message_size",
+"subject": "Anvil builder",
+"subject_re": "\\banvil",
+"cue_re": "message|size",
+"kind": "number",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Marlin",
+"pretty": "Marlin",
+"held_out": false
+},
+{
+"id": "A0203",
+"status": "UNSUPPORTED",
+"relation": "max_message_size",
+"subject": "Prism dashboard",
+"subject_re": "\\bprism",
+"cue_re": "message|size",
+"kind": "number",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Juniper",
+"pretty": "Juniper",
+"held_out": true
+},
+{
+"id": "A0204",
+"status": "UNSUPPORTED",
+"relation": "max_message_size",
+"subject": "Hopper ingest service",
+"subject_re": "\\bhopper",
+"cue_re": "message|size",
+"kind": "number",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Osprey",
+"pretty": "Osprey",
+"held_out": false
+},
+{
+"id": "A0205",
+"status": "UNSUPPORTED",
+"relation": "max_message_size",
+"subject": "Sluice cache",
+"subject_re": "\\bsluice",
+"cue_re": "message|size",
+"kind": "number",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Tamarind",
+"pretty": "Tamarind",
+"held_out": false
+},
+{
+"id": "A0206",
+"status": "UNSUPPORTED",
+"relation": "max_message_size",
+"subject": "Turret API",
+"subject_re": "\\bturret",
+"cue_re": "message|size",
+"kind": "number",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Vesper",
+"pretty": "Vesper",
+"held_out": false
+},
+{
+"id": "A0207",
+"status": "UNSUPPORTED",
+"relation": "max_message_size",
+"subject": "Relay gateway",
+"subject_re": "\\brelay",
+"cue_re": "message|size",
+"kind": "number",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Pinnacle",
+"pretty": "Pinnacle",
+"held_out": true
+},
+{
+"id": "A0208",
+"status": "UNSUPPORTED",
+"relation": "max_message_size",
+"subject": "Conduit stream",
+"subject_re": "\\bconduit",
+"cue_re": "message|size",
+"kind": "number",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Quartz",
+"pretty": "Quartz",
+"held_out": false
+},
+{
+"id": "A0209",
+"status": "UNSUPPORTED",
+"relation": "max_message_size",
+"subject": "Ferry queue",
+"subject_re": "\\bferry",
+"cue_re": "message|size",
+"kind": "number",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Sable",
+"pretty": "Sable",
+"held_out": false
+},
+{
+"id": "A0210",
+"status": "UNSUPPORTED",
+"relation": "max_message_size",
+"subject": "Lattice store",
+"subject_re": "\\blattice",
+"cue_re": "message|size",
+"kind": "number",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Thistle",
+"pretty": "Thistle",
+"held_out": true
+},
+{
+"id": "A0211",
+"status": "UNSUPPORTED",
+"relation": "max_message_size",
+"subject": "Mosaic search index",
+"subject_re": "\\bmosaic",
+"cue_re": "message|size",
+"kind": "number",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Umbra",
+"pretty": "Umbra",
+"held_out": true
+},
+{
+"id": "A0212",
+"status": "UNSUPPORTED",
+"relation": "max_message_size",
+"subject": "Cobalt auth service",
+"subject_re": "\\bcobalt",
+"cue_re": "message|size",
+"kind": "number",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Willow",
+"pretty": "Willow",
+"held_out": false
+},
+{
+"id": "A0213",
+"status": "UNSUPPORTED",
+"relation": "vacation",
+"subject": "Cedar",
+"subject_re": "\\bcedar",
+"cue_re": "vacation|leave|\\baway|out of office",
+"kind": "month",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Cedar",
+"pretty": "Cedar",
+"held_out": false
+},
+{
+"id": "A0214",
+"status": "UNSUPPORTED",
+"relation": "vacation",
+"subject": "Marlin",
+"subject_re": "\\bmarlin",
+"cue_re": "vacation|leave|\\baway|out of office",
+"kind": "month",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Marlin",
+"pretty": "Marlin",
+"held_out": false
+},
+{
+"id": "A0215",
+"status": "UNSUPPORTED",
+"relation": "vacation",
+"subject": "Juniper",
+"subject_re": "\\bjuniper",
+"cue_re": "vacation|leave|\\baway|out of office",
+"kind": "month",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Juniper",
+"pretty": "Juniper",
+"held_out": true
+},
+{
+"id": "A0216",
+"status": "UNSUPPORTED",
+"relation": "vacation",
+"subject": "Osprey",
+"subject_re": "\\bosprey",
+"cue_re": "vacation|leave|\\baway|out of office",
+"kind": "month",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Osprey",
+"pretty": "Osprey",
+"held_out": false
+},
+{
+"id": "A0217",
+"status": "UNSUPPORTED",
+"relation": "vacation",
+"subject": "Tamarind",
+"subject_re": "\\btamarind",
+"cue_re": "vacation|leave|\\baway|out of office",
+"kind": "month",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Tamarind",
+"pretty": "Tamarind",
+"held_out": false
+},
+{
+"id": "A0218",
+"status": "UNSUPPORTED",
+"relation": "vacation",
+"subject": "Vesper",
+"subject_re": "\\bvesper",
+"cue_re": "vacation|leave|\\baway|out of office",
+"kind": "month",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Vesper",
+"pretty": "Vesper",
+"held_out": false
+},
+{
+"id": "A0219",
+"status": "UNSUPPORTED",
+"relation": "vacation",
+"subject": "Pinnacle",
+"subject_re": "\\bpinnacle",
+"cue_re": "vacation|leave|\\baway|out of office",
+"kind": "month",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Pinnacle",
+"pretty": "Pinnacle",
+"held_out": true
+},
+{
+"id": "A0220",
+"status": "UNSUPPORTED",
+"relation": "vacation",
+"subject": "Quartz",
+"subject_re": "\\bquartz",
+"cue_re": "vacation|leave|\\baway|out of office",
+"kind": "month",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Quartz",
+"pretty": "Quartz",
+"held_out": false
+},
+{
+"id": "A0221",
+"status": "UNSUPPORTED",
+"relation": "vacation",
+"subject": "Sable",
+"subject_re": "\\bsable",
+"cue_re": "vacation|leave|\\baway|out of office",
+"kind": "month",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Sable",
+"pretty": "Sable",
+"held_out": false
+},
+{
+"id": "A0222",
+"status": "UNSUPPORTED",
+"relation": "vacation",
+"subject": "Thistle",
+"subject_re": "\\bthistle",
+"cue_re": "vacation|leave|\\baway|out of office",
+"kind": "month",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Thistle",
+"pretty": "Thistle",
+"held_out": true
+},
+{
+"id": "A0223",
+"status": "UNSUPPORTED",
+"relation": "vacation",
+"subject": "Umbra",
+"subject_re": "\\bumbra",
+"cue_re": "vacation|leave|\\baway|out of office",
+"kind": "month",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Umbra",
+"pretty": "Umbra",
+"held_out": true
+},
+{
+"id": "A0224",
+"status": "UNSUPPORTED",
+"relation": "vacation",
+"subject": "Willow",
+"subject_re": "\\bwillow",
+"cue_re": "vacation|leave|\\baway|out of office",
+"kind": "month",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": null,
+"project": "Willow",
+"pretty": "Willow",
+"held_out": false
+},
+{
+"id": "A0225",
+"status": "UNSUPPORTED",
+"relation": "incident_auditor",
+"subject": "Pinnacle",
+"subject_re": "\\bpinnacle",
+"cue_re": "audit",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": "\\bamara\\b",
+"project": "Pinnacle",
+"pretty": "Pinnacle",
+"held_out": true
+},
+{
+"id": "A0226",
+"status": "UNSUPPORTED",
+"relation": "incident_auditor",
+"subject": "Quartz",
+"subject_re": "\\bquartz",
+"cue_re": "audit",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": "\\brania\\b",
+"project": "Quartz",
+"pretty": "Quartz",
+"held_out": false
+},
+{
+"id": "A0227",
+"status": "UNSUPPORTED",
+"relation": "incident_auditor",
+"subject": "Sable",
+"subject_re": "\\bsable",
+"cue_re": "audit",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": "\\bhiro\\b",
+"project": "Sable",
+"pretty": "Sable",
+"held_out": false
+},
+{
+"id": "A0228",
+"status": "UNSUPPORTED",
+"relation": "incident_auditor",
+"subject": "Thistle",
+"subject_re": "\\bthistle",
+"cue_re": "audit",
+"kind": "person",
+"severe": true,
+"values": [],
+"display": [],
+"sources": [],
+"needs_citation": false,
+"canary": "\\byusuf\\b",
+"project": "Thistle",
+"pretty": "Thistle",
+"held_out": true
+},
+{
+"id": "A0229",
+"status": "HISTORICAL",
+"relation": "default_model_history",
+"subject": "Cedar",
+"subject_re": "\\bcedar",
+"cue_re": "default|model|march|earlier|before|previous|formerly|used",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"merlin\\-2b"
+]
+],
+"display": [
+"Merlin-2B"
+],
+"sources": [
+"memory:m099",
+"memory:m100"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Cedar",
+"pretty": "Cedar",
+"held_out": false
+},
+{
+"id": "A0230",
+"status": "HISTORICAL",
+"relation": "default_model_history",
+"subject": "Marlin",
+"subject_re": "\\bmarlin",
+"cue_re": "default|model|march|earlier|before|previous|formerly|used",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"kestrel\\-3b"
+]
+],
+"display": [
+"Kestrel-3B"
+],
+"sources": [
+"memory:m101",
+"memory:m102"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Marlin",
+"pretty": "Marlin",
+"held_out": false
+},
+{
+"id": "A0231",
+"status": "HISTORICAL",
+"relation": "default_model_history",
+"subject": "Juniper",
+"subject_re": "\\bjuniper",
+"cue_re": "default|model|march|earlier|before|previous|formerly|used",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"swift\\-6b"
+]
+],
+"display": [
+"Swift-6B"
+],
+"sources": [
+"memory:m103",
+"memory:m104"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Juniper",
+"pretty": "Juniper",
+"held_out": true
+},
+{
+"id": "A0232",
+"status": "HISTORICAL",
+"relation": "default_model_history",
+"subject": "Osprey",
+"subject_re": "\\bosprey",
+"cue_re": "default|model|march|earlier|before|previous|formerly|used",
+"kind": "model",
+"severe": false,
+"values": [
+[
+"kestrel\\-9b"
+]
+],
+"display": [
+"Kestrel-9B"
+],
+"sources": [
+"memory:m105",
+"memory:m106"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Osprey",
+"pretty": "Osprey",
+"held_out": false
+},
+{
+"id": "A0233",
+"status": "HISTORICAL",
+"relation": "retry_limit_history",
+"subject": "Gantry scheduler",
+"subject_re": "\\bgantry",
+"cue_re": "retr|attempt|tried|archiv|old|first|before",
+"kind": "number",
+"severe": false,
+"values": [
+[
+"\\b2\\b"
+]
+],
+"display": [
+"2"
+],
+"sources": [
+"document:doc-cedar-arch-v1"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Cedar",
+"pretty": "Gantry scheduler",
+"held_out": false
+},
+{
+"id": "A0234",
+"status": "HISTORICAL",
+"relation": "retry_limit_history",
+"subject": "Anvil builder",
+"subject_re": "\\banvil",
+"cue_re": "retr|attempt|tried|archiv|old|first|before",
+"kind": "number",
+"severe": false,
+"values": [
+[
+"\\b5\\b",
+"\\bfive\\b"
+]
+],
+"display": [
+"5"
+],
+"sources": [
+"document:doc-marlin-arch-v1"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Marlin",
+"pretty": "Anvil builder",
+"held_out": false
+},
+{
+"id": "A0235",
+"status": "HISTORICAL",
+"relation": "retry_limit_history",
+"subject": "Prism dashboard",
+"subject_re": "\\bprism",
+"cue_re": "retr|attempt|tried|archiv|old|first|before",
+"kind": "number",
+"severe": false,
+"values": [
+[
+"\\b3\\b",
+"\\bthree\\b"
+]
+],
+"display": [
+"3"
+],
+"sources": [
+"document:doc-juniper-arch-v1"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Juniper",
+"pretty": "Prism dashboard",
+"held_out": true
+},
+{
+"id": "A0236",
+"status": "HISTORICAL",
+"relation": "retry_limit_history",
+"subject": "Hopper ingest service",
+"subject_re": "\\bhopper",
+"cue_re": "retr|attempt|tried|archiv|old|first|before",
+"kind": "number",
+"severe": false,
+"values": [
+[
+"\\b6\\b",
+"\\bsix\\b"
+]
+],
+"display": [
+"6"
+],
+"sources": [
+"document:doc-osprey-arch-v1"
+],
+"needs_citation": true,
+"canary": null,
+"project": "Osprey",
+"pretty": "Hopper ingest service",
+"held_out": false
+},
+{
+"id": "A0237",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Cedar",
+"subject_re": "\\bcedar",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"\\b9\\b",
+"\\bnine\\b"
+],
+[
+"\\b11\\b",
+"\\beleven\\b"
+]
+],
+"display": [
+"9",
+"11"
+],
+"sources": [
+"memory:m005",
+"memory:m006"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "standup",
+"project": "Cedar",
+"pretty": "the Cedar standup time",
+"held_out": false
+},
+{
+"id": "A0238",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Cedar",
+"subject_re": "\\bcedar",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"monday"
+],
+[
+"thursday"
+]
+],
+"display": [
+"Monday",
+"Thursday"
+],
+"sources": [
+"memory:m007",
+"memory:m008"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "review_day",
+"project": "Cedar",
+"pretty": "the Cedar design review day",
+"held_out": false
+},
+{
+"id": "A0239",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Marlin",
+"subject_re": "\\bmarlin",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"\\b10\\b",
+"\\bten\\b"
+],
+[
+"\\b12\\b",
+"\\btwelve\\b"
+]
+],
+"display": [
+"10",
+"12"
+],
+"sources": [
+"memory:m013",
+"memory:m014"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "standup",
+"project": "Marlin",
+"pretty": "the Marlin standup time",
+"held_out": false
+},
+{
+"id": "A0240",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Marlin",
+"subject_re": "\\bmarlin",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"tuesday"
+],
+[
+"friday"
+]
+],
+"display": [
+"Tuesday",
+"Friday"
+],
+"sources": [
+"memory:m015",
+"memory:m016"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "review_day",
+"project": "Marlin",
+"pretty": "the Marlin design review day",
+"held_out": false
+},
+{
+"id": "A0241",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Juniper",
+"subject_re": "\\bjuniper",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"\\b9\\b",
+"\\bnine\\b"
+],
+[
+"\\b11\\b",
+"\\beleven\\b"
+]
+],
+"display": [
+"9",
+"11"
+],
+"sources": [
+"memory:m020",
+"memory:m021"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "standup",
+"project": "Juniper",
+"pretty": "the Juniper standup time",
+"held_out": true
+},
+{
+"id": "A0242",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Juniper",
+"subject_re": "\\bjuniper",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"wednesday"
+],
+[
+"thursday"
+]
+],
+"display": [
+"Wednesday",
+"Thursday"
+],
+"sources": [
+"memory:m022",
+"memory:m023"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "review_day",
+"project": "Juniper",
+"pretty": "the Juniper design review day",
+"held_out": true
+},
+{
+"id": "A0243",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Osprey",
+"subject_re": "\\bosprey",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"\\b10\\b",
+"\\bten\\b"
+],
+[
+"\\b12\\b",
+"\\btwelve\\b"
+]
+],
+"display": [
+"10",
+"12"
+],
+"sources": [
+"memory:m029",
+"memory:m030"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "standup",
+"project": "Osprey",
+"pretty": "the Osprey standup time",
+"held_out": false
+},
+{
+"id": "A0244",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Osprey",
+"subject_re": "\\bosprey",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"monday"
+],
+[
+"friday"
+]
+],
+"display": [
+"Monday",
+"Friday"
+],
+"sources": [
+"memory:m031",
+"memory:m032"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "review_day",
+"project": "Osprey",
+"pretty": "the Osprey design review day",
+"held_out": false
+},
+{
+"id": "A0245",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Tamarind",
+"subject_re": "\\btamarind",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"\\b9\\b",
+"\\bnine\\b"
+],
+[
+"\\b11\\b",
+"\\beleven\\b"
+]
+],
+"display": [
+"9",
+"11"
+],
+"sources": [
+"memory:m038",
+"memory:m039"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "standup",
+"project": "Tamarind",
+"pretty": "the Tamarind standup time",
+"held_out": false
+},
+{
+"id": "A0246",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Tamarind",
+"subject_re": "\\btamarind",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"tuesday"
+],
+[
+"thursday"
+]
+],
+"display": [
+"Tuesday",
+"Thursday"
+],
+"sources": [
+"memory:m040",
+"memory:m041"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "review_day",
+"project": "Tamarind",
+"pretty": "the Tamarind design review day",
+"held_out": false
+},
+{
+"id": "A0247",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Vesper",
+"subject_re": "\\bvesper",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"\\b10\\b",
+"\\bten\\b"
+],
+[
+"\\b12\\b",
+"\\btwelve\\b"
+]
+],
+"display": [
+"10",
+"12"
+],
+"sources": [
+"memory:m046",
+"memory:m047"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "standup",
+"project": "Vesper",
+"pretty": "the Vesper standup time",
+"held_out": false
+},
+{
+"id": "A0248",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Vesper",
+"subject_re": "\\bvesper",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"wednesday"
+],
+[
+"friday"
+]
+],
+"display": [
+"Wednesday",
+"Friday"
+],
+"sources": [
+"memory:m048",
+"memory:m049"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "review_day",
+"project": "Vesper",
+"pretty": "the Vesper design review day",
+"held_out": false
+},
+{
+"id": "A0249",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Pinnacle",
+"subject_re": "\\bpinnacle",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"\\b9\\b",
+"\\bnine\\b"
+],
+[
+"\\b11\\b",
+"\\beleven\\b"
+]
+],
+"display": [
+"9",
+"11"
+],
+"sources": [
+"memory:m053",
+"memory:m054"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "standup",
+"project": "Pinnacle",
+"pretty": "the Pinnacle standup time",
+"held_out": true
+},
+{
+"id": "A0250",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Pinnacle",
+"subject_re": "\\bpinnacle",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"monday"
+],
+[
+"thursday"
+]
+],
+"display": [
+"Monday",
+"Thursday"
+],
+"sources": [
+"memory:m055",
+"memory:m056"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "review_day",
+"project": "Pinnacle",
+"pretty": "the Pinnacle design review day",
+"held_out": true
+},
+{
+"id": "A0251",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Quartz",
+"subject_re": "\\bquartz",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"\\b10\\b",
+"\\bten\\b"
+],
+[
+"\\b12\\b",
+"\\btwelve\\b"
+]
+],
+"display": [
+"10",
+"12"
+],
+"sources": [
+"memory:m060",
+"memory:m061"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "standup",
+"project": "Quartz",
+"pretty": "the Quartz standup time",
+"held_out": false
+},
+{
+"id": "A0252",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Quartz",
+"subject_re": "\\bquartz",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"tuesday"
+],
+[
+"friday"
+]
+],
+"display": [
+"Tuesday",
+"Friday"
+],
+"sources": [
+"memory:m062",
+"memory:m063"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "review_day",
+"project": "Quartz",
+"pretty": "the Quartz design review day",
+"held_out": false
+},
+{
+"id": "A0253",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Sable",
+"subject_re": "\\bsable",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"\\b9\\b",
+"\\bnine\\b"
+],
+[
+"\\b11\\b",
+"\\beleven\\b"
+]
+],
+"display": [
+"9",
+"11"
+],
+"sources": [
+"memory:m066",
+"memory:m067"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "standup",
+"project": "Sable",
+"pretty": "the Sable standup time",
+"held_out": false
+},
+{
+"id": "A0254",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Sable",
+"subject_re": "\\bsable",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"wednesday"
+],
+[
+"thursday"
+]
+],
+"display": [
+"Wednesday",
+"Thursday"
+],
+"sources": [
+"memory:m068",
+"memory:m069"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "review_day",
+"project": "Sable",
+"pretty": "the Sable design review day",
+"held_out": false
+},
+{
+"id": "A0255",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Thistle",
+"subject_re": "\\bthistle",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"\\b10\\b",
+"\\bten\\b"
+],
+[
+"\\b12\\b",
+"\\btwelve\\b"
+]
+],
+"display": [
+"10",
+"12"
+],
+"sources": [
+"memory:m073",
+"memory:m074"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "standup",
+"project": "Thistle",
+"pretty": "the Thistle standup time",
+"held_out": true
+},
+{
+"id": "A0256",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Thistle",
+"subject_re": "\\bthistle",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"monday"
+],
+[
+"friday"
+]
+],
+"display": [
+"Monday",
+"Friday"
+],
+"sources": [
+"memory:m075",
+"memory:m076"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "review_day",
+"project": "Thistle",
+"pretty": "the Thistle design review day",
+"held_out": true
+},
+{
+"id": "A0257",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Umbra",
+"subject_re": "\\bumbra",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"\\b9\\b",
+"\\bnine\\b"
+],
+[
+"\\b11\\b",
+"\\beleven\\b"
+]
+],
+"display": [
+"9",
+"11"
+],
+"sources": [
+"memory:m079",
+"memory:m080"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "standup",
+"project": "Umbra",
+"pretty": "the Umbra standup time",
+"held_out": true
+},
+{
+"id": "A0258",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Umbra",
+"subject_re": "\\bumbra",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"tuesday"
+],
+[
+"thursday"
+]
+],
+"display": [
+"Tuesday",
+"Thursday"
+],
+"sources": [
+"memory:m081",
+"memory:m082"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "review_day",
+"project": "Umbra",
+"pretty": "the Umbra design review day",
+"held_out": true
+},
+{
+"id": "A0259",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Willow",
+"subject_re": "\\bwillow",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"\\b10\\b",
+"\\bten\\b"
+],
+[
+"\\b12\\b",
+"\\btwelve\\b"
+]
+],
+"display": [
+"10",
+"12"
+],
+"sources": [
+"memory:m084",
+"memory:m085"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "standup",
+"project": "Willow",
+"pretty": "the Willow standup time",
+"held_out": false
+},
+{
+"id": "A0260",
+"status": "ORDER_UNSUPPORTED",
+"relation": "order_figure",
+"subject": "Willow",
+"subject_re": "\\bwillow",
+"cue_re": "newer|recent|updat|replac|older|latest|supersed",
+"kind": "none",
+"severe": true,
+"values": [
+[
+"wednesday"
+],
+[
+"friday"
+]
+],
+"display": [
+"Wednesday",
+"Friday"
+],
+"sources": [
+"memory:m086",
+"memory:m087"
+],
+"needs_citation": false,
+"canary": null,
+"base_relation": "review_day",
+"project": "Willow",
+"pretty": "the Willow design review day",
+"held_out": false
+}
+]

@@ -1,4 +1,6 @@
-# Phase 44: selective partial answering, development and acceptance protocol (PROPOSAL, 2026-10-12; nothing implemented or deployed)
+# Phase 44: selective partial answering, development and acceptance protocol (PROPOSAL, 2026-10-12; Stage A built, nothing else implemented or deployed)
+
+> **Stage A status (owner-approved 2026-10-12):** corpus, scorer, validation and the two protocols below are built; results are in [the Stage A record](verification/phase-44-selective-stage-a-2026-10-12.md). Sections 12 and 13 supersede sections 7 and 8 where they differ (ten owner criteria, sub-claim registry statuses including ORDER_UNSUPPORTED). No response policy exists.
 
 Owner direction, 2026-10-12: *protocol design approved: answer the supported sub-claims while explicitly identifying unsupported or conflicting sub-claims; test mixed evidence, multi-part questions, conflicting records, unknown actors, negative claims and temporal/supersession assertions. Do not implement or deploy a partial-answering policy yet; return the protocol and acceptance criteria for review.* This page is that proposal. It changes no behaviour: the 7B is the default, the 44H boundary is active, indexing is `false`, retrieval and shadow are off, and C2 stays a calibrated annotation, never a hard-abstention gate.
 
@@ -113,3 +115,25 @@ Voice rendering; any production wiring; C4's JSON generation (paused); the deter
 2. Approve arms P0 to P4 (or remove P3/P4).
 3. Fix the acceptance numbers in section 8 (or amend them).
 4. Approve building the sub-claim generator and scorer (Stage A) as the first step.
+
+## 12. Stage A development-set protocol (dev15)
+
+- **Data:** `cases_dev15.json` (173 questions, design relations and projects, design bank). Everything may be developed and tuned here: mechanisms, prompts, thresholds. Arms: B1a baseline with the 44H boundary, oracle (diagnostic ceiling, never a candidate), revised C1, C2 annotation and C3 each separately switchable, then any new mechanism the owner approves in Stage B.
+- **Scorer:** `selective/scorer.py` is frozen once the fresh adjudication in the Stage A record, section 3, is done; until then it may change only to fix a documented defect, with the case added to `scorer_cases.py` and the change listed. Disagreements between the scorer and a reader are listed beside the automatic scores and never used to alter them.
+- **Decision rules:** each candidate is reported against B1a on dev15 with paired outcomes by case id, discordant counts, Wilson or zero-event bounds, and criteria 1 to 10 from `evaluator.py`. dev15 results are design evidence; no claim is made from them.
+- **No use of consumed sets:** dev8, dev10, dev12 and dev14 are never rerun or tuned against; dev16 and bank D are not run on a model during development.
+
+## 13. Stage A one-shot acceptance protocol (dev16, NOT yet frozen)
+
+- **Candidates:** `cases_dev16.json` (218 questions, held-out relations `release_day`, `escalation_contact`, `approver`, held-out projects juniper, pinnacle, thistle, umbra, unseen bank D with the disclosed amendment in the Stage A record, section 1). It is not frozen and no freeze manifest exists. It is frozen only after the owner approves the amendments below, the fresh scorer adjudication is done, and the mechanism, prompts and thresholds are fixed.
+- **Freeze:** at that point a `dev16_freeze.json` manifest hashes the cases, bank files, scorer, evaluator, mechanism code and this section; `freeze_check.py` and a test cover it. One run only, guarded by a decision-point file, `AQ_DEV16_APPROVAL`, the manifest and a single run log (the dev8 to dev14 pattern). A failed or aborted run is not repeated without an owner decision.
+- **Reading, fixed before the run:** the ten criteria in the Stage A record, section 5, in their amended operational forms; the registered pass rule is all ten; every failure is reported by case id; no post-hoc exclusions; the original statistics are reported even if a scorer disagreement is later documented.
+- **Hold-out hygiene:** the candidate must not be read by any author before the freeze except by the generators; the tuned mechanism is chosen on dev15 only.
+
+### Decisions requested
+
+1. Approve or amend the operational forms of criteria 4, 6, 7, 8, 9 (record, section 6).
+2. Approve enlarging the world for criteria 7 to 9, or the bound-reporting form.
+3. Approve the date-semantics rule and the question-level definition of "fully correct".
+4. Approve a fresh scorer adjudication (second rater welcome) before any freeze.
+5. Decide whether to proceed to Stage B (mechanism design), noting that the oracle ceiling means filtering evidence alone cannot satisfy criteria 2 and 7, and that the design must separate discovery from admissible answer evidence.

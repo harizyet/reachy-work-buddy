@@ -1,0 +1,1 @@
+8f334290035735c53a110e793b9d2fbc0a0028c9c4022446f1e72d0d12c9bd22  bank D phrasings of every relation EXCEPT order_figure, standup, review_day: byte-identical to commit bd050ec (pre-scorer); recomputed from that commit and from the current file

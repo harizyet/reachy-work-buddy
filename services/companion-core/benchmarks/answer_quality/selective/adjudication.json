@@ -1,0 +1,211 @@
+{
+ "judge": "the author (single rater; the same author wrote the scorer: disclosed)",
+ "judged_on": "2026-10-12",
+ "truth": {
+  "0": [
+   "identified",
+   "false_abstention"
+  ],
+  "1": [
+   "stated"
+  ],
+  "2": [
+   "stated"
+  ],
+  "3": [
+   "stated"
+  ],
+  "4": [],
+  "5": [
+   "stated"
+  ],
+  "6": [
+   "stated"
+  ],
+  "7": [
+   "stated"
+  ],
+  "8": [
+   "stated"
+  ],
+  "9": [
+   "identified",
+   "false_abstention"
+  ],
+  "10": [
+   "stated"
+  ],
+  "11": [
+   "stated"
+  ],
+  "12": [
+   "stated"
+  ],
+  "13": [
+   "stated"
+  ],
+  "14": [
+   "identified"
+  ],
+  "15": [
+   "identified"
+  ],
+  "16": [
+   "identified"
+  ],
+  "17": [
+   "identified"
+  ],
+  "18": [
+   "identified"
+  ],
+  "19": [
+   "identified"
+  ],
+  "20": [
+   "identified"
+  ],
+  "21": [
+   "identified"
+  ],
+  "22": [
+   "leaked"
+  ],
+  "23": [
+   "identified"
+  ],
+  "24": [
+   "identified"
+  ],
+  "25": [
+   "identified"
+  ],
+  "26": [
+   "leaked"
+  ],
+  "27": [
+   "identified"
+  ],
+  "28": [
+   "stated"
+  ],
+  "29": [
+   "stated"
+  ],
+  "30": [
+   "identified",
+   "false_abstention"
+  ],
+  "31": [
+   "stated"
+  ],
+  "32": [
+   "identified",
+   "false_abstention"
+  ],
+  "33": [
+   "stated",
+   "both"
+  ],
+  "34": [
+   "stated"
+  ],
+  "35": [
+   "identified",
+   "false_abstention"
+  ],
+  "36": [
+   "stated"
+  ],
+  "37": [
+   "identified",
+   "false_abstention"
+  ],
+  "38": [
+   "stated"
+  ],
+  "39": [
+   "stated"
+  ],
+  "40": [
+   "stated"
+  ],
+  "41": [
+   "stated"
+  ],
+  "42": [
+   "stated"
+  ],
+  "43": [
+   "identified",
+   "false_abstention"
+  ],
+  "44": [
+   "stated"
+  ],
+  "45": [],
+  "46": [
+   "stated"
+  ],
+  "47": [
+   "stated"
+  ],
+  "48": [
+   "stated"
+  ],
+  "49": [
+   "stated"
+  ],
+  "50": [
+   "stated"
+  ],
+  "51": [
+   "identified"
+  ],
+  "52": [
+   "identified"
+  ],
+  "53": [
+   "identified"
+  ],
+  "54": [
+   "identified",
+   "leaked",
+   "absence_claim"
+  ],
+  "55": [
+   "identified"
+  ],
+  "56": [
+   "leaked",
+   "invented_order"
+  ],
+  "57": [
+   "leaked",
+   "invented_order"
+  ],
+  "58": [
+   "leaked",
+   "invented_order"
+  ],
+  "59": [
+   "leaked",
+   "invented_order"
+  ],
+  "60": [
+   "leaked",
+   "invented_order"
+  ],
+  "61": [],
+  "62": [],
+  "63": [
+   "leaked",
+   "invented_order"
+  ]
+ },
+ "wrong_value": [
+  4,
+  45
+ ],
+ "notes": "Judged from the status definitions in scorer.py's header by reading each reply; flags not listed are false. wrong_value marks a supported sub-claim answered with a different value of the right kind (not a defined flag in the first scorer)."
+}

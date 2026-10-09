@@ -1,7 +1,7 @@
 """Question phrasings for the selective-answering corpus (v4), in two banks written BEFORE the sub-claim scorer existed (2026-10-12).
 
 Bank C (phrasings 0 and 1): design. Bank D (phrasings 2 and 3): unseen; hashed in `bank_d.sha256` at the moment of writing and used only by the acceptance set.
-HELD_OUT relations (release_day, escalation_contact, staging_env, approver) appear in every phrasing only in the acceptance set. Same-author caveat as before. {x} is the subject."""
+HELD_OUT relations (release_day, escalation_contact, approver) appear in every phrasing only in the acceptance set. Same-author caveat as before. {x} is the subject."""
 
 BANKS: dict[str, list[str]] = {
     "owner": ["Who owns the {x}?", "Who is responsible for the {x}?", "Whose job is it to look after the {x}?", "Who is accountable for keeping the {x} running?"],
@@ -31,6 +31,9 @@ BANKS: dict[str, list[str]] = {
     "vacation": ["When is the {x} lead's next vacation?", "When will the {x} lead be away next?", "Which dates is the {x} lead on leave?", "When is the {x} lead out of office next?"],
     "incident_auditor": ["Who audits the {x} build logs?", "Who is going to audit the {x} build logs after the incident?", "Which person checks the {x} build logs?", "Who reviews the {x} build logs for the incident?"],
     # ordering questions over undated or conflicting records
-    "order_figure": ["Is the document's figure for {x} newer than the memory's?", "Which is more recent for {x}, the document or the memory?", "Was the {x} figure in the memory updated after the document?", "Did the {x} memory replace the figure in the document?"],
+    "order_figure": ["Which of the two memories about {x} is more recent?", "Was {x} updated in one memory after the other memory gave a different answer?", "Did one of the two memories about {x} replace the other?", "Which memory about {x} should I treat as the newer one?"],
+    # two memories created on the same day that disagree: nothing in what is shown orders them
+    "standup": ["What time is the {x} standup?", "When does the {x} standup start?", "At what hour does {x} hold its standup?", "When is {x}'s daily standup?"],
+    "review_day": ["On which day are {x} design reviews held?", "Which day is the {x} design review?", "What weekday do {x} design reviews fall on?", "When does {x} hold its design review?"],
 }
-HELD_OUT = {"release_day", "escalation_contact", "staging_env", "approver"}
+HELD_OUT = {"release_day", "escalation_contact", "approver"}
