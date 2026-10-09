@@ -22,8 +22,21 @@ Reproducible (the same bytes on every host), offline (no network at run time), r
    - **B. Populate the existing `model-cache` volume** with a one-off container and set offline flags: no image change, but the volume is mutable and shared.
    - **C. A verified directory mounted read-only** (for example `/models/all-MiniLM-L6-v2`, populated by the same one-off step) and loaded **by path**, with `HF_HUB_OFFLINE=1` and `TRANSFORMERS_OFFLINE=1` set. A path load never consults the hub: no revision lookup, no warning, no network, and a read-only mount stops runtime drift.
 5. **Verify at use, fail closed.** Before the first embedding after each start, hash the files (about 90 MB, a fraction of a second) against the manifest baked into the image or mounted beside the weights, then run a **golden-vector check**: encode three fixed sentences and compare with stored vectors (tolerance 1e-5) to catch wrong weights that happen to have the right names. On any failure the embedder raises a clear error, the indexing worker records a failure for that item (it already isolates failures per item and backs off), and nothing downloads. Retrieval stays off regardless.
-6. **Label the weights, not just the name.** The index's `embedding_model` should identify the revision (for example `sentence-transformers/all-MiniLM-L6-v2@1110a243`). Because the worker's reconciliation re-queues rows whose label differs, adopting the new label re-embeds every row once; with 81 rows that is seconds, and it must be planned (a deliberate migration of labels, not a side effect of a deploy). Until then the label stays as it is.
+6. **Label the weights, not just the name.** The index's `embedding_model` should identify the revision (for example `sentence-transformers/all-MiniLM-L6-v2@1110a243`). Because the worker's reconciliation re-queues rows whose label differs, simply changing the label would re-embed every row. [Section 3a](#3a-verification-of-vector-equivalence-done-2026-10-10-read-only) shows the re-embedded vectors are equivalent, so the revision should be recorded without a relabel (a metadata field or an alias the reconciler accepts); any label migration is a separate, planned and approved step. Until then the label stays as it is.
 7. **Rollback and rotation.** Directories are named by revision and kept side by side; the active one is chosen by one environment value; switching back is a restart. Updating the model is a deliberate change of the pinned revision and manifest in a reviewed commit, followed by the label migration above.
+
+## 3a. Verification of vector equivalence (done 2026-10-10, read-only)
+
+Question: does the pinned revision (`1110a243…`, the revision already cached) with the production embedding call produce the vectors already stored in the index? Method: the 81 stored `match_text` values and vectors were exported read-only to a temporary file (deleted afterwards, never printed), then re-embedded in a throwaway container from the production image with **no network**, the model-cache volume mounted read-only, `HF_HUB_OFFLINE=1`, loading the model **by pinned revision with `local_files_only`**.
+
+| Embedding call | Max absolute difference from the stored vectors | Minimum cosine similarity |
+|---|---|---|
+| Production call (batch encode, normalised, 2 threads) | 1.2e-7 | 0.9999999999998 |
+| One text at a time | 1.5e-7 | 0.9999999999997 |
+| Batch size 8 | 1.2e-7 | 0.9999999999998 |
+| One thread | 1.2e-7 | 0.9999999999998 |
+
+Conclusions: (1) the pinned revision loads offline from the existing cache in 0.2 s and is **the same model** that produced the index; (2) the vectors agree to float32 rounding noise (about 1e-7), not bit for bit, because batch composition and thread count change the order of floating-point additions; so a bitwise comparison is the wrong test and a tolerance (1e-5 on the largest component, cosine above 0.99999) is the right golden-vector check; (3) therefore **no re-embedding is needed for correctness** if the weights are pinned to this revision. The only reason the worker would re-embed is its label comparison. A revision-bearing label would trigger a full re-embed of numerically equivalent rows, so the preferred way to record the revision is a separate metadata field (or a label alias that the reconciler treats as equal to the current label), not a relabel. **Nothing in production was relabelled or re-embedded**, and no production row, flag or volume was modified; the cache volume was mounted read-only.
 
 ## 4. Test plan (all on disposable infrastructure; no production change)
 
@@ -35,4 +48,4 @@ This covers only the MiniLM embedder used by the knowledge index and document se
 
 ## 6. Decisions requested
 
-(a) Delivery option A, B or C (C recommended). (b) Whether to adopt the revision-bearing index label, and when (a planned re-embed of the current 81 rows). (c) Whether the golden-vector check is wanted at every start or only at acquisition. (d) Owner approval before any change to a compose file, image, volume or flag.
+(a) Delivery option A, B or C (C recommended). (b) How to record the revision without a re-embed (a separate metadata field or a reconciler-recognised alias; section 3a shows the existing vectors are equivalent, so a relabel that re-embeds is unnecessary). (c) Whether the golden-vector check is wanted at every start or only at acquisition. (d) Owner approval before any change to a compose file, image, volume or flag.
