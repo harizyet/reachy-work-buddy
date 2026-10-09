@@ -44,6 +44,21 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
 
 ## Implemented but not fully accepted
 
+- **Semantic knowledge and selective answering (44):** deployed, all with
+  indexing, retrieval and shadow OFF: migrations 026 (source sensitivity) and
+  027 (knowledge index and outbox), and the 44H unclaimed-action boundary in
+  core. Robot acceptance of the 44A deployment, a browser pass and Telegram
+  receipt of the smoke reminder were still pending when recorded in
+  [HANDOVER](../HANDOVER.md). **Not deployed:** the selective-answering work
+  (Stage B-1, a deterministic cited answer layer, source and tests only, wired
+  nowhere), 44F, retrieval and shadow rollout. The scorer-v3 research that was
+  meant to validate a severe-hallucination detector **failed its formal
+  validation and was stopped on 2026-10-10**; the scorer is research-only and
+  not used for any enforcement. B-1 is the primary release candidate but is
+  **not ready for formal acceptance** (free-text question decomposition, a
+  gold-independent relation registry and coverage are open). See
+  [Phase 44](phase-44.md), the [integration plan](phase-44-selective-answering-integration-plan.md)
+  and the [I-1/I-2 record](verification/phase-44-selective-i1-i2-2026-10-10.md).
 - **Meeting intelligence (27):** upload, transcription and diarization reached
   ALIGNING in the real homelab with a short synthetic single-speaker clip.
   Real multi-speaker/30–60 minute acceptance, resource measurements,

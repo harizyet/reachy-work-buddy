@@ -2,6 +2,8 @@
 
 Owner decision, 2026-10-13: *extend B-1 before candidate evaluation, limited strictly to the three identified recall gaps: authoritative structured attendee/speaker input; bounded cross-sentence subject context; conservative deterministic extraction of supported free-text values. Preserve the safety invariants; extraction failure or ambiguous subject binding stays unestablished. No general coreference. No further dev15-driven optimisation. Ambiguity applies at the smallest affected proposition.* Predecessor: [Stage B-1 record](phase-44-selective-stage-b1-2026-10-13.md). Production unchanged; no model call, no integration, no migration; dev16 unfrozen, unrun and unused.
 
+> **Correction note (2026-10-10).** The 282 of 307 (91.9%) below came from a harness whose known-subject list kept escaped backslashes, so model names never counted as competing subjects. With a faithful list the same pipeline scores 267 of 307 (87.0%); a caller-side fix restores 282. No unsupported claim or wrong value appears in either. See [I-1/I-2 record, section 2.2](phase-44-selective-i1-i2-2026-10-10.md).
+
 ## 1. What changed in `knowledge/answerability_b1/`
 
 | Gap | Mechanism | Bounds |

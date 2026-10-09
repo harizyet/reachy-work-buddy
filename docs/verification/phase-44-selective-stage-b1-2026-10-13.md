@@ -2,6 +2,8 @@
 
 Owner decision, 2026-10-13: *Stage B-1 approved: deterministic components and unit tests only; the discovery evidence → admissible evidence → per-claim answerability → response-contract pipeline of the [Stage B design](../phase-44-selective-stage-b-design.md); no model calls, response-policy integration, deployment or database migration; dev16 stays unfrozen and unrun and is not used to tune B-1.* Production is unchanged: Qwen2.5-7B, 44H boundary active, indexing off, retrieval and shadow off, 44F not implemented.
 
+> **Correction note (2026-10-10).** Later changes: NEGATIVE_SUPPORTED now requires an authoritative (owner or system) record (a third-party or attendee "there is no X" is reported as attributed and not established), NEGATIVE_UNSUPPORTED has a scoped-search form, display wording changed (articles, plurals, "another says"), and a composer was added: [I-1/I-2 record](phase-44-selective-i1-i2-2026-10-10.md). The 77.9% figure below used a harness whose known-subject list kept escaped backslashes.
+
 ## 1. What was built
 
 `services/companion-core/src/companion_core/knowledge/answerability_b1/` (about 700 lines, pure functions, no I/O, no model call). **Nothing in the repository imports it** except its tests and an offline benchmark script (checked with a search); it ships as unreferenced source, like `knowledge/sufficiency.py`. No migration, no endpoint, no setting.
