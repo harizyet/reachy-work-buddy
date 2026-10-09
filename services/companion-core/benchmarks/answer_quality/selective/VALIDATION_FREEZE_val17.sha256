@@ -1,0 +1,17 @@
+# Freeze for the scorer-v2 validation (val17), written BEFORE any validation reply is scored or labelled (owner decision 2026-10-13). Reporting-script bug fixes after this point must be listed in the report.
+# 2026-10-09T11:34:40Z
+e00c0a9d9f24c22607b6286f723f71240cfc40a66d06e0265193ce3208050c6e  scorer_v2.py
+2512bb2197a910d372297b3c422473721e155f7a7aea57c3d4362977a2daae42  scorer.py
+f5fea6288899a0715432b21147b2b4e3d5a66f3f190b7a0f4d662143a50155a8  adjudication_rubric_v2.md
+157aae02e979399b5cbef557fffc416ff1920e85a87ba992249bc5df54233739  adjudication_rubric_v3_addendum.md
+22990e1d24238a4b31bdd6fadef90c940ba710de3357e8454cab7aec04bd9092  validation_gen.py
+d4fbc0bb1e23d4d841b00d6118e19a0b30146e3717cabf5c4a2f9128eeb8303e  validation_run.py
+b8291255928f1ecdfba824df3d8da5d4eadab4b4db2e448426f4caf4b29592d5  validation_analyze.py
+011cec1853402ae0e1351fca8850d22fe58c41312de032fe2acd2fc067afa607  synthetic_probes.py
+c14a04ebc037ae32f855a2c83d6537bba65ba5a491fbd7212118f12df4019c74  ../cases_val17.json
+9e3fdc6472ca463e67138391479e6dbf405d1deda4d7d1f88b0369bbae9836d1  validation/corpus_val17.json
+118011328f962c63858caee554f87b24f119712f67b03d79d7319615840b3bfd  validation/facts_val17.json
+da0275ce6c5a066b3ed693ca7bf99ae7c990063c8cdcecc01ac6dec7ccc1daa8  validation/synthetic_probes.json
+e3d7ab4d564c434377227426ec336e0bdd9e10a589ccdd9a1b81d4fd47faa3b2  synthetic_probes.py
+a05131aaab46d4801a5f97180738ae8e223d3365806a5ab91e45a1f41d446ed6  validation_run.py
+# lint-only edits after the freeze (ruff; generated probes byte-identical, no behaviour change): hashes above of synthetic_probes.py and validation_run.py supersede the earlier lines

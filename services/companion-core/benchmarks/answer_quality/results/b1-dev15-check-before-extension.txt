@@ -1,0 +1,45 @@
+atoms 307; state equals gold 239 (77.9%)
+  gold CONFLICTED             -> CONFLICTED             19
+  gold HISTORICAL             -> HISTORICAL             13
+  gold HISTORICAL             -> UNSUPPORTED            11
+  gold NEGATIVE_SUPPORTED     -> NEGATIVE_SUPPORTED     7
+  gold NEGATIVE_UNSUPPORTED   -> NEGATIVE_UNSUPPORTED   6
+  gold ORDER_UNSUPPORTED      -> ORDER_UNSUPPORTED      9
+  gold SUPPORTED              -> SUPPORTED              97
+  gold SUPPORTED              -> UNSUPPORTED            57
+  gold UNSUPPORTED            -> UNSUPPORTED            88
+disagreements by relation (relation, gold, got):
+  attends                SUPPORTED    -> UNSUPPORTED  10
+  default_model          SUPPORTED    -> UNSUPPORTED  2
+  retry_limit            SUPPORTED    -> UNSUPPORTED  9
+  retry_limit_history    HISTORICAL   -> UNSUPPORTED  11
+  reviews                SUPPORTED    -> UNSUPPORTED  13
+  runs_on                SUPPORTED    -> UNSUPPORTED  13
+  support_hours          SUPPORTED    -> UNSUPPORTED  2
+  test_fixer             SUPPORTED    -> UNSUPPORTED  8
+first disagreements:
+   ('D15-002', 'SUPPORTED', 'UNSUPPORTED', 'What is Nikhil Rao reviewing?', ('no_admitted_record', 'ambiguous_record_on_same_subject'))
+   ('D15-004', 'SUPPORTED', 'UNSUPPORTED', 'Where does Swift-6B run?', ('no_admitted_record',))
+   ('D15-005', 'SUPPORTED', 'UNSUPPORTED', 'Who was in the Quartz planning meeting?', ('no_admitted_record',))
+   ('D15-006', 'SUPPORTED', 'UNSUPPORTED', 'What is Ines Duarte reviewing?', ('no_admitted_record', 'ambiguous_record_on_same_subject'))
+   ('D15-007', 'SUPPORTED', 'UNSUPPORTED', 'Who was in the Vesper planning meeting?', ('no_admitted_record',))
+   ('D15-011', 'SUPPORTED', 'UNSUPPORTED', 'What does Dmitri Volkov review?', ('no_admitted_record', 'ambiguous_record_on_same_subject'))
+   ('D15-012', 'SUPPORTED', 'UNSUPPORTED', 'Where does Kestrel-9B run?', ('no_admitted_record',))
+   ('D15-013', 'SUPPORTED', 'UNSUPPORTED', 'Which host serves Merlin-2B?', ('no_admitted_record',))
+   ('D15-017', 'SUPPORTED', 'UNSUPPORTED', 'Who was in the Marlin planning meeting?', ('no_admitted_record',))
+   ('D15-044', 'SUPPORTED', 'UNSUPPORTED', 'What is Jonas Weiss reviewing, and what is the maximum message size of', ('no_admitted_record', 'ambiguous_record_on_same_subject'))
+   ('D15-046', 'SUPPORTED', 'UNSUPPORTED', 'Where does Merlin-7B run, and who is the security reviewer for Willow?', ('no_admitted_record',))
+   ('D15-051', 'SUPPORTED', 'UNSUPPORTED', 'What does Bruno Keller review, and who is the Marlin lead?', ('no_admitted_record', 'ambiguous_record_on_same_subject'))
+   ('D15-052', 'SUPPORTED', 'UNSUPPORTED', "Who attended the Osprey planning meeting, and when is the Marlin lead'", ('no_admitted_record',))
+   ('D15-055', 'SUPPORTED', 'UNSUPPORTED', 'Who will fix the Cedar rollback test, and how large can a Hopper inges', ('no_admitted_record',))
+   ('D15-058', 'SUPPORTED', 'UNSUPPORTED', 'Who is fixing the Tamarind rollback test, and what is the maximum mess', ('no_admitted_record',))
+   ('D15-061', 'SUPPORTED', 'UNSUPPORTED', 'What does Wen Zhao review, and how large can a Turret API message be?', ('no_admitted_record',))
+   ('D15-064', 'SUPPORTED', 'UNSUPPORTED', 'Who is fixing the Osprey rollback test, and who is fixing the Willow r', ('no_admitted_record',))
+   ('D15-065', 'SUPPORTED', 'UNSUPPORTED', 'What is the retry limit of the Cobalt auth service, and how large can ', ('no_admitted_record',))
+   ('D15-069', 'SUPPORTED', 'UNSUPPORTED', 'What does Yusuf Demir review, and when will the Tamarind lead be away ', ('no_admitted_record',))
+   ('D15-070', 'SUPPORTED', 'UNSUPPORTED', "Which model does Sable use by default, and when is the Vesper lead's n", ('no_admitted_record',))
+   ('D15-072', 'HISTORICAL', 'UNSUPPORTED', 'Which model does Osprey use by default, and by when does Elena Marsh h', ('no_record_marked_past',))
+   ('D15-073', 'SUPPORTED', 'UNSUPPORTED', 'Who was in the Tamarind planning meeting, and who has the on-call duty', ('no_admitted_record',))
+   ('D15-074', 'HISTORICAL', 'UNSUPPORTED', "What was decided about Quartz's default model, and who owns the Anvil ", ('no_record_marked_past',))
+   ('D15-076', 'SUPPORTED', 'UNSUPPORTED', 'Who is on call for Sable, and where does Heron-12B run, and which mode', ('no_admitted_record',))
+   ('D15-077', 'HISTORICAL', 'UNSUPPORTED', "Who is the Cedar lead, and what is Amara Osei's deadline for the writt", ('no_record_marked_past',))

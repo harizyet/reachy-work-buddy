@@ -19,6 +19,7 @@ from companion_core.knowledge.answerability_b1.types import (
     _TOKEN,
     AUTHORITATIVE,
     AdmittedFact,
+    AttendeeRecord,
     AuthDecision,
     AuthorClass,
     Component,
@@ -26,6 +27,7 @@ from companion_core.knowledge.answerability_b1.types import (
     FactScope,
     Provenance,
     RelationSpec,
+    SpeakerSegment,
 )
 from companion_core.knowledge.context import looks_like_instruction
 
@@ -55,6 +57,7 @@ class AdmissionPolicy:
     expected_policy_version: str
     auth_max_age: timedelta = timedelta(seconds=60)
     clock_skew: timedelta = timedelta(seconds=2)
+    allow_context: bool = True  # the bounded one-sentence subject context; switchable so its effect can be ablated
 
 
 @dataclass(frozen=True)
@@ -64,6 +67,7 @@ class AdmissionResult:
     ambiguous: tuple[tuple[str, str], ...]  # (ref, reason): authorised and well-formed but not safely readable; never an assertion
     excluded: tuple[tuple[str, tuple[str, ...]], ...]  # (ref, reasons): audit only; a reply must never reveal these
     discovery_only: tuple[str, ...]  # authorised and well-formed, asserting nothing for this component
+    ambiguous_scopes: tuple[FactScope, ...] = ()  # the time scope of each ambiguous sentence, parallel to `ambiguous`
 
 
 def _dt(value) -> datetime | None:
@@ -164,10 +168,66 @@ def _fact_scope(sentence: str, prov: Provenance, title: str, now: datetime) -> F
     return FactScope.UNDATED
 
 
+_FIRST_PERSON = re.compile(r"^\s*I(?:['’]ll| will| am going to|['’]m going to| have| will be)\b")
+_PERSON_NAME = re.compile(r"^[A-Z][a-z]+ [A-Z][a-z]+$")
+_TEXT_MAX_WORDS = 10
+_ARTICLE = re.compile(r"^(?:the|a|an)\s+", re.IGNORECASE)
+
+
+def _units(text: str) -> list[tuple[str, int]]:
+    """(sentence, paragraph id). A blank line, a heading line ("# ...") and every list item start a new paragraph, so the one-sentence context lookback never crosses them."""
+    out: list[tuple[str, int]] = []
+    para = 0
+    for line in text.split("\n"):
+        stripped = line.strip()
+        if not stripped:
+            para += 1
+            continue
+        if stripped.startswith("#"):
+            para += 1
+            continue
+        if stripped[0] in "-*•":
+            para += 1
+            stripped = stripped.lstrip("-*• ").strip()
+        out.extend((s.strip(), para) for s in re.split(r"(?<=[.!?])\s+", stripped) if s.strip())
+    return out
+
+
+def _text_values(spec: RelationSpec, sentence: str) -> list[str] | None:
+    """Conservative free-text value: only what the relation's reviewed `text_pattern` captures as group `value`, short, unhedged. None: a match that cannot be trusted (too long, hedged)."""
+    found = []
+    for m in re.finditer(spec.text_pattern or "(?!)", sentence, re.IGNORECASE):
+        raw = m.group("value").strip(" ,;:")
+        if not raw or len(raw.split()) > _TEXT_MAX_WORDS or _HEDGE.search(raw) or _NEGATED_VALUE.search(raw) or re.search(r"[.!?]", raw):
+            return None
+        found.append(raw)
+    return found
+
+
+_OBJECT_FUNCTION_WORDS = frozenset({"the", "a", "an", "of", "for", "this", "that", "to", "s"})
+
+
+def _object_covered(sentence: str, component: Component, spec: RelationSpec) -> bool:
+    """A first-person statement answers the relation only if everything after its verb is the subject, the relation's own words or function words. "I will own the Conduit stream schedule" is about the
+    schedule, not about the Conduit stream, so it asserts nothing for "who owns the Conduit stream"."""
+    match = _FIRST_PERSON.match(sentence)
+    rest = re.findall(r"[A-Za-z0-9]+", sentence[match.end():] if match else sentence)
+    allowed = set(_OBJECT_FUNCTION_WORDS)
+    for phrase in (component.subject, *component.aliases, spec.words, *spec.object_words):
+        allowed |= {w.lower() for w in re.findall(r"[A-Za-z0-9]+", phrase)}
+    return all(tok.lower() in allowed for tok in rest[1:])  # rest[0] is the verb
+
+
+@dataclass(frozen=True)
+class _Amb:
+    reason: str
+    scope: FactScope
+
+
 def admit(component: Component, items: Collection[DiscoveryItem], auths: Mapping[str, AuthDecision], *, now: datetime, spec: RelationSpec | None, known_subjects: Collection[str],
-          policy: AdmissionPolicy) -> AdmissionResult:
+          policy: AdmissionPolicy, structured: Collection[AttendeeRecord | SpeakerSegment] = ()) -> AdmissionResult:
     facts: list[AdmittedFact] = []
-    ambiguous: list[tuple[str, str]] = []
+    ambiguous: list[tuple[str, str, FactScope]] = []
     excluded: list[tuple[str, tuple[str, ...]]] = []
     discovery_only: list[str] = []
     own = _alias_re(component.aliases) if component.aliases else None
@@ -175,6 +235,10 @@ def admit(component: Component, items: Collection[DiscoveryItem], auths: Mapping
     others = [s for s in known_subjects if s.lower() not in mine]
     other_re = _alias_re(others) if others else None
     cue_res = [re.compile(c, re.IGNORECASE) for c in spec.cues] if spec else []
+
+    def fact(ref, value, polarity, scope, sentence, prov, binding):
+        facts.append(AdmittedFact(component.id, ref, value, polarity, scope, sentence, prov, binding, _token=_TOKEN))
+
     for item in items:
         prov, problems = parse_provenance(item.ref, item.provenance, now, policy)
         if prov is None:
@@ -191,44 +255,113 @@ def admit(component: Component, items: Collection[DiscoveryItem], auths: Mapping
             discovery_only.append(item.ref)
             continue
         got_fact = False
-        item_ambiguous: str | None = None
-        for sentence in (s.strip() for s in _SENT.split(item.text)):
-            # the subject may come from the record's own title ("Cedar architecture", "Vesper planning") when the sentence itself names no other subject
-            named = own.search(sentence) or (own.search(item.title or "") and not (other_re and other_re.search(sentence)))
-            if not sentence or not named or not any(c.search(sentence) for c in cue_res):
+        item_amb: _Amb | None = None
+        units = _units(item.text)
+        for k, (sentence, para) in enumerate(units):
+            direct = bool(own.search(sentence))
+            titled = (not direct) and bool(own.search(item.title or "")) and not (other_re and other_re.search(sentence))
+            # bounded context: the ONE previous sentence of the same paragraph names this subject and no other, and this sentence names no subject at all
+            context_prev = None
+            if policy.allow_context and not direct and not titled and k > 0 and not (other_re and other_re.search(sentence)):
+                prev, prev_para = units[k - 1]
+                if prev_para == para and own.search(prev) and not (other_re and other_re.search(prev)) and not _HEDGE.search(prev):
+                    context_prev = prev
+            if not (direct or titled or context_prev) or not any(c.search(sentence) for c in cue_res):
                 continue
+            binding = "sentence" if direct else "title" if titled else "context"
+            evidence = f"{context_prev} {sentence}" if context_prev else sentence
+            scope = _fact_scope(evidence, prov, item.title, now)
             if _HEDGE.search(sentence):
-                item_ambiguous = item_ambiguous or "hedged"
+                item_amb = item_amb or _Amb("hedged", scope)
                 continue
-            if other_re and not spec.co_subjects_ok and other_re.search(sentence):
-                item_ambiguous = item_ambiguous or "competing_subject"
+            probe = sentence
+            if spec.kind == "text" and spec.text_pattern:
+                # the captured phrase is the value, so another entity named INSIDE it ("reviewing the Sluice settings") is not a competing subject; the rest of the sentence still is checked
+                probe = re.sub(spec.text_pattern, lambda m: m.group(0).replace(m.group("value"), " "), sentence, flags=re.IGNORECASE)
+            if other_re and not spec.co_subjects_ok and other_re.search(probe):
+                item_amb = item_amb or _Amb("competing_subject", scope)
                 continue
             if spec.kind == "existence":
                 neg = bool(spec.negation and re.search(spec.negation, sentence, re.IGNORECASE))
                 pres = bool(spec.presence and re.search(spec.presence, sentence, re.IGNORECASE))
                 if neg and pres:
-                    item_ambiguous = item_ambiguous or "contradictory_polarity"
+                    item_amb = item_amb or _Amb("contradictory_polarity", scope)
                 elif neg or pres:
-                    facts.append(AdmittedFact(component.id, item.ref, "", "negates" if neg else "asserts", _fact_scope(sentence, prov, item.title, now), sentence, prov, _token=_TOKEN))
+                    fact(item.ref, "", "negates" if neg else "asserts", scope, evidence, prov, binding)
                     got_fact = True
                 continue  # neither: a mention that does not say
-            distinct = list(dict.fromkeys(_values(spec.kind, sentence, [*component.aliases, *others])))
+            if spec.kind == "text":
+                vals = _text_values(spec, sentence)
+                if vals is None:
+                    item_amb = item_amb or _Amb("unreadable_text_value", scope)
+                    continue
+                distinct = list(dict.fromkeys(vals))
+            else:
+                distinct = list(dict.fromkeys(_values(spec.kind, sentence, [*component.aliases, *others])))
             if not distinct:
                 continue  # related, asserts no value
             if _NEGATED_VALUE.search(sentence):
-                item_ambiguous = item_ambiguous or "negated_value"
+                item_amb = item_amb or _Amb("negated_value", scope)
                 continue
-            if len(distinct) > 1 and not spec.many:
-                item_ambiguous = item_ambiguous or "multiple_values"
+            if len({_ARTICLE.sub("", d).casefold() for d in distinct}) > 1 and not spec.many:
+                item_amb = item_amb or _Amb("multiple_values", scope)
                 continue
-            scope = _fact_scope(sentence, prov, item.title, now)
-            facts.extend(AdmittedFact(component.id, item.ref, v, "asserts", scope, sentence, prov, _token=_TOKEN) for v in distinct)
+            for v in distinct:
+                fact(item.ref, v, "asserts", scope, evidence, prov, binding)
             got_fact = True
-        if item_ambiguous:
-            ambiguous.append((item.ref, item_ambiguous))  # an unreadable part never becomes an assertion; any readable part stays admitted
+        if item_amb:
+            ambiguous.append((item.ref, item_amb.reason, item_amb.scope))  # an unreadable part never becomes an assertion; any readable part stays admitted
         elif not got_fact:
             discovery_only.append(item.ref)
-    return AdmissionResult(component.id, tuple(facts), tuple(ambiguous), tuple(excluded), tuple(discovery_only))
+
+    # authoritative structured input: attendee lists and speaker-attributed segments (a reviewed speaker map). The same provenance and authorisation checks apply, and the author must be authoritative.
+    for rec in structured:
+        prov, problems = parse_provenance(rec.ref, rec.provenance, now, policy)
+        if prov is None:
+            excluded.append((rec.ref, tuple(problems)))
+            continue
+        auth_problems = check_authorization(prov, auths.get(rec.ref), now, policy)
+        if auth_problems:
+            excluded.append((rec.ref, tuple(auth_problems)))
+            continue
+        if prov.author_class not in AUTHORITATIVE:
+            excluded.append((rec.ref, ("structured_input_not_authoritative",)))
+            continue
+        if spec is None or own is None or spec.structured is None:
+            discovery_only.append(rec.ref)
+            continue
+        scope = _fact_scope(rec.title or "", prov, rec.title or "", now)
+        if isinstance(rec, AttendeeRecord) and spec.structured == "attendees":
+            if not own.search(rec.title or ""):
+                discovery_only.append(rec.ref)
+                continue
+            valid = [a for a in rec.attendees if isinstance(a, str) and _PERSON_NAME.match(a.strip())]
+            if len(valid) != len(rec.attendees):
+                ambiguous.append((rec.ref, "attendee_name_unparsable", scope))
+            for name in dict.fromkeys(a.strip() for a in valid):
+                fact(rec.ref, name, "asserts", scope, f"Attendees of {rec.title}: {name}", prov, "structured")
+            if not valid and not rec.attendees:
+                discovery_only.append(rec.ref)  # an empty list is not evidence that nobody attended
+        elif isinstance(rec, SpeakerSegment) and spec.structured == "speaker":
+            if looks_like_instruction(rec.text):
+                excluded.append((rec.ref, ("instruction_bearing",)))
+                continue
+            sentence = rec.text.strip()
+            named = own.search(sentence) or (own.search(rec.title or "") and not (other_re and other_re.search(sentence)))
+            if not _FIRST_PERSON.match(sentence) or not named or not any(c.search(sentence) for c in cue_res):
+                discovery_only.append(rec.ref)
+                continue
+            if _HEDGE.search(sentence) or _NEGATED_VALUE.search(sentence):
+                ambiguous.append((rec.ref, "hedged", scope))
+            elif not _object_covered(sentence, component, spec):
+                discovery_only.append(rec.ref)  # a statement about another object of the same subject
+            elif not (isinstance(rec.speaker, str) and _PERSON_NAME.match(rec.speaker.strip())):
+                ambiguous.append((rec.ref, "speaker_unresolved", scope))
+            else:
+                fact(rec.ref, rec.speaker.strip(), "asserts", _fact_scope(sentence, prov, rec.title or "", now), sentence, prov, "speaker")
+        else:
+            discovery_only.append(rec.ref)
+    return AdmissionResult(component.id, tuple(facts), tuple((r, why) for r, why, _ in ambiguous), tuple(excluded), tuple(discovery_only), tuple(s for _, _, s in ambiguous))
 
 
 def find_supersessions(items: Collection[DiscoveryItem], auths: Mapping[str, AuthDecision], *, now: datetime, policy: AdmissionPolicy) -> frozenset[tuple[str, str]]:

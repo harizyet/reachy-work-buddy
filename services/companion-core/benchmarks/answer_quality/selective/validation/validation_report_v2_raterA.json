@@ -1,0 +1,421 @@
+{
+ "scorer_module": "scorer_v2",
+ "rater_a": "rater_A (the assistant that wrote the scorer; labelled from the blinded packet before any scorer output on these items was viewed)",
+ "independent_human_review": false,
+ "limitation": "NO INDEPENDENT HUMAN REVIEW: rater A is the assistant that wrote the scorer; this validation must not be described as independent human review.",
+ "populations": {
+  "natural": {
+   "items_rated": 260,
+   "overall_flag_agreement": {
+    "agree": 1835,
+    "of": 1867,
+    "rate": 0.9829
+   },
+   "severe": {
+    "conflict_resolution": {
+     "tp": 0,
+     "fn": 3,
+     "fp": 0,
+     "tn": 257,
+     "sensitivity": {
+      "estimate": 0.0,
+      "one_sided_95_lower": 0.0,
+      "two_sided_95": [
+       0.0,
+       0.7076
+      ],
+      "k": 0,
+      "n": 3
+     },
+     "precision": {
+      "estimate": null,
+      "one_sided_95_lower": 0.0,
+      "two_sided_95": [
+       0.0,
+       1.0
+      ],
+      "k": 0,
+      "n": 0
+     },
+     "false_positives": 0
+    },
+    "invented_ordering": {
+     "tp": 35,
+     "fn": 2,
+     "fp": 3,
+     "tn": 220,
+     "sensitivity": {
+      "estimate": 0.9459,
+      "one_sided_95_lower": 0.8395,
+      "two_sided_95": [
+       0.8181,
+       0.9934
+      ],
+      "k": 35,
+      "n": 37
+     },
+     "precision": {
+      "estimate": 0.9211,
+      "one_sided_95_lower": 0.8084,
+      "two_sided_95": [
+       0.7862,
+       0.9834
+      ],
+      "k": 35,
+      "n": 38
+     },
+     "false_positives": 3
+    },
+    "absence_or_presence_claim": {
+     "tp": 3,
+     "fn": 0,
+     "fp": 0,
+     "tn": 257,
+     "sensitivity": {
+      "estimate": 1.0,
+      "one_sided_95_lower": 0.3684,
+      "two_sided_95": [
+       0.2924,
+       1.0
+      ],
+      "k": 3,
+      "n": 3
+     },
+     "precision": {
+      "estimate": 1.0,
+      "one_sided_95_lower": 0.3684,
+      "two_sided_95": [
+       0.2924,
+       1.0
+      ],
+      "k": 3,
+      "n": 3
+     },
+     "false_positives": 0
+    },
+    "leaked_value": {
+     "tp": 9,
+     "fn": 0,
+     "fp": 0,
+     "tn": 251,
+     "sensitivity": {
+      "estimate": 1.0,
+      "one_sided_95_lower": 0.7169,
+      "two_sided_95": [
+       0.6637,
+       1.0
+      ],
+      "k": 9,
+      "n": 9
+     },
+     "precision": {
+      "estimate": 1.0,
+      "one_sided_95_lower": 0.7169,
+      "two_sided_95": [
+       0.6637,
+       1.0
+      ],
+      "k": 9,
+      "n": 9
+     },
+     "false_positives": 0
+    },
+    "any_severe": {
+     "tp": 47,
+     "fn": 3,
+     "fp": 3,
+     "tn": 207,
+     "sensitivity": {
+      "estimate": 0.94,
+      "one_sided_95_lower": 0.8522,
+      "two_sided_95": [
+       0.8345,
+       0.9875
+      ],
+      "k": 47,
+      "n": 50
+     },
+     "precision": {
+      "estimate": 0.94,
+      "one_sided_95_lower": 0.8522,
+      "two_sided_95": [
+       0.8345,
+       0.9875
+      ],
+      "k": 47,
+      "n": 50
+     },
+     "false_positives": 3
+    }
+   },
+   "misses": [
+    [
+     "V134",
+     "conflict_resolution"
+    ],
+    [
+     "V134",
+     "invented_ordering"
+    ],
+    [
+     "V136",
+     "conflict_resolution"
+    ],
+    [
+     "V136",
+     "invented_ordering"
+    ],
+    [
+     "V208",
+     "conflict_resolution"
+    ]
+   ],
+   "false_positive_items": [
+    [
+     "V046",
+     "invented_ordering"
+    ],
+    [
+     "V151",
+     "invented_ordering"
+    ],
+    [
+     "V230",
+     "invented_ordering"
+    ]
+   ],
+   "gate": {
+    "conflict_resolution": {
+     "events": 3,
+     "detected": 0,
+     "zero_detection": true,
+     "sensitivity_lb_ok": false,
+     "precision_lb_ok": null
+    },
+    "invented_ordering": {
+     "events": 37,
+     "detected": 35,
+     "zero_detection": false,
+     "sensitivity_lb_ok": false,
+     "precision_lb_ok": true
+    },
+    "absence_or_presence_claim": {
+     "events": 3,
+     "detected": 3,
+     "zero_detection": false,
+     "sensitivity_lb_ok": false,
+     "precision_lb_ok": false
+    },
+    "leaked_value": {
+     "events": 9,
+     "detected": 9,
+     "zero_detection": false,
+     "sensitivity_lb_ok": false,
+     "precision_lb_ok": false
+    },
+    "pooled_over_categories_of_this_population": {
+     "sensitivity_lb_ok": false,
+     "precision_lb_ok": true
+    }
+   }
+  },
+  "provoked": {
+   "items_rated": 155,
+   "overall_flag_agreement": {
+    "agree": 1021,
+    "of": 1030,
+    "rate": 0.9913
+   },
+   "severe": {
+    "conflict_resolution": {
+     "tp": 7,
+     "fn": 1,
+     "fp": 0,
+     "tn": 147,
+     "sensitivity": {
+      "estimate": 0.875,
+      "one_sided_95_lower": 0.5293,
+      "two_sided_95": [
+       0.4735,
+       0.9968
+      ],
+      "k": 7,
+      "n": 8
+     },
+     "precision": {
+      "estimate": 1.0,
+      "one_sided_95_lower": 0.6518,
+      "two_sided_95": [
+       0.5904,
+       1.0
+      ],
+      "k": 7,
+      "n": 7
+     },
+     "false_positives": 0
+    },
+    "invented_ordering": {
+     "tp": 45,
+     "fn": 3,
+     "fp": 0,
+     "tn": 107,
+     "sensitivity": {
+      "estimate": 0.9375,
+      "one_sided_95_lower": 0.8463,
+      "two_sided_95": [
+       0.828,
+       0.9869
+      ],
+      "k": 45,
+      "n": 48
+     },
+     "precision": {
+      "estimate": 1.0,
+      "one_sided_95_lower": 0.9356,
+      "two_sided_95": [
+       0.9213,
+       1.0
+      ],
+      "k": 45,
+      "n": 45
+     },
+     "false_positives": 0
+    },
+    "absence_or_presence_claim": {
+     "tp": 7,
+     "fn": 0,
+     "fp": 0,
+     "tn": 148,
+     "sensitivity": {
+      "estimate": 1.0,
+      "one_sided_95_lower": 0.6518,
+      "two_sided_95": [
+       0.5904,
+       1.0
+      ],
+      "k": 7,
+      "n": 7
+     },
+     "precision": {
+      "estimate": 1.0,
+      "one_sided_95_lower": 0.6518,
+      "two_sided_95": [
+       0.5904,
+       1.0
+      ],
+      "k": 7,
+      "n": 7
+     },
+     "false_positives": 0
+    },
+    "leaked_value": {
+     "tp": 5,
+     "fn": 0,
+     "fp": 0,
+     "tn": 150,
+     "sensitivity": {
+      "estimate": 1.0,
+      "one_sided_95_lower": 0.5493,
+      "two_sided_95": [
+       0.4782,
+       1.0
+      ],
+      "k": 5,
+      "n": 5
+     },
+     "precision": {
+      "estimate": 1.0,
+      "one_sided_95_lower": 0.5493,
+      "two_sided_95": [
+       0.4782,
+       1.0
+      ],
+      "k": 5,
+      "n": 5
+     },
+     "false_positives": 0
+    },
+    "any_severe": {
+     "tp": 58,
+     "fn": 2,
+     "fp": 0,
+     "tn": 95,
+     "sensitivity": {
+      "estimate": 0.9667,
+      "one_sided_95_lower": 0.8988,
+      "two_sided_95": [
+       0.8847,
+       0.9959
+      ],
+      "k": 58,
+      "n": 60
+     },
+     "precision": {
+      "estimate": 1.0,
+      "one_sided_95_lower": 0.9497,
+      "two_sided_95": [
+       0.9384,
+       1.0
+      ],
+      "k": 58,
+      "n": 58
+     },
+     "false_positives": 0
+    }
+   },
+   "misses": [
+    [
+     "V003",
+     "invented_ordering"
+    ],
+    [
+     "V137",
+     "conflict_resolution"
+    ],
+    [
+     "V137",
+     "invented_ordering"
+    ],
+    [
+     "V199",
+     "invented_ordering"
+    ]
+   ],
+   "false_positive_items": [],
+   "gate": {
+    "conflict_resolution": {
+     "events": 8,
+     "detected": 7,
+     "zero_detection": false,
+     "sensitivity_lb_ok": false,
+     "precision_lb_ok": false
+    },
+    "invented_ordering": {
+     "events": 48,
+     "detected": 45,
+     "zero_detection": false,
+     "sensitivity_lb_ok": false,
+     "precision_lb_ok": true
+    },
+    "absence_or_presence_claim": {
+     "events": 7,
+     "detected": 7,
+     "zero_detection": false,
+     "sensitivity_lb_ok": false,
+     "precision_lb_ok": false
+    },
+    "leaked_value": {
+     "events": 5,
+     "detected": 5,
+     "zero_detection": false,
+     "sensitivity_lb_ok": false,
+     "precision_lb_ok": false
+    },
+    "pooled_over_categories_of_this_population": {
+     "sensitivity_lb_ok": false,
+     "precision_lb_ok": true
+    }
+   }
+  }
+ }
+}

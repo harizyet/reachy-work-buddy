@@ -24,6 +24,7 @@ from companion_core.knowledge.answerability_b1.states import Ticket, decide
 from companion_core.knowledge.answerability_b1.types import (
     AdmittedFact,
     Ask,
+    AttendeeRecord,
     AuthDecision,
     AuthorClass,
     Component,
@@ -32,8 +33,9 @@ from companion_core.knowledge.answerability_b1.types import (
     Provenance,
     RelationSpec,
     Scope,
+    SpeakerSegment,
     State,
 )
 
-__all__ = ["AdmissionPolicy", "AdmissionResult", "AdmittedFact", "Ask", "AuthDecision", "AuthorClass", "Claim", "Component", "DiscoveryItem", "FactScope", "Plan", "Provenance", "RelationSpec", "Scope", "State",
+__all__ = ["AdmissionPolicy", "AdmissionResult", "AdmittedFact", "Ask", "AttendeeRecord", "AuthDecision", "AuthorClass", "Claim", "Component", "DiscoveryItem", "FactScope", "Plan", "Provenance", "RelationSpec", "Scope", "SpeakerSegment", "State",
            "Ticket", "admit", "build_plan", "decide", "decompose", "find_supersessions", "render_claim"]

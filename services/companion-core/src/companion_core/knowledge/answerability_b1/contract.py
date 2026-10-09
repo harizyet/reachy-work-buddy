@@ -83,6 +83,8 @@ def render_claim(ticket: Ticket, label: str, eid_for: Mapping[str, str]) -> tupl
     tuple((v, tuple(dict.fromkeys(eid_for[r] for r in refs))) for v, refs in ticket.history)
     caveat = " Another record on this could not be read reliably, so it is not used." if ticket.ambiguous_refs else ""
     s = ticket.state
+    if "ambiguity_on_requested_proposition" in ticket.reasons and not ticket.values:
+        return f"The records on the {label} are unclear, so I will not pick an answer.", ()
     if s is State.SUPPORTED and ticket.component.ask is Ask.EXISTENCE:
         return f"The records say there is a {label} {_cite(cites[0][1])}.{caveat}", cites
     if s is State.SUPPORTED and ticket.component.ask is Ask.ORDERING:
@@ -121,7 +123,7 @@ def _claim(ticket: Ticket, spec: RelationSpec | None, eid_for: Mapping[str, str]
 
 
 def build_plan(components: Collection[Component], items: Collection[DiscoveryItem], auths: Mapping[str, AuthDecision], *, now: datetime, specs: Mapping[str, RelationSpec],
-               eids: Mapping[str, str], known_subjects: Collection[str], policy: AdmissionPolicy, fallback: bool = False) -> Plan:
+               eids: Mapping[str, str], known_subjects: Collection[str], policy: AdmissionPolicy, fallback: bool = False, structured: Collection = ()) -> Plan:
     supersessions = find_supersessions(items, auths, now=now, policy=policy)
     tickets: list[Ticket] = []
     claims: list[Claim] = []
@@ -131,7 +133,7 @@ def build_plan(components: Collection[Component], items: Collection[DiscoveryIte
         try:
             if comp.relation is not None and spec is None:
                 raise LookupError("no relation spec")
-            result = admit(comp, items, auths, now=now, spec=spec, known_subjects=known_subjects, policy=policy)
+            result = admit(comp, items, auths, now=now, spec=spec, known_subjects=known_subjects, policy=policy, structured=structured)
             ticket = decide(comp, result, supersessions, many=bool(spec and spec.many))
             claim = _claim(ticket, spec, eids)
         except Exception as exc:  # one component failing never takes the others down; it is withheld with distinct wording  # noqa: BLE001

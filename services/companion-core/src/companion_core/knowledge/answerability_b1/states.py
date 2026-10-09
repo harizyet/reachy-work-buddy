@@ -12,7 +12,7 @@ Ambiguous, unreadable or unauthorised records contribute nothing; an ambiguous r
 from __future__ import annotations
 
 from collections.abc import Collection
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from companion_core.knowledge.answerability_b1.admission import AdmissionResult
 from companion_core.knowledge.answerability_b1.types import (
@@ -57,7 +57,7 @@ def _drop_superseded(facts: list[AdmittedFact], supersessions: Collection[tuple[
     return kept, len(kept) != len(facts)
 
 
-def decide(component: Component, result: AdmissionResult, supersessions: Collection[tuple[str, str]] = (), *, many: bool = False) -> Ticket:
+def _decide_core(component: Component, result: AdmissionResult, supersessions: Collection[tuple[str, str]] = (), *, many: bool = False) -> Ticket:
     facts = list(result.facts)
     amb = tuple(ref for ref, _ in result.ambiguous)
     base = {"ambiguous_refs": amb, "discovery_refs": result.discovery_only}
@@ -110,6 +110,33 @@ def decide(component: Component, result: AdmissionResult, supersessions: Collect
         return Ticket(component, State.CONFLICTED, ("admitted_records_disagree", "no_explicit_supersession", *note), values, history, **base)
     reasons = ("single_value", *(("older_record_explicitly_superseded",) if was_superseded else ()), *note)
     return Ticket(component, State.SUPPORTED, reasons, values, history, **base)
+
+
+AMBIGUITY = "ambiguity_on_requested_proposition"
+
+
+def _ambiguity_touches(component: Component, result: AdmissionResult) -> bool:
+    """An ambiguous sentence about this subject and relation that could bear on the time the question asks about."""
+    for scope in result.ambiguous_scopes:
+        if component.scope is Scope.ANY or (component.scope is Scope.PAST and scope is not FactScope.CURRENT) or (component.scope is Scope.CURRENT and scope is not FactScope.PAST):
+            return True
+    return False
+
+
+def decide(component: Component, result: AdmissionResult, supersessions: Collection[tuple[str, str]] = (), *, many: bool = False) -> Ticket:
+    """Ambiguity applies at the smallest affected proposition. A sentence that is about THIS subject and relation but cannot be read safely (hedged, negated, several values, competing subject, unreadable
+    text value) makes a single-valued answer unchoosable: the ticket is withheld, never resolved in favour of a clean-looking record. For a many-valued relation each value is its own proposition, so the
+    independent supported values stay answered (the contract adds a caveat); a CONFLICTED ticket chooses nothing and is kept. Other components are never touched."""
+    t = _decide_core(component, result, supersessions, many=many)
+    if component.relation is None or not _ambiguity_touches(component, result):
+        return t
+    if many and component.ask is Ask.VALUE:
+        return t
+    if t.state in (State.SUPPORTED, State.HISTORICAL, State.NEGATIVE_SUPPORTED) or (t.state is State.SUPPORTED and component.ask is Ask.ORDERING):
+        return Ticket(component, _empty_state(component), (AMBIGUITY, *t.reasons[:0]), ambiguous_refs=t.ambiguous_refs, discovery_refs=t.discovery_refs)
+    if t.state in (State.CONFLICTED, State.UNSUPPORTED, State.NEGATIVE_UNSUPPORTED, State.ORDER_UNSUPPORTED):
+        return replace(t, reasons=(*t.reasons, AMBIGUITY))  # nothing was chosen; the reply says the records are unclear rather than that they are silent
+    return t
 
 
 def _empty_state(component: Component) -> State:

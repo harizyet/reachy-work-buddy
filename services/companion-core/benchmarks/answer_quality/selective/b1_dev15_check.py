@@ -16,17 +16,41 @@ sys.path.insert(0, str(HERE.parents[2] / "src"))
 from companion_core.knowledge.answerability_b1 import (
     AdmissionPolicy,
     Ask,
+    AttendeeRecord,
     AuthDecision,
     Component,
     DiscoveryItem,
     RelationSpec,
     Scope,
+    SpeakerSegment,
     build_plan,
 )
 
 NOW = datetime(2026, 10, 13, 12, 0, tzinfo=UTC)
-POLICY = AdmissionPolicy(expected_policy_version="p1")
+FLAGS = set(sys.argv[1:])  # --harness-fixes --structured --context --text ; none = the pre-extension configuration
+POLICY = AdmissionPolicy(expected_policy_version="p1", allow_context="--context" in FLAGS)
+TEXT_PATTERNS = {  # reviewed patterns for the two design relations whose value is a phrase; written from the relations' own wording, not from dev15 replies
+    "reviews": r"\breview(?:s|ing)?\s+(?:the\s+)?(?P<value>[A-Z][\w-]*(?: [\w-]+){0,4}?)\s*(?:[.;]|$)",
+    "decision": r"\bdecision is to\s+(?P<value>[^.;,]{3,80}?)\s*(?:[.;]|$)",
+}
 KINDS = {"person": "person", "number": "number", "day": "day", "month": "month", "model": "model", "host": "host", "hours": "hours", "bool": "existence", "text": "person", "time": "time"}
+
+
+def _norm(v: str) -> str:
+    return re.sub(r"^(?:the|a|an)\s+", "", v.strip().casefold())
+
+
+def structured_records(c4):
+    """Authoritative structured input from the corpus's reviewed speaker map (ADR 0030 style): an attendee list per meeting and each segment with its resolved speaker."""
+    out = []
+    created = NOW - timedelta(days=100)
+    for mt in c4["meetings"]:
+        p = {"store": "meeting", "record_id": mt["id"], "author_class": "system", "created_at": created, "retrieved_at": NOW - timedelta(minutes=1), "acl_revision": 1}
+        out.append(AttendeeRecord(f"meeting:{mt['id']}", mt["title"], tuple(mt["speaker_names"].values()), p))
+        for k, seg in enumerate(mt["segments"]):
+            ref = f"meeting:{mt['id']}#{k}"
+            out.append(SpeakerSegment(ref, seg["text"], mt["speaker_names"].get(seg["speaker"]), {**p, "record_id": f"{mt['id']}"}, mt["title"]))
+    return out
 
 
 def pool():
@@ -43,7 +67,7 @@ def pool():
     for n in c["notes"]:
         add(f"note:{n['id']}", n["body"], "owner", n.get("title", ""))
     for d in c["documents"]:
-        add(f"document:{d['id']}", d["content"].replace("\n#", "\n"), "third_party", d.get("title", ""))
+        add(f"document:{d['id']}", d["content"] if "--harness-fixes" in FLAGS else d["content"].replace("\n#", "\n"), "third_party", d.get("title", ""))
     for mt in c["meetings"]:
         for k, seg in enumerate(mt["segments"]):
             add(f"meeting:{mt['id']}", seg["text"], "attendee", mt.get("title", ""))
@@ -71,6 +95,9 @@ def main():
     # access profile owner_private: ceiling work-private, so `sensitive` records are NOT authorised (the access rule, applied here by the harness)
     auths = {i.ref: AuthDecision(level.get(i.ref.split("#")[0], "public") != "sensitive", NOW - timedelta(seconds=3), "p1", 1) for i in items}
     eids = {i.ref: f"E{n}" for n, i in enumerate(items, 1)}
+    for rec in structured_records(c4):
+        auths[rec.ref] = AuthDecision(level.get(rec.ref.split("#")[0], "public") != "sensitive", NOW - timedelta(seconds=3), "p1", 1)
+        eids[rec.ref] = f"S{len(eids) + 1}"
     cases = json.loads((HERE.parent / "cases_dev15.json").read_text())["cases"]
     from validate_scorer import PEOPLE
 
@@ -78,31 +105,57 @@ def main():
     known = sorted({re.sub(r"\\b", "", a["subject_re"]) for q in cases for a in q["atoms"] if a["subject_re"]} - people - {p.replace(" ", "\\ ") for p in people})
     known = [k for k in known if k.replace("\\", "") not in people]
     conf = collections.Counter()
+    value_checks = collections.Counter()
     by_rel = collections.Counter()
     bad = []
+    wrong = []
     for q in cases:
         for a in q["atoms"]:
             subject = re.sub(r"\\b", "", a["subject_re"])
+            if "--harness-fixes" in FLAGS:
+                subject = subject.replace("\\", "")  # harness bug: an escaped hyphen ("swift\\-6b") never matched the sentence
             kind = KINDS.get(a["kind"], "person")
-            spec = RelationSpec(a["relation"], kind, (a["cue_re"],), many=a["relation"] == "attends", co_subjects_ok=a["relation"] in ("runs_on", "default_model"), negation=r"\b(?:has no|does not have|there is no|no)\b", presence=r"\b(?:has a|has an|there is a)\b")
+            text_pattern = None
+            if "--text" in FLAGS and a["relation"] in TEXT_PATTERNS:
+                kind, text_pattern = "text", TEXT_PATTERNS[a["relation"]]
+            structured_kind = None
+            if "--structured" in FLAGS:
+                structured_kind = "attendees" if a["relation"] == "attends" else "speaker" if kind == "person" else None
+            spec = RelationSpec(a["relation"], kind, (a["cue_re"],), many=a["relation"] == "attends", co_subjects_ok=a["relation"] in ("runs_on", "default_model"), negation=r"\b(?:has no|does not have|there is no|no)\b",
+                                presence=r"\b(?:has a|has an|there is a)\b", text_pattern=text_pattern, structured=structured_kind,
+                                object_words=tuple(re.findall(r"[A-Za-z0-9]+", a["cue_re"])))
             ask = Ask.EXISTENCE if a["status"].startswith("NEGATIVE") else Ask.ORDERING if a["status"] == "ORDER_UNSUPPORTED" else Ask.VALUE
             scope = Scope.PAST if a["status"] == "HISTORICAL" else Scope.ANY
             comp = Component("c1", a["subject"], (subject,), a["relation"], ask, scope)
-            plan = build_plan([comp], items, auths, now=NOW, specs={a["relation"]: spec}, eids=eids, known_subjects=[k for k in known if k != subject], policy=POLICY)
+            plan = build_plan([comp], items, auths, now=NOW, specs={a["relation"]: spec}, eids=eids, known_subjects=[k for k in known if k != subject], policy=POLICY, structured=structured_records(c4) if "--structured" in FLAGS else ())
             got = plan.claims[0].state.value
+            if got in ("SUPPORTED", "HISTORICAL") and a["status"] == got and ask is Ask.VALUE:
+                shown = {_norm(v) for v, _ in plan.tickets[0].values}
+                want = {_norm(d) for d in a["display"]}
+                value_checks["correct" if (shown == want if spec.many else shown <= want) else "WRONG"] += 1
             conf[(a["status"], got)] += 1
             by_rel[(a["relation"], a["status"], got)] += 1
             if got != a["status"]:
-                bad.append((q["id"], a["status"], got, q["question"][:70], plan.tickets[0].reasons))
+                bad.append((q["id"], a["status"], got, q["question"][:70], plan.tickets[0].reasons, [(v, r) for v, r in plan.tickets[0].values][:3], a["relation"]))
+            if value_checks and got in ("SUPPORTED", "HISTORICAL") and a["status"] == got and ask is Ask.VALUE and not ({_norm(v) for v, _ in plan.tickets[0].values} <= {_norm(d) for d in a["display"]} if not spec.many else {_norm(v) for v, _ in plan.tickets[0].values} == {_norm(d) for d in a["display"]}):
+                wrong.append((q["id"], a["relation"], plan.tickets[0].values, a["display"]))
     total = sum(conf.values())
     ok = sum(v for (g, s), v in conf.items() if g == s)
     print(f"atoms {total}; state equals gold {ok} ({ok / total:.1%})")
     for (g, s), v in sorted(conf.items()):
         print(f"  gold {g:22s} -> {s:22s} {v}")
+    print(f"values of answered SUPPORTED/HISTORICAL atoms: {dict(value_checks)}")
     print("disagreements by relation (relation, gold, got):")
     for (rel, g, s), v in sorted(by_rel.items()):
         if g != s:
             print(f"  {rel:22s} {g:12s} -> {s:12s} {v}")
+    print("WRONG values:")
+    for w in wrong:
+        print("  ", w)
+    print("gold UNSUPPORTED answered:")
+    for b in bad:
+        if b[1] == "UNSUPPORTED":
+            print("  ", b)
     print("first disagreements:")
     for b in bad[:25]:
         print("  ", b)

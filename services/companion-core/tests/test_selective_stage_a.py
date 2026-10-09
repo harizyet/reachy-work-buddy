@@ -238,3 +238,10 @@ def test_ordering_and_conflict_gold_never_rests_on_retrieval_or_creation_time():
                 assert a["status"] != "SUPERSEDED"
                 if a["status"] in ("CONFLICTED", "ORDER_UNSUPPORTED"):
                     assert all(s.startswith("memory:") for s in a["sources"]), (case["id"], a["sources"])
+
+
+def test_exact_binomial_bounds_used_by_the_validation_gate():
+    va = load("sel_validation_analyze", "validation_analyze.py")
+    assert va.lower_bound(29, 29, 0.05) >= 0.90 > va.lower_bound(28, 29, 0.05)  # 29 detections without a miss are the minimum for a 90% one-sided bound
+    assert va.lower_bound(60, 60, 0.05) >= 0.95 and va.lower_bound(59, 60, 0.05) >= 0.90 > va.lower_bound(58, 60, 0.05)  # 60 events allow one miss
+    assert va.lower_bound(0, 10, 0.05) == 0.0 and va.upper_bound(0, 10, 0.05) < 0.26

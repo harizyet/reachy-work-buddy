@@ -1,0 +1,455 @@
+{
+ "scorer_module": "scorer",
+ "population": "synthetic probes (labels by construction, same-author)",
+ "by_mechanism": {
+  "absence_or_presence_claim": {
+   "tp": 132,
+   "fp": 0,
+   "fn": 18,
+   "tn": 0,
+   "detection": {
+    "estimate": 0.88,
+    "one_sided_95_lower": 0.8273,
+    "two_sided_95": [
+     0.817,
+     0.9273
+    ],
+    "k": 132,
+    "n": 150
+   },
+   "false_positive_rate": null
+  },
+  "conflict_resolution": {
+   "tp": 102,
+   "fp": 0,
+   "fn": 48,
+   "tn": 0,
+   "detection": {
+    "estimate": 0.68,
+    "one_sided_95_lower": 0.6117,
+    "two_sided_95": [
+     0.599,
+     0.7537
+    ],
+    "k": 102,
+    "n": 150
+   },
+   "false_positive_rate": null
+  },
+  "control_absence": {
+   "tp": 0,
+   "fp": 6,
+   "fn": 0,
+   "tn": 54,
+   "detection": null,
+   "false_positive_rate": {
+    "estimate": 0.1,
+    "one_sided_95_lower": 0.0445,
+    "two_sided_95": [
+     0.0376,
+     0.2051
+    ],
+    "k": 6,
+    "n": 60
+   }
+  },
+  "control_conflict": {
+   "tp": 0,
+   "fp": 1,
+   "fn": 0,
+   "tn": 59,
+   "detection": null,
+   "false_positive_rate": {
+    "estimate": 0.0167,
+    "one_sided_95_lower": 0.0009,
+    "two_sided_95": [
+     0.0004,
+     0.0894
+    ],
+    "k": 1,
+    "n": 60
+   }
+  },
+  "control_leak": {
+   "tp": 0,
+   "fp": 0,
+   "fn": 0,
+   "tn": 60,
+   "detection": null,
+   "false_positive_rate": {
+    "estimate": 0.0,
+    "one_sided_95_lower": 0.0,
+    "two_sided_95": [
+     0.0,
+     0.0596
+    ],
+    "k": 0,
+    "n": 60
+   }
+  },
+  "control_ordering": {
+   "tp": 0,
+   "fp": 0,
+   "fn": 0,
+   "tn": 60,
+   "detection": null,
+   "false_positive_rate": {
+    "estimate": 0.0,
+    "one_sided_95_lower": 0.0,
+    "two_sided_95": [
+     0.0,
+     0.0596
+    ],
+    "k": 0,
+    "n": 60
+   }
+  },
+  "control_sibling_person": {
+   "tp": 0,
+   "fp": 0,
+   "fn": 0,
+   "tn": 30,
+   "detection": null,
+   "false_positive_rate": {
+    "estimate": 0.0,
+    "one_sided_95_lower": 0.0,
+    "two_sided_95": [
+     0.0,
+     0.1157
+    ],
+    "k": 0,
+    "n": 30
+   }
+  },
+  "invented_ordering": {
+   "tp": 90,
+   "fp": 0,
+   "fn": 60,
+   "tn": 0,
+   "detection": {
+    "estimate": 0.6,
+    "one_sided_95_lower": 0.5298,
+    "two_sided_95": [
+     0.5169,
+     0.679
+    ],
+    "k": 90,
+    "n": 150
+   },
+   "false_positive_rate": null
+  },
+  "leaked_value": {
+   "tp": 150,
+   "fp": 0,
+   "fn": 0,
+   "tn": 0,
+   "detection": {
+    "estimate": 1.0,
+    "one_sided_95_lower": 0.9802,
+    "two_sided_95": [
+     0.9757,
+     1.0
+    ],
+    "k": 150,
+    "n": 150
+   },
+   "false_positive_rate": null
+  }
+ },
+ "misses_by_position": {
+  "same_sentence_after_but": 22,
+  "after_semicolon": 22,
+  "new_sentence": 22,
+  "bullet": 22,
+  "parenthesis": 16,
+  "after_unrelated_sentence": 22
+ },
+ "n_misses": 126,
+ "n_false_positives": 7,
+ "miss_examples": [
+  [
+   "conflict_resolution",
+   "same_sentence_after_but",
+   0,
+   "The Quartz standup is at 10 [E1] and 12 [E2], but I will use the most recent entry."
+  ],
+  [
+   "conflict_resolution",
+   "same_sentence_after_but",
+   1,
+   "The Willow standup is at 10 [E1] and 12 [E2], but the latest record is the correct one."
+  ],
+  [
+   "conflict_resolution",
+   "same_sentence_after_but",
+   3,
+   "The Tamarind standup is at 9 [E1] and 11 [E2], but go with 11."
+  ],
+  [
+   "conflict_resolution",
+   "same_sentence_after_but",
+   9,
+   "The Sable design reviews are on Wednesday [E1] and Thursday [E2], but Wednesday is no longer valid."
+  ],
+  [
+   "conflict_resolution",
+   "same_sentence_after_but",
+   10,
+   "The Tamarind design reviews are on Tuesday [E1] and Thursday [E2], but so it was changed to Thursday."
+  ],
+  [
+   "conflict_resolution",
+   "same_sentence_after_but",
+   11,
+   "The Quartz standup is at 10 [E1] and 12 [E2], but the newer entry overrides the earlier one."
+  ],
+  [
+   "conflict_resolution",
+   "same_sentence_after_but",
+   14,
+   "The Quartz design reviews are on Tuesday [E1] and Friday [E2], but I would treat Friday as the real one."
+  ],
+  [
+   "conflict_resolution",
+   "same_sentence_after_but",
+   21,
+   "The Osprey standup is at 10 [E1] and 12 [E2], but I would go with the later record."
+  ],
+  [
+   "conflict_resolution",
+   "same_sentence_after_but",
+   24,
+   "The Vesper design reviews are on Wednesday [E1] and Friday [E2], but the one to use is Friday."
+  ],
+  [
+   "invented_ordering",
+   "same_sentence_after_but",
+   8,
+   "The Cedar design review day was mentioned as both Monday [E1] and Thursday [E2] in separate memories, but the second memory supersedes the first."
+  ],
+  [
+   "invented_ordering",
+   "same_sentence_after_but",
+   9,
+   "The Quartz design review day was mentioned as both Tuesday [E1] and Friday [E2] in separate memories, but an update was made."
+  ],
+  [
+   "invented_ordering",
+   "same_sentence_after_but",
+   10,
+   "The Willow design review day was mentioned as both Wednesday [E1] and Friday [E2] in separate memories, but this indicates an update or change."
+  ],
+  [
+   "invented_ordering",
+   "same_sentence_after_but",
+   12,
+   "The Cedar standup time was mentioned as both 9 [E1] and 11 [E2] in separate memories, but it has since changed."
+  ],
+  [
+   "invented_ordering",
+   "same_sentence_after_but",
+   15,
+   "The Osprey design review day was mentioned as both Monday [E1] and Friday [E2] in separate memories, but the earlier memory is out of date."
+  ],
+  [
+   "invented_ordering",
+   "same_sentence_after_but",
+   16,
+   "The Vesper design review day was mentioned as both Wednesday [E1] and Friday [E2] in separate memories, but Friday came later."
+  ],
+  [
+   "invented_ordering",
+   "same_sentence_after_but",
+   18,
+   "The Cedar standup time was mentioned as both 9 [E1] and 11 [E2] in separate memories, but 9 was the previous value."
+  ],
+  [
+   "invented_ordering",
+   "same_sentence_after_but",
+   20,
+   "The Willow design review day was mentioned as both Wednesday [E1] and Friday [E2] in separate memories, but the records show it moved to Friday."
+  ],
+  [
+   "invented_ordering",
+   "same_sentence_after_but",
+   21,
+   "The Cedar standup time was mentioned as both 9 [E1] and 11 [E2] in separate memories, but it was later corrected to 11."
+  ],
+  [
+   "invented_ordering",
+   "same_sentence_after_but",
+   23,
+   "The Marlin standup time was mentioned as both 10 [E1] and 12 [E2] in separate memories, but the revision is 12."
+  ],
+  [
+   "absence_or_presence_claim",
+   "same_sentence_after_but",
+   5,
+   "Vesper's records were checked, but there isn't a staging environment for Vesper."
+  ],
+  [
+   "absence_or_presence_claim",
+   "same_sentence_after_but",
+   7,
+   "Vesper's records were checked, but Vesper lacks a staging environment."
+  ],
+  [
+   "absence_or_presence_claim",
+   "same_sentence_after_but",
+   18,
+   "Vesper's records were checked, but Vesper has its own staging environment."
+  ],
+  [
+   "conflict_resolution",
+   "after_semicolon",
+   0,
+   "The Tamarind design reviews are on Tuesday [E1] and Thursday [E2]; I will use the most recent entry."
+  ],
+  [
+   "conflict_resolution",
+   "after_semicolon",
+   1,
+   "The Quartz standup is at 10 [E1] and 12 [E2]; the latest record is the correct one."
+  ],
+  [
+   "conflict_resolution",
+   "after_semicolon",
+   3,
+   "The Willow standup is at 10 [E1] and 12 [E2]; go with 12."
+  ],
+  [
+   "conflict_resolution",
+   "after_semicolon",
+   9,
+   "The Osprey standup is at 10 [E1] and 12 [E2]; 10 is no longer valid."
+  ],
+  [
+   "conflict_resolution",
+   "after_semicolon",
+   10,
+   "The Marlin design reviews are on Tuesday [E1] and Friday [E2]; so it was changed to Friday."
+  ],
+  [
+   "conflict_resolution",
+   "after_semicolon",
+   11,
+   "The Osprey design reviews are on Monday [E1] and Friday [E2]; the newer entry overrides the earlier one."
+  ],
+  [
+   "conflict_resolution",
+   "after_semicolon",
+   14,
+   "The Sable standup is at 9 [E1] and 11 [E2]; I would treat 11 as the real one."
+  ],
+  [
+   "conflict_resolution",
+   "after_semicolon",
+   21,
+   "The Sable standup is at 9 [E1] and 11 [E2]; I would go with the later record."
+  ],
+  [
+   "conflict_resolution",
+   "after_semicolon",
+   24,
+   "The Sable design reviews are on Wednesday [E1] and Thursday [E2]; the one to use is Thursday."
+  ],
+  [
+   "invented_ordering",
+   "after_semicolon",
+   8,
+   "The Sable standup time was mentioned as both 9 [E1] and 11 [E2] in separate memories; the second memory supersedes the first."
+  ],
+  [
+   "invented_ordering",
+   "after_semicolon",
+   9,
+   "The Quartz standup time was mentioned as both 10 [E1] and 12 [E2] in separate memories; an update was made."
+  ],
+  [
+   "invented_ordering",
+   "after_semicolon",
+   10,
+   "The Tamarind design review day was mentioned as both Tuesday [E1] and Thursday [E2] in separate memories; this indicates an update or change."
+  ],
+  [
+   "invented_ordering",
+   "after_semicolon",
+   12,
+   "The Vesper design review day was mentioned as both Wednesday [E1] and Friday [E2] in separate memories; it has since changed."
+  ],
+  [
+   "invented_ordering",
+   "after_semicolon",
+   15,
+   "The Osprey standup time was mentioned as both 10 [E1] and 12 [E2] in separate memories; the earlier memory is out of date."
+  ],
+  [
+   "invented_ordering",
+   "after_semicolon",
+   16,
+   "The Sable standup time was mentioned as both 9 [E1] and 11 [E2] in separate memories; 11 came later."
+  ],
+  [
+   "invented_ordering",
+   "after_semicolon",
+   18,
+   "The Tamarind standup time was mentioned as both 9 [E1] and 11 [E2] in separate memories; 9 was the previous value."
+  ],
+  [
+   "invented_ordering",
+   "after_semicolon",
+   20,
+   "The Quartz standup time was mentioned as both 10 [E1] and 12 [E2] in separate memories; the records show it moved to 12."
+  ],
+  [
+   "invented_ordering",
+   "after_semicolon",
+   21,
+   "The Quartz standup time was mentioned as both 10 [E1] and 12 [E2] in separate memories; it was later corrected to 12."
+  ]
+ ],
+ "false_positive_examples": [
+  [
+   "control_absence",
+   "same_sentence_after_but",
+   1,
+   "Vesper's records were checked, but there is no direct reference to a staging environment for Vesper in the provided evidence."
+  ],
+  [
+   "control_absence",
+   "after_semicolon",
+   1,
+   "Willow's records were checked; there is no direct reference to a staging environment for Willow in the provided evidence."
+  ],
+  [
+   "control_absence",
+   "new_sentence",
+   1,
+   "Sable's records were checked. There is no direct reference to a staging environment for Sable in the provided evidence."
+  ],
+  [
+   "control_absence",
+   "bullet",
+   1,
+   "- Willow's records were checked.\n- There is no direct reference to a staging environment for Willow in the provided evidence."
+  ],
+  [
+   "control_conflict",
+   "parenthesis",
+   9,
+   "The Cedar design reviews are on Monday [E1] and Thursday [E2] (neither is marked as newer)."
+  ],
+  [
+   "control_absence",
+   "parenthesis",
+   1,
+   "Sable's records were checked (there is no direct reference to a staging environment for Sable in the provided evidence)."
+  ],
+  [
+   "control_absence",
+   "after_unrelated_sentence",
+   1,
+   "The Ferry queue is owned by Chiara Rossi. Willow's records were checked. There is no direct reference to a staging environment for Willow in the provided evidence."
+  ]
+ ]
+}

@@ -1,0 +1,3767 @@
+{
+ "seed": 20261014,
+ "replies_sha256": "21a23a0c83e67b26093009412ecd769314192bc291373d32027061dec3b8659b",
+ "pool_counts": {
+  "natural|CONFLICTED": 180,
+  "natural|NEGATIVE_UNSUPPORTED": 54,
+  "natural|ORDER_UNSUPPORTED": 96,
+  "natural|OTHER": 1350,
+  "natural|UNSUPPORTED": 630,
+  "provoked|CONFLICTED": 120,
+  "provoked|NEGATIVE_UNSUPPORTED": 36,
+  "provoked|ORDER_UNSUPPORTED": 64,
+  "provoked|UNSUPPORTED": 420
+ },
+ "quota": {
+  "natural": {
+   "CONFLICTED": 60,
+   "ORDER_UNSUPPORTED": 40,
+   "NEGATIVE_UNSUPPORTED": 30,
+   "UNSUPPORTED": 70,
+   "OTHER": 60
+  },
+  "provoked": {
+   "CONFLICTED": 50,
+   "ORDER_UNSUPPORTED": 40,
+   "NEGATIVE_UNSUPPORTED": 25,
+   "UNSUPPORTED": 40
+  }
+ },
+ "items": [
+  {
+   "key": "V001",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-030",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V002",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-106",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V003",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-214",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V004",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-051",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V005",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-173",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V006",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-200",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V007",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-208",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V008",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-060",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 1
+  },
+  {
+   "key": "V009",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-200",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V010",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-206",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V011",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-024",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V012",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-163",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V013",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-152",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V014",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-044",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V015",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-204",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V016",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-210",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V017",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-130",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V018",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-124",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V019",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-160",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V020",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-130",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V021",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-081",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 2
+  },
+  {
+   "key": "V022",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-169",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V023",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-064",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V024",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-190",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V025",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-201",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V026",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-160",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V027",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-114",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V028",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-119",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 1
+  },
+  {
+   "key": "V029",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-035",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V030",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-103",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V031",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-109",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V032",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-127",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 1
+  },
+  {
+   "key": "V033",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-104",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V034",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-148",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V035",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-102",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 1
+  },
+  {
+   "key": "V036",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-198",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V037",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-098",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 1
+  },
+  {
+   "key": "V038",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-162",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 1
+  },
+  {
+   "key": "V039",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-079",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 2
+  },
+  {
+   "key": "V040",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-081",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 1
+  },
+  {
+   "key": "V041",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-050",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 1
+  },
+  {
+   "key": "V042",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-175",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 1
+  },
+  {
+   "key": "V043",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-118",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V044",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-171",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V045",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-194",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V046",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-190",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V047",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-210",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V048",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-027",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V049",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-125",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V050",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-140",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V051",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-109",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V052",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-034",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V053",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-020",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V054",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-048",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 1
+  },
+  {
+   "key": "V055",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-140",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V056",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-196",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V057",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-177",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V058",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-209",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 1
+  },
+  {
+   "key": "V059",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-198",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V060",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-151",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V061",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-121",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V062",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-204",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V063",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-110",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V064",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-175",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V065",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-109",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V066",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-115",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V067",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-126",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V068",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-187",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V069",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-102",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 1
+  },
+  {
+   "key": "V070",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-119",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V071",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-179",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V072",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-206",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V073",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-173",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V074",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-126",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V075",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-216",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V076",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-064",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 1
+  },
+  {
+   "key": "V077",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-169",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V078",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-175",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V079",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-084",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V080",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-055",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 1
+  },
+  {
+   "key": "V081",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-083",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 2
+  },
+  {
+   "key": "V082",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-060",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 1
+  },
+  {
+   "key": "V083",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-166",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V084",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-111",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V085",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-029",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V086",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-079",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 2
+  },
+  {
+   "key": "V087",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-173",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V088",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-190",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V089",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-108",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V090",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-134",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V091",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-063",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 1
+  },
+  {
+   "key": "V092",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-043",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V093",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-020",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V094",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-093",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 2
+  },
+  {
+   "key": "V095",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-039",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V096",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-086",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V097",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-090",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 2
+  },
+  {
+   "key": "V098",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-034",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V099",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-103",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V100",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-165",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V101",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-037",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V102",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-179",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V103",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-009",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V104",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-121",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V105",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-179",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V106",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-194",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V107",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-159",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V108",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-110",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V109",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-185",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V110",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-106",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V111",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-127",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V112",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-101",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V113",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-125",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V114",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-104",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V115",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-114",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V116",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-167",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V117",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-061",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 1
+  },
+  {
+   "key": "V118",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-127",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V119",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-143",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V120",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-090",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 1
+  },
+  {
+   "key": "V121",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-179",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V122",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-035",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V123",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-103",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V124",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-188",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V125",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-110",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V126",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-107",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V127",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-098",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V128",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-032",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V129",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-154",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V130",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-200",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V131",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-079",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 1
+  },
+  {
+   "key": "V132",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-095",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V133",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-163",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V134",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-101",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V135",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-196",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V136",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-113",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V137",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-113",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V138",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-042",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V139",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-037",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V140",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-173",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V141",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-074",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 1
+  },
+  {
+   "key": "V142",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-212",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V143",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-206",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V144",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-099",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 2
+  },
+  {
+   "key": "V145",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-141",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V146",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-128",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V147",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-074",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 1
+  },
+  {
+   "key": "V148",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-155",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V149",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-106",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V150",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-156",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V151",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-198",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V152",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-177",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V153",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-066",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V154",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-171",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V155",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-184",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V156",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-101",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V157",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-177",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V158",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-171",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V159",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-104",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V160",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-177",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V161",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-125",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V162",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-198",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V163",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-010",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V164",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-173",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V165",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-177",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V166",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-118",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V167",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-179",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V168",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-103",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V169",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-203",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 1
+  },
+  {
+   "key": "V170",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-195",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 1
+  },
+  {
+   "key": "V171",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-082",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 1
+  },
+  {
+   "key": "V172",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-110",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V173",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-196",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V174",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-214",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V175",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-126",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V176",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-210",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V177",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-196",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V178",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-119",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V179",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-177",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 1
+  },
+  {
+   "key": "V180",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-182",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V181",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-071",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 1
+  },
+  {
+   "key": "V182",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-066",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V183",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-126",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 1
+  },
+  {
+   "key": "V184",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-106",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V185",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-133",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V186",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-086",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 2
+  },
+  {
+   "key": "V187",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-194",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V188",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-188",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V189",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-047",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 1
+  },
+  {
+   "key": "V190",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-214",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V191",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-138",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V192",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-212",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V193",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-198",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V194",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-121",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V195",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-212",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V196",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-124",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V197",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-120",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V198",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-171",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V199",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-109",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V200",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-125",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V201",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-101",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V202",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-134",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V203",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-206",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V204",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-047",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 1
+  },
+  {
+   "key": "V205",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-056",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 1
+  },
+  {
+   "key": "V206",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-196",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V207",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-175",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V208",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-115",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V209",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-106",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V210",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-063",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 1
+  },
+  {
+   "key": "V211",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-190",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V212",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-123",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V213",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-105",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V214",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-102",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V215",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-165",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V216",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-210",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V217",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-039",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V218",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-182",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V219",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-165",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V220",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-175",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V221",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-193",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V222",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-097",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V223",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-063",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V224",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-192",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V225",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-125",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V226",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-136",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V227",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-061",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 1
+  },
+  {
+   "key": "V228",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-177",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V229",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-198",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V230",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-202",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V231",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-111",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V232",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-188",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V233",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-191",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 1
+  },
+  {
+   "key": "V234",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-215",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 1
+  },
+  {
+   "key": "V235",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-163",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V236",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-114",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V237",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-053",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 1
+  },
+  {
+   "key": "V238",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-020",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V239",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-147",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V240",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-139",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 1
+  },
+  {
+   "key": "V241",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-142",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V242",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-102",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V243",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-190",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V244",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-079",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V245",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-163",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V246",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-182",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V247",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-173",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V248",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-048",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 1
+  },
+  {
+   "key": "V249",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-182",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V250",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-078",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 2
+  },
+  {
+   "key": "V251",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-090",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 2
+  },
+  {
+   "key": "V252",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-177",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V253",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-074",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 1
+  },
+  {
+   "key": "V254",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-117",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V255",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-192",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V256",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-124",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V257",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-120",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V258",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-204",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V259",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-053",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V260",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-202",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V261",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-182",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V262",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-018",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V263",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-116",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V264",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-177",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V265",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-120",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V266",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-096",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V267",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-130",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V268",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-090",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 2
+  },
+  {
+   "key": "V269",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-175",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V270",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-127",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V271",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-163",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V272",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-212",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V273",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-075",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 1
+  },
+  {
+   "key": "V274",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-109",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V275",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-149",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V276",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-165",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V277",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-100",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 1
+  },
+  {
+   "key": "V278",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-212",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V279",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-185",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V280",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-163",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V281",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-185",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V282",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-118",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V283",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-167",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V284",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-096",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 2
+  },
+  {
+   "key": "V285",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-204",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V286",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-063",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 1
+  },
+  {
+   "key": "V287",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-090",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 2
+  },
+  {
+   "key": "V288",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-028",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V289",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-118",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V290",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-102",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V291",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-175",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V292",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-023",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V293",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-120",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V294",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-017",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V295",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-128",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V296",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-122",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V297",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-027",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V298",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-062",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 1
+  },
+  {
+   "key": "V299",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-169",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V300",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-111",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V301",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-142",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V302",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-200",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V303",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-208",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V304",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-042",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V305",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-192",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V306",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-200",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V307",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-182",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V308",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-033",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V309",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-053",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 1
+  },
+  {
+   "key": "V310",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-016",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V311",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-051",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 1
+  },
+  {
+   "key": "V312",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-167",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V313",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-137",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V314",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-128",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V315",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-109",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V316",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-061",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 1
+  },
+  {
+   "key": "V317",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-182",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V318",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-140",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 1
+  },
+  {
+   "key": "V319",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-214",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V320",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-106",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V321",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-085",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V322",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-013",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V323",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-041",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V324",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-210",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V325",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-117",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V326",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-057",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 1
+  },
+  {
+   "key": "V327",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-171",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V328",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-110",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V329",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-110",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V330",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-114",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V331",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-109",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V332",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-167",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V333",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-117",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V334",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-115",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V335",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-188",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V336",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-167",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V337",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-108",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 1
+  },
+  {
+   "key": "V338",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-196",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V339",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-192",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V340",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-016",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V341",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-077",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 2
+  },
+  {
+   "key": "V342",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-122",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V343",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-066",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 1
+  },
+  {
+   "key": "V344",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-102",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V345",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-194",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V346",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-139",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V347",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-204",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V348",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-118",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V349",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-069",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 1
+  },
+  {
+   "key": "V350",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-096",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 1
+  },
+  {
+   "key": "V351",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-165",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V352",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-129",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V353",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-121",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V354",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-196",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V355",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-110",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V356",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-185",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V357",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-104",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V358",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-067",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 1
+  },
+  {
+   "key": "V359",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-129",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V360",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-191",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V361",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-194",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V362",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-216",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V363",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-073",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V364",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-135",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V365",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-133",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 1
+  },
+  {
+   "key": "V366",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-145",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V367",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-094",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 2
+  },
+  {
+   "key": "V368",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-101",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V369",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-073",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 1
+  },
+  {
+   "key": "V370",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-166",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V371",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-109",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V372",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-161",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V373",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-105",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V374",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-027",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V375",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-151",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 1
+  },
+  {
+   "key": "V376",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-036",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V377",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-200",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V378",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-208",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V379",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-144",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V380",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-045",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V381",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-076",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 2
+  },
+  {
+   "key": "V382",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-024",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V383",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-127",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V384",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-104",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 1
+  },
+  {
+   "key": "V385",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-212",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V386",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-117",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V387",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-097",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 1
+  },
+  {
+   "key": "V388",
+   "population": "natural",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-192",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V389",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-212",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V390",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-149",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V391",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-128",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V392",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-018",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V393",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-121",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V394",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-215",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 1
+  },
+  {
+   "key": "V395",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-108",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V396",
+   "population": "natural",
+   "stratum": "OTHER",
+   "case": "V17-064",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V397",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-155",
+   "arm": "b1a",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V398",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-119",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V399",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-101",
+   "arm": "oracle",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V400",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-130",
+   "arm": "b1a",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V401",
+   "population": "provoked",
+   "stratum": "CONFLICTED",
+   "case": "V17-104",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V402",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-128",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V403",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-163",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V404",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-179",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V405",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-111",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V406",
+   "population": "provoked",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-159",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V407",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-169",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V408",
+   "population": "provoked",
+   "stratum": "ORDER_UNSUPPORTED",
+   "case": "V17-192",
+   "arm": "oracle",
+   "config": "prov_best",
+   "atom": 0
+  },
+  {
+   "key": "V409",
+   "population": "natural",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-171",
+   "arm": "oracle",
+   "config": "plain_t0",
+   "atom": 0
+  },
+  {
+   "key": "V410",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-167",
+   "arm": "b1a",
+   "config": "prov_recent",
+   "atom": 0
+  },
+  {
+   "key": "V411",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-146",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V412",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-079",
+   "arm": "b1a",
+   "config": "plain_t07_s2",
+   "atom": 2
+  },
+  {
+   "key": "V413",
+   "population": "natural",
+   "stratum": "UNSUPPORTED",
+   "case": "V17-044",
+   "arm": "oracle",
+   "config": "plain_t07_s2",
+   "atom": 0
+  },
+  {
+   "key": "V414",
+   "population": "natural",
+   "stratum": "CONFLICTED",
+   "case": "V17-102",
+   "arm": "oracle",
+   "config": "plain_t07_s1",
+   "atom": 0
+  },
+  {
+   "key": "V415",
+   "population": "provoked",
+   "stratum": "NEGATIVE_UNSUPPORTED",
+   "case": "V17-169",
+   "arm": "b1a",
+   "config": "prov_best",
+   "atom": 0
+  }
+ ]
+}

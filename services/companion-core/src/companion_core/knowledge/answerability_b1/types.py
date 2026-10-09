@@ -89,15 +89,39 @@ class DiscoveryItem:
 
 
 @dataclass(frozen=True)
+class AttendeeRecord:
+    """Authoritative structured attendee list for one meeting (for example the reviewed speaker map of ADR 0030). Provenance must be authoritative (owner or system)."""
+
+    ref: str
+    title: str  # the meeting's title, which carries its subject ("Cedar planning")
+    attendees: tuple[str, ...]
+    provenance: Mapping | None = None
+
+
+@dataclass(frozen=True)
+class SpeakerSegment:
+    """A meeting segment with its speaker resolved by an authoritative speaker map. `speaker` None or unresolved ("SPEAKER_00") is never guessed."""
+
+    ref: str
+    text: str
+    speaker: str | None
+    provenance: Mapping | None = None
+    title: str = ""
+
+
+@dataclass(frozen=True)
 class RelationSpec:
     """A reviewable description of one relation: how a sentence states it and what kind of value it carries. Supplied by the caller; nothing here is learned."""
 
     name: str
-    kind: str  # person | number | day | month | model | host | hours | time | existence
+    kind: str  # person | number | day | month | model | host | hours | time | existence | text (needs text_pattern)
     cues: tuple[str, ...]  # regexes: the relation words a sentence must contain
     many: bool = False  # several values may be true at once (attendees)
     negation: str | None = None  # existence kind: regex for "has no X"
     presence: str | None = None  # existence kind: regex for "has an X"
+    text_pattern: str | None = None  # kind "text": a reviewed regex whose named group `value` captures the free-text value (short, unhedged); nothing else is ever read as a value
+    object_words: tuple[str, ...] = ()  # extra words the relation's object noun phrase may contain ("rollback", "test"); speaker statements with any other word in the object are another proposition
+    structured: str | None = None  # "attendees" | "speaker": the relation can also be established from authoritative structured input
     co_subjects_ok: bool = False  # sentences of this relation naturally name a second entity ("Osprey serves Swift-6B on the edge host"); it is then not a competing subject
     phrase: str = ""  # wording used by code-written replies ("owner", "staging environment"); defaults to the relation name
     joiner: str = "of"  # "owner OF the Ferry queue", "staging environment FOR Vesper"
@@ -127,8 +151,9 @@ class AdmittedFact:
     value: str  # normalised; "" for an existence statement
     polarity: str  # "asserts" | "negates"
     scope: FactScope
-    sentence: str  # the exact sentence the fact was read from (claim-level evidence)
+    sentence: str  # the exact sentence the fact was read from (claim-level evidence; with its one context sentence when bound by context)
     provenance: Provenance
+    binding: str = "sentence"  # how the subject was bound: sentence | title | context | structured | speaker
     _token: object = field(default=None, repr=False, compare=False)
 
     def __post_init__(self):

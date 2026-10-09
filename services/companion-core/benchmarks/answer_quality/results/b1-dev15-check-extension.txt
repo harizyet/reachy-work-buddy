@@ -1,0 +1,111 @@
+# B-1 recall extension, offline dev15 development check (no model; dev16 untouched). Configurations are cumulative; see docs/verification/phase-44-selective-stage-b1-extension-2026-10-13.md
+# before extension = results/b1-dev15-check-before-extension.txt (239/307, the previous ambiguity policy)
+
+=== flags: [none: current code, extensions unused]
+atoms 307; state equals gold 218 (71.0%)
+  gold CONFLICTED             -> CONFLICTED             19
+  gold HISTORICAL             -> UNSUPPORTED            24
+  gold NEGATIVE_SUPPORTED     -> NEGATIVE_SUPPORTED     7
+  gold NEGATIVE_UNSUPPORTED   -> NEGATIVE_UNSUPPORTED   6
+  gold ORDER_UNSUPPORTED      -> ORDER_UNSUPPORTED      9
+  gold SUPPORTED              -> SUPPORTED              89
+  gold SUPPORTED              -> UNSUPPORTED            65
+  gold UNSUPPORTED            -> UNSUPPORTED            88
+values of answered SUPPORTED/HISTORICAL atoms: {'correct': 79, 'WRONG': 10}
+
+=== flags: [--harness-fixes]
+atoms 307; state equals gold 231 (75.2%)
+  gold CONFLICTED             -> CONFLICTED             19
+  gold HISTORICAL             -> UNSUPPORTED            24
+  gold NEGATIVE_SUPPORTED     -> NEGATIVE_SUPPORTED     7
+  gold NEGATIVE_UNSUPPORTED   -> NEGATIVE_UNSUPPORTED   6
+  gold ORDER_UNSUPPORTED      -> ORDER_UNSUPPORTED      9
+  gold SUPPORTED              -> SUPPORTED              102
+  gold SUPPORTED              -> UNSUPPORTED            52
+  gold UNSUPPORTED            -> UNSUPPORTED            88
+values of answered SUPPORTED/HISTORICAL atoms: {'correct': 92, 'WRONG': 10}
+
+=== flags: [--harness-fixes --structured]
+atoms 307; state equals gold 249 (81.1%)
+  gold CONFLICTED             -> CONFLICTED             19
+  gold HISTORICAL             -> UNSUPPORTED            24
+  gold NEGATIVE_SUPPORTED     -> NEGATIVE_SUPPORTED     7
+  gold NEGATIVE_UNSUPPORTED   -> NEGATIVE_UNSUPPORTED   6
+  gold ORDER_UNSUPPORTED      -> ORDER_UNSUPPORTED      9
+  gold SUPPORTED              -> SUPPORTED              120
+  gold SUPPORTED              -> UNSUPPORTED            34
+  gold UNSUPPORTED            -> UNSUPPORTED            88
+values of answered SUPPORTED/HISTORICAL atoms: {'correct': 110, 'WRONG': 10}
+
+=== flags: [--harness-fixes --structured --context]
+atoms 307; state equals gold 269 (87.6%)
+  gold CONFLICTED             -> CONFLICTED             19
+  gold HISTORICAL             -> HISTORICAL             11
+  gold HISTORICAL             -> UNSUPPORTED            13
+  gold NEGATIVE_SUPPORTED     -> NEGATIVE_SUPPORTED     7
+  gold NEGATIVE_UNSUPPORTED   -> NEGATIVE_UNSUPPORTED   6
+  gold ORDER_UNSUPPORTED      -> ORDER_UNSUPPORTED      9
+  gold SUPPORTED              -> SUPPORTED              129
+  gold SUPPORTED              -> UNSUPPORTED            25
+  gold UNSUPPORTED            -> UNSUPPORTED            88
+values of answered SUPPORTED/HISTORICAL atoms: {'correct': 130, 'WRONG': 10}
+
+=== flags: [--harness-fixes --structured --context --text]
+atoms 307; state equals gold 282 (91.9%)
+  gold CONFLICTED             -> CONFLICTED             19
+  gold HISTORICAL             -> HISTORICAL             11
+  gold HISTORICAL             -> UNSUPPORTED            13
+  gold NEGATIVE_SUPPORTED     -> NEGATIVE_SUPPORTED     7
+  gold NEGATIVE_UNSUPPORTED   -> NEGATIVE_UNSUPPORTED   6
+  gold ORDER_UNSUPPORTED      -> ORDER_UNSUPPORTED      9
+  gold SUPPORTED              -> SUPPORTED              142
+  gold SUPPORTED              -> UNSUPPORTED            12
+  gold UNSUPPORTED            -> UNSUPPORTED            88
+values of answered SUPPORTED/HISTORICAL atoms: {'correct': 151, 'WRONG': 2}
+
+=== final configuration, full
+atoms 307; state equals gold 282 (91.9%)
+  gold CONFLICTED             -> CONFLICTED             19
+  gold HISTORICAL             -> HISTORICAL             11
+  gold HISTORICAL             -> UNSUPPORTED            13
+  gold NEGATIVE_SUPPORTED     -> NEGATIVE_SUPPORTED     7
+  gold NEGATIVE_UNSUPPORTED   -> NEGATIVE_UNSUPPORTED   6
+  gold ORDER_UNSUPPORTED      -> ORDER_UNSUPPORTED      9
+  gold SUPPORTED              -> SUPPORTED              142
+  gold SUPPORTED              -> UNSUPPORTED            12
+  gold UNSUPPORTED            -> UNSUPPORTED            88
+values of answered SUPPORTED/HISTORICAL atoms: {'correct': 151, 'WRONG': 2}
+disagreements by relation (relation, gold, got):
+  default_model          SUPPORTED    -> UNSUPPORTED  10
+  default_model_history  HISTORICAL   -> UNSUPPORTED  13
+  support_hours          SUPPORTED    -> UNSUPPORTED  2
+WRONG values:
+   ('D15-066', 'staging_env', (('', ('memory:m028',)),), ['yes'])
+   ('D15-085', 'staging_env', (('', ('memory:m004',)),), ['yes'])
+gold UNSUPPORTED answered:
+first disagreements:
+   ('D15-059', 'SUPPORTED', 'UNSUPPORTED', "What is Cedar's default model, and how large can a Sluice cache messag", ('ambiguity_on_requested_proposition',), [], 'default_model')
+   ('D15-070', 'SUPPORTED', 'UNSUPPORTED', "Which model does Sable use by default, and when is the Vesper lead's n", ('no_admitted_record',), [], 'default_model')
+   ('D15-071', 'HISTORICAL', 'UNSUPPORTED', 'Who is the Quartz lead, and which model did Tamarind decide to keep, a', ('ambiguity_on_requested_proposition',), [], 'default_model_history')
+   ('D15-072', 'SUPPORTED', 'UNSUPPORTED', 'Which model does Osprey use by default, and by when does Elena Marsh h', ('ambiguity_on_requested_proposition',), [], 'default_model')
+   ('D15-076', 'HISTORICAL', 'UNSUPPORTED', 'Who is on call for Sable, and where does Heron-12B run, and which mode', ('ambiguity_on_requested_proposition',), [], 'default_model_history')
+   ('D15-081', 'SUPPORTED', 'UNSUPPORTED', "What is Marlin's default model, and who is the Vesper lead, and who is", ('ambiguity_on_requested_proposition',), [], 'default_model')
+   ('D15-082', 'HISTORICAL', 'UNSUPPORTED', 'Who is fixing the Vesper rollback test, and where does Kestrel-3B run,', ('ambiguity_on_requested_proposition',), [], 'default_model_history')
+   ('D15-083', 'HISTORICAL', 'UNSUPPORTED', 'What is the retry limit of the Conduit stream, and when is Tidewater P', ('ambiguity_on_requested_proposition',), [], 'default_model_history')
+   ('D15-085', 'SUPPORTED', 'UNSUPPORTED', 'Is there a staging environment for Cedar, and when is Quarry Data supp', ('no_admitted_record',), [], 'support_hours')
+   ('D15-087', 'SUPPORTED', 'UNSUPPORTED', "What is Willow's default model, and until which month is Quartz funded", ('no_admitted_record',), [], 'default_model')
+   ('D15-091', 'HISTORICAL', 'UNSUPPORTED', 'Which model did Vesper decide to keep, and which host serves Swift-6B,', ('ambiguity_on_requested_proposition',), [], 'default_model_history')
+   ('D15-094', 'HISTORICAL', 'UNSUPPORTED', 'Through when is the Tamarind budget approved, and who owns the Ferry q', ('ambiguity_on_requested_proposition',), [], 'default_model_history')
+   ('D15-120', 'SUPPORTED', 'UNSUPPORTED', 'Who is fixing the Sable rollback test, and which model does Cedar use ', ('ambiguity_on_requested_proposition',), [], 'default_model')
+   ('D15-125', 'SUPPORTED', 'UNSUPPORTED', "Who will fix the Willow rollback test, and what is Osprey's default mo", ('ambiguity_on_requested_proposition',), [], 'default_model')
+   ('D15-130', 'SUPPORTED', 'UNSUPPORTED', 'Who owns the Conduit stream, and which model does Osprey use by defaul', ('ambiguity_on_requested_proposition',), [], 'default_model')
+   ('D15-132', 'SUPPORTED', 'UNSUPPORTED', 'Who is fixing the Sable rollback test, and which model does Marlin use', ('ambiguity_on_requested_proposition',), [], 'default_model')
+   ('D15-139', 'SUPPORTED', 'UNSUPPORTED', "Who will fix the Quartz rollback test, and what is Marlin's default mo", ('ambiguity_on_requested_proposition',), [], 'default_model')
+   ('D15-153', 'HISTORICAL', 'UNSUPPORTED', "What was Cedar's default model before October?", ('ambiguity_on_requested_proposition',), [], 'default_model_history')
+   ('D15-157', 'HISTORICAL', 'UNSUPPORTED', "What was Marlin's default model before October, and what is the retry ", ('ambiguity_on_requested_proposition',), [], 'default_model_history')
+   ('D15-160', 'HISTORICAL', 'UNSUPPORTED', 'Which model did Osprey use by default in March, and which model does Q', ('ambiguity_on_requested_proposition',), [], 'default_model_history')
+   ('D15-164', 'HISTORICAL', 'UNSUPPORTED', 'Which model did Marlin use by default in March, and who attended the C', ('ambiguity_on_requested_proposition',), [], 'default_model_history')
+   ('D15-166', 'HISTORICAL', 'UNSUPPORTED', 'Which model did Osprey use by default in March, and what are Quarry Da', ('ambiguity_on_requested_proposition',), [], 'default_model_history')
+   ('D15-166', 'SUPPORTED', 'UNSUPPORTED', 'Which model did Osprey use by default in March, and what are Quarry Da', ('no_admitted_record',), [], 'support_hours')
+   ('D15-170', 'HISTORICAL', 'UNSUPPORTED', 'Which model did Marlin use by default in March, and through when is th', ('ambiguity_on_requested_proposition',), [], 'default_model_history')
+   ('D15-172', 'HISTORICAL', 'UNSUPPORTED', 'Which model did Osprey use by default in March, and through when is th', ('ambiguity_on_requested_proposition',), [], 'default_model_history')

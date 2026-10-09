@@ -1,4 +1,4 @@
-# Phase 44: scorer v2 validation protocol (prepared 2026-10-13; NOT executed, not frozen)
+# Phase 44: scorer v2 validation protocol (prepared 2026-10-13; executed 2026-10-13 with the owner's revised gate: see [the validation record](verification/phase-44-scorer-v2-validation-2026-10-13.md))
 
 Owner decision, 2026-10-13: *the current scorer is not sufficiently reliable for severe-error enforcement (6 of 9 severe errors detected). Seal the 142-item adjudication and scorer v1; fixes for confirmed severe-error mechanisms may be prepared after sealing; the existing sample is development data for any revised scorer and must not be claimed as independent validation of the revision; prepare a fresh validation protocol with deliberately increased coverage of severe errors; prefer a second reviewer blinded to scorer predictions, and if none exists record the absence of independent human review; report severe-error sensitivity, precision, false positives and confidence intervals separately from overall agreement.* Related: [adjudication record](verification/phase-44-selective-adjudication-2026-10-13.md), [Stage B-1 record](verification/phase-44-selective-stage-b1-2026-10-13.md).
 
@@ -32,11 +32,11 @@ Replies are never chosen by scorer output. Coverage is raised by what is asked a
 
 ## 5. Reporting (separate from overall agreement)
 
-Overall flag agreement is reported by status, as before. The severe-error section is separate and states, for each of the four mechanisms and pooled: true positives, false negatives, false positives, true negatives; **sensitivity** with exact (Clopper-Pearson) two-sided 95% and one-sided lower 95% bounds; **precision** with the same intervals on the natural-prevalence sample (enriched samples are not prevalence-valid for precision and are labelled so); false-positive count and rate; specificity; and a list of every miss and every false positive with the reply text. Synthetic probes are a separate table.
+Overall flag agreement is reported by status, as before, per population. The severe-error section is separate and states, for each of the four mechanisms and pooled: true positives, false negatives, false positives, true negatives; **sensitivity** with exact (Clopper-Pearson) two-sided 95% and one-sided lower 95% bounds; **precision** with the same intervals on the natural-prevalence sample (enriched samples are not prevalence-valid for precision and are labelled so); false-positive count and rate; specificity; and a list of every miss and every false positive with the reply text. Synthetic probes are a separate table.
 
-## 6. Proposed pre-registered use gate (for the owner to set)
+## 6. Use gate (owner, 2026-10-13, replacing the proposal)
 
-The scorer may be used as an **enforcement** component for severe errors only if on real replies: one-sided 95% lower bound on sensitivity at least **90%** (this needs at least 29 events with no miss, 60 events allow at most one miss, 80 allow three), one-sided lower bound on precision at least 80%, and no mechanism with fewer than 10 events or with a miss on the synthetic probes. Otherwise it remains a measurement tool and criteria 7 and 9 are decided by human reading of every conflict and ordering reply. This threshold is a proposal; nothing is gated on it until the owner sets it.
+The scorer may be used as an **enforcement** component for severe errors only if, on real replies: severe-error sensitivity has a **one-sided 95% lower confidence bound of at least 90%**; severe-error precision has a **one-sided 95% lower confidence bound of at least 80%**; **no severe-error category has zero detection**; and **each severe category is reported separately.** Naturally occurring 7B output and synthetic/adversarial linguistic probes are **separate populations and are never combined into one headline sensitivity.** A lower bound of 90% needs at least 29 events with no miss in a category (60 events allow one miss, 80 allow three). Otherwise the scorer stays a measurement tool and criteria 7 and 9 are decided by human reading of every conflict and ordering reply.
 
 ## 7. Freeze and independence rules
 
