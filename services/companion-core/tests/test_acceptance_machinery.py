@@ -63,13 +63,14 @@ def test_blinded_keys_hide_population_and_category():
 def test_the_stopping_rule_uses_labels_only(monkeypatch):
     seq = [{"key": f"N-CON-{i:04d}", "status": "CONFLICTED"} for i in range(100)]
     plan = {"sequences": {"natural|conflict_resolution": seq}}
-    labels = {packet.opaque(it["key"]): {"flags": ["resolved"], "unclear": False} for it in seq[:cfg.TARGET_EVENTS - 1]}
+    name = "natural|conflict_resolution"
+    labels = {packet.opaque(packet.cid(name, it)): {"flags": ["resolved"], "unclear": False} for it in seq[:cfg.TARGET_EVENTS - 1]}
     assert not packet.sequence_status(plan, labels)["natural|conflict_resolution"]["done"]
-    labels[packet.opaque(seq[cfg.TARGET_EVENTS - 1]["key"])] = {"flags": ["resolved"], "unclear": False}
+    labels[packet.opaque(packet.cid(name, seq[cfg.TARGET_EVENTS - 1]))] = {"flags": ["resolved"], "unclear": False}
     s = packet.sequence_status(plan, labels)["natural|conflict_resolution"]
     assert s["done"] and s["confirmed_events"] == cfg.TARGET_EVENTS
     exhausted = {"sequences": {"natural|conflict_resolution": seq[:10]}}
-    assert packet.sequence_status(exhausted, {packet.opaque(it["key"]): {"flags": [], "unclear": False} for it in seq[:10]})["natural|conflict_resolution"]["done"]
+    assert packet.sequence_status(exhausted, {packet.opaque(packet.cid(name, it)): {"flags": [], "unclear": False} for it in seq[:10]})["natural|conflict_resolution"]["done"]
 
 
 def test_the_target_and_gate_arithmetic_match_the_protocol():
@@ -78,3 +79,9 @@ def test_the_target_and_gate_arithmetic_match_the_protocol():
     assert va.lower_bound(44, 46, 0.05) < 0.9
     assert va.lower_bound(28, 29, 0.05) < 0.9 <= va.lower_bound(29, 29, 0.05)  # 29 events with no miss is the minimum for a 90% bound
     assert cfg.MIN_EVENTS == 29 and cfg.TARGET_EVENTS == 46 and cfg.GATE == {"sensitivity_lower": 0.90, "precision_lower": 0.80}
+
+
+def test_conflict_and_control_plan_keys_do_not_collide_in_the_reply_and_label_index():
+    plan = json.loads((SEL / "acceptance" / "plan.json").read_text())
+    ids = [packet.opaque(packet.cid(name, it)) for name, seq in plan["sequences"].items() for it in seq]
+    assert len(ids) == len(set(ids)) == 3748  # the bare plan key repeats between the conflict and control sequences; the composite identity does not

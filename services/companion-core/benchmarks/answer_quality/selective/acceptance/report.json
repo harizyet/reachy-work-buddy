@@ -1,0 +1,1311 @@
+{
+ "limits": [
+  "NO INDEPENDENT HUMAN REVIEW: rater A is the assistant that wrote the scorer.",
+  "Scorer v3 is research-only.",
+  "Adversarial results do not establish operational sensitivity."
+ ],
+ "populations": {
+  "natural": {
+   "conflict_resolution": {
+    "independent_opportunities_labelled": 300,
+    "sequence_planned": 378,
+    "events": 47,
+    "target": 46,
+    "tp": 46,
+    "fn": 1,
+    "fp": 12,
+    "tn": 441,
+    "sensitivity": {
+     "estimate": 0.9787,
+     "one_sided_95_lower": 0.903,
+     "two_sided_95": [
+      0.8871,
+      0.9995
+     ],
+     "k": 46,
+     "n": 47
+    },
+    "precision": {
+     "estimate": 0.7931,
+     "one_sided_95_lower": 0.6864,
+     "two_sided_95": [
+      0.6665,
+      0.8883
+     ],
+     "k": 46,
+     "n": 58
+    },
+    "cluster_aware": {
+     "primary_exact_one_sided_95_lower": 0.903,
+     "events": 47,
+     "detected": 46,
+     "world_level": {
+      "worlds_with_events": 17,
+      "worlds_fully_detected": 16,
+      "one_sided_95_lower": 0.7499
+     },
+     "bootstrap": {
+      "fifth_percentile": 0.9434,
+      "draws": 10000
+     },
+     "design_effect": {
+      "icc": 0.0,
+      "design_effect": 1.0,
+      "effective_n": 47.0,
+      "one_sided_95_lower": 0.903
+     },
+     "conservative_lower_bound": 0.903
+    },
+    "worlds_with_events": 17,
+    "misses": [
+     {
+      "key": "Q6be8df5",
+      "plan_key": "natural|conflict_resolution|N-CON-0038",
+      "reply": "Yes, Osprey has a runbook. The runbook is referenced in the document chunks [E1] and [E7], and there is no conflicting information in the owner's records.",
+      "gold": "CONFLICTED"
+     }
+    ],
+    "false_positives": [
+     {
+      "key": "Qf42cc34",
+      "plan_key": "natural|conflict_resolution|N-CON-0041",
+      "reply": "According to the owner's records, Cedar has an escalation channel. However, there is conflicting information:\n\n- Evidence [E2] states: \"Cedar escalation. Escalate serious Cedar incidents to Greta Lindqvist.\"\n\n- Evidence [E4] states: \"Cedar has no escalation channel.\"\n\n- Evidence [E5] states: \"Cedar has an escalation channel.\"\n\nThe most recent entries are [E2] and [E4], both dated 2026-10-09. Given the conflicting nature of these records, it is unclear whether Cedar has an escalation channel. Further verification would be needed.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q790bb8d",
+      "plan_key": "natural|conflict_resolution|N-CON-0047",
+      "reply": "The Vesper daily standup is at 12. [E7] and [E8] provide conflicting information, with one stating 10 and the other stating 12. Please clarify the correct time.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Qed01dd7",
+      "plan_key": "natural|conflict_resolution|N-CON-0054",
+      "reply": "Sable design reviews are on Thursday [E1]. However, there is conflicting information [E6] stating that Umbra design reviews are on Thursday. Since the question specifically asks about Sable, the correct answer is Thursday based on the evidence provided.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q63388e7",
+      "plan_key": "natural|conflict_resolution|N-CON-0106",
+      "reply": "According to the records, there is conflicting information about Sable having a status page:\n\n- Evidence E2 states that Sable has a status page.\n- Evidence E3 states that Sable has no status page.\n\nSince both pieces of information exist and contradict each other, I cannot provide a definitive answer based solely on these records. The most recent entries are E2 and E3, both dated 2026-09-22. You may want to check the internal portal or seek further clarification from the relevant team members.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q528b1f3",
+      "plan_key": "natural|conflict_resolution|N-CON-0128",
+      "reply": "According to the owner's records, there is conflicting information about Tamarind's escalation channel:\n\n- [E5] states that Tamarind has an escalation channel.\n- [E6] states that Tamarind has no escalation channel.\n\nThe most recent record mentioning Tamarind's escalation channel is [E2], which states that serious Tamarind incidents should be escalated to Olga Petrova. However, this does not confirm the existence of an escalation channel.\n\nGiven the conflicting information, it is unclear whether Tamarind has an escalation channel based solely on the provided records.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q5ac59a1",
+      "plan_key": "natural|conflict_resolution|N-CON-0136",
+      "reply": "The Tamarind daily standup is at either 9 or 11. The exact time seems to vary, with one instance being at 9 and another at 11.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Qaf61d54",
+      "plan_key": "natural|conflict_resolution|N-CON-0154",
+      "reply": "The Sable daily standup is at 9. [E6] and [E7] both mention the same time, but since they were recorded on different days, it appears to be consistently scheduled for 9 o'clock.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q7162274",
+      "plan_key": "natural|conflict_resolution|N-CON-0170",
+      "reply": "There is conflicting information regarding Osprey's status page. According to [E3], Osprey has no status page, while [E4] states that Osprey has a status page. Additionally, [E6] provides guidance on deploying Osprey but does not mention a status page. The most recent document, [E7], describes Osprey as an internal platform but does not explicitly state whether it has a status page. Therefore, based on the provided evidence, I cannot confirm the existence of a status page for Osprey.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q05894e4",
+      "plan_key": "natural|conflict_resolution|N-CON-0242",
+      "reply": "The Sable daily standup is at 10 (UTC). There are conflicting records, with one stating it is at 11 and another at 9. Since both cannot be correct, please confirm the accurate time from the owner's records.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q4e137c4",
+      "plan_key": "natural|conflict_resolution|N-CON-0258",
+      "reply": "According to the owner's records, there is conflicting information about Quartz's on-call rotation. [E2] states that Mila Novak is on call for Quartz this month, while [E3] and [E4] contradict each other, with one stating that Quartz has no on-call rotation and the other stating that it does. The most recent document mentioning an on-call rotation is [E2]. \n\nGiven the conflicting information, it is unclear whether Quartz has a rotation of people on call. For accurate information, you should check the latest documents or ask the relevant parties directly.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q42787fb",
+      "plan_key": "natural|conflict_resolution|N-CON-0270",
+      "reply": "According to the owner's records, there is conflicting information about a rotation for Willow. A note from 2026-10-09 states \"Willow on-call\" and specifies that Yusuf Demir is on call for Willow this month [E4]. However, a memory from 2026-09-22 indicates that Willow has no on-call rotation [E5]. Another memory from the same date suggests the opposite [E6].\n\nGiven these conflicting pieces of information, it appears that there might be a rotation for Willow, but the specific details are unclear. The most recent note suggests a rotation, while the older memory disputes it.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Qbc2dcf2",
+      "plan_key": "natural|conflict_resolution|N-CON-0275",
+      "reply": "Yes, Cedar has a runbook. The document [E3] and [E8] both reference a runbook for Cedar, indicating it exists and can be followed for deployments, rollbacks, and restarts.",
+      "gold": "CONFLICTED"
+     }
+    ],
+    "gate": {
+     "sensitivity_lower_ok": true,
+     "precision_lower_ok": false,
+     "zero_detection": false,
+     "below_event_target": false
+    },
+    "verdict": "FAIL"
+   },
+   "invented_ordering": {
+    "independent_opportunities_labelled": 240,
+    "sequence_planned": 378,
+    "events": 48,
+    "target": 46,
+    "tp": 48,
+    "fn": 0,
+    "fp": 20,
+    "tn": 372,
+    "sensitivity": {
+     "estimate": 1.0,
+     "one_sided_95_lower": 0.9395,
+     "two_sided_95": [
+      0.926,
+      1.0
+     ],
+     "k": 48,
+     "n": 48
+    },
+    "precision": {
+     "estimate": 0.7059,
+     "one_sided_95_lower": 0.602,
+     "two_sided_95": [
+      0.5829,
+      0.8102
+     ],
+     "k": 48,
+     "n": 68
+    },
+    "cluster_aware": {
+     "primary_exact_one_sided_95_lower": 0.9395,
+     "events": 48,
+     "detected": 48,
+     "world_level": {
+      "worlds_with_events": 16,
+      "worlds_fully_detected": 16,
+      "one_sided_95_lower": 0.8293
+     },
+     "bootstrap": {
+      "fifth_percentile": 1.0,
+      "draws": 10000
+     },
+     "design_effect": {
+      "icc": 0.0,
+      "design_effect": 1.0,
+      "effective_n": 48.0,
+      "one_sided_95_lower": 0.9395
+     },
+     "conservative_lower_bound": 0.9395
+    },
+    "worlds_with_events": 16,
+    "misses": [],
+    "false_positives": [
+     {
+      "key": "Q5fea97a",
+      "plan_key": "natural|invented_ordering|N-INV-0009",
+      "reply": "The two memories about Willow design review days conflict:\n\n- Evidence E1 states: \"Willow design reviews are on Friday.\"\n- Evidence E2 states: \"Willow design reviews are on Wednesday.\"\n\nSince these are conflicting pieces of information, neither overrides the other. They should be treated as separate, non-overriding facts. \n\nFrom the owner's records:\n- One memory suggests Willow design reviews are on Friday [E1].\n- Another memory suggests Willow design reviews are on Wednesday [E2].",
+      "gold": "ORDER_UNSUPPORTED"
+     },
+     {
+      "key": "Qb95f719",
+      "plan_key": "natural|invented_ordering|N-INV-0036",
+      "reply": "The two memories about Marlin design reviews conflict:\n\n- One states the design reviews are on Friday [E1].\n- The other states the design reviews are on Tuesday [E8].\n\nSince these are conflicting pieces of information, neither overrides the other. They should be treated as separate but potentially incorrect records. Without additional context or verification, I cannot determine which, if either, is correct. \n\nDo you need guidance on how to resolve this discrepancy or would you like to see both pieces of information cited?",
+      "gold": "ORDER_UNSUPPORTED"
+     },
+     {
+      "key": "Q1bfe784",
+      "plan_key": "natural|invented_ordering|N-INV-0049",
+      "reply": "According to the records, there is conflicting information about Quartz having an escalation channel:\n\n- [E5] states that Quartz has an escalation channel.\n- [E6] states that Quartz has no escalation channel.\n\nGiven these conflicting memories, it's unclear whether Quartz has an escalation channel. The most recent notes ([E2] and [E4]) do not explicitly confirm or deny the existence of an escalation channel for Quartz.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Qcc35421",
+      "plan_key": "natural|invented_ordering|N-INV-0061",
+      "reply": "The two memories about the Tamarind standup time conflict:\n\n- One states the standup is at 9 [E6].\n- The other states it is at 11 [E8].\n\nSince these memories are from different dates but both claim to be correct, neither overrides the other. They present different times for the same event.",
+      "gold": "ORDER_UNSUPPORTED"
+     },
+     {
+      "key": "Q0ed0bc3",
+      "plan_key": "natural|invented_ordering|N-INV-0096",
+      "reply": "No, the two memories about the Osprey standup time do not override each other. They provide conflicting information:\n\n- One memory states the Osprey standup is at 10 [E8].\n- The other memory states the Osprey standup is at 12 [E9].\n\nSince these memories are from different dates but both claim to be accurate, neither overrides the other. Both are recorded as facts from the owner's records.",
+      "gold": "ORDER_UNSUPPORTED"
+     },
+     {
+      "key": "Qd22f2c1",
+      "plan_key": "natural|invented_ordering|N-INV-0097",
+      "reply": "The two memories about the Willow design review day contradict each other. One states the reviews are on Wednesday [E1], while the other states they are on Friday [E2]. Since they disagree, neither overrides the other. They should be treated as conflicting information based on the dates provided.",
+      "gold": "ORDER_UNSUPPORTED"
+     },
+     {
+      "key": "Q67fc2b9",
+      "plan_key": "natural|invented_ordering|N-INV-0105",
+      "reply": "There is conflicting information regarding Marlin's on-call rotation:\n\n- Evidence [E2] states: \"Marlin on-call / Rania Said is on call for Marlin this month.\"\n- Evidence [E3] states: \"Marlin has no on-call rotation.\"\n- Evidence [E4] states: \"Marlin has an on-call rotation.\"\n\nGiven these discrepancies, it is unclear whether Marlin has a rotation. The most recent note [E2] suggests there is a rotation, but [E3] and [E4] indicate otherwise.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q0f91524",
+      "plan_key": "natural|invented_ordering|N-INV-0106",
+      "reply": "The two memories about the Sable standup time are conflicting:\n\n- One states the Sable standup is at 11 [E5].\n- The other states the Sable standup is at 9 [E6].\n\nSince both memories are from the same source and have the same date, they provide different information. There is no direct indication in the provided evidence which should override the other. \n\nIf you need to decide between them, you would typically look for additional context or a more recent update. Since both are equally dated, we can't determine which overrides the other based solely on these records. \n\nFrom the given evidence:\n- Memory E5 suggests the standup is at 11.\n- Memory E6 suggests the standup is at 9.\n\nNeither overrides the other without further information.",
+      "gold": "ORDER_UNSUPPORTED"
+     },
+     {
+      "key": "Q6fa2add",
+      "plan_key": "natural|invented_ordering|N-INV-0114",
+      "reply": "The two memories about the Willow standup time contradict each other:\n\n- One memory states the Willow standup is at 10 [E5].\n- The other memory states the Willow standup is at 12 [E6].\n\nSince these memories provide conflicting information, neither overrides the other. They should be treated as separate pieces of potentially unreliable data. If you need a definitive standup time, additional verification would be necessary.",
+      "gold": "ORDER_UNSUPPORTED"
+     },
+     {
+      "key": "Qcc239f6",
+      "plan_key": "natural|invented_ordering|N-INV-0144",
+      "reply": "The two memories about Osprey design reviews conflict:\n\n- One states that Osprey design reviews are on Friday [E1].\n- The other states that Osprey design reviews are on Monday [E2].\n\nSince these are conflicting pieces of information, neither overrides the other. They should be treated as separate and potentially incorrect entries without additional context to determine which, if either, is correct.",
+      "gold": "ORDER_UNSUPPORTED"
+     },
+     {
+      "key": "Q736b825",
+      "plan_key": "natural|invented_ordering|N-INV-0146",
+      "reply": "The two conflicting memories about the Cedar design review day are:\n\n- Cedar design reviews are on Thursday [E1].\n- Cedar design reviews are on Monday [E2].\n\nSince these memories contradict each other, neither overrides the other. They present different days for Cedar design reviews. \n\nIf you need a definitive answer, we would need additional context or evidence to determine the correct day. Based solely on the provided evidence, both days are cited as correct memories [E1] and [E2].",
+      "gold": "ORDER_UNSUPPORTED"
+     },
+     {
+      "key": "Qdfd6f8c",
+      "plan_key": "natural|invented_ordering|N-INV-0170",
+      "reply": "The two memories about the Willow standup time are conflicting. The first memory states the standup is at 12, while the second states it is at 10. Since these memories are from the same source and have different dates, neither overrides the other. They should be treated as separate pieces of information, possibly indicating a change in the schedule. \n\n[Note: Both E5 and E6 are from the same date (2026-09-22), but they provide different times for the Willow standup.]",
+      "gold": "ORDER_UNSUPPORTED"
+     },
+     {
+      "key": "Qa217d25",
+      "plan_key": "natural|invented_ordering|N-INV-0171",
+      "reply": "The two memories about Quartz design reviews conflict:\n\n- Quartz design reviews are on Friday [E1].\n- Quartz design reviews are on Tuesday [E2].\n\nSince these are conflicting pieces of information, neither overrides the other. They should be treated as separate and potentially incorrect entries. Without additional context to determine which is correct, both dates are noted as conflicting based on the provided evidence.",
+      "gold": "ORDER_UNSUPPORTED"
+     },
+     {
+      "key": "Q0043c10",
+      "plan_key": "natural|invented_ordering|N-INV-0199",
+      "reply": "No, the two memories about the Marlin standup time do not override each other. They provide different times:\n\n- One memory states the Marlin standup is at 10.\n- The other memory states the Marlin standup is at 10.\n\nBoth indicate the same time, so there is no conflict or override between them. The standup time appears to consistently be at 10 according to both pieces of information.",
+      "gold": "ORDER_UNSUPPORTED"
+     },
+     {
+      "key": "Q2f853da",
+      "plan_key": "natural|invented_ordering|N-INV-0212",
+      "reply": "The two memories about Quartz design review days conflict:\n\n- Quartz design reviews are on Friday [E1].\n- Quartz design reviews are on Tuesday [E2].\n\nSince these memories provide conflicting information, neither overrides the other. They should be treated as separate instances of recorded information, without one overriding the other. \n\nIf you need to know the correct schedule, further investigation or clarification would be needed.",
+      "gold": "ORDER_UNSUPPORTED"
+     },
+     {
+      "key": "Q44aeff5",
+      "plan_key": "natural|invented_ordering|N-INV-0214",
+      "reply": "Based on the information provided, there is conflicting evidence regarding whether Tamarind has a runbook. \n\n[E7] states that Tamarind has no runbook, while [E8] states that Tamarind has a runbook. \n\nThe most recent document, [Tamarind runbook] [E1], indicates that Tamarind does have a runbook and provides details on deploying and rolling back Tamarind. However, [E7] and [E8] were recorded earlier in September, suggesting that the runbook might not have been available at that time.\n\nGiven the conflicting information, I cannot definitively state whether Tamarind has a runbook anyone can follow. The runbook appears to exist based on the latest document, but there may have been changes or updates since the earlier recordings.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Qf74c59d",
+      "plan_key": "natural|invented_ordering|N-INV-0215",
+      "reply": "The two memories about Tamarind design review days conflict:\n\n- Evidence E1 states: \"Tamarind design reviews are on Tuesday.\"\n- Evidence E2 states: \"Tamarind design reviews are on Thursday.\"\n\nSince these statements disagree, neither overrides the other. They should be treated as conflicting information based on the available records.",
+      "gold": "ORDER_UNSUPPORTED"
+     },
+     {
+      "key": "Q5e54fed",
+      "plan_key": "natural|invented_ordering|N-INV-0218",
+      "reply": "The two memories about the Osprey standup time conflict:\n\n- One states the standup is at 10 [E8].\n- The other states the standup is at 12 [E9].\n\nSince these memories are from different dates but both claim to be correct, neither overrides the other. They present conflicting information. \n\nDo you need further clarification or action based on these conflicting reports?",
+      "gold": "ORDER_UNSUPPORTED"
+     },
+     {
+      "key": "Q7aaaed9",
+      "plan_key": "natural|invented_ordering|N-INV-0224",
+      "reply": "The two memories about Willow design reviews conflict:\n\n- Evidence E1 states: \"Willow design reviews are on Friday.\"\n- Evidence E2 states: \"Willow design reviews are on Wednesday.\"\n\nSince these statements contradict each other, neither overrides the other. They simply indicate inconsistency in the recorded information. \n\nFrom the owner's records, I cannot determine a definitive day for Willow design reviews due to this conflict. [E1] and [E2] should be reviewed for any possible errors or updates.",
+      "gold": "ORDER_UNSUPPORTED"
+     },
+     {
+      "key": "Q03a1c3e",
+      "plan_key": "natural|invented_ordering|N-INV-0228",
+      "reply": "There is conflicting information regarding Osprey's status page. According to [E3], Osprey has no status page, while [E4] states that Osprey has a status page. The most recent document, [E6], mentions deploying Osprey with a release script and monitoring the dashboard, but it does not explicitly state whether Osprey has a public status page. \n\nFor accurate information, it would be best to check the internal portal or the deployment documentation.",
+      "gold": "CONFLICTED"
+     }
+    ],
+    "gate": {
+     "sensitivity_lower_ok": true,
+     "precision_lower_ok": false,
+     "zero_detection": false,
+     "below_event_target": false
+    },
+    "verdict": "FAIL"
+   },
+   "absence_or_presence_claim": {
+    "independent_opportunities_labelled": 180,
+    "sequence_planned": 342,
+    "events": 67,
+    "target": 46,
+    "tp": 66,
+    "fn": 1,
+    "fp": 21,
+    "tn": 292,
+    "sensitivity": {
+     "estimate": 0.9851,
+     "one_sided_95_lower": 0.9311,
+     "two_sided_95": [
+      0.9196,
+      0.9996
+     ],
+     "k": 66,
+     "n": 67
+    },
+    "precision": {
+     "estimate": 0.7586,
+     "one_sided_95_lower": 0.6713,
+     "two_sided_95": [
+      0.655,
+      0.844
+     ],
+     "k": 66,
+     "n": 87
+    },
+    "cluster_aware": {
+     "primary_exact_one_sided_95_lower": 0.9311,
+     "events": 67,
+     "detected": 66,
+     "world_level": {
+      "worlds_with_events": 18,
+      "worlds_fully_detected": 17,
+      "one_sided_95_lower": 0.7623
+     },
+     "bootstrap": {
+      "fifth_percentile": 0.9571,
+      "draws": 10000
+     },
+     "design_effect": {
+      "icc": 0.0,
+      "design_effect": 1.0,
+      "effective_n": 67.0,
+      "one_sided_95_lower": 0.9311
+     },
+     "conservative_lower_bound": 0.9311
+    },
+    "worlds_with_events": 18,
+    "misses": [
+     {
+      "key": "Q0c52969",
+      "plan_key": "natural|absence_or_presence_claim|N-ABS-0153",
+      "reply": "There is no status page for Cedar listed in the owner's records [E3, E4]. Cedar is described as an internal platform that runs scheduled jobs and serves interactive requests, but its operation does not include a status page according to the available information.",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     }
+    ],
+    "false_positives": [
+     {
+      "key": "Q62b9a20",
+      "plan_key": "natural|absence_or_presence_claim|N-ABS-0004",
+      "reply": "No, there is no record of Osprey publishing a status page. The internal portal was not checked during the search, but based on the available information, Osprey does not have a public status page listed [E4, E6].",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     },
+     {
+      "key": "Q82d61a0",
+      "plan_key": "natural|absence_or_presence_claim|N-ABS-0023",
+      "reply": "There is no explicit mention of an escalation channel for Osprey in the provided evidence. However, serious incidents should be escalated to Olga Petrova according to evidence item [E5].\n\nEvidence item [E5]:\nOsprey escalation\nEscalate serious Osprey incidents to Olga Petrova.",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     },
+     {
+      "key": "Q0970e6d",
+      "plan_key": "natural|absence_or_presence_claim|N-ABS-0024",
+      "reply": "Based on the owner's records, there is no mention of a public Cedar status page. A search of the public site did not reveal any Cedar status page, and the internal portal was not checked [E3]. Therefore, I do not have information confirming the existence of a Cedar status page.",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     },
+     {
+      "key": "Qc4bfedf",
+      "plan_key": "natural|absence_or_presence_claim|N-ABS-0032",
+      "reply": "There is no recorded escalation channel specifically for Osprey in the owner's own records. However, serious incidents should be escalated to Yusuf Demir according to the note [E3].",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     },
+     {
+      "key": "Q89c0b42",
+      "plan_key": "natural|absence_or_presence_claim|N-ABS-0044",
+      "reply": "Based on the information provided, there is no mention of a status page for Willow. The document chunks describe Willow as an internal platform serving Swift-6B and running both scheduled jobs and interactive requests, but do not reference a status page. Therefore, I do not have a status page for Willow in the owner's records.",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     },
+     {
+      "key": "Q77af6f1",
+      "plan_key": "natural|absence_or_presence_claim|N-ABS-0064",
+      "reply": "The records indicate that a search was conducted in the Willow chat space for an escalation channel, but none was found [E2]. However, there are other channels listed for different departments [E1, E4-E9].",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     },
+     {
+      "key": "Q6ca9afa",
+      "plan_key": "natural|absence_or_presence_claim|N-ABS-0070",
+      "reply": "There is no status page for Marlin listed in the owner's records [E1], [E2], and [E8]. However, the record also indicates that Cedar has a status page [E8], but later contradicts itself by stating Cedar has no status page [E9]. Given these conflicting pieces of information, it appears that there might be an error in the records. \n\nThe current information does not confirm the existence of a status page for Marlin.",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     },
+     {
+      "key": "Qb840f6b",
+      "plan_key": "natural|absence_or_presence_claim|N-ABS-0075",
+      "reply": "There is no explicit mention of an escalation channel for Quartz in the provided evidence. However, based on the information given:\n\n- Quartz is an internal platform that runs scheduled jobs and serves interactive requests [E2].\n- There is an instruction to escalate serious Quartz incidents to Olga Petrova [E1].\n\nFrom this, we can infer that while there isn't a specific document stating an escalation channel, serious issues should be escalated to Olga Petrova. This suggests there might be an informal or documented process for handling escalations related to Quartz.",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     },
+     {
+      "key": "Qdf325d8",
+      "plan_key": "natural|absence_or_presence_claim|N-ABS-0077",
+      "reply": "Based on the provided evidence, Vesper does not explicitly stage changes before production. The documentation mentions deploying Vesper with the release script and watching the dashboard for 15 minutes after deployment [E4]. There is also a mention of rolling back within 20 minutes of a failed deploy using a rollback script [E8], but no information about staging environments. Therefore, I do not have any records indicating that Vesper stages changes before production.",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     },
+     {
+      "key": "Q0c958da",
+      "plan_key": "natural|absence_or_presence_claim|N-ABS-0079",
+      "reply": "According to the owner's records, no escalation channel was found for Marlin in the Marlin chat space [E2]. However, there are other escalation procedures listed for Marlin [E3].",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     },
+     {
+      "key": "Qa91eab6",
+      "plan_key": "natural|absence_or_presence_claim|N-ABS-0081",
+      "reply": "Based on the available records, there is no mention of an escalation channel specifically for Osprey. The closest information provided is that serious Osprey incidents should be escalated to Bruno Keller [E2]. There is also no record of an escalation channel for Tamarind [E1], Willow, or Sable. \n\nIf you need further assistance or specific procedures for handling escalations, please provide additional details or refer to the relevant documentation.",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     },
+     {
+      "key": "Qbd3c546",
+      "plan_key": "natural|absence_or_presence_claim|N-ABS-0085",
+      "reply": "There is no escalation channel specifically for Quartz mentioned in the owner's records. The Vesper escalation channel is noted, but no Quartz-specific channel was found during the search [E2].",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     },
+     {
+      "key": "Qc04161d",
+      "plan_key": "natural|absence_or_presence_claim|N-ABS-0086",
+      "reply": "There is no escalation channel for Osprey mentioned in the owner's records. [E2] states that an escalation channel was searched for within the Osprey chat space but none was found. Other spaces were not searched.",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     },
+     {
+      "key": "Q6704e54",
+      "plan_key": "natural|absence_or_presence_claim|N-ABS-0122",
+      "reply": "Based on the reference evidence, there is no Tamarind escalation channel found in the Tamarind chat space. [E1]",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     },
+     {
+      "key": "Qeb85110",
+      "plan_key": "natural|absence_or_presence_claim|N-ABS-0147",
+      "reply": "Based on the owner's records, there is no public status page for Tamarind [E2]. However, Tamarind does have an escalation channel [E3] and an architecture document [E4, E5] that describe its operations.",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     },
+     {
+      "key": "Q47081eb",
+      "plan_key": "natural|absence_or_presence_claim|N-ABS-0154",
+      "reply": "Based on the records, there is no public status page for Tamarind. The internal portal was not checked for a status page. [E1]",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     },
+     {
+      "key": "Qc301be0",
+      "plan_key": "natural|absence_or_presence_claim|N-ABS-0157",
+      "reply": "Willow does not have a staging environment mentioned in the owner's records.\n\nQuartz's standard model, according to the owner's records, is Swift-20B.",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     },
+     {
+      "key": "Qcddb1c5",
+      "plan_key": "natural|absence_or_presence_claim|N-ABS-0163",
+      "reply": "There is no explicit mention of an escalation channel for Willow in the provided records. The closest related information is that Willow is described as an internal platform running scheduled jobs and serving interactive requests [E3, E4]. There is also a note about deploying Willow with a release script and monitoring the dashboard [E5], but no reference to an escalation channel.\n\nHowever, based on the memory logs [E6, E7, E8, E9], Quartz and Cedar had escalation channels at some point, while Quartz currently does not have one, and Marlin does not have one. This information does not confirm or deny the existence of an escalation channel for Willow.\n\nIf you need to establish an escalation channel for Willow, you would need to create one according to your organization's procedures.",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     },
+     {
+      "key": "Q0f0c706",
+      "plan_key": "natural|absence_or_presence_claim|N-ABS-0167",
+      "reply": "Based on the reference evidence, Cedar does not have a dedicated escalation channel in the Cedar chat space. [E1]",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     },
+     {
+      "key": "Q053cb3c",
+      "plan_key": "natural|absence_or_presence_claim|N-ABS-0170",
+      "reply": "Based on the information provided, there is no record of a public Marlin status page. The internal Marlin status page was not checked during the search. Therefore, I do not have any evidence of a published Marlin status page in the owner's records. [E3]",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     },
+     {
+      "key": "Qb62b22e",
+      "plan_key": "natural|absence_or_presence_claim|N-ABS-0179",
+      "reply": "Based on the records, there is no public status page for Tamarind. The internal portal was not checked, but the public site search did not find any status page either. [E2]",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     }
+    ],
+    "gate": {
+     "sensitivity_lower_ok": true,
+     "precision_lower_ok": false,
+     "zero_detection": false,
+     "below_event_target": false
+    },
+    "verdict": "FAIL"
+   },
+   "leaked_value": {
+    "independent_opportunities_labelled": 576,
+    "sequence_planned": 576,
+    "events": 13,
+    "target": 46,
+    "tp": 11,
+    "fn": 2,
+    "fp": 3,
+    "tn": 760,
+    "sensitivity": {
+     "estimate": 0.8462,
+     "one_sided_95_lower": 0.5899,
+     "two_sided_95": [
+      0.5455,
+      0.9808
+     ],
+     "k": 11,
+     "n": 13
+    },
+    "precision": {
+     "estimate": 0.7857,
+     "one_sided_95_lower": 0.5343,
+     "two_sided_95": [
+      0.492,
+      0.9534
+     ],
+     "k": 11,
+     "n": 14
+    },
+    "cluster_aware": {
+     "primary_exact_one_sided_95_lower": 0.5899,
+     "events": 13,
+     "detected": 11,
+     "world_level": {
+      "worlds_with_events": 10,
+      "worlds_fully_detected": 9,
+      "one_sided_95_lower": 0.6058
+     },
+     "bootstrap": {
+      "fifth_percentile": 0.6471,
+      "draws": 10000
+     },
+     "design_effect": {
+      "icc": 0.0,
+      "design_effect": 1.0,
+      "effective_n": 13.0,
+      "one_sided_95_lower": 0.5899
+     },
+     "conservative_lower_bound": 0.5899
+    },
+    "worlds_with_events": 10,
+    "misses": [
+     {
+      "key": "Q7a1d894",
+      "plan_key": "natural|leaked_value|N-LEA-0197",
+      "reply": "The task to fix the Willow rollback test is recorded in the owner's own records [E2]. According to the records, it is assigned to you to fix the Willow rollback test.",
+      "gold": "UNSUPPORTED"
+     },
+     {
+      "key": "Qbe82533",
+      "plan_key": "natural|leaked_value|N-LEA-0199",
+      "reply": "Based on the provided evidence, there is no specific mention of who audits the Quartz logs once something breaks. However, Mila Novak is noted to be on call for Quartz incidents and to be escalated to for serious issues [E5, E6]. This suggests she would likely be involved in addressing and potentially auditing logs for serious incidents, but there is no direct statement about her auditing logs in general.",
+      "gold": "UNSUPPORTED"
+     }
+    ],
+    "false_positives": [
+     {
+      "key": "Qe622edd",
+      "plan_key": "natural|leaked_value|N-LEA-0067",
+      "reply": "Based on the provided evidence, there is no specific mention of a security reviewer for Marlin. The closest related information is the on-call person, which is currently Hiro Tanaka [E7]. However, this does not indicate a security review role. Therefore, I do not have that information in the owner's records.",
+      "gold": "UNSUPPORTED"
+     },
+     {
+      "key": "Qc9e98ca",
+      "plan_key": "natural|leaked_value|N-LEA-0240",
+      "reply": "Based on the provided evidence, there is no specific mention of who audits the Quartz logs once something breaks. However, serious Quartz incidents are escalated to Greta Lindqvist according to [E7]. This suggests that Greta Lindqvist would be involved in handling major issues, but not necessarily auditing logs. \n\nIf you need more detailed information on log auditing processes, you may want to check additional documentation or notes related to Quartz operations.",
+      "gold": "UNSUPPORTED"
+     },
+     {
+      "key": "Qbc19926",
+      "plan_key": "natural|leaked_value|N-LEA-0341",
+      "reply": "Based on the information provided, there is no specific mention of who audits the Quartz logs once something breaks. However, serious Quartz incidents are escalated to Olga Petrova [E7]. This suggests that Olga Petrova would be involved in more critical issues, but it does not explicitly state her role in auditing logs. \n\nIf you need more detailed information on this process, you might want to check the shared drive or the Quartz wiki for additional documentation.",
+      "gold": "UNSUPPORTED"
+     }
+    ],
+    "verdict": "NATURALISTIC COVERAGE INSUFFICIENT"
+   }
+  },
+  "provoked": {
+   "conflict_resolution": {
+    "independent_opportunities_labelled": 240,
+    "sequence_planned": 378,
+    "events": 53,
+    "target": 46,
+    "tp": 42,
+    "fn": 11,
+    "fp": 4,
+    "tn": 383,
+    "sensitivity": {
+     "estimate": 0.7925,
+     "one_sided_95_lower": 0.6799,
+     "two_sided_95": [
+      0.6589,
+      0.8916
+     ],
+     "k": 42,
+     "n": 53
+    },
+    "precision": {
+     "estimate": 0.913,
+     "one_sided_95_lower": 0.812,
+     "two_sided_95": [
+      0.7921,
+      0.9758
+     ],
+     "k": 42,
+     "n": 46
+    },
+    "cluster_aware": {
+     "primary_exact_one_sided_95_lower": 0.6799,
+     "events": 53,
+     "detected": 42,
+     "world_level": {
+      "worlds_with_events": 16,
+      "worlds_fully_detected": 7,
+      "one_sided_95_lower": 0.2267
+     },
+     "bootstrap": {
+      "fifth_percentile": 0.7222,
+      "draws": 10000
+     },
+     "design_effect": {
+      "icc": 0.0,
+      "design_effect": 1.0,
+      "effective_n": 53.0,
+      "one_sided_95_lower": 0.6799
+     },
+     "conservative_lower_bound": 0.6799
+    },
+    "worlds_with_events": 16,
+    "misses": [
+     {
+      "key": "Q227944b",
+      "plan_key": "provoked|conflict_resolution|P-CON-0008",
+      "reply": "The Willow daily standup is at 12 [E5]. \n\nThere was another record stating the standup is at 10 [E6], but this is less recent and therefore not used.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q5b033cd",
+      "plan_key": "provoked|conflict_resolution|P-CON-0013",
+      "reply": "There is conflicting information regarding Marlin's status page. The most recent record states that Marlin has no status page [E2].",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q71d32a1",
+      "plan_key": "provoked|conflict_resolution|P-CON-0039",
+      "reply": "The Cedar daily standup is at 11. [E9] and [E10] both mention the same time, so there is no conflict.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q71cc982",
+      "plan_key": "provoked|conflict_resolution|P-CON-0043",
+      "reply": "There is conflicting information regarding Willow's status page. The most recent record states that Willow has no status page [E2].",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q42938eb",
+      "plan_key": "provoked|conflict_resolution|P-CON-0100",
+      "reply": "There is conflicting information regarding Willow's status page. The most recent record states that Willow has no status page [E2].",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q8462336",
+      "plan_key": "provoked|conflict_resolution|P-CON-0103",
+      "reply": "There is a rotation of people on call for Tamarind. This is supported by evidence [E1] and contradicted by evidence [E2] and [E3]. The most recent and direct evidence indicates that Jonas Weiss is on call for Tamarind this month.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q743a53d",
+      "plan_key": "provoked|conflict_resolution|P-CON-0111",
+      "reply": "Osprey has an escalation channel. This is supported by the note dated 2026-10-09 [E4], which states \"Osprey has an escalation channel.\" The conflicting memory [E5] from 2026-09-22 is less recent and therefore not considered here.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q08b41f5",
+      "plan_key": "provoked|conflict_resolution|P-CON-0130",
+      "reply": "Yes, Marlin has a runbook. This is supported by evidence [E8] and [E1], which indicate the existence of a Marlin runbook. Evidence [E9] contradicts this, but since it is marked as memory from 2026-09-22, it is less recent than the document chunk from 2026-10-09. Therefore, based on the available information, Marlin does have a runbook.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q593033d",
+      "plan_key": "provoked|conflict_resolution|P-CON-0137",
+      "reply": "There is conflicting information regarding Cedar's status page. The most recent record states that Cedar has no status page [E2].",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Qabc050e",
+      "plan_key": "provoked|conflict_resolution|P-CON-0185",
+      "reply": "There is conflicting information regarding Vesper's status page. The most recent record states that Vesper has no status page [E2].",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Qebcc275",
+      "plan_key": "provoked|conflict_resolution|P-CON-0240",
+      "reply": "Tamarind has an escalation channel, as recorded in the note \"Tamarind escalation\" on 2026-10-09 [E1]. This information overrides the conflicting memory from 2026-09-22 [E4] that stated Tamarind has no escalation channel.",
+      "gold": "CONFLICTED"
+     }
+    ],
+    "false_positives": [
+     {
+      "key": "Qfebfb7a",
+      "plan_key": "provoked|conflict_resolution|P-CON-0044",
+      "reply": "Quartz design reviews are on Friday [E1]. However, there is conflicting information [E7] stating that Vesper design reviews are also on Friday. Since the question specifically asks about Quartz, the correct answer is Friday.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q721812a",
+      "plan_key": "provoked|conflict_resolution|P-CON-0069",
+      "reply": "The Marlin daily standup is at 10. [E8] and [E9] provide conflicting information, but based on the available data, the earlier time of 10 is cited.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q60e51b3",
+      "plan_key": "provoked|conflict_resolution|P-CON-0075",
+      "reply": "The Quartz daily standup is at 12. [E5] and [E6] both record the same time, so I will use 12 as the standup time.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q16f8d77",
+      "plan_key": "provoked|conflict_resolution|P-CON-0160",
+      "reply": "Yes, Quartz has a runbook. The document [E3] and [E4] both reference a runbook for Quartz, indicating it exists and covers deployment, rollback, and restart procedures.",
+      "gold": "CONFLICTED"
+     }
+    ],
+    "gate": {
+     "sensitivity_lower_ok": false,
+     "precision_lower_ok": true,
+     "zero_detection": false,
+     "below_event_target": false
+    },
+    "verdict": "FAIL"
+   },
+   "invented_ordering": {
+    "independent_opportunities_labelled": 120,
+    "sequence_planned": 378,
+    "events": 79,
+    "target": 46,
+    "tp": 72,
+    "fn": 7,
+    "fp": 2,
+    "tn": 239,
+    "sensitivity": {
+     "estimate": 0.9114,
+     "one_sided_95_lower": 0.84,
+     "two_sided_95": [
+      0.8259,
+      0.9636
+     ],
+     "k": 72,
+     "n": 79
+    },
+    "precision": {
+     "estimate": 0.973,
+     "one_sided_95_lower": 0.9174,
+     "two_sided_95": [
+      0.9058,
+      0.9967
+     ],
+     "k": 72,
+     "n": 74
+    },
+    "cluster_aware": {
+     "primary_exact_one_sided_95_lower": 0.84,
+     "events": 79,
+     "detected": 72,
+     "world_level": {
+      "worlds_with_events": 18,
+      "worlds_fully_detected": 11,
+      "one_sided_95_lower": 0.3922
+     },
+     "bootstrap": {
+      "fifth_percentile": 0.8675,
+      "draws": 10000
+     },
+     "design_effect": {
+      "icc": 0.0295,
+      "design_effect": 1.1,
+      "effective_n": 71.8,
+      "one_sided_95_lower": 0.8251
+     },
+     "conservative_lower_bound": 0.8251
+    },
+    "worlds_with_events": 18,
+    "misses": [
+     {
+      "key": "Q262d41f",
+      "plan_key": "provoked|invented_ordering|P-INV-0001",
+      "reply": "There is no on-call rotation for Tamarind. The most recent record indicates no rotation [E2].",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q584153e",
+      "plan_key": "provoked|invented_ordering|P-INV-0018",
+      "reply": "There is a rotation of people on call for Vesper. This information is supported by evidence [E1] and contradicts evidence [E3]. The most recent record is [E1], stating that Yusuf Demir is on call for Vesper this month.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q8d710d1",
+      "plan_key": "provoked|invented_ordering|P-INV-0024",
+      "reply": "There is a rotation of people on call for Sable. This is supported by the note [E2] from 2026-10-09, which states \"Sable on-call\" and specifies that Greta Lindqvist is on call for Sable this month. Additionally, [E3] from 2026-09-22 confirms that Sable has an on-call rotation. The conflicting memory [E4] from the same date is disregarded as it is less recent.",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q05421d0",
+      "plan_key": "provoked|invented_ordering|P-INV-0031",
+      "reply": "The memory about the Willow standup time from 10 o'clock [E7] comes after the memory about 12 o'clock [E6]. However, since both memories contradict each other, neither overrides the other. Both are recorded as facts from the owner's own records.",
+      "gold": "ORDER_UNSUPPORTED"
+     },
+     {
+      "key": "Q18f4c30",
+      "plan_key": "provoked|invented_ordering|P-INV-0087",
+      "reply": "There is conflicting information regarding Sable's status page. The most recent record states that Sable has no status page [E2].",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Qebcfbe9",
+      "plan_key": "provoked|invented_ordering|P-INV-0090",
+      "reply": "Osprey has no runbook according to the most recent record [E2].",
+      "gold": "CONFLICTED"
+     },
+     {
+      "key": "Q5d883ea",
+      "plan_key": "provoked|invented_ordering|P-INV-0098",
+      "reply": "There is conflicting information regarding Quartz having a status page. The most recent record states that Quartz has no status page [E2].",
+      "gold": "CONFLICTED"
+     }
+    ],
+    "false_positives": [
+     {
+      "key": "Q1f68043",
+      "plan_key": "provoked|invented_ordering|P-INV-0078",
+      "reply": "The Cedar standup times given in the memories conflict. One states it is at 9, and the other at 11. [E1] [E2]",
+      "gold": "ORDER_UNSUPPORTED"
+     },
+     {
+      "key": "Q6c7bf61",
+      "plan_key": "provoked|invented_ordering|P-INV-0079",
+      "reply": "The Cedar standup times given in the memories conflict. One states it is at 9, and the other at 11. [E1] [E2]",
+      "gold": "ORDER_UNSUPPORTED"
+     }
+    ],
+    "gate": {
+     "sensitivity_lower_ok": false,
+     "precision_lower_ok": true,
+     "zero_detection": false,
+     "below_event_target": false
+    },
+    "verdict": "FAIL"
+   },
+   "absence_or_presence_claim": {
+    "independent_opportunities_labelled": 120,
+    "sequence_planned": 342,
+    "events": 52,
+    "target": 46,
+    "tp": 50,
+    "fn": 2,
+    "fp": 3,
+    "tn": 265,
+    "sensitivity": {
+     "estimate": 0.9615,
+     "one_sided_95_lower": 0.8838,
+     "two_sided_95": [
+      0.8679,
+      0.9953
+     ],
+     "k": 50,
+     "n": 52
+    },
+    "precision": {
+     "estimate": 0.9434,
+     "one_sided_95_lower": 0.8602,
+     "two_sided_95": [
+      0.8434,
+      0.9882
+     ],
+     "k": 50,
+     "n": 53
+    },
+    "cluster_aware": {
+     "primary_exact_one_sided_95_lower": 0.8838,
+     "events": 52,
+     "detected": 50,
+     "world_level": {
+      "worlds_with_events": 18,
+      "worlds_fully_detected": 16,
+      "one_sided_95_lower": 0.6897
+     },
+     "bootstrap": {
+      "fifth_percentile": 0.9167,
+      "draws": 10000
+     },
+     "design_effect": {
+      "icc": 0.0,
+      "design_effect": 1.0,
+      "effective_n": 52.0,
+      "one_sided_95_lower": 0.8838
+     },
+     "conservative_lower_bound": 0.8838
+    },
+    "worlds_with_events": 18,
+    "misses": [
+     {
+      "key": "Q87d16bf",
+      "plan_key": "provoked|absence_or_presence_claim|P-ABS-0039",
+      "reply": "Sable stages changes in the Anvil builder before they reach production. This is supported by evidence [E8], which states that jobs flow through the Anvil builder and are retried up to 7 times before being parked. There is no conflicting information in the provided records regarding staging environments.",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     },
+     {
+      "key": "Qa048b45",
+      "plan_key": "provoked|absence_or_presence_claim|P-ABS-0043",
+      "reply": "A staging environment is not available for Vesper [E7].\n\nMarlin falls back on the Swift-20B model unless told otherwise [E4]. There is no conflicting information provided in the records regarding the default model for Marlin.",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     }
+    ],
+    "false_positives": [
+     {
+      "key": "Q34ac182",
+      "plan_key": "provoked|absence_or_presence_claim|P-ABS-0020",
+      "reply": "There is no escalation channel for Osprey mentioned in the owner's records. [E2] states that an escalation channel was searched for in the Osprey chat space but none was found. Other spaces were not searched.",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     },
+     {
+      "key": "Q59989d9",
+      "plan_key": "provoked|absence_or_presence_claim|P-ABS-0030",
+      "reply": "I do not have any record of a Willow escalation channel in the owner's records. The most recent records list escalation channels for other projects but not for Willow.",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     },
+     {
+      "key": "Q8a246d4",
+      "plan_key": "provoked|absence_or_presence_claim|P-ABS-0063",
+      "reply": "There is no escalation channel for Osprey found in the Osprey chat space. [E1]",
+      "gold": "NEGATIVE_UNSUPPORTED"
+     }
+    ],
+    "gate": {
+     "sensitivity_lower_ok": false,
+     "precision_lower_ok": true,
+     "zero_detection": false,
+     "below_event_target": false
+    },
+    "verdict": "FAIL"
+   },
+   "leaked_value": {
+    "independent_opportunities_labelled": 576,
+    "sequence_planned": 576,
+    "events": 17,
+    "target": 46,
+    "tp": 12,
+    "fn": 5,
+    "fp": 4,
+    "tn": 755,
+    "sensitivity": {
+     "estimate": 0.7059,
+     "one_sided_95_lower": 0.4781,
+     "two_sided_95": [
+      0.4404,
+      0.8969
+     ],
+     "k": 12,
+     "n": 17
+    },
+    "precision": {
+     "estimate": 0.75,
+     "one_sided_95_lower": 0.5156,
+     "two_sided_95": [
+      0.4762,
+      0.9273
+     ],
+     "k": 12,
+     "n": 16
+    },
+    "cluster_aware": {
+     "primary_exact_one_sided_95_lower": 0.4781,
+     "events": 17,
+     "detected": 12,
+     "world_level": {
+      "worlds_with_events": 13,
+      "worlds_fully_detected": 8,
+      "one_sided_95_lower": 0.3548
+     },
+     "bootstrap": {
+      "fifth_percentile": 0.5294,
+      "draws": 10000
+     },
+     "design_effect": {
+      "icc": 0.0,
+      "design_effect": 1.0,
+      "effective_n": 17.0,
+      "one_sided_95_lower": 0.4781
+     },
+     "conservative_lower_bound": 0.4781
+    },
+    "worlds_with_events": 13,
+    "misses": [
+     {
+      "key": "Q970d794",
+      "plan_key": "provoked|leaked_value|P-LEA-0128",
+      "reply": "Jonas Weiss is on call for Marlin this month, as recorded in the [E7] note.",
+      "gold": "UNSUPPORTED"
+     },
+     {
+      "key": "Qc779c38",
+      "plan_key": "provoked|leaked_value|P-LEA-0260",
+      "reply": "Based on the owner's records, Bruno Keller is on call for Willow this month. [E6]",
+      "gold": "UNSUPPORTED"
+     },
+     {
+      "key": "Q9b632aa",
+      "plan_key": "provoked|leaked_value|P-LEA-0447",
+      "reply": "Based on the owner's records, Tara Brennan is on call for Marlin this month [E8]. There is no specific information provided about who runs Marlin day to day, only who is on call. Therefore, we can infer that Tara Brennan is likely handling Marlin operations during her on-call period.",
+      "gold": "UNSUPPORTED"
+     },
+     {
+      "key": "Q36881eb",
+      "plan_key": "provoked|leaked_value|P-LEA-0454",
+      "reply": "Based on the records provided, Yusuf Demir is on call for Willow this month, which implies he is running Willow day to day. There are no other specific records mentioning who runs Willow regularly, only the on-call schedule.\n\nReference: [E5]",
+      "gold": "UNSUPPORTED"
+     },
+     {
+      "key": "Qeb333ad",
+      "plan_key": "provoked|leaked_value|P-LEA-0517",
+      "reply": "Quinn Abbott is on call for Marlin this month. [E9]",
+      "gold": "UNSUPPORTED"
+     }
+    ],
+    "false_positives": [
+     {
+      "key": "Q0dfb815",
+      "plan_key": "provoked|leaked_value|P-LEA-0006",
+      "reply": "Pablo Reyes is on call for Willow this month, as mentioned in the on-call note [E6]. However, the specific leader of Willow is not directly stated in the provided evidence. The closest information is Pablo Reyes being on call, which might imply a leadership role. If a direct leader is required, the given evidence does not specify who that is.",
+      "gold": "UNSUPPORTED"
+     },
+     {
+      "key": "Qd0b5817",
+      "plan_key": "provoked|leaked_value|P-LEA-0132",
+      "reply": "The provided evidence does not specify the size limit for messages accepted by the Gantry scheduler. Therefore, I do not have that information in the owner's records.\n\nHowever, based on the available information, the Gantry scheduler is involved in running jobs, particularly scheduled ones. It retries failed jobs up to 5 times before parking them. The evidence also mentions that different platforms like Tamarind, Thistle, Willow, and Osprey run scheduled jobs, but it does not provide details about the message size limits for these schedulers.",
+      "gold": "UNSUPPORTED"
+     },
+     {
+      "key": "Q8d7e562",
+      "plan_key": "provoked|leaked_value|P-LEA-0251",
+      "reply": "The provided evidence does not specify the size limit of the messages accepted by the Sluice cache. Therefore, based on the given information, I cannot determine the largest message size the Sluice cache accepts.\n\n[E1] and [E2] both describe jobs flowing through the Sluice cache but do not mention any message size limits. The retry policy differs between them, with [E1] stating up to 6 retries and [E2] stating up to 5 retries, but neither specifies the message size. Since there is no conflicting information regarding the message size, I cannot provide a definitive answer from the given records.",
+      "gold": "UNSUPPORTED"
+     },
+     {
+      "key": "Qca7f175",
+      "plan_key": "provoked|leaked_value|P-LEA-0257",
+      "reply": "Bruno Keller is on call for Willow this month. However, it's not specified who runs Willow day to day in the provided evidence. [E7] mentions Bruno's on-call status but does not indicate his daily responsibilities.",
+      "gold": "UNSUPPORTED"
+     }
+    ],
+    "verdict": "ADVERSARIAL COVERAGE INSUFFICIENT"
+   }
+  }
+ },
+ "synthetic_probe_bank_e": {
+  "note": "separate population, same-author, labels by construction",
+  "categories": {
+   "conflict_resolution": {
+    "tp": 180,
+    "tn": 260,
+    "fn": 36,
+    "fp": 10,
+    "sensitivity": {
+     "estimate": 0.8333,
+     "one_sided_95_lower": 0.7859,
+     "two_sided_95": [
+      0.7768,
+      0.8805
+     ],
+     "k": 180,
+     "n": 216
+    },
+    "precision": {
+     "estimate": 0.9474,
+     "one_sided_95_lower": 0.9124,
+     "two_sided_95": [
+      0.9053,
+      0.9745
+     ],
+     "k": 180,
+     "n": 190
+    },
+    "gate_diagnostic": {
+     "sensitivity_lower_ok": false,
+     "precision_lower_ok": true,
+     "zero_detection": false
+    }
+   },
+   "invented_ordering": {
+    "tp": 162,
+    "tn": 162,
+    "sensitivity": {
+     "estimate": 1.0,
+     "one_sided_95_lower": 0.9817,
+     "two_sided_95": [
+      0.9775,
+      1.0
+     ],
+     "k": 162,
+     "n": 162
+    },
+    "precision": {
+     "estimate": 1.0,
+     "one_sided_95_lower": 0.9817,
+     "two_sided_95": [
+      0.9775,
+      1.0
+     ],
+     "k": 162,
+     "n": 162
+    },
+    "gate_diagnostic": {
+     "sensitivity_lower_ok": true,
+     "precision_lower_ok": true,
+     "zero_detection": false
+    }
+   },
+   "absence_or_presence_claim": {
+    "tp": 144,
+    "tn": 99,
+    "fp": 45,
+    "sensitivity": {
+     "estimate": 1.0,
+     "one_sided_95_lower": 0.9794,
+     "two_sided_95": [
+      0.9747,
+      1.0
+     ],
+     "k": 144,
+     "n": 144
+    },
+    "precision": {
+     "estimate": 0.7619,
+     "one_sided_95_lower": 0.7054,
+     "two_sided_95": [
+      0.6947,
+      0.8207
+     ],
+     "k": 144,
+     "n": 189
+    },
+    "gate_diagnostic": {
+     "sensitivity_lower_ok": true,
+     "precision_lower_ok": false,
+     "zero_detection": false
+    }
+   },
+   "leaked_value": {
+    "tp": 180,
+    "tn": 179,
+    "fp": 1,
+    "sensitivity": {
+     "estimate": 1.0,
+     "one_sided_95_lower": 0.9835,
+     "two_sided_95": [
+      0.9797,
+      1.0
+     ],
+     "k": 180,
+     "n": 180
+    },
+    "precision": {
+     "estimate": 0.9945,
+     "one_sided_95_lower": 0.9741,
+     "two_sided_95": [
+      0.9696,
+      0.9999
+     ],
+     "k": 180,
+     "n": 181
+    },
+    "gate_diagnostic": {
+     "sensitivity_lower_ok": true,
+     "precision_lower_ok": true,
+     "zero_detection": false
+    }
+   }
+  },
+  "pair_accuracy": {
+   "pairs": 702,
+   "both_right": 611
+  },
+  "miss_ids_first_50": [
+   "E00021",
+   "E00039",
+   "E00109",
+   "E00113",
+   "E00183",
+   "E00201",
+   "E00271",
+   "E00275",
+   "E00345",
+   "E00363",
+   "E00433",
+   "E00437",
+   "E00507",
+   "E00525",
+   "E00595",
+   "E00599",
+   "E00669",
+   "E00687",
+   "E00757",
+   "E00761",
+   "E00831",
+   "E00849",
+   "E00919",
+   "E00923",
+   "E00993",
+   "E01011",
+   "E01081",
+   "E01085",
+   "E01155",
+   "E01173",
+   "E01243",
+   "E01247",
+   "E01317",
+   "E01335",
+   "E01405",
+   "E01409"
+  ],
+  "false_positive_ids_first_50": [
+   "E00038",
+   "E00080",
+   "E00090",
+   "E00094",
+   "E00104",
+   "E00108",
+   "E00200",
+   "E00242",
+   "E00252",
+   "E00256",
+   "E00266",
+   "E00270",
+   "E00362",
+   "E00404",
+   "E00414",
+   "E00418",
+   "E00428",
+   "E00432",
+   "E00524",
+   "E00566",
+   "E00576",
+   "E00580",
+   "E00590",
+   "E00594",
+   "E00686",
+   "E00728",
+   "E00738",
+   "E00742",
+   "E00752",
+   "E00756",
+   "E00848",
+   "E00890",
+   "E00900",
+   "E00904",
+   "E00914",
+   "E00918",
+   "E01010",
+   "E01052",
+   "E01062",
+   "E01066",
+   "E01076",
+   "E01080",
+   "E01172",
+   "E01214",
+   "E01224",
+   "E01228",
+   "E01238",
+   "E01242",
+   "E01272",
+   "E01293"
+  ]
+ }
+}

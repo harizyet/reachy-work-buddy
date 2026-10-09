@@ -42,17 +42,17 @@ def run():
     outputs = {}
     results: dict = {"limits": ["NO INDEPENDENT HUMAN REVIEW: rater A is the assistant that wrote the scorer.", "Scorer v3 is research-only.", "Adversarial results do not establish operational sensitivity."], "populations": {}}
     for pop in cfg.POPULATIONS:
-        ctrl = [it for it in plan["sequences"][f"{pop}|control"] if ap.opaque(it["key"]) in labels]
+        ctrl = [{**it, "_seq": f"{pop}|control"} for it in plan["sequences"][f"{pop}|control"] if ap.opaque(ap.cid(f"{pop}|control", it)) in labels]
         results["populations"][pop] = {}
         for cat in cfg.CATEGORIES:
-            seq = [it for it in plan["sequences"][f"{pop}|{cat}"] if ap.opaque(it["key"]) in labels]
+            seq = [{**it, "_seq": f"{pop}|{cat}"} for it in plan["sequences"][f"{pop}|{cat}"] if ap.opaque(ap.cid(f"{pop}|{cat}", it)) in labels]
             tp = fn = fp = tn = 0
             per_world: dict[int, list[int]] = defaultdict(lambda: [0, 0])
             misses, fps = [], []
             for kind, items in (("seq", seq), ("ctrl", ctrl)):
                 for it in items:
-                    op = ap.opaque(it["key"])
-                    r = replies[it["key"]]
+                    op = ap.opaque(ap.cid(it["_seq"], it))
+                    r = replies[ap.cid(it["_seq"], it)]
                     if it["world"] not in cases:
                         cases[it["world"]] = {c["id"]: c for c in fm.world(it["world"])[2]}
                     atoms = cases[it["world"]][it["case"]]["atoms"]
@@ -60,7 +60,7 @@ def run():
                     flags = va.flags_of(out)
                     sc = scorer_cats(flags, it["status"])
                     truth = ap.rater_categories(labels, op, it["status"])
-                    outputs.setdefault(op, {"key": it["key"], "scorer_categories": sorted(sc), "scorer_flags": flags, "rater_categories": sorted(truth)})
+                    outputs.setdefault(op, {"key": ap.cid(it["_seq"], it), "scorer_categories": sorted(sc), "scorer_flags": flags, "rater_categories": sorted(truth)})
                     event, flagged = cat in truth, cat in sc
                     if kind == "seq":
                         if event:
@@ -71,9 +71,9 @@ def run():
                     fp += flagged and not event
                     tn += (not flagged) and (not event)
                     if event and not flagged:
-                        misses.append({"key": op, "plan_key": it["key"], "reply": r["reply"], "gold": it["status"]})
+                        misses.append({"key": op, "plan_key": ap.cid(it["_seq"], it), "reply": r["reply"], "gold": it["status"]})
                     if flagged and not event:
-                        fps.append({"key": op, "plan_key": it["key"], "reply": r["reply"], "gold": it["status"]})
+                        fps.append({"key": op, "plan_key": ap.cid(it["_seq"], it), "reply": r["reply"], "gold": it["status"]})
             events = tp + fn
             sens = va.interval(tp, events) if events else None
             prec = va.interval(tp, tp + fp) if tp + fp else None

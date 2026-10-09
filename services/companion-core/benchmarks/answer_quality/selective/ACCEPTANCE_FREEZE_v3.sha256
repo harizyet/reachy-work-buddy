@@ -36,3 +36,7 @@ ac2c9da15d99950f21d04d5b75e4de906367a1de55a60927a58f3d5000e1563d  adjudication_r
 8884664ace8a692bef16eaf27fca33db68ba0d5b8d457f7433a63802d0245444  acceptance/plan.json
 0ab8641b212f36cf4808f851c9978ffca77d95872225df72a1bd52e848443718  docs/phase-44-scorer-v3-formal-validation-protocol.md
 17117769c2fa7ad38eae6aaee2225c8080a72d7e47b37b9ec6d09d02cf81dbe3  docs/verification/phase-44-corpus-v5-coverage-2026-10-15.md
+
+# POST-GENERATION MACHINERY FIX (before any label or scorer output existed): the plan key repeated between the conflict and control sequences (both abbreviate to CON), so the bare key was ambiguous in the reply/label index. All 3,748 replies exist and are distinct by (population, category, key). acceptance_packet.py and acceptance_report.py now use the composite identity; the plan, the replies, the scorer, the thresholds and the protocol are unchanged. New hashes of the two scripts:
+401edd6c50cd35576f658109c35d1fbd86980572e5270316ebdaadee87c436de  acceptance_packet.py
+670a994ff4b3115a51e7dae7673000fcdc95f15cfc340f131b1aaf58b2c1048a  acceptance_report.py

@@ -27,9 +27,14 @@ def opaque(key: str) -> str:
 
 def load():
     plan = json.loads((ACC / "plan.json").read_text())
-    replies = {r["key"]: r for r in map(json.loads, (ACC / "replies.jsonl").read_text().splitlines())}
+    replies = {f"{r['population']}|{r['category']}|{r['key']}": r for r in map(json.loads, (ACC / "replies.jsonl").read_text().splitlines())}  # the plan key alone collides between the conflict and control sequences
     labels = json.loads(LABELS.read_text())["labels"] if LABELS.exists() else {}
     return plan, replies, labels
+
+
+def cid(name: str, it: dict) -> str:
+    """Composite identity of a plan item: sequence name (population|category) plus its plan key."""
+    return f"{name}|{it['key']}"
 
 
 def rater_categories(labels: dict, op: str, status: str) -> set[str]:
@@ -43,8 +48,8 @@ def sequence_status(plan, labels):
     out = {}
     for name, seq in plan["sequences"].items():
         _pop, cat = name.split("|")
-        labelled = [it for it in seq if opaque(it["key"]) in labels]
-        events = sum(1 for it in labelled if cat in rater_categories(labels, opaque(it["key"]), it["status"]))
+        labelled = [it for it in seq if opaque(cid(name, it)) in labels]
+        events = sum(1 for it in labelled if cat in rater_categories(labels, opaque(cid(name, it)), it["status"]))
         done = cat == "control" and len(labelled) >= len(seq) or (cat != "control" and (events >= cfg.TARGET_EVENTS or len(labelled) >= len(seq)))
         out[name] = {"planned": len(seq), "labelled": len(labelled), "confirmed_events": events, "done": done}
     return out
@@ -58,12 +63,12 @@ def build_next():
     for name, seq in plan["sequences"].items():
         if status[name]["done"]:
             continue
-        pending = [it for it in seq if opaque(it["key"]) not in labels and it["key"] in replies][: cfg.LABEL_BLOCK]
+        pending = [it for it in seq if opaque(cid(name, it)) not in labels and cid(name, it) in replies][: cfg.LABEL_BLOCK]
         items += [{**it, "sequence": name} for it in pending]
     if not items:
         print("nothing left to label")
         return
-    items.sort(key=lambda it: opaque(it["key"]))  # opaque order: sequences are interleaved and not recognisable
+    items.sort(key=lambda it: opaque(cid(it["sequence"], it)))  # opaque order: sequences are interleaved and not recognisable
     for it in items:
         w = it["world"]
         if w not in cases:
@@ -72,10 +77,10 @@ def build_next():
     lines = ["# Blinded acceptance packet (no scorer output exists). Rubric: v2 + v3 addendum + v4 addendum", ""]
     keymap = json.loads((ACC / "packet_map.json").read_text()) if (ACC / "packet_map.json").exists() else {}
     for it in items:
-        r = replies[it["key"]]
+        r = replies[cid(it["sequence"], it)]
         a = cases[it["world"]][it["case"]]["atoms"][it["atom"]]
-        op = opaque(it["key"])
-        keymap[op] = it["key"]
+        op = opaque(cid(it["sequence"], it))
+        keymap[op] = cid(it["sequence"], it)
         lines += [f"## {op}", f"Q: {r['question']}", f"Gold: {a['status']}; sub-claim: {a['relation']} of {a['pretty']}; gold value(s): {a.get('display', [])}", "Reply:", "> " + r["reply"].replace("\n", "\n> "), ""]
     (ACC / f"packet_block{n:02d}.md").write_text("\n".join(lines))
     (ACC / "packet_map.json").write_text(json.dumps(keymap))

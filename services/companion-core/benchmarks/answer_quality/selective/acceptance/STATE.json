@@ -1,10 +1,29 @@
 {
- "stage": "frozen",
+ "stage": "scored",
  "history": [
   {
    "stage": "frozen",
    "at": "2026-10-09T14:37:54.604496+00:00",
    "freeze_sha256": "b77e6afa84260884bb2c54ab5b848d80f4991e0bff9a0e7b46bdb5c6d86d9334"
+  },
+  {
+   "stage": "generated",
+   "at": "2026-10-09T15:56:30.482445+00:00",
+   "replies_sha256": "171080c1ad5054aba81ebb52946099f6b1e7ff7058e9bb62a4ce872064b14b42",
+   "replies": 3348
+  },
+  {
+   "stage": "labels_frozen",
+   "at": "2026-10-09T16:06:41.471116+00:00",
+   "labels_sha256": "857cf73a53d8f6c799a0fcdf77586932c5e969e996e98a4af27c1d71de55bf30",
+   "labelled": 2752,
+   "expansion_triggered": []
+  },
+  {
+   "stage": "scored",
+   "at": "2026-10-09T16:06:55.847082+00:00",
+   "report_sha256": "b191724fa1df897c970903400d9e7628f399dd9fe7490a89f4f36ed8030e836b",
+   "scorer_outputs_sha256": "8b046b7705e9af4cf6db104aa88d349b942bb0c326ea278871603a9a1bc1aea7"
   }
  ]
 }
