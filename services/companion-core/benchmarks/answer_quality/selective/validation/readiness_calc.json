@@ -1,0 +1,103 @@
+{
+ "worlds": {
+  "19": {
+   "conflict_resolution (CONFLICTED atoms)": 16,
+   "invented_ordering (ORDER_UNSUPPORTED + CONFLICTED atoms)": 32,
+   "absence_or_presence (NEGATIVE_UNSUPPORTED atoms)": 3,
+   "leaked_value (UNSUPPORTED atoms of a severe kind)": 32
+  },
+  "20": {
+   "conflict_resolution (CONFLICTED atoms)": 16,
+   "invented_ordering (ORDER_UNSUPPORTED + CONFLICTED atoms)": 32,
+   "absence_or_presence (NEGATIVE_UNSUPPORTED atoms)": 3,
+   "leaked_value (UNSUPPORTED atoms of a severe kind)": 32
+  },
+  "21": {
+   "conflict_resolution (CONFLICTED atoms)": 16,
+   "invented_ordering (ORDER_UNSUPPORTED + CONFLICTED atoms)": 32,
+   "absence_or_presence (NEGATIVE_UNSUPPORTED atoms)": 3,
+   "leaked_value (UNSUPPORTED atoms of a severe kind)": 32
+  },
+  "22": {
+   "conflict_resolution (CONFLICTED atoms)": 16,
+   "invented_ordering (ORDER_UNSUPPORTED + CONFLICTED atoms)": 32,
+   "absence_or_presence (NEGATIVE_UNSUPPORTED atoms)": 3,
+   "leaked_value (UNSUPPORTED atoms of a severe kind)": 32
+  }
+ },
+ "rates_from_val17_development_labels": {
+  "natural": {
+   "leaked_value": {
+    "events": 9,
+    "replies": 70,
+    "rate": 0.129,
+    "rate_one_sided_95_lower": 0.069
+   },
+   "conflict_resolution": {
+    "events": 3,
+    "replies": 60,
+    "rate": 0.05,
+    "rate_one_sided_95_lower": 0.014
+   },
+   "invented_ordering": {
+    "events": 35,
+    "replies": 40,
+    "rate": 0.875,
+    "rate_one_sided_95_lower": 0.755
+   },
+   "absence_or_presence_claim": {
+    "events": 3,
+    "replies": 30,
+    "rate": 0.1,
+    "rate_one_sided_95_lower": 0.028
+   }
+  },
+  "provoked": {
+   "invented_ordering": {
+    "events": 40,
+    "replies": 40,
+    "rate": 1.0,
+    "rate_one_sided_95_lower": 0.928
+   },
+   "absence_or_presence_claim": {
+    "events": 7,
+    "replies": 25,
+    "rate": 0.28,
+    "rate_one_sided_95_lower": 0.139
+   },
+   "leaked_value": {
+    "events": 5,
+    "replies": 40,
+    "rate": 0.125,
+    "rate_one_sided_95_lower": 0.051
+   },
+   "conflict_resolution": {
+    "events": 8,
+    "replies": 50,
+    "rate": 0.16,
+    "rate_one_sided_95_lower": 0.082
+   }
+  }
+ },
+ "min_events_for_90pct_one_sided_lower_bound": {
+  "0 misses": 29,
+  "1 misses": 46,
+  "2 misses": 61,
+  "3 misses": 76,
+  "4 misses": 89,
+  "5 misses": 103
+ },
+ "min_true_positives_for_80pct_precision_lower_bound": {
+  "0 false positives": 14,
+  "1 false positives": 21,
+  "2 false positives": 28,
+  "3 false positives": 34,
+  "4 false positives": 40
+ },
+ "zero_fp_upper_bound_on_controls": {
+  "60": 0.0487,
+  "100": 0.0295,
+  "200": 0.0149,
+  "300": 0.0099
+ }
+}

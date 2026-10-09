@@ -1,0 +1,185 @@
+{
+ "note": "plan only; regenerate with fresh_manifest.py",
+ "seeds": {
+  "19": {
+   "corpus_sha256": "d0506e81ec616e8c98ad13c3971b0a74f1b12f01ff0c43857ce2ddb19f467103",
+   "facts_sha256": "2b6448f6c4bcbf0e9b2e307ce3415d245b3ccbec8c2bc83b3b808c3d1c559d73",
+   "cases_sha256": "1b399c2cda0f13b5270b1f9850e4b721960c66a8cef8cf34741ecb6fb6368ae5",
+   "questions": 219,
+   "distinct_atoms": {
+    "SUPPORTED": 88,
+    "UNSUPPORTED": 32,
+    "HISTORICAL": 6,
+    "CONFLICTED": 16,
+    "NEGATIVE_SUPPORTED": 3,
+    "NEGATIVE_UNSUPPORTED": 3,
+    "ORDER_UNSUPPORTED": 16
+   }
+  },
+  "20": {
+   "corpus_sha256": "0369099149bebf30e39be9dab36042e88cab6739db5b08d36b93f3f70bd13c48",
+   "facts_sha256": "1d3131b3852b6be995c6939987f8786c764209f48d70ef299eadef4c5cec49d2",
+   "cases_sha256": "a64d943869db050cce4bcfd98aa874c3d5d78857e30066136a6220b1a61959c5",
+   "questions": 219,
+   "distinct_atoms": {
+    "SUPPORTED": 88,
+    "UNSUPPORTED": 32,
+    "HISTORICAL": 6,
+    "CONFLICTED": 16,
+    "NEGATIVE_SUPPORTED": 3,
+    "NEGATIVE_UNSUPPORTED": 3,
+    "ORDER_UNSUPPORTED": 16
+   }
+  },
+  "21": {
+   "corpus_sha256": "4621b968966fccfbecccc2da7a3a3071e49816759ff70a6f1f062711e10edb31",
+   "facts_sha256": "1f79849f899fd56d5dbf9ade57f7076e7ffcf21034293fa554498b1fa68e7999",
+   "cases_sha256": "ef72c761808c96cc22ef2d7f6e5afee948de341bbf1f868de6fe57bed47494f1",
+   "questions": 218,
+   "distinct_atoms": {
+    "SUPPORTED": 88,
+    "UNSUPPORTED": 32,
+    "HISTORICAL": 6,
+    "CONFLICTED": 16,
+    "NEGATIVE_SUPPORTED": 3,
+    "NEGATIVE_UNSUPPORTED": 3,
+    "ORDER_UNSUPPORTED": 16
+   }
+  },
+  "22": {
+   "corpus_sha256": "4b3206e3c48cfcf00232c391fa45b5e000f007ce8ba48e837e2c34aae5f5e1b3",
+   "facts_sha256": "649827701d62389ed3cacd9ee6bc68c90fcd56ffa0cb0361b832bb882518893c",
+   "cases_sha256": "86588c4d8e4c19db8f920dde5d2b788f53f22838129be08049e0cc6bcfa1fa0a",
+   "questions": 219,
+   "distinct_atoms": {
+    "SUPPORTED": 88,
+    "UNSUPPORTED": 32,
+    "HISTORICAL": 6,
+    "CONFLICTED": 16,
+    "NEGATIVE_SUPPORTED": 3,
+    "NEGATIVE_UNSUPPORTED": 3,
+    "ORDER_UNSUPPORTED": 16
+   }
+  },
+  "23": {
+   "corpus_sha256": "3519011d96fb2e25b6cf8d713c4e4d9da11854fdc846485d1ed2c11797c721eb",
+   "facts_sha256": "60c2d1fff594841f4dc1abff2e26628123ca9db4a453b345aaa8c2b7bbffde79",
+   "cases_sha256": "c82a3183cfa91ac720a5bdf3e53aea0d742b2dfe7aad3309177c59faa1a82b80",
+   "questions": 218,
+   "distinct_atoms": {
+    "SUPPORTED": 88,
+    "UNSUPPORTED": 32,
+    "HISTORICAL": 6,
+    "CONFLICTED": 16,
+    "NEGATIVE_SUPPORTED": 3,
+    "NEGATIVE_UNSUPPORTED": 3,
+    "ORDER_UNSUPPORTED": 16
+   }
+  },
+  "24": {
+   "corpus_sha256": "5cdd5bb183ac7f89c513ccf15c9ad378c5bccf13f1f5f25412f29121fe7919b4",
+   "facts_sha256": "4c9c46bcb6ca1734ab0834fd3948e5e60602c93cb10bf9630a7e06965b79ab45",
+   "cases_sha256": "60d0eed851b787ce6c2afcda81a40556e7e394b54b092e79d50ac26c1d480169",
+   "questions": 219,
+   "distinct_atoms": {
+    "SUPPORTED": 88,
+    "UNSUPPORTED": 32,
+    "HISTORICAL": 6,
+    "CONFLICTED": 16,
+    "NEGATIVE_SUPPORTED": 3,
+    "NEGATIVE_UNSUPPORTED": 3,
+    "ORDER_UNSUPPORTED": 16
+   }
+  },
+  "25": {
+   "corpus_sha256": "0c73fc6380ea7385e4935d3a2e1eb44d7e1e101f2a71bbd6e44260c8d9b6a565",
+   "facts_sha256": "8d227b42b3a56fe7982abf7f911c6bfb7f1a48a2850e44a0f790961daf41d058",
+   "cases_sha256": "b2f0a38137558c0559492043fc1addf7101f73d4ed868d74a340945cabb9475b",
+   "questions": 218,
+   "distinct_atoms": {
+    "SUPPORTED": 88,
+    "UNSUPPORTED": 32,
+    "HISTORICAL": 6,
+    "CONFLICTED": 16,
+    "NEGATIVE_SUPPORTED": 3,
+    "NEGATIVE_UNSUPPORTED": 3,
+    "ORDER_UNSUPPORTED": 16
+   }
+  },
+  "26": {
+   "corpus_sha256": "fa62a0348b60b77e977340571ada59dcbcd009d0c93d11e3d3c96aff36c3f964",
+   "facts_sha256": "58456d9af3f55612f48958256c175b894a22461c8c1015505632ab1bb87558f4",
+   "cases_sha256": "6a2c9770a80beafed6f5e80bd186404745ea39db8e2d235a54ad90971f973c2a",
+   "questions": 219,
+   "distinct_atoms": {
+    "SUPPORTED": 88,
+    "UNSUPPORTED": 32,
+    "HISTORICAL": 6,
+    "CONFLICTED": 16,
+    "NEGATIVE_SUPPORTED": 3,
+    "NEGATIVE_UNSUPPORTED": 3,
+    "ORDER_UNSUPPORTED": 16
+   }
+  },
+  "27": {
+   "corpus_sha256": "8930c9ab302b2d8decfb2a893a2a99942ea5d7637d71de65cc3970201bd71705",
+   "facts_sha256": "8275098835c5692736df79cc639975f4590fd2d22414c19e6a534c8e16e36ee9",
+   "cases_sha256": "a8e519dc1260f9c544d756e0463c456e8571aa0da7f225af802a65ba2f08eace",
+   "questions": 219,
+   "distinct_atoms": {
+    "SUPPORTED": 88,
+    "UNSUPPORTED": 32,
+    "HISTORICAL": 6,
+    "CONFLICTED": 16,
+    "NEGATIVE_SUPPORTED": 3,
+    "NEGATIVE_UNSUPPORTED": 3,
+    "ORDER_UNSUPPORTED": 16
+   }
+  },
+  "28": {
+   "corpus_sha256": "3cdf2a04c08ba3583cde8fd0203e3477de52e3b557a268e7d8dbb84ccece9c6a",
+   "facts_sha256": "749e13d5cdde64839ac91b68981b6f57f8cffdd2078ae7126716cfe2fe179e21",
+   "cases_sha256": "08d6036e04cc2405ee155649332345c53462932d5159ba134cb3fdfd50fb0eab",
+   "questions": 218,
+   "distinct_atoms": {
+    "SUPPORTED": 88,
+    "UNSUPPORTED": 32,
+    "HISTORICAL": 6,
+    "CONFLICTED": 16,
+    "NEGATIVE_SUPPORTED": 3,
+    "NEGATIVE_UNSUPPORTED": 3,
+    "ORDER_UNSUPPORTED": 16
+   }
+  },
+  "29": {
+   "corpus_sha256": "532538d43b2857d40b1fc1d28a7a68e20c16bb0fe9aa7bf968132ad958979534",
+   "facts_sha256": "7b711aa7f3dea02e59bc61c341a600bbe78fc9a832b3a4437adc388aa681b4f0",
+   "cases_sha256": "ea4ed3b5bf9a27c524ae1041ab1cc32e8756b9ae3891cfd690900415a1b3a9ff",
+   "questions": 219,
+   "distinct_atoms": {
+    "SUPPORTED": 88,
+    "UNSUPPORTED": 32,
+    "HISTORICAL": 6,
+    "CONFLICTED": 16,
+    "NEGATIVE_SUPPORTED": 3,
+    "NEGATIVE_UNSUPPORTED": 3,
+    "ORDER_UNSUPPORTED": 16
+   }
+  },
+  "30": {
+   "corpus_sha256": "082c957b8fff0e7c4a2b242fb1852d5ca6250f15bf04c7c71d063152a28f6e25",
+   "facts_sha256": "907b86781f0bd5d97e0b5cbbc0eee5c2d6d9595dbd7e17968af31e9bdc08fc1d",
+   "cases_sha256": "8d40235e0766f3f0fb52ccccd5b3ebd6b163db8e2cfe7fb49f3a673816fd3248",
+   "questions": 218,
+   "distinct_atoms": {
+    "SUPPORTED": 88,
+    "UNSUPPORTED": 32,
+    "HISTORICAL": 6,
+    "CONFLICTED": 16,
+    "NEGATIVE_SUPPORTED": 3,
+    "NEGATIVE_UNSUPPORTED": 3,
+    "ORDER_UNSUPPORTED": 16
+   }
+  }
+ }
+}

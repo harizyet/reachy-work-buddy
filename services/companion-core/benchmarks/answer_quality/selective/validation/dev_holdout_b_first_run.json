@@ -1,0 +1,119 @@
+{
+ "note": "holdout-B FIRST run, before any change made in response to it",
+ "results": {
+  "scorer": {
+   "absence_presence|ok": [
+    42,
+    48
+   ],
+   "absence_presence|violation": [
+    18,
+    48
+   ],
+   "conflict_resolution|ok": [
+    96,
+    96
+   ],
+   "conflict_resolution|violation": [
+    0,
+    108
+   ],
+   "leaked_person|ok": [
+    0,
+    48
+   ],
+   "leaked_person|violation": [
+    48,
+    48
+   ],
+   "ordering|ok": [
+    72,
+    72
+   ],
+   "ordering|violation": [
+    12,
+    72
+   ],
+   "other_entity_same_wording|ok": [
+    40,
+    40
+   ]
+  },
+  "scorer_v2": {
+   "absence_presence|ok": [
+    42,
+    48
+   ],
+   "absence_presence|violation": [
+    12,
+    48
+   ],
+   "conflict_resolution|ok": [
+    96,
+    96
+   ],
+   "conflict_resolution|violation": [
+    0,
+    108
+   ],
+   "leaked_person|ok": [
+    0,
+    48
+   ],
+   "leaked_person|violation": [
+    48,
+    48
+   ],
+   "ordering|ok": [
+    72,
+    72
+   ],
+   "ordering|violation": [
+    12,
+    72
+   ],
+   "other_entity_same_wording|ok": [
+    40,
+    40
+   ]
+  },
+  "scorer_v3": {
+   "absence_presence|ok": [
+    42,
+    48
+   ],
+   "absence_presence|violation": [
+    18,
+    48
+   ],
+   "conflict_resolution|ok": [
+    90,
+    96
+   ],
+   "conflict_resolution|violation": [
+    30,
+    108
+   ],
+   "leaked_person|ok": [
+    36,
+    48
+   ],
+   "leaked_person|violation": [
+    48,
+    48
+   ],
+   "ordering|ok": [
+    72,
+    72
+   ],
+   "ordering|violation": [
+    30,
+    72
+   ],
+   "other_entity_same_wording|ok": [
+    40,
+    40
+   ]
+  }
+ }
+}

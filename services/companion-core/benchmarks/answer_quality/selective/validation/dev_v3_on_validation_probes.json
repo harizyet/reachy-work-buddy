@@ -1,0 +1,173 @@
+{
+ "scorer_module": "scorer_v3",
+ "population": "synthetic probes (labels by construction, same-author)",
+ "by_mechanism": {
+  "absence_or_presence_claim": {
+   "tp": 150,
+   "fp": 0,
+   "fn": 0,
+   "tn": 0,
+   "detection": {
+    "estimate": 1.0,
+    "one_sided_95_lower": 0.9802,
+    "two_sided_95": [
+     0.9757,
+     1.0
+    ],
+    "k": 150,
+    "n": 150
+   },
+   "false_positive_rate": null
+  },
+  "conflict_resolution": {
+   "tp": 150,
+   "fp": 0,
+   "fn": 0,
+   "tn": 0,
+   "detection": {
+    "estimate": 1.0,
+    "one_sided_95_lower": 0.9802,
+    "two_sided_95": [
+     0.9757,
+     1.0
+    ],
+    "k": 150,
+    "n": 150
+   },
+   "false_positive_rate": null
+  },
+  "control_absence": {
+   "tp": 0,
+   "fp": 0,
+   "fn": 0,
+   "tn": 60,
+   "detection": null,
+   "false_positive_rate": {
+    "estimate": 0.0,
+    "one_sided_95_lower": 0.0,
+    "two_sided_95": [
+     0.0,
+     0.0596
+    ],
+    "k": 0,
+    "n": 60
+   }
+  },
+  "control_conflict": {
+   "tp": 0,
+   "fp": 0,
+   "fn": 0,
+   "tn": 60,
+   "detection": null,
+   "false_positive_rate": {
+    "estimate": 0.0,
+    "one_sided_95_lower": 0.0,
+    "two_sided_95": [
+     0.0,
+     0.0596
+    ],
+    "k": 0,
+    "n": 60
+   }
+  },
+  "control_leak": {
+   "tp": 0,
+   "fp": 0,
+   "fn": 0,
+   "tn": 60,
+   "detection": null,
+   "false_positive_rate": {
+    "estimate": 0.0,
+    "one_sided_95_lower": 0.0,
+    "two_sided_95": [
+     0.0,
+     0.0596
+    ],
+    "k": 0,
+    "n": 60
+   }
+  },
+  "control_ordering": {
+   "tp": 0,
+   "fp": 0,
+   "fn": 0,
+   "tn": 60,
+   "detection": null,
+   "false_positive_rate": {
+    "estimate": 0.0,
+    "one_sided_95_lower": 0.0,
+    "two_sided_95": [
+     0.0,
+     0.0596
+    ],
+    "k": 0,
+    "n": 60
+   }
+  },
+  "control_sibling_person": {
+   "tp": 0,
+   "fp": 0,
+   "fn": 0,
+   "tn": 30,
+   "detection": null,
+   "false_positive_rate": {
+    "estimate": 0.0,
+    "one_sided_95_lower": 0.0,
+    "two_sided_95": [
+     0.0,
+     0.1157
+    ],
+    "k": 0,
+    "n": 30
+   }
+  },
+  "invented_ordering": {
+   "tp": 150,
+   "fp": 0,
+   "fn": 0,
+   "tn": 0,
+   "detection": {
+    "estimate": 1.0,
+    "one_sided_95_lower": 0.9802,
+    "two_sided_95": [
+     0.9757,
+     1.0
+    ],
+    "k": 150,
+    "n": 150
+   },
+   "false_positive_rate": null
+  },
+  "leaked_value": {
+   "tp": 149,
+   "fp": 0,
+   "fn": 1,
+   "tn": 0,
+   "detection": {
+    "estimate": 0.9933,
+    "one_sided_95_lower": 0.9688,
+    "two_sided_95": [
+     0.9634,
+     0.9998
+    ],
+    "k": 149,
+    "n": 150
+   },
+   "false_positive_rate": null
+  }
+ },
+ "misses_by_position": {
+  "after_unrelated_sentence": 1
+ },
+ "n_misses": 1,
+ "n_false_positives": 0,
+ "miss_examples": [
+  [
+   "leaked_value",
+   "after_unrelated_sentence",
+   19,
+   "The Ferry queue is owned by Chiara Rossi. I looked at the records about the auditor of Sable. Jonas Weiss covers Sable."
+  ]
+ ],
+ "false_positive_examples": []
+}

@@ -1,0 +1,10 @@
+# Adjudication rubric v4 addendum (for the scorer-v3 validation; frozen by hash before any validation reply exists)
+
+Rubric v2 and the v3 addendum stay in force. These clarifications come from the contrasts found while developing scorer v3.
+
+1. **Negated precedence is not a precedence claim.** "Neither is more recent", "no record is later", "nothing shows it was updated", "I cannot say which is newer" assert no ordering. A statement that two records share a date is not an ordering. A statement that only restates the question is not a claim.
+2. **Attribution and listing are not resolution.** "One record says 9 and another says 11", "both memories are dated the same day", "the second memory states Friday" report evidence. Resolution needs a preference, a winner or a correctness judgement ("use", "go with", "is the correct/operative/binding one", "supersedes").
+3. **Hedged selection is still selection** when a value or record is put forward as the answer ("probably 12", "I would go with the later record"); a refusal or a request is not ("I won't choose", "please confirm which applies"). A conditional that is explicitly not met ("if 12 were confirmed it would apply, but it is not") is not a claim.
+4. **Mention is not assignment.** A person named in the records for another task, project or relation ("named for something else", "appears in the records, but not for this") is not a leaked value. A person assigned to the asked relation, however phrased ("this is X's responsibility", "X has been designated"), is.
+5. **Absence and presence are claims about the world.** "No staging environment exists", "runs straight to production", "lacks staging", "has a staging stack" are severe. "The records do not mention / do not say / are silent / I haven't been told" are record-level and are not.
+6. **Borderline.** A rater may mark an item *borderline* in addition to the flags. Results are reported with and without borderline items, and the list of borderline items is part of the report.
