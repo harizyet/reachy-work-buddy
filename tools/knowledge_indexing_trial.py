@@ -8,6 +8,7 @@ operator (a person) turns the indexing flag on and off with the compose commands
   python tools/knowledge_indexing_trial.py monitor --seconds 900 --log FILE   samples every few seconds, aborts on a gate, writes a TSV
   python tools/knowledge_indexing_trial.py watch --seconds 900 --log FILE     4 Hz view of the outbox and the newest index rows (one psql connection)
   python tools/knowledge_indexing_trial.py snapshot                            one-line counts: index rows by kind, outbox rows, connections
+  python tools/knowledge_indexing_trial.py planned-restart --seconds 45        run just before recreating core: its brief unavailability is not an abort
   python tools/knowledge_indexing_trial.py verify                              read-only drift check of the index against the stores (one-off container)
 
 Everything reads the homelab compose project (reachy-homelab) through `docker exec`; no host database port is used and no credential is printed."""
@@ -136,34 +137,76 @@ def preflight() -> list[tuple[str, bool, str]]:
     return checks
 
 
-def monitor(seconds: int, log: Path, stop_file: Path) -> int:
+RESTART_MARKER = Path("/tmp/knowledge-indexing-trial.RESTART")
+
+
+def planned_restart(seconds: int = 45, marker: Path = RESTART_MARKER) -> None:
+    """Tell a running monitor that core is about to be restarted on purpose: for `seconds`, core being unreachable is not a health failure. Hub and vLLM
+    health, connections, PgBouncer and every other gate keep applying."""
+    marker.write_text(str(time.time() + max(1, min(seconds, 120))))
+
+
+def grace_active(marker: Path = RESTART_MARKER, now: float | None = None) -> bool:
+    try:
+        return (now if now is not None else time.time()) < float(marker.read_text().strip())
+    except (OSError, ValueError):
+        return False
+
+
+class Gates:
+    """The mandatory abort gates as a pure state machine (testable without Docker). `check` takes one sample and returns the reason to abort, or ''."""
+
+    def __init__(self, limits: dict | None = None, stop_file: Path | None = None) -> None:
+        self.limits = limits or GATES
+        self.stop_file = stop_file
+        self.waits = 0
+        self.unhealthy = 0
+
+    def check(self, s: dict, *, core_grace: bool = False) -> str:
+        g = self.limits
+        self.waits = self.waits + 1 if s.get("cl_waiting", 0) > 0 else 0
+        statuses = {"core": s["core"], "hub": s["hub"], "vllm": s["vllm"]}  # each (milliseconds, code)
+        bad = [name for name, (ms, code) in statuses.items() if (code != "200" or ms > g["health_ms"]) and not (core_grace and name == "core")]
+        self.unhealthy = self.unhealthy + 1 if bad else 0
+        if s["pg"] >= g["pg_connections"]:
+            return f"PostgreSQL connections {s['pg']}"
+        if self.waits >= g["waiting_samples"]:
+            return "PgBouncer clients waiting on consecutive samples"
+        if s.get("maxwait", 0) >= g["maxwait_s"]:
+            return f"PgBouncer maxwait {s['maxwait']} s"
+        if self.unhealthy >= 2:
+            return f"service health failing or slow twice running ({', '.join(bad)})"
+        if s["load1"] > g["load"]:
+            return f"load {s['load1']}"
+        if s["available_mb"] < g["min_available_mb"]:
+            return f"available memory {s['available_mb']} MB"
+        if str(s.get("outbox_failed", "0")) not in ("0", ""):
+            return "outbox row failed"
+        if self.stop_file is not None and self.stop_file.exists():
+            return "stop file"
+        return ""
+
+
+def monitor(seconds: int, log: Path, stop_file: Path, marker: Path = RESTART_MARKER) -> int:
     header = ["t", "pg_conns", "cl_active", "cl_waiting", "sv_active", "sv_idle", "maxwait", "core_ms", "hub_ms", "vllm_ms", "load1", "available_mb", "core_cpu", "core_mem",
-              "items", "outbox_rows", "outbox_attempted", "outbox_failed", "outbox_leased"]
+              "items", "outbox_rows", "outbox_attempted", "outbox_failed", "outbox_leased", "grace"]
     log.write_text("\t".join(header) + "\n")
-    end, waits, unhealthy, last_stats = time.monotonic() + seconds, 0, 0, {"core_cpu": "", "core_mem": ""}
-    tick = 0
+    end, gates, last_stats, tick = time.monotonic() + seconds, Gates(stop_file=stop_file), {"core_cpu": "", "core_mem": ""}, 0
     while time.monotonic() < end:
         t0 = time.monotonic()
         pg, pl, c, h = pg_connections(), pools(), counts(), host()
-        (cms, ccode), (hms, hcode), (vms, vcode) = health(CORE), health(HUB), vllm_health()
+        core, hub, vllm = health(CORE), health(HUB), vllm_health()
         if tick % 2 == 0:
             last_stats = container_stats()
         tick += 1
+        grace = grace_active(marker)
         row = [datetime.now(UTC).strftime("%H:%M:%S"), pg, pl.get("cl_active", ""), pl.get("cl_waiting", ""), pl.get("sv_active", ""), pl.get("sv_idle", ""), pl.get("maxwait", ""),
-               f"{cms}:{ccode}", f"{hms}:{hcode}", f"{vms}:{vcode}", h["load1"], h["available_mb"], last_stats["core_cpu"], last_stats["core_mem"], c["items"], c["outbox_rows"],
-               c["outbox_attempted"], c["outbox_failed"], c["outbox_leased"]]
+               f"{core[0]}:{core[1]}", f"{hub[0]}:{hub[1]}", f"{vllm[0]}:{vllm[1]}", h["load1"], h["available_mb"], last_stats["core_cpu"], last_stats["core_mem"], c["items"],
+               c["outbox_rows"], c["outbox_attempted"], c["outbox_failed"], c["outbox_leased"], int(grace)]
         with log.open("a") as f:
             f.write("\t".join(str(x) for x in row) + "\n")
-        waits = waits + 1 if pl.get("cl_waiting", 0) > 0 else 0
-        unhealthy = unhealthy + 1 if (ccode, hcode, vcode) != ("200", "200", "200") or max(cms, hms) > GATES["health_ms"] else 0
-        reason = (f"PostgreSQL connections {pg}" if pg >= GATES["pg_connections"] else
-                  "PgBouncer clients waiting on consecutive samples" if waits >= GATES["waiting_samples"] else
-                  f"PgBouncer maxwait {pl.get('maxwait')} s" if pl.get("maxwait", 0) >= GATES["maxwait_s"] else
-                  "service health failing or slow twice running" if unhealthy >= 2 else
-                  f"load {h['load1']}" if h["load1"] > GATES["load"] else
-                  f"available memory {h['available_mb']} MB" if h["available_mb"] < GATES["min_available_mb"] else
-                  "outbox row failed" if str(c["outbox_failed"]) not in ("0", "") else
-                  "stop file" if stop_file.exists() else "")
+        reason = gates.check({"pg": pg, "cl_waiting": pl.get("cl_waiting", 0), "maxwait": pl.get("maxwait", 0), "core": core, "hub": hub, "vllm": vllm, "load1": h["load1"],
+                              "available_mb": h["available_mb"], "outbox_failed": c["outbox_failed"]}, core_grace=grace)
         if reason:
             Path(str(log) + ".ABORT").write_text(reason + "\n")
             print("ABORT:", reason, file=sys.stderr)
@@ -172,19 +215,31 @@ def monitor(seconds: int, log: Path, stop_file: Path) -> int:
     return 0
 
 
+WATCH_APP = "ks-trial-watch"
+
+
+def close_watchers() -> None:
+    """Ending the docker client does not end the server-side session: close every backend this tool opened so no connection is left behind."""
+    psql(f"select pg_terminate_backend(pid) from pg_stat_activity where application_name='{WATCH_APP}'")
+
+
 def watch(seconds: int, log: Path) -> int:
     """One long-lived psql session re-running a small read every 0.25 s: the only way to see a claim and its lease that lasts milliseconds."""
     sql = ("select to_char(clock_timestamp(),'HH24:MI:SS.MS') ts, (select count(*) from knowledge_outbox) outbox, "
            "(select string_agg(source_type||':attempts='||attempts||':leased='||(locked_until is not null and locked_until>now())::text||':failed='||(failed_at is not null)::text, ' ') from knowledge_outbox) rows, "
            "(select count(*) from knowledge_items) items, (select max(indexed_at) from knowledge_items) newest_indexed_at\\watch 0.25")
-    with log.open("w") as out:
-        proc = subprocess.Popen(["docker", "exec", "-i", "-e", "PGAPPNAME=ks-trial-watch", PG, "psql", "-U", "reachy", "-d", "reachy_hub", "-At", "-F", ",", "-q"], stdin=subprocess.PIPE, stdout=out, text=True)
-        proc.stdin.write(sql + "\n")
-        proc.stdin.flush()
-        time.sleep(seconds)
-        proc.terminate()
-    # Ending the docker client does not end the server-side session: close the watcher's backend explicitly so no connection is left behind.
-    psql("select pg_terminate_backend(pid) from pg_stat_activity where application_name='ks-trial-watch'")
+    proc = None
+    try:
+        with log.open("w") as out:
+            proc = subprocess.Popen(["docker", "exec", "-i", "-e", f"PGAPPNAME={WATCH_APP}", PG, "psql", "-U", "reachy", "-d", "reachy_hub", "-At", "-F", ",", "-q"],
+                                    stdin=subprocess.PIPE, stdout=out, text=True)
+            proc.stdin.write(sql + "\n")
+            proc.stdin.flush()
+            time.sleep(seconds)
+    finally:  # an interrupt or an error must not leave the session or the client running
+        if proc is not None:
+            proc.terminate()
+        close_watchers()
     return 0
 
 
@@ -213,6 +268,8 @@ def main() -> int:
     wat.add_argument("--seconds", type=int, default=900)
     wat.add_argument("--log", required=True)
     sub.add_parser("snapshot")
+    rs = sub.add_parser("planned-restart", help="tell the running monitor that core is about to be restarted on purpose")
+    rs.add_argument("--seconds", type=int, default=45)
     sub.add_parser("verify")
     a = p.parse_args()
     if a.cmd == "preflight":
@@ -226,6 +283,10 @@ def main() -> int:
         return monitor(a.seconds, Path(a.log), Path(a.stop_file))
     if a.cmd == "watch":
         return watch(a.seconds, Path(a.log))
+    if a.cmd == "planned-restart":
+        planned_restart(a.seconds)
+        print(f"core may be unreachable for {a.seconds} s without tripping the health gate")
+        return 0
     if a.cmd == "snapshot":
         print(json.dumps({**counts(), "pg_connections": pg_connections(), "pools": pools(), **host(), **container_stats()}))
         return 0
