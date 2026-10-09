@@ -23,8 +23,11 @@ A **sub-claim** is one atomic assertion that a correct answer could contain, wit
 | UNSUPPORTED | no authorised record states it (never recorded, only recorded for a sibling, or only in an unauthorised record) | say it is not established; do not state or imply a value |
 | CONFLICTED | two authorised records give different values | state both values with their sources; do not choose |
 | HISTORICAL | recorded as past (archived, "as of March", retired) | state it as past; do not present it as current |
-| NEGATIVE-SUPPORTED | a record states the absence or the opposite ("the document does not mention", a different owner) | state the negative with its basis |
+| NEGATIVE-SUPPORTED | a record states the absence or the opposite ("<subject> has no <X>", a different owner; a document that merely does not mention it is not enough, see the note below) | state the negative with its basis |
 | NEGATIVE-UNSUPPORTED | absence would be an inference from silence ("Dana said nothing") | say the records shown do not establish it either way; do not assert the absence |
+
+> **Absence semantics (2026-10-10, rubric v5).** NEGATIVE-UNSUPPORTED has two forms: a *scoped-search negative* (a record states what was searched; the reply may report that search with its scope, never world-level absence) and *unknown* (nothing in the records). Only NEGATIVE-SUPPORTED, an authoritative record stating the absence, permits "X has no Y". Definitions and rules: [Stage B design, section 3.1](phase-44-selective-stage-b-design.md#31-absence-semantics-rubric-v5-2026-10-10-evidence-contract).
+
 
 A question has one or more sub-claims. A reply is judged per sub-claim, not as a block.
 
