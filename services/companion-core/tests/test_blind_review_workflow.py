@@ -97,3 +97,24 @@ def test_an_item_with_an_attached_meeting_names_it_so_a_wrong_meeting_answer_can
     out, _ = package
     sheet = (out / "sheet.md").read_text()
     assert re.search(r'the meeting "(Harbor planning|Lantern review|Weekly sync)" was attached', sheet) and "; a meeting was attached" not in sheet
+
+
+def test_finalizing_helper_shows_no_system_names_and_merges_overrides_without_touching_the_submitted_ratings(tmp_path):
+    submitted = REAL / "ratings-submitted-2026-10-10.csv"
+    before = submitted.read_bytes()
+    (tmp_path / "sheet.md").write_text((REAL / "sheet.md").read_text())
+    done = run("blind_finalize.py", "sheet", "--dir", str(tmp_path), "--ratings", str(submitted), "--out", str(tmp_path / "c.md"))
+    assert done.returncode == 0, done.stderr
+    text = (tmp_path / "c.md").read_text()
+    assert len(re.findall(r"^## R\d\d$", text, re.MULTILINE)) == 21
+    assert not re.search(r"\b(b1a|b1b|oracle|p43)\b|\bB-[A-Z]\d\b", text, re.IGNORECASE)  # no system name or case id (a rater's own word such as "distractor" is theirs)
+    (tmp_path / "owner.csv").write_text("item,q1_owner,q8_owner,note\nR02,partly,,wrong meeting\nR05,accept,with checks,\n")
+    merged = run("blind_finalize.py", "merge", "--dir", str(tmp_path), "--ratings", str(submitted), "--owner", str(tmp_path / "owner.csv"), "--out", str(tmp_path / "final.csv"))
+    assert merged.returncode == 0 and "R02" in merged.stdout and "R05" in merged.stdout
+    final = {r["item"]: r for r in csv.DictReader((tmp_path / "final.csv").open())}
+    assert final["R02"]["q1"].startswith("partly") and "wrong meeting" in final["R02"]["q1"] and final["R05"]["q8"].startswith("with checks")
+    assert final["R03"]["q1"] == "yes" and len(final) == 21  # untouched items keep the submitted values
+    bad = tmp_path / "bad.csv"
+    bad.write_text("item,q1_owner,q8_owner,note\nR01,maybe,,\n")
+    assert run("blind_finalize.py", "merge", "--dir", str(tmp_path), "--ratings", str(submitted), "--owner", str(bad), "--out", str(tmp_path / "x.csv")).returncode != 0
+    assert submitted.read_bytes() == before  # the submitted ratings are never edited

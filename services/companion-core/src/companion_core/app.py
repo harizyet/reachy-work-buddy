@@ -782,7 +782,7 @@ def create_app(
                                              planner=app.state.planner_store, tasks=app.state.task_store)
             app.state.knowledge_shadow = knowledge_shadow_from_env(
                 retriever=Retriever(search=PostgresSearch(db.pool), config=B1A, clock=lambda: datetime.now(UTC), adapters=shadow_adapters),
-                tasks=app.state.task_store, planner=app.state.planner_store, adapters=shadow_adapters,
+                tasks=app.state.task_store, planner=app.state.planner_store, adapters=shadow_adapters, memory=app.state.memory_store,
             )
         if app.state.knowledge_shadow is not None:
             with contextlib.suppress(Exception):  # a shadow that cannot start must not stop the service

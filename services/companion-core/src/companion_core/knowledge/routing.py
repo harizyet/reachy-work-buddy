@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal
 
+from companion_core.memory.store import MemoryStore
 from companion_core.planner.models import ReminderStatus
 from companion_core.planner.store import PlannerStore
 from companion_core.semantic import access as rules
@@ -31,8 +32,9 @@ from companion_core.tasks.models import TaskStatus
 from companion_core.tasks.store import TaskStore
 from shared.models.response import Privacy
 
-StatusIntent = Literal["open_tasks", "done_tasks", "reminders"]
+StatusIntent = Literal["open_tasks", "done_tasks", "reminders", "person"]
 Path = Literal["phase43", "status", "retrieval"]
+PERSON_MAX = 12  # a person's records are ordered memories, notes, tasks, reminders and cut here
 MAX_ITEMS = 25  # a status list is exhaustive up to this many; beyond it the reply is told the list was cut
 
 _TASK_WORD = r"(?:tasks?|to-?dos?|to do list|action items?|chores?)"
@@ -50,6 +52,15 @@ _PATTERNS: list[tuple[StatusIntent, re.Pattern[str]]] = [
 _SUBJECT = re.compile(r"\b(?:involv\w*|for|with|about|assigned to|owned by|regarding|concerning)\s+(?:the\s+)?([A-Za-z][\w'-]{2,})", re.IGNORECASE)
 _NOT_SUBJECT = {"me", "you", "my", "mine", "today", "tomorrow", "this", "that", "these", "those", "them", "now", "week", "month", "all", "anything", "everything",
                 "something", "the", "and", "or", "any", "each", "every", "your", "our", "his", "her", "their", "its", "next", "last", "still", "yet"}
+_NAME = r"([A-Z][a-z]{2,}(?: [A-Z][a-z]{2,})?)"
+_PERSON_PATTERNS = [
+    re.compile(rf"\b(?i:what|which)\b[^.?!]{{0,40}}?\b(?i:is|are|does|do)\s+{_NAME}\s+(?i:responsible for|accountable for|in charge of|own|owns|lead|leads|working on|assigned to|do|doing|handle|handles)\b"),
+    re.compile(rf"\b(?i:responsibilit\w+|role|duties|ownership)\s+(?i:of|for)\s+{_NAME}"),
+    re.compile(rf"\b{_NAME}'s\s+(?i:responsibilit\w+|role|duties|tasks|ownership|workload)\b"),
+    re.compile(rf"\b(?i:who is)\s+{_NAME}\s*[?.!]?\s*$"),
+    re.compile(rf"\b(?i:which responsibilit\w+|what responsibilit\w+)\s+(?i:does|do)\s+{_NAME}\s+(?i:have)\b"),
+]
+_NOT_A_NAME = {"What", "Which", "Who", "When", "Where", "How", "Why", "The", "Reachy", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
 _MEETING_HINT = re.compile(r"\b(?:in|from|during|at) (?:this|the|that|today's) (?:meeting|call|review|sync)\b", re.IGNORECASE)
 
 
@@ -69,6 +80,10 @@ def classify(query: str) -> tuple[StatusIntent, tuple[str, ...]] | None:
     """The status intent of a question and the subject words to filter by, or None. Fixed patterns; no model."""
     if _MEETING_HINT.search(query):
         return None  # about what was said in a meeting, not about the stores
+    for pattern in _PERSON_PATTERNS:
+        m = pattern.search(query)
+        if m and m.group(1) not in _NOT_A_NAME:
+            return "person", (m.group(1),)
     for intent, pattern in _PATTERNS:
         if pattern.search(query):
             subjects = tuple(dict.fromkeys(
@@ -92,6 +107,28 @@ def _item(kind: str, source_type: str, source_id: str, text: str, sensitivity, s
                          local_only=False, project_scope=scope, observed_at=observed)
 
 
+async def _person_records(name: str, *, tasks: TaskStore, planner: PlannerStore, memory: MemoryStore | None) -> list[KnowledgeItem]:
+    """Records in the authoritative stores that name a person: memories first (they state roles and ownership), then notes, tasks and reminders. Read with the list calls, which do not
+    stamp a memory as accessed. Matching is on the name, case-insensitive, as a whole word; a first name matches a full name."""
+    pattern = re.compile(rf"\b{re.escape(name.split()[0])}\b", re.IGNORECASE)
+    out: list[KnowledgeItem] = []
+    if memory is not None:
+        for m in await memory.list_memories():
+            if pattern.search(m.content):
+                out.append(_item("memory", "memory", m.id, f"Memory: {m.content}", m.sensitivity, m.project_scope, m.created_at))
+    for n in await planner.list_notes():
+        if pattern.search(n.title) or pattern.search(n.body):
+            out.append(_item("note", "note", n.id, f"Note: {n.title}\n{n.body}".strip(), n.sensitivity, n.project_scope, n.updated_at))
+    for t in await tasks.list_tasks():
+        if pattern.search(t.text):
+            label = "open" if t.status == TaskStatus.OPEN else "done"
+            out.append(_item("task", "task", t.id, f"Task ({label}): {t.text}", t.sensitivity, t.project_scope, t.created_at))
+    for r in await planner.list_reminders():
+        if r.status == ReminderStatus.PENDING and pattern.search(r.text):
+            out.append(_item("reminder", "reminder", r.id, f"Reminder (pending, due {r.due_at:%Y-%m-%d %H:%M}): {r.text}", r.sensitivity, None, r.created_at))
+    return out
+
+
 def sees_everything(access: AccessContext) -> bool:
     """True only when no access rule can have hidden a record from this caller (the top sensitivity tier and no project restriction)."""
     return access.sensitivity_ceiling == Privacy.SENSITIVE and access.project_scopes is None
@@ -107,20 +144,20 @@ def restricted_reply(access: AccessContext) -> str | None:
     return RESTRICTED_REPLY if access.sensitivity_ceiling == Privacy.PUBLIC else None
 
 
-def status_note(head: str, access: AccessContext, *, shown: int, truncated: bool) -> str:
+def status_note(head: str, access: AccessContext, *, shown: int, truncated: bool, cap: int = MAX_ITEMS) -> str:
     """The one line of the evidence frame for a status list. Wording rule: it must not reveal whether restricted records exist, so it is built from
     the caller's access and the count of what may be shown, never from what was withheld; two situations that differ only in hidden records give
     the same words. Completeness is claimed only for a caller who cannot have anything hidden."""
     if sees_everything(access):
-        return f"{head}: " + (f"{shown} shown, the list was cut at {MAX_ITEMS}." if truncated else f"{shown} in all; the list is complete, so anything not listed does not exist.")
+        return f"{head}: " + (f"{shown} shown, the list was cut at {cap}." if truncated else f"{shown} in all; the list is complete, so anything not listed does not exist.")
     tail = ("If nothing is shown, say that you cannot show any here and that the owner can ask on a private channel. "
             if access.sensitivity_ceiling == Privacy.PUBLIC else "")
-    return (f"{head} that this channel may show: {shown}" + (f", cut at {MAX_ITEMS}" if truncated else "") + ". "
+    return (f"{head} that this channel may show: {shown}" + (f", cut at {cap}" if truncated else "") + ". "
             "Do not say whether other records exist or do not exist, and do not say this is everything. " + tail).strip()
 
 
 async def route_status(
-    query: str, access: AccessContext, *, tasks: TaskStore, planner: PlannerStore, now: datetime
+    query: str, access: AccessContext, *, tasks: TaskStore, planner: PlannerStore, now: datetime, memory: MemoryStore | None = None
 ) -> RoutedStatus | None:
     """Read the authoritative stores for a status question. None when the question is not one. Every record passes `decide` for this caller
     before it is returned, and the counts reported are of what the caller may see."""
@@ -129,7 +166,9 @@ async def route_status(
         return None
     intent, subjects = found
     candidates: list[KnowledgeItem] = []
-    if intent in ("open_tasks", "done_tasks"):
+    if intent == "person":
+        candidates = await _person_records(subjects[0], tasks=tasks, planner=planner, memory=memory)
+    elif intent in ("open_tasks", "done_tasks"):
         want = TaskStatus.OPEN if intent == "open_tasks" else TaskStatus.DONE
         for t in await tasks.list_tasks(want):
             label = "open" if t.status == TaskStatus.OPEN else f"done {t.completed_at:%Y-%m-%d}" if t.completed_at else "done"
@@ -152,13 +191,15 @@ async def route_status(
             dropped[reason] = dropped.get(reason, 0) + 1
         else:
             allowed.append(item)
-    if subjects:
+    if subjects and intent != "person":
         lowered = [s.lower() for s in subjects]
         allowed = [i for i in allowed if any(s in i.text.lower() for s in lowered)]
-    truncated = len(allowed) > MAX_ITEMS
-    shown = allowed[:MAX_ITEMS]
-    what = {"open_tasks": "open tasks (and action-item notes)", "done_tasks": "completed tasks", "reminders": "pending reminders"}[intent]
+    cap = PERSON_MAX if intent == "person" else MAX_ITEMS
+    truncated = len(allowed) > cap
+    shown = allowed[:cap]
+    what = {"open_tasks": "open tasks (and action-item notes)", "done_tasks": "completed tasks", "reminders": "pending reminders",
+            "person": f"memories, notes, tasks and reminders that name {subjects[0] if subjects else 'the person'}"}[intent]
     scope = f" matching {', '.join(subjects)}" if subjects else ""
     head = f"These are the {what}{scope} read directly from the owner's stores at {now:%Y-%m-%d %H:%M} UTC"
-    note = status_note(head, access, shown=len(shown), truncated=truncated)
+    note = status_note(head, access, shown=len(shown), truncated=truncated, cap=cap)
     return RoutedStatus(intent, subjects, tuple(shown), total, len(shown), truncated, dropped, note)

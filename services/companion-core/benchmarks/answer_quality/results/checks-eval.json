@@ -1,0 +1,164 @@
+{
+ "human_set": {
+  "n": 21,
+  "invented_by_reviewer": 11,
+  "repeats_by_reviewer": 4,
+  "per_check": {
+   "value_in_cited_item": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 10,
+    "tn": 10,
+    "precision": 1.0,
+    "recall": 0.09,
+    "flagged_items": [
+     "R14"
+    ]
+   },
+   "recency_claim": {
+    "tp": 1,
+    "fp": 0,
+    "fn": 10,
+    "tn": 10,
+    "precision": 1.0,
+    "recall": 0.09,
+    "flagged_items": [
+     "R14"
+    ]
+   },
+   "actor_swapped": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 10,
+    "tn": 9,
+    "precision": 0.5,
+    "recall": 0.09,
+    "flagged_items": [
+     "R07",
+     "R15"
+    ]
+   },
+   "contamination": {
+    "tp": 3,
+    "fp": 0,
+    "fn": 1,
+    "tn": 17,
+    "precision": 1.0,
+    "recall": 0.75,
+    "flagged_items": [
+     "R12",
+     "R16",
+     "R21"
+    ]
+   },
+   "subject_property": {
+    "tp": 4,
+    "fp": 1,
+    "fn": 7,
+    "tn": 9,
+    "precision": 0.8,
+    "recall": 0.36,
+    "flagged_items": [
+     "R01",
+     "R06",
+     "R09",
+     "R10",
+     "R14"
+    ]
+   },
+   "source_label": {
+    "tp": 1,
+    "fp": 1,
+    "fn": 10,
+    "tn": 9,
+    "precision": 0.5,
+    "recall": 0.09,
+    "flagged_items": [
+     "R05",
+     "R18"
+    ]
+   }
+  },
+  "union": {
+   "tp": 6,
+   "fp": 3,
+   "fn": 5,
+   "tn": 7,
+   "precision": 0.67,
+   "recall": 0.55,
+   "flagged_items": [
+    "R01",
+    "R05",
+    "R06",
+    "R07",
+    "R09",
+    "R10",
+    "R14",
+    "R15",
+    "R18"
+   ]
+  },
+  "not_found": [
+   "R08",
+   "R12",
+   "R16",
+   "R19",
+   "R21"
+  ]
+ },
+ "dev5": {
+  "replies": 120,
+  "unsupported_by_scorer": 4,
+  "per_check": {
+   "value_in_cited_item": {
+    "tp": 0,
+    "fp": 2,
+    "fn": 4,
+    "tn": 114,
+    "precision": 0.0,
+    "recall": 0.0
+   },
+   "recency_claim": {
+    "tp": 4,
+    "fp": 6,
+    "fn": 0,
+    "tn": 110,
+    "precision": 0.4,
+    "recall": 1.0
+   },
+   "actor_swapped": {
+    "tp": 0,
+    "fp": 26,
+    "fn": 4,
+    "tn": 90,
+    "precision": 0.0,
+    "recall": 0.0
+   },
+   "subject_property": {
+    "tp": 4,
+    "fp": 2,
+    "fn": 0,
+    "tn": 114,
+    "precision": 0.67,
+    "recall": 1.0
+   },
+   "source_label": {
+    "tp": 4,
+    "fp": 0,
+    "fn": 0,
+    "tn": 116,
+    "precision": 1.0,
+    "recall": 1.0
+   }
+  },
+  "contamination_vs_echo": {
+   "tp": 0,
+   "fp": 0,
+   "fn": 0,
+   "tn": 120,
+   "precision": null,
+   "recall": null
+  },
+  "runtime_us_per_reply_median": 138.0
+ }
+}

@@ -76,6 +76,7 @@ class KnowledgeShadow:
     tasks: TaskStore
     planner: PlannerStore
     telemetry: ShadowTelemetry
+    memory: object | None = None  # for person questions (read with list calls only)
     vocabulary: Callable[[], Awaitable[frozenset[str]]] | None = None
     queue_size: int = DEFAULT_QUEUE
     timeout_seconds: float = DEFAULT_TIMEOUT
@@ -181,7 +182,7 @@ class KnowledgeShadow:
         now = self.clock()
         intent = None
         if path == "status":
-            routed = await route_status(turn.text, access, tasks=self.tasks, planner=self.planner, now=now)
+            routed = await route_status(turn.text, access, tasks=self.tasks, planner=self.planner, now=now, memory=self.memory)
             items, note, candidates, dropped, intent = list(routed.items), routed.note, routed.total, dict(routed.dropped), routed.intent
         else:
             result = await self.retriever.retrieve(turn.text, access, SourceFilters(), temporal="current", limit=10)
@@ -197,7 +198,7 @@ class KnowledgeShadow:
         return dict(self.telemetry.total)
 
 
-def shadow_from_env(*, retriever: Retriever, tasks: TaskStore, planner: PlannerStore, adapters: dict | None = None) -> KnowledgeShadow | None:
+def shadow_from_env(*, retriever: Retriever, tasks: TaskStore, planner: PlannerStore, adapters: dict | None = None, memory=None) -> KnowledgeShadow | None:
     """None unless KNOWLEDGE_SHADOW_ENABLED=true and a log path is configured. Bounds come from the environment but are clamped."""
     if not shadow_enabled():
         return None
@@ -211,7 +212,7 @@ def shadow_from_env(*, retriever: Retriever, tasks: TaskStore, planner: PlannerS
         return await build_vocabulary(adapters or {})
 
     return KnowledgeShadow(
-        retriever=retriever, tasks=tasks, planner=planner,
+        retriever=retriever, tasks=tasks, planner=planner, memory=memory,
         telemetry=ShadowTelemetry(path, retention_days=int(os.environ.get("KNOWLEDGE_SHADOW_RETENTION_DAYS", "30"))),
         vocabulary=vocabulary if adapters else None,
         queue_size=min(max(int(os.environ.get("KNOWLEDGE_SHADOW_QUEUE", str(DEFAULT_QUEUE))), 1), 10),

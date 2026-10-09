@@ -39,7 +39,7 @@ def test_status_questions_are_classified(query, intent):
 
 @pytest.mark.parametrize("query", [
     "Who owns the Quill queue?", "What did we decide in this meeting?", "What was said in the meeting about outstanding tasks?",
-    "How many retries before a job is parked?", "Add a task to call Dana", "What is Tomas Weber responsible for?", "tell me a joke",
+    "How many retries before a job is parked?", "Add a task to call Dana", "What does the Quill queue do?", "tell me a joke",
 ])
 def test_other_questions_are_not_routed(query):
     assert classify(query) is None
@@ -152,3 +152,47 @@ def test_a_restricted_channel_gets_a_constant_reply_that_depends_on_nothing_in_t
     import inspect
 
     assert list(inspect.signature(restricted_reply).parameters) == ["access"]
+
+
+async def _people_world():
+    from companion_core.memory.store import InMemoryMemoryStore
+
+    memory, tasks, planner = InMemoryMemoryStore(), InMemoryTaskStore(), InMemoryPlannerStore()
+    await memory.add_memory(content="Tomas Weber is the Harbor infrastructure lead.", source="t")
+    await memory.add_memory(content="Tomas Weber owns the Quill message queue.", source="t")
+    await memory.add_memory(content="Dana Okafor owns security reviews for Harbor.", source="t")
+    await memory.add_memory(content="Tomas Weber's performance review is on Friday.", source="t", sensitivity=Privacy.SENSITIVE)
+    await planner.add_note("Harbor action items", "Tomas to benchmark Falcon-7B latency by Thursday. Dana to review Quill retry settings.")
+    await tasks.add_task("Ask Dana Okafor to audit the build logs")
+    return memory, tasks, planner
+
+
+@pytest.mark.parametrize("query,name", [
+    ("What is Tomas Weber responsible for?", "Tomas Weber"), ("What does Dana own or lead?", "Dana"), ("Which responsibilities does Priya have?", None),
+    ("What is Tomas working on?", "Tomas"), ("Tell me about Dana's responsibilities", "Dana"), ("Who is Dana Okafor?", "Dana Okafor"), ("What is the Quill queue responsible for?", None),
+])
+def test_person_questions_are_classified_with_the_name(query, name):
+    found = classify(query)
+    if name is None and "Priya" not in query:
+        assert found is None or found[0] != "person"
+    elif name is None:
+        assert found is None or found[0] != "person" or found[1] == ("Priya",)
+    else:
+        assert found == ("person", (name,))
+
+
+def test_a_person_question_reads_memories_notes_and_tasks_that_name_them_within_access():
+    memory, tasks, planner = run(_people_world())
+    r = run(route_status("What is Tomas Weber responsible for?", OWNER, tasks=tasks, planner=planner, memory=memory, now=NOW))
+    texts = [i.text for i in r.items]
+    assert [i.kind for i in r.items] == ["memory", "memory", "note"]  # memories first; the sensitive memory is over the ceiling
+    assert any("infrastructure lead" in t for t in texts) and any("Quill message queue" in t for t in texts) and not any("performance review" in t for t in texts)
+    assert r.dropped == {"over_ceiling": 1} and "Tomas" in r.note and "everything" in r.note
+    shared = AccessContext(principal="o", sensitivity_ceiling=Privacy.PUBLIC, channel_private=False)
+    assert run(route_status("What is Tomas Weber responsible for?", shared, tasks=tasks, planner=planner, memory=memory, now=NOW)).items == ()
+
+
+def test_a_person_lookup_does_not_stamp_memories_as_accessed():
+    memory, tasks, planner = run(_people_world())
+    run(route_status("What is Dana responsible for?", OWNER, tasks=tasks, planner=planner, memory=memory, now=NOW))
+    assert all(m.last_accessed is None for m in run(memory.list_memories()))  # list calls only: reading for routing leaves no trace

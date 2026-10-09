@@ -150,7 +150,7 @@ class Conditions:
             prepared.fixed_reply = restricted_reply(access)
             return prepared
         t = time.perf_counter()
-        routed = await route_status(case["question"], access, tasks=tasks, planner=planner, now=NOW)
+        routed = await route_status(case["question"], access, tasks=tasks, planner=planner, now=NOW, memory=self.env.stores[0])
         prepared.retrieval_ms = (time.perf_counter() - t) * 1000
         prepared.retrieval_dropped = dict(routed.dropped)
         prepared.candidates = routed.total
