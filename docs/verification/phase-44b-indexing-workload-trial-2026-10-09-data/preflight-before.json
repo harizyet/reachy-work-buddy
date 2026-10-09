@@ -1,0 +1,82 @@
+[
+ {
+  "check": "database revision",
+  "pass": true,
+  "detail": "027_knowledge_index"
+ },
+ {
+  "check": "indexing flag is false",
+  "pass": true,
+  "detail": "false"
+ },
+ {
+  "check": "shadow flag is not set",
+  "pass": true,
+  "detail": "must stay off for the trial"
+ },
+ {
+  "check": "core healthy",
+  "pass": true,
+  "detail": "200 in 169 ms"
+ },
+ {
+  "check": "hub healthy",
+  "pass": true,
+  "detail": "200 in 108 ms"
+ },
+ {
+  "check": "vLLM healthy",
+  "pass": true,
+  "detail": "200 in 6 ms"
+ },
+ {
+  "check": "PgBouncer healthy",
+  "pass": true,
+  "detail": "healthy"
+ },
+ {
+  "check": "PgBouncer idle: no waiting clients",
+  "pass": true,
+  "detail": "{'cl_active': 7, 'cl_waiting': 0, 'sv_active': 0, 'sv_idle': 1, 'maxwait': 0}"
+ },
+ {
+  "check": "PostgreSQL connections well below the limit",
+  "pass": true,
+  "detail": "10 of 100"
+ },
+ {
+  "check": "host load and memory",
+  "pass": true,
+  "detail": "{'load1': 1.75, 'available_mb': 8855}"
+ },
+ {
+  "check": "no alarm or reminder due within 45 minutes",
+  "pass": true,
+  "detail": "0 due"
+ },
+ {
+  "check": "no meeting in progress or processing",
+  "pass": true,
+  "detail": "0 active"
+ },
+ {
+  "check": "outbox empty and no failed rows",
+  "pass": false,
+  "detail": "{'outbox_rows': '1', 'outbox_failed': '0'}"
+ },
+ {
+  "check": "index present (derived data only)",
+  "pass": true,
+  "detail": "80 rows {'meeting_minutes': '1', 'meeting_segment': '78', 'meeting_summary': '1'}"
+ },
+ {
+  "check": "a pre-trial dump exists (take one with pg_dump per the plan)",
+  "pass": true,
+  "detail": "reachy-before-phase44e-indexing-trial-20261009-1015.dump"
+ },
+ {
+  "check": "model-manager reachable",
+  "pass": true,
+  "detail": "no deep-review transition may be running"
+ }
+]

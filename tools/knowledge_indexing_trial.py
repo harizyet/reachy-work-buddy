@@ -178,11 +178,13 @@ def watch(seconds: int, log: Path) -> int:
            "(select string_agg(source_type||':attempts='||attempts||':leased='||(locked_until is not null and locked_until>now())::text||':failed='||(failed_at is not null)::text, ' ') from knowledge_outbox) rows, "
            "(select count(*) from knowledge_items) items, (select max(indexed_at) from knowledge_items) newest_indexed_at\\watch 0.25")
     with log.open("w") as out:
-        proc = subprocess.Popen(["docker", "exec", "-i", PG, "psql", "-U", "reachy", "-d", "reachy_hub", "-At", "-F", ",", "-q"], stdin=subprocess.PIPE, stdout=out, text=True)
+        proc = subprocess.Popen(["docker", "exec", "-i", "-e", "PGAPPNAME=ks-trial-watch", PG, "psql", "-U", "reachy", "-d", "reachy_hub", "-At", "-F", ",", "-q"], stdin=subprocess.PIPE, stdout=out, text=True)
         proc.stdin.write(sql + "\n")
         proc.stdin.flush()
         time.sleep(seconds)
         proc.terminate()
+    # Ending the docker client does not end the server-side session: close the watcher's backend explicitly so no connection is left behind.
+    psql("select pg_terminate_backend(pid) from pg_stat_activity where application_name='ks-trial-watch'")
     return 0
 
 
