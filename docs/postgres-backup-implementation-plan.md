@@ -2,7 +2,7 @@
 
 > **Owner direction (2026-10-12): backup and recovery becomes its own, larger phase** (number to be assigned; the highest existing phase is 47) and is no longer part of Phase 44. This page, the [hardening proposal](postgres-backup-hardening-proposal.md) and the Stage 0 findings below are its starting inputs; the roadmap entry is for the owner to place.
 >
-> **PAUSED (owner, 2026-10-12): "for now lets not spend time on backup since the implementation is not in production."** Only the Stage 0 findings below were recorded. No Stage 1 code is committed (a partial, untested draft in `tools/reachy_backup/` is deliberately left uncommitted), no credential exists, nothing is scheduled, and the 44H dump and rollback image are kept.
+> **PAUSED (owner, 2026-10-12): "for now lets not spend time on backup since the implementation is not in production."** Only the Stage 0 findings below were recorded. No Stage 1 code is committed (a partial, untested draft was moved out of the repository and is not committed), no credential exists, nothing is scheduled, and the 44H dump and rollback image are kept.
 
 ## Stage 0 findings: read-only assessment of `localnas` (2026-10-12; no login, no changes)
 

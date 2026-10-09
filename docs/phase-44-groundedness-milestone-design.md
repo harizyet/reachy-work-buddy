@@ -25,6 +25,10 @@ So the open problems are **(a) selection**: which passages are shown and whether
 - **Invented corpus only**, no owner data, no cloud model, until a later, separate decision.
 - **Production touchpoints: none in this milestone.** Everything runs in the benchmark harness first; an answer-path integration is a later owner decision.
 
+### 2.0 Progress log
+
+- **Stage 0 built (2026-10-12):** corpus v2 (`benchmarks/answer_quality/corpus_v2/`: 126 source records, about 450 retrievable passages after chunking and meeting segments, 142 registry facts; fewer records than the "about 300" first sketched, which is still ten times the 44A corpus for stressing selection), a question pool of 621 registry-derived labelled questions, `cases_dev11.json` (50, design) and `cases_dev12.json` (91, 54 answerable, held-out relations/projects/paraphrases only; **authored, not frozen, not run**). Baseline on dev11 (7B, B1a with routing): 32/50 fully correct, 9 unsupported claims; oracle 43/50, 2 unsupported; no retrieval 14/50. The gap is concentrated as predicted (wrong-entity 4 of 8 wrong, no-record 3 of 6 wrong, conflicts 5 of 6 partial). `tests/test_corpus_v2.py` pins determinism, registry integrity, the sensitive-tier rule and the design/acceptance split.
+
 ### 2a. Owner decisions and refinements (2026-10-12)
 
 - **C2 must not depend on the generator.** The answerability state is computed from the question's proposition and the authorised retrieved evidence (or an authoritative store), never from the generator's confidence, its proposed answer, or its wording. A generator-proposed answer may be *checked against* the state (an answer proposed while the state is UNESTABLISHED is suppressed and reported), but it can never upgrade a state. C2 is therefore evaluated with a **null generator** (no model in the loop) against gold labels.

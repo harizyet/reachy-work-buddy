@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +32,10 @@ def load_json(name: str) -> dict[str, Any]:
 
 
 def load_corpus() -> dict[str, Any]:
+    """The 44A corpus, or the file named by KBENCH_CORPUS (the groundedness milestone's invented corpus v2, same shape)."""
+    override = os.environ.get("KBENCH_CORPUS")
+    if override:
+        return json.loads(Path(override).read_text())
     return load_json("corpus")
 
 
