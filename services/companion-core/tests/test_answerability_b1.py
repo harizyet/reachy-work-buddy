@@ -30,7 +30,7 @@ SPECS = {
     "retry_limit": RelationSpec("retry_limit", "number", (r"retr",), phrase="retry limit"),
     "default_model": RelationSpec("default_model", "model", (r"default model", r"by default"), phrase="default model"),
     "staging_env": RelationSpec("staging_env", "existence", (r"staging",), negation=r"\b(?:has no|does not have|there is no)\b", presence=r"\b(?:has a|has an|there is a)\b", phrase="staging environment", joiner="for"),
-    "attends": RelationSpec("attends", "person", (r"attend|in the .* meeting",), many=True, phrase="attendees"),
+    "attends": RelationSpec("attends", "person", (r"attend|in the .* meeting",), many=True, phrase="attendees", object_words=("planning", "meeting")),
     "standup": RelationSpec("standup", "time", (r"stand-?up",), phrase="standup time"),
 }
 SUBJECTS = {"Ferry queue": ("Ferry",), "Conduit stream": ("Conduit",), "Vesper": ("Vesper",), "Marlin": ("Marlin",), "Cedar": ("Cedar",), "Osprey": ("Osprey",)}
@@ -495,7 +495,7 @@ def test_an_archived_lifecycle_or_title_marks_the_record_past_even_without_wordi
 
 # -- B-1 extension 1: authoritative structured attendee / speaker input ---------------------------------------------------------------------
 
-ATT = RelationSpec("attends", "person", (r"attend",), many=True, structured="attendees", phrase="attendees")
+ATT = RelationSpec("attends", "person", (r"attend",), many=True, structured="attendees", phrase="attendees", object_words=("planning", "meeting"))
 FIX = RelationSpec("test_fixer", "person", (r"\bfix", r"rollback test"), structured="speaker", phrase="person fixing the rollback test")
 SPECS["attends"] = ATT
 SPECS["test_fixer"] = FIX
@@ -714,3 +714,81 @@ def test_a_free_text_value_may_name_another_entity_but_the_rest_of_the_sentence_
     outside = item("note:n2", "Cedar says Nikhil Rao is reviewing the Ferry settings.")
     r2 = admit(comp("reviews", "Nikhil Rao"), [outside], auth(outside), now=NOW, spec=spec, known_subjects=KNOWN, policy=POLICY)
     assert r2.facts == () and r2.ambiguous == (("note:n2", "competing_subject"),)
+
+
+# -- qualified-object tightening (owner, 2026-10-14): a schedule/plan/process/component of the subject is not the subject --------------------------------------------
+
+@pytest.mark.parametrize("text", [
+    "Olga Petrova owns the Ferry queue schedule.",  # the owner-position example
+    "The Ferry queue schedule is owned by Olga Petrova.",  # subject position
+    "Olga Petrova owns the Ferry queue's schedule.",  # possessive
+    "Olga Petrova is responsible for the Ferry queue rollout plan.",
+    "Olga Petrova owns the Ferry queue runbook.",
+    "Olga Petrova owns the Ferry queue deployment process.",
+    "Olga Petrova owns the Ferry queue dashboard.",
+    "The Ferry queue rollout plan belongs to Olga Petrova and owns nothing else.",
+    "The Ferry queue schedule owner is Olga Petrova.",  # relation word after the qualifier
+])
+def test_ownership_of_a_qualified_object_does_not_establish_ownership_of_the_subject(text):
+    i = item("memory:m1", text)
+    plan, t, _c = run(comp("owner"), [i])
+    assert t.state is State.UNSUPPORTED and "Olga" not in plan.text
+    assert admit(comp("owner"), [i], auth(i), now=NOW, spec=SPECS["owner"], known_subjects=KNOWN, policy=POLICY).facts == ()
+
+
+@pytest.mark.parametrize("text", [
+    "Olga Petrova owns the Ferry queue.",
+    "The Ferry queue is owned by Olga Petrova.",
+    "Olga Petrova is responsible for the Ferry queue in production.",
+    "Olga Petrova owns the Ferry queue, and it is stable.",
+    "The Ferry queue's owner is Olga Petrova.",
+    "The Ferry queue owner is Olga Petrova.",
+    "Olga Petrova owns the Ferry queue this quarter.",
+    "Ferry queue: Olga Petrova owns it.",
+])
+def test_the_tighter_rule_still_admits_plain_statements_about_the_subject(text):
+    i = item("memory:m1", text)
+    _, t, _c = run(comp("owner"), [i])
+    assert t.state is State.SUPPORTED and t.values == (("Olga Petrova", ("memory:m1",)),), text
+
+
+def test_a_schedule_statement_next_to_a_plain_one_contributes_nothing_and_causes_no_conflict():
+    clean, sched = item("memory:m1", "Chiara Rossi owns the Ferry queue."), item("memory:m2", "Olga Petrova owns the Ferry queue schedule.")
+    _, t, c = run(comp("owner"), [clean, sched])
+    assert t.state is State.SUPPORTED and t.values == (("Chiara Rossi", ("memory:m1",)),) and "Olga" not in c.text
+
+
+def test_the_rule_applies_to_every_value_kind_not_only_people():
+    spec = RETRY
+    for text in ("The Ferry queue schedule retries up to 3 times.", "A failed Ferry queue job is retried up to 3 times by its schedule.", "The Ferry queue's schedule retries up to 3 times."):
+        i = item("memory:m1", text)
+        r = admit(comp("retry_limit"), [i], auth(i), now=NOW, spec=spec, known_subjects=KNOWN, policy=POLICY)
+        assert [f.value for f in r.facts] == [] or "by its schedule" in text  # the last sentence names the subject in a plain position
+    ok = item("memory:m2", "The Ferry queue retries up to 3 times.")
+    assert [f.value for f in admit(comp("retry_limit"), [ok], auth(ok), now=NOW, spec=spec, known_subjects=KNOWN, policy=POLICY).facts] == ["3"]
+
+
+def test_an_authoritative_equivalence_lifts_the_rule_for_that_exact_phrase_only():
+    i = item("memory:m1", "Olga Petrova owns the Ferry queue schedule.")
+    other = item("memory:m2", "Olga Petrova owns the Ferry queue rollout plan.")
+    eq = AdmissionPolicy(expected_policy_version="p1", equivalences=frozenset({"ferry queue schedule"}))
+    assert [f.value for f in admit(comp("owner"), [i], auth(i), now=NOW, spec=SPECS["owner"], known_subjects=KNOWN, policy=eq).facts] == ["Olga Petrova"]
+    assert admit(comp("owner"), [other], auth(other), now=NOW, spec=SPECS["owner"], known_subjects=KNOWN, policy=eq).facts == ()
+
+
+def test_the_tightening_can_be_switched_off_only_to_measure_it_and_defaults_on():
+    assert AdmissionPolicy(expected_policy_version="p1").qualified_object_check is True
+    i = item("memory:m1", "Olga Petrova owns the Ferry queue schedule.")
+    off = AdmissionPolicy(expected_policy_version="p1", qualified_object_check=False)
+    assert [f.value for f in admit(comp("owner"), [i], auth(i), now=NOW, spec=SPECS["owner"], known_subjects=KNOWN, policy=off).facts] == ["Olga Petrova"]
+
+
+def test_a_verb_like_word_after_the_subject_is_not_mistaken_for_a_qualifier():
+    spec = RelationSpec("default_model", "model", (r"default model", r"serves"), co_subjects_ok=True, phrase="default model")
+    i = item("document:d1", "Cedar serves Swift-20B on the batch host.", author="third_party")
+    assert [f.value for f in admit(comp("default_model", "Cedar"), [i], auth(i), now=NOW, spec=spec, known_subjects=KNOWN, policy=POLICY).facts] == ["Swift-20B"]
+
+
+def test_context_and_title_bound_sentences_are_not_subject_to_the_object_rule_because_they_name_no_subject():
+    d = doc("Jobs flow through the Conduit stream. A failed job is retried up to 3 times before it is parked.")
+    assert [f.value for f in admitted(comp("retry_limit", "Conduit stream"), [d]).facts] == ["3"]

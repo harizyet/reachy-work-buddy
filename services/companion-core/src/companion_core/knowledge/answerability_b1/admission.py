@@ -58,6 +58,9 @@ class AdmissionPolicy:
     auth_max_age: timedelta = timedelta(seconds=60)
     clock_skew: timedelta = timedelta(seconds=2)
     allow_context: bool = True  # the bounded one-sentence subject context; switchable so its effect can be ablated
+    # Authoritative equivalences the caller supplies: lowercase noun phrases that ARE the subject for admission purposes ("ferry queue schedule" is not one unless an authority says so). Empty by default.
+    equivalences: frozenset[str] = frozenset()
+    qualified_object_check: bool = True  # switchable only so the tightening can be measured against the previous behaviour
 
 
 @dataclass(frozen=True)
@@ -218,6 +221,62 @@ def _object_covered(sentence: str, component: Component, spec: RelationSpec) -> 
     return all(tok.lower() in allowed for tok in rest[1:])  # rest[0] is the verb
 
 
+_NP_BOUNDARY = frozenset(["is", "are", "was", "were", "be", "been", "being", "has", "have", "had", "will", "would", "can", "could", "may", "might", "shall", "should", "and", "or", "but", "nor", "of", "for", "in", "on", "at", "by", "with", "to", "from", "as", "than", "that", "this", "these", "those", "the", "a", "an", "it", "its", "their", "his", "her", "not", "no", "also", "still", "now", "currently", "then", "so", "who", "which", "when", "where", "while", "after", "before", "until", "since", "because", "if", "up", "down", "out", "over", "under", "through", "into", "about", "per", "via", "each", "every", "all", "both"])
+
+
+def _qualified_object(sentence: str, own: re.Pattern, component: Component, spec: RelationSpec, policy: AdmissionPolicy, cue_res: list[re.Pattern]) -> bool:
+    """True when EVERY mention of the subject in the sentence is the beginning of a longer qualified object ("owns the Ferry queue **schedule**", "the Ferry queue **schedule** is owned by", "the Ferry queue's
+    **runbook**"), so the sentence is about the schedule, not about the Ferry queue. Two structural cases only, no coreference and no parsing:
+      object position (a relation cue precedes the subject): a head noun that is not a boundary or relation word follows the subject, or a possessive does;
+      subject position: such a word is followed by a copula/auxiliary, punctuation, the end, or a relation word.
+    A caller-supplied authoritative equivalence (`policy.equivalences`) lifts the rule for that exact phrase."""
+    subject_words = {w.lower() for phrase in (component.subject, *component.aliases) for w in re.findall(r"[A-Za-z0-9]+", phrase)}
+    relation_words = {w.lower() for phrase in (spec.words, *spec.object_words) for w in re.findall(r"[A-Za-z0-9]+", phrase)}
+    stems = [s.lower() for c in spec.cues for s in re.findall(r"[A-Za-z]{3,}", c)]
+
+    def is_relation(word: str) -> bool:
+        return word in relation_words or any(word.startswith(s) for s in stems)
+
+    qualified_any = False
+    for m in own.finditer(sentence):
+        toks = re.findall(r"['’]s\b|[A-Za-z0-9][A-Za-z0-9\-]*|[^\sA-Za-z0-9]", sentence[m.end():])
+        i = 0
+        phrase = [m.group(0).lower()]
+        while i < len(toks) and toks[i].lower() in subject_words:  # the rest of the subject's own name ("queue" in "Ferry queue")
+            phrase.append(toks[i].lower())
+            i += 1
+        if i >= len(toks):
+            return False
+        tok = toks[i]
+        if tok in ("'s", "’s"):
+            nxt = toks[i + 1].lower() if i + 1 < len(toks) else ""
+            if nxt and nxt not in _NP_BOUNDARY and not is_relation(nxt) and " ".join([*phrase, nxt]) not in policy.equivalences:
+                qualified_any = True
+                continue
+            return False
+        low = tok.lower()
+        if not (tok[0].isalnum()) or low in _NP_BOUNDARY or is_relation(low):
+            return False
+        phrase.append(low)
+        if " ".join(phrase) in policy.equivalences:
+            return False
+        cue_before = any(c.search(sentence[: m.start()]) for c in cue_res)
+        if cue_before:
+            qualified_any = True
+            continue
+        # subject position: a run of up to four plain words after the subject that ends at a boundary, punctuation, the end or a relation word is a qualifier ("rollout plan belongs", "schedule is owned");
+        # a capitalised or numeric token inside the run means a verb followed by its value ("serves Swift-20B"), which is not a qualifier
+        run = [tok]
+        j = i + 1
+        while j < len(toks) and len(run) <= 4 and toks[j][0].isalnum() and toks[j].lower() not in _NP_BOUNDARY and not is_relation(toks[j].lower()):
+            run.append(toks[j])
+            j += 1
+        if len(run) > 4 or any(w[0].isupper() or any(ch.isdigit() for ch in w) for w in run[1:]):
+            return False
+        qualified_any = True
+    return qualified_any
+
+
 @dataclass(frozen=True)
 class _Amb:
     reason: str
@@ -269,6 +328,8 @@ def admit(component: Component, items: Collection[DiscoveryItem], auths: Mapping
             if not (direct or titled or context_prev) or not any(c.search(sentence) for c in cue_res):
                 continue
             binding = "sentence" if direct else "title" if titled else "context"
+            if direct and policy.qualified_object_check and spec.kind != "existence" and _qualified_object(sentence, own, component, spec, policy, cue_res):
+                continue  # about a qualified object of the subject (its schedule, plan, runbook...), not about the subject: asserts nothing for it
             evidence = f"{context_prev} {sentence}" if context_prev else sentence
             scope = _fact_scope(evidence, prov, item.title, now)
             if _HEDGE.search(sentence):

@@ -1,0 +1,23 @@
+# dev15
+9 distinct sentences rejected as qualified-object
+  3  Failed Cedar jobs are retried 8 times before they are parked.
+  5  Failed Marlin jobs are retried 11 times before they are parked.
+  5  Failed Osprey jobs are retried 12 times before they are parked.
+  1  I will own the Anvil builder schedule.
+  7  I will own the Conduit stream schedule.
+  3  I will own the Gantry scheduler schedule.
+  2  I will own the Hopper ingest service schedule.
+  2  I will own the Sluice cache schedule.
+  2  I will own the Turret API schedule.
+
+# val17
+9 distinct sentences rejected as qualified-object
+  3  Failed Cedar jobs are retried 8 times before they are parked.
+  8  Failed Marlin jobs are retried 11 times before they are parked.
+  2  Failed Osprey jobs are retried 12 times before they are parked.
+  3  I will own the Anvil builder schedule.
+  3  I will own the Conduit stream schedule.
+  2  I will own the Gantry scheduler schedule.
+  9  I will own the Lattice store schedule.
+  2  I will own the Prism dashboard schedule.
+  2  I will own the Turret API schedule.

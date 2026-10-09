@@ -27,8 +27,9 @@ from companion_core.knowledge.answerability_b1 import (
 )
 
 NOW = datetime(2026, 10, 13, 12, 0, tzinfo=UTC)
-FLAGS = set(sys.argv[1:])  # --harness-fixes --structured --context --text ; none = the pre-extension configuration
-POLICY = AdmissionPolicy(expected_policy_version="p1", allow_context="--context" in FLAGS)
+FLAGS = set(sys.argv[1:])
+CORPUS = HERE / ("validation/corpus_val17.json" if "--val17" in FLAGS else "corpus_v4.json")  # --harness-fixes --structured --context --text ; none = the pre-extension configuration
+POLICY = AdmissionPolicy(expected_policy_version="p1", allow_context="--context" in FLAGS, qualified_object_check="--no-qualified-object" not in FLAGS)
 TEXT_PATTERNS = {  # reviewed patterns for the two design relations whose value is a phrase; written from the relations' own wording, not from dev15 replies
     "reviews": r"\breview(?:s|ing)?\s+(?:the\s+)?(?P<value>[A-Z][\w-]*(?: [\w-]+){0,4}?)\s*(?:[.;]|$)",
     "decision": r"\bdecision is to\s+(?P<value>[^.;,]{3,80}?)\s*(?:[.;]|$)",
@@ -54,7 +55,7 @@ def structured_records(c4):
 
 
 def pool():
-    c = json.loads((HERE / "corpus_v4.json").read_text())
+    c = json.loads(CORPUS.read_text())
     items = []
     created = NOW - timedelta(days=100)
 
@@ -87,7 +88,7 @@ def pool():
 
 def main():
     items = pool()
-    c4 = json.loads((HERE / "corpus_v4.json").read_text())
+    c4 = json.loads(CORPUS.read_text())
     level = {}
     for key, store in (("memories", "memory"), ("notes", "note"), ("documents", "document"), ("meetings", "meeting")):
         for r in c4[key]:
@@ -98,7 +99,7 @@ def main():
     for rec in structured_records(c4):
         auths[rec.ref] = AuthDecision(level.get(rec.ref.split("#")[0], "public") != "sensitive", NOW - timedelta(seconds=3), "p1", 1)
         eids[rec.ref] = f"S{len(eids) + 1}"
-    cases = json.loads((HERE.parent / "cases_dev15.json").read_text())["cases"]
+    cases = json.loads((HERE.parent / ("cases_val17.json" if "--val17" in FLAGS else "cases_dev15.json")).read_text())["cases"]
     from validate_scorer import PEOPLE
 
     people = {p.lower() for p in PEOPLE} | {p.split()[0].lower() for p in PEOPLE}
@@ -129,6 +130,8 @@ def main():
             comp = Component("c1", a["subject"], (subject,), a["relation"], ask, scope)
             plan = build_plan([comp], items, auths, now=NOW, specs={a["relation"]: spec}, eids=eids, known_subjects=[k for k in known if k != subject], policy=POLICY, structured=structured_records(c4) if "--structured" in FLAGS else ())
             got = plan.claims[0].state.value
+            if "--dump" in FLAGS:
+                print("DUMP", q["id"], a["id"], got, "|", plan.claims[0].text, "|", [(f.ref, f.sentence) for r in () for f in r])
             if got in ("SUPPORTED", "HISTORICAL") and a["status"] == got and ask is Ask.VALUE:
                 shown = {_norm(v) for v, _ in plan.tickets[0].values}
                 want = {_norm(d) for d in a["display"]}
