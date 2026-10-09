@@ -56,10 +56,8 @@ _WISH = re.compile(
     rf"\b(?:i (?:want|need|would like|'d like)|have|get|make sure)\b[^.!?;]{{0,40}}?\b{_TARGET}\b[^.!?;]{{0,30}}?\b(?:deleted|removed|cleared|cancelled|canceled|erased|wiped|sent|archived|completed|done|updated|changed)\b", re.IGNORECASE)
 _CLAUSE_BREAK = re.compile(r"[.!?;]+\s+|\s+(?:and then|then|and also|also|and)\s+|,\s+(?=(?:please|and|then|also)\b)", re.IGNORECASE)
 
-UNCLAIMED_ACTION_REPLY = (
-    "I haven't done that, and nothing has changed. I couldn't match it to something I'm able to do from this conversation. "
-    "If you also asked a question, please ask it again on its own."
-)
+# Owner-approved wording (2026-10-12). It says this request was not performed here; it does not claim the capability can never exist elsewhere.
+UNCLAIMED_ACTION_REPLY = "I can't perform that action here, so I haven't made any changes."
 UNCLAIMED_CONFIRMATION_REPLY = "There is nothing waiting for your confirmation, and I haven't done anything."
 
 

@@ -79,7 +79,12 @@ def test_the_fixed_replies_make_no_completion_claim_and_say_nothing_changed():
     from aq.assertions import claims
 
     for reply in (UNCLAIMED_ACTION_REPLY, UNCLAIMED_CONFIRMATION_REPLY):
-        assert claims(reply) == [] and ("nothing" in reply.lower() or "haven't done" in reply.lower())
+        assert claims(reply) == [] and ("haven't made any changes" in reply or "haven't done anything" in reply)
+
+
+def test_the_action_reply_is_the_owner_approved_wording_and_does_not_say_never():
+    assert UNCLAIMED_ACTION_REPLY == "I can't perform that action here, so I haven't made any changes."
+    assert "never" not in UNCLAIMED_ACTION_REPLY.lower() and "unable to ever" not in UNCLAIMED_ACTION_REPLY.lower()
 
 
 # -- the live route ------------------------------------------------------------------------------------------------------------------

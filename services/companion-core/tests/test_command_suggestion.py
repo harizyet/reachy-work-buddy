@@ -121,7 +121,7 @@ def test_classifier_failure_falls_back_silently_to_the_ordinary_answer():
     resp = client.post("/conversation", json={**TURN, "text": "Turn off Reachy."})
     assert resp.status_code == 200
     # Since the unclaimed-action boundary (2026-10-12) an action-shaped turn the classifier could not place gets the fixed truthful reply, not a model answer; the failure is still silent.
-    assert resp.json()["reply"].startswith("I haven't done that")
+    assert resp.json()["reply"].startswith("I can't perform that action here")
     resp = client.post("/conversation", json={**TURN, "text": "What does Reachy look like?"})
     assert resp.status_code == 200
     assert resp.json()["reply"] == "A normal answer."
@@ -142,7 +142,7 @@ def test_classifier_timeout_falls_back_silently_to_the_ordinary_answer():
     resp = client.post("/conversation", json={**TURN, "text": "Turn off Reachy."})
     assert resp.status_code == 200
     # Since the unclaimed-action boundary (2026-10-12) an action-shaped turn the classifier could not place gets the fixed truthful reply, not a model answer; the failure is still silent.
-    assert resp.json()["reply"].startswith("I haven't done that")
+    assert resp.json()["reply"].startswith("I can't perform that action here")
     resp = client.post("/conversation", json={**TURN, "text": "What does Reachy look like?"})
     assert resp.status_code == 200
     assert resp.json()["reply"] == "A normal answer."

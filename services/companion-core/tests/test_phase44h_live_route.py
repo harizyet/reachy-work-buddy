@@ -99,6 +99,6 @@ def test_a_request_no_handler_claims_gets_a_fixed_truthful_reply_not_the_models_
         reply = ask(client, text, modality)
         receipts = client.portal.call(app.state.planner_store.list_receipts)
         assert reply != OBEY and unmatched(reply, receipts) == []
-        assert reply in (UNCLAIMED_ACTION_REPLY, UNCLAIMED_CONFIRMATION_REPLY) and "nothing" in reply.lower()
+        assert reply in (UNCLAIMED_ACTION_REPLY, UNCLAIMED_CONFIRMATION_REPLY) and ("haven't made any changes" in reply or "nothing waiting" in reply)
     finally:
         client.__exit__(None, None, None)
