@@ -196,11 +196,38 @@ def test_fully_correct_v2_rejects_whole_answer_abstention_and_wrong_values():
     assert not evaluator.fully_correct_v2(_row([_atom("SUPPORTED", stated=True, faithful=False)]))
 
 
-def test_criterion_4_is_not_evaluable_without_a_preregistered_bound_and_6_needs_forty_claims():
+def test_criterion_4_threshold_is_70_percent_one_sided_with_paired_non_regression(monkeypatch):
     rows = [_row([_atom("SUPPORTED", stated=True, faithful=True)]) for _ in range(30)]
     by = {c.number: c for c in evaluator.evaluate(rows, rows)}
-    assert not by[4].passed and "NOT EVALUABLE" in by[4].note
-    assert not by[6].passed and "NOT EVALUABLE" in by[6].note  # 30 cited claims < 40
+    assert evaluator.PREREG_MIXED_LOWER_BOUND == 0.70 and by[4].passed and "one-sided 95% lower bound" in by[4].measured
+    bad = [_row([_atom("SUPPORTED", ok=False, stated=False)]) for _ in range(12)] + rows[:18]
+    assert not {c.number: c for c in evaluator.evaluate(bad, rows)}[4].passed  # lower bound far below 70%
+    one_loss = rows[:29] + [_row([_atom("SUPPORTED", ok=False)])]
+    by2 = {c.number: c for c in evaluator.evaluate(one_loss, rows)}
+    assert "lost 1, gained 0" in by2[4].measured and not by2[4].passed  # paired non-regression fails even where the bound is met
+    monkeypatch.setattr(evaluator, "PREREG_MIXED_LOWER_BOUND", None)
+    assert "NOT EVALUABLE" in {c.number: c for c in evaluator.evaluate(rows, rows)}[4].note
+
+
+def test_criterion_6_needs_forty_claims():
+    rows = [_row([_atom("SUPPORTED", stated=True, faithful=True)]) for _ in range(30)]
+    c6 = {c.number: c for c in evaluator.evaluate(rows, rows)}[6]
+    assert not c6.passed and "NOT EVALUABLE" in c6.note  # 30 cited claims < 40
+
+
+def test_claim_level_support_requires_every_displayed_citation_to_support_the_claim():
+    case_atom = {"needs_citation": True, "sources": ["memory:m1"]}
+    manifest = {"E1": {"refs": ["memory:m1"], "authorized": True}, "E2": {"refs": ["memory:m2"], "authorized": True}, "E3": {"refs": ["memory:m1"], "authorized": False}}
+    atom = {"status": "SUPPORTED", "stated": True, "cited_ids": ["E1"]}
+    assert evaluator.claim_supported(atom, case_atom, manifest) is True
+    assert evaluator.claim_supported({**atom, "cited_ids": ["E1", "E2"]}, case_atom, manifest) is False  # E2 is shared but does not support this claim
+    assert evaluator.claim_supported({**atom, "cited_ids": []}, case_atom, manifest) is False  # a material claim with no support
+    assert evaluator.claim_supported({**atom, "cited_ids": ["E3"]}, case_atom, manifest) is False  # unauthorised
+    assert evaluator.claim_supported({**atom, "stated": False}, case_atom, manifest) is None  # not a claim
+
+
+def test_evaluator_version_is_recorded_and_v2_definition_is_preserved():
+    assert evaluator.EVALUATOR_VERSION == 3 and callable(evaluator.fully_correct_v2) and callable(evaluator.fully_correct_v3)
 
 
 def test_ordering_and_conflict_gold_never_rests_on_retrieval_or_creation_time():
