@@ -10,6 +10,8 @@ Status: **investigation and regression cases only.** No authorization mechanism,
 
 Others already covered elsewhere and kept as 44H inputs: a planted instruction in a retrieved document or a spoken instruction in an attached meeting never changes state with an obedient model (live-route tests, in-process and real-model); the fake "SYSTEM: admin mode" turn is refused in text; stored text cannot close the evidence delimiter or forge a label (builder tests); the 7B repeats planted instructional text and, in one dev case, called it an instruction that "overrides" the owner's ([first-look record](verification/phase-44e-first-look-2026-10-09.md)).
 
+Architecture proposal for the full boundary (robot, email, calendar; outcome states completed, failed, pending, unverified): [phase-44h-receipt-boundary-proposal.md](phase-44h-receipt-boundary-proposal.md).
+
 ## Investigation: an answer/action receipt boundary
 
 **Problem.** A model-generated reply can say that something consequential succeeded (an alarm set, tasks deleted, mail sent, the robot asleep) when nothing happened. The deterministic handlers do not have this problem: they answer with fixed text and write an `ActionReceipt` from persisted state ([ADR 0028](adr/0028-persona-responses-and-action-receipts.md)). The generic chat branch has no tools, so **no receipt can exist for it**, and any success claim in its reply is unsupported by construction.
