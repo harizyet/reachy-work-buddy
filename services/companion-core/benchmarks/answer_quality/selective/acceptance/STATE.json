@@ -1,0 +1,10 @@
+{
+ "stage": "frozen",
+ "history": [
+  {
+   "stage": "frozen",
+   "at": "2026-10-09T14:37:54.604496+00:00",
+   "freeze_sha256": "b77e6afa84260884bb2c54ab5b848d80f4991e0bff9a0e7b46bdb5c6d86d9334"
+  }
+ ]
+}
