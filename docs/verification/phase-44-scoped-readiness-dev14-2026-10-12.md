@@ -70,3 +70,9 @@ The revised candidate **does not qualify for integration readiness as built.** I
 4. **Two-part questions** are where the false abstentions concentrate; that is the selective-answering protocol ([proposal](../phase-44-selective-answering-protocol.md)).
 5. **Generator:** check semantic overlap between relations (storage limit vs message size) as well as duplicates.
 Any of these needs a new development set and a new untouched acceptance set; dev13 and dev14 are spent for design purposes. **No production decision follows from this record.**
+
+## Owner decisions after this record (2026-10-12)
+
+- dev14 is recorded as a completed, consumed acceptance set; its scores are not altered and nothing is tuned against it.
+- **The revised C1 quarantine + C2 candidate fails G2 and G5 and is not approved for integration.** Further C1 quarantine and lexicon optimisation is **paused**; another development/acceptance cycle for the quarantine variant is not started automatically. The C1/C2 implementations and results are preserved as experimental comparators.
+- **Design principle fixed by the fabricated `[E1]` citations:** labelling retrieved material as uncitable is not a sufficient trust boundary. Future designs must distinguish **discovery evidence** (what retrieval and selection may look at, and use to decide whether something is answerable) from **admissible answer evidence** (the only material a reply may assert from, each item with an id the validator can check). Material that is not admissible answer evidence must not be shown to the generator as readable text with values.
