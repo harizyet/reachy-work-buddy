@@ -109,3 +109,13 @@ def test_a_telemetry_write_failure_is_counted_and_never_raised(tmp_path):
     t.count("attempted")
     t.flush()
     assert t.total["telemetry_write_failed"] == 1
+
+
+def test_the_default_retention_is_thirty_days_and_the_environment_default_agrees(tmp_path, monkeypatch):
+    from companion_core.knowledge.shadow import shadow_from_env
+
+    assert ShadowTelemetry(str(tmp_path / "t.jsonl")).retention_days == 30
+    monkeypatch.setenv("KNOWLEDGE_SHADOW_ENABLED", "true")
+    monkeypatch.setenv("KNOWLEDGE_SHADOW_LOG_PATH", str(tmp_path / "s.jsonl"))
+    monkeypatch.delenv("KNOWLEDGE_SHADOW_RETENTION_DAYS", raising=False)
+    assert shadow_from_env(retriever=None, tasks=None, planner=None).telemetry.retention_days == 30

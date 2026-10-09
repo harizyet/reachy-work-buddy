@@ -212,7 +212,7 @@ def shadow_from_env(*, retriever: Retriever, tasks: TaskStore, planner: PlannerS
 
     return KnowledgeShadow(
         retriever=retriever, tasks=tasks, planner=planner,
-        telemetry=ShadowTelemetry(path, retention_days=int(os.environ.get("KNOWLEDGE_SHADOW_RETENTION_DAYS", "90"))),
+        telemetry=ShadowTelemetry(path, retention_days=int(os.environ.get("KNOWLEDGE_SHADOW_RETENTION_DAYS", "30"))),
         vocabulary=vocabulary if adapters else None,
         queue_size=min(max(int(os.environ.get("KNOWLEDGE_SHADOW_QUEUE", str(DEFAULT_QUEUE))), 1), 10),
         timeout_seconds=min(max(float(os.environ.get("KNOWLEDGE_SHADOW_TIMEOUT_SECONDS", str(DEFAULT_TIMEOUT))), 0.2), 5.0),

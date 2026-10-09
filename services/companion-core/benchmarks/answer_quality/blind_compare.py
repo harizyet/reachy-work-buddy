@@ -30,11 +30,12 @@ def main() -> int:
     p.add_argument("--dir", required=True)
     p.add_argument("--ratings", required=True)
     p.add_argument("--out")
+    p.add_argument("--key", help="the answer key (default: ~/.local/share/reachy-blind-review/<package name>/KEY-do-not-open-until-rated.json, outside the repository)")
     args = p.parse_args()
     d = Path(args.dir)
     sheet_items = sorted(line[3:].strip() for line in (d / "sheet.md").read_text().splitlines() if line.startswith("## R"))
     ratings = load_ratings(Path(args.ratings), sheet_items)
-    key_path = d / "KEY-do-not-open-until-rated.json"
+    key_path = Path(args.key) if args.key else Path.home() / ".local/share/reachy-blind-review" / d.name / "KEY-do-not-open-until-rated.json"
     if hashlib.sha256(key_path.read_bytes()).hexdigest() != (d / "KEY.sha256").read_text().strip():
         raise SystemExit("the key does not match its seal: it was changed after the package was made")
     key = json.loads(key_path.read_text())["items"]

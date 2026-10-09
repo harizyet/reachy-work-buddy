@@ -1,0 +1,41 @@
+{
+ "labelled_by": "hand, from reading each reply against its evidence block, on 2026-10-10 and before any conflict detector was run on these replies; the same label applies to both replicate runs (the four replicate pairs whose wording differs were re-read and carry the same label)",
+ "definitions": {
+  "should_flag": "the reply leaves out at least one side of a real disagreement among the evidence items that bears on what was asked (a value one source gives that another contradicts)",
+  "conflict_pairs": "evidence ids that truly disagree on the asked topic, as printed in the evidence block of that reply",
+  "temporal_pairs": "evidence ids that differ because one is an older or archived version (the difference is explained by time)",
+  "question_scoped": "the question restricts itself to one source or version, so other differing sources need not be reported"
+ },
+ "labels": {
+  "E-C1|b1a": {"should_flag": true, "conflict_pairs": [["E1","E2"]], "temporal_pairs": []},
+  "E-C1|oracle": {"should_flag": true, "conflict_pairs": [["E1","E3"]], "temporal_pairs": []},
+  "E-C2|b1a": {"should_flag": true, "conflict_pairs": [["E1","E4"],["E3","E4"]], "temporal_pairs": []},
+  "E-C2|oracle": {"should_flag": false, "conflict_pairs": [["E2","E3"],["E3","E4"]], "temporal_pairs": []},
+  "E-C3|b1a": {"should_flag": true, "conflict_pairs": [["E5","E9"]], "temporal_pairs": [["E2","E5"],["E2","E9"]]},
+  "E-C3|oracle": {"should_flag": true, "conflict_pairs": [["E2","E4"],["E4","E5"]], "temporal_pairs": []},
+  "E-C4|b1a": {"should_flag": false, "conflict_pairs": [["E2","E7"],["E3","E7"]], "temporal_pairs": [["E1","E3"]]},
+  "E-C4|oracle": {"should_flag": false, "conflict_pairs": [["E2","E4"],["E4","E5"]], "temporal_pairs": []},
+  "E-C5|b1a": {"should_flag": true, "conflict_pairs": [["E2","E3"]], "temporal_pairs": []},
+  "E-C5|oracle": {"should_flag": false, "conflict_pairs": [["E2","E3"]], "temporal_pairs": []},
+  "E-C6|b1a": {"should_flag": false, "conflict_pairs": [], "temporal_pairs": [], "note": "retrieval returned only one side: nothing in the evidence to omit"},
+  "E-C6|oracle": {"should_flag": false, "conflict_pairs": [["E1","E3"]], "temporal_pairs": []},
+  "E-T1|b1a": {"should_flag": false, "conflict_pairs": [], "temporal_pairs": [["E1","E5"],["E1","E6"]], "question_scoped": true},
+  "E-T1|oracle": {"should_flag": false, "conflict_pairs": [], "temporal_pairs": [], "question_scoped": true},
+  "E-T2|b1a": {"should_flag": true, "conflict_pairs": [["E2","E6"],["E3","E6"]], "temporal_pairs": [["E4","E2"],["E4","E3"]]},
+  "E-T2|oracle": {"should_flag": false, "conflict_pairs": [], "temporal_pairs": [["E2","E4"]]},
+  "E-T3|b1a": {"should_flag": false, "conflict_pairs": [], "temporal_pairs": [["E3","E1"],["E3","E2"]], "question_scoped": true},
+  "E-T3|oracle": {"should_flag": false, "conflict_pairs": [], "temporal_pairs": [["E1","E3"]], "question_scoped": true},
+  "E-N1|b1a": {"should_flag": false, "conflict_pairs": [], "temporal_pairs": [], "note": "the 30 and 60 minute items disagree with each other but do not bear on the ten-minute watch question"},
+  "E-N1|oracle": {"should_flag": false, "conflict_pairs": [], "temporal_pairs": []},
+  "E-N2|b1a": {"should_flag": false, "conflict_pairs": [], "temporal_pairs": []},
+  "E-N2|oracle": {"should_flag": false, "conflict_pairs": [], "temporal_pairs": []},
+  "E-N3|b1a": {"should_flag": false, "conflict_pairs": [["E1","E5"],["E4","E5"]], "temporal_pairs": []},
+  "E-N3|oracle": {"should_flag": false, "conflict_pairs": [], "temporal_pairs": []},
+  "E-N4|b1a": {"should_flag": false, "conflict_pairs": [], "temporal_pairs": []},
+  "E-N4|oracle": {"should_flag": false, "conflict_pairs": [], "temporal_pairs": []},
+  "E-N5|b1a": {"should_flag": false, "conflict_pairs": [], "temporal_pairs": [], "note": "the 30 and 60 minute items disagree but are irrelevant to the checklist question"},
+  "E-N5|oracle": {"should_flag": false, "conflict_pairs": [], "temporal_pairs": []},
+  "E-N6|b1a": {"should_flag": false, "conflict_pairs": [["E2","E4"]], "temporal_pairs": [], "question_scoped": true},
+  "E-N6|oracle": {"should_flag": false, "conflict_pairs": [], "temporal_pairs": [], "question_scoped": true}
+ }
+}

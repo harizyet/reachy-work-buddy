@@ -1,0 +1,456 @@
+{
+ "rows": 60,
+ "unique": 30,
+ "v1": {
+  "tp": 8,
+  "fp": 18,
+  "fn": 6,
+  "tn": 28,
+  "precision": 0.308,
+  "recall": 0.571,
+  "false_positive_rate_on_unflagged_truth": 0.391,
+  "errors": [
+   {
+    "row": "E-C2|oracle",
+    "run": "dev4-1500-a",
+    "detected": true,
+    "truth": false,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-C3|b1a",
+    "run": "dev4-1500-a",
+    "detected": false,
+    "truth": true,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-C3|oracle",
+    "run": "dev4-1500-a",
+    "detected": false,
+    "truth": true,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-C5|oracle",
+    "run": "dev4-1500-a",
+    "detected": true,
+    "truth": false,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-T2|b1a",
+    "run": "dev4-1500-a",
+    "detected": false,
+    "truth": true,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-T3|b1a",
+    "run": "dev4-1500-a",
+    "detected": true,
+    "truth": false,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-N1|b1a",
+    "run": "dev4-1500-a",
+    "detected": true,
+    "truth": false,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-N1|oracle",
+    "run": "dev4-1500-a",
+    "detected": true,
+    "truth": false,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-N3|b1a",
+    "run": "dev4-1500-a",
+    "detected": true,
+    "truth": false,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-N3|oracle",
+    "run": "dev4-1500-a",
+    "detected": true,
+    "truth": false,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-N5|b1a",
+    "run": "dev4-1500-a",
+    "detected": true,
+    "truth": false,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-N6|b1a",
+    "run": "dev4-1500-a",
+    "detected": true,
+    "truth": false,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-C2|oracle",
+    "run": "dev4-1500-b",
+    "detected": true,
+    "truth": false,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-C3|b1a",
+    "run": "dev4-1500-b",
+    "detected": false,
+    "truth": true,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-C3|oracle",
+    "run": "dev4-1500-b",
+    "detected": false,
+    "truth": true,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-C5|oracle",
+    "run": "dev4-1500-b",
+    "detected": true,
+    "truth": false,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-T2|b1a",
+    "run": "dev4-1500-b",
+    "detected": false,
+    "truth": true,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-T3|b1a",
+    "run": "dev4-1500-b",
+    "detected": true,
+    "truth": false,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-N1|b1a",
+    "run": "dev4-1500-b",
+    "detected": true,
+    "truth": false,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-N1|oracle",
+    "run": "dev4-1500-b",
+    "detected": true,
+    "truth": false,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-N3|b1a",
+    "run": "dev4-1500-b",
+    "detected": true,
+    "truth": false,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-N3|oracle",
+    "run": "dev4-1500-b",
+    "detected": true,
+    "truth": false,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-N5|b1a",
+    "run": "dev4-1500-b",
+    "detected": true,
+    "truth": false,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-N6|b1a",
+    "run": "dev4-1500-b",
+    "detected": true,
+    "truth": false,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   }
+  ],
+  "pair_identification": {
+   "reported_pairs": 0,
+   "reported_that_are_true_conflicts": 0,
+   "true_pairs_in_flag_worthy_rows": 20,
+   "found": 0
+  },
+  "flags_raised_only_for_temporally_explained_pairs": 0,
+  "rows_with_a_temporal_pair": 14,
+  "runtime_us_per_reply": {
+   "median": 64.1,
+   "p95": 112.0,
+   "max": 2196.8
+  }
+ },
+ "v2": {
+  "tp": 6,
+  "fp": 0,
+  "fn": 8,
+  "tn": 46,
+  "precision": 1.0,
+  "recall": 0.429,
+  "false_positive_rate_on_unflagged_truth": 0.0,
+  "errors": [
+   {
+    "row": "E-C3|b1a",
+    "run": "dev4-1500-a",
+    "detected": false,
+    "truth": true,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-C3|oracle",
+    "run": "dev4-1500-a",
+    "detected": false,
+    "truth": true,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-C5|b1a",
+    "run": "dev4-1500-a",
+    "detected": false,
+    "truth": true,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-T2|b1a",
+    "run": "dev4-1500-a",
+    "detected": false,
+    "truth": true,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-C3|b1a",
+    "run": "dev4-1500-b",
+    "detected": false,
+    "truth": true,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-C3|oracle",
+    "run": "dev4-1500-b",
+    "detected": false,
+    "truth": true,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-C5|b1a",
+    "run": "dev4-1500-b",
+    "detected": false,
+    "truth": true,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-T2|b1a",
+    "run": "dev4-1500-b",
+    "detected": false,
+    "truth": true,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   }
+  ],
+  "pair_identification": {
+   "reported_pairs": 6,
+   "reported_that_are_true_conflicts": 6,
+   "true_pairs_in_flag_worthy_rows": 20,
+   "found": 6
+  },
+  "flags_raised_only_for_temporally_explained_pairs": 0,
+  "rows_with_a_temporal_pair": 14,
+  "runtime_us_per_reply": {
+   "median": 405.6,
+   "p95": 1062.3,
+   "max": 1413.2
+  }
+ },
+ "v3": {
+  "tp": 10,
+  "fp": 2,
+  "fn": 4,
+  "tn": 44,
+  "precision": 0.833,
+  "recall": 0.714,
+  "false_positive_rate_on_unflagged_truth": 0.043,
+  "errors": [
+   {
+    "row": "E-C3|b1a",
+    "run": "dev4-1500-a",
+    "detected": false,
+    "truth": true,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-C3|oracle",
+    "run": "dev4-1500-a",
+    "detected": false,
+    "truth": true,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-N1|b1a",
+    "run": "dev4-1500-a",
+    "detected": true,
+    "truth": false,
+    "pairs": [
+     [
+      "E2",
+      "E3"
+     ]
+    ],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-C3|b1a",
+    "run": "dev4-1500-b",
+    "detected": false,
+    "truth": true,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-C3|oracle",
+    "run": "dev4-1500-b",
+    "detected": false,
+    "truth": true,
+    "pairs": [],
+    "temporal": [],
+    "scoped": false
+   },
+   {
+    "row": "E-N1|b1a",
+    "run": "dev4-1500-b",
+    "detected": true,
+    "truth": false,
+    "pairs": [
+     [
+      "E2",
+      "E3"
+     ]
+    ],
+    "temporal": [],
+    "scoped": false
+   }
+  ],
+  "pair_identification": {
+   "reported_pairs": 14,
+   "reported_that_are_true_conflicts": 12,
+   "true_pairs_in_flag_worthy_rows": 20,
+   "found": 12
+  },
+  "flags_raised_only_for_temporally_explained_pairs": 0,
+  "rows_with_a_temporal_pair": 14,
+  "runtime_us_per_reply": {
+   "median": 502.2,
+   "p95": 1273.7,
+   "max": 1538.0
+  }
+ },
+ "stress": {
+  "n": 20,
+  "v1": {
+   "wrong": [
+    {
+     "topic": "rollback",
+     "reply": "Within half an hour [E1]. One record says an hour [E2].",
+     "should_flag": false,
+     "detected": true
+    },
+    {
+     "topic": "retries",
+     "reply": "Jobs are retried 5 times [E1]; a memory says 10 [E3].",
+     "should_flag": false,
+     "detected": true
+    }
+   ],
+   "correct": 18
+  },
+  "v2": {
+   "wrong": [],
+   "correct": 20
+  },
+  "v3": {
+   "wrong": [],
+   "correct": 20
+  }
+ }
+}

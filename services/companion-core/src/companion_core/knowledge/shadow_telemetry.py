@@ -15,7 +15,7 @@ Funnel, each stage counted separately and reconcilable (see `reconcile`):
   failed_timeout     the job exceeded its time limit
 `evaluated_qualifying` is the number the 14-day, 50-query criterion counts: processed_ok jobs that actually ran status routing or retrieval.
 
-Retention: rows older than `retention_days` (default 90, clamped to 1..365) are removed at start and once a day; the file is 0600; deleting it erases everything."""
+Retention: rows older than `retention_days` (default 30, clamped to 1..365) are removed at start and once a day; the file is 0600; deleting it erases everything."""
 
 from __future__ import annotations
 
@@ -55,7 +55,7 @@ def reconcile(counts: dict[str, int], pending: int = 0) -> dict[str, int]:
 
 
 class ShadowTelemetry:
-    def __init__(self, path: str, *, retention_days: int = 90, flush_seconds: float = 300.0, clock=lambda: datetime.now(UTC)) -> None:
+    def __init__(self, path: str, *, retention_days: int = 30, flush_seconds: float = 300.0, clock=lambda: datetime.now(UTC)) -> None:
         self.path = Path(path)
         self.retention_days = min(max(int(retention_days), 1), 365)
         self.flush_seconds = flush_seconds
