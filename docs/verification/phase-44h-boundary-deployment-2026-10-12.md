@@ -36,6 +36,10 @@ Probes use the service token read from the container's own environment (never pr
 
 **Residue of the supported-action check (disclosed):** one cancelled alarm row, two audit receipts (`alarm.created`, `alarm.cancelled`; receipts are append-only), and, because the `alarm.created` receipt carries the notification flag, a Telegram notification for it was delivered to the owner at 05:27:27 on the host clock. The `alarms` table has no outbox trigger, so the pending knowledge outbox row (the owner's second note) was neither touched nor joined by new rows. I did not create a task or note for this check for that reason.
 
-## Acceptance
+## Acceptance (owner, 2026-10-12)
 
-Software deployment: complete and passed as above. Not done by design: shadow, retrieval, indexing, the evidence-coverage mechanism. Not tested: a physical robot (no robot action was possible or sent). **Awaiting the owner:** acceptance of the deployment (the rollback assets stay until then).
+**Accepted for the unclaimed-action boundary.** The production text and voice probes, the deterministic replies, the absence of observed unauthorized side effects and the preserved supported action paths satisfy this deployment's acceptance scope. This does **not** close retrospective action hallucinations ("Did you finish X?") or the broader Phase 44H receipt architecture. This verification record is preserved. The alarm test's cancelled alarm row and its two audit receipts stay documented and are **not** to be removed.
+
+**Rollback assets: not yet released.** The owner allowed releasing the temporary rollback image and the deployment backup once normal recovery coverage and retention requirements were confirmed. Checked 2026-10-12: the host has **no scheduled database backup** (only `dpkg-db-backup.timer`; no cron entry), the repository documents no retention period for these dumps, and `reachy-before-phase44h-boundary-20261009-132459.dump` (279,238 bytes) is the newest full recovery point, 3 hours newer than the indexing-trial dump and taken after the owner's second note. Recovery coverage is therefore not established by anything other than these ad hoc dumps, so both assets were **kept**: `reachy-rollback/companion-core:pre-44h-boundary` and the dump. Release needs a one-line confirmation that the owner accepts the dump as redundant (or a scheduled backup in place); both are small.
+
+Not done by design: shadow, retrieval, indexing, the evidence-coverage mechanism. Not tested: a physical robot.

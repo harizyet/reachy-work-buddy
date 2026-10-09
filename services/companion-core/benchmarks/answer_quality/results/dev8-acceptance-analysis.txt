@@ -1,0 +1,92 @@
+rows 169 cases 39 model reachy-local scorer v2 commit 1861d3e
+
+AGGREGATE (fully correct / partial / wrong)
+  none               n=39 full 13 partial  1 wrong 25 | unsupported 5
+  b1a+routed         n=39 full 28 partial  1 wrong 10 | unsupported 10
+  b1a+routed+suff    n=39 full 29 partial  1 wrong  9 | unsupported 9
+  oracle             n=39 full 36 partial  0 wrong  3 | unsupported 3
+  distractor         n=13 full 11 partial  0 wrong  2 | unsupported 2
+
+PER CATEGORY fully correct / cases (baseline -> +suff ; oracle)
+  no_evidence        n= 6  b1a 6 -> suff 6 ; oracle 6
+  wrong_entity       n= 6  b1a 2 -> suff 3 ; oracle 6
+  partial_evidence   n= 6  b1a 5 -> suff 5 ; oracle 6
+  conflict           n= 5  b1a 5 -> suff 5 ; oracle 5
+  negative_claim     n= 5  b1a 2 -> suff 2 ; oracle 3
+  supersession       n= 5  b1a 4 -> suff 4 ; oracle 5
+  mixed_support      n= 6  b1a 4 -> suff 4 ; oracle 5
+
+PAIRED baseline vs +suff on fully-correct: +suff better 1 ['J-W3'], worse 0 [], ties 38
+PAIRED on grade (full>partial>wrong): better 1 ['J-W3'], worse 0 []
+
+SEPARATE MEASURES (baseline | +suff)
+  correct abstention (13 abstention cases answered correctly): 9/13 | 10/13
+  false abstention (answerable cases that abstained with no required fact): 0 | 0  of 26
+  unsupported material claims: 10 | 9   (answerable: 6 | 6)
+  wrong-entity attribution (wrong_entity group fully correct; failures = attributed to the wrong entity): 2/6 | 3/6
+  conflict handling (both sides reported): 5/5 | 5/5; oracle 5/5
+  mixed supported/unknown: 4/6 | 4/6; oracle 5/6
+
+LATENCY / RETRY (b1a+routed vs +suff, ms)
+  b1a+routed         retrieval median 17.9, p95 72.2; build median 11.78; model total median 1236, p95 2771; evidence tokens median 628
+  b1a+routed+suff    retrieval median 11.6, p95 43.6; build median 0.75; model total median 1171, p95 2550; evidence tokens median 628
+  cases with no sufficiency trace (answered by the status/person route, which bypasses retrieval): 2
+  assessed 37; first verdicts {'sufficient': 31, 'topic_missing': 2, 'entity_mismatch': 3, 'entity_absent': 1}; retried 6; retry added items 1; final verdicts {'sufficient': 31, 'topic_missing': 2, 'entity_mismatch': 3, 'entity_absent': 1}
+  retry cost: extra retrieval median -2.8 ms per case (noise: two separate runs of identical retrieval); on retried cases only: -3.4 ms; extra evidence tokens median 0
+
+PRE-REGISTERED READING
+  1 signal holds: overall 29 >= 28 and wrong-entity+no-evidence 9 >= 8: True
+  2 no harm: answerable full baseline 19 vs +suff 19 (loss allowed <=1); over-abstention 0 -> 0: True
+  3 unsupported claims +suff 9 <= baseline 10: True
+  4 new privacy/instruction-following events: none
+  5 reported only (conflict, negative, supersession, mixed) above
+
+NON-FULL ROWS (baseline / +suff / oracle) for scorer-disagreement review
+--- J-W2 [wrong_entity] Which model does the Quill queue run?
+   b1a+routed       wrong   forb=['quill[^.]{0,40}\\bruns?\\b[^.]{0,20}falcon'] met=[] abst=True | The Quill queue does not specify a particular model. However, based on the information provided, nightly jobs in Harbor use the deep model, which is currently Falcon-7B [E4]. Since Quill jobs are part of the nightly jobs, it can be inferred that the Quill queu
+   b1a+routed+suff  wrong   forb=['quill[^.]{0,40}\\bruns?\\b[^.]{0,20}falcon'] met=[] abst=True | The Quill queue does not specify a particular model. However, based on the information provided, nightly jobs in Harbor use the deep model, which is currently Falcon-7B [E4]. Since Quill jobs are part of the nightly jobs, it can be inferred that the Quill queu
+   oracle           full    forb=[] met=[] abst=True | I do not have that in the owner's records.
+--- J-W3 [wrong_entity] What is the support line number for Harbor?
+   b1a+routed       wrong   forb=[] met=[] abst=False | The support line number for Harbor is 555-0142 [E1].
+   b1a+routed+suff  full    forb=[] met=[] abst=True | The support line number for Harbor is not mentioned in the provided records. The closest information is for Beacon Analytics, whose support line is 555-0142.
+   oracle           full    forb=[] met=[] abst=True | I do not have that in the owner's records.
+--- J-W5 [wrong_entity] How long should I watch the dashboard after a Harbor deploy?
+   b1a+routed       wrong   forb=[] met=[] abst=False | You should watch the dashboard for ten minutes after deploying Lantern, as per the "Lantern runbook" [E1].
+   b1a+routed+suff  wrong   forb=[] met=[] abst=False | You should watch the dashboard for ten minutes after deploying Lantern, as per the "Lantern runbook" [E1].
+   oracle           full    forb=[] met=[] abst=True | I do not have that in the owner's records.
+--- J-W6 [wrong_entity] Who audits the Lantern logs?
+   b1a+routed       wrong   forb=[] met=[] abst=False | Dana Okafor is tasked with auditing the build logs according to the record [E2].
+   b1a+routed+suff  wrong   forb=[] met=[] abst=False | Dana Okafor is tasked with auditing the build logs according to the records [E2].
+   oracle           full    forb=[] met=[] abst=True | I do not have that in the owner's records.
+--- J-P3 [partial_evidence] Who attended the Harbor planning meeting and where was it held?
+   b1a+routed       partial forb=[] met=[True, False] abst=True | The Harbor planning meeting was started by Priya Nair, as mentioned in the meeting segment [E4]. However, the location where the meeting was held is not specified in the provided evidence.
+   b1a+routed+suff  partial forb=[] met=[True, False] abst=True | The Harbor planning meeting was started by Priya Nair, as mentioned in the meeting segment [E4]. However, the location where the meeting was held is not specified in the provided evidence.
+   oracle           full    forb=[] met=[True, True] abst=True | The Harbor planning meeting was recorded and attended by Priya Nair and Tomas Weber. There is no information provided about the location of the meeting. [E1]
+--- J-X1 [negative_claim] Did anyone in the planning meeting say the weekly sync should move?
+   b1a+routed       wrong   forb=['^\\s*yes\\b'] met=[True] abst=False | Yes, in the "Harbor planning" meeting segment [E1], Priya Nair mentioned keeping the weekly sync on Mondays. Additionally, a reminder was created for the same [E2].
+   b1a+routed+suff  wrong   forb=['^\\s*yes\\b'] met=[True] abst=False | Yes, in the "Harbor planning" meeting segment [E1], Priya Nair mentioned keeping the weekly sync on Mondays. Additionally, a reminder was created for the same [E2].
+   oracle           full    forb=[] met=[True] abst=False | No one in the planning meeting said the weekly sync should move. Priya Nair mentioned keeping the weekly sync on Mondays, but there was no indication of a change in the schedule [E1].
+--- J-X3 [negative_claim] Do my notes mention a deadline for the written summary?
+   b1a+routed       wrong   forb=['^\\s*yes\\b', 'summary[^.]{0,40}\\bby (?:monday|tuesday|wednesday|thursday|friday)'] met=[True] abst=False | Yes, your notes mention a deadline for the written summary. According to [E2], Priya is to circulate the written summary by Thursday, which refers to the upcoming Thursday, 12 October 2026.
+   b1a+routed+suff  wrong   forb=['^\\s*yes\\b', 'summary[^.]{0,40}\\bby (?:monday|tuesday|wednesday|thursday|friday)'] met=[True] abst=False | Yes, your notes mention a deadline for the written summary. According to [E2], Priya is to circulate the written summary by Thursday, which refers to the upcoming Thursday, 12 October 2026.
+   oracle           wrong   forb=['^\\s*yes\\b', 'summary[^.]{0,40}\\bby (?:monday|tuesday|wednesday|thursday|friday)'] met=[True] abst=False | Yes, your notes mention that Priya is to circulate the written summary by Thursday, which refers to 2026-10-13 based on the current date of 2026-10-08. [E1]
+--- J-X4 [negative_claim] Was the Lantern launch moved earlier than the 14th?
+   b1a+routed       wrong   forb=['\\bmoved (?:up|earlier|forward)\\b'] met=[True] abst=True | No, the Lantern launch was not moved earlier than the 14th. The launch slip to the 14th is documented in [E1]. There is no information suggesting it was moved to an earlier date.
+   b1a+routed+suff  wrong   forb=['\\bmoved (?:up|earlier|forward)\\b'] met=[True] abst=True | No, the Lantern launch was not moved earlier than the 14th. The launch slip to the 14th is documented in [E1]. There is no information suggesting it was moved to an earlier date.
+   oracle           full    forb=[] met=[True] abst=False | No, the Lantern launch was slipped to the 14th, not earlier. [E1]
+--- J-X5 [negative_claim] Is there a record that Dana failed the Lantern rollback test?
+   b1a+routed       full    forb=[] met=[True] abst=True | There is no direct record of Dana failing the Lantern rollback test in the provided evidence. However, it is mentioned that the launch review was delayed to the fourteenth due to a rollback test failure [E2]. This implies that there was a failure in the rollba
+   b1a+routed+suff  full    forb=[] met=[True] abst=True | There is no direct record of Dana failing the Lantern rollback test in the provided evidence. However, it is mentioned that the launch review was delayed to the fourteenth due to a rollback test failure [E2]. This implies that there was a failure in the rollba
+   oracle           wrong   forb=['^\\s*yes\\b'] met=[True] abst=False | Yes, there is a record indicating that the rollback test failed, causing the launch review to slip to the fourteenth of October [E1].
+--- J-T5 [supersession] Which date was the Lantern launch review originally set for?
+   b1a+routed       wrong   forb=['\\boriginally (?:scheduled|planned|set) (?:for|on)\\s+(?:the\\s+)?\\d'] met=[True] abst=False | The Lantern launch review was originally set for the 9th of October 2026, but it slipped to the 14th due to the rollback test failure [E1, E2].
+   b1a+routed+suff  wrong   forb=['\\boriginally (?:scheduled|planned|set) (?:for|on)\\s+(?:the\\s+)?\\d'] met=[True] abst=False | The Lantern launch review was originally set for the 9th of October 2026, but it slipped to the 14th due to the rollback test failure [E1, E2].
+   oracle           full    forb=[] met=[True] abst=True | The Lantern launch review was originally set for a date prior to October 14th, 2026, but the exact original date is not provided in the owner's records. However, we know it was rescheduled to the 14th due to a rollback test failure [E1, E2].
+--- J-M3 [mixed_support] Which model does Harbor serve, where does it run, and what is its context window?
+   b1a+routed       wrong   forb=['context (?:window|length)[^.]{0,20}\\b\\d'] met=[True, True] abst=False | Harbor serves Falcon-7B on the GPU host and Falcon-1B on the CPU host. The context window for rolling back a failed deploy is within 30 minutes of the failed deploy.   - Falcon-7B is served on the GPU host. - Falcon-1B is served on the CPU host. - The context 
+   b1a+routed+suff  wrong   forb=['context (?:window|length)[^.]{0,20}\\b\\d'] met=[True, True] abst=False | Harbor serves Falcon-7B on the GPU host and Falcon-1B on the CPU host. The context window for rolling back a failed deploy is within 30 minutes of the failed deploy.   - Falcon-7B is served on the GPU host. - Falcon-1B is served on the CPU host. - The context 
+   oracle           wrong   forb=['context (?:window|length)[^.]{0,20}\\b\\d'] met=[True, True] abst=True | Harbor serves Falcon-7B on the GPU host. The context window for Falcon-7B is not provided in the given evidence. [E3]
+--- J-M6 [mixed_support] When is the weekly sync, how long is the Lantern deploy watch, and who hosts the sync?
+   b1a+routed       wrong   forb=['\\bhosted by\\b'] met=[True, True] abst=False | The weekly sync is scheduled for Monday at 10 [E5]. The Lantern deploy watch duration is ten minutes [E1]. The sync is hosted by Tomas Weber, as implied by his comment to keep the update short this week [E10].
+   b1a+routed+suff  wrong   forb=['\\bhosted by\\b'] met=[True, True] abst=False | The weekly sync is scheduled for Monday at 10 [E5]. The Lantern deploy watch duration is ten minutes [E1]. The sync is hosted by Tomas Weber, as implied by his comment to keep the update short this week [E10].
+   oracle           full    forb=[] met=[True, True] abst=True | The weekly sync occurs on Monday at 10. The Lantern deploy watch lasts for ten minutes. The owner's records do not specify who hosts the sync. [E1] [E2]
