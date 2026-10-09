@@ -120,8 +120,12 @@ def test_classifier_failure_falls_back_silently_to_the_ordinary_answer():
     client.put("/settings/llm", json={"local": {"base_url": "http://ovms/v1", "model": "qwen"}})
     resp = client.post("/conversation", json={**TURN, "text": "Turn off Reachy."})
     assert resp.status_code == 200
+    # Since the unclaimed-action boundary (2026-10-12) an action-shaped turn the classifier could not place gets the fixed truthful reply, not a model answer; the failure is still silent.
+    assert resp.json()["reply"].startswith("I haven't done that")
+    resp = client.post("/conversation", json={**TURN, "text": "What does Reachy look like?"})
+    assert resp.status_code == 200
     assert resp.json()["reply"] == "A normal answer."
-    assert len(calls) == 2
+    assert len(calls) == 3  # the action turn: the classifier only, no answer generation; the ordinary turn: classifier, then the answer
 
 
 def test_classifier_timeout_falls_back_silently_to_the_ordinary_answer():
@@ -137,8 +141,12 @@ def test_classifier_timeout_falls_back_silently_to_the_ordinary_answer():
     client.put("/settings/llm", json={"local": {"base_url": "http://ovms/v1", "model": "qwen"}})
     resp = client.post("/conversation", json={**TURN, "text": "Turn off Reachy."})
     assert resp.status_code == 200
+    # Since the unclaimed-action boundary (2026-10-12) an action-shaped turn the classifier could not place gets the fixed truthful reply, not a model answer; the failure is still silent.
+    assert resp.json()["reply"].startswith("I haven't done that")
+    resp = client.post("/conversation", json={**TURN, "text": "What does Reachy look like?"})
+    assert resp.status_code == 200
     assert resp.json()["reply"] == "A normal answer."
-    assert len(calls) == 2
+    assert len(calls) == 3  # the action turn: the classifier only, no answer generation; the ordinary turn: classifier, then the answer
     # The classifier's own failed call must not be recorded as a
     # user-visible provider error in the operator-facing usage ledger.
     assert client.get("/llm/usage").json()["summary"]["errors"] == 0

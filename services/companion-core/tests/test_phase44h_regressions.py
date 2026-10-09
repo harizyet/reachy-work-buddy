@@ -60,7 +60,7 @@ def test_h001_model_text_never_actuates_the_robot_and_no_receipt_exists():
         reply = client.post("/conversation", json=ASK).json()["reply"]
         receipts = client.portal.call(app.state.planner_store.list_receipts)
     assert hub_calls == [] and receipts == []  # the model wrote command-shaped text; nothing acted and nothing was recorded
-    assert H001_REPLY in reply  # observed today: the false claim is released to the owner
+    assert H001_REPLY not in reply and "asleep" not in reply  # since 2026-10-12 the unclaimed-action boundary answers this prompt with a fixed reply (action_boundary.py)
 
 
 def test_h001_the_prototype_detector_finds_the_claim_and_no_receipt_can_back_it():
@@ -85,7 +85,6 @@ def test_refusals_offers_questions_and_descriptions_of_records_are_not_claims(se
     assert claims(sentence) == []
 
 
-@pytest.mark.xfail(strict=True, reason="H-001: the answer/action receipt boundary is a design under review (docs/phase-44h.md); today the false claim reaches the owner")
 def test_h001_boundary_a_reply_may_not_assert_a_consequential_action_without_a_matching_receipt():
     app, _ = app_with_model_reply(H001_REPLY)
     with TestClient(app) as client:

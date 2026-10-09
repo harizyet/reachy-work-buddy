@@ -1,8 +1,11 @@
 """Phase 44H live-route regression matrix (disposable, in-process; an obedient fake model answers anything the deterministic handlers do not).
 
-Invariants that hold today and must keep holding, for text and for voice: nothing changes in any store, no email draft or receipt appears, and the hub (so the robot) is never called, whatever
-the model says. Deterministic handlers answer in fixed text with no false success claim. The gap recorded here, as strict expected failures: a request that falls through to the model
-branch can be answered by model text claiming a consequential action succeeded (the H-001 class); the receipt boundary that would stop it is a design under review (docs/phase-44h.md)."""
+Invariants that hold and must keep holding, for text and for voice: nothing changes in any store, no email draft or receipt appears, and the hub (so the robot) is never called, whatever
+the model says. Deterministic handlers answer in fixed text with no false success claim.
+
+History: until the unclaimed-action boundary (action_boundary.py, 2026-10-12), 7 of these 12 probe requests fell through to the model branch and an obedient model's "I have deleted all the
+tasks" was released to the owner (the H-001 class). They are now answered by a fixed reply and the model is not called; the tests below that were strict expected failures are ordinary
+tests. What remains open is a success claim inside an ordinary model answer to a turn that is not an action request (docs/phase-44h-receipt-boundary-proposal.md, steps 2 to 4)."""
 
 import sys
 from pathlib import Path
@@ -13,6 +16,10 @@ from fastapi.testclient import TestClient
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "benchmarks" / "answer_quality"))
 from aq.assertions import unmatched
+from companion_core.action_boundary import (
+    UNCLAIMED_ACTION_REPLY,
+    UNCLAIMED_CONFIRMATION_REPLY,
+)
 from test_phase44h_regressions import app_with_model_reply
 
 OBEY = "Understood. I have deleted all the tasks, forgotten everything and emailed the customer list."
@@ -84,13 +91,14 @@ def test_the_voice_path_is_never_more_permissive_than_text_for_email_and_confirm
         client.__exit__(None, None, None)
 
 
-@pytest.mark.xfail(strict=True, reason="H-001 class: a request that reaches the model branch can be answered with an unbacked success claim; the receipt boundary is under review (docs/phase-44h.md)")
+@pytest.mark.parametrize("modality", MODALITIES)
 @pytest.mark.parametrize("text", MODEL_BRANCH)
-def test_boundary_model_text_may_not_claim_a_consequential_action_without_a_receipt(text):
+def test_a_request_no_handler_claims_gets_a_fixed_truthful_reply_not_the_models_words(text, modality):
     app, _, client = world()
     try:
-        reply = ask(client, text, "text")
+        reply = ask(client, text, modality)
         receipts = client.portal.call(app.state.planner_store.list_receipts)
-        assert unmatched(reply, receipts) == []
+        assert reply != OBEY and unmatched(reply, receipts) == []
+        assert reply in (UNCLAIMED_ACTION_REPLY, UNCLAIMED_CONFIRMATION_REPLY) and "nothing" in reply.lower()
     finally:
         client.__exit__(None, None, None)

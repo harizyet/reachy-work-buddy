@@ -94,6 +94,7 @@ async def run(args) -> dict:
                         "evidence_tokens": prep.rendered.tokens if prep.rendered else (llm.count_tokens(prep.text) if prep.text else 0),
                         "finish": done.finish_reason,
                     },
+                    "suff": prep.suff or None,
                     "context": {"text": prep.text, "entries": prep.entries, "dropped": prep.dropped, "retrieval_dropped": prep.retrieval_dropped, "candidates": prep.candidates,
                                 "local_only": prep.rendered.local_only if prep.rendered else None,
                                 "max_sensitivity": prep.rendered.max_sensitivity.value if prep.rendered else None},
@@ -111,7 +112,7 @@ async def run(args) -> dict:
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--split", choices=("dev", "dev2", "dev3", "dev4", "dev5", "holdout"), default="dev")
+    p.add_argument("--split", choices=("dev", "dev2", "dev3", "dev4", "dev5", "dev6", "dev7", "holdout"), default="dev")
     p.add_argument("--conditions", default=",".join(CONDITIONS))
     p.add_argument("--budget", type=int, default=1500, choices=(500, 1000, 1500))
     p.add_argument("--decision-point")

@@ -38,6 +38,7 @@ def main() -> int:
     p.add_argument("--model")
     p.add_argument("--base-url")
     p.add_argument("--out", required=True)
+    p.add_argument("--only-empty-frame", action="store_true", help="replay only rows whose evidence message has no entries (an empty bundle): the rows an earlier replay rebuilt without the frame")
     a = p.parse_args()
     if a.model:
         llmlib.MODEL = a.model
@@ -55,11 +56,16 @@ def main() -> int:
         if row["condition"] not in wanted or row["id"] not in cases:
             continue
         case = cases[row["id"]]
+        if a.only_empty_frame and (row["context"]["entries"] or not row["context"].get("text")):
+            continue
+        if row["cost"].get("finish") == "fixed":  # a deterministic reply never reaches a model, so there is nothing to compare
+            continue
         text = row["context"].get("text", "")
-        builder = bool(row["context"]["entries"])
+        # An empty bundle still carries the evidence frame ("nothing was found"), so the message is rebuilt whenever there is text, not only when there are entries.
+        builder = bool(text) and row["condition"].split("+")[0] != "p43"
         messages = rebuild(case, text, builder)
         done = llm.complete(messages, max_tokens=150 if case["modality"] == "voice" else 350)
-        ctx = {"entries": row["context"]["entries"], "has_ids": builder, "text": text, "prompt_violations": row["score"]["privacy"]["rule_violations_in_prompt"]}
+        ctx = {"entries": row["context"]["entries"], "has_ids": bool(row["context"]["entries"]), "text": text, "prompt_violations": row["score"]["privacy"]["rule_violations_in_prompt"]}
         score = score_answer(case, done.text, ctx)
         total += 1
         same += done.text == row["reply"]

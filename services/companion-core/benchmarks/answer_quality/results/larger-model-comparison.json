@@ -1,0 +1,488 @@
+{
+ "rows": 285,
+ "patched_rows": 21,
+ "by_condition": {
+  "b1a+routed": {
+   "base": {
+    "n": 53,
+    "full": 42,
+    "wrong": 9,
+    "unsupported_claims": 8,
+    "abstained_correctly": 14,
+    "abstention_cases": 21,
+    "contamination": 1
+   },
+   "other": {
+    "n": 53,
+    "full": 45,
+    "wrong": 6,
+    "unsupported_claims": 4,
+    "abstained_correctly": 19,
+    "abstention_cases": 21,
+    "contamination": 1
+   },
+   "other_better": 7,
+   "other_worse": 4,
+   "sign_p": 0.5488
+  },
+  "b1a+routed+suff": {
+   "base": {
+    "n": 53,
+    "full": 47,
+    "wrong": 4,
+    "unsupported_claims": 3,
+    "abstained_correctly": 19,
+    "abstention_cases": 21,
+    "contamination": 1
+   },
+   "other": {
+    "n": 53,
+    "full": 46,
+    "wrong": 5,
+    "unsupported_claims": 3,
+    "abstained_correctly": 19,
+    "abstention_cases": 21,
+    "contamination": 1
+   },
+   "other_better": 2,
+   "other_worse": 3,
+   "sign_p": 1.0
+  },
+  "b1a+routed+suff+cf": {
+   "base": {
+    "n": 53,
+    "full": 46,
+    "wrong": 6,
+    "unsupported_claims": 5,
+    "abstained_correctly": 17,
+    "abstention_cases": 21,
+    "contamination": 1
+   },
+   "other": {
+    "n": 53,
+    "full": 46,
+    "wrong": 5,
+    "unsupported_claims": 3,
+    "abstained_correctly": 19,
+    "abstention_cases": 21,
+    "contamination": 1
+   },
+   "other_better": 3,
+   "other_worse": 3,
+   "sign_p": 1.0
+  },
+  "distractor": {
+   "base": {
+    "n": 20,
+    "full": 16,
+    "wrong": 4,
+    "unsupported_claims": 4,
+    "abstained_correctly": 16,
+    "abstention_cases": 20,
+    "contamination": 0
+   },
+   "other": {
+    "n": 20,
+    "full": 19,
+    "wrong": 1,
+    "unsupported_claims": 1,
+    "abstained_correctly": 19,
+    "abstention_cases": 20,
+    "contamination": 0
+   },
+   "other_better": 3,
+   "other_worse": 0,
+   "sign_p": 0.25
+  },
+  "none": {
+   "base": {
+    "n": 53,
+    "full": 20,
+    "wrong": 30,
+    "unsupported_claims": 4,
+    "abstained_correctly": 19,
+    "abstention_cases": 21,
+    "contamination": 0
+   },
+   "other": {
+    "n": 53,
+    "full": 11,
+    "wrong": 40,
+    "unsupported_claims": 12,
+    "abstained_correctly": 11,
+    "abstention_cases": 21,
+    "contamination": 0
+   },
+   "other_better": 1,
+   "other_worse": 10,
+   "sign_p": 0.0117
+  },
+  "oracle": {
+   "base": {
+    "n": 53,
+    "full": 48,
+    "wrong": 4,
+    "unsupported_claims": 3,
+    "abstained_correctly": 21,
+    "abstention_cases": 21,
+    "contamination": 1
+   },
+   "other": {
+    "n": 53,
+    "full": 50,
+    "wrong": 2,
+    "unsupported_claims": 0,
+    "abstained_correctly": 21,
+    "abstention_cases": 21,
+    "contamination": 0
+   },
+   "other_better": 5,
+   "other_worse": 3,
+   "sign_p": 0.7266
+  }
+ },
+ "by_group": {
+  "b1a family": {
+   "correct abstention (no support)": {
+    "base": {
+     "n": 27,
+     "full": 25,
+     "wrong": 2,
+     "unsupported_claims": 2,
+     "abstained_correctly": 25,
+     "abstention_cases": 27,
+     "contamination": 0
+    },
+    "other": {
+     "n": 27,
+     "full": 27,
+     "wrong": 0,
+     "unsupported_claims": 0,
+     "abstained_correctly": 27,
+     "abstention_cases": 27,
+     "contamination": 0
+    }
+   },
+   "evidence about the wrong entity": {
+    "base": {
+     "n": 27,
+     "full": 22,
+     "wrong": 5,
+     "unsupported_claims": 5,
+     "abstained_correctly": 22,
+     "abstention_cases": 27,
+     "contamination": 0
+    },
+    "other": {
+     "n": 27,
+     "full": 24,
+     "wrong": 3,
+     "unsupported_claims": 3,
+     "abstained_correctly": 24,
+     "abstention_cases": 27,
+     "contamination": 0
+    }
+   },
+   "partially supporting evidence": {
+    "base": {
+     "n": 21,
+     "full": 21,
+     "wrong": 0,
+     "unsupported_claims": 0,
+     "abstained_correctly": 0,
+     "abstention_cases": 0,
+     "contamination": 0
+    },
+    "other": {
+     "n": 21,
+     "full": 18,
+     "wrong": 3,
+     "unsupported_claims": 0,
+     "abstained_correctly": 0,
+     "abstention_cases": 0,
+     "contamination": 0
+    }
+   },
+   "conflicting evidence": {
+    "base": {
+     "n": 15,
+     "full": 10,
+     "wrong": 0,
+     "unsupported_claims": 0,
+     "abstained_correctly": 0,
+     "abstention_cases": 0,
+     "contamination": 0
+    },
+    "other": {
+     "n": 15,
+     "full": 12,
+     "wrong": 0,
+     "unsupported_claims": 0,
+     "abstained_correctly": 0,
+     "abstention_cases": 0,
+     "contamination": 0
+    }
+   },
+   "invented supersession / temporal": {
+    "base": {
+     "n": 21,
+     "full": 18,
+     "wrong": 3,
+     "unsupported_claims": 3,
+     "abstained_correctly": 0,
+     "abstention_cases": 3,
+     "contamination": 0
+    },
+    "other": {
+     "n": 21,
+     "full": 18,
+     "wrong": 3,
+     "unsupported_claims": 3,
+     "abstained_correctly": 0,
+     "abstention_cases": 3,
+     "contamination": 0
+    }
+   },
+   "actor / assignee attribution": {
+    "base": {
+     "n": 18,
+     "full": 18,
+     "wrong": 0,
+     "unsupported_claims": 0,
+     "abstained_correctly": 0,
+     "abstention_cases": 0,
+     "contamination": 0
+    },
+    "other": {
+     "n": 18,
+     "full": 15,
+     "wrong": 0,
+     "unsupported_claims": 0,
+     "abstained_correctly": 0,
+     "abstention_cases": 0,
+     "contamination": 0
+    }
+   },
+   "negative claims": {
+    "base": {
+     "n": 21,
+     "full": 15,
+     "wrong": 6,
+     "unsupported_claims": 3,
+     "abstained_correctly": 3,
+     "abstention_cases": 6,
+     "contamination": 0
+    },
+    "other": {
+     "n": 21,
+     "full": 17,
+     "wrong": 4,
+     "unsupported_claims": 1,
+     "abstained_correctly": 6,
+     "abstention_cases": 6,
+     "contamination": 0
+    }
+   },
+   "retrieved instruction contamination": {
+    "base": {
+     "n": 9,
+     "full": 6,
+     "wrong": 3,
+     "unsupported_claims": 3,
+     "abstained_correctly": 0,
+     "abstention_cases": 0,
+     "contamination": 3
+    },
+    "other": {
+     "n": 9,
+     "full": 6,
+     "wrong": 3,
+     "unsupported_claims": 3,
+     "abstained_correctly": 0,
+     "abstention_cases": 0,
+     "contamination": 3
+    }
+   }
+  },
+  "oracle": {
+   "correct abstention (no support)": {
+    "base": {
+     "n": 9,
+     "full": 9,
+     "wrong": 0,
+     "unsupported_claims": 0,
+     "abstained_correctly": 9,
+     "abstention_cases": 9,
+     "contamination": 0
+    },
+    "other": {
+     "n": 9,
+     "full": 9,
+     "wrong": 0,
+     "unsupported_claims": 0,
+     "abstained_correctly": 9,
+     "abstention_cases": 9,
+     "contamination": 0
+    }
+   },
+   "evidence about the wrong entity": {
+    "base": {
+     "n": 9,
+     "full": 9,
+     "wrong": 0,
+     "unsupported_claims": 0,
+     "abstained_correctly": 9,
+     "abstention_cases": 9,
+     "contamination": 0
+    },
+    "other": {
+     "n": 9,
+     "full": 9,
+     "wrong": 0,
+     "unsupported_claims": 0,
+     "abstained_correctly": 9,
+     "abstention_cases": 9,
+     "contamination": 0
+    }
+   },
+   "partially supporting evidence": {
+    "base": {
+     "n": 7,
+     "full": 6,
+     "wrong": 1,
+     "unsupported_claims": 1,
+     "abstained_correctly": 0,
+     "abstention_cases": 0,
+     "contamination": 0
+    },
+    "other": {
+     "n": 7,
+     "full": 6,
+     "wrong": 1,
+     "unsupported_claims": 0,
+     "abstained_correctly": 0,
+     "abstention_cases": 0,
+     "contamination": 0
+    }
+   },
+   "conflicting evidence": {
+    "base": {
+     "n": 5,
+     "full": 4,
+     "wrong": 0,
+     "unsupported_claims": 0,
+     "abstained_correctly": 0,
+     "abstention_cases": 0,
+     "contamination": 0
+    },
+    "other": {
+     "n": 5,
+     "full": 5,
+     "wrong": 0,
+     "unsupported_claims": 0,
+     "abstained_correctly": 0,
+     "abstention_cases": 0,
+     "contamination": 0
+    }
+   },
+   "invented supersession / temporal": {
+    "base": {
+     "n": 7,
+     "full": 7,
+     "wrong": 0,
+     "unsupported_claims": 0,
+     "abstained_correctly": 1,
+     "abstention_cases": 1,
+     "contamination": 0
+    },
+    "other": {
+     "n": 7,
+     "full": 7,
+     "wrong": 0,
+     "unsupported_claims": 0,
+     "abstained_correctly": 1,
+     "abstention_cases": 1,
+     "contamination": 0
+    }
+   },
+   "actor / assignee attribution": {
+    "base": {
+     "n": 6,
+     "full": 6,
+     "wrong": 0,
+     "unsupported_claims": 0,
+     "abstained_correctly": 0,
+     "abstention_cases": 0,
+     "contamination": 0
+    },
+    "other": {
+     "n": 6,
+     "full": 5,
+     "wrong": 0,
+     "unsupported_claims": 0,
+     "abstained_correctly": 0,
+     "abstention_cases": 0,
+     "contamination": 0
+    }
+   },
+   "negative claims": {
+    "base": {
+     "n": 7,
+     "full": 5,
+     "wrong": 2,
+     "unsupported_claims": 1,
+     "abstained_correctly": 2,
+     "abstention_cases": 2,
+     "contamination": 0
+    },
+    "other": {
+     "n": 7,
+     "full": 7,
+     "wrong": 0,
+     "unsupported_claims": 0,
+     "abstained_correctly": 2,
+     "abstention_cases": 2,
+     "contamination": 0
+    }
+   },
+   "retrieved instruction contamination": {
+    "base": {
+     "n": 3,
+     "full": 2,
+     "wrong": 1,
+     "unsupported_claims": 1,
+     "abstained_correctly": 0,
+     "abstention_cases": 0,
+     "contamination": 1
+    },
+    "other": {
+     "n": 3,
+     "full": 2,
+     "wrong": 1,
+     "unsupported_claims": 0,
+     "abstained_correctly": 0,
+     "abstention_cases": 0,
+     "contamination": 0
+    }
+   }
+  }
+ },
+ "latency": {
+  "base": {
+   "n": 285,
+   "total_ms_median": 1234,
+   "total_ms_p95": 2963,
+   "ttft_ms_median": 56,
+   "completion_tokens_median": 45,
+   "prompt_tokens_median": 581
+  },
+  "other": {
+   "n": 285,
+   "total_ms_median": 1765,
+   "total_ms_p95": 3848,
+   "ttft_ms_median": 136,
+   "completion_tokens_median": 32,
+   "prompt_tokens_median": 585
+  }
+ }
+}

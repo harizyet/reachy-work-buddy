@@ -30,6 +30,9 @@ Run only when the model server is otherwise quiet: the runner is serial, checks 
 | `aq/scoring.py` | Deterministic scoring: correctness, abstention, groundedness, citations, privacy, injection, voice form. |
 | `aq/conditions.py`, `aq/llm.py` | What the model is given under each condition; the streaming vLLM client (time to first token, usage, server-side token counts). |
 | `run.py`, `report.py`, `review.py` | Runner (holdout needs `AQ_HOLDOUT_APPROVAL=<decision point>` and is logged once in `holdout_runs.jsonl`), summaries with paired tests, the owner-review generator. |
+| `cases_dev6.json`, `cases_dev7.json` | Fresh development sets (2026-10-12) for the evidence-sufficiency work and the larger-model comparison: no evidence, partial evidence, wrong entity, conflicts, supersession, actor attribution, negative claims, contamination. dev7 was written after `knowledge/sufficiency.py` was frozen. `make_cases_dev6.py`, `make_cases_dev7.py`. |
+| Conditions `+suff`, `+gate` | `b1a+routed+suff`: coverage note and one focused retrieval retry; `+gate` adds a fixed abstention. `sufficiency_eval.py` (assessor on perfect evidence, no model), `summarize_sufficiency.py`, `aq/postcheck.py` and `postcheck_eval.py` (post-generation checks: measured, not usable to enforce). |
+| `replay.py`, `compare_models.py`, `run_larger_model.sh`, `run_larger_model_empty.sh` | Replay stored prompts on another model and compare on identical evidence; the shell scripts run under the model manager (`python -m model_manager run -- ./run_larger_model.sh TAG`) so the 7B is always restored. `AQ_LLM_NOTHINK=1` for a Qwen3 server that is not already launched with thinking off. |
 | `results/` | Raw runs and summaries. |
 
 The corpus is small and invented, so a model with no retrieval cannot answer by world knowledge: the informative contrasts are Phase 43 against retrieval against oracle, and the abstention, authorization and injection behaviour, not the no-retrieval score.

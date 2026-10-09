@@ -29,6 +29,13 @@ from companion_core.knowledge.routing import (
     restricted_reply,
     route_status,
 )
+from companion_core.knowledge.sufficiency import (
+    abstention,
+    assess,
+    coverage_note,
+    pieces_from_items,
+    retry_query,
+)
 from companion_core.meetings import outputs as meeting_outputs
 from companion_core.persona.context import context_message
 from companion_core.semantic.model import SourceFilters
@@ -57,6 +64,7 @@ class Prepared:
     prompt_violations: list[str] = field(default_factory=list)
     skipped: str | None = None
     fixed_reply: str | None = None  # a deterministic reply that bypasses the model (restricted channel)
+    suff: dict[str, Any] = field(default_factory=dict)  # the evidence-sufficiency trace: first verdict, retry, final verdict
 
 
 def base_messages(case: dict[str, Any]) -> list[dict[str, str]]:
@@ -73,6 +81,7 @@ class Conditions:
         self.env, self.spec, self.llm, self.budget = env, built_spec, llm, budget
         self.flag_instructions = flag_instructions
         self.header, self.note, self.conflicts, self.template = "v1", None, False, False
+        self.suff = self.gate = False
         self.meta = source_meta(built_spec)
         self.retrievers: dict[str, Retriever] = {}
         self.embed = minilm_embed
@@ -133,6 +142,7 @@ class Conditions:
         self.header = "v2" if "v2" in mods else "v1"
         self.conflicts = "cf" in mods
         self.template = "tmpl" in mods
+        self.suff, self.gate = "suff" in mods or "gate" in mods, "gate" in mods
         if "routed" in mods:
             path = choose_path(case["question"], attached_meeting=bool(case["attached_meeting"]))
             if path == "phase43":
@@ -160,6 +170,29 @@ class Conditions:
         finally:
             self.note = None
 
+    async def _sufficiency(self, name, case, access, pinned, items, prepared: Prepared):
+        """Assess the evidence the builder will see; one focused retry when it does not cover the question; a coverage note; optionally a fixed abstention."""
+        question = case["question"]
+        first = assess(question, pieces_from_items(items))
+        prepared.suff = {"first": first.verdict, "retried": False, "final": first.verdict}
+        final = first
+        query = retry_query(first)
+        if query:
+            again = await self.retriever(name).retrieve(query, access, pinned, temporal=case["temporal"], limit=10)
+            seen = {i.ref.key for i in items}
+            extra = [i for i in again.bundle.items if i.ref.key not in seen]
+            prepared.suff.update(retried=True, retry_query=query, retry_added=len(extra))
+            if extra:
+                items = items + extra[:3]
+                final = assess(question, pieces_from_items(items))
+        prepared.suff["final"] = final.verdict
+        if self.gate:
+            reply = abstention(final)
+            if reply is not None:
+                prepared.fixed_reply = reply
+                prepared.suff["gated"] = True
+        return items, coverage_note(final)
+
     async def _prepare_base(self, name: str, case: dict[str, Any]) -> Prepared:
         profile = self.spec["access_profiles"][case["access"]]
         access = access_context(profile)
@@ -186,7 +219,16 @@ class Conditions:
             prepared.candidates = len(result.trace.candidates)
             prepared.retrieval_dropped = dict(result.bundle.dropped)
             pins = pinned.pinned_sources if pinned else frozenset()
-            return self._finish(case, prepared, list(result.bundle.items), access, pinned=frozenset(pins), candidates=len(result.bundle.items))
+            items = list(result.bundle.items)
+            if self.suff and not case["attached_meeting"]:
+                items, note = await self._sufficiency(name, case, access, pinned, items, prepared)
+                if prepared.fixed_reply is not None:
+                    return prepared
+                self.note = note
+            try:
+                return self._finish(case, prepared, items, access, pinned=frozenset(pins), candidates=len(items))
+            finally:
+                self.note = None
         if name == "oracle":
             return self._finish(case, prepared, await self._items(case["gold_refs"]), access)
         if name == "distractor":

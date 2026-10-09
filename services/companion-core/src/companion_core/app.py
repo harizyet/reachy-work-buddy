@@ -180,6 +180,7 @@ from companion_core import (
     rag_intent,
 )
 from companion_core import receipts as action_receipts
+from companion_core.action_boundary import unclaimed_action_reply
 from companion_core.briefing import BriefingItem, build_briefing
 from companion_core.calendar.models import CalendarEvent
 from companion_core.calendar.postgres_store import PostgresCalendarStore
@@ -1508,6 +1509,11 @@ def create_app(
                 production_suggestion = str(suggestion.intent.value) if suggestion is not None else None
                 if suggestion is not None:
                     reply = command_suggestion.format_suggestion_reply(suggestion.intent)
+                elif (unclaimed := unclaimed_action_reply(turn.text)) is not None:
+                    # Phase 44H: an action request that no handler above claimed. The model has no tools, so anything it said about
+                    # having done it would be false; the reply is fixed and the model is not called.
+                    reply = unclaimed
+                    production_handler = "action_boundary.unclaimed"
                 else:
                     try:
                         persona = await app.state.persona_store.get()

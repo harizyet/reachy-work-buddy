@@ -13,6 +13,8 @@ import httpx
 BASE = os.environ.get("AQ_LLM_URL", "http://localhost:8003")
 MODEL = os.environ.get("AQ_LLM_MODEL", "reachy-local")
 SEED = 44
+# A Qwen3 model reasons before answering unless told not to; the production 7B ignores the field. Set AQ_LLM_NOTHINK=1 when replaying on Qwen3 so the request is otherwise identical (Phase 42 did the same).
+NOTHINK = os.environ.get("AQ_LLM_NOTHINK") == "1"
 
 
 @dataclass
@@ -46,6 +48,8 @@ class Local:
     def complete(self, messages: list[dict[str, str]], *, max_tokens: int = 350) -> Completion:
         body = {"model": MODEL, "messages": messages, "stream": True, "stream_options": {"include_usage": True},
                 "temperature": 0, "seed": SEED, "max_tokens": max_tokens}
+        if NOTHINK:
+            body["chat_template_kwargs"] = {"enable_thinking": False}
         start = time.perf_counter()
         first: float | None = None
         parts: list[str] = []

@@ -1,0 +1,40 @@
+
+dev6 (32 cases; written before the mechanism, failures seen before it was built)
+  none                   full  10/32  partial  1 wrong 21
+  b1a+routed             full  27/32  partial  1 wrong  4
+  b1a+routed+suff        full  30/32  partial  1 wrong  1
+  b1a+routed+gate        full  30/32  partial  1 wrong  1
+  oracle                 full  28/32  partial  1 wrong  3
+  distractor             full   9/11  partial  0 wrong  2
+
+dev7 (21 cases; written after the mechanism was frozen: evaluated once)
+  none                   full  10/21  partial  2 wrong  9
+  b1a+routed             full  15/21  partial  1 wrong  5
+  b1a+routed+suff        full  17/21  partial  1 wrong  3
+  b1a+routed+gate        full  17/21  partial  1 wrong  3
+  b1a+routed+suff+cf     full  17/21  partial  1 wrong  3
+  oracle                 full  20/21  partial  0 wrong  1
+  distractor             full   7/9   partial  0 wrong  2
+
+dev6 + dev7: fully correct / cases, by category
+  attribution        b1a        6/6   b1a+suff   6/6   oracle     6/6
+  conflict           b1a        3/5   b1a+suff   3/5   oracle     4/5
+  injection          b1a        2/3   b1a+suff   2/3   oracle     2/3
+  negative_claim     b1a        5/7   b1a+suff   5/7   oracle     5/7
+  no_evidence        b1a        8/9   b1a+suff   9/9   oracle     9/9
+  partial_evidence   b1a        7/7   b1a+suff   7/7   oracle     6/7
+  supersession       b1a        6/7   b1a+suff   6/7   oracle     7/7
+  wrong_entity       b1a        5/9   b1a+suff   9/9   oracle     9/9
+
+paired, fresh sets, b1a+routed -> +suff: better 5, worse 0, two-sided sign p 0.0625
+paired, dev7 only:                      better 2, worse 0, two-sided sign p 0.5
+
+older development splits dev..dev5 (113 cases; regression: did the note cost answerable cases?)
+  b1a+routed             full  91/113 partial 12 wrong 10
+  b1a+routed+suff        full  93/113 partial 12 wrong  8
+  b1a+routed+gate        full  93/113 partial 11 wrong  9
+
+older splits, b1a+routed -> +suff: better 2, worse 0, p 0.5; -> +gate: better 2, worse 0, p 0.5
+over-abstained (older splits): {'b1a+routed': 2, 'b1a+routed+suff': 2, 'b1a+routed+gate': 3}
+
+retry (b1a+routed+suff rows): {'assessed': 138, 'insufficient_first': 31, 'retried': 30, 'retry_added_items': 6, 'still_insufficient_after_retry': 29}
