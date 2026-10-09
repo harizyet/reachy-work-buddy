@@ -1,6 +1,6 @@
 # Phase 44H: security regression cases and the answer/action receipt boundary (investigation, 2026-10-10)
 
-Status (2026-10-12): **the unclaimed-action boundary is implemented locally and not deployed** ([section below](#unclaimed-action-boundary-local-2026-10-12)); the broader answer/action receipt boundary remains an investigation. No authorization mechanism, consent gate, hub route or receipt is changed; any further change to them needs a separately reviewed design. This page is the home of the 44H security subset named in [Phase 44E](phase-44e-plan.md): a case belongs here when stored text or model text could overstate or misuse authority.
+Status (2026-10-12): **the unclaimed-action boundary is implemented and DEPLOYED to the homelab core 2026-10-12** ([deployment record](verification/phase-44h-boundary-deployment-2026-10-12.md)) ([section below](#unclaimed-action-boundary-deployed-2026-10-12)); the broader answer/action receipt boundary remains an investigation. No authorization mechanism, consent gate, hub route or receipt is changed; any further change to them needs a separately reviewed design. This page is the home of the 44H security subset named in [Phase 44E](phase-44e-plan.md): a case belongs here when stored text or model text could overstate or misuse authority.
 
 ## Regression cases
 
@@ -31,7 +31,7 @@ Architecture proposal for the full boundary (robot, email, calendar; outcome sta
 **Design questions for review (nothing is built).** (1) Where the check runs: after generation in the generic branch and in any future verbalizer, never in the deterministic handlers. (2) What it does on a match: replace the sentence, or the whole reply, with a fixed correction; never ask a model to repair it. (3) Recall is bounded by phrasing: a deterministic detector will miss passive and indirect claims, so it reduces rather than closes the gap; the stronger structural options are to forbid action verbs in the generic branch's system prompt (already stated by the action-boundary instruction, which the 7B ignored in H-001) or to render all consequential confirmations only from receipts. (4) Robot actions need hub-side receipts before any robot claim could ever be allowed. (5) False positives on descriptions of records matter more once retrieval is active. (6) The check must be tested on the live route with a real model, as H-001 was found. **Owner review is required before any code touches a reply path.**
 
 
-## Unclaimed-action boundary (local, 2026-10-12)
+## Unclaimed-action boundary (deployed 2026-10-12)
 
 Owner decision, 2026-10-12: *"an action request that reaches the end of the supported action-handler chain without being claimed cannot fall through as an ordinary conversational request capable of asserting completion... It should return a truthful deterministic response indicating that the requested action was not performed/handled. Preserve existing authorization, consent and receipt mechanisms. Add regression cases for the current 7/12 fall-through probes. Do not deploy without review."*
 
@@ -53,4 +53,4 @@ Owner decision, 2026-10-12: *"an action request that reaches the end of the supp
 - One existing test changed on purpose: with a failed command classifier, "Turn off Reachy." now gets the fixed reply instead of a model answer (`tests/test_command_suggestion.py`).
 - Core suite after the change: 1,176 passed, 77 skipped, 0 expected failures; ruff clean. (The known unrelated `test_knowledge_index` reconcile test is excluded as before.)
 
-**Open for the owner.** (1) Whether a recognised-but-unsupported request should name what the assistant can do. (3) Whether the boundary should also cover the cloud/frontier path identically (it does: it sits before the model call whatever the provider). (4) Deployment is a core image rebuild; nothing is deployed.
+**Open for the owner.** (1) Whether a recognised-but-unsupported request should name what the assistant can do. (3) Whether the boundary should also cover the cloud/frontier path identically (it does: it sits before the model call whatever the provider). (2) Deployment was a core image rebuild, done 2026-10-12.
