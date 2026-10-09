@@ -1,4 +1,4 @@
-# Phase 44: scorer v3 validation readiness plan (2026-10-14; plan only; no formal validation launched, no reply generated)
+# Phase 44: scorer v3 validation readiness plan (2026-10-14; plan only; SUPERSEDED in part by the [formal validation protocol](phase-44-scorer-v3-formal-validation-protocol.md) of 2026-10-15: corpus v5 with 18 worlds, new bank E, separate adversarial gate)
 
 Owner decision, 2026-10-14: *do not launch another formal validation yet; first provide scorer-v3 development results, a fresh validation corpus and sampling plan, independent-opportunity counts by severe category, a blinded adjudication protocol, and sample requirements for the confidence-bound gate. A second blinded reviewer is preferred but not confirmed; do not claim independent human validation without one.* Companion: [scorer v3 development](verification/phase-44-scorer-v3-development-2026-10-14.md). The gate is unchanged: severe sensitivity one-sided 95% lower bound ≥ 90%, severe precision one-sided 95% lower bound ≥ 80%, no severe category with zero detection; natural and provoked 7B output reported separately and never merged with synthetic probes.
 

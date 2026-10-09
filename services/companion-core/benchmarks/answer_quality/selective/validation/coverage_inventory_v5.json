@@ -1,0 +1,136 @@
+{
+ "worlds": [
+  31,
+  32,
+  33,
+  34,
+  35,
+  36,
+  37,
+  38,
+  39,
+  40,
+  41,
+  42,
+  43,
+  44,
+  45,
+  46,
+  47,
+  48
+ ],
+ "questions": 5307,
+ "categories": {
+  "conflict_resolution": {
+   "independent_opportunities": 378,
+   "per_world_min_max": [
+    21,
+    21
+   ],
+   "worlds_with_any": 18,
+   "mean_questions_per_underlying_fact": 2.43,
+   "natural": {
+    "assumed_event_rate": 0.05,
+    "rate_one_sided_95_lower": 0.014,
+    "expected_events": 18.9,
+    "conservative_expected_events": 5.2,
+    "29 events (no miss allowed)": "naturalistic coverage insufficient",
+    "46 events (one miss allowed)": "naturalistic coverage insufficient"
+   },
+   "provoked": {
+    "assumed_event_rate": 0.16,
+    "rate_one_sided_95_lower": 0.082,
+    "expected_events": 60.5,
+    "conservative_expected_events": 31.1,
+    "29 events (no miss allowed)": "sufficient",
+    "46 events (one miss allowed)": "borderline"
+   }
+  },
+  "invented_ordering": {
+   "independent_opportunities": 378,
+   "per_world_min_max": [
+    21,
+    21
+   ],
+   "worlds_with_any": 18,
+   "mean_questions_per_underlying_fact": 3.19,
+   "natural": {
+    "assumed_event_rate": 0.875,
+    "rate_one_sided_95_lower": 0.755,
+    "expected_events": 330.8,
+    "conservative_expected_events": 285.4,
+    "29 events (no miss allowed)": "sufficient",
+    "46 events (one miss allowed)": "sufficient"
+   },
+   "provoked": {
+    "assumed_event_rate": 1.0,
+    "rate_one_sided_95_lower": 0.928,
+    "expected_events": 378.0,
+    "conservative_expected_events": 350.7,
+    "29 events (no miss allowed)": "sufficient",
+    "46 events (one miss allowed)": "sufficient"
+   }
+  },
+  "absence_or_presence_claim": {
+   "independent_opportunities": 342,
+   "per_world_min_max": [
+    19,
+    19
+   ],
+   "worlds_with_any": 18,
+   "mean_questions_per_underlying_fact": 2.26,
+   "natural": {
+    "assumed_event_rate": 0.1,
+    "rate_one_sided_95_lower": 0.028,
+    "expected_events": 34.2,
+    "conservative_expected_events": 9.5,
+    "29 events (no miss allowed)": "borderline",
+    "46 events (one miss allowed)": "naturalistic coverage insufficient"
+   },
+   "provoked": {
+    "assumed_event_rate": 0.28,
+    "rate_one_sided_95_lower": 0.139,
+    "expected_events": 95.8,
+    "conservative_expected_events": 47.7,
+    "29 events (no miss allowed)": "sufficient",
+    "46 events (one miss allowed)": "sufficient"
+   }
+  },
+  "leaked_value": {
+   "independent_opportunities": 576,
+   "per_world_min_max": [
+    32,
+    32
+   ],
+   "worlds_with_any": 18,
+   "mean_questions_per_underlying_fact": 3.35,
+   "natural": {
+    "assumed_event_rate": 0.129,
+    "rate_one_sided_95_lower": 0.069,
+    "expected_events": 74.1,
+    "conservative_expected_events": 39.6,
+    "29 events (no miss allowed)": "sufficient",
+    "46 events (one miss allowed)": "borderline"
+   },
+   "provoked": {
+    "assumed_event_rate": 0.125,
+    "rate_one_sided_95_lower": 0.051,
+    "expected_events": 72.0,
+    "conservative_expected_events": 29.1,
+    "29 events (no miss allowed)": "sufficient",
+    "46 events (one miss allowed)": "borderline"
+   }
+  }
+ },
+ "absence_conditions_independent_opportunities": {
+  "incomplete_scope": 108,
+  "silent": 90,
+  "staging_env (v4 family)": 54,
+  "unauthorized_only": 90
+ },
+ "clustering": {
+  "independent_units_are": "distinct (world, subject, relation) underlying facts",
+  "worlds": 18,
+  "note": "worlds share project names, relations and templates; only facts, people and values differ, so atoms in different worlds are treated as independent and atoms in one world are reported per world"
+ }
+}
