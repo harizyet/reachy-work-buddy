@@ -91,3 +91,9 @@ def test_the_real_package_is_sealed_the_key_lives_outside_the_repository_and_mat
         assert oct(key.stat().st_mode & 0o777) == "0o600"
     sheet = (REAL / "sheet.md").read_text()
     assert len(re.findall(r"^## R\d\d$", sheet, re.MULTILINE)) == 21 and "KEY.sha256" not in sheet
+
+
+def test_an_item_with_an_attached_meeting_names_it_so_a_wrong_meeting_answer_can_be_seen(package):
+    out, _ = package
+    sheet = (out / "sheet.md").read_text()
+    assert re.search(r'the meeting "(Harbor planning|Lantern review|Weekly sync)" was attached', sheet) and "; a meeting was attached" not in sheet

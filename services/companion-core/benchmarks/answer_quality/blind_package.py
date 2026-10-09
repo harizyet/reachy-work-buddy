@@ -12,9 +12,11 @@ import hashlib
 import json
 import random
 import re
+import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parent / "knowledge_retrieval"))
 SELECTION = [  # (case, condition, why it is in the package)
     ("B-C1", "b1b", "retrieval disagreement"), ("B-C1", "oracle", "retrieval disagreement"),
     ("B-T3", "b1a", "conflicting sources"), ("B-T3", "b1b", "conflicting sources"),
@@ -58,6 +60,11 @@ def main() -> int:
     run = json.loads(Path(args.run).read_text())
     cases = {c["id"]: c for c in json.loads((HERE / "cases_holdout.json").read_text())["cases"]}
     rows = {(r["id"], r["condition"]): r for r in run["rows"]}
+    from kbench.fixtures import (
+        load_corpus,  # the attached meeting's title is shown so a rater can tell a wrong-meeting answer (found in the first review: R02)
+    )
+
+    meeting_titles = {m["id"]: m["title"] for m in load_corpus()["meetings"]}
     picked = [(c, cond, why) for c, cond, why in SELECTION if (c, cond) in rows]
     random.Random(args.seed).shuffle(picked)
     out = Path(args.out)
@@ -75,7 +82,7 @@ def main() -> int:
         row, case = rows[(cid, cond)], cases[cid]
         who = {"owner_private": "the owner on a private channel", "owner_sensitive": "the owner, sensitive records allowed", "shared_speaker": "a shared speaker (public records only)",
                "harbor_only": "restricted to the Harbor project", "owner_cloud": "a route that may use the cloud"}[case["access"]]
-        sheet += [f"## {rid}", "", f"**Asked by:** {who}" + ("; a meeting was attached" if case["attached_meeting"] else "") + (" (spoken)" if case["modality"] == "voice" else ""),
+        sheet += [f"## {rid}", "", f"**Asked by:** {who}" + (f"; the meeting \"{meeting_titles[case['attached_meeting']]}\" was attached" if case["attached_meeting"] else "") + (" (spoken)" if case["modality"] == "voice" else ""),
                   f"**Question:** {case['question']}", "", "**Evidence the assistant was shown:**", "", "```", evidence_view(row), "```", "", "**Answer:**", "",
                   "> " + row["reply"].strip().replace("\n", "\n> "), ""]
         key[rid] = {"case": cid, "condition": cond, "why_selected": why, "category": case["category"], "automatic_correctness": row["score"]["correctness"],
