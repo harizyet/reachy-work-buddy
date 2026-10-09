@@ -1,6 +1,8 @@
-# Phase 44 groundedness: dev12 one-shot acceptance protocol (frozen 2026-10-12; NOT RUN)
+# Phase 44 groundedness: dev12 one-shot acceptance protocol (frozen 2026-10-12; RUN ONCE and CONSUMED 2026-10-12)
 
-Owner decisions (2026-10-12): *separately frozen dev12 one-shot acceptance set; do not tune against dev12; guardrails fixed before dev12 is frozen.* The dev12 run needs the owner's separate go-ahead; nothing here is deployed, and no component is wired into an answer path.
+**Result: [dev12 acceptance record](verification/phase-44-groundedness-dev12-acceptance-2026-10-12.md).** The protocol below is as frozen; dev12 is not to be rerun or tuned against.
+
+Owner decisions (2026-10-12): *separately frozen dev12 one-shot acceptance set; do not tune against dev12; guardrails fixed before dev12 is frozen.* The owner approved the one-shot run on 2026-10-12; nothing here is deployed, and no component is wired into an answer path.
 
 ## What dev12 is
 

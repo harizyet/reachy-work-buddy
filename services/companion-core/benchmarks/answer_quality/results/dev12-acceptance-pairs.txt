@@ -1,0 +1,42 @@
+PER LABEL, fully correct / n
+arm                            ESTABLISHED      CONFLICTED  UNESTABLISHED:  UNESTABLISHED:  UNESTABLISHED:         PARTIAL
+b1a                                  23/28            2/10           19/22            7/10            5/5             4/16
+b1a+c1f                              23/28            3/10           17/22            7/10            5/5            14/16
+b1a+c2n                              23/28            4/10           19/22            7/10            5/5             8/16
+b1a+c1f+c2n                          23/28            3/10           17/22            7/10            5/5            15/16
+b1a+c1f+c2n+c3                       24/28            3/10           17/22            7/10            5/5            15/16
+b1a+c1f+c2t+c3                       18/28            3/10           18/22           10/10            5/5             2/16
+b1a+c4+c5                            18/28            2/10           17/22            8/10            5/5             3/16
+oracle                               28/28            3/10           22/22           10/10            5/5            13/16
+oracle+c4+c5                         26/28            2/10           22/22            7/10            5/5            13/16
+
+PAIRED vs baseline (fully correct): wins / losses / ties
+  b1a+c1f                    16 /  7 / 68   losses: ['D12-003', 'D12-011', 'D12-019', 'D12-042', 'D12-052', 'D12-053', 'D12-054']
+  b1a+c2n                     8 /  2 / 81   losses: ['D12-047', 'D12-080']
+  b1a+c1f+c2n                17 /  7 / 67   losses: ['D12-003', 'D12-011', 'D12-019', 'D12-042', 'D12-052', 'D12-053', 'D12-054']
+  b1a+c1f+c2n+c3             18 /  7 / 66   losses: ['D12-003', 'D12-011', 'D12-019', 'D12-042', 'D12-052', 'D12-053', 'D12-054']
+  b1a+c1f+c2t+c3              7 / 11 / 73   losses: ['D12-003', 'D12-011', 'D12-012', 'D12-014', 'D12-017', 'D12-019', 'D12-042', 'D12-052', 'D12-054', 'D12-080', 'D12-085']
+  b1a+c4+c5                   2 /  9 / 80   losses: ['D12-006', 'D12-007', 'D12-011', 'D12-018', 'D12-019', 'D12-036', 'D12-047', 'D12-055', 'D12-080']
+  oracle                     21 /  0 / 70   losses: []
+  oracle+c4+c5               18 /  3 / 70   losses: ['D12-001', 'D12-019', 'D12-036']
+
+PAIRED on unsupported claims vs baseline: fewer / more
+  b1a+c1f                    fewer  9  more  4   more: ['D12-042', 'D12-052', 'D12-053', 'D12-054']
+  b1a+c2n                    fewer  6  more  2   more: ['D12-047', 'D12-080']
+  b1a+c1f+c2n                fewer 10  more  4   more: ['D12-042', 'D12-052', 'D12-053', 'D12-054']
+  b1a+c1f+c2n+c3             fewer 10  more  4   more: ['D12-042', 'D12-052', 'D12-053', 'D12-054']
+  b1a+c1f+c2t+c3             fewer 14  more  3   more: ['D12-042', 'D12-052', 'D12-054']
+  b1a+c4+c5                  fewer 10  more  2   more: ['D12-047', 'D12-055']
+  oracle                     fewer 12  more  0   more: []
+  oracle+c4+c5               fewer 12  more  0   more: []
+
+SCORER ANNOTATION: unsupported claims, automatic vs excluding question-echo hits of the generic no-record pattern in abstaining replies
+  b1a                        automatic 15  annotated 12  (echo hits 3)
+  b1a+c1f                    automatic 10  annotated  7  (echo hits 3)
+  b1a+c2n                    automatic 11  annotated  8  (echo hits 3)
+  b1a+c1f+c2n                automatic  9  annotated  6  (echo hits 3)
+  b1a+c1f+c2n+c3             automatic  9  annotated  6  (echo hits 3)
+  b1a+c1f+c2t+c3             automatic  4  annotated  4  (echo hits 0)
+  b1a+c4+c5                  automatic  7  annotated  5  (echo hits 2)
+  oracle                     automatic  3  annotated  3  (echo hits 0)
+  oracle+c4+c5               automatic  3  annotated  0  (echo hits 3)

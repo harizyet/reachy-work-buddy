@@ -1,0 +1,35 @@
+dev12: 91 cases, 54 answerable; arms 9; model reachy-local
+
+arm                                   full unsup falseAbs ansFull corrAbs better worse regress corrected citBad  ms med
+b1a                                     60    15        6      29      31      0     0       0         0      0    1151
+b1a+c1f                                 69    10        4      40      29     16     7       7         9      0     851
+b1a+c2n                                 66    11        6      35      31      8     2       2         6      0    1206
+b1a+c1f+c2n                             70     9        4      41      29     17     7       7        10      0     864
+b1a+c1f+c2n+c3                          71     9        3      42      29     18     7       7        10      0     832
+b1a+c1f+c2t+c3                          56     4       24      23      33      7    11      11         0      0       0
+b1a+c4+c5                               53     7       10      23      30      2     9       9         1      0    1282
+oracle                                  81     3        0      44      37     21     0       0         6      1     522
+oracle+c4+c5                            75     3        1      41      34     18     3       3         9      0    1147
+
+GUARDRAILS (candidate arms vs baseline; owner-fixed 2026-10-12)
+b1a+c1f                              1 fewer unsupported 10<15: True  | 2 false abstention +-2 (-3.7%): True  | 3 answerable net loss -11: True  | 4 specific corrections 9: True  | 5 bad citations 0: True  | ALL True
+b1a+c2n                              1 fewer unsupported 11<15: True  | 2 false abstention +0 (+0.0%): True  | 3 answerable net loss -6: True  | 4 specific corrections 6: True  | 5 bad citations 0: True  | ALL True
+b1a+c1f+c2n                          1 fewer unsupported 9<15: True  | 2 false abstention +-2 (-3.7%): True  | 3 answerable net loss -12: True  | 4 specific corrections 10: True  | 5 bad citations 0: True  | ALL True
+b1a+c1f+c2n+c3                       1 fewer unsupported 9<15: True  | 2 false abstention +-3 (-5.6%): True  | 3 answerable net loss -13: True  | 4 specific corrections 10: True  | 5 bad citations 0: True  | ALL True
+b1a+c1f+c2t+c3                       1 fewer unsupported 4<15: True  | 2 false abstention +18 (+33.3%): False | 3 answerable net loss 6: False | 4 specific corrections 0: False | 5 bad citations 0: True  | ALL False
+b1a+c4+c5                            1 fewer unsupported 7<15: True  | 2 false abstention +4 (+7.4%): False | 3 answerable net loss 6: False | 4 specific corrections 1: True  | 5 bad citations 0: True  | ALL False
+
+BY LABEL (fully correct / n) baseline | arms
+  ESTABLISHED                  n=28                    B 23 |              B+c4+c5 18 |               oracle 28
+  CONFLICTED                   n=10                    B 2 |              B+c4+c5 2 |               oracle 3
+  UNESTABLISHED:wrong_entity   n=22                    B 19 |              B+c4+c5 17 |               oracle 22
+  UNESTABLISHED:no_record      n=10                    B 7 |              B+c4+c5 8 |               oracle 10
+  UNESTABLISHED:unauthorized   n= 5                    B 5 |              B+c4+c5 5 |               oracle 5
+  PARTIAL                      n=16                    B 4 |              B+c4+c5 3 |               oracle 13
+
+CLAIM-LEVEL (c4 arms)
+  b1a+c4+c5                            parse_ok 91/91; claims 51; valid 49; rejections {'claim_value_not_in_span': 1, 'quote_not_in_item': 1}; accepted invalid 0
+  oracle+c4+c5                         parse_ok 91/91; claims 43; valid 42; rejections {'claim_value_not_in_span': 1}; accepted invalid 0
+
+C2 STATE vs LABEL on arms that computed it
+  b1a+c2n {('CONFLICTED', 'CONFLICTED'): 8, ('CONFLICTED', 'ESTABLISHED'): 2, ('ESTABLISHED', 'CONFLICTED'): 4, ('ESTABLISHED', 'ESTABLISHED'): 15, ('ESTABLISHED', 'UNESTABLISHED'): 9, ('PARTIAL', 'PARTIAL'): 2, ('PARTIAL', 'UNESTABLISHED'): 14, ('UNESTABLISHED:no_record', 'UNESTABLISHED'): 10, ('UNESTABLISHED:unauthorized', 'UNESTABLISHED'): 5, ('UNESTABLISHED:wrong_entity', 'CONFLICTED'): 2, ('UNESTABLISHED:wrong_entity', 'ESTABLISHED'): 13, ('UNESTABLISHED:wrong_entity', 'UNESTABLISHED'): 7}

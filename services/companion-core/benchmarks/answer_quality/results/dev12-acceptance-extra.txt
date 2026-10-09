@@ -1,0 +1,107 @@
+C1 FILTER vs BASELINE, case by case
+  records shown: B 8.6 -> C1 3.1; non-gold shown: 8.0 -> 2.4
+  improved 16, regressed 7, gold evidence removed by C1 in 3 cases ['D12-003', 'D12-019', 'D12-023']
+  + D12-015 ESTABLISHED | non-gold 10->3, shown 10->3 | Whose job is it to look after the Gantry scheduler?
+  + D12-020 ESTABLISHED | non-gold 10->2, shown 10->3 | Whose job is it to look after the Lattice store?
+  + D12-021 ESTABLISHED | non-gold 10->3, shown 10->3 | Whose job is it to look after the Ferry queue?
+  + D12-031 CONFLICTED | non-gold 9->3, shown 10->5 | How often is a failed job on the Relay gateway tried again before it is parked?
+  + D12-041 UNESTABLISHED:wrong_entity | non-gold 10->3, shown 10->3 | What did the Sable planning decide on the model?
+  + D12-059 UNESTABLISHED:wrong_entity | non-gold 10->3, shown 10->3 | Which model did the Thistle team agree to keep?
+  + D12-077 PARTIAL | non-gold 9->1, shown 10->3 | Which model sits behind the Sable deep path?
+  + D12-078 PARTIAL | non-gold 9->1, shown 10->3 | Which model does the deep path serve for Umbra?
+  + D12-079 PARTIAL | non-gold 9->1, shown 10->3 | Which model does the deep path serve for Willow?
+  + D12-081 PARTIAL | non-gold 9->2, shown 9->2 | Whose job is the Hopper ingest service, and what size limit does it have?
+  + D12-082 PARTIAL | non-gold 9->1, shown 10->3 | Which model sits behind the Umbra deep path?
+  + D12-084 PARTIAL | non-gold 9->1, shown 10->3 | Which model sits behind the Thistle deep path?
+  + D12-086 PARTIAL | non-gold 9->1, shown 10->3 | Which model sits behind the Quartz deep path?
+  + D12-088 PARTIAL | non-gold 9->1, shown 10->3 | Which model does the deep path serve for Thistle?
+  + D12-090 PARTIAL | non-gold 10->3, shown 10->3 | Whose job is the Gantry scheduler, and what size limit does it have?
+  + D12-091 PARTIAL | non-gold 10->3, shown 10->3 | Whose job is the Relay gateway, and what size limit does it have?
+  - D12-003 ESTABLISHED | gold present True->False | How long does the Osprey budget run?
+       B : 'The Osprey budget is approved through July, as stated in the meeting segment [E6].'
+       C1: 'The Osprey budget run duration is not specified in the provided evidence. The documents mention deploying Osprey with a release script and m'
+  - D12-011 ESTABLISHED | gold present True->True | When must Dmitri Volkov send the written summary?
+       B : "According to the owner's records, Dmitri Volkov is scheduled to circulate the written summary by Monday [E2]. However, there is also a confl"
+       C1: "According to the owner's records, Dmitri Volkov must circulate the written summary by Monday. This is based on the Cedar action items [E2]."
+  - D12-019 ESTABLISHED | gold present True->False | Which model did the Vesper team agree to keep?
+       B : 'The Vesper team agreed to keep Heron-12B as the default model [E6].'
+       C1: 'The provided evidence does not specify which model the Vesper team agreed to keep. The evidence only mentions that Vesper serves Heron-12B o'
+  - D12-042 UNESTABLISHED:wrong_entity | gold present None->None | What was decided about Thistle's default model?
+       B : "The owner's records do not specify a default model for Thistle. Thistle serves Kestrel-9B on the CPU host and uses the fast path for interac"
+       C1: 'Thistle serves Kestrel-9B on the CPU host. This information is from the document recorded on 2026-10-09 [E1].'
+  - D12-052 UNESTABLISHED:wrong_entity | gold present None->None | What was decided about Sable's default model?
+       B : 'Based on the records, Sable does not have a specific default model mentioned. However, Sable serves Kestrel-3B on the GPU host, and interact'
+       C1: 'Sable serves Kestrel-3B on the GPU host. This information is from the document chunk [E1] dated 2026-10-09.'
+  - D12-053 UNESTABLISHED:wrong_entity | gold present None->None | Whose job is it to look after the Turret API?
+       B : 'The information provided does not specify who is responsible for maintaining the Turret API. The details given describe the job flow and ret'
+       C1: 'According to the meeting segment [E2], Liam Oconnor is responsible for owning the Turret API schedule.'
+  - D12-054 UNESTABLISHED:wrong_entity | gold present None->None | Through when is the Umbra budget approved?
+       B : 'The budget for Umbra is not mentioned in the provided evidence. All budgets listed in the evidence are for different projects and end at var'
+       C1: 'The budget for Umbra is approved through October 2026, based on the information provided in the meeting segment "Umbra architecture" [E7].'
+
+C1 gold removed (any case where baseline shows all gold and C1 does not): ['D12-003', 'D12-019', 'D12-023']
+
+C2 ANSWERABILITY DECISIONS (state computed on the C2-note arm; the generator plays no part)
+  false UNESTABLISHED (would wrongly withhold an answerable question): 23 of 54 answerable-labelled: Counter({'PARTIAL': 14, 'ESTABLISHED': 9})
+  missed UNESTABLISHED (state says ESTABLISHED/CONFLICTED/PARTIAL for an unanswerable question): 15 of 37: by relation Counter({'attends': 8, 'budget_through': 4, 'decision': 3}); held-out relation share 4/15
+  fp by relation Counter({'deep_path_model': 11, 'deadline': 3, 'owner': 3, 'owner+max_message_size': 3, 'on_call': 1, 'decision': 1, 'lead': 1})
+  did the note change answers where C2 was wrong? answerable false-UNESTABLISHED: fully correct with note vs baseline: 11 vs 7 (n=23)
+  missed unanswerable: unsupported with note vs baseline: 1 vs 1
+
+ORACLE ARM CITATION OUTSIDE THE CANDIDATES (reported; guardrail 5 applies to candidate arms)
+   D12-053 {'cited': ['E1'], 'nonexistent': ['E1'], 'unauthorized': []} | I do not have that information in the owner's records [E1].
+
+LATENCY AND RESOURCES (ms / tokens)
+  b1a                      model call median   1151 p95   2574 | retrieval median  16.7 | prompt tokens median   934 completion   37 | model calls skipped 0
+  b1a+c1f                  model call median    851 p95   2339 | retrieval median   0.0 | prompt tokens median   528 completion   30 | model calls skipped 0
+  b1a+c2n                  model call median   1206 p95   2681 | retrieval median   0.0 | prompt tokens median   940 completion   40 | model calls skipped 0
+  b1a+c1f+c2n              model call median    864 p95   2260 | retrieval median   0.0 | prompt tokens median   541 completion   31 | model calls skipped 0
+  b1a+c1f+c2n+c3           model call median    832 p95   2182 | retrieval median   0.0 | prompt tokens median   541 completion   31 | model calls skipped 9
+  b1a+c1f+c2t+c3           model call median      0 p95   1360 | retrieval median   0.0 | prompt tokens median     0 completion    0 | model calls skipped 54
+  b1a+c4+c5                model call median   1282 p95   1798 | retrieval median  11.1 | prompt tokens median  1042 completion   48 | model calls skipped 0
+  oracle                   model call median    522 p95   1282 | retrieval median   0.0 | prompt tokens median   398 completion   19 | model calls skipped 0
+  oracle+c4+c5             model call median   1147 p95   1681 | retrieval median   0.0 | prompt tokens median   506 completion   39 | model calls skipped 0
+
+SCORER REVIEW: non-full replies of the C1+C2 candidate (automatic score unmodified)
+- D12-003 [ESTABLISHED] wrong forb=[] facts_met=[False] | How long does the Osprey budget run?
+    'The Osprey budget run duration is not specified in the provided evidence. The documents mention deploying Osprey with a release script and monitoring the dashboard for five minutes, but they do not indicate the length of the budge'
+- D12-011 [ESTABLISHED] wrong forb=[] facts_met=[False] | When must Dmitri Volkov send the written summary?
+    'According to the records, Dmitri Volkov is required to circulate the written summary by Monday. This is stated in the Cedar action items [E2].'
+- D12-019 [ESTABLISHED] wrong forb=[] facts_met=[False] | Which model did the Vesper team agree to keep?
+    "I do not have that information in the owner's records. The provided evidence does not mention which model the Vesper team agreed to keep."
+- D12-023 [ESTABLISHED] wrong forb=[] facts_met=[False, False] | Which people took part in the Marlin planning?
+    "I do not have that in the owner's records."
+- D12-028 [ESTABLISHED] wrong forb=[] facts_met=[False] | Who is in charge of Cedar?
+    'The information provided does not specify who is in charge of Cedar. The documents mention Cedar as an internal platform used for deploying jobs and serving requests, but they do not identify a person in charge. [E1] and [E2] do n'
+- D12-029 [CONFLICTED] partial forb=[] facts_met=[True, False] | Within how many minutes must a Quartz rollback happen?
+    'According to the "Quartz runbook" [E1], a Quartz rollback must happen within 20 minutes of a failed deploy.'
+- D12-030 [CONFLICTED] partial forb=[] facts_met=[True, False] | Within how many minutes must a Osprey rollback happen?
+    'According to the Osprey runbook [E1], a rollback must happen within 30 minutes of a failed deploy by running the rollback script.'
+- D12-031 [CONFLICTED] partial forb=[] facts_met=[True, False] | How often is a failed job on the Relay gateway tried again before it is parked?
+    'The records provide conflicting information about the number of retries for failed jobs on the Relay gateway:\n\n- Evidence E1 states that a failed job is retried up to 5 times before it is parked.\n- Evidence E2 states that a failed'
+- D12-032 [CONFLICTED] partial forb=[] facts_met=[True, False] | How often is a failed job on the Gantry scheduler tried again before it is parked?
+    'The records provide conflicting information about the retry count for failed jobs on the Gantry scheduler:\n\n- According to the archived document [E1], a failed job is retried up to 3 times.\n- The current document [E2] states that '
+- D12-033 [CONFLICTED] partial forb=[] facts_met=[True, False] | Within how many minutes must a Pinnacle rollback happen?
+    'According to the "Pinnacle runbook" [E1], a rollback must happen within 15 minutes of a failed deploy.'
+- D12-034 [CONFLICTED] wrong forb=[] facts_met=[False, False] | How often is a failed job on the Hopper ingest service tried again before it is parked?
+    'A failed job on the Hopper ingest service is retried up to 5 times before it is parked, as documented in [E1].'
+- D12-035 [CONFLICTED] partial forb=[] facts_met=[True, False] | Within how many minutes must a Vesper rollback happen?
+    'According to the Vesper runbook [E1], a rollback must happen within 40 minutes of a failed deploy by running the rollback script.'
+- D12-042 [UNESTABLISHED:wrong_entity] wrong forb=[] facts_met=[] | What was decided about Thistle's default model?
+    'Thistle serves Kestrel-9B on the CPU host. This information is from the document recorded on 2026-10-09 [E1].'
+- D12-044 [UNESTABLISHED:wrong_entity] wrong forb=[] facts_met=[] | Through when is the Thistle budget approved?
+    'The Thistle budget is approved through October [E5].'
+- D12-052 [UNESTABLISHED:wrong_entity] wrong forb=[] facts_met=[] | What was decided about Sable's default model?
+    'Sable serves Kestrel-3B on the GPU host. This information is from the document chunk [E1] dated 2026-10-09.'
+- D12-053 [UNESTABLISHED:wrong_entity] wrong forb=[] facts_met=[] | Whose job is it to look after the Turret API?
+    'According to the meeting segment [E2], Liam Oconnor will own the Turret API schedule.'
+- D12-054 [UNESTABLISHED:wrong_entity] wrong forb=[] facts_met=[] | Through when is the Umbra budget approved?
+    'The budget for Umbra is approved through October 2026, based on the information provided in the meeting segment "Umbra architecture" [E7] and [E8].'
+- D12-061 [UNESTABLISHED:no_record] wrong forb=['signs off|reviewer|approves'] facts_met=[] | Which person approves Sable security changes?
+    "I do not have that information in the owner's records. The provided evidence focuses on Sable's architecture and deployment runbook, but does not mention who approves security changes."
+- D12-067 [UNESTABLISHED:no_record] wrong forb=['signs off|reviewer|approves'] facts_met=[] | Who signs off Umbra security?
+    "I do not have that information in the owner's records. The provided evidence does not include details about who signs off on Umbra security."
+- D12-068 [UNESTABLISHED:no_record] wrong forb=['signs off|reviewer|approves'] facts_met=[] | Which person approves Quartz security changes?
+    "I do not have that information in the owner's records. The provided evidence does not mention who approves Quartz security changes."
+- D12-089 [PARTIAL] wrong forb=['(?:deep path|scheduled jobs)[^.]{0,30}\\b(?:serves?|runs?|uses?|is)\\b[^.]{0,15}merlin\\-2b'] facts_met=[True] | Which model sits behind the Juniper deep path?
+    'The Juniper deep path uses the Merlin-2B model [E1].'
