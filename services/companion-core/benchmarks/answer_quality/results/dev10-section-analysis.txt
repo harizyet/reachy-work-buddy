@@ -1,0 +1,152 @@
+rows 220 cases 41 answerable 26 abstention 15 commit ca667ff
+
+AGGREGATE
+  A baseline               n=41 full 25 partial 1 wrong 15 | UNSUPPORTED 14 | false abstention 1 | abstention cases correct 7/15
+  B existing coverage      n=41 full 25 partial 1 wrong 15 | UNSUPPORTED 14 | false abstention 1 | abstention cases correct 7/15
+  C section-level          n=41 full 25 partial 1 wrong 15 | UNSUPPORTED 14 | false abstention 1 | abstention cases correct 7/15
+  D section+descriptors    n=41 full 25 partial 1 wrong 15 | UNSUPPORTED 14 | false abstention 1 | abstention cases correct 7/15
+  oracle                   n=41 full 40 partial 0 wrong  1 | UNSUPPORTED  0 | false abstention 0 | abstention cases correct 15/15
+  distractor               n=15 full 11 partial 0 wrong  4 | UNSUPPORTED  4 | false abstention 0 | abstention cases correct 11/15
+
+PER CATEGORY fully correct / unsupported (A | B | C | D ; oracle)
+  cross_section    n= 7  2/5 | 2/5 | 2/5 | 2/5 ; oracle 7
+  wrong_entity     n= 6  2/4 | 2/4 | 2/4 | 2/4 ; oracle 6
+  partial_evidence n= 5  4/1 | 4/1 | 4/1 | 4/1 ; oracle 5
+  conflict         n= 4  4/0 | 4/0 | 4/0 | 4/0 ; oracle 4
+  supersession     n= 5  3/2 | 3/2 | 3/2 | 3/2 ; oracle 5
+  negative_claim   n= 4  2/1 | 2/1 | 2/1 | 2/1 ; oracle 3
+  no_evidence      n= 4  4/0 | 4/0 | 4/0 | 4/0 ; oracle 4
+  mixed_support    n= 6  4/1 | 4/1 | 4/1 | 4/1 ; oracle 6
+
+PAIRED on fully correct (second arm better / worse / ties)
+  B vs A: better 0 [], worse 0 [], ties 41
+  C vs A: better 0 [], worse 0 [], ties 41
+  D vs A: better 0 [], worse 0 [], ties 41
+  C vs B: better 0 [], worse 0 [], ties 41
+  D vs B: better 0 [], worse 0 [], ties 41
+
+PAIRED on unsupported claims (second arm fewer / more)
+  B vs A: fewer 0 [], more 0 []
+  C vs A: fewer 0 [], more 0 []
+  D vs A: fewer 0 [], more 0 []
+  C vs B: fewer 0 [], more 0 []
+
+VERDICTS (first assessment, per question)
+  b1a+routed+suff      assessed 40: {'sufficient': 33, 'entity_mismatch': 3, 'partial': 1, 'topic_missing': 3}; retried 7; retry added items 0; final changed 0
+  b1a+routed+sec       assessed 40: {'sufficient': 33, 'entity_mismatch': 3, 'partial': 1, 'topic_missing': 3}; retried 7; retry added items 0; final changed 0
+  b1a+routed+secd      assessed 40: {'sufficient': 29, 'entity_mismatch': 4, 'topic_missing': 6, 'partial': 1}; retried 11; retry added items 2; final changed 0
+  verdict agreement C vs B (section vs item level): 40/40 = 100%; differing: []
+  answerable questions given a coverage note, b1a+routed+suff: 2/26 ['L-S3', 'L-X3']
+  answerable questions given a coverage note, b1a+routed+sec: 2/26 ['L-S3', 'L-X3']
+  answerable questions given a coverage note, b1a+routed+secd: 5/26 ['L-S3', 'L-S5', 'L-C3', 'L-X1', 'L-X3']
+  prompt identity: B's evidence message equals A's on 34/41 cases; C equals B on 41/41; D equals B on 34/41
+
+LATENCY (ms): model total median/p95 | retrieval median | retried | evidence tokens median
+  A baseline               1418/2529 | 13.4 | 0 | 592
+  B existing coverage      1393/2415 | 10.7 | 7 | 592
+  C section-level          1393/2387 | 11.7 | 7 | 592
+  D section+descriptors    1396/2394 | 11.3 | 11 | 609
+
+PRE-REGISTERED READING
+  1. C acceptable vs baseline: unsupported 14 <= 14, fully correct 25 >= 25, false abstention 1 <= 1, privacy/instruction events none -> True
+  1. D (exploratory) acceptable vs baseline: unsupported 14 <= 14, fully correct 25 >= 25, false abstention 1 <= 1, privacy/instruction events none -> True
+  2. C distinguishable from B: unsupported C 14 <= B 14 - 2: False; or paired wins>=3 & losses==0: False (wins 0, losses 0) -> False
+  4. verdict agreement >= 90%: 100% -> True
+
+NON-FULL ROWS FOR SCORER REVIEW (A / B / C / D / oracle)
+--- L-S1 [cross_section] Which model does the deep path serve?
+   b1a          wrong   forb=['deep path[^.]{0,30}\\b(?:serves?|runs?|uses?|is)\\b[^.]{0,15}falcon-?7b'] abst=False | The deep path serves Falcon-7B, as stated in the document [E1] which references the Harbor architecture. This information aligns with the decision made in the meeting segment [E3] where Priya Nair confirmed keeping Falcon-7B as the default 
+   b1a+suff     wrong   forb=['deep path[^.]{0,30}\\b(?:serves?|runs?|uses?|is)\\b[^.]{0,15}falcon-?7b'] abst=False | (same reply as b1a+routed)
+   b1a+sec      wrong   forb=['deep path[^.]{0,30}\\b(?:serves?|runs?|uses?|is)\\b[^.]{0,15}falcon-?7b'] abst=False | (same reply as b1a+routed)
+   b1a+secd     wrong   forb=['deep path[^.]{0,30}\\b(?:serves?|runs?|uses?|is)\\b[^.]{0,15}falcon-?7b'] abst=False | (same reply as b1a+routed)
+   oracle       full    forb=[] abst=False | The deep path serves nightly jobs, and according to the owner's records, Harbor serves Falcon-7B on the GPU host for these jobs [E3].
+--- L-S2 [cross_section] Is the fast path served from the GPU host?
+   b1a          wrong   forb=['^\\s*yes\\b', 'fast path[^.]{0,30}\\b(?:is served|runs?|uses?)\\b[^.]{0,20}gpu'] abst=False | Yes, the fast path is served from the GPU host according to the reference evidence [E1].
+   b1a+suff     wrong   forb=['^\\s*yes\\b', 'fast path[^.]{0,30}\\b(?:is served|runs?|uses?)\\b[^.]{0,20}gpu'] abst=False | (same reply as b1a+routed)
+   b1a+sec      wrong   forb=['^\\s*yes\\b', 'fast path[^.]{0,30}\\b(?:is served|runs?|uses?)\\b[^.]{0,20}gpu'] abst=False | (same reply as b1a+routed)
+   b1a+secd     wrong   forb=['^\\s*yes\\b', 'fast path[^.]{0,30}\\b(?:is served|runs?|uses?)\\b[^.]{0,20}gpu'] abst=False | (same reply as b1a+routed)
+   oracle       full    forb=[] abst=True | I do not have that in the owner's records. Please provide more details or check the relevant documentation or logs.
+--- L-S4 [cross_section] How soon after the dashboard watch must a Lantern rollback be done?
+   b1a          wrong   forb=['roll\\s?back[^.]{0,40}\\b(?:ten|10) minutes'] abst=False | According to the "Lantern runbook" [E1], a Lantern rollback must be done within ten minutes after deploying Lantern and watching the dashboard. However, the rollback window for a failed deploy is 60 minutes, as mentioned in the memory log [
+   b1a+suff     wrong   forb=['roll\\s?back[^.]{0,40}\\b(?:ten|10) minutes'] abst=False | (same reply as b1a+routed)
+   b1a+sec      wrong   forb=['roll\\s?back[^.]{0,40}\\b(?:ten|10) minutes'] abst=False | (same reply as b1a+routed)
+   b1a+secd     wrong   forb=['roll\\s?back[^.]{0,40}\\b(?:ten|10) minutes'] abst=False | (same reply as b1a+routed)
+   oracle       full    forb=[] abst=False | According to the "Lantern runbook", a rollback should be done within 30 minutes of a failed deploy after watching the dashboard for ten minutes [E1, E2].
+--- L-S5 [cross_section] Which retry limit did the CPU host have?
+   b1a          wrong   forb=['cpu host[^.]{0,40}\\b(?:5|10|five|ten)\\b'] abst=False | The CPU host has a retry limit of five, as discussed in the "Harbor planning" meeting on 2026-10-09 [E3] and documented in the "Harbor architecture" [E4].
+   b1a+suff     wrong   forb=['cpu host[^.]{0,40}\\b(?:5|10|five|ten)\\b'] abst=False | (same reply as b1a+routed)
+   b1a+sec      wrong   forb=['cpu host[^.]{0,40}\\b(?:5|10|five|ten)\\b'] abst=False | (same reply as b1a+routed)
+   b1a+secd     wrong   forb=['cpu host[^.]{0,40}\\b(?:5|10|five|ten)\\b'] abst=False | The CPU host had a retry limit of five, as mentioned in the "Harbor architecture v1 (archived)" document [E1] and confirmed in the "Weekly sync" meeting segment [E2].
+   oracle       full    forb=[] abst=True | The retry limit for jobs in the Quill message queue is up to 3 times before a job is parked. This information is from [E1]. The CPU host serving Falcon-1B does not have a specified retry limit in the provided evidence.
+--- L-S6 [cross_section] Which model ran the fast path in the first architecture?
+   b1a          wrong   forb=[] abst=False | According to the reference evidence, the Falcon-7B model ran the fast path on the GPU host in the initial architecture described in [E1]. This information was recorded on 2026-10-09.
+   b1a+suff     wrong   forb=[] abst=False | (same reply as b1a+routed)
+   b1a+sec      wrong   forb=[] abst=False | (same reply as b1a+routed)
+   b1a+secd     wrong   forb=[] abst=False | (same reply as b1a+routed)
+   oracle       full    forb=[] abst=True | I do not have that in the owner's records. Please provide more details or check the relevant evidence items.
+--- L-W2 [wrong_entity] What is the Beacon Analytics rollback window?
+   b1a          wrong   forb=['beacon[^.]{0,50}\\b(?:30|60|thirty|sixty)\\s*minutes'] abst=False | The Beacon Analytics rollback window is 30 minutes after a failed deploy, as stated in the Lantern runbook [E2]. However, there is conflicting information; previously, Beacon Analytics support hours were noted as 8 to 6 on weekdays [E5], wh
+   b1a+suff     wrong   forb=[] abst=False | The Beacon Analytics support notes indicate a rollback window of 9 to 5 on weekdays, while the memory notes from September 15th state a window of 8 to 6 on weekdays. These times conflict, so both are provided:  - [E1]: 9 to 5 on weekdays - 
+   b1a+sec      wrong   forb=[] abst=False | (same reply as b1a+routed+suff)
+   b1a+secd     wrong   forb=['beacon[^.]{0,50}\\b(?:30|60|thirty|sixty)\\s*minutes'] abst=False | The Beacon Analytics rollback window is 30 minutes after a failed deploy, as stated in the Lantern runbook [E2] and confirmed during the Lantern review meeting [E6].
+   oracle       full    forb=[] abst=True | I do not have that in the owner's records.
+--- L-W3 [wrong_entity] Which model does Priya's project run?
+   b1a          wrong   forb=['priya[^.]{0,50}\\b(?:runs?|uses?)\\b[^.]{0,20}falcon'] abst=False | Based on the reference evidence, Priya's project runs Falcon-7B as the default model. This was decided in a meeting segment on "Harbor planning" [E1].
+   b1a+suff     wrong   forb=['priya[^.]{0,50}\\b(?:runs?|uses?)\\b[^.]{0,20}falcon'] abst=False | (same reply as b1a+routed)
+   b1a+sec      wrong   forb=['priya[^.]{0,50}\\b(?:runs?|uses?)\\b[^.]{0,20}falcon'] abst=False | (same reply as b1a+routed)
+   b1a+secd     wrong   forb=['priya[^.]{0,50}\\b(?:runs?|uses?)\\b[^.]{0,20}falcon'] abst=False | (same reply as b1a+routed)
+   oracle       full    forb=[] abst=True | I do not have that in the owner's records.
+--- L-W5 [wrong_entity] How many failed attempts does a Lantern job get?
+   b1a          wrong   forb=['lantern[^.]{0,50}\\b(?:3|5|10|three|five|ten)\\b[^.]{0,15}(?:times|retries|attempts)'] abst=False | According to the owner's records, a failed Lantern job is retried 10 times before it is parked [E6].
+   b1a+suff     wrong   forb=['lantern[^.]{0,50}\\b(?:3|5|10|three|five|ten)\\b[^.]{0,15}(?:times|retries|attempts)'] abst=False | (same reply as b1a+routed)
+   b1a+sec      wrong   forb=['lantern[^.]{0,50}\\b(?:3|5|10|three|five|ten)\\b[^.]{0,15}(?:times|retries|attempts)'] abst=False | (same reply as b1a+routed)
+   b1a+secd     wrong   forb=['lantern[^.]{0,50}\\b(?:3|5|10|three|five|ten)\\b[^.]{0,15}(?:times|retries|attempts)'] abst=False | (same reply as b1a+routed)
+   oracle       full    forb=[] abst=True | I do not have that in the owner's records.
+--- L-W6 [wrong_entity] Who reviews the Lantern retry settings?
+   b1a          wrong   forb=[] abst=False | Dana to review the Quill retry settings [E2].
+   b1a+suff     wrong   forb=[] abst=False | (same reply as b1a+routed)
+   b1a+sec      wrong   forb=[] abst=False | (same reply as b1a+routed)
+   b1a+secd     wrong   forb=[] abst=False | (same reply as b1a+routed)
+   oracle       full    forb=[] abst=True | I do not have that in the owner's records.
+--- L-P1 [partial_evidence] Who updates the Lantern checklist and how many items does it have?
+   b1a          wrong   forb=['\\b(?:four|five|six|seven|eight|\\d{2,}|[4-9])\\s+items\\b'] abst=False | The Lantern checklist is updated by Dana Okafor. The checklist contains four items:  1. Update the rollback script. 2. Confirm the launch date of the 14th. 3. Notify support.  These items are referenced in the evidence block provided [E2].
+   b1a+suff     wrong   forb=['\\b(?:four|five|six|seven|eight|\\d{2,}|[4-9])\\s+items\\b'] abst=False | (same reply as b1a+routed)
+   b1a+sec      wrong   forb=['\\b(?:four|five|six|seven|eight|\\d{2,}|[4-9])\\s+items\\b'] abst=False | (same reply as b1a+routed)
+   b1a+secd     wrong   forb=['\\b(?:four|five|six|seven|eight|\\d{2,}|[4-9])\\s+items\\b'] abst=False | (same reply as b1a+routed)
+   oracle       full    forb=[] abst=False | Dana Okafor updates the Lantern checklist. The checklist has three items: 1. Update the rollback script. 2. Confirm the launch date of the 14th. 3. Notify support.  [Reference: E1, E2]
+--- L-T2 [supersession] Is the 8-to-6 support schedule the newer one?
+   b1a          wrong   forb=['\\b(?:(?:is|was|been|are) (?:now )?(?:superseded|outdated|obsolete|replaced)|supersedes|no longer (?:valid|current|applies|the case)|replaced by|(?:is|are) now the (?:current|new))\\b'] abst=False | The 8-to-6 support schedule [E2] is older and likely no longer current. The newer schedule shows support hours as 9 to 5 on weekdays [E1].
+   b1a+suff     wrong   forb=[] abst=False | The 8-to-6 support schedule [E2] is older and was recorded on 2026-09-01. The newer schedule [E1] is 9 to 5 on weekdays, recorded on 2026-10-09.
+   b1a+sec      wrong   forb=[] abst=False | (same reply as b1a+routed+suff)
+   b1a+secd     wrong   forb=[] abst=False | (same reply as b1a+routed+suff)
+   oracle       full    forb=[] abst=True | I do not have that in the owner's records.
+--- L-T4 [supersession] Which is the more recent record of Harbor's retry limit, the document or the memory?
+   b1a          wrong   forb=[] abst=False | The more recent record of Harbor's retry limit comes from the meeting segment [E5] and [E6], where Tomas Weber mentioned raising the retry limit from three to five. This is more recent than the document [E7] which states a retry limit of te
+   b1a+suff     wrong   forb=[] abst=False | (same reply as b1a+routed)
+   b1a+sec      wrong   forb=[] abst=False | (same reply as b1a+routed)
+   b1a+secd     wrong   forb=[] abst=False | (same reply as b1a+routed)
+   oracle       full    forb=[] abst=True | I do not have that in the owner's records. Please provide the specific ids of the documents or memories for comparison.
+--- L-X1 [negative_claim] Does the Harbor architecture document mention Falcon-1B?
+   b1a          wrong   forb=['^\\s*yes\\b'] abst=False | Yes, the Harbor architecture document mentions Falcon-1B. Specifically, it states that Harbor serves Falcon-1B on the CPU host [E1]. Additionally, it notes that as of March 2026, the Harbor default model was Falcon-1B [E4], and as of Octobe
+   b1a+suff     wrong   forb=['^\\s*yes\\b'] abst=False | Yes, the Harbor architecture document mentions Falcon-1B. Specifically, it states that Harbor serves Falcon-1B on the CPU host [E1]. Additionally, it notes that as of October, the default model is Falcon-7B, indicating that Falcon-1B has be
+   b1a+sec      wrong   forb=['^\\s*yes\\b'] abst=False | (same reply as b1a+routed+suff)
+   b1a+secd     wrong   forb=['^\\s*yes\\b'] abst=False | Yes, the Harbor architecture document mentions Falcon-1B. Specifically, it states that Harbor serves Falcon-1B on the CPU host [E1].
+   oracle       full    forb=[] abst=True | The Harbor architecture document does not mention Falcon-1B. The relevant information states that Harbor serves Falcon-7B on the GPU host [E3].
+--- L-X3 [negative_claim] Is Dana listed as attending the planning meeting?
+   b1a          wrong   forb=[] abst=True | No, Dana Okafor is not listed as attending the planning meeting according to the provided evidence. The evidence only shows Dana's participation in a weekly sync meeting and her commitments following the call.
+   b1a+suff     wrong   forb=[] abst=True | I do not have any information about Dana attending a planning meeting in the provided records. The evidence includes references to a "Weekly sync" meeting but does not mention a planning meeting or Dana's attendance at one.
+   b1a+sec      wrong   forb=[] abst=True | (same reply as b1a+routed+suff)
+   b1a+secd     wrong   forb=[] abst=True | The owner's records do not mention Dana attending a planning meeting. The records show Dana participating in a weekly sync, but there is no indication of a planning meeting. [E2] [E3] [E4]
+   oracle       wrong   forb=[] abst=False | Dana is mentioned in the meeting but not as an attendee. She is referred to as someone who will review the Quill retry settings. [E1]
+--- L-M4 [mixed_support] What does Tomas lead, how long is the Lantern watch, and what is Tomas's office location?
+   b1a          partial forb=[] abst=True | Tomas leads the Harbor infrastructure team [E1]. There is no information provided about the length of the Lantern watch or Tomas's office location in the given records.
+   b1a+suff     partial forb=[] abst=True | (same reply as b1a+routed)
+   b1a+sec      partial forb=[] abst=True | (same reply as b1a+routed)
+   b1a+secd     partial forb=[] abst=True | (same reply as b1a+routed)
+   oracle       full    forb=[] abst=True | Tomas Weber leads the Harbor infrastructure team [E1]. The Lantern watch should last for ten minutes [E2]. The owner's records do not include Tomas's office location.
+--- L-M6 [mixed_support] Which model did Harbor use in March, which does it use now, and why did it switch?
+   b1a          wrong   forb=['switch\\w*[^.]{0,30}\\b(?:because|due to)\\b[^.]{0,30}\\b(?:cost|speed|latency|accuracy|performance|licen)'] abst=False | In March, Harbor used Falcon-1B as its default model [E4]. As of October, the default model is Falcon-7B, and the Falcon-1B model has been retired [E5].  The switch occurred because Falcon-7B provides better performance for both interactive
+   b1a+suff     wrong   forb=['switch\\w*[^.]{0,30}\\b(?:because|due to)\\b[^.]{0,30}\\b(?:cost|speed|latency|accuracy|performance|licen)'] abst=False | (same reply as b1a+routed)
+   b1a+sec      wrong   forb=['switch\\w*[^.]{0,30}\\b(?:because|due to)\\b[^.]{0,30}\\b(?:cost|speed|latency|accuracy|performance|licen)'] abst=False | (same reply as b1a+routed)
+   b1a+secd     wrong   forb=['switch\\w*[^.]{0,30}\\b(?:because|due to)\\b[^.]{0,30}\\b(?:cost|speed|latency|accuracy|performance|licen)'] abst=False | (same reply as b1a+routed)
+   oracle       full    forb=[] abst=False | In March, Harbor used the Falcon-1B model [E1]. Now, as of October, it uses the Falcon-7B model [E2], with the 1B model having been retired.

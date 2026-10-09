@@ -2,6 +2,10 @@
 
 Owner approval, 2026-10-12: *run the frozen 39-case dev8 set once with the existing 7B, the scratch database, the frozen scorer, harness and evidence-coverage mechanism.* Protocol and pre-registered reading: [phase-44e-dev8-acceptance-protocol.md](../phase-44e-dev8-acceptance-protocol.md). **dev8 is now a consumed acceptance set and must not be developed against.** Nothing is deployed or activated; indexing is still `false`, retrieval and shadow are off, Phase 44F is not implemented.
 
+## Owner interpretation (2026-10-12)
+
+**Recorded as PASSED against its pre-registered criteria, with a marginal improvement: 28/39 baseline versus 29/39 coverage, one paired win and no losses.** This qualifies the mechanism for further controlled evaluation, not for production integration. dev8 is not to be rerun or tuned against. (The follow-up [section-level experiment](phase-44e-section-coverage-2026-10-12.md) found no difference between the item-level and section-level signals and no effect of either on a new acceptance set.)
+
 ## Execution
 
 - **Before running:** `freeze_check.py` reported every frozen file unchanged (cases, generator, `sufficiency.py` blob `65e4512b`, scorers, harness, builder, routing, holdout); `dev8_runs.jsonl` did not exist and no dev8 result existed; the guard refused the run without the decision point and approval variable.
