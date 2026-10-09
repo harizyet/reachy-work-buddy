@@ -1,0 +1,47 @@
+{
+ "seeds": [
+  101,
+  102
+ ],
+ "facts": 64,
+ "counts": {
+  "facts": 64,
+  "state_equals_expected": 64,
+  "asserted_or_reported_with_citation": 34,
+  "with_citation": 34,
+  "scoped_cases": 12,
+  "scoped_form_rendered": 12,
+  "scoped_with_unsearched_part_quoted": 12,
+  "unauthorized_only_cases": 10,
+  "unauthorized_only_identical_to_record_absent": 10
+ },
+ "confusion_by_condition": {
+  "explicit_absence": {
+   "NEGATIVE_SUPPORTED": 12
+  },
+  "incomplete_scope": {
+   "NEGATIVE_UNSUPPORTED": 12
+  },
+  "source_disagreement": {
+   "CONFLICTED": 10
+  },
+  "other_authorized_source": {
+   "SUPPORTED": 10
+  },
+  "unauthorized_only": {
+   "NEGATIVE_UNSUPPORTED": 10
+  },
+  "silent": {
+   "NEGATIVE_UNSUPPORTED": 10
+  }
+ },
+ "examples": {
+  "explicit_absence": "The records say there is no escalation channel for Willow [E110].",
+  "incomplete_scope": "A search of the Osprey chat space found no escalation channel for Osprey [E154]; not searched: other spaces. That does not show there is none.",
+  "source_disagreement": "The records disagree on whether there is an on-call rotation for Quartz: one says there is [E111], another says there is not [E112]. They do not say which applies.",
+  "other_authorized_source": "The records say there is a status page for Quartz [E198].",
+  "unauthorized_only": "The records I searched do not mention a status page for Sable.",
+  "silent": "The records I searched do not mention a status page for Osprey."
+ },
+ "problems": []
+}

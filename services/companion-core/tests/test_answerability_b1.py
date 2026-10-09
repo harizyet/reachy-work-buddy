@@ -412,7 +412,7 @@ def test_citations_are_claim_level_each_value_cites_only_the_records_that_state_
     a, b = item("memory:m1", "The Cedar standup is at 9."), item("memory:m2", "The Cedar standup is at 11.")
     _, _, c = run(comp("standup", "Cedar"), [a, b], eids={"memory:m1": "E4", "memory:m2": "E7"})
     assert dict(c.assertable) == {"9": ("E4",), "11": ("E7",)}
-    assert "9 [E7]" not in c.text and "one record says 9 [E4]" in c.text and "one record says 11 [E7]" in c.text
+    assert "9 [E7]" not in c.text and "one record says 9 [E4]" in c.text and "another says 11 [E7]" in c.text
 
 
 def test_every_cited_id_in_a_claim_text_belongs_to_its_assertable_mapping():

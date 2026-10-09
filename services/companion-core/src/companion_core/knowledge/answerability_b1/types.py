@@ -125,6 +125,8 @@ class RelationSpec:
     co_subjects_ok: bool = False  # sentences of this relation naturally name a second entity ("Osprey serves Swift-6B on the edge host"); it is then not a competing subject
     phrase: str = ""  # wording used by code-written replies ("owner", "staging environment"); defaults to the relation name
     joiner: str = "of"  # "owner OF the Ferry queue", "staging environment FOR Vesper"
+    prefix: str = ""  # put before a non-numeric value in code-written replies ("the " for hosts); display only
+    unit: str = ""  # appended to a numeric value in code-written replies ("40 minutes"); display only, never part of the admitted value
 
     @property
     def words(self) -> str:
@@ -142,6 +144,18 @@ class Component:
     ask: Ask = Ask.VALUE
     scope: Scope = Scope.ANY
     label: str = ""  # human wording used by the code-written replies, e.g. "owner of the Ferry queue"
+
+
+@dataclass(frozen=True)
+class ScopedFinding:
+    """A verifiable bounded-search negative (rubric v5 class 1): an admitted record states WHAT was searched ("scope") and that nothing was found there, and optionally what was not searched.
+    It carries no assertable value: it can only ever be reported as a search result, never as absence. `scope` and `unsearched` are quoted from the record by admission, not paraphrased."""
+
+    ref: str
+    scope: str
+    unsearched: str  # "" when the record does not say what was left unsearched
+    sentence: str
+    provenance: Provenance
 
 
 @dataclass(frozen=True)

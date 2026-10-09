@@ -22,6 +22,7 @@ from companion_core.knowledge.answerability_b1.types import (
     Component,
     FactScope,
     Scope,
+    ScopedFinding,
     State,
 )
 
@@ -35,6 +36,10 @@ class Ticket:
     history: tuple[tuple[str, tuple[str, ...]], ...] = ()  # past values shown as past
     ambiguous_refs: tuple[str, ...] = ()
     ordering_basis: str | None = None
+    # rubric v5. `scoped`: verifiable bounded-search negatives (reported as search results, never as absence). `absence_authors`: author classes of non-authoritative records that say "there is no X"
+    # (reported as an attributed statement the records do not establish). Both only ever appear on a NEGATIVE_UNSUPPORTED existence ticket.
+    scoped: tuple[ScopedFinding, ...] = ()
+    absence_authors: tuple[str, ...] = ()
     # discovery-only refs are kept for telemetry. They carry no value and the contract never reads them.
     discovery_refs: tuple[str, ...] = field(default=(), compare=False)
 
@@ -85,10 +90,16 @@ def _decide_core(component: Component, result: AdmissionResult, supersessions: C
             pres = [f for f in pres if f.scope is not FactScope.PAST]
         if neg and pres:
             return Ticket(component, State.CONFLICTED, ("presence_and_absence_both_recorded", *note), (("absent", tuple(dict.fromkeys(f.ref for f in neg))), ("present", tuple(dict.fromkeys(f.ref for f in pres)))), **base)
-        if neg:
-            return Ticket(component, State.NEGATIVE_SUPPORTED, ("record_states_absence", *note), (("absent", tuple(dict.fromkeys(f.ref for f in neg))),), **base)
-        if pres:
+        authoritative_neg = [f for f in neg if f.provenance.author_class in AUTHORITATIVE]
+        if authoritative_neg:  # rubric v5 class 2: only an authoritative record establishes absence; scoped searches add nothing to it
+            return Ticket(component, State.NEGATIVE_SUPPORTED, ("record_states_absence", *note), (("absent", tuple(dict.fromkeys(f.ref for f in authoritative_neg))),), **base)
+        if pres:  # a presence record decides; a search of one place that found nothing is consistent with it existing elsewhere
             return Ticket(component, State.SUPPORTED, ("record_states_presence", *note), (("present", tuple(dict.fromkeys(f.ref for f in pres))),), **base)
+        if neg:  # "there is no X" from a non-authoritative author: attributed, not established (rubric v5 class 2 needs an authoritative record)
+            return Ticket(component, State.NEGATIVE_UNSUPPORTED, ("absence_not_authoritative", *note), (("absent", tuple(dict.fromkeys(f.ref for f in neg))),),
+                          absence_authors=tuple(dict.fromkeys(f.provenance.author_class.value for f in neg)), scoped=result.scoped, **base)
+        if result.scoped:  # rubric v5 class 1: a verifiable bounded search; reported with its scope, never as absence
+            return Ticket(component, State.NEGATIVE_UNSUPPORTED, ("scoped_search_negative", *note), scoped=result.scoped, **base)
         return Ticket(component, State.NEGATIVE_UNSUPPORTED, ("no_record_asserts_presence_or_absence", *note), **base)
 
     # VALUE

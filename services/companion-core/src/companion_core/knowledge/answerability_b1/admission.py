@@ -27,6 +27,7 @@ from companion_core.knowledge.answerability_b1.types import (
     FactScope,
     Provenance,
     RelationSpec,
+    ScopedFinding,
     SpeakerSegment,
 )
 from companion_core.knowledge.context import looks_like_instruction
@@ -52,6 +53,18 @@ _VALUE_PATTERNS = {
 }
 
 
+# Rubric v5 class 1. A BOUNDED search only: the sentence must name where it looked and say "only" ("Searched the Osprey wiki only for a runbook and found none there."). An unbounded "searched everywhere"
+# is not a verifiable scope and matches nothing here. This is checked BEFORE the relation's negation pattern, so a loose "no X" pattern can never turn a search result into an absence statement.
+_SCOPED = re.compile(r"^(?:searched(?: through| in)?|checked|looked(?: in| at| through)?)\s+(?P<scope>.+?)\s+only(?:\s+for\s+(?P<what>.+?))?,?\s+and\s+(?:found|saw|got)\s+(?:none|nothing|no\s+[^.]+?)\s+there\s*\.?$", re.IGNORECASE)
+_UNSEARCHED = re.compile(r"^(?P<un>.+?)\s+(?:was|were|is|are|has been|have been)\s+not\s+(?:checked|searched|covered|looked at)\s*\.?$", re.IGNORECASE)
+_LOWER_LEAD = frozenset({"the", "other", "a", "an", "its", "their"})
+
+
+def _lead_lower(text: str) -> str:
+    first = text.split(" ", 1)[0]
+    return text[0].lower() + text[1:] if first.lower() in _LOWER_LEAD else text
+
+
 @dataclass(frozen=True)
 class AdmissionPolicy:
     expected_policy_version: str
@@ -71,6 +84,7 @@ class AdmissionResult:
     excluded: tuple[tuple[str, tuple[str, ...]], ...]  # (ref, reasons): audit only; a reply must never reveal these
     discovery_only: tuple[str, ...]  # authorised and well-formed, asserting nothing for this component
     ambiguous_scopes: tuple[FactScope, ...] = ()  # the time scope of each ambiguous sentence, parallel to `ambiguous`
+    scoped: tuple[ScopedFinding, ...] = ()  # verifiable bounded-search negatives for an existence component (rubric v5 class 1); never facts
 
 
 def _dt(value) -> datetime | None:
@@ -142,6 +156,15 @@ def check_authorization(prov: Provenance, decision: AuthDecision | None, now: da
     return reasons
 
 
+def _display(kind: str, low: str) -> str:
+    """Readable form of a normalised value for the reply: Friday, August, GPU host, edge host. Comparisons are case-insensitive, so this changes presentation only."""
+    if kind in ("day", "month"):
+        return low.capitalize()
+    if kind == "host":
+        return re.sub(r"^(gpu|cpu)\b", lambda m: m.group(1).upper(), low)
+    return low
+
+
 def _values(kind: str, sentence: str, exclude: Collection[str]) -> list[str]:
     skip = [e.lower() for e in exclude]
     found = []
@@ -152,7 +175,7 @@ def _values(kind: str, sentence: str, exclude: Collection[str]) -> list[str]:
             continue
         if low in skip:
             continue
-        found.append(_NUMWORDS.get(low, raw if kind in ("person", "model") else low))
+        found.append(_NUMWORDS.get(low, raw if kind in ("person", "model") else _display(kind, low)))
     return found
 
 
@@ -289,6 +312,7 @@ def admit(component: Component, items: Collection[DiscoveryItem], auths: Mapping
     ambiguous: list[tuple[str, str, FactScope]] = []
     excluded: list[tuple[str, tuple[str, ...]]] = []
     discovery_only: list[str] = []
+    scoped: list[ScopedFinding] = []
     own = _alias_re(component.aliases) if component.aliases else None
     mine = {a.lower() for a in component.aliases}
     others = [s for s in known_subjects if s.lower() not in mine]
@@ -343,6 +367,13 @@ def admit(component: Component, items: Collection[DiscoveryItem], auths: Mapping
                 item_amb = item_amb or _Amb("competing_subject", scope)
                 continue
             if spec.kind == "existence":
+                sm = _SCOPED.match(sentence.strip())
+                if sm:
+                    nxt = units[k + 1] if k + 1 < len(units) and units[k + 1][1] == para else None
+                    um = _UNSEARCHED.match(nxt[0]) if nxt else None
+                    scoped.append(ScopedFinding(item.ref, sm.group("scope").strip(), _lead_lower(um.group("un").strip()) if um else "", sentence.strip() + (f" {nxt[0]}" if um else ""), prov))
+                    got_fact = True  # the record is about this component; it is not merely related
+                    continue
                 neg = bool(spec.negation and re.search(spec.negation, sentence, re.IGNORECASE))
                 pres = bool(spec.presence and re.search(spec.presence, sentence, re.IGNORECASE))
                 if neg and pres:
@@ -422,7 +453,7 @@ def admit(component: Component, items: Collection[DiscoveryItem], auths: Mapping
                 fact(rec.ref, rec.speaker.strip(), "asserts", _fact_scope(sentence, prov, rec.title or "", now), sentence, prov, "speaker")
         else:
             discovery_only.append(rec.ref)
-    return AdmissionResult(component.id, tuple(facts), tuple((r, why) for r, why, _ in ambiguous), tuple(excluded), tuple(discovery_only), tuple(s for _, _, s in ambiguous))
+    return AdmissionResult(component.id, tuple(facts), tuple((r, why) for r, why, _ in ambiguous), tuple(excluded), tuple(discovery_only), tuple(s for _, _, s in ambiguous), tuple(scoped))
 
 
 def find_supersessions(items: Collection[DiscoveryItem], auths: Mapping[str, AuthDecision], *, now: datetime, policy: AdmissionPolicy) -> frozenset[tuple[str, str]]:

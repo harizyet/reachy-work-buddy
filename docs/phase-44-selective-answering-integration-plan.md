@@ -1,10 +1,17 @@
 # Phase 44: B-1 selective answering, integration and evaluation plan (PROPOSAL for owner review, 2026-10-10)
 
-**Status: plan only. Nothing here is built, wired, frozen, deployed or run.** Production is unchanged: Qwen2.5-7B is the default, the 44H unclaimed-action boundary is live, indexing, retrieval and shadow are off, Phase 44F is not implemented, and dev16 is unfrozen and unrun.
+**Status: approved by the owner on 2026-10-10 with amendments (below); I-1 and I-2 are done (record: [I-1/I-2](verification/phase-44-selective-i1-i2-2026-10-10.md)); I-3 onward are not approved. Nothing is wired, frozen or deployed.** Production is unchanged: Qwen2.5-7B is the default, the 44H unclaimed-action boundary is live, indexing, retrieval and shadow are off, Phase 44F is not implemented, and dev16 is unfrozen and unrun.
 
 Owner direction, 2026-10-10 (after the failed scorer-v3 validation): *prepare an integration and evaluation plan for B-1 selective answering that minimises dependence on open-ended lexical hallucination scoring; prefer structured answerability states, claim-to-evidence mappings and deterministic checks of admissible propositions; specify how the remaining natural-language claims are manually adjudicated; keep dev16 untouched until the protocol is reviewed and approved; prioritise a usable daily-driver assistant over expanding the scorer research programme. Stop the scorer-v3 cycle; no scorer v4.*
 
 Builds on: [Stage B design](phase-44-selective-stage-b-design.md) (architecture, states, trust boundaries; section 3.1 is the new absence contract), [protocol](phase-44-selective-answering-protocol.md), [B-1 record](verification/phase-44-selective-stage-b1-2026-10-13.md), [recall extension](verification/phase-44-selective-stage-b1-extension-2026-10-13.md), [qualified-object tightening](verification/phase-44-selective-b1-qualified-object-2026-10-14.md), [the consumed scorer-v3 validation](verification/phase-44-scorer-v3-formal-validation-2026-10-10.md).
+
+## Amendments from the owner's approval (2026-10-10)
+
+1. **Release strategy.** Deterministic, cited answering is the primary Phase 44 release candidate. I-3 (model-written phrasing) is deferred until the I-2 results are reviewed, and a model arm must show a measurable benefit over the template floor rather than become a mandatory dependency.
+2. **Scope.** I-1 (scoped-search negative renderer, tests for scope, source authorization, citation provenance and conflicting evidence) and I-2 (offline deterministic evaluation on dev15 reporting exact answerability, supported partial answers, false abstentions, unsupported claims, authorization failures and citation errors, with mechanical properties separated from semantic claims that need manual review) only.
+3. **dev16** is neither run nor frozen; its criteria are preserved, and the criteria the deterministic evaluation cannot measure are listed in the [I-1/I-2 record, section 4](verification/phase-44-selective-i1-i2-2026-10-10.md).
+4. **No independent validation claim** without a second blinded reviewer and a reported agreement; none is confirmed.
 
 ## 1. The principle: safety by construction, measured deterministically
 

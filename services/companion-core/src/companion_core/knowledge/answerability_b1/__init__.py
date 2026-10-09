@@ -17,6 +17,7 @@ from companion_core.knowledge.answerability_b1.contract import (
     Claim,
     Plan,
     build_plan,
+    compose,
     decompose,
     render_claim,
 )
@@ -33,9 +34,10 @@ from companion_core.knowledge.answerability_b1.types import (
     Provenance,
     RelationSpec,
     Scope,
+    ScopedFinding,
     SpeakerSegment,
     State,
 )
 
-__all__ = ["AdmissionPolicy", "AdmissionResult", "AdmittedFact", "Ask", "AttendeeRecord", "AuthDecision", "AuthorClass", "Claim", "Component", "DiscoveryItem", "FactScope", "Plan", "Provenance", "RelationSpec", "Scope", "SpeakerSegment", "State",
-           "Ticket", "admit", "build_plan", "decide", "decompose", "find_supersessions", "render_claim"]
+__all__ = ["AdmissionPolicy", "AdmissionResult", "AdmittedFact", "Ask", "AttendeeRecord", "AuthDecision", "AuthorClass", "Claim", "Component", "DiscoveryItem", "FactScope", "Plan", "Provenance", "RelationSpec", "Scope", "ScopedFinding", "SpeakerSegment", "State",
+           "Ticket", "admit", "build_plan", "compose", "decide", "decompose", "find_supersessions", "render_claim"]
