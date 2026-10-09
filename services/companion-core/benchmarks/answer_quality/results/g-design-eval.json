@@ -1,0 +1,9997 @@
+[
+ {
+  "id": "V2-0001",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "retry_limit",
+  "q": "How many times does the Ferry queue retry a failed job?",
+  "gold": 2,
+  "b1a_has_gold": false,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 5,
+  "b1a_nongold": 9,
+  "c1_nongold": 3,
+  "state": "CONFLICTED",
+  "recognised": "retry_limit",
+  "diag": [
+   [
+    0,
+    [
+     "2"
+    ],
+    "A failed job is retried up to 2 times before it is parked."
+   ],
+   [
+    1,
+    [
+     "3"
+    ],
+    "A failed job is retried up to 3 times before it is parked."
+   ],
+   [
+    20,
+    [
+     "8"
+    ],
+    "Failed Cedar jobs are retried 8 times before they are parked."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Ferry"
+    ],
+    "retry_limit",
+    [
+     "retried",
+     "retries",
+     "retry"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0002",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "retry_limit",
+  "q": "What is the retry limit of the Ferry queue?",
+  "gold": 2,
+  "b1a_has_gold": false,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 5,
+  "b1a_nongold": 9,
+  "c1_nongold": 3,
+  "state": "CONFLICTED",
+  "recognised": "retry_limit",
+  "diag": [
+   [
+    0,
+    [
+     "2"
+    ],
+    "A failed job is retried up to 2 times before it is parked."
+   ],
+   [
+    1,
+    [
+     "3"
+    ],
+    "A failed job is retried up to 3 times before it is parked."
+   ],
+   [
+    22,
+    [
+     "8"
+    ],
+    "Failed Cedar jobs are retried 8 times before they are parked."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Ferry"
+    ],
+    "retry_limit",
+    [
+     "retried",
+     "retries",
+     "retry"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0004",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "retry_limit",
+  "q": "How many times does the Gantry scheduler retry a failed job?",
+  "gold": 2,
+  "b1a_has_gold": false,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 5,
+  "b1a_nongold": 9,
+  "c1_nongold": 3,
+  "state": "CONFLICTED",
+  "recognised": "retry_limit",
+  "diag": [
+   [
+    0,
+    [
+     "3"
+    ],
+    "A failed job is retried up to 3 times before it is parked."
+   ],
+   [
+    1,
+    [
+     "4"
+    ],
+    "A failed job is retried up to 4 times before it is parked."
+   ],
+   [
+    18,
+    [
+     "9"
+    ],
+    "Failed Marlin jobs are retried 9 times before they are parked."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Gantry"
+    ],
+    "retry_limit",
+    [
+     "retried",
+     "retries",
+     "retry"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0005",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "retry_limit",
+  "q": "What is the retry limit of the Gantry scheduler?",
+  "gold": 2,
+  "b1a_has_gold": false,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 9,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "retry_limit",
+  "diag": [
+   [
+    0,
+    [
+     "3"
+    ],
+    "A failed job is retried up to 3 times before it is parked."
+   ],
+   [
+    1,
+    [
+     "4"
+    ],
+    "A failed job is retried up to 4 times before it is parked."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Gantry"
+    ],
+    "retry_limit",
+    [
+     "retried",
+     "retries",
+     "retry"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0007",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "retry_limit",
+  "q": "How many times does the Relay gateway retry a failed job?",
+  "gold": 2,
+  "b1a_has_gold": false,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 5,
+  "b1a_nongold": 9,
+  "c1_nongold": 3,
+  "state": "CONFLICTED",
+  "recognised": "retry_limit",
+  "diag": [
+   [
+    0,
+    [
+     "5"
+    ],
+    "A failed job is retried up to 5 times before it is parked."
+   ],
+   [
+    1,
+    [
+     "4"
+    ],
+    "A failed job is retried up to 4 times before it is parked."
+   ],
+   [
+    16,
+    [
+     "10"
+    ],
+    "Failed Juniper jobs are retried 10 times before they are parked."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Relay"
+    ],
+    "retry_limit",
+    [
+     "retried",
+     "retries",
+     "retry"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0008",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "retry_limit",
+  "q": "What is the retry limit of the Relay gateway?",
+  "gold": 2,
+  "b1a_has_gold": false,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 5,
+  "b1a_nongold": 9,
+  "c1_nongold": 3,
+  "state": "CONFLICTED",
+  "recognised": "retry_limit",
+  "diag": [
+   [
+    0,
+    [
+     "5"
+    ],
+    "A failed job is retried up to 5 times before it is parked."
+   ],
+   [
+    1,
+    [
+     "4"
+    ],
+    "A failed job is retried up to 4 times before it is parked."
+   ],
+   [
+    18,
+    [
+     "10"
+    ],
+    "Failed Juniper jobs are retried 10 times before they are parked."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Relay"
+    ],
+    "retry_limit",
+    [
+     "retried",
+     "retries",
+     "retry"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0010",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "retry_limit",
+  "q": "How many times does the Hopper ingest service retry a failed job?",
+  "gold": 2,
+  "b1a_has_gold": false,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "retry_limit",
+  "diag": [
+   [
+    0,
+    [
+     "6"
+    ],
+    "A failed job is retried up to 6 times before it is parked."
+   ],
+   [
+    1,
+    [
+     "5"
+    ],
+    "A failed job is retried up to 5 times before it is parked."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Hopper"
+    ],
+    "retry_limit",
+    [
+     "retried",
+     "retries",
+     "retry"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0011",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "retry_limit",
+  "q": "What is the retry limit of the Hopper ingest service?",
+  "gold": 2,
+  "b1a_has_gold": false,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 9,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "retry_limit",
+  "diag": [
+   [
+    0,
+    [
+     "6"
+    ],
+    "A failed job is retried up to 6 times before it is parked."
+   ],
+   [
+    1,
+    [
+     "5"
+    ],
+    "A failed job is retried up to 5 times before it is parked."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Hopper"
+    ],
+    "retry_limit",
+    [
+     "retried",
+     "retries",
+     "retry"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0013",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "retry_limit",
+  "q": "How many times does the Sluice cache retry a failed job?",
+  "gold": 2,
+  "b1a_has_gold": false,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "CONFLICTED",
+  "recognised": "retry_limit",
+  "diag": [
+   [
+    0,
+    [
+     "7"
+    ],
+    "A failed job is retried up to 7 times before it is parked."
+   ],
+   [
+    21,
+    [
+     "12"
+    ],
+    "Failed Tamarind jobs are retried 12 times before they are parked."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Sluice"
+    ],
+    "retry_limit",
+    [
+     "retried",
+     "retries",
+     "retry"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0014",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "retry_limit",
+  "q": "What is the retry limit of the Sluice cache?",
+  "gold": 2,
+  "b1a_has_gold": false,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "CONFLICTED",
+  "recognised": "retry_limit",
+  "diag": [
+   [
+    0,
+    [
+     "7"
+    ],
+    "A failed job is retried up to 7 times before it is parked."
+   ],
+   [
+    22,
+    [
+     "12"
+    ],
+    "Failed Tamarind jobs are retried 12 times before they are parked."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Sluice"
+    ],
+    "retry_limit",
+    [
+     "retried",
+     "retries",
+     "retry"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0016",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "retry_limit",
+  "q": "How many times does the Turret API retry a failed job?",
+  "gold": 2,
+  "b1a_has_gold": false,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "CONFLICTED",
+  "recognised": "retry_limit",
+  "diag": [
+   [
+    0,
+    [
+     "3"
+    ],
+    "A failed job is retried up to 3 times before it is parked."
+   ],
+   [
+    19,
+    [
+     "8"
+    ],
+    "Failed Vesper jobs are retried 8 times before they are parked."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Turret",
+     "API"
+    ],
+    "retry_limit",
+    [
+     "retried",
+     "retries",
+     "retry"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0017",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "retry_limit",
+  "q": "What is the retry limit of the Turret API?",
+  "gold": 2,
+  "b1a_has_gold": false,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "CONFLICTED",
+  "recognised": "retry_limit",
+  "diag": [
+   [
+    0,
+    [
+     "3"
+    ],
+    "A failed job is retried up to 3 times before it is parked."
+   ],
+   [
+    20,
+    [
+     "8"
+    ],
+    "Failed Vesper jobs are retried 8 times before they are parked."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Turret",
+     "API"
+    ],
+    "retry_limit",
+    [
+     "retried",
+     "retries",
+     "retry"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0019",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "retry_limit",
+  "q": "How many times does the Conduit stream retry a failed job?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "retry_limit",
+  "diag": [
+   [
+    0,
+    [
+     "4"
+    ],
+    "A failed job is retried up to 4 times before it is parked."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Conduit"
+    ],
+    "retry_limit",
+    [
+     "retried",
+     "retries",
+     "retry"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0020",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "retry_limit",
+  "q": "What is the retry limit of the Conduit stream?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "retry_limit",
+  "diag": [
+   [
+    0,
+    [
+     "4"
+    ],
+    "A failed job is retried up to 4 times before it is parked."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Conduit"
+    ],
+    "retry_limit",
+    [
+     "retried",
+     "retries",
+     "retry"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0022",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "retry_limit",
+  "q": "How many times does the Lattice store retry a failed job?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "retry_limit",
+  "diag": [
+   [
+    0,
+    [
+     "5"
+    ],
+    "A failed job is retried up to 5 times before it is parked."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Lattice"
+    ],
+    "retry_limit",
+    [
+     "retried",
+     "retries",
+     "retry"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0023",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "retry_limit",
+  "q": "What is the retry limit of the Lattice store?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "retry_limit",
+  "diag": [
+   [
+    0,
+    [
+     "5"
+    ],
+    "A failed job is retried up to 5 times before it is parked."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Lattice"
+    ],
+    "retry_limit",
+    [
+     "retried",
+     "retries",
+     "retry"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0037",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "default_model",
+  "q": "Which model does Cedar use by default?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 6,
+  "b1a_nongold": 9,
+  "c1_nongold": 5,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Kestrel-3B"
+    ],
+    "Cedar serves Kestrel-3B on the GPU host."
+   ],
+   [
+    1,
+    [
+     "Kestrel-3B",
+     "Merlin-7B"
+    ],
+    "As of October, the Cedar default model is Kestrel-3B; the Merlin-7B model has been retired"
+   ],
+   [
+    10,
+    [
+     "Merlin-7B"
+    ],
+    "Cedar serves Merlin-7B on the CPU host."
+   ],
+   [
+    17,
+    [
+     "Merlin-7B"
+    ],
+    "As of March, the Cedar default model was Merlin-7B."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Cedar"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0038",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "default_model",
+  "q": "What is Cedar's default model?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 6,
+  "b1a_nongold": 8,
+  "c1_nongold": 5,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Kestrel-3B",
+     "Merlin-7B"
+    ],
+    "As of October, the Cedar default model is Kestrel-3B; the Merlin-7B model has been retired"
+   ],
+   [
+    1,
+    [
+     "Merlin-7B"
+    ],
+    "Cedar serves Merlin-7B on the CPU host."
+   ],
+   [
+    2,
+    [
+     "Kestrel-3B"
+    ],
+    "Cedar serves Kestrel-3B on the GPU host."
+   ],
+   [
+    6,
+    [
+     "Merlin-7B"
+    ],
+    "As of March, the Cedar default model was Merlin-7B."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Cedar"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0040",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "default_model",
+  "q": "Which model does Marlin use by default?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 6,
+  "b1a_nongold": 9,
+  "c1_nongold": 5,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Kestrel-9B"
+    ],
+    "Marlin serves Kestrel-9B on the CPU host."
+   ],
+   [
+    1,
+    [
+     "Kestrel-9B",
+     "Heron-4B"
+    ],
+    "As of October, the Marlin default model is Kestrel-9B; the Heron-4B model has been retired"
+   ],
+   [
+    6,
+    [
+     "Heron-4B"
+    ],
+    "Marlin serves Heron-4B on the CPU host."
+   ],
+   [
+    17,
+    [
+     "Heron-4B"
+    ],
+    "As of March, the Marlin default model was Heron-4B."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Marlin"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0041",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "default_model",
+  "q": "What is Marlin's default model?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 6,
+  "b1a_nongold": 8,
+  "c1_nongold": 5,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Kestrel-9B",
+     "Heron-4B"
+    ],
+    "As of October, the Marlin default model is Kestrel-9B; the Heron-4B model has been retired"
+   ],
+   [
+    1,
+    [
+     "Heron-4B"
+    ],
+    "Marlin serves Heron-4B on the CPU host."
+   ],
+   [
+    2,
+    [
+     "Kestrel-9B"
+    ],
+    "Marlin serves Kestrel-9B on the CPU host."
+   ],
+   [
+    6,
+    [
+     "Heron-4B"
+    ],
+    "As of March, the Marlin default model was Heron-4B."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Marlin"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0043",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "default_model",
+  "q": "Which model does Juniper use by default?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 6,
+  "b1a_nongold": 9,
+  "c1_nongold": 5,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Merlin-2B"
+    ],
+    "Juniper serves Merlin-2B on the edge host."
+   ],
+   [
+    1,
+    [
+     "Merlin-2B",
+     "Heron-12B"
+    ],
+    "As of October, the Juniper default model is Merlin-2B; the Heron-12B model has been retire"
+   ],
+   [
+    7,
+    [
+     "Heron-12B"
+    ],
+    "Juniper serves Heron-12B on the CPU host."
+   ],
+   [
+    14,
+    [
+     "Heron-12B"
+    ],
+    "As of March, the Juniper default model was Heron-12B."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Juniper"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0044",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "default_model",
+  "q": "What is Juniper's default model?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 6,
+  "b1a_nongold": 8,
+  "c1_nongold": 5,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Merlin-2B",
+     "Heron-12B"
+    ],
+    "As of October, the Juniper default model is Merlin-2B; the Heron-12B model has been retire"
+   ],
+   [
+    1,
+    [
+     "Merlin-2B"
+    ],
+    "Juniper serves Merlin-2B on the edge host."
+   ],
+   [
+    2,
+    [
+     "Heron-12B"
+    ],
+    "Juniper serves Heron-12B on the CPU host."
+   ],
+   [
+    3,
+    [
+     "Heron-12B"
+    ],
+    "As of March, the Juniper default model was Heron-12B."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Juniper"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0046",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "default_model",
+  "q": "Which model does Osprey use by default?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 6,
+  "b1a_nongold": 9,
+  "c1_nongold": 5,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Merlin-7B"
+    ],
+    "Osprey serves Merlin-7B on the batch host."
+   ],
+   [
+    1,
+    [
+     "Merlin-7B",
+     "Swift-6B"
+    ],
+    "As of October, the Osprey default model is Merlin-7B; the Swift-6B model has been retired."
+   ],
+   [
+    12,
+    [
+     "Swift-6B"
+    ],
+    "Osprey serves Swift-6B on the CPU host."
+   ],
+   [
+    17,
+    [
+     "Swift-6B"
+    ],
+    "As of March, the Osprey default model was Swift-6B."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Osprey"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0047",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "default_model",
+  "q": "What is Osprey's default model?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 6,
+  "b1a_nongold": 8,
+  "c1_nongold": 5,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Merlin-7B",
+     "Swift-6B"
+    ],
+    "As of October, the Osprey default model is Merlin-7B; the Swift-6B model has been retired."
+   ],
+   [
+    1,
+    [
+     "Merlin-7B"
+    ],
+    "Osprey serves Merlin-7B on the batch host."
+   ],
+   [
+    2,
+    [
+     "Swift-6B"
+    ],
+    "Osprey serves Swift-6B on the CPU host."
+   ],
+   [
+    6,
+    [
+     "Swift-6B"
+    ],
+    "As of March, the Osprey default model was Swift-6B."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Osprey"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0049",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "default_model",
+  "q": "Which model does Tamarind use by default?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Heron-4B"
+    ],
+    "Tamarind serves Heron-4B on the GPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Tamarind"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0050",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "default_model",
+  "q": "What is Tamarind's default model?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 8,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Heron-4B"
+    ],
+    "Tamarind serves Heron-4B on the GPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Tamarind"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0052",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "default_model",
+  "q": "Which model does Vesper use by default?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Heron-12B"
+    ],
+    "Vesper serves Heron-12B on the CPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Vesper"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0053",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "default_model",
+  "q": "What is Vesper's default model?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 8,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Heron-12B"
+    ],
+    "Vesper serves Heron-12B on the CPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Vesper"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0055",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "default_model",
+  "q": "Which model does Pinnacle use by default?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Swift-6B"
+    ],
+    "Pinnacle serves Swift-6B on the edge host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Pinnacle"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0056",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "default_model",
+  "q": "What is Pinnacle's default model?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 8,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Swift-6B"
+    ],
+    "Pinnacle serves Swift-6B on the edge host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Pinnacle"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0058",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "default_model",
+  "q": "Which model does Quartz use by default?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Swift-20B"
+    ],
+    "Quartz serves Swift-20B on the batch host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Quartz"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0059",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "default_model",
+  "q": "What is Quartz's default model?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 8,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Swift-20B"
+    ],
+    "Quartz serves Swift-20B on the batch host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Quartz"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0073",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Where does Kestrel-3B run?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 9,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "gpu host"
+    ],
+    "Sable serves Kestrel-3B on the GPU host."
+   ],
+   [
+    1,
+    [
+     "gpu host"
+    ],
+    "Cedar serves Kestrel-3B on the GPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Kestrel-3B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0074",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Which host serves Kestrel-3B?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 5,
+  "b1a_nongold": 9,
+  "c1_nongold": 4,
+  "state": "ESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "gpu host"
+    ],
+    "Sable serves Kestrel-3B on the GPU host."
+   ],
+   [
+    1,
+    [
+     "gpu host"
+    ],
+    "Cedar serves Kestrel-3B on the GPU host."
+   ],
+   [
+    12,
+    [
+     "cpu host"
+    ],
+    "Cedar serves Merlin-7B on the CPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Kestrel-3B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0076",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Where does Kestrel-9B run?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 9,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "cpu host"
+    ],
+    "Thistle serves Kestrel-9B on the CPU host."
+   ],
+   [
+    1,
+    [
+     "cpu host"
+    ],
+    "Marlin serves Kestrel-9B on the CPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Kestrel-9B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0077",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Which host serves Kestrel-9B?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 5,
+  "b1a_nongold": 9,
+  "c1_nongold": 4,
+  "state": "ESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "cpu host"
+    ],
+    "Thistle serves Kestrel-9B on the CPU host."
+   ],
+   [
+    1,
+    [
+     "cpu host"
+    ],
+    "Marlin serves Kestrel-9B on the CPU host."
+   ],
+   [
+    8,
+    [
+     "cpu host"
+    ],
+    "Marlin serves Heron-4B on the CPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Kestrel-9B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0079",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Where does Merlin-2B run?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 8,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "edge host"
+    ],
+    "Juniper serves Merlin-2B on the edge host."
+   ],
+   [
+    1,
+    [
+     "edge host"
+    ],
+    "Umbra serves Merlin-2B on the edge host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Merlin-2B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0080",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Which host serves Merlin-2B?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 5,
+  "b1a_nongold": 9,
+  "c1_nongold": 4,
+  "state": "ESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "edge host"
+    ],
+    "Juniper serves Merlin-2B on the edge host."
+   ],
+   [
+    1,
+    [
+     "edge host"
+    ],
+    "Umbra serves Merlin-2B on the edge host."
+   ],
+   [
+    9,
+    [
+     "cpu host"
+    ],
+    "Juniper serves Heron-12B on the CPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Merlin-2B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0082",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Where does Merlin-7B run?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 5,
+  "b1a_nongold": 9,
+  "c1_nongold": 4,
+  "state": "ESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "batch host"
+    ],
+    "Willow serves Merlin-7B on the batch host."
+   ],
+   [
+    1,
+    [
+     "batch host"
+    ],
+    "Osprey serves Merlin-7B on the batch host."
+   ],
+   [
+    2,
+    [
+     "cpu host"
+    ],
+    "Cedar serves Merlin-7B on the CPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Merlin-7B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0083",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Which host serves Merlin-7B?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 7,
+  "b1a_nongold": 9,
+  "c1_nongold": 6,
+  "state": "CONFLICTED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "batch host"
+    ],
+    "Willow serves Merlin-7B on the batch host."
+   ],
+   [
+    1,
+    [
+     "batch host"
+    ],
+    "Osprey serves Merlin-7B on the batch host."
+   ],
+   [
+    2,
+    [
+     "cpu host"
+    ],
+    "Cedar serves Merlin-7B on the CPU host."
+   ],
+   [
+    14,
+    [
+     "cpu host"
+    ],
+    "Osprey serves Swift-6B on the CPU host."
+   ],
+   [
+    15,
+    [
+     "gpu host"
+    ],
+    "Cedar serves Kestrel-3B on the GPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Merlin-7B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0085",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Where does Heron-4B run?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 9,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "cpu host"
+    ],
+    "Marlin serves Heron-4B on the CPU host."
+   ],
+   [
+    1,
+    [
+     "gpu host"
+    ],
+    "Tamarind serves Heron-4B on the GPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Heron-4B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0086",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Which host serves Heron-4B?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 5,
+  "b1a_nongold": 9,
+  "c1_nongold": 4,
+  "state": "CONFLICTED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "cpu host"
+    ],
+    "Marlin serves Heron-4B on the CPU host."
+   ],
+   [
+    1,
+    [
+     "gpu host"
+    ],
+    "Tamarind serves Heron-4B on the GPU host."
+   ],
+   [
+    12,
+    [
+     "cpu host"
+    ],
+    "Marlin serves Kestrel-9B on the CPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Heron-4B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0088",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Where does Heron-12B run?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 9,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "cpu host"
+    ],
+    "Juniper serves Heron-12B on the CPU host."
+   ],
+   [
+    1,
+    [
+     "cpu host"
+    ],
+    "Vesper serves Heron-12B on the CPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Heron-12B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0089",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Which host serves Heron-12B?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 5,
+  "b1a_nongold": 9,
+  "c1_nongold": 4,
+  "state": "CONFLICTED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "cpu host"
+    ],
+    "Juniper serves Heron-12B on the CPU host."
+   ],
+   [
+    1,
+    [
+     "cpu host"
+    ],
+    "Vesper serves Heron-12B on the CPU host."
+   ],
+   [
+    5,
+    [
+     "edge host"
+    ],
+    "Juniper serves Merlin-2B on the edge host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Heron-12B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0091",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Where does Swift-6B run?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 8,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "edge host"
+    ],
+    "Pinnacle serves Swift-6B on the edge host."
+   ],
+   [
+    1,
+    [
+     "cpu host"
+    ],
+    "Osprey serves Swift-6B on the CPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Swift-6B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0092",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Which host serves Swift-6B?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 5,
+  "b1a_nongold": 9,
+  "c1_nongold": 4,
+  "state": "CONFLICTED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "edge host"
+    ],
+    "Pinnacle serves Swift-6B on the edge host."
+   ],
+   [
+    1,
+    [
+     "cpu host"
+    ],
+    "Osprey serves Swift-6B on the CPU host."
+   ],
+   [
+    5,
+    [
+     "batch host"
+    ],
+    "Osprey serves Merlin-7B on the batch host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Swift-6B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0094",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Where does Swift-20B run?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "batch host"
+    ],
+    "Quartz serves Swift-20B on the batch host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Swift-20B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0095",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Which host serves Swift-20B?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "batch host"
+    ],
+    "Quartz serves Swift-20B on the batch host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Swift-20B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0097",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Where does Kestrel-3B run?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 9,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "gpu host"
+    ],
+    "Sable serves Kestrel-3B on the GPU host."
+   ],
+   [
+    1,
+    [
+     "gpu host"
+    ],
+    "Cedar serves Kestrel-3B on the GPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Kestrel-3B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0098",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Which host serves Kestrel-3B?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 5,
+  "b1a_nongold": 9,
+  "c1_nongold": 4,
+  "state": "ESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "gpu host"
+    ],
+    "Sable serves Kestrel-3B on the GPU host."
+   ],
+   [
+    1,
+    [
+     "gpu host"
+    ],
+    "Cedar serves Kestrel-3B on the GPU host."
+   ],
+   [
+    12,
+    [
+     "cpu host"
+    ],
+    "Cedar serves Merlin-7B on the CPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Kestrel-3B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0100",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Where does Kestrel-9B run?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 9,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "cpu host"
+    ],
+    "Thistle serves Kestrel-9B on the CPU host."
+   ],
+   [
+    1,
+    [
+     "cpu host"
+    ],
+    "Marlin serves Kestrel-9B on the CPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Kestrel-9B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0101",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Which host serves Kestrel-9B?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 5,
+  "b1a_nongold": 9,
+  "c1_nongold": 4,
+  "state": "ESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "cpu host"
+    ],
+    "Thistle serves Kestrel-9B on the CPU host."
+   ],
+   [
+    1,
+    [
+     "cpu host"
+    ],
+    "Marlin serves Kestrel-9B on the CPU host."
+   ],
+   [
+    8,
+    [
+     "cpu host"
+    ],
+    "Marlin serves Heron-4B on the CPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Kestrel-9B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0103",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Where does Merlin-2B run?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 9,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "edge host"
+    ],
+    "Juniper serves Merlin-2B on the edge host."
+   ],
+   [
+    1,
+    [
+     "edge host"
+    ],
+    "Umbra serves Merlin-2B on the edge host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Merlin-2B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0104",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Which host serves Merlin-2B?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 5,
+  "b1a_nongold": 9,
+  "c1_nongold": 4,
+  "state": "ESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "edge host"
+    ],
+    "Juniper serves Merlin-2B on the edge host."
+   ],
+   [
+    1,
+    [
+     "edge host"
+    ],
+    "Umbra serves Merlin-2B on the edge host."
+   ],
+   [
+    9,
+    [
+     "cpu host"
+    ],
+    "Juniper serves Heron-12B on the CPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Merlin-2B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0106",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Where does Merlin-7B run?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 5,
+  "b1a_nongold": 9,
+  "c1_nongold": 4,
+  "state": "ESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "batch host"
+    ],
+    "Willow serves Merlin-7B on the batch host."
+   ],
+   [
+    1,
+    [
+     "batch host"
+    ],
+    "Osprey serves Merlin-7B on the batch host."
+   ],
+   [
+    2,
+    [
+     "cpu host"
+    ],
+    "Cedar serves Merlin-7B on the CPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Merlin-7B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0107",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "runs_on",
+  "q": "Which host serves Merlin-7B?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 7,
+  "b1a_nongold": 9,
+  "c1_nongold": 6,
+  "state": "CONFLICTED",
+  "recognised": "runs_on",
+  "diag": [
+   [
+    0,
+    [
+     "batch host"
+    ],
+    "Willow serves Merlin-7B on the batch host."
+   ],
+   [
+    1,
+    [
+     "batch host"
+    ],
+    "Osprey serves Merlin-7B on the batch host."
+   ],
+   [
+    2,
+    [
+     "cpu host"
+    ],
+    "Cedar serves Merlin-7B on the CPU host."
+   ],
+   [
+    14,
+    [
+     "cpu host"
+    ],
+    "Osprey serves Swift-6B on the CPU host."
+   ],
+   [
+    15,
+    [
+     "gpu host"
+    ],
+    "Cedar serves Kestrel-3B on the GPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Merlin-7B"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0109",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "rollback_window",
+  "q": "What is the rollback window for Cedar?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 8,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "rollback_window",
+  "diag": [
+   [
+    0,
+    [
+     "15"
+    ],
+    "Roll back within 15 minutes of a failed deploy by running the rollback script."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Cedar"
+    ],
+    "rollback_window",
+    [
+     "roll back within",
+     "rollback window",
+     "rollback within",
+     "roll back"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0110",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "rollback_window",
+  "q": "How long do I have to roll back a failed Cedar deploy?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 8,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "rollback_window",
+  "diag": [
+   [
+    0,
+    [
+     "15"
+    ],
+    "Roll back within 15 minutes of a failed deploy by running the rollback script."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Cedar"
+    ],
+    "rollback_window",
+    [
+     "roll back within",
+     "rollback window",
+     "rollback within",
+     "roll back"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0112",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "rollback_window",
+  "q": "What is the rollback window for Marlin?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "rollback_window",
+  "diag": [
+   [
+    0,
+    [
+     "20"
+    ],
+    "Roll back within 20 minutes of a failed deploy by running the rollback script."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Marlin"
+    ],
+    "rollback_window",
+    [
+     "roll back within",
+     "rollback window",
+     "rollback within",
+     "roll back"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0113",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "rollback_window",
+  "q": "How long do I have to roll back a failed Marlin deploy?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "rollback_window",
+  "diag": [
+   [
+    0,
+    [
+     "20"
+    ],
+    "Roll back within 20 minutes of a failed deploy by running the rollback script."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Marlin"
+    ],
+    "rollback_window",
+    [
+     "roll back within",
+     "rollback window",
+     "rollback within",
+     "roll back"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0115",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "rollback_window",
+  "q": "What is the rollback window for Juniper?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 8,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "rollback_window",
+  "diag": [
+   [
+    0,
+    [
+     "25"
+    ],
+    "Roll back within 25 minutes of a failed deploy by running the rollback script."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Juniper"
+    ],
+    "rollback_window",
+    [
+     "roll back within",
+     "rollback window",
+     "rollback within",
+     "roll back"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0116",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "rollback_window",
+  "q": "How long do I have to roll back a failed Juniper deploy?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 8,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "rollback_window",
+  "diag": [
+   [
+    0,
+    [
+     "25"
+    ],
+    "Roll back within 25 minutes of a failed deploy by running the rollback script."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Juniper"
+    ],
+    "rollback_window",
+    [
+     "roll back within",
+     "rollback window",
+     "rollback within",
+     "roll back"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0118",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "rollback_window",
+  "q": "What is the rollback window for Osprey?",
+  "gold": 2,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 7,
+  "c1_nongold": 1,
+  "state": "CONFLICTED",
+  "recognised": "rollback_window",
+  "diag": [
+   [
+    0,
+    [
+     "30"
+    ],
+    "Roll back within 30 minutes of a failed deploy by running the rollback script."
+   ],
+   [
+    1,
+    [
+     "60"
+    ],
+    "The Osprey rollback window is 60 minutes after a failed deploy."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Osprey"
+    ],
+    "rollback_window",
+    [
+     "roll back within",
+     "rollback window",
+     "rollback within",
+     "roll back"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0119",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "rollback_window",
+  "q": "How long do I have to roll back a failed Osprey deploy?",
+  "gold": 2,
+  "b1a_has_gold": false,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 8,
+  "c1_nongold": 1,
+  "state": "CONFLICTED",
+  "recognised": "rollback_window",
+  "diag": [
+   [
+    0,
+    [
+     "30"
+    ],
+    "Roll back within 30 minutes of a failed deploy by running the rollback script."
+   ],
+   [
+    13,
+    [
+     "60"
+    ],
+    "The Osprey rollback window is 60 minutes after a failed deploy."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Osprey"
+    ],
+    "rollback_window",
+    [
+     "roll back within",
+     "rollback window",
+     "rollback within",
+     "roll back"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0121",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "rollback_window",
+  "q": "What is the rollback window for Tamarind?",
+  "gold": 2,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 8,
+  "c1_nongold": 2,
+  "state": "CONFLICTED",
+  "recognised": "rollback_window",
+  "diag": [
+   [
+    0,
+    [
+     "35"
+    ],
+    "Roll back within 35 minutes of a failed deploy by running the rollback script."
+   ],
+   [
+    1,
+    [
+     "65"
+    ],
+    "The Tamarind rollback window is 65 minutes after a failed deploy."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Tamarind"
+    ],
+    "rollback_window",
+    [
+     "roll back within",
+     "rollback window",
+     "rollback within",
+     "roll back"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0122",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "rollback_window",
+  "q": "How long do I have to roll back a failed Tamarind deploy?",
+  "gold": 2,
+  "b1a_has_gold": false,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "CONFLICTED",
+  "recognised": "rollback_window",
+  "diag": [
+   [
+    0,
+    [
+     "35"
+    ],
+    "Roll back within 35 minutes of a failed deploy by running the rollback script."
+   ],
+   [
+    13,
+    [
+     "65"
+    ],
+    "The Tamarind rollback window is 65 minutes after a failed deploy."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Tamarind"
+    ],
+    "rollback_window",
+    [
+     "roll back within",
+     "rollback window",
+     "rollback within",
+     "roll back"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0124",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "rollback_window",
+  "q": "What is the rollback window for Vesper?",
+  "gold": 2,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 7,
+  "c1_nongold": 2,
+  "state": "CONFLICTED",
+  "recognised": "rollback_window",
+  "diag": [
+   [
+    0,
+    [
+     "40"
+    ],
+    "Roll back within 40 minutes of a failed deploy by running the rollback script."
+   ],
+   [
+    1,
+    [
+     "70"
+    ],
+    "The Vesper rollback window is 70 minutes after a failed deploy."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Vesper"
+    ],
+    "rollback_window",
+    [
+     "roll back within",
+     "rollback window",
+     "rollback within",
+     "roll back"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0125",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "rollback_window",
+  "q": "How long do I have to roll back a failed Vesper deploy?",
+  "gold": 2,
+  "b1a_has_gold": false,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 8,
+  "c1_nongold": 2,
+  "state": "CONFLICTED",
+  "recognised": "rollback_window",
+  "diag": [
+   [
+    0,
+    [
+     "40"
+    ],
+    "Roll back within 40 minutes of a failed deploy by running the rollback script."
+   ],
+   [
+    13,
+    [
+     "70"
+    ],
+    "The Vesper rollback window is 70 minutes after a failed deploy."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Vesper"
+    ],
+    "rollback_window",
+    [
+     "roll back within",
+     "rollback window",
+     "rollback within",
+     "roll back"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0127",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "rollback_window",
+  "q": "What is the rollback window for Pinnacle?",
+  "gold": 2,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 7,
+  "c1_nongold": 1,
+  "state": "CONFLICTED",
+  "recognised": "rollback_window",
+  "diag": [
+   [
+    0,
+    [
+     "15"
+    ],
+    "Roll back within 15 minutes of a failed deploy by running the rollback script."
+   ],
+   [
+    1,
+    [
+     "45"
+    ],
+    "The Pinnacle rollback window is 45 minutes after a failed deploy."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Pinnacle"
+    ],
+    "rollback_window",
+    [
+     "roll back within",
+     "rollback window",
+     "rollback within",
+     "roll back"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0128",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "rollback_window",
+  "q": "How long do I have to roll back a failed Pinnacle deploy?",
+  "gold": 2,
+  "b1a_has_gold": false,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 8,
+  "c1_nongold": 1,
+  "state": "CONFLICTED",
+  "recognised": "rollback_window",
+  "diag": [
+   [
+    0,
+    [
+     "15"
+    ],
+    "Roll back within 15 minutes of a failed deploy by running the rollback script."
+   ],
+   [
+    13,
+    [
+     "45"
+    ],
+    "The Pinnacle rollback window is 45 minutes after a failed deploy."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Pinnacle"
+    ],
+    "rollback_window",
+    [
+     "roll back within",
+     "rollback window",
+     "rollback within",
+     "roll back"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0130",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "rollback_window",
+  "q": "What is the rollback window for Quartz?",
+  "gold": 2,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 8,
+  "c1_nongold": 2,
+  "state": "CONFLICTED",
+  "recognised": "rollback_window",
+  "diag": [
+   [
+    0,
+    [
+     "20"
+    ],
+    "Roll back within 20 minutes of a failed deploy by running the rollback script."
+   ],
+   [
+    1,
+    [
+     "50"
+    ],
+    "The Quartz rollback window is 50 minutes after a failed deploy."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Quartz"
+    ],
+    "rollback_window",
+    [
+     "roll back within",
+     "rollback window",
+     "rollback within",
+     "roll back"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0131",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "rollback_window",
+  "q": "How long do I have to roll back a failed Quartz deploy?",
+  "gold": 2,
+  "b1a_has_gold": false,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 8,
+  "c1_nongold": 2,
+  "state": "CONFLICTED",
+  "recognised": "rollback_window",
+  "diag": [
+   [
+    0,
+    [
+     "20"
+    ],
+    "Roll back within 20 minutes of a failed deploy by running the rollback script."
+   ],
+   [
+    13,
+    [
+     "50"
+    ],
+    "The Quartz rollback window is 50 minutes after a failed deploy."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Quartz"
+    ],
+    "rollback_window",
+    [
+     "roll back within",
+     "rollback window",
+     "rollback within",
+     "roll back"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0145",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "owner",
+  "q": "Who owns the Ferry queue?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 5,
+  "c1_shown": 3,
+  "b1a_nongold": 4,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "owner",
+  "diag": [
+   [
+    3,
+    [
+     "Bruno Keller"
+    ],
+    "Bruno Keller owns the Ferry queue."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Ferry"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0146",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "owner",
+  "q": "Who is responsible for the Ferry queue?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 5,
+  "c1_shown": 3,
+  "b1a_nongold": 4,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "owner",
+  "diag": [
+   [
+    3,
+    [
+     "Bruno Keller"
+    ],
+    "Bruno Keller owns the Ferry queue."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Ferry"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0148",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "owner",
+  "q": "Who owns the Gantry scheduler?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "owner",
+  "diag": [
+   [
+    3,
+    [
+     "Dmitri Volkov"
+    ],
+    "Dmitri Volkov owns the Gantry scheduler."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Gantry"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0149",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "owner",
+  "q": "Who is responsible for the Gantry scheduler?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "owner",
+  "diag": [
+   [
+    3,
+    [
+     "Dmitri Volkov"
+    ],
+    "Dmitri Volkov owns the Gantry scheduler."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Gantry"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0151",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "owner",
+  "q": "Who owns the Relay gateway?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 5,
+  "c1_shown": 3,
+  "b1a_nongold": 4,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "owner",
+  "diag": [
+   [
+    3,
+    [
+     "Farid Haddad"
+    ],
+    "Farid Haddad owns the Relay gateway."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Relay"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0152",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "owner",
+  "q": "Who is responsible for the Relay gateway?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 5,
+  "c1_shown": 3,
+  "b1a_nongold": 4,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "owner",
+  "diag": [
+   [
+    3,
+    [
+     "Farid Haddad"
+    ],
+    "Farid Haddad owns the Relay gateway."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Relay"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0154",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "owner",
+  "q": "Who owns the Hopper ingest service?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 6,
+  "c1_shown": 3,
+  "b1a_nongold": 5,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "owner",
+  "diag": [
+   [
+    3,
+    [
+     "Hiro Tanaka"
+    ],
+    "Hiro Tanaka owns the Hopper ingest service."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Hopper"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0155",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "owner",
+  "q": "Who is responsible for the Hopper ingest service?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 6,
+  "c1_shown": 3,
+  "b1a_nongold": 5,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "owner",
+  "diag": [
+   [
+    3,
+    [
+     "Hiro Tanaka"
+    ],
+    "Hiro Tanaka owns the Hopper ingest service."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Hopper"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0157",
+  "label": "UNESTABLISHED",
+  "reason": "wrong_entity",
+  "relation": "owner",
+  "q": "Who owns the Sluice cache?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 3,
+  "c1_shown": 3,
+  "b1a_nongold": 3,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "owner",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Sluice"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0158",
+  "label": "UNESTABLISHED",
+  "reason": "wrong_entity",
+  "relation": "owner",
+  "q": "Who is responsible for the Sluice cache?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 3,
+  "c1_shown": 3,
+  "b1a_nongold": 3,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "owner",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Sluice"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0160",
+  "label": "UNESTABLISHED",
+  "reason": "wrong_entity",
+  "relation": "owner",
+  "q": "Who owns the Turret API?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 3,
+  "c1_shown": 3,
+  "b1a_nongold": 3,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "owner",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Turret",
+     "API"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0161",
+  "label": "UNESTABLISHED",
+  "reason": "wrong_entity",
+  "relation": "owner",
+  "q": "Who is responsible for the Turret API?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 3,
+  "c1_shown": 3,
+  "b1a_nongold": 3,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "owner",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Turret",
+     "API"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0163",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "owner",
+  "q": "Who owns the Conduit stream?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 4,
+  "c1_shown": 3,
+  "b1a_nongold": 3,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "owner",
+  "diag": [
+   [
+    2,
+    [
+     "Nikhil Rao"
+    ],
+    "Nikhil Rao owns the Conduit stream."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Conduit"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0164",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "owner",
+  "q": "Who is responsible for the Conduit stream?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 4,
+  "c1_shown": 3,
+  "b1a_nongold": 3,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "owner",
+  "diag": [
+   [
+    2,
+    [
+     "Nikhil Rao"
+    ],
+    "Nikhil Rao owns the Conduit stream."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Conduit"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0166",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "owner",
+  "q": "Who owns the Lattice store?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 4,
+  "c1_shown": 3,
+  "b1a_nongold": 3,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "owner",
+  "diag": [
+   [
+    2,
+    [
+     "Pablo Reyes"
+    ],
+    "Pablo Reyes owns the Lattice store."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Lattice"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0167",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "owner",
+  "q": "Who is responsible for the Lattice store?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 4,
+  "c1_shown": 3,
+  "b1a_nongold": 3,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "owner",
+  "diag": [
+   [
+    2,
+    [
+     "Pablo Reyes"
+    ],
+    "Pablo Reyes owns the Lattice store."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Lattice"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0181",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "lead",
+  "q": "Who leads Cedar?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "lead",
+  "diag": [
+   [
+    4,
+    [
+     "Amara Osei"
+    ],
+    "Amara Osei is the Cedar lead."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Cedar"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0182",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "lead",
+  "q": "Who is the Cedar lead?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "lead",
+  "diag": [
+   [
+    4,
+    [
+     "Amara Osei"
+    ],
+    "Amara Osei is the Cedar lead."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Cedar"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0184",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "lead",
+  "q": "Who leads Marlin?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "lead",
+  "diag": [
+   [
+    4,
+    [
+     "Chiara Rossi"
+    ],
+    "Chiara Rossi is the Marlin lead."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Marlin"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0185",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "lead",
+  "q": "Who is the Marlin lead?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "lead",
+  "diag": [
+   [
+    4,
+    [
+     "Chiara Rossi"
+    ],
+    "Chiara Rossi is the Marlin lead."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Marlin"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0187",
+  "label": "UNESTABLISHED",
+  "reason": "wrong_entity",
+  "relation": "lead",
+  "q": "Who leads Juniper?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "lead",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Juniper"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0188",
+  "label": "UNESTABLISHED",
+  "reason": "wrong_entity",
+  "relation": "lead",
+  "q": "Who is the Juniper lead?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "lead",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Juniper"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0190",
+  "label": "UNESTABLISHED",
+  "reason": "wrong_entity",
+  "relation": "lead",
+  "q": "Who leads Osprey?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "lead",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Osprey"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0191",
+  "label": "UNESTABLISHED",
+  "reason": "wrong_entity",
+  "relation": "lead",
+  "q": "Who is the Osprey lead?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "lead",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Osprey"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0193",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "lead",
+  "q": "Who leads Tamarind?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "lead",
+  "diag": [
+   [
+    3,
+    [
+     "Ines Duarte"
+    ],
+    "Ines Duarte is the Tamarind lead."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Tamarind"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0194",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "lead",
+  "q": "Who is the Tamarind lead?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "lead",
+  "diag": [
+   [
+    3,
+    [
+     "Ines Duarte"
+    ],
+    "Ines Duarte is the Tamarind lead."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Tamarind"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0196",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "lead",
+  "q": "Who leads Vesper?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "lead",
+  "diag": [
+   [
+    3,
+    [
+     "Kavya Menon"
+    ],
+    "Kavya Menon is the Vesper lead."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Vesper"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0197",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "lead",
+  "q": "Who is the Vesper lead?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "lead",
+  "diag": [
+   [
+    3,
+    [
+     "Kavya Menon"
+    ],
+    "Kavya Menon is the Vesper lead."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Vesper"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0199",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "lead",
+  "q": "Who leads Pinnacle?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "lead",
+  "diag": [
+   [
+    3,
+    [
+     "Mila Novak"
+    ],
+    "Mila Novak is the Pinnacle lead."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Pinnacle"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0200",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "lead",
+  "q": "Who is the Pinnacle lead?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "lead",
+  "diag": [
+   [
+    3,
+    [
+     "Mila Novak"
+    ],
+    "Mila Novak is the Pinnacle lead."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Pinnacle"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0202",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "lead",
+  "q": "Who leads Quartz?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "lead",
+  "diag": [
+   [
+    3,
+    [
+     "Olga Petrova"
+    ],
+    "Olga Petrova is the Quartz lead."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Quartz"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0203",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "lead",
+  "q": "Who is the Quartz lead?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "lead",
+  "diag": [
+   [
+    3,
+    [
+     "Olga Petrova"
+    ],
+    "Olga Petrova is the Quartz lead."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Quartz"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0253",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "support_hours",
+  "q": "What are Nimbus Metrics's support hours?",
+  "gold": 2,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 9,
+  "c1_shown": 4,
+  "b1a_nongold": 7,
+  "c1_nongold": 2,
+  "state": "CONFLICTED",
+  "recognised": "support_hours",
+  "diag": [
+   [
+    0,
+    [
+     "8 to 5"
+    ],
+    "Nimbus Metrics support hours are 8 to 5 on weekdays."
+   ],
+   [
+    6,
+    [
+     "7 to 6"
+    ],
+    "Nimbus Metrics support hours are 7 to 6 on weekdays."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Nimbus",
+     "Metrics"
+    ],
+    "support_hours",
+    [
+     "support hours",
+     "hours are",
+     "support is open"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0254",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "support_hours",
+  "q": "When is Nimbus Metrics support open on weekdays?",
+  "gold": 2,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 9,
+  "c1_shown": 4,
+  "b1a_nongold": 7,
+  "c1_nongold": 2,
+  "state": "CONFLICTED",
+  "recognised": "support_hours",
+  "diag": [
+   [
+    0,
+    [
+     "8 to 5"
+    ],
+    "Nimbus Metrics support hours are 8 to 5 on weekdays."
+   ],
+   [
+    6,
+    [
+     "7 to 6"
+    ],
+    "Nimbus Metrics support hours are 7 to 6 on weekdays."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Nimbus",
+     "Metrics"
+    ],
+    "support_hours",
+    [
+     "support hours",
+     "hours are",
+     "support is open"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0256",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "support_hours",
+  "q": "What are Quarry Data's support hours?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 8,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "support_hours",
+  "diag": [
+   [
+    0,
+    [
+     "9 to 6"
+    ],
+    "Quarry Data support hours are 9 to 6 on weekdays."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Quarry",
+     "Data"
+    ],
+    "support_hours",
+    [
+     "support hours",
+     "hours are",
+     "support is open"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0257",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "support_hours",
+  "q": "When is Quarry Data support open on weekdays?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 8,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "support_hours",
+  "diag": [
+   [
+    0,
+    [
+     "9 to 6"
+    ],
+    "Quarry Data support hours are 9 to 6 on weekdays."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Quarry",
+     "Data"
+    ],
+    "support_hours",
+    [
+     "support hours",
+     "hours are",
+     "support is open"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0259",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "support_hours",
+  "q": "What are Falconer Logs's support hours?",
+  "gold": 2,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 9,
+  "c1_shown": 4,
+  "b1a_nongold": 7,
+  "c1_nongold": 2,
+  "state": "CONFLICTED",
+  "recognised": "support_hours",
+  "diag": [
+   [
+    0,
+    [
+     "8 to 7"
+    ],
+    "Falconer Logs support hours are 8 to 7 on weekdays."
+   ],
+   [
+    6,
+    [
+     "9 to 6"
+    ],
+    "Falconer Logs support hours are 9 to 6 on weekdays."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Falconer",
+     "Logs"
+    ],
+    "support_hours",
+    [
+     "support hours",
+     "hours are",
+     "support is open"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0260",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "support_hours",
+  "q": "When is Falconer Logs support open on weekdays?",
+  "gold": 2,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 9,
+  "c1_shown": 4,
+  "b1a_nongold": 7,
+  "c1_nongold": 2,
+  "state": "CONFLICTED",
+  "recognised": "support_hours",
+  "diag": [
+   [
+    0,
+    [
+     "8 to 7"
+    ],
+    "Falconer Logs support hours are 8 to 7 on weekdays."
+   ],
+   [
+    6,
+    [
+     "9 to 6"
+    ],
+    "Falconer Logs support hours are 9 to 6 on weekdays."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Falconer",
+     "Logs"
+    ],
+    "support_hours",
+    [
+     "support hours",
+     "hours are",
+     "support is open"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0262",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "support_hours",
+  "q": "What are Tidewater Pay's support hours?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 9,
+  "c1_shown": 3,
+  "b1a_nongold": 8,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "support_hours",
+  "diag": [
+   [
+    0,
+    [
+     "9 to 5"
+    ],
+    "Tidewater Pay support hours are 9 to 5 on weekdays."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Tidewater",
+     "Pay"
+    ],
+    "support_hours",
+    [
+     "support hours",
+     "hours are",
+     "support is open"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0263",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "support_hours",
+  "q": "When is Tidewater Pay support open on weekdays?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 9,
+  "c1_shown": 3,
+  "b1a_nongold": 8,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "support_hours",
+  "diag": [
+   [
+    0,
+    [
+     "9 to 5"
+    ],
+    "Tidewater Pay support hours are 9 to 5 on weekdays."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Tidewater",
+     "Pay"
+    ],
+    "support_hours",
+    [
+     "support hours",
+     "hours are",
+     "support is open"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0265",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "support_hours",
+  "q": "What are Brightwell Mail's support hours?",
+  "gold": 2,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 7,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "support_hours",
+  "diag": [
+   [
+    0,
+    [
+     "8 to 6"
+    ],
+    "Brightwell Mail support hours are 8 to 6 on weekdays."
+   ],
+   [
+    6,
+    [
+     "8 to 6"
+    ],
+    "Brightwell Mail support hours are 8 to 6 on weekdays."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Brightwell",
+     "Mail"
+    ],
+    "support_hours",
+    [
+     "support hours",
+     "hours are",
+     "support is open"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0266",
+  "label": "CONFLICTED",
+  "reason": null,
+  "relation": "support_hours",
+  "q": "When is Brightwell Mail support open on weekdays?",
+  "gold": 2,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 7,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "support_hours",
+  "diag": [
+   [
+    0,
+    [
+     "8 to 6"
+    ],
+    "Brightwell Mail support hours are 8 to 6 on weekdays."
+   ],
+   [
+    6,
+    [
+     "8 to 6"
+    ],
+    "Brightwell Mail support hours are 8 to 6 on weekdays."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Brightwell",
+     "Mail"
+    ],
+    "support_hours",
+    [
+     "support hours",
+     "hours are",
+     "support is open"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0268",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "support_hours",
+  "q": "What are Ironside Backup's support hours?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 9,
+  "c1_shown": 3,
+  "b1a_nongold": 8,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "support_hours",
+  "diag": [
+   [
+    0,
+    [
+     "9 to 7"
+    ],
+    "Ironside Backup support hours are 9 to 7 on weekdays."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Ironside",
+     "Backup"
+    ],
+    "support_hours",
+    [
+     "support hours",
+     "hours are",
+     "support is open"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0269",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "support_hours",
+  "q": "When is Ironside Backup support open on weekdays?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 9,
+  "c1_shown": 3,
+  "b1a_nongold": 8,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "support_hours",
+  "diag": [
+   [
+    0,
+    [
+     "9 to 7"
+    ],
+    "Ironside Backup support hours are 9 to 7 on weekdays."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Ironside",
+     "Backup"
+    ],
+    "support_hours",
+    [
+     "support hours",
+     "hours are",
+     "support is open"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0271",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "decision",
+  "q": "What was decided about Cedar's default model?",
+  "gold": 1,
+  "b1a_has_gold": false,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 6,
+  "b1a_nongold": 10,
+  "c1_nongold": 6,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Kestrel-3B",
+     "Merlin-7B"
+    ],
+    "As of October, the Cedar default model is Kestrel-3B; the Merlin-7B model has been retired"
+   ],
+   [
+    1,
+    [
+     "Merlin-7B"
+    ],
+    "Cedar serves Merlin-7B on the CPU host."
+   ],
+   [
+    2,
+    [
+     "Kestrel-3B"
+    ],
+    "Cedar serves Kestrel-3B on the GPU host."
+   ],
+   [
+    6,
+    [
+     "Merlin-7B"
+    ],
+    "As of March, the Cedar default model was Merlin-7B."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Cedar"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0272",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "decision",
+  "q": "What did the Cedar planning decide on the model?",
+  "gold": 1,
+  "b1a_has_gold": false,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "decision",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Cedar"
+    ],
+    "decision",
+    [
+     "decision is",
+     "we decided",
+     "agreed to",
+     "decided to"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0274",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "decision",
+  "q": "What was decided about Marlin's default model?",
+  "gold": 1,
+  "b1a_has_gold": false,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 6,
+  "b1a_nongold": 10,
+  "c1_nongold": 6,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Kestrel-9B",
+     "Heron-4B"
+    ],
+    "As of October, the Marlin default model is Kestrel-9B; the Heron-4B model has been retired"
+   ],
+   [
+    1,
+    [
+     "Heron-4B"
+    ],
+    "Marlin serves Heron-4B on the CPU host."
+   ],
+   [
+    2,
+    [
+     "Kestrel-9B"
+    ],
+    "Marlin serves Kestrel-9B on the CPU host."
+   ],
+   [
+    6,
+    [
+     "Heron-4B"
+    ],
+    "As of March, the Marlin default model was Heron-4B."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Marlin"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0275",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "decision",
+  "q": "What did the Marlin planning decide on the model?",
+  "gold": 1,
+  "b1a_has_gold": false,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "decision",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Marlin"
+    ],
+    "decision",
+    [
+     "decision is",
+     "we decided",
+     "agreed to",
+     "decided to"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0277",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "decision",
+  "q": "What was decided about Juniper's default model?",
+  "gold": 1,
+  "b1a_has_gold": false,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 6,
+  "b1a_nongold": 10,
+  "c1_nongold": 6,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Merlin-2B",
+     "Heron-12B"
+    ],
+    "As of October, the Juniper default model is Merlin-2B; the Heron-12B model has been retire"
+   ],
+   [
+    1,
+    [
+     "Merlin-2B"
+    ],
+    "Juniper serves Merlin-2B on the edge host."
+   ],
+   [
+    2,
+    [
+     "Heron-12B"
+    ],
+    "Juniper serves Heron-12B on the CPU host."
+   ],
+   [
+    3,
+    [
+     "Heron-12B"
+    ],
+    "As of March, the Juniper default model was Heron-12B."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Juniper"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0278",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "decision",
+  "q": "What did the Juniper planning decide on the model?",
+  "gold": 1,
+  "b1a_has_gold": false,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "decision",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Juniper"
+    ],
+    "decision",
+    [
+     "decision is",
+     "we decided",
+     "agreed to",
+     "decided to"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0280",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "decision",
+  "q": "What was decided about Osprey's default model?",
+  "gold": 1,
+  "b1a_has_gold": false,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 6,
+  "b1a_nongold": 10,
+  "c1_nongold": 6,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Merlin-7B",
+     "Swift-6B"
+    ],
+    "As of October, the Osprey default model is Merlin-7B; the Swift-6B model has been retired."
+   ],
+   [
+    1,
+    [
+     "Merlin-7B"
+    ],
+    "Osprey serves Merlin-7B on the batch host."
+   ],
+   [
+    2,
+    [
+     "Swift-6B"
+    ],
+    "Osprey serves Swift-6B on the CPU host."
+   ],
+   [
+    6,
+    [
+     "Swift-6B"
+    ],
+    "As of March, the Osprey default model was Swift-6B."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Osprey"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0281",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "decision",
+  "q": "What did the Osprey planning decide on the model?",
+  "gold": 1,
+  "b1a_has_gold": false,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "decision",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Osprey"
+    ],
+    "decision",
+    [
+     "decision is",
+     "we decided",
+     "agreed to",
+     "decided to"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0283",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "decision",
+  "q": "What was decided about Tamarind's default model?",
+  "gold": 1,
+  "b1a_has_gold": false,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Heron-4B"
+    ],
+    "Tamarind serves Heron-4B on the GPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Tamarind"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0284",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "decision",
+  "q": "What did the Tamarind planning decide on the model?",
+  "gold": 1,
+  "b1a_has_gold": false,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "decision",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Tamarind"
+    ],
+    "decision",
+    [
+     "decision is",
+     "we decided",
+     "agreed to",
+     "decided to"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0286",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "decision",
+  "q": "What was decided about Vesper's default model?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Heron-12B"
+    ],
+    "Vesper serves Heron-12B on the CPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Vesper"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0287",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "decision",
+  "q": "What did the Vesper planning decide on the model?",
+  "gold": 1,
+  "b1a_has_gold": false,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "decision",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Vesper"
+    ],
+    "decision",
+    [
+     "decision is",
+     "we decided",
+     "agreed to",
+     "decided to"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0289",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "decision",
+  "q": "What was decided about Pinnacle's default model?",
+  "gold": 1,
+  "b1a_has_gold": false,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Swift-6B"
+    ],
+    "Pinnacle serves Swift-6B on the edge host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Pinnacle"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0290",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "decision",
+  "q": "What did the Pinnacle planning decide on the model?",
+  "gold": 1,
+  "b1a_has_gold": false,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "decision",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Pinnacle"
+    ],
+    "decision",
+    [
+     "decision is",
+     "we decided",
+     "agreed to",
+     "decided to"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0292",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "decision",
+  "q": "What was decided about Quartz's default model?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Swift-20B"
+    ],
+    "Quartz serves Swift-20B on the batch host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Quartz"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0293",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "decision",
+  "q": "What did the Quartz planning decide on the model?",
+  "gold": 1,
+  "b1a_has_gold": false,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "decision",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Quartz"
+    ],
+    "decision",
+    [
+     "decision is",
+     "we decided",
+     "agreed to",
+     "decided to"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0319",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "attends",
+  "q": "Who attended the Cedar planning meeting?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 0,
+  "b1a_nongold": 9,
+  "c1_nongold": 0,
+  "state": "ESTABLISHED",
+  "recognised": "attends",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Cedar"
+    ],
+    "attends",
+    []
+   ]
+  ]
+ },
+ {
+  "id": "V2-0320",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "attends",
+  "q": "Who was in the Cedar planning meeting?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 0,
+  "b1a_nongold": 9,
+  "c1_nongold": 0,
+  "state": "ESTABLISHED",
+  "recognised": "attends",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Cedar"
+    ],
+    "attends",
+    []
+   ]
+  ]
+ },
+ {
+  "id": "V2-0322",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "attends",
+  "q": "Who attended the Marlin planning meeting?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 0,
+  "b1a_nongold": 9,
+  "c1_nongold": 0,
+  "state": "ESTABLISHED",
+  "recognised": "attends",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Marlin"
+    ],
+    "attends",
+    []
+   ]
+  ]
+ },
+ {
+  "id": "V2-0323",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "attends",
+  "q": "Who was in the Marlin planning meeting?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 0,
+  "b1a_nongold": 9,
+  "c1_nongold": 0,
+  "state": "ESTABLISHED",
+  "recognised": "attends",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Marlin"
+    ],
+    "attends",
+    []
+   ]
+  ]
+ },
+ {
+  "id": "V2-0325",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "attends",
+  "q": "Who attended the Juniper planning meeting?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 0,
+  "b1a_nongold": 9,
+  "c1_nongold": 0,
+  "state": "ESTABLISHED",
+  "recognised": "attends",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Juniper"
+    ],
+    "attends",
+    []
+   ]
+  ]
+ },
+ {
+  "id": "V2-0326",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "attends",
+  "q": "Who was in the Juniper planning meeting?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 0,
+  "b1a_nongold": 9,
+  "c1_nongold": 0,
+  "state": "ESTABLISHED",
+  "recognised": "attends",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Juniper"
+    ],
+    "attends",
+    []
+   ]
+  ]
+ },
+ {
+  "id": "V2-0328",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "attends",
+  "q": "Who attended the Osprey planning meeting?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 0,
+  "b1a_nongold": 9,
+  "c1_nongold": 0,
+  "state": "ESTABLISHED",
+  "recognised": "attends",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Osprey"
+    ],
+    "attends",
+    []
+   ]
+  ]
+ },
+ {
+  "id": "V2-0329",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "attends",
+  "q": "Who was in the Osprey planning meeting?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 0,
+  "b1a_nongold": 9,
+  "c1_nongold": 0,
+  "state": "ESTABLISHED",
+  "recognised": "attends",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Osprey"
+    ],
+    "attends",
+    []
+   ]
+  ]
+ },
+ {
+  "id": "V2-0331",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "attends",
+  "q": "Who attended the Tamarind planning meeting?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 0,
+  "b1a_nongold": 9,
+  "c1_nongold": 0,
+  "state": "ESTABLISHED",
+  "recognised": "attends",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Tamarind"
+    ],
+    "attends",
+    []
+   ]
+  ]
+ },
+ {
+  "id": "V2-0332",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "attends",
+  "q": "Who was in the Tamarind planning meeting?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 0,
+  "b1a_nongold": 9,
+  "c1_nongold": 0,
+  "state": "ESTABLISHED",
+  "recognised": "attends",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Tamarind"
+    ],
+    "attends",
+    []
+   ]
+  ]
+ },
+ {
+  "id": "V2-0334",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "attends",
+  "q": "Who attended the Vesper planning meeting?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 0,
+  "b1a_nongold": 8,
+  "c1_nongold": 0,
+  "state": "ESTABLISHED",
+  "recognised": "attends",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Vesper"
+    ],
+    "attends",
+    []
+   ]
+  ]
+ },
+ {
+  "id": "V2-0335",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "attends",
+  "q": "Who was in the Vesper planning meeting?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 0,
+  "b1a_nongold": 8,
+  "c1_nongold": 0,
+  "state": "ESTABLISHED",
+  "recognised": "attends",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Vesper"
+    ],
+    "attends",
+    []
+   ]
+  ]
+ },
+ {
+  "id": "V2-0337",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "attends",
+  "q": "Who attended the Pinnacle planning meeting?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 0,
+  "b1a_nongold": 9,
+  "c1_nongold": 0,
+  "state": "ESTABLISHED",
+  "recognised": "attends",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Pinnacle"
+    ],
+    "attends",
+    []
+   ]
+  ]
+ },
+ {
+  "id": "V2-0338",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "attends",
+  "q": "Who was in the Pinnacle planning meeting?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 0,
+  "b1a_nongold": 9,
+  "c1_nongold": 0,
+  "state": "ESTABLISHED",
+  "recognised": "attends",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Pinnacle"
+    ],
+    "attends",
+    []
+   ]
+  ]
+ },
+ {
+  "id": "V2-0340",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "attends",
+  "q": "Who attended the Quartz planning meeting?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 0,
+  "b1a_nongold": 8,
+  "c1_nongold": 0,
+  "state": "ESTABLISHED",
+  "recognised": "attends",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Quartz"
+    ],
+    "attends",
+    []
+   ]
+  ]
+ },
+ {
+  "id": "V2-0341",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "attends",
+  "q": "Who was in the Quartz planning meeting?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 0,
+  "b1a_nongold": 8,
+  "c1_nongold": 0,
+  "state": "ESTABLISHED",
+  "recognised": "attends",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Quartz"
+    ],
+    "attends",
+    []
+   ]
+  ]
+ },
+ {
+  "id": "V2-0367",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "reviews",
+  "q": "What is Wen Zhao reviewing?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 9,
+  "c1_shown": 3,
+  "b1a_nongold": 8,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "reviews",
+  "diag": [
+   [
+    0,
+    [
+     "Wen Zhao",
+     "Ferry"
+    ],
+    "Wen Zhao to review the Ferry settings."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Wen",
+     "Zhao"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0368",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "reviews",
+  "q": "What does Wen Zhao review?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 9,
+  "c1_shown": 3,
+  "b1a_nongold": 8,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "reviews",
+  "diag": [
+   [
+    0,
+    [
+     "Wen Zhao",
+     "Ferry"
+    ],
+    "Wen Zhao to review the Ferry settings."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Wen",
+     "Zhao"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0370",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "reviews",
+  "q": "What is Greta Lindqvist reviewing?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 9,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "reviews",
+  "diag": [
+   [
+    0,
+    [
+     "Greta Lindqvist",
+     "Conduit"
+    ],
+    "Greta Lindqvist to review the Conduit settings."
+   ],
+   [
+    1,
+    [
+     "Greta Lindqvist",
+     "Gantry"
+    ],
+    "Greta Lindqvist to review the Gantry settings."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Greta",
+     "Lindqvist"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0371",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "reviews",
+  "q": "What does Greta Lindqvist review?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 9,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "reviews",
+  "diag": [
+   [
+    0,
+    [
+     "Greta Lindqvist",
+     "Conduit"
+    ],
+    "Greta Lindqvist to review the Conduit settings."
+   ],
+   [
+    1,
+    [
+     "Greta Lindqvist",
+     "Gantry"
+    ],
+    "Greta Lindqvist to review the Gantry settings."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Greta",
+     "Lindqvist"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0373",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "reviews",
+  "q": "What is Ines Duarte reviewing?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "reviews",
+  "diag": [
+   [
+    0,
+    [
+     "Ines Duarte",
+     "Relay"
+    ],
+    "Ines Duarte to review the Relay settings."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Ines",
+     "Duarte"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0374",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "reviews",
+  "q": "What does Ines Duarte review?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "reviews",
+  "diag": [
+   [
+    0,
+    [
+     "Ines Duarte",
+     "Relay"
+    ],
+    "Ines Duarte to review the Relay settings."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Ines",
+     "Duarte"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0376",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "reviews",
+  "q": "What is Vera Kovac reviewing?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "reviews",
+  "diag": [
+   [
+    0,
+    [
+     "Vera Kovac",
+     "Hopper"
+    ],
+    "Vera Kovac to review the Hopper settings."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Vera",
+     "Kovac"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0377",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "reviews",
+  "q": "What does Vera Kovac review?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "reviews",
+  "diag": [
+   [
+    0,
+    [
+     "Vera Kovac",
+     "Hopper"
+    ],
+    "Vera Kovac to review the Hopper settings."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Vera",
+     "Kovac"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0379",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "reviews",
+  "q": "What is Pablo Reyes reviewing?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "reviews",
+  "diag": [
+   [
+    0,
+    [
+     "Pablo Reyes",
+     "Sluice"
+    ],
+    "Pablo Reyes to review the Sluice settings."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Pablo",
+     "Reyes"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0380",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "reviews",
+  "q": "What does Pablo Reyes review?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "ESTABLISHED",
+  "recognised": "reviews",
+  "diag": [
+   [
+    0,
+    [
+     "Pablo Reyes",
+     "Sluice"
+    ],
+    "Pablo Reyes to review the Sluice settings."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Pablo",
+     "Reyes"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0382",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "reviews",
+  "q": "What is Tara Brennan reviewing?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 9,
+  "c1_shown": 4,
+  "b1a_nongold": 8,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "reviews",
+  "diag": [
+   [
+    0,
+    [
+     "Tara Brennan",
+     "Turret"
+    ],
+    "Tara Brennan to review the Turret settings."
+   ],
+   [
+    1,
+    [
+     "Tara Brennan",
+     "Lattice"
+    ],
+    "Tara Brennan to review the Lattice settings."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Tara",
+     "Brennan"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0383",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "reviews",
+  "q": "What does Tara Brennan review?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 9,
+  "c1_shown": 4,
+  "b1a_nongold": 8,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "reviews",
+  "diag": [
+   [
+    0,
+    [
+     "Tara Brennan",
+     "Turret"
+    ],
+    "Tara Brennan to review the Turret settings."
+   ],
+   [
+    1,
+    [
+     "Tara Brennan",
+     "Lattice"
+    ],
+    "Tara Brennan to review the Lattice settings."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Tara",
+     "Brennan"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0385",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "reviews",
+  "q": "What is Greta Lindqvist reviewing?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 9,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "reviews",
+  "diag": [
+   [
+    0,
+    [
+     "Greta Lindqvist",
+     "Conduit"
+    ],
+    "Greta Lindqvist to review the Conduit settings."
+   ],
+   [
+    1,
+    [
+     "Greta Lindqvist",
+     "Gantry"
+    ],
+    "Greta Lindqvist to review the Gantry settings."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Greta",
+     "Lindqvist"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0386",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "reviews",
+  "q": "What does Greta Lindqvist review?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 4,
+  "b1a_nongold": 9,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "reviews",
+  "diag": [
+   [
+    0,
+    [
+     "Greta Lindqvist",
+     "Conduit"
+    ],
+    "Greta Lindqvist to review the Conduit settings."
+   ],
+   [
+    1,
+    [
+     "Greta Lindqvist",
+     "Gantry"
+    ],
+    "Greta Lindqvist to review the Gantry settings."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Greta",
+     "Lindqvist"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0388",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "reviews",
+  "q": "What is Tara Brennan reviewing?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 9,
+  "c1_shown": 4,
+  "b1a_nongold": 8,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "reviews",
+  "diag": [
+   [
+    0,
+    [
+     "Tara Brennan",
+     "Turret"
+    ],
+    "Tara Brennan to review the Turret settings."
+   ],
+   [
+    1,
+    [
+     "Tara Brennan",
+     "Lattice"
+    ],
+    "Tara Brennan to review the Lattice settings."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Tara",
+     "Brennan"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0389",
+  "label": "ESTABLISHED",
+  "reason": null,
+  "relation": "reviews",
+  "q": "What does Tara Brennan review?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 9,
+  "c1_shown": 4,
+  "b1a_nongold": 8,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "reviews",
+  "diag": [
+   [
+    0,
+    [
+     "Tara Brennan",
+     "Turret"
+    ],
+    "Tara Brennan to review the Turret settings."
+   ],
+   [
+    1,
+    [
+     "Tara Brennan",
+     "Lattice"
+    ],
+    "Tara Brennan to review the Lattice settings."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Tara",
+     "Brennan"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0427",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "security_reviewer",
+  "q": "Who is the security reviewer for Cedar?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "reviews",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Cedar"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0428",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "security_reviewer",
+  "q": "Who signs off Cedar security?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Cedar"
+    ],
+    null,
+    [
+     "signs",
+     "security"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0430",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "security_reviewer",
+  "q": "Who is the security reviewer for Marlin?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "reviews",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Marlin"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0431",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "security_reviewer",
+  "q": "Who signs off Marlin security?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Marlin"
+    ],
+    null,
+    [
+     "signs",
+     "security"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0433",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "security_reviewer",
+  "q": "Who is the security reviewer for Juniper?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "reviews",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Juniper"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0434",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "security_reviewer",
+  "q": "Who signs off Juniper security?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Juniper"
+    ],
+    null,
+    [
+     "signs",
+     "security"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0436",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "security_reviewer",
+  "q": "Who is the security reviewer for Osprey?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "reviews",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Osprey"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0437",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "security_reviewer",
+  "q": "Who signs off Osprey security?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Osprey"
+    ],
+    null,
+    [
+     "signs",
+     "security"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0439",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "security_reviewer",
+  "q": "Who is the security reviewer for Tamarind?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "reviews",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Tamarind"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0440",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "security_reviewer",
+  "q": "Who signs off Tamarind security?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Tamarind"
+    ],
+    null,
+    [
+     "signs",
+     "security"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0442",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "security_reviewer",
+  "q": "Who is the security reviewer for Vesper?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "reviews",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Vesper"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0443",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "security_reviewer",
+  "q": "Who signs off Vesper security?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Vesper"
+    ],
+    null,
+    [
+     "signs",
+     "security"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0445",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "security_reviewer",
+  "q": "Who is the security reviewer for Pinnacle?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "reviews",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Pinnacle"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0446",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "security_reviewer",
+  "q": "Who signs off Pinnacle security?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Pinnacle"
+    ],
+    null,
+    [
+     "signs",
+     "security"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0448",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "security_reviewer",
+  "q": "Who is the security reviewer for Quartz?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "reviews",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Quartz"
+    ],
+    "reviews",
+    [
+     "to review",
+     "reviews",
+     "reviewing",
+     "will review"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0449",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "security_reviewer",
+  "q": "Who signs off Quartz security?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Quartz"
+    ],
+    null,
+    [
+     "signs",
+     "security"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0463",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "max_message_size",
+  "q": "What is the maximum message size of the Ferry queue?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 5,
+  "c1_shown": 3,
+  "b1a_nongold": 5,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Ferry"
+    ],
+    null,
+    [
+     "maximum",
+     "message",
+     "size",
+     "queue"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0464",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "max_message_size",
+  "q": "How large can a Ferry message be?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 5,
+  "c1_shown": 3,
+  "b1a_nongold": 5,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Ferry"
+    ],
+    null,
+    [
+     "large",
+     "message"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0466",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "max_message_size",
+  "q": "What is the maximum message size of the Gantry scheduler?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Gantry"
+    ],
+    null,
+    [
+     "maximum",
+     "message",
+     "size",
+     "scheduler"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0467",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "max_message_size",
+  "q": "How large can a Gantry message be?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 5,
+  "c1_shown": 3,
+  "b1a_nongold": 5,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Gantry"
+    ],
+    null,
+    [
+     "large",
+     "message"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0469",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "max_message_size",
+  "q": "What is the maximum message size of the Relay gateway?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 5,
+  "c1_shown": 3,
+  "b1a_nongold": 5,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Relay"
+    ],
+    null,
+    [
+     "maximum",
+     "message",
+     "size",
+     "gateway"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0470",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "max_message_size",
+  "q": "How large can a Relay message be?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 5,
+  "c1_shown": 3,
+  "b1a_nongold": 5,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Relay"
+    ],
+    null,
+    [
+     "large",
+     "message"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0472",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "max_message_size",
+  "q": "What is the maximum message size of the Hopper ingest service?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 6,
+  "c1_shown": 3,
+  "b1a_nongold": 6,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Hopper"
+    ],
+    null,
+    [
+     "maximum",
+     "message",
+     "size",
+     "ingest",
+     "service"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0473",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "max_message_size",
+  "q": "How large can a Hopper message be?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 5,
+  "c1_shown": 3,
+  "b1a_nongold": 5,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Hopper"
+    ],
+    null,
+    [
+     "large",
+     "message"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0475",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "max_message_size",
+  "q": "What is the maximum message size of the Sluice cache?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 3,
+  "c1_shown": 3,
+  "b1a_nongold": 3,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Sluice"
+    ],
+    null,
+    [
+     "maximum",
+     "message",
+     "size",
+     "cache"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0476",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "max_message_size",
+  "q": "How large can a Sluice message be?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 3,
+  "c1_shown": 3,
+  "b1a_nongold": 3,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Sluice"
+    ],
+    null,
+    [
+     "large",
+     "message"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0478",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "max_message_size",
+  "q": "What is the maximum message size of the Turret API?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 3,
+  "c1_shown": 3,
+  "b1a_nongold": 3,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Turret",
+     "API"
+    ],
+    null,
+    [
+     "maximum",
+     "message",
+     "size"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0479",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "max_message_size",
+  "q": "How large can a Turret message be?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 3,
+  "c1_shown": 3,
+  "b1a_nongold": 3,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Turret"
+    ],
+    null,
+    [
+     "large",
+     "message"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0481",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "max_message_size",
+  "q": "What is the maximum message size of the Conduit stream?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 4,
+  "c1_shown": 3,
+  "b1a_nongold": 4,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Conduit"
+    ],
+    null,
+    [
+     "maximum",
+     "message",
+     "size",
+     "stream"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0482",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "max_message_size",
+  "q": "How large can a Conduit message be?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 4,
+  "c1_shown": 3,
+  "b1a_nongold": 4,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Conduit"
+    ],
+    null,
+    [
+     "large",
+     "message"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0484",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "max_message_size",
+  "q": "What is the maximum message size of the Lattice store?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 4,
+  "c1_shown": 3,
+  "b1a_nongold": 4,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Lattice"
+    ],
+    null,
+    [
+     "maximum",
+     "message",
+     "size",
+     "store"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0485",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "max_message_size",
+  "q": "How large can a Lattice message be?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 4,
+  "c1_shown": 3,
+  "b1a_nongold": 4,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Lattice"
+    ],
+    null,
+    [
+     "large",
+     "message"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0499",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "vacation",
+  "q": "When is the Cedar lead's next vacation?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Cedar"
+    ],
+    null,
+    [
+     "lead",
+     "next",
+     "vacation"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0500",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "vacation",
+  "q": "When will the Cedar lead be away next?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "lead",
+  "diag": [
+   [
+    4,
+    [
+     "Amara Osei"
+    ],
+    "Amara Osei is the Cedar lead."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Cedar"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0502",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "vacation",
+  "q": "When is the Marlin lead's next vacation?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Marlin"
+    ],
+    null,
+    [
+     "lead",
+     "next",
+     "vacation"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0503",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "vacation",
+  "q": "When will the Marlin lead be away next?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "lead",
+  "diag": [
+   [
+    4,
+    [
+     "Chiara Rossi"
+    ],
+    "Chiara Rossi is the Marlin lead."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Marlin"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0505",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "vacation",
+  "q": "When is the Juniper lead's next vacation?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Juniper"
+    ],
+    null,
+    [
+     "lead",
+     "next",
+     "vacation"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0506",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "vacation",
+  "q": "When will the Juniper lead be away next?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "lead",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Juniper"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0508",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "vacation",
+  "q": "When is the Osprey lead's next vacation?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Osprey"
+    ],
+    null,
+    [
+     "lead",
+     "next",
+     "vacation"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0509",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "vacation",
+  "q": "When will the Osprey lead be away next?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": "lead",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Osprey"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0511",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "vacation",
+  "q": "When is the Tamarind lead's next vacation?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Tamarind"
+    ],
+    null,
+    [
+     "lead",
+     "next",
+     "vacation"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0512",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "vacation",
+  "q": "When will the Tamarind lead be away next?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "lead",
+  "diag": [
+   [
+    3,
+    [
+     "Ines Duarte"
+    ],
+    "Ines Duarte is the Tamarind lead."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Tamarind"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0514",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "vacation",
+  "q": "When is the Vesper lead's next vacation?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Vesper"
+    ],
+    null,
+    [
+     "lead",
+     "next",
+     "vacation"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0515",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "vacation",
+  "q": "When will the Vesper lead be away next?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "lead",
+  "diag": [
+   [
+    3,
+    [
+     "Kavya Menon"
+    ],
+    "Kavya Menon is the Vesper lead."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Vesper"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0517",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "vacation",
+  "q": "When is the Pinnacle lead's next vacation?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Pinnacle"
+    ],
+    null,
+    [
+     "lead",
+     "next",
+     "vacation"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0518",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "vacation",
+  "q": "When will the Pinnacle lead be away next?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "lead",
+  "diag": [
+   [
+    3,
+    [
+     "Mila Novak"
+    ],
+    "Mila Novak is the Pinnacle lead."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Pinnacle"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0520",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "vacation",
+  "q": "When is the Quartz lead's next vacation?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Quartz"
+    ],
+    null,
+    [
+     "lead",
+     "next",
+     "vacation"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0521",
+  "label": "UNESTABLISHED",
+  "reason": "no_record",
+  "relation": "vacation",
+  "q": "When will the Quartz lead be away next?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "ESTABLISHED",
+  "recognised": "lead",
+  "diag": [
+   [
+    3,
+    [
+     "Olga Petrova"
+    ],
+    "Olga Petrova is the Quartz lead."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Quartz"
+    ],
+    "lead",
+    [
+     "lead",
+     "leads",
+     "led by"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0535",
+  "label": "UNESTABLISHED",
+  "reason": "unauthorized",
+  "relation": "incident_auditor",
+  "q": "Who audits the Pinnacle build logs?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Pinnacle"
+    ],
+    null,
+    [
+     "audits",
+     "build",
+     "logs"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0536",
+  "label": "UNESTABLISHED",
+  "reason": "unauthorized",
+  "relation": "incident_auditor",
+  "q": "Who is going to audit the Pinnacle build logs after the incident?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Pinnacle"
+    ],
+    null,
+    [
+     "going",
+     "audit",
+     "build",
+     "logs",
+     "after",
+     "incident"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0538",
+  "label": "UNESTABLISHED",
+  "reason": "unauthorized",
+  "relation": "incident_auditor",
+  "q": "Who audits the Quartz build logs?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Quartz"
+    ],
+    null,
+    [
+     "audits",
+     "build",
+     "logs"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0539",
+  "label": "UNESTABLISHED",
+  "reason": "unauthorized",
+  "relation": "incident_auditor",
+  "q": "Who is going to audit the Quartz build logs after the incident?",
+  "gold": 0,
+  "b1a_has_gold": null,
+  "c1_has_gold": null,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 10,
+  "c1_nongold": 3,
+  "state": "UNESTABLISHED",
+  "recognised": null,
+  "diag": [],
+  "props": [
+   [
+    [
+     "Quartz"
+    ],
+    null,
+    [
+     "going",
+     "audit",
+     "build",
+     "logs",
+     "after",
+     "incident"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0547",
+  "label": "SUPERSEDED",
+  "reason": null,
+  "relation": "default_model_history",
+  "q": "Which model did Cedar use by default in March?",
+  "gold": 2,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 6,
+  "b1a_nongold": 8,
+  "c1_nongold": 4,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Kestrel-3B"
+    ],
+    "Cedar serves Kestrel-3B on the GPU host."
+   ],
+   [
+    1,
+    [
+     "Kestrel-3B",
+     "Merlin-7B"
+    ],
+    "As of October, the Cedar default model is Kestrel-3B; the Merlin-7B model has been retired"
+   ],
+   [
+    2,
+    [
+     "Merlin-7B"
+    ],
+    "As of March, the Cedar default model was Merlin-7B."
+   ],
+   [
+    11,
+    [
+     "Merlin-7B"
+    ],
+    "Cedar serves Merlin-7B on the CPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Cedar"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0548",
+  "label": "SUPERSEDED",
+  "reason": null,
+  "relation": "default_model_history",
+  "q": "What was Cedar's default model before October?",
+  "gold": 2,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 6,
+  "b1a_nongold": 8,
+  "c1_nongold": 4,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Kestrel-3B",
+     "Merlin-7B"
+    ],
+    "As of October, the Cedar default model is Kestrel-3B; the Merlin-7B model has been retired"
+   ],
+   [
+    4,
+    [
+     "Merlin-7B"
+    ],
+    "Cedar serves Merlin-7B on the CPU host."
+   ],
+   [
+    5,
+    [
+     "Kestrel-3B"
+    ],
+    "Cedar serves Kestrel-3B on the GPU host."
+   ],
+   [
+    6,
+    [
+     "Merlin-7B"
+    ],
+    "As of March, the Cedar default model was Merlin-7B."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Cedar"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0550",
+  "label": "SUPERSEDED",
+  "reason": null,
+  "relation": "default_model_history",
+  "q": "Which model did Marlin use by default in March?",
+  "gold": 2,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 6,
+  "b1a_nongold": 8,
+  "c1_nongold": 4,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Kestrel-9B"
+    ],
+    "Marlin serves Kestrel-9B on the CPU host."
+   ],
+   [
+    1,
+    [
+     "Kestrel-9B",
+     "Heron-4B"
+    ],
+    "As of October, the Marlin default model is Kestrel-9B; the Heron-4B model has been retired"
+   ],
+   [
+    2,
+    [
+     "Heron-4B"
+    ],
+    "As of March, the Marlin default model was Heron-4B."
+   ],
+   [
+    7,
+    [
+     "Heron-4B"
+    ],
+    "Marlin serves Heron-4B on the CPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Marlin"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0551",
+  "label": "SUPERSEDED",
+  "reason": null,
+  "relation": "default_model_history",
+  "q": "What was Marlin's default model before October?",
+  "gold": 2,
+  "b1a_has_gold": true,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 8,
+  "c1_nongold": 2,
+  "state": "UNESTABLISHED",
+  "recognised": "default_model",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Marlin"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0553",
+  "label": "SUPERSEDED",
+  "reason": null,
+  "relation": "default_model_history",
+  "q": "Which model did Juniper use by default in March?",
+  "gold": 2,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 6,
+  "b1a_nongold": 8,
+  "c1_nongold": 4,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Merlin-2B"
+    ],
+    "Juniper serves Merlin-2B on the edge host."
+   ],
+   [
+    1,
+    [
+     "Heron-12B"
+    ],
+    "As of March, the Juniper default model was Heron-12B."
+   ],
+   [
+    2,
+    [
+     "Merlin-2B",
+     "Heron-12B"
+    ],
+    "As of October, the Juniper default model is Merlin-2B; the Heron-12B model has been retire"
+   ],
+   [
+    8,
+    [
+     "Heron-12B"
+    ],
+    "Juniper serves Heron-12B on the CPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Juniper"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0554",
+  "label": "SUPERSEDED",
+  "reason": null,
+  "relation": "default_model_history",
+  "q": "What was Juniper's default model before October?",
+  "gold": 2,
+  "b1a_has_gold": true,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 8,
+  "c1_nongold": 2,
+  "state": "UNESTABLISHED",
+  "recognised": "default_model",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Juniper"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0556",
+  "label": "SUPERSEDED",
+  "reason": null,
+  "relation": "default_model_history",
+  "q": "Which model did Osprey use by default in March?",
+  "gold": 2,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 6,
+  "b1a_nongold": 8,
+  "c1_nongold": 4,
+  "state": "ESTABLISHED",
+  "recognised": "default_model",
+  "diag": [
+   [
+    0,
+    [
+     "Merlin-7B"
+    ],
+    "Osprey serves Merlin-7B on the batch host."
+   ],
+   [
+    1,
+    [
+     "Merlin-7B",
+     "Swift-6B"
+    ],
+    "As of October, the Osprey default model is Merlin-7B; the Swift-6B model has been retired."
+   ],
+   [
+    2,
+    [
+     "Swift-6B"
+    ],
+    "As of March, the Osprey default model was Swift-6B."
+   ],
+   [
+    13,
+    [
+     "Swift-6B"
+    ],
+    "Osprey serves Swift-6B on the CPU host."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Osprey"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0557",
+  "label": "SUPERSEDED",
+  "reason": null,
+  "relation": "default_model_history",
+  "q": "What was Osprey's default model before October?",
+  "gold": 2,
+  "b1a_has_gold": true,
+  "c1_has_gold": false,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 8,
+  "c1_nongold": 2,
+  "state": "UNESTABLISHED",
+  "recognised": "default_model",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Osprey"
+    ],
+    "default_model",
+    [
+     "default model",
+     "serves",
+     "model"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0559",
+  "label": "UNESTABLISHED",
+  "reason": null,
+  "relation": "deep_path_model",
+  "q": "Which model does the deep path serve for Cedar?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 1,
+  "state": "UNESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Cedar"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0560",
+  "label": "UNESTABLISHED",
+  "reason": null,
+  "relation": "deep_path_model",
+  "q": "Which model do Cedar's scheduled jobs run on?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 7,
+  "c1_nongold": 1,
+  "state": "UNESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Cedar"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0562",
+  "label": "PARTIAL",
+  "reason": null,
+  "relation": "owner+max_message_size",
+  "q": "Who owns the Ferry queue, and what is its maximum message size?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 5,
+  "c1_shown": 3,
+  "b1a_nongold": 4,
+  "c1_nongold": 2,
+  "state": "PARTIAL",
+  "recognised": "owner",
+  "diag": [
+   [
+    3,
+    [
+     "Bruno Keller"
+    ],
+    "Bruno Keller owns the Ferry queue."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Ferry"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ],
+   [
+    [
+     "Ferry"
+    ],
+    null,
+    [
+     "maximum",
+     "message",
+     "size"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0563",
+  "label": "PARTIAL",
+  "reason": null,
+  "relation": "owner+max_message_size",
+  "q": "Who is responsible for the Ferry queue and how big can a message be?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 5,
+  "c1_shown": 3,
+  "b1a_nongold": 4,
+  "c1_nongold": 2,
+  "state": "PARTIAL",
+  "recognised": "owner",
+  "diag": [
+   [
+    3,
+    [
+     "Bruno Keller"
+    ],
+    "Bruno Keller owns the Ferry queue."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Ferry"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ],
+   [
+    [
+     "Ferry"
+    ],
+    null,
+    [
+     "big",
+     "message"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0565",
+  "label": "UNESTABLISHED",
+  "reason": null,
+  "relation": "deep_path_model",
+  "q": "Which model does the deep path serve for Marlin?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 1,
+  "state": "UNESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Marlin"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0566",
+  "label": "UNESTABLISHED",
+  "reason": null,
+  "relation": "deep_path_model",
+  "q": "Which model do Marlin's scheduled jobs run on?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 7,
+  "c1_nongold": 1,
+  "state": "UNESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Marlin"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0568",
+  "label": "PARTIAL",
+  "reason": null,
+  "relation": "owner+max_message_size",
+  "q": "Who owns the Gantry scheduler, and what is its maximum message size?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "PARTIAL",
+  "recognised": "owner",
+  "diag": [
+   [
+    3,
+    [
+     "Dmitri Volkov"
+    ],
+    "Dmitri Volkov owns the Gantry scheduler."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Gantry"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ],
+   [
+    [
+     "Gantry"
+    ],
+    null,
+    [
+     "maximum",
+     "message",
+     "size"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0569",
+  "label": "PARTIAL",
+  "reason": null,
+  "relation": "owner+max_message_size",
+  "q": "Who is responsible for the Gantry scheduler and how big can a message be?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 2,
+  "state": "PARTIAL",
+  "recognised": "owner",
+  "diag": [
+   [
+    3,
+    [
+     "Dmitri Volkov"
+    ],
+    "Dmitri Volkov owns the Gantry scheduler."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Gantry"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ],
+   [
+    [
+     "Gantry"
+    ],
+    null,
+    [
+     "big",
+     "message"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0571",
+  "label": "UNESTABLISHED",
+  "reason": null,
+  "relation": "deep_path_model",
+  "q": "Which model does the deep path serve for Juniper?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 1,
+  "state": "UNESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Juniper"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0572",
+  "label": "UNESTABLISHED",
+  "reason": null,
+  "relation": "deep_path_model",
+  "q": "Which model do Juniper's scheduled jobs run on?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 7,
+  "c1_nongold": 0,
+  "state": "UNESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Juniper"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0574",
+  "label": "PARTIAL",
+  "reason": null,
+  "relation": "owner+max_message_size",
+  "q": "Who owns the Relay gateway, and what is its maximum message size?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 5,
+  "c1_shown": 3,
+  "b1a_nongold": 4,
+  "c1_nongold": 2,
+  "state": "PARTIAL",
+  "recognised": "owner",
+  "diag": [
+   [
+    3,
+    [
+     "Farid Haddad"
+    ],
+    "Farid Haddad owns the Relay gateway."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Relay"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ],
+   [
+    [
+     "Relay"
+    ],
+    null,
+    [
+     "maximum",
+     "message",
+     "size"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0575",
+  "label": "PARTIAL",
+  "reason": null,
+  "relation": "owner+max_message_size",
+  "q": "Who is responsible for the Relay gateway and how big can a message be?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 5,
+  "c1_shown": 3,
+  "b1a_nongold": 4,
+  "c1_nongold": 2,
+  "state": "PARTIAL",
+  "recognised": "owner",
+  "diag": [
+   [
+    3,
+    [
+     "Farid Haddad"
+    ],
+    "Farid Haddad owns the Relay gateway."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Relay"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ],
+   [
+    [
+     "Relay"
+    ],
+    null,
+    [
+     "big",
+     "message"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0577",
+  "label": "UNESTABLISHED",
+  "reason": null,
+  "relation": "deep_path_model",
+  "q": "Which model does the deep path serve for Osprey?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 1,
+  "state": "UNESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Osprey"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0578",
+  "label": "UNESTABLISHED",
+  "reason": null,
+  "relation": "deep_path_model",
+  "q": "Which model do Osprey's scheduled jobs run on?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 7,
+  "c1_nongold": 0,
+  "state": "UNESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Osprey"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0580",
+  "label": "PARTIAL",
+  "reason": null,
+  "relation": "owner+max_message_size",
+  "q": "Who owns the Hopper ingest service, and what is its maximum message size?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 6,
+  "c1_shown": 3,
+  "b1a_nongold": 5,
+  "c1_nongold": 2,
+  "state": "PARTIAL",
+  "recognised": "owner",
+  "diag": [
+   [
+    3,
+    [
+     "Hiro Tanaka"
+    ],
+    "Hiro Tanaka owns the Hopper ingest service."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Hopper"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ],
+   [
+    [
+     "Hopper"
+    ],
+    null,
+    [
+     "maximum",
+     "message",
+     "size"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0581",
+  "label": "PARTIAL",
+  "reason": null,
+  "relation": "owner+max_message_size",
+  "q": "Who is responsible for the Hopper ingest service and how big can a message be?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 6,
+  "c1_shown": 3,
+  "b1a_nongold": 5,
+  "c1_nongold": 2,
+  "state": "PARTIAL",
+  "recognised": "owner",
+  "diag": [
+   [
+    3,
+    [
+     "Hiro Tanaka"
+    ],
+    "Hiro Tanaka owns the Hopper ingest service."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Hopper"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ],
+   [
+    [
+     "Hopper"
+    ],
+    null,
+    [
+     "big",
+     "message"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0583",
+  "label": "UNESTABLISHED",
+  "reason": null,
+  "relation": "deep_path_model",
+  "q": "Which model does the deep path serve for Tamarind?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 1,
+  "state": "UNESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Tamarind"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0584",
+  "label": "UNESTABLISHED",
+  "reason": null,
+  "relation": "deep_path_model",
+  "q": "Which model do Tamarind's scheduled jobs run on?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 7,
+  "c1_nongold": 0,
+  "state": "UNESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Tamarind"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0586",
+  "label": "UNESTABLISHED",
+  "reason": null,
+  "relation": "deep_path_model",
+  "q": "Which model does the deep path serve for Vesper?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 1,
+  "state": "UNESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Vesper"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0587",
+  "label": "UNESTABLISHED",
+  "reason": null,
+  "relation": "deep_path_model",
+  "q": "Which model do Vesper's scheduled jobs run on?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 7,
+  "c1_nongold": 0,
+  "state": "UNESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Vesper"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0589",
+  "label": "UNESTABLISHED",
+  "reason": null,
+  "relation": "deep_path_model",
+  "q": "Which model does the deep path serve for Pinnacle?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 1,
+  "state": "UNESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Pinnacle"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0590",
+  "label": "UNESTABLISHED",
+  "reason": null,
+  "relation": "deep_path_model",
+  "q": "Which model do Pinnacle's scheduled jobs run on?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 7,
+  "c1_nongold": 0,
+  "state": "UNESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Pinnacle"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0592",
+  "label": "PARTIAL",
+  "reason": null,
+  "relation": "owner+max_message_size",
+  "q": "Who owns the Conduit stream, and what is its maximum message size?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 4,
+  "c1_shown": 3,
+  "b1a_nongold": 3,
+  "c1_nongold": 2,
+  "state": "PARTIAL",
+  "recognised": "owner",
+  "diag": [
+   [
+    2,
+    [
+     "Nikhil Rao"
+    ],
+    "Nikhil Rao owns the Conduit stream."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Conduit"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ],
+   [
+    [
+     "Conduit"
+    ],
+    null,
+    [
+     "maximum",
+     "message",
+     "size"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0593",
+  "label": "PARTIAL",
+  "reason": null,
+  "relation": "owner+max_message_size",
+  "q": "Who is responsible for the Conduit stream and how big can a message be?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 4,
+  "c1_shown": 3,
+  "b1a_nongold": 3,
+  "c1_nongold": 2,
+  "state": "PARTIAL",
+  "recognised": "owner",
+  "diag": [
+   [
+    2,
+    [
+     "Nikhil Rao"
+    ],
+    "Nikhil Rao owns the Conduit stream."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Conduit"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ],
+   [
+    [
+     "Conduit"
+    ],
+    null,
+    [
+     "big",
+     "message"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0595",
+  "label": "UNESTABLISHED",
+  "reason": null,
+  "relation": "deep_path_model",
+  "q": "Which model does the deep path serve for Quartz?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 9,
+  "c1_nongold": 1,
+  "state": "UNESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Quartz"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0596",
+  "label": "UNESTABLISHED",
+  "reason": null,
+  "relation": "deep_path_model",
+  "q": "Which model do Quartz's scheduled jobs run on?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 10,
+  "c1_shown": 3,
+  "b1a_nongold": 7,
+  "c1_nongold": 0,
+  "state": "UNESTABLISHED",
+  "recognised": "runs_on",
+  "diag": [],
+  "props": [
+   [
+    [
+     "Quartz"
+    ],
+    "runs_on",
+    [
+     "serves",
+     "on the",
+     "runs on",
+     "hosted"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0598",
+  "label": "PARTIAL",
+  "reason": null,
+  "relation": "owner+max_message_size",
+  "q": "Who owns the Lattice store, and what is its maximum message size?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 4,
+  "c1_shown": 3,
+  "b1a_nongold": 3,
+  "c1_nongold": 2,
+  "state": "PARTIAL",
+  "recognised": "owner",
+  "diag": [
+   [
+    2,
+    [
+     "Pablo Reyes"
+    ],
+    "Pablo Reyes owns the Lattice store."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Lattice"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ],
+   [
+    [
+     "Lattice"
+    ],
+    null,
+    [
+     "maximum",
+     "message",
+     "size"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "V2-0599",
+  "label": "PARTIAL",
+  "reason": null,
+  "relation": "owner+max_message_size",
+  "q": "Who is responsible for the Lattice store and how big can a message be?",
+  "gold": 1,
+  "b1a_has_gold": true,
+  "c1_has_gold": true,
+  "b1a_shown": 4,
+  "c1_shown": 3,
+  "b1a_nongold": 3,
+  "c1_nongold": 2,
+  "state": "PARTIAL",
+  "recognised": "owner",
+  "diag": [
+   [
+    2,
+    [
+     "Pablo Reyes"
+    ],
+    "Pablo Reyes owns the Lattice store."
+   ]
+  ],
+  "props": [
+   [
+    [
+     "Lattice"
+    ],
+    "owner",
+    [
+     "owns",
+     "owned by",
+     "owner of",
+     "owner",
+     "responsible for"
+    ]
+   ],
+   [
+    [
+     "Lattice"
+    ],
+    null,
+    [
+     "big",
+     "message"
+    ]
+   ]
+  ]
+ }
+]

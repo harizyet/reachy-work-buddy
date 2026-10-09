@@ -1,0 +1,51 @@
+dev11: 50 cases, 33 answerable; arms 15; model reachy-local
+
+arm                                   full unsup falseAbs ansFull corrAbs better worse regress corrected citBad  ms med
+b1a                                     31     8        2      21      10      0     0       0         0      0    1044
+b1a+c1o                                 31     8        2      21      10      1     1       1         0      0     932
+b1a+c1f                                 33     8        2      23      10      2     0       0         0      0     854
+b1a+c2n                                 34     7        2      22      12      4     1       1         0      0    1100
+b1a+c2t                                 33     0        8      16      17      7     5       5         0      0     145
+b1a+c3                                  32     8        2      22      10      1     0       0         0      0     857
+b1a+c4                                  30     7        3      20      10      1     2       2         0      6    1317
+b1a+c4+c5                               24     7        9      14      10      1     8       8         0      0    1307
+b1a+c1f+c2n                             35     7        2      25      10      4     0       0         1      0     926
+b1a+c1f+c2t                             35     0        9      18      17      9     5       5         0      0     145
+b1a+c1f+c2t+c3                          36     0        8      19      17     10     5       5         0      0       0
+b1a+c1f+c2t+c3+c4+c5                    34     0        9      17      17     10     7       7         0      0       0
+oracle                                  43     2        2      26      17     15     3       3         0      0     512
+oracle+c4                               36     3        1      22      14     10     5       5         4      0    1304
+oracle+c4+c5                            36     3        1      22      14     10     5       5         4      0    1252
+
+GUARDRAILS (candidate arms vs baseline; owner-fixed 2026-10-12)
+b1a+c1o                              1 fewer unsupported 8<8: False | 2 false abstention +0 (+0.0%): True  | 3 answerable net loss 0: True  | 4 specific corrections 0: False | 5 bad citations 0: True  | ALL False
+b1a+c1f                              1 fewer unsupported 8<8: False | 2 false abstention +0 (+0.0%): True  | 3 answerable net loss -2: True  | 4 specific corrections 0: False | 5 bad citations 0: True  | ALL False
+b1a+c2n                              1 fewer unsupported 7<8: True  | 2 false abstention +0 (+0.0%): True  | 3 answerable net loss -1: True  | 4 specific corrections 0: False | 5 bad citations 0: True  | ALL False
+b1a+c2t                              1 fewer unsupported 0<8: True  | 2 false abstention +6 (+18.2%): False | 3 answerable net loss 5: False | 4 specific corrections 0: False | 5 bad citations 0: True  | ALL False
+b1a+c3                               1 fewer unsupported 8<8: False | 2 false abstention +0 (+0.0%): True  | 3 answerable net loss -1: True  | 4 specific corrections 0: False | 5 bad citations 0: True  | ALL False
+b1a+c4                               1 fewer unsupported 7<8: True  | 2 false abstention +1 (+3.0%): False | 3 answerable net loss 1: True  | 4 specific corrections 0: False | 5 bad citations 6: False | ALL False
+b1a+c4+c5                            1 fewer unsupported 7<8: True  | 2 false abstention +7 (+21.2%): False | 3 answerable net loss 7: False | 4 specific corrections 0: False | 5 bad citations 0: True  | ALL False
+b1a+c1f+c2n                          1 fewer unsupported 7<8: True  | 2 false abstention +0 (+0.0%): True  | 3 answerable net loss -4: True  | 4 specific corrections 1: True  | 5 bad citations 0: True  | ALL True
+b1a+c1f+c2t                          1 fewer unsupported 0<8: True  | 2 false abstention +7 (+21.2%): False | 3 answerable net loss 3: False | 4 specific corrections 0: False | 5 bad citations 0: True  | ALL False
+b1a+c1f+c2t+c3                       1 fewer unsupported 0<8: True  | 2 false abstention +6 (+18.2%): False | 3 answerable net loss 2: False | 4 specific corrections 0: False | 5 bad citations 0: True  | ALL False
+b1a+c1f+c2t+c3+c4+c5                 1 fewer unsupported 0<8: True  | 2 false abstention +7 (+21.2%): False | 3 answerable net loss 4: False | 4 specific corrections 0: False | 5 bad citations 0: True  | ALL False
+
+BY LABEL (fully correct / n) baseline | arms
+  ESTABLISHED                  n=14                    B 8 |              B+c4+c5 9 |            B+c1f+c2t 10 |   B+c1f+c2t+c3+c4+c5 11 |               oracle 12
+  CONFLICTED                   n= 6                    B 1 |              B+c4+c5 0 |            B+c1f+c2t 1 |   B+c1f+c2t+c3+c4+c5 0 |               oracle 3
+  UNESTABLISHED:wrong_entity   n= 8                    B 4 |              B+c4+c5 4 |            B+c1f+c2t 8 |   B+c1f+c2t+c3+c4+c5 8 |               oracle 8
+  UNESTABLISHED:no_record      n= 6                    B 3 |              B+c4+c5 3 |            B+c1f+c2t 6 |   B+c1f+c2t+c3+c4+c5 6 |               oracle 6
+  UNESTABLISHED:unauthorized   n= 3                    B 3 |              B+c4+c5 3 |            B+c1f+c2t 3 |   B+c1f+c2t+c3+c4+c5 3 |               oracle 3
+  PARTIAL                      n=10                    B 9 |              B+c4+c5 2 |            B+c1f+c2t 6 |   B+c1f+c2t+c3+c4+c5 5 |               oracle 8
+  SUPERSEDED                   n= 3                    B 3 |              B+c4+c5 3 |            B+c1f+c2t 1 |   B+c1f+c2t+c3+c4+c5 1 |               oracle 3
+
+CLAIM-LEVEL (c4 arms)
+  b1a+c4                               parse_ok 50/50; claims 37; valid 31; rejections {'relation_not_in_span': 6}; accepted invalid 6
+  b1a+c4+c5                            parse_ok 50/50; claims 36; valid 30; rejections {'relation_not_in_span': 6}; accepted invalid 0
+  b1a+c1f+c2t+c3+c4+c5                 parse_ok 24/50; claims 26; valid 25; rejections {'relation_not_in_span': 1}; accepted invalid 0
+  oracle+c4                            parse_ok 50/50; claims 32; valid 32; rejections {}; accepted invalid 0
+  oracle+c4+c5                         parse_ok 50/50; claims 32; valid 32; rejections {}; accepted invalid 0
+
+C2 STATE vs LABEL on arms that computed it
+  b1a+c2n {('CONFLICTED', 'CONFLICTED'): 6, ('ESTABLISHED', 'CONFLICTED'): 2, ('ESTABLISHED', 'ESTABLISHED'): 10, ('ESTABLISHED', 'UNESTABLISHED'): 2, ('PARTIAL', 'PARTIAL'): 6, ('PARTIAL', 'UNESTABLISHED'): 4, ('SUPERSEDED', 'ESTABLISHED'): 1, ('SUPERSEDED', 'UNESTABLISHED'): 2, ('UNESTABLISHED:no_record', 'UNESTABLISHED'): 6, ('UNESTABLISHED:unauthorized', 'UNESTABLISHED'): 3, ('UNESTABLISHED:wrong_entity', 'UNESTABLISHED'): 8}
+  b1a+c1f+c2t {('CONFLICTED', 'CONFLICTED'): 6, ('ESTABLISHED', 'CONFLICTED'): 2, ('ESTABLISHED', 'ESTABLISHED'): 10, ('ESTABLISHED', 'UNESTABLISHED'): 2, ('PARTIAL', 'PARTIAL'): 6, ('PARTIAL', 'UNESTABLISHED'): 4, ('SUPERSEDED', 'ESTABLISHED'): 1, ('SUPERSEDED', 'UNESTABLISHED'): 2, ('UNESTABLISHED:no_record', 'UNESTABLISHED'): 6, ('UNESTABLISHED:unauthorized', 'UNESTABLISHED'): 3, ('UNESTABLISHED:wrong_entity', 'UNESTABLISHED'): 8}

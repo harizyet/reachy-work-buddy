@@ -1,0 +1,32 @@
+{
+ "frozen_at": "2026-10-12",
+ "purpose": "files the dev12 one-shot groundedness acceptance evaluation is frozen against",
+ "model": "Qwen/Qwen2.5-7B-Instruct-AWQ served as reachy-local, temperature 0, seed 44, budget 1500",
+ "files": {
+  "services/companion-core/benchmarks/answer_quality/cases_dev12.json": "1f87d53855bad0b9e9c29438c19e072f0fa14eb87897d981a426cbbfaaa67608",
+  "services/companion-core/benchmarks/answer_quality/corpus_v2/corpus_v2.json": "585c900a645c5872e195255af87b7383dffff2de0da45ce08869380e8129a860",
+  "services/companion-core/benchmarks/answer_quality/corpus_v2/facts_v2.json": "29df68f3fc09a26d29e6fd040263cc95da4db24e6ffdf814bfdf2db5be8f216d",
+  "services/companion-core/benchmarks/answer_quality/corpus_v2/gen.py": "a9262b2ef5a0796ef7b21913f91c650443716c4a8700188209cd1ed4b67d0285",
+  "services/companion-core/benchmarks/answer_quality/corpus_v2/questions.py": "961a5de92c1e377ee0288ff94a43a5ff836eb64ae9e24a4dcb773dddfb2e1b9a",
+  "services/companion-core/src/companion_core/knowledge/grounding/__init__.py": "b74ad96fa2bf9bb83ca0b275129824cb401e905ee91f94816982009c4394b47d",
+  "services/companion-core/src/companion_core/knowledge/grounding/relations.py": "9eedeb02d0c4701176b46e6497cffde63b6b279b46a4d837f42b938d2f234eb7",
+  "services/companion-core/src/companion_core/knowledge/grounding/propositions.py": "a6479c942d6bffb7e6115625a85a048e2ab21ff176aec81f01bad5872fd89811",
+  "services/companion-core/src/companion_core/knowledge/grounding/answerability.py": "6ad5aaf60b8954aa04906d3f328343542910b8b1e910bc8951c57510523cda69",
+  "services/companion-core/src/companion_core/knowledge/grounding/routes.py": "8c40b2e2e26fecd1839e2fbdafbd42c922987ad3adb6be813679d99b7840a12b",
+  "services/companion-core/src/companion_core/knowledge/grounding/claims.py": "cce8ef6edb3bab1ac43033c175a4007473d7ad4f750e7b8db87aa8bd92071045",
+  "services/companion-core/src/companion_core/knowledge/grounding/validate.py": "ced66c10a4639b1de139278eda8cac84e0157dae2b539349db66abe736ea5920",
+  "services/companion-core/src/companion_core/knowledge/sufficiency.py": "e6936ca7e2c712982f38c140309b1093916e6d72c282ae1ee9394613329f7ab4",
+  "services/companion-core/src/companion_core/knowledge/sufficiency_section.py": "a780222e9c9a7b00cc2361a516fa941ddfb74a44b1be36a1a064f03f1944d7be",
+  "services/companion-core/src/companion_core/knowledge/context.py": "19068a208dd4b16e416fd4328d23bef15a20062201e460084244d5d442006b62",
+  "services/companion-core/src/companion_core/knowledge/routing.py": "03d13c64576961759b26a92f900326b0bf3cc145b2df828185c1c768cb0cf663",
+  "services/companion-core/benchmarks/answer_quality/run_g.py": "7d1796d2313dee18ef0e399ad81ed6a37c3caceda3b56267e8ebf2c9075e6a72",
+  "services/companion-core/benchmarks/answer_quality/aq/conditions_g.py": "59ddd19d48b72e7d08d5ea17ce0d37a8ff5cdedd0d5888de59f4f5f675e141c2",
+  "services/companion-core/benchmarks/answer_quality/aq/llm_json.py": "038d5d8a035a93667e3a8adaabe0a576042ab3552135416df28a9b0461d37a36",
+  "services/companion-core/benchmarks/answer_quality/aq/conditions.py": "6da335a5055458d268d5e99437a60959e1ff0fc87362b3780dac85979f39e964",
+  "services/companion-core/benchmarks/answer_quality/aq/llm.py": "03281a260b63b641355c72ca28c62af13bc7c6ad2c2f9f5ec5b51c821c7c3164",
+  "services/companion-core/benchmarks/answer_quality/aq/scoring.py": "6bfb790efdf6a2cb4909e3966c74da0aab5fa92032ceca2c3d10c702a001a1f2",
+  "services/companion-core/benchmarks/answer_quality/aq/scoring_v2.py": "b5ecf0db22de19de4fa419c129fd62d73cf0aea36abb3077d2433d1ec14b2204",
+  "services/companion-core/benchmarks/answer_quality/analyze_g.py": "368717a7ba4f606d775151180073ccdfd810481b7716c5a5a0950eed99a48030",
+  "services/companion-core/benchmarks/answer_quality/cases_holdout.json": "e546188ccecfc9ce423ed0150f0a041ed637c1b13686fed229ace9160388445c"
+ }
+}
