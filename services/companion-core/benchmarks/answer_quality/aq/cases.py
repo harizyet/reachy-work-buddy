@@ -26,9 +26,9 @@ CATEGORIES = (
     "sensitive_partial", "scope", "shared_speaker", "cloud_destination", "injection", "attached_meeting", "voice",
     "status_routing", "unsupported_inference", "restricted_wording", "supported_control", "numeric_control",
     "person_responsibility", "attribution", "property_grounding", "supersession",
-    "no_evidence", "partial_evidence", "wrong_entity", "negative_claim", "mixed_support",
+    "no_evidence", "partial_evidence", "wrong_entity", "negative_claim", "mixed_support", "cross_section",
 )
-FILES = {"dev": "cases_dev.json", "holdout": "cases_holdout.json", "dev2": "cases_dev2.json", "dev3": "cases_dev3.json", "dev4": "cases_dev4.json", "dev5": "cases_dev5.json", "dev6": "cases_dev6.json", "dev7": "cases_dev7.json", "dev8": "cases_dev8.json"}
+FILES = {"dev": "cases_dev.json", "holdout": "cases_holdout.json", "dev2": "cases_dev2.json", "dev3": "cases_dev3.json", "dev4": "cases_dev4.json", "dev5": "cases_dev5.json", "dev6": "cases_dev6.json", "dev7": "cases_dev7.json", "dev8": "cases_dev8.json", "dev9": "cases_dev9.json", "dev10": "cases_dev10.json"}
 
 
 class CaseError(ValueError):

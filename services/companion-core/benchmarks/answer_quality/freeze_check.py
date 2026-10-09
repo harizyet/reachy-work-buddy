@@ -13,8 +13,8 @@ def sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def verify() -> list[str]:
-    freeze = json.loads((HERE / "dev8_freeze.json").read_text())
+def verify(manifest: str = "dev8_freeze.json") -> list[str]:
+    freeze = json.loads((HERE / manifest).read_text())
     problems = []
     for rel, expected in freeze["files"].items():
         path = REPO / rel
@@ -26,6 +26,8 @@ def verify() -> list[str]:
 
 
 if __name__ == "__main__":
-    bad = verify()
+    import sys
+
+    bad = verify(sys.argv[1] if len(sys.argv) > 1 else "dev8_freeze.json")
     print("frozen files unchanged" if not bad else "\n".join(bad))
     raise SystemExit(1 if bad else 0)

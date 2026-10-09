@@ -1,0 +1,19 @@
+{
+ "cases": 192,
+ "evidence_pieces_median": 2.0,
+ "item_level": {
+  "median_us": 49.9,
+  "p95_us": 207.3,
+  "max_us": 1971.5
+ },
+ "section": {
+  "median_us": 66.2,
+  "p95_us": 270.6,
+  "max_us": 614.0
+ },
+ "section_descriptors": {
+  "median_us": 55.5,
+  "p95_us": 220.1,
+  "max_us": 489.6
+ }
+}
