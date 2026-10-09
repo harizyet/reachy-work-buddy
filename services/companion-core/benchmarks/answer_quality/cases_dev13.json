@@ -1,0 +1,2424 @@
+{
+ "version": 1,
+ "split": "dev13",
+ "corpus": "corpus_v3",
+ "purpose": "design cases for the revised C1/C2 candidate (bank A phrasings, design relations)",
+ "cases": [
+  {
+   "id": "D13-001",
+   "category": "single_source",
+   "question": "Who has the on-call duty for Marlin?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "note:note-marlin-oncall"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "farid",
+     "farid\\ haddad"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "ESTABLISHED",
+   "reason": null,
+   "relation": "on_call",
+   "subject": "Marlin",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-002",
+   "category": "single_source",
+   "question": "Which host serves Merlin-2B?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-quartz-arch"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "edge\\ host"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "ESTABLISHED",
+   "reason": null,
+   "relation": "runs_on",
+   "subject": "Merlin-2B",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-003",
+   "category": "single_source",
+   "question": "Which model does Umbra use by default?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-umbra-arch"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "kestrel\\-9b"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "ESTABLISHED",
+   "reason": null,
+   "relation": "default_model",
+   "subject": "Umbra",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-004",
+   "category": "single_source",
+   "question": "Who attended the Juniper planning meeting?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "meeting:mt-juniper"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "yusuf",
+     "yusuf\\ demir"
+    ],
+    [
+     "liam",
+     "liam\\ oconnor"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "ESTABLISHED",
+   "reason": null,
+   "relation": "attends",
+   "subject": "mt-juniper",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-005",
+   "category": "single_source",
+   "question": "How many times does the Lattice store retry a failed job?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-umbra-arch"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "\\b3\\b",
+     "\\bthree\\b"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "ESTABLISHED",
+   "reason": null,
+   "relation": "retry_limit",
+   "subject": "Lattice store",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-006",
+   "category": "single_source",
+   "question": "What is the rollback window for Marlin?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-marlin-runbook"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "\\b40\\b",
+     "\\bforty\\b"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "ESTABLISHED",
+   "reason": null,
+   "relation": "rollback_window",
+   "subject": "Marlin",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-007",
+   "category": "single_source",
+   "question": "Who is the Tamarind lead?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "memory:m012"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "vera",
+     "vera\\ kovac"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "ESTABLISHED",
+   "reason": null,
+   "relation": "lead",
+   "subject": "Tamarind",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-008",
+   "category": "single_source",
+   "question": "What are Ironside Backup's support hours?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-vendor-ironside-backup"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "9\\ to\\ 7"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "ESTABLISHED",
+   "reason": null,
+   "relation": "support_hours",
+   "subject": "Ironside Backup",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-009",
+   "category": "single_source",
+   "question": "Which model did Juniper decide to keep?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "meeting:mt-juniper#2"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "keep\\ kestrel\\-9b\\ as\\ the\\ default\\ model"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "ESTABLISHED",
+   "reason": null,
+   "relation": "decision",
+   "subject": "Juniper",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-010",
+   "category": "single_source",
+   "question": "What is Chiara Rossi reviewing?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "note:note-vesper-actions"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "the\\ conduit\\ settings"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "ESTABLISHED",
+   "reason": null,
+   "relation": "reviews",
+   "subject": "Chiara Rossi",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-011",
+   "category": "single_source",
+   "question": "Who is responsible for the Anvil builder?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "memory:m011"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "kavya",
+     "kavya\\ menon"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "ESTABLISHED",
+   "reason": null,
+   "relation": "owner",
+   "subject": "Anvil builder",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-012",
+   "category": "single_source",
+   "question": "By when does Farid Haddad have to circulate the written summary?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "note:note-cedar-actions"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "monday"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "ESTABLISHED",
+   "reason": null,
+   "relation": "deadline",
+   "subject": "Farid Haddad",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-013",
+   "category": "single_source",
+   "question": "Through when is the Juniper budget approved?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "meeting:mt-juniper#3"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "june"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "ESTABLISHED",
+   "reason": null,
+   "relation": "budget_through",
+   "subject": "Juniper",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-014",
+   "category": "single_source",
+   "question": "Who is on call for Thistle?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "note:note-thistle-oncall"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "sven",
+     "sven\\ larsen"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "ESTABLISHED",
+   "reason": null,
+   "relation": "on_call",
+   "subject": "Thistle",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-015",
+   "category": "single_source",
+   "question": "Where does Heron-4B run?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-osprey-arch",
+    "document:doc-willow-arch"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "gpu",
+     "gpu\\ host"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "ESTABLISHED",
+   "reason": null,
+   "relation": "runs_on",
+   "subject": "Heron-4B",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-016",
+   "category": "single_source",
+   "question": "What is Tamarind's default model?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-tamarind-arch"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "swift\\-20b"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "ESTABLISHED",
+   "reason": null,
+   "relation": "default_model",
+   "subject": "Tamarind",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-017",
+   "category": "single_source",
+   "question": "Who was in the Marlin planning meeting?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "meeting:mt-marlin"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "nikhil",
+     "nikhil\\ rao"
+    ],
+    [
+     "elena",
+     "elena\\ marsh"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "ESTABLISHED",
+   "reason": null,
+   "relation": "attends",
+   "subject": "mt-marlin",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-018",
+   "category": "single_source",
+   "question": "What is the retry limit of the Cobalt auth service?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-sable-arch"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "\\b7\\b",
+     "\\bseven\\b"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "ESTABLISHED",
+   "reason": null,
+   "relation": "retry_limit",
+   "subject": "Cobalt auth service",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-019",
+   "category": "single_source",
+   "question": "How long do I have to roll back a failed Marlin deploy?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-marlin-runbook"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "\\b40\\b",
+     "\\bforty\\b"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "ESTABLISHED",
+   "reason": null,
+   "relation": "rollback_window",
+   "subject": "Marlin",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-020",
+   "category": "single_source",
+   "question": "Who is the Juniper lead?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "memory:m006"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "yusuf",
+     "yusuf\\ demir"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "ESTABLISHED",
+   "reason": null,
+   "relation": "lead",
+   "subject": "Juniper",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-021",
+   "category": "single_source",
+   "question": "When is Ironside Backup support open on weekdays?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-vendor-ironside-backup"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "9\\ to\\ 7"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "ESTABLISHED",
+   "reason": null,
+   "relation": "support_hours",
+   "subject": "Ironside Backup",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-022",
+   "category": "single_source",
+   "question": "What was decided about Vesper's default model?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "meeting:mt-vesper#2"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "keep\\ heron\\-12b\\ as\\ the\\ default\\ model"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "ESTABLISHED",
+   "reason": null,
+   "relation": "decision",
+   "subject": "Vesper",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-023",
+   "category": "conflict",
+   "question": "How many times does the Conduit stream retry a failed job?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-vesper-arch",
+    "memory:m032"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": true,
+   "required": [
+    [
+     "\\b3\\b",
+     "\\bthree\\b"
+    ],
+    [
+     "\\b8\\b",
+     "\\beight\\b"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "CONFLICTED",
+   "reason": null,
+   "relation": "retry_limit",
+   "subject": "Conduit stream",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-024",
+   "category": "conflict",
+   "question": "How long do I have to roll back a failed Pinnacle deploy?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-pinnacle-runbook",
+    "memory:m036"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": true,
+   "required": [
+    [
+     "\\b15\\b",
+     "\\bfifteen\\b"
+    ],
+    [
+     "\\b45\\b",
+     "\\bforty-five\\b"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "CONFLICTED",
+   "reason": null,
+   "relation": "rollback_window",
+   "subject": "Pinnacle",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-025",
+   "category": "conflict",
+   "question": "When is Brightwell Mail support open on weekdays?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-vendor-brightwell-mail",
+    "memory:m048"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": true,
+   "required": [
+    [
+     "8\\ to\\ 6"
+    ],
+    [
+     "8\\ to\\ 6"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "CONFLICTED",
+   "reason": null,
+   "relation": "support_hours",
+   "subject": "Brightwell Mail",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-026",
+   "category": "conflict",
+   "question": "How many times does the Mosaic search index retry a failed job?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-marlin-arch",
+    "memory:m028"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": true,
+   "required": [
+    [
+     "\\b6\\b",
+     "\\bsix\\b"
+    ],
+    [
+     "\\b11\\b",
+     "\\beleven\\b"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "CONFLICTED",
+   "reason": null,
+   "relation": "retry_limit",
+   "subject": "Mosaic search index",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-027",
+   "category": "conflict",
+   "question": "What is the rollback window for Tamarind?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-tamarind-runbook",
+    "memory:m034"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": true,
+   "required": [
+    [
+     "\\b25\\b",
+     "\\btwenty-five\\b"
+    ],
+    [
+     "\\b55\\b",
+     "\\bfifty-five\\b"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "CONFLICTED",
+   "reason": null,
+   "relation": "rollback_window",
+   "subject": "Tamarind",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-028",
+   "category": "conflict",
+   "question": "What are Falconer Logs's support hours?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-vendor-falconer-logs",
+    "memory:m047"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": true,
+   "required": [
+    [
+     "8\\ to\\ 7"
+    ],
+    [
+     "9\\ to\\ 6"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "CONFLICTED",
+   "reason": null,
+   "relation": "support_hours",
+   "subject": "Falconer Logs",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-029",
+   "category": "conflict",
+   "question": "How many times does the Anvil builder retry a failed job?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-tamarind-arch",
+    "memory:m031"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": true,
+   "required": [
+    [
+     "\\b5\\b",
+     "\\bfive\\b"
+    ],
+    [
+     "\\b10\\b",
+     "\\bten\\b"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "CONFLICTED",
+   "reason": null,
+   "relation": "retry_limit",
+   "subject": "Anvil builder",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-030",
+   "category": "conflict",
+   "question": "What is the rollback window for Pinnacle?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-pinnacle-runbook",
+    "memory:m036"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": true,
+   "required": [
+    [
+     "\\b15\\b",
+     "\\bfifteen\\b"
+    ],
+    [
+     "\\b45\\b",
+     "\\bforty-five\\b"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "CONFLICTED",
+   "reason": null,
+   "relation": "rollback_window",
+   "subject": "Pinnacle",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-031",
+   "category": "wrong_entity",
+   "question": "Who attended the Sable planning meeting?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "meeting:mt-cedar",
+    "meeting:mt-marlin"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "wrong_entity",
+   "relation": "attends",
+   "subject": "Sable",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-032",
+   "category": "wrong_entity",
+   "question": "Who leads Sable?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "memory:m003",
+    "memory:m006"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [
+    "Sable(?:'s)?(?: \\w+){0,3} (?:is|are|was) nikhil",
+    "Sable(?:'s)?(?: \\w+){0,3} (?:is|are|was) yusuf"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "wrong_entity",
+   "relation": "lead",
+   "subject": "Sable",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-033",
+   "category": "wrong_entity",
+   "question": "Who is responsible for the Gantry scheduler?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "memory:m001",
+    "memory:m005"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [
+    "Gantry(?:'s)?(?: \\w+){0,3} (?:is|are|was) olga",
+    "Gantry(?:'s)?(?: \\w+){0,3} (?:is|are|was) liam"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "wrong_entity",
+   "relation": "owner",
+   "subject": "Gantry scheduler",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-034",
+   "category": "wrong_entity",
+   "question": "Until which month is Thistle funded?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "meeting:mt-cedar#3",
+    "meeting:mt-marlin#3"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [
+    "Thistle(?:'s)?(?: \\w+){0,3} (?:is|are|was|through|on) april",
+    "Thistle(?:'s)?(?: \\w+){0,3} (?:is|are|was|through|on) may"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "wrong_entity",
+   "relation": "budget_through",
+   "subject": "Thistle",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-035",
+   "category": "wrong_entity",
+   "question": "Which model did Thistle decide to keep?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "meeting:mt-cedar#2",
+    "meeting:mt-marlin#2"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "wrong_entity",
+   "relation": "decision",
+   "subject": "Thistle",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-036",
+   "category": "wrong_entity",
+   "question": "Who was in the Umbra planning meeting?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "meeting:mt-cedar",
+    "meeting:mt-marlin"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "wrong_entity",
+   "relation": "attends",
+   "subject": "Umbra",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-037",
+   "category": "wrong_entity",
+   "question": "Who is the Sable lead?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "memory:m003",
+    "memory:m006"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [
+    "Sable(?:'s)?(?: \\w+){0,3} (?:is|are|was) nikhil",
+    "Sable(?:'s)?(?: \\w+){0,3} (?:is|are|was) yusuf"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "wrong_entity",
+   "relation": "lead",
+   "subject": "Sable",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-038",
+   "category": "wrong_entity",
+   "question": "Who owns the Mosaic search index?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "memory:m001",
+    "memory:m005"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [
+    "Mosaic(?:'s)?(?: \\w+){0,3} (?:is|are|was) olga",
+    "Mosaic(?:'s)?(?: \\w+){0,3} (?:is|are|was) liam"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "wrong_entity",
+   "relation": "owner",
+   "subject": "Mosaic search index",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-039",
+   "category": "wrong_entity",
+   "question": "Through when is the Umbra budget approved?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "meeting:mt-cedar#3",
+    "meeting:mt-marlin#3"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [
+    "Umbra(?:'s)?(?: \\w+){0,3} (?:is|are|was|through|on) april",
+    "Umbra(?:'s)?(?: \\w+){0,3} (?:is|are|was|through|on) may"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "wrong_entity",
+   "relation": "budget_through",
+   "subject": "Umbra",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-040",
+   "category": "wrong_entity",
+   "question": "What was decided about Sable's default model?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "meeting:mt-cedar#2",
+    "meeting:mt-marlin#2"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "wrong_entity",
+   "relation": "decision",
+   "subject": "Sable",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-041",
+   "category": "wrong_entity",
+   "question": "Who attended the Thistle planning meeting?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "meeting:mt-cedar",
+    "meeting:mt-marlin"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "wrong_entity",
+   "relation": "attends",
+   "subject": "Thistle",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-042",
+   "category": "wrong_entity",
+   "question": "Who is the Vesper lead?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "memory:m003",
+    "memory:m006"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [
+    "Vesper(?:'s)?(?: \\w+){0,3} (?:is|are|was) nikhil",
+    "Vesper(?:'s)?(?: \\w+){0,3} (?:is|are|was) yusuf"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "wrong_entity",
+   "relation": "lead",
+   "subject": "Vesper",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-043",
+   "category": "wrong_entity",
+   "question": "Who owns the Gantry scheduler?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "memory:m001",
+    "memory:m005"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [
+    "Gantry(?:'s)?(?: \\w+){0,3} (?:is|are|was) olga",
+    "Gantry(?:'s)?(?: \\w+){0,3} (?:is|are|was) liam"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "wrong_entity",
+   "relation": "owner",
+   "subject": "Gantry scheduler",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-044",
+   "category": "wrong_entity",
+   "question": "Through when is the Sable budget approved?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "meeting:mt-cedar#3",
+    "meeting:mt-marlin#3"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [
+    "Sable(?:'s)?(?: \\w+){0,3} (?:is|are|was|through|on) april",
+    "Sable(?:'s)?(?: \\w+){0,3} (?:is|are|was|through|on) may"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "wrong_entity",
+   "relation": "budget_through",
+   "subject": "Sable",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-045",
+   "category": "no_evidence",
+   "question": "Who signs off Umbra security?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "document:doc-umbra-arch"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [
+    "\\b(?:is|are|was|by)\\s+(?:Amara|Bruno|Chiara|Dmitri|Elena|Farid|Greta|Hiro|Ines|Jonas|Kavya|Liam|Mila|Nikhil|Olga|Pablo|Quinn|Rania|Sven|Tara|Umar|Vera|Wen|Yusuf)\\b"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "no_record",
+   "relation": "security_reviewer",
+   "subject": "Umbra",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-046",
+   "category": "no_evidence",
+   "question": "What is the maximum message size of the Cobalt auth service?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "document:doc-sable-arch"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [
+    "\\b\\d+\\s?(?:kb|mb|bytes)\\b"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "no_record",
+   "relation": "max_message_size",
+   "subject": "Sable",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-047",
+   "category": "no_evidence",
+   "question": "When is the Juniper lead's next vacation?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "document:doc-juniper-arch"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [
+    "\\b(?:january|february|march|april|may|june|july|august|september|october|november|december)\\b"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "no_record",
+   "relation": "vacation",
+   "subject": "Juniper",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-048",
+   "category": "no_evidence",
+   "question": "Who is the security reviewer for Tamarind?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "document:doc-tamarind-arch"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [
+    "\\b(?:is|are|was|by)\\s+(?:Amara|Bruno|Chiara|Dmitri|Elena|Farid|Greta|Hiro|Ines|Jonas|Kavya|Liam|Mila|Nikhil|Olga|Pablo|Quinn|Rania|Sven|Tara|Umar|Vera|Wen|Yusuf)\\b"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "no_record",
+   "relation": "security_reviewer",
+   "subject": "Tamarind",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-049",
+   "category": "no_evidence",
+   "question": "How large can a Conduit stream message be?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "document:doc-vesper-arch"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [
+    "\\b\\d+\\s?(?:kb|mb|bytes)\\b"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "no_record",
+   "relation": "max_message_size",
+   "subject": "Vesper",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-050",
+   "category": "no_evidence",
+   "question": "When will the Tamarind lead be away next?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "document:doc-tamarind-arch"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [
+    "\\b(?:january|february|march|april|may|june|july|august|september|october|november|december)\\b"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "no_record",
+   "relation": "vacation",
+   "subject": "Tamarind",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-051",
+   "category": "no_evidence",
+   "question": "Who signs off Tamarind security?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "document:doc-tamarind-arch"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [
+    "\\b(?:is|are|was|by)\\s+(?:Amara|Bruno|Chiara|Dmitri|Elena|Farid|Greta|Hiro|Ines|Jonas|Kavya|Liam|Mila|Nikhil|Olga|Pablo|Quinn|Rania|Sven|Tara|Umar|Vera|Wen|Yusuf)\\b"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "no_record",
+   "relation": "security_reviewer",
+   "subject": "Tamarind",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-052",
+   "category": "no_evidence",
+   "question": "How large can a Cobalt auth service message be?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "document:doc-sable-arch"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [
+    "\\b\\d+\\s?(?:kb|mb|bytes)\\b"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "no_record",
+   "relation": "max_message_size",
+   "subject": "Sable",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-053",
+   "category": "authorization",
+   "question": "Who is going to audit the Sable build logs after the incident?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "document:doc-sable-arch"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [],
+   "canaries": [
+    "quinn"
+   ],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [
+    "document:doc-sable-incident"
+   ],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "unauthorized",
+   "relation": "incident_auditor",
+   "subject": "Sable",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-054",
+   "category": "authorization",
+   "question": "Who audits the Sable build logs?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "document:doc-sable-arch"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [],
+   "canaries": [
+    "quinn"
+   ],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [
+    "document:doc-sable-incident"
+   ],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "unauthorized",
+   "relation": "incident_auditor",
+   "subject": "Sable",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-055",
+   "category": "authorization",
+   "question": "Who audits the Pinnacle build logs?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "document:doc-pinnacle-arch"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [],
+   "canaries": [
+    "jonas"
+   ],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [
+    "document:doc-pinnacle-incident"
+   ],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "unauthorized",
+   "relation": "incident_auditor",
+   "subject": "Pinnacle",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-056",
+   "category": "authorization",
+   "question": "Who audits the Thistle build logs?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [
+    "document:doc-thistle-arch"
+   ],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [],
+   "canaries": [
+    "amara"
+   ],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [
+    "document:doc-thistle-incident"
+   ],
+   "note": "",
+   "label": "UNESTABLISHED",
+   "reason": "unauthorized",
+   "relation": "incident_auditor",
+   "subject": "Thistle",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-057",
+   "category": "partial_evidence",
+   "question": "Who owns the Anvil builder, and what is its maximum message size?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "memory:m011"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "kavya",
+     "kavya\\ menon"
+    ]
+   ],
+   "forbidden": [
+    "\\b\\d+\\s?(?:kb|mb|bytes)\\b"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "PARTIAL",
+   "reason": null,
+   "relation": "owner+max_message_size",
+   "subject": "Tamarind",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-058",
+   "category": "partial_evidence",
+   "question": "Which model do Juniper's scheduled jobs run on?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-juniper-arch"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "deep path",
+     "scheduled"
+    ]
+   ],
+   "forbidden": [
+    "(?:deep path|scheduled jobs)[^.]{0,30}\\b(?:serves?|runs?|uses?|is)\\b[^.]{0,15}kestrel\\-9b"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "PARTIAL",
+   "reason": null,
+   "relation": "deep_path_model",
+   "subject": "Juniper",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-059",
+   "category": "partial_evidence",
+   "question": "Who owns the Relay gateway, and what is its maximum message size?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "memory:m005"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "liam",
+     "liam\\ oconnor"
+    ]
+   ],
+   "forbidden": [
+    "\\b\\d+\\s?(?:kb|mb|bytes)\\b"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "PARTIAL",
+   "reason": null,
+   "relation": "owner+max_message_size",
+   "subject": "Juniper",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-060",
+   "category": "partial_evidence",
+   "question": "Which model do Thistle's scheduled jobs run on?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-thistle-arch"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "deep path",
+     "scheduled"
+    ]
+   ],
+   "forbidden": [
+    "(?:deep path|scheduled jobs)[^.]{0,30}\\b(?:serves?|runs?|uses?|is)\\b[^.]{0,15}merlin\\-7b"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "PARTIAL",
+   "reason": null,
+   "relation": "deep_path_model",
+   "subject": "Thistle",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-061",
+   "category": "partial_evidence",
+   "question": "Who is responsible for the Cobalt auth service and how big can a message be?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "memory:m021"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "tara",
+     "tara\\ brennan"
+    ]
+   ],
+   "forbidden": [
+    "\\b\\d+\\s?(?:kb|mb|bytes)\\b"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "PARTIAL",
+   "reason": null,
+   "relation": "owner+max_message_size",
+   "subject": "Sable",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-062",
+   "category": "partial_evidence",
+   "question": "Which model do Tamarind's scheduled jobs run on?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-tamarind-arch"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "deep path",
+     "scheduled"
+    ]
+   ],
+   "forbidden": [
+    "(?:deep path|scheduled jobs)[^.]{0,30}\\b(?:serves?|runs?|uses?|is)\\b[^.]{0,15}swift\\-20b"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "PARTIAL",
+   "reason": null,
+   "relation": "deep_path_model",
+   "subject": "Tamarind",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-063",
+   "category": "partial_evidence",
+   "question": "Who owns the Lattice store, and what is its maximum message size?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "memory:m024"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "mila",
+     "mila\\ novak"
+    ]
+   ],
+   "forbidden": [
+    "\\b\\d+\\s?(?:kb|mb|bytes)\\b"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "PARTIAL",
+   "reason": null,
+   "relation": "owner+max_message_size",
+   "subject": "Umbra",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-064",
+   "category": "partial_evidence",
+   "question": "Which model does the deep path serve for Pinnacle?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-pinnacle-arch"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "deep path",
+     "scheduled"
+    ]
+   ],
+   "forbidden": [
+    "(?:deep path|scheduled jobs)[^.]{0,30}\\b(?:serves?|runs?|uses?|is)\\b[^.]{0,15}swift\\-6b"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "PARTIAL",
+   "reason": null,
+   "relation": "deep_path_model",
+   "subject": "Pinnacle",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-065",
+   "category": "partial_evidence",
+   "question": "Who is responsible for the Conduit stream and how big can a message be?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "memory:m014"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "greta",
+     "greta\\ lindqvist"
+    ]
+   ],
+   "forbidden": [
+    "\\b\\d+\\s?(?:kb|mb|bytes)\\b"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "PARTIAL",
+   "reason": null,
+   "relation": "owner+max_message_size",
+   "subject": "Vesper",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-066",
+   "category": "partial_evidence",
+   "question": "Which model does the deep path serve for Marlin?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-marlin-arch"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "deep path",
+     "scheduled"
+    ]
+   ],
+   "forbidden": [
+    "(?:deep path|scheduled jobs)[^.]{0,30}\\b(?:serves?|runs?|uses?|is)\\b[^.]{0,15}merlin\\-7b"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "PARTIAL",
+   "reason": null,
+   "relation": "deep_path_model",
+   "subject": "Marlin",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-067",
+   "category": "partial_evidence",
+   "question": "Who is responsible for the Anvil builder and how big can a message be?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "memory:m011"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "kavya",
+     "kavya\\ menon"
+    ]
+   ],
+   "forbidden": [
+    "\\b\\d+\\s?(?:kb|mb|bytes)\\b"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "PARTIAL",
+   "reason": null,
+   "relation": "owner+max_message_size",
+   "subject": "Tamarind",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-068",
+   "category": "partial_evidence",
+   "question": "Which model does the deep path serve for Tamarind?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-tamarind-arch"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "deep path",
+     "scheduled"
+    ]
+   ],
+   "forbidden": [
+    "(?:deep path|scheduled jobs)[^.]{0,30}\\b(?:serves?|runs?|uses?|is)\\b[^.]{0,15}swift\\-20b"
+   ],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "PARTIAL",
+   "reason": null,
+   "relation": "deep_path_model",
+   "subject": "Tamarind",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-069",
+   "category": "supersession",
+   "question": "What was Marlin's default model before October?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "include_historical",
+   "modality": "text",
+   "gold_refs": [
+    "memory:m040",
+    "memory:m041"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "swift\\-6b"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "SUPERSEDED",
+   "reason": null,
+   "relation": "default_model_history",
+   "subject": "Marlin",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-070",
+   "category": "supersession",
+   "question": "What was Osprey's default model before October?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "include_historical",
+   "modality": "text",
+   "gold_refs": [
+    "memory:m044",
+    "memory:m045"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "swift\\-20b"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "SUPERSEDED",
+   "reason": null,
+   "relation": "default_model_history",
+   "subject": "Osprey",
+   "phrasing": 1,
+   "held_out": false,
+   "bank": "A"
+  },
+  {
+   "id": "D13-071",
+   "category": "supersession",
+   "question": "Which model did Osprey use by default in March?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "include_historical",
+   "modality": "text",
+   "gold_refs": [
+    "memory:m044",
+    "memory:m045"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [
+    [
+     "swift\\-20b"
+    ]
+   ],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "label": "SUPERSEDED",
+   "reason": null,
+   "relation": "default_model_history",
+   "subject": "Osprey",
+   "phrasing": 0,
+   "held_out": false,
+   "bank": "A"
+  }
+ ]
+}

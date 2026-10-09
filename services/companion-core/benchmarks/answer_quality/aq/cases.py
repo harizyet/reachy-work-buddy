@@ -30,7 +30,8 @@ CATEGORIES = (
     "no_evidence", "partial_evidence", "wrong_entity", "negative_claim", "mixed_support", "cross_section",
 )
 V2_SPLITS = ('dev11', 'dev12')
-FILES = {"dev": "cases_dev.json", "holdout": "cases_holdout.json", "dev2": "cases_dev2.json", "dev3": "cases_dev3.json", "dev4": "cases_dev4.json", "dev5": "cases_dev5.json", "dev6": "cases_dev6.json", "dev7": "cases_dev7.json", "dev8": "cases_dev8.json", "dev9": "cases_dev9.json", "dev10": "cases_dev10.json", "dev11": "cases_dev11.json", "dev12": "cases_dev12.json"}
+V3_SPLITS = ('dev13', 'dev14')
+FILES = {"dev": "cases_dev.json", "holdout": "cases_holdout.json", "dev2": "cases_dev2.json", "dev3": "cases_dev3.json", "dev4": "cases_dev4.json", "dev5": "cases_dev5.json", "dev6": "cases_dev6.json", "dev7": "cases_dev7.json", "dev8": "cases_dev8.json", "dev9": "cases_dev9.json", "dev10": "cases_dev10.json", "dev11": "cases_dev11.json", "dev12": "cases_dev12.json", "dev13": "cases_dev13.json", "dev14": "cases_dev14.json"}
 
 
 class CaseError(ValueError):
@@ -52,8 +53,9 @@ def validate(cases_by_split: dict[str, list[dict[str, Any]]] | None = None) -> l
     """Every problem found. A case is only valid if the question can be answered from its gold sources: each required fact must be
     met by the gold text, unless the case says the model states it itself (`model_stated`)."""
     if cases_by_split is None:  # the v2 splits belong to corpus v2 (KBENCH_CORPUS), every other split to the 44A corpus
-        v2 = bool(os.environ.get("KBENCH_CORPUS"))
-        cases_by_split = {s: load_cases(s) for s in FILES if (s in V2_SPLITS) == v2}
+        corpus = os.environ.get("KBENCH_CORPUS", "")
+        want = V3_SPLITS if "corpus_v3" in corpus else (V2_SPLITS if corpus else ())
+        cases_by_split = {s: load_cases(s) for s in FILES if (s in want if want else s not in V2_SPLITS + V3_SPLITS)}
     corpus = load_corpus()
     texts, meta = source_texts(corpus), source_meta(corpus)
     profiles, meetings = corpus["access_profiles"], {m["id"] for m in corpus["meetings"]}

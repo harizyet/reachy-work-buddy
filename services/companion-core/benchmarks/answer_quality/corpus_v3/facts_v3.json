@@ -1,0 +1,2285 @@
+{
+ "version": 2,
+ "seed": 13,
+ "held_out_relations": [
+  "escalation_contact",
+  "release_day",
+  "storage_limit"
+ ],
+ "held_out_projects": [
+  "cedar",
+  "osprey",
+  "quartz",
+  "willow"
+ ],
+ "facts": [
+  {
+   "id": "f0001",
+   "subject": "Sluice cache",
+   "relation": "retry_limit",
+   "value": 3,
+   "refs": [
+    "document:doc-cedar-arch",
+    "memory:m027"
+   ],
+   "state": "conflicted",
+   "note": "",
+   "held_out": true,
+   "sensitive": false,
+   "conflict_value": 8
+  },
+  {
+   "id": "f0002",
+   "subject": "Cedar",
+   "relation": "default_model",
+   "value": "Kestrel-3B",
+   "refs": [
+    "document:doc-cedar-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0003",
+   "subject": "Sluice cache",
+   "relation": "storage_limit",
+   "value": 20,
+   "refs": [
+    "document:doc-cedar-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0004",
+   "subject": "Kestrel-3B",
+   "relation": "runs_on",
+   "value": "GPU host",
+   "refs": [
+    "document:doc-cedar-arch",
+    "document:doc-sable-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0005",
+   "subject": "Cedar",
+   "relation": "rollback_window",
+   "value": 15,
+   "refs": [
+    "document:doc-cedar-runbook"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0006",
+   "subject": "Sluice cache",
+   "relation": "owner",
+   "value": "Olga Petrova",
+   "refs": [
+    "memory:m001"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0007",
+   "subject": "Cedar",
+   "relation": "lead",
+   "value": null,
+   "refs": [],
+   "state": "unrecorded",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0008",
+   "subject": "Cedar",
+   "relation": "on_call",
+   "value": "Jonas Weiss",
+   "refs": [
+    "note:note-cedar-oncall"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0009",
+   "subject": "Cedar",
+   "relation": "escalation_contact",
+   "value": "Greta Lindqvist",
+   "refs": [
+    "note:note-cedar-escalation"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0010",
+   "subject": "Cedar",
+   "relation": "release_day",
+   "value": "Monday",
+   "refs": [
+    "memory:m002"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0011",
+   "subject": "Mosaic search index",
+   "relation": "retry_limit",
+   "value": 6,
+   "refs": [
+    "document:doc-marlin-arch",
+    "memory:m028"
+   ],
+   "state": "conflicted",
+   "note": "",
+   "held_out": false,
+   "sensitive": false,
+   "conflict_value": 11
+  },
+  {
+   "id": "f0012",
+   "subject": "Marlin",
+   "relation": "default_model",
+   "value": "Merlin-7B",
+   "refs": [
+    "document:doc-marlin-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0013",
+   "subject": "Mosaic search index",
+   "relation": "storage_limit",
+   "value": 90,
+   "refs": [
+    "document:doc-marlin-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0014",
+   "subject": "Merlin-7B",
+   "relation": "runs_on",
+   "value": "batch host",
+   "refs": [
+    "document:doc-marlin-arch",
+    "document:doc-thistle-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0015",
+   "subject": "Marlin",
+   "relation": "rollback_window",
+   "value": 40,
+   "refs": [
+    "document:doc-marlin-runbook"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0016",
+   "subject": "Mosaic search index",
+   "relation": "owner",
+   "value": null,
+   "refs": [],
+   "state": "unrecorded",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0017",
+   "subject": "Marlin",
+   "relation": "lead",
+   "value": "Nikhil Rao",
+   "refs": [
+    "memory:m003"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0018",
+   "subject": "Marlin",
+   "relation": "on_call",
+   "value": "Farid Haddad",
+   "refs": [
+    "note:note-marlin-oncall"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0019",
+   "subject": "Marlin",
+   "relation": "escalation_contact",
+   "value": "Quinn Abbott",
+   "refs": [
+    "note:note-marlin-escalation"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0020",
+   "subject": "Marlin",
+   "relation": "release_day",
+   "value": "Wednesday",
+   "refs": [
+    "memory:m004"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0021",
+   "subject": "Relay gateway",
+   "relation": "retry_limit",
+   "value": 4,
+   "refs": [
+    "document:doc-juniper-arch",
+    "memory:m029"
+   ],
+   "state": "conflicted",
+   "note": "",
+   "held_out": false,
+   "sensitive": false,
+   "conflict_value": 9
+  },
+  {
+   "id": "f0022",
+   "subject": "Juniper",
+   "relation": "default_model",
+   "value": "Kestrel-9B",
+   "refs": [
+    "document:doc-juniper-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0023",
+   "subject": "Relay gateway",
+   "relation": "storage_limit",
+   "value": 70,
+   "refs": [
+    "document:doc-juniper-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0024",
+   "subject": "Kestrel-9B",
+   "relation": "runs_on",
+   "value": "CPU host",
+   "refs": [
+    "document:doc-juniper-arch",
+    "document:doc-umbra-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0025",
+   "subject": "Juniper",
+   "relation": "rollback_window",
+   "value": 35,
+   "refs": [
+    "document:doc-juniper-runbook"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0026",
+   "subject": "Relay gateway",
+   "relation": "owner",
+   "value": "Liam Oconnor",
+   "refs": [
+    "memory:m005"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0027",
+   "subject": "Juniper",
+   "relation": "lead",
+   "value": "Yusuf Demir",
+   "refs": [
+    "memory:m006"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0028",
+   "subject": "Juniper",
+   "relation": "on_call",
+   "value": "Liam Oconnor",
+   "refs": [
+    "note:note-juniper-oncall"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0029",
+   "subject": "Juniper",
+   "relation": "escalation_contact",
+   "value": "Ines Duarte",
+   "refs": [
+    "note:note-juniper-escalation"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0030",
+   "subject": "Juniper",
+   "relation": "release_day",
+   "value": "Friday",
+   "refs": [
+    "memory:m007"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0031",
+   "subject": "Hopper ingest service",
+   "relation": "retry_limit",
+   "value": 7,
+   "refs": [
+    "document:doc-osprey-arch",
+    "memory:m030"
+   ],
+   "state": "conflicted",
+   "note": "",
+   "held_out": true,
+   "sensitive": false,
+   "conflict_value": 12
+  },
+  {
+   "id": "f0032",
+   "subject": "Osprey",
+   "relation": "default_model",
+   "value": "Heron-4B",
+   "refs": [
+    "document:doc-osprey-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0033",
+   "subject": "Hopper ingest service",
+   "relation": "storage_limit",
+   "value": 50,
+   "refs": [
+    "document:doc-osprey-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0034",
+   "subject": "Heron-4B",
+   "relation": "runs_on",
+   "value": "GPU host",
+   "refs": [
+    "document:doc-osprey-arch",
+    "document:doc-willow-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0035",
+   "subject": "Osprey",
+   "relation": "rollback_window",
+   "value": 30,
+   "refs": [
+    "document:doc-osprey-runbook",
+    "memory:m033"
+   ],
+   "state": "conflicted",
+   "note": "",
+   "held_out": true,
+   "sensitive": false,
+   "conflict_value": 60
+  },
+  {
+   "id": "f0036",
+   "subject": "Hopper ingest service",
+   "relation": "owner",
+   "value": "Pablo Reyes",
+   "refs": [
+    "memory:m008"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0037",
+   "subject": "Osprey",
+   "relation": "lead",
+   "value": "Hiro Tanaka",
+   "refs": [
+    "memory:m009"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0038",
+   "subject": "Osprey",
+   "relation": "on_call",
+   "value": "Liam Oconnor",
+   "refs": [
+    "note:note-osprey-oncall"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0039",
+   "subject": "Osprey",
+   "relation": "escalation_contact",
+   "value": "Olga Petrova",
+   "refs": [
+    "note:note-osprey-escalation"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0040",
+   "subject": "Osprey",
+   "relation": "release_day",
+   "value": "Tuesday",
+   "refs": [
+    "memory:m010"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0041",
+   "subject": "Anvil builder",
+   "relation": "retry_limit",
+   "value": 5,
+   "refs": [
+    "document:doc-tamarind-arch",
+    "memory:m031"
+   ],
+   "state": "conflicted",
+   "note": "",
+   "held_out": false,
+   "sensitive": false,
+   "conflict_value": 10
+  },
+  {
+   "id": "f0042",
+   "subject": "Tamarind",
+   "relation": "default_model",
+   "value": "Swift-20B",
+   "refs": [
+    "document:doc-tamarind-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0043",
+   "subject": "Anvil builder",
+   "relation": "storage_limit",
+   "value": 30,
+   "refs": [
+    "document:doc-tamarind-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0044",
+   "subject": "Swift-20B",
+   "relation": "runs_on",
+   "value": "batch host",
+   "refs": [
+    "document:doc-tamarind-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0045",
+   "subject": "Tamarind",
+   "relation": "rollback_window",
+   "value": 25,
+   "refs": [
+    "document:doc-tamarind-runbook",
+    "memory:m034"
+   ],
+   "state": "conflicted",
+   "note": "",
+   "held_out": false,
+   "sensitive": false,
+   "conflict_value": 55
+  },
+  {
+   "id": "f0046",
+   "subject": "Anvil builder",
+   "relation": "owner",
+   "value": "Kavya Menon",
+   "refs": [
+    "memory:m011"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0047",
+   "subject": "Tamarind",
+   "relation": "lead",
+   "value": "Vera Kovac",
+   "refs": [
+    "memory:m012"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0048",
+   "subject": "Tamarind",
+   "relation": "on_call",
+   "value": "Ines Duarte",
+   "refs": [
+    "note:note-tamarind-oncall"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0049",
+   "subject": "Tamarind",
+   "relation": "escalation_contact",
+   "value": "Tara Brennan",
+   "refs": [
+    "note:note-tamarind-escalation"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0050",
+   "subject": "Tamarind",
+   "relation": "release_day",
+   "value": "Thursday",
+   "refs": [
+    "memory:m013"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0051",
+   "subject": "Conduit stream",
+   "relation": "retry_limit",
+   "value": 3,
+   "refs": [
+    "document:doc-vesper-arch",
+    "memory:m032"
+   ],
+   "state": "conflicted",
+   "note": "",
+   "held_out": false,
+   "sensitive": false,
+   "conflict_value": 8
+  },
+  {
+   "id": "f0052",
+   "subject": "Vesper",
+   "relation": "default_model",
+   "value": "Heron-12B",
+   "refs": [
+    "document:doc-vesper-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0053",
+   "subject": "Conduit stream",
+   "relation": "storage_limit",
+   "value": 100,
+   "refs": [
+    "document:doc-vesper-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0054",
+   "subject": "Heron-12B",
+   "relation": "runs_on",
+   "value": "CPU host",
+   "refs": [
+    "document:doc-vesper-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0055",
+   "subject": "Vesper",
+   "relation": "rollback_window",
+   "value": 20,
+   "refs": [
+    "document:doc-vesper-runbook",
+    "memory:m035"
+   ],
+   "state": "conflicted",
+   "note": "",
+   "held_out": false,
+   "sensitive": false,
+   "conflict_value": 50
+  },
+  {
+   "id": "f0056",
+   "subject": "Conduit stream",
+   "relation": "owner",
+   "value": "Greta Lindqvist",
+   "refs": [
+    "memory:m014"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0057",
+   "subject": "Vesper",
+   "relation": "lead",
+   "value": null,
+   "refs": [],
+   "state": "unrecorded",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0058",
+   "subject": "Vesper",
+   "relation": "on_call",
+   "value": "Ines Duarte",
+   "refs": [
+    "note:note-vesper-oncall"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0059",
+   "subject": "Vesper",
+   "relation": "escalation_contact",
+   "value": "Mila Novak",
+   "refs": [
+    "note:note-vesper-escalation"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0060",
+   "subject": "Vesper",
+   "relation": "release_day",
+   "value": "Monday",
+   "refs": [
+    "memory:m015"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0061",
+   "subject": "Gantry scheduler",
+   "relation": "retry_limit",
+   "value": 6,
+   "refs": [
+    "document:doc-pinnacle-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0062",
+   "subject": "Pinnacle",
+   "relation": "default_model",
+   "value": "Swift-6B",
+   "refs": [
+    "document:doc-pinnacle-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0063",
+   "subject": "Gantry scheduler",
+   "relation": "storage_limit",
+   "value": 80,
+   "refs": [
+    "document:doc-pinnacle-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0064",
+   "subject": "Swift-6B",
+   "relation": "runs_on",
+   "value": "edge host",
+   "refs": [
+    "document:doc-pinnacle-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0065",
+   "subject": "Pinnacle",
+   "relation": "rollback_window",
+   "value": 15,
+   "refs": [
+    "document:doc-pinnacle-runbook",
+    "memory:m036"
+   ],
+   "state": "conflicted",
+   "note": "",
+   "held_out": false,
+   "sensitive": false,
+   "conflict_value": 45
+  },
+  {
+   "id": "f0066",
+   "subject": "Gantry scheduler",
+   "relation": "owner",
+   "value": null,
+   "refs": [],
+   "state": "unrecorded",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0067",
+   "subject": "Pinnacle",
+   "relation": "lead",
+   "value": "Wen Zhao",
+   "refs": [
+    "memory:m016"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0068",
+   "subject": "Pinnacle",
+   "relation": "on_call",
+   "value": "Elena Marsh",
+   "refs": [
+    "note:note-pinnacle-oncall"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0069",
+   "subject": "Pinnacle",
+   "relation": "escalation_contact",
+   "value": "Sven Larsen",
+   "refs": [
+    "note:note-pinnacle-escalation"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0070",
+   "subject": "Pinnacle",
+   "relation": "release_day",
+   "value": "Wednesday",
+   "refs": [
+    "memory:m017"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0071",
+   "subject": "Turret API",
+   "relation": "retry_limit",
+   "value": 4,
+   "refs": [
+    "document:doc-quartz-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0072",
+   "subject": "Quartz",
+   "relation": "default_model",
+   "value": "Merlin-2B",
+   "refs": [
+    "document:doc-quartz-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0073",
+   "subject": "Turret API",
+   "relation": "storage_limit",
+   "value": 60,
+   "refs": [
+    "document:doc-quartz-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0074",
+   "subject": "Merlin-2B",
+   "relation": "runs_on",
+   "value": "edge host",
+   "refs": [
+    "document:doc-quartz-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0075",
+   "subject": "Quartz",
+   "relation": "rollback_window",
+   "value": 40,
+   "refs": [
+    "document:doc-quartz-runbook",
+    "memory:m037"
+   ],
+   "state": "conflicted",
+   "note": "",
+   "held_out": true,
+   "sensitive": false,
+   "conflict_value": 70
+  },
+  {
+   "id": "f0076",
+   "subject": "Turret API",
+   "relation": "owner",
+   "value": "Sven Larsen",
+   "refs": [
+    "memory:m018"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0077",
+   "subject": "Quartz",
+   "relation": "lead",
+   "value": "Bruno Keller",
+   "refs": [
+    "memory:m019"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0078",
+   "subject": "Quartz",
+   "relation": "on_call",
+   "value": "Pablo Reyes",
+   "refs": [
+    "note:note-quartz-oncall"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0079",
+   "subject": "Quartz",
+   "relation": "escalation_contact",
+   "value": "Rania Said",
+   "refs": [
+    "note:note-quartz-escalation"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0080",
+   "subject": "Quartz",
+   "relation": "release_day",
+   "value": "Friday",
+   "refs": [
+    "memory:m020"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0081",
+   "subject": "Cobalt auth service",
+   "relation": "retry_limit",
+   "value": 7,
+   "refs": [
+    "document:doc-sable-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0082",
+   "subject": "Sable",
+   "relation": "default_model",
+   "value": "Kestrel-3B",
+   "refs": [
+    "document:doc-sable-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0083",
+   "subject": "Cobalt auth service",
+   "relation": "storage_limit",
+   "value": 40,
+   "refs": [
+    "document:doc-sable-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0084",
+   "subject": "Sable",
+   "relation": "rollback_window",
+   "value": 35,
+   "refs": [
+    "document:doc-sable-runbook"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0085",
+   "subject": "Cobalt auth service",
+   "relation": "owner",
+   "value": "Tara Brennan",
+   "refs": [
+    "memory:m021"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0086",
+   "subject": "Sable",
+   "relation": "lead",
+   "value": null,
+   "refs": [],
+   "state": "unrecorded",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0087",
+   "subject": "Sable",
+   "relation": "on_call",
+   "value": "Hiro Tanaka",
+   "refs": [
+    "note:note-sable-oncall"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0088",
+   "subject": "Ferry queue",
+   "relation": "retry_limit",
+   "value": 5,
+   "refs": [
+    "document:doc-thistle-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0089",
+   "subject": "Thistle",
+   "relation": "default_model",
+   "value": "Merlin-7B",
+   "refs": [
+    "document:doc-thistle-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0090",
+   "subject": "Ferry queue",
+   "relation": "storage_limit",
+   "value": 20,
+   "refs": [
+    "document:doc-thistle-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0091",
+   "subject": "Thistle",
+   "relation": "rollback_window",
+   "value": 30,
+   "refs": [
+    "document:doc-thistle-runbook"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0092",
+   "subject": "Ferry queue",
+   "relation": "owner",
+   "value": "Rania Said",
+   "refs": [
+    "memory:m022"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0093",
+   "subject": "Thistle",
+   "relation": "lead",
+   "value": "Dmitri Volkov",
+   "refs": [
+    "memory:m023"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0094",
+   "subject": "Thistle",
+   "relation": "on_call",
+   "value": "Sven Larsen",
+   "refs": [
+    "note:note-thistle-oncall"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0095",
+   "subject": "Lattice store",
+   "relation": "retry_limit",
+   "value": 3,
+   "refs": [
+    "document:doc-umbra-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0096",
+   "subject": "Umbra",
+   "relation": "default_model",
+   "value": "Kestrel-9B",
+   "refs": [
+    "document:doc-umbra-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0097",
+   "subject": "Lattice store",
+   "relation": "storage_limit",
+   "value": 90,
+   "refs": [
+    "document:doc-umbra-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0098",
+   "subject": "Umbra",
+   "relation": "rollback_window",
+   "value": 25,
+   "refs": [
+    "document:doc-umbra-runbook"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0099",
+   "subject": "Lattice store",
+   "relation": "owner",
+   "value": "Mila Novak",
+   "refs": [
+    "memory:m024"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0100",
+   "subject": "Umbra",
+   "relation": "lead",
+   "value": "Jonas Weiss",
+   "refs": [
+    "memory:m025"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0101",
+   "subject": "Umbra",
+   "relation": "on_call",
+   "value": "Hiro Tanaka",
+   "refs": [
+    "note:note-umbra-oncall"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0102",
+   "subject": "Prism dashboard",
+   "relation": "retry_limit",
+   "value": 6,
+   "refs": [
+    "document:doc-willow-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0103",
+   "subject": "Willow",
+   "relation": "default_model",
+   "value": "Heron-4B",
+   "refs": [
+    "document:doc-willow-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0104",
+   "subject": "Prism dashboard",
+   "relation": "storage_limit",
+   "value": 70,
+   "refs": [
+    "document:doc-willow-arch"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0105",
+   "subject": "Willow",
+   "relation": "rollback_window",
+   "value": 20,
+   "refs": [
+    "document:doc-willow-runbook"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0106",
+   "subject": "Prism dashboard",
+   "relation": "owner",
+   "value": null,
+   "refs": [],
+   "state": "unrecorded",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0107",
+   "subject": "Willow",
+   "relation": "lead",
+   "value": "Chiara Rossi",
+   "refs": [
+    "memory:m026"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0108",
+   "subject": "Willow",
+   "relation": "on_call",
+   "value": "Greta Lindqvist",
+   "refs": [
+    "note:note-willow-oncall"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0109",
+   "subject": "Cedar",
+   "relation": "default_model_history",
+   "value": "Merlin-7B",
+   "refs": [
+    "memory:m038",
+    "memory:m039"
+   ],
+   "state": "superseded",
+   "note": "the older value is historical",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0110",
+   "subject": "Marlin",
+   "relation": "default_model_history",
+   "value": "Swift-6B",
+   "refs": [
+    "memory:m040",
+    "memory:m041"
+   ],
+   "state": "superseded",
+   "note": "the older value is historical",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0111",
+   "subject": "Juniper",
+   "relation": "default_model_history",
+   "value": "Heron-4B",
+   "refs": [
+    "memory:m042",
+    "memory:m043"
+   ],
+   "state": "superseded",
+   "note": "the older value is historical",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0112",
+   "subject": "Osprey",
+   "relation": "default_model_history",
+   "value": "Swift-20B",
+   "refs": [
+    "memory:m044",
+    "memory:m045"
+   ],
+   "state": "superseded",
+   "note": "the older value is historical",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0113",
+   "subject": "Nimbus Metrics",
+   "relation": "support_hours",
+   "value": "8 to 5",
+   "refs": [
+    "document:doc-vendor-nimbus-metrics",
+    "memory:m046"
+   ],
+   "state": "conflicted",
+   "note": "",
+   "held_out": false,
+   "sensitive": false,
+   "conflict_value": "7 to 6"
+  },
+  {
+   "id": "f0114",
+   "subject": "Quarry Data",
+   "relation": "support_hours",
+   "value": "9 to 6",
+   "refs": [
+    "document:doc-vendor-quarry-data"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0115",
+   "subject": "Falconer Logs",
+   "relation": "support_hours",
+   "value": "8 to 7",
+   "refs": [
+    "document:doc-vendor-falconer-logs",
+    "memory:m047"
+   ],
+   "state": "conflicted",
+   "note": "",
+   "held_out": false,
+   "sensitive": false,
+   "conflict_value": "9 to 6"
+  },
+  {
+   "id": "f0116",
+   "subject": "Tidewater Pay",
+   "relation": "support_hours",
+   "value": "9 to 5",
+   "refs": [
+    "document:doc-vendor-tidewater-pay"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0117",
+   "subject": "Brightwell Mail",
+   "relation": "support_hours",
+   "value": "8 to 6",
+   "refs": [
+    "document:doc-vendor-brightwell-mail",
+    "memory:m048"
+   ],
+   "state": "conflicted",
+   "note": "",
+   "held_out": false,
+   "sensitive": false,
+   "conflict_value": "8 to 6"
+  },
+  {
+   "id": "f0118",
+   "subject": "Ironside Backup",
+   "relation": "support_hours",
+   "value": "9 to 7",
+   "refs": [
+    "document:doc-vendor-ironside-backup"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0119",
+   "subject": "Cedar",
+   "relation": "decision",
+   "value": "keep Kestrel-3B as the default model",
+   "refs": [
+    "meeting:mt-cedar#2"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0120",
+   "subject": "Cedar",
+   "relation": "budget_through",
+   "value": "April",
+   "refs": [
+    "meeting:mt-cedar#3"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0121",
+   "subject": "mt-cedar",
+   "relation": "attends",
+   "value": [
+    "Ines Duarte",
+    "Olga Petrova"
+   ],
+   "refs": [
+    "meeting:mt-cedar"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0122",
+   "subject": "Marlin",
+   "relation": "decision",
+   "value": "keep Merlin-7B as the default model",
+   "refs": [
+    "meeting:mt-marlin#2"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0123",
+   "subject": "Marlin",
+   "relation": "budget_through",
+   "value": "May",
+   "refs": [
+    "meeting:mt-marlin#3"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0124",
+   "subject": "mt-marlin",
+   "relation": "attends",
+   "value": [
+    "Nikhil Rao",
+    "Elena Marsh"
+   ],
+   "refs": [
+    "meeting:mt-marlin"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0125",
+   "subject": "Juniper",
+   "relation": "decision",
+   "value": "keep Kestrel-9B as the default model",
+   "refs": [
+    "meeting:mt-juniper#2"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0126",
+   "subject": "Juniper",
+   "relation": "budget_through",
+   "value": "June",
+   "refs": [
+    "meeting:mt-juniper#3"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0127",
+   "subject": "mt-juniper",
+   "relation": "attends",
+   "value": [
+    "Yusuf Demir",
+    "Liam Oconnor"
+   ],
+   "refs": [
+    "meeting:mt-juniper"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0128",
+   "subject": "Osprey",
+   "relation": "decision",
+   "value": "keep Heron-4B as the default model",
+   "refs": [
+    "meeting:mt-osprey#2"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0129",
+   "subject": "Osprey",
+   "relation": "budget_through",
+   "value": "July",
+   "refs": [
+    "meeting:mt-osprey#3"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0130",
+   "subject": "mt-osprey",
+   "relation": "attends",
+   "value": [
+    "Hiro Tanaka",
+    "Pablo Reyes"
+   ],
+   "refs": [
+    "meeting:mt-osprey"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0131",
+   "subject": "Tamarind",
+   "relation": "decision",
+   "value": "keep Swift-20B as the default model",
+   "refs": [
+    "meeting:mt-tamarind#2"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0132",
+   "subject": "Tamarind",
+   "relation": "budget_through",
+   "value": "August",
+   "refs": [
+    "meeting:mt-tamarind#3"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0133",
+   "subject": "mt-tamarind",
+   "relation": "attends",
+   "value": [
+    "Vera Kovac",
+    "Kavya Menon"
+   ],
+   "refs": [
+    "meeting:mt-tamarind"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0134",
+   "subject": "Vesper",
+   "relation": "decision",
+   "value": "keep Heron-12B as the default model",
+   "refs": [
+    "meeting:mt-vesper#2"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0135",
+   "subject": "Vesper",
+   "relation": "budget_through",
+   "value": "September",
+   "refs": [
+    "meeting:mt-vesper#3"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0136",
+   "subject": "mt-vesper",
+   "relation": "attends",
+   "value": [
+    "Farid Haddad",
+    "Greta Lindqvist"
+   ],
+   "refs": [
+    "meeting:mt-vesper"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0137",
+   "subject": "Pinnacle",
+   "relation": "decision",
+   "value": "keep Swift-6B as the default model",
+   "refs": [
+    "meeting:mt-pinnacle#2"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0138",
+   "subject": "Pinnacle",
+   "relation": "budget_through",
+   "value": "October",
+   "refs": [
+    "meeting:mt-pinnacle#3"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0139",
+   "subject": "mt-pinnacle",
+   "relation": "attends",
+   "value": [
+    "Wen Zhao",
+    "Quinn Abbott"
+   ],
+   "refs": [
+    "meeting:mt-pinnacle"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0140",
+   "subject": "Quartz",
+   "relation": "decision",
+   "value": "keep Merlin-2B as the default model",
+   "refs": [
+    "meeting:mt-quartz#2"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0141",
+   "subject": "Quartz",
+   "relation": "budget_through",
+   "value": "November",
+   "refs": [
+    "meeting:mt-quartz#3"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0142",
+   "subject": "mt-quartz",
+   "relation": "attends",
+   "value": [
+    "Bruno Keller",
+    "Sven Larsen"
+   ],
+   "refs": [
+    "meeting:mt-quartz"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0143",
+   "subject": "Farid Haddad",
+   "relation": "deadline",
+   "value": "Monday",
+   "refs": [
+    "note:note-cedar-actions"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0144",
+   "subject": "Mila Novak",
+   "relation": "reviews",
+   "value": "the Sluice settings",
+   "refs": [
+    "note:note-cedar-actions"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0145",
+   "subject": "Tara Brennan",
+   "relation": "deadline",
+   "value": "Tuesday",
+   "refs": [
+    "note:note-marlin-actions"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0146",
+   "subject": "Greta Lindqvist",
+   "relation": "reviews",
+   "value": "the Mosaic settings",
+   "refs": [
+    "note:note-marlin-actions"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0147",
+   "subject": "Vera Kovac",
+   "relation": "deadline",
+   "value": "Wednesday",
+   "refs": [
+    "note:note-juniper-actions"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0148",
+   "subject": "Hiro Tanaka",
+   "relation": "reviews",
+   "value": "the Relay settings",
+   "refs": [
+    "note:note-juniper-actions"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0149",
+   "subject": "Jonas Weiss",
+   "relation": "deadline",
+   "value": "Thursday",
+   "refs": [
+    "note:note-osprey-actions"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0150",
+   "subject": "Olga Petrova",
+   "relation": "reviews",
+   "value": "the Hopper settings",
+   "refs": [
+    "note:note-osprey-actions"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0151",
+   "subject": "Bruno Keller",
+   "relation": "deadline",
+   "value": "Friday",
+   "refs": [
+    "note:note-tamarind-actions"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0152",
+   "subject": "Elena Marsh",
+   "relation": "reviews",
+   "value": "the Anvil settings",
+   "refs": [
+    "note:note-tamarind-actions"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0153",
+   "subject": "Dmitri Volkov",
+   "relation": "deadline",
+   "value": "Monday",
+   "refs": [
+    "note:note-vesper-actions"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0154",
+   "subject": "Chiara Rossi",
+   "relation": "reviews",
+   "value": "the Conduit settings",
+   "refs": [
+    "note:note-vesper-actions"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0155",
+   "subject": "Sven Larsen",
+   "relation": "deadline",
+   "value": "Tuesday",
+   "refs": [
+    "note:note-pinnacle-actions"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0156",
+   "subject": "Kavya Menon",
+   "relation": "reviews",
+   "value": "the Gantry settings",
+   "refs": [
+    "note:note-pinnacle-actions"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0157",
+   "subject": "Umar Bello",
+   "relation": "deadline",
+   "value": "Wednesday",
+   "refs": [
+    "note:note-quartz-actions"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0158",
+   "subject": "Nikhil Rao",
+   "relation": "reviews",
+   "value": "the Turret settings",
+   "refs": [
+    "note:note-quartz-actions"
+   ],
+   "state": "established",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0159",
+   "subject": "Pinnacle",
+   "relation": "incident_auditor",
+   "value": "Jonas Weiss",
+   "refs": [
+    "document:doc-pinnacle-incident"
+   ],
+   "state": "unauthorized",
+   "note": "",
+   "held_out": false,
+   "sensitive": true
+  },
+  {
+   "id": "f0160",
+   "subject": "Quartz",
+   "relation": "incident_auditor",
+   "value": "Amara Osei",
+   "refs": [
+    "document:doc-quartz-incident"
+   ],
+   "state": "unauthorized",
+   "note": "",
+   "held_out": true,
+   "sensitive": true
+  },
+  {
+   "id": "f0161",
+   "subject": "Sable",
+   "relation": "incident_auditor",
+   "value": "Quinn Abbott",
+   "refs": [
+    "document:doc-sable-incident"
+   ],
+   "state": "unauthorized",
+   "note": "",
+   "held_out": false,
+   "sensitive": true
+  },
+  {
+   "id": "f0162",
+   "subject": "Thistle",
+   "relation": "incident_auditor",
+   "value": "Amara Osei",
+   "refs": [
+    "document:doc-thistle-incident"
+   ],
+   "state": "unauthorized",
+   "note": "",
+   "held_out": false,
+   "sensitive": true
+  },
+  {
+   "id": "f0163",
+   "subject": "Sluice cache",
+   "relation": "retry_limit_history",
+   "value": 2,
+   "refs": [
+    "document:doc-cedar-arch-v1"
+   ],
+   "state": "superseded",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  },
+  {
+   "id": "f0164",
+   "subject": "Mosaic search index",
+   "relation": "retry_limit_history",
+   "value": 5,
+   "refs": [
+    "document:doc-marlin-arch-v1"
+   ],
+   "state": "superseded",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0165",
+   "subject": "Relay gateway",
+   "relation": "retry_limit_history",
+   "value": 3,
+   "refs": [
+    "document:doc-juniper-arch-v1"
+   ],
+   "state": "superseded",
+   "note": "",
+   "held_out": false,
+   "sensitive": false
+  },
+  {
+   "id": "f0166",
+   "subject": "Hopper ingest service",
+   "relation": "retry_limit_history",
+   "value": 6,
+   "refs": [
+    "document:doc-osprey-arch-v1"
+   ],
+   "state": "superseded",
+   "note": "",
+   "held_out": true,
+   "sensitive": false
+  }
+ ],
+ "projects": {
+  "Cedar": {
+   "system": "Sluice",
+   "kind": "cache",
+   "model": "Kestrel-3B"
+  },
+  "Marlin": {
+   "system": "Mosaic",
+   "kind": "search index",
+   "model": "Merlin-7B"
+  },
+  "Juniper": {
+   "system": "Relay",
+   "kind": "gateway",
+   "model": "Kestrel-9B"
+  },
+  "Osprey": {
+   "system": "Hopper",
+   "kind": "ingest service",
+   "model": "Heron-4B"
+  },
+  "Tamarind": {
+   "system": "Anvil",
+   "kind": "builder",
+   "model": "Swift-20B"
+  },
+  "Vesper": {
+   "system": "Conduit",
+   "kind": "stream",
+   "model": "Heron-12B"
+  },
+  "Pinnacle": {
+   "system": "Gantry",
+   "kind": "scheduler",
+   "model": "Swift-6B"
+  },
+  "Quartz": {
+   "system": "Turret",
+   "kind": "API",
+   "model": "Merlin-2B"
+  },
+  "Sable": {
+   "system": "Cobalt",
+   "kind": "auth service",
+   "model": "Kestrel-3B"
+  },
+  "Thistle": {
+   "system": "Ferry",
+   "kind": "queue",
+   "model": "Merlin-7B"
+  },
+  "Umbra": {
+   "system": "Lattice",
+   "kind": "store",
+   "model": "Kestrel-9B"
+  },
+  "Willow": {
+   "system": "Prism",
+   "kind": "dashboard",
+   "model": "Heron-4B"
+  }
+ }
+}
