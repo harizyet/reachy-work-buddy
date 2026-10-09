@@ -1,5 +1,15 @@
 # Phase 44E: section-level evidence-coverage experiment (2026-10-12)
 
+> **NEGATIVE RESULT (owner decision, 2026-10-12).** Lexical / question-side coverage signals are **stopped as an enforcement mechanism.** The existing coverage note, the retry, the section-level variant and the descriptor variant are **not advanced to production integration.** On the untouched dev10 acceptance set (41 cases, 7B):
+>
+> | | fully correct | unsupported material claims |
+> |---|---|---|
+> | **B1a baseline** | **25 / 41** | **14** |
+> | **Gold / oracle evidence** | **40 / 41** | **0** |
+> | Existing coverage, section-level, descriptor variant | **identical to baseline on all 41 cases** | 14 |
+>
+> Evidence selection and answerability are now the primary groundedness research direction; the remaining known generation failures are preserved below. Design for the next milestone (not implemented): [phase-44-groundedness-milestone-design.md](../phase-44-groundedness-milestone-design.md).
+
 Owner approval, 2026-10-12: *proceed locally; keep the existing coverage mechanism frozen as a comparator; design on new cases; freeze a separate untouched acceptance set; identical evidence and prompts; unsupported material claims are the primary safety outcome; do not claim superiority from a small set; stop and report.* Protocol, design findings and the pre-registered reading: [phase-44e-section-coverage-protocol.md](../phase-44e-section-coverage-protocol.md). Nothing here touches a production answer path, indexing or retrieval; the 7B stays the default, the 44H boundary stays active, indexing is `false`, retrieval and shadow are off.
 
 ## What was run

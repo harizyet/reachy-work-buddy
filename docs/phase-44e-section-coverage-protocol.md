@@ -1,4 +1,6 @@
-# Phase 44E: section-level evidence-coverage experiment: protocol (frozen 2026-10-12)
+# Phase 44E: section-level evidence-coverage experiment: protocol (frozen 2026-10-12; executed; negative result)
+
+**Result: negative, see [the record](verification/phase-44e-section-coverage-2026-10-12.md).** The protocol below is as frozen.
 
 Owner decision, 2026-10-12: *proceed with the section-level co-occurrence experiment locally. Hypothesis: evidence coverage at the passage/section level can reduce unsupported combinations of facts that merely co-occur within the same document.* Constraints: the existing coverage mechanism stays frozen as a comparator; new development cases for design; a separate untouched acceptance set frozen before the final comparison; identical evidence and prompts; unsupported material claims are the primary safety outcome beside correctness and false abstention; wrong-entity, partial, conflict and temporal outcomes reported separately; latency and overhead measured; no production change; no claim of superiority from a small set; **stop and report afterwards, with no automatic further optimisation.** The decision after this experiment is the owner's: advance to integration readiness, or stop work on lexical coverage signals and consider another groundedness approach.
 

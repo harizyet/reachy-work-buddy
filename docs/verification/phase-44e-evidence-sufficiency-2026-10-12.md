@@ -1,5 +1,7 @@
 # Phase 44E: evidence sufficiency and groundedness (development, 2026-10-12)
 
+> **Superseded as a direction (owner, 2026-10-12): negative result.** The coverage signal did not replicate on the untouched dev10 set (identical to baseline) and its section-level and descriptor variants added nothing; lexical coverage is stopped as an enforcement mechanism and is not advanced to production. See [the section-level record](phase-44e-section-coverage-2026-10-12.md). The numbers below remain the record of the dev6 to dev8 development results.
+
 Owner decision, 2026-10-12: groundedness is the immediate Phase 44 quality priority. *"Prepare/evaluate the evidence-sufficiency mechanism on fresh development data... Prefer abstention or bounded retrieval retry over unsupported assertions. Do not tune against the consumed holdout."* This is development evidence on invented data with the production 7B (`reachy-local`, Qwen2.5-7B-AWQ) at temperature 0, seed 44. Nothing is deployed; production indexing, retrieval and shadow stay off. The consumed first-look holdout was not read or scored.
 
 ## What was built

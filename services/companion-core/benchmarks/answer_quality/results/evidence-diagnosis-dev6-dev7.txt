@@ -1,0 +1,5 @@
+answerable, fully correct          n=28 mean items 7.1, mean non-gold items 5.1, all gold present 27/28
+answerable, not correct            n= 4 mean items 7.2, mean non-gold items 5.8, all gold present 2/4
+abstention, correct                n=14 mean items 5.0, mean non-gold items 5.0, all gold present 0/0
+abstention, invented an answer     n= 7 mean items 9.3, mean non-gold items 9.3, all gold present 0/0
+answerable failures with gold missing from the evidence: 2 of 4

@@ -1,5 +1,7 @@
 # Proposal: minimal operational hardening for PostgreSQL recovery (2026-10-12)
 
+> **Owner choices made 2026-10-12** (Synology NAS if a separate failure domain; encrypted before transfer; 7 daily / 4 weekly / 6 monthly; Telegram on failure, staleness or verification failure only; monthly isolated restore test with schema, table and integrity checks). The implementation plan is [postgres-backup-implementation-plan.md](postgres-backup-implementation-plan.md); this page keeps the original rationale.
+
 Status: **proposal only. Nothing in this page has been built, scheduled or changed.** No existing recovery asset (the dumps in `~/reachy-backups`, the `reachy-rollback/*` images) is to be deleted, and no production backup behaviour changed, without the owner's approval. Requested by the owner on 2026-10-12 after the Phase 44H deployment, when the absence of any scheduled production backup meant the deployment-specific dump could not be shown to be redundant.
 
 ## What exists today (read-only facts, 2026-10-12)
