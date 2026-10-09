@@ -29,6 +29,7 @@ from companion_core.semantic.model import (
 )
 from companion_core.tasks.models import TaskStatus
 from companion_core.tasks.store import TaskStore
+from shared.models.response import Privacy
 
 StatusIntent = Literal["open_tasks", "done_tasks", "reminders"]
 Path = Literal["phase43", "status", "retrieval"]
@@ -43,7 +44,7 @@ _PATTERNS: list[tuple[StatusIntent, re.Pattern[str]]] = [
     ("open_tasks", re.compile(
         rf"\b{_OPEN_WORD}\b[^.?!]{{0,40}}\b{_TASK_WORD}\b|\b{_TASK_WORD}\b[^.?!]{{0,40}}\b{_OPEN_WORD}\b|\bwhat (?:tasks?|to-?dos?)\b|"
         r"\b(?:anything|something|what(?:'s| is| do i have)?)\b[^.?!]{0,20}\boutstanding\b|\bwhat (?:do|should|must) i (?:still )?(?:have to|need to|got to) do\b|"
-        rf"\bmy {_TASK_WORD}\b|\b(?:everything|anything|all|whatever)\b[^.?!]{{0,30}}\b(?:i|we)\b[^.?!]{{0,20}}\b(?:have|need|got|must|should) to do\b|\bwhat(?:'s| is) (?:left|on my plate)\b|\boutstanding\b[^.?!]{{0,30}}\b(?:involv|for|with)", re.IGNORECASE)),
+        rf"\bmy {_TASK_WORD}\b|\b(?:everything|anything|all|whatever)\b[^.?!]{{0,30}}\b(?:i|we)\b[^.?!]{{0,20}}\b(?:have|need|got|must|should) to (?:do|get done|finish|complete)\b|\bwhat(?:'s| is) (?:left|on my plate)\b|\boutstanding\b[^.?!]{{0,30}}\b(?:involv|for|with)", re.IGNORECASE)),
 ]
 # Words after "involves/for/with/about" that name a subject worth filtering by; generic words are ignored.
 _SUBJECT = re.compile(r"\b(?:involv\w*|for|with|about|assigned to|owned by|regarding|concerning)\s+(?:the\s+)?([A-Za-z][\w'-]{2,})", re.IGNORECASE)
@@ -91,6 +92,33 @@ def _item(kind: str, source_type: str, source_id: str, text: str, sensitivity, s
                          local_only=False, project_scope=scope, observed_at=observed)
 
 
+def sees_everything(access: AccessContext) -> bool:
+    """True only when no access rule can have hidden a record from this caller (the top sensitivity tier and no project restriction)."""
+    return access.sensitivity_ceiling == Privacy.SENSITIVE and access.project_scopes is None
+
+
+RESTRICTED_REPLY = "I can't read out private records on a shared speaker. You can ask me this on your private channel."
+
+
+def restricted_reply(access: AccessContext) -> str | None:
+    """A fixed reply for a status question on a channel that may show nothing private (the public ceiling), or None. It is a constant: not built from the
+    stores, the caller's records or a model, so it cannot reveal whether any restricted record exists, nor claim that none does. A model asked to word this
+    from a neutral note still said "you have no tasks" in some runs (development record), which is why the safe wording is deterministic."""
+    return RESTRICTED_REPLY if access.sensitivity_ceiling == Privacy.PUBLIC else None
+
+
+def status_note(head: str, access: AccessContext, *, shown: int, truncated: bool) -> str:
+    """The one line of the evidence frame for a status list. Wording rule: it must not reveal whether restricted records exist, so it is built from
+    the caller's access and the count of what may be shown, never from what was withheld; two situations that differ only in hidden records give
+    the same words. Completeness is claimed only for a caller who cannot have anything hidden."""
+    if sees_everything(access):
+        return f"{head}: " + (f"{shown} shown, the list was cut at {MAX_ITEMS}." if truncated else f"{shown} in all; the list is complete, so anything not listed does not exist.")
+    tail = ("If nothing is shown, say that you cannot show any here and that the owner can ask on a private channel. "
+            if access.sensitivity_ceiling == Privacy.PUBLIC else "")
+    return (f"{head} that this channel may show: {shown}" + (f", cut at {MAX_ITEMS}" if truncated else "") + ". "
+            "Do not say whether other records exist or do not exist, and do not say this is everything. " + tail).strip()
+
+
 async def route_status(
     query: str, access: AccessContext, *, tasks: TaskStore, planner: PlannerStore, now: datetime
 ) -> RoutedStatus | None:
@@ -131,15 +159,6 @@ async def route_status(
     shown = allowed[:MAX_ITEMS]
     what = {"open_tasks": "open tasks (and action-item notes)", "done_tasks": "completed tasks", "reminders": "pending reminders"}[intent]
     scope = f" matching {', '.join(subjects)}" if subjects else ""
-    withheld = sum(dropped.values())
     head = f"These are the {what}{scope} read directly from the owner's stores at {now:%Y-%m-%d %H:%M} UTC"
-    if withheld and not shown:
-        note = (f"{head}. Some records of this kind exist but may not be shared on this channel. Say that you cannot share them here; "
-                "do not say that there are none.")
-    elif withheld:
-        note = (f"{head} that you may show: {len(shown)} below" + (f", cut at {MAX_ITEMS}" if truncated else "")
-                + ". Other records exist that may not be shown on this channel; do not say the list is complete.")
-    else:
-        note = (f"{head}: " + (f"{len(shown)} shown, the list was cut at {MAX_ITEMS}." if truncated
-                               else f"{len(shown)} in all; the list is complete, so anything not listed does not exist."))
+    note = status_note(head, access, shown=len(shown), truncated=truncated)
     return RoutedStatus(intent, subjects, tuple(shown), total, len(shown), truncated, dropped, note)

@@ -1,0 +1,777 @@
+{
+ "purpose": "labelled utterances for the knowledge-query qualifier; positives are questions about the owner's own records, negatives are chit-chat, general knowledge, commands and requests. dev is for building the rules, test is looked at once.",
+ "dev": [
+  {
+   "text": "What are my open tasks?",
+   "knowledge": true
+  },
+  {
+   "text": "Who owns the Quill queue?",
+   "knowledge": true
+  },
+  {
+   "text": "What did we decide about retries in the weekly sync?",
+   "knowledge": true
+  },
+  {
+   "text": "When is my weekly sync reminder?",
+   "knowledge": true
+  },
+  {
+   "text": "Which model is Harbor's default right now?",
+   "knowledge": true
+  },
+  {
+   "text": "What does Priya prefer for updates?",
+   "knowledge": true
+  },
+  {
+   "text": "Did Dana sign off the release?",
+   "knowledge": true
+  },
+  {
+   "text": "How long is the Lantern rollback window?",
+   "knowledge": true
+  },
+  {
+   "text": "What did I note about the vendor?",
+   "knowledge": true
+  },
+  {
+   "text": "What's Tomas responsible for?",
+   "knowledge": true
+  },
+  {
+   "text": "Which reminders do I have set?",
+   "knowledge": true
+  },
+  {
+   "text": "What was in the planning meeting?",
+   "knowledge": true
+  },
+  {
+   "text": "Remind me what the Beacon support hours are",
+   "knowledge": true
+  },
+  {
+   "text": "Is the Falcon benchmark finished?",
+   "knowledge": true
+  },
+  {
+   "text": "Who is reviewing the Quill retry settings?",
+   "knowledge": true
+  },
+  {
+   "text": "What do I need to do for Dana?",
+   "knowledge": true
+  },
+  {
+   "text": "What happened at the Lantern review?",
+   "knowledge": true
+  },
+  {
+   "text": "Where did I write down the guest wifi name?",
+   "knowledge": true
+  },
+  {
+   "text": "How many retries before a job is parked?",
+   "knowledge": true
+  },
+  {
+   "text": "List my completed tasks.",
+   "knowledge": true
+  },
+  {
+   "text": "Tell me what we know about Harbor's architecture.",
+   "knowledge": true
+  },
+  {
+   "text": "What are the action items from last week's sync?",
+   "knowledge": true
+  },
+  {
+   "text": "Do I have anything outstanding for Priya?",
+   "knowledge": true
+  },
+  {
+   "text": "What is the support line for Beacon Analytics?",
+   "knowledge": true
+  },
+  {
+   "text": "Show me my notes about Lantern.",
+   "knowledge": true
+  },
+  {
+   "text": "which meeting mentioned the GPU budget",
+   "knowledge": true
+  },
+  {
+   "text": "Has Priya circulated the summary?",
+   "knowledge": true
+  },
+  {
+   "text": "What did the incident postmortem say about the credentials?",
+   "knowledge": true
+  },
+  {
+   "text": "Hello",
+   "knowledge": false
+  },
+  {
+   "text": "Thanks, that's all",
+   "knowledge": false
+  },
+  {
+   "text": "Tell me a joke",
+   "knowledge": false
+  },
+  {
+   "text": "What is the capital of France?",
+   "knowledge": false
+  },
+  {
+   "text": "How do I boil an egg?",
+   "knowledge": false
+  },
+  {
+   "text": "Write a poem about robots",
+   "knowledge": false
+  },
+  {
+   "text": "What's 17 times 23?",
+   "knowledge": false
+  },
+  {
+   "text": "Good morning Reachy",
+   "knowledge": false
+  },
+  {
+   "text": "Translate 'good evening' into German",
+   "knowledge": false
+  },
+  {
+   "text": "Who won the World Cup in 2010?",
+   "knowledge": false
+  },
+  {
+   "text": "Explain how photosynthesis works",
+   "knowledge": false
+  },
+  {
+   "text": "Can you sing something?",
+   "knowledge": false
+  },
+  {
+   "text": "What's the weather like today?",
+   "knowledge": false
+  },
+  {
+   "text": "Turn privacy mode on",
+   "knowledge": false
+  },
+  {
+   "text": "Add a task to call the dentist",
+   "knowledge": false
+  },
+  {
+   "text": "Remind me to stretch in ten minutes",
+   "knowledge": false
+  },
+  {
+   "text": "Delete all my tasks",
+   "knowledge": false
+  },
+  {
+   "text": "/help",
+   "knowledge": false
+  },
+  {
+   "text": "Stand up and wave",
+   "knowledge": false
+  },
+  {
+   "text": "What time is it?",
+   "knowledge": false
+  },
+  {
+   "text": "How are you today?",
+   "knowledge": false
+  },
+  {
+   "text": "Summarise this paragraph for me",
+   "knowledge": false
+  },
+  {
+   "text": "Recommend a good book",
+   "knowledge": false
+  },
+  {
+   "text": "What does DNS stand for?",
+   "knowledge": false
+  },
+  {
+   "text": "Set an alarm for seven",
+   "knowledge": false
+  }
+ ],
+ "test": [
+  {
+   "text": "What's still open on my to-do list?",
+   "knowledge": true
+  },
+  {
+   "text": "Who is the Harbor infrastructure lead?",
+   "knowledge": true
+  },
+  {
+   "text": "What did the security review conclude for the Harbor release?",
+   "knowledge": true
+  },
+  {
+   "text": "Is there a reminder for Priya's summary?",
+   "knowledge": true
+  },
+  {
+   "text": "What are Beacon Analytics' support hours?",
+   "knowledge": true
+  },
+  {
+   "text": "Which tasks involve Dana Okafor?",
+   "knowledge": true
+  },
+  {
+   "text": "What did Tomas say in the planning meeting about nightly jobs?",
+   "knowledge": true
+  },
+  {
+   "text": "What did I decide about the Lantern launch date?",
+   "knowledge": true
+  },
+  {
+   "text": "How long should I watch the dashboard after a Lantern deploy?",
+   "knowledge": true
+  },
+  {
+   "text": "What does the Lantern checklist say?",
+   "knowledge": true
+  },
+  {
+   "text": "Which Falcon model did we use in March?",
+   "knowledge": true
+  },
+  {
+   "text": "Who fixes the rollback test?",
+   "knowledge": true
+  },
+  {
+   "text": "What are the Quill credentials follow-ups?",
+   "knowledge": true
+  },
+  {
+   "text": "When is the GPU host budget approved until?",
+   "knowledge": true
+  },
+  {
+   "text": "What's on the Harbor action items note?",
+   "knowledge": true
+  },
+  {
+   "text": "Did the weekly sync approve the budget?",
+   "knowledge": true
+  },
+  {
+   "text": "Where is the benchmark latency recorded?",
+   "knowledge": true
+  },
+  {
+   "text": "What reminders are coming up?",
+   "knowledge": true
+  },
+  {
+   "text": "What did the vendor note say about support?",
+   "knowledge": true
+  },
+  {
+   "text": "Which documents mention the retry limit?",
+   "knowledge": true
+  },
+  {
+   "text": "Have I finished rotating the Quill credentials?",
+   "knowledge": true
+  },
+  {
+   "text": "what's the guest network called",
+   "knowledge": true
+  },
+  {
+   "text": "Who signs off Harbor releases?",
+   "knowledge": true
+  },
+  {
+   "text": "What is Priya's preference for status updates?",
+   "knowledge": true
+  },
+  {
+   "text": "Hi there",
+   "knowledge": false
+  },
+  {
+   "text": "Okay thanks",
+   "knowledge": false
+  },
+  {
+   "text": "What is the speed of light?",
+   "knowledge": false
+  },
+  {
+   "text": "Give me a recipe for pancakes",
+   "knowledge": false
+  },
+  {
+   "text": "Write a haiku about autumn",
+   "knowledge": false
+  },
+  {
+   "text": "Who painted the Mona Lisa?",
+   "knowledge": false
+  },
+  {
+   "text": "How do I reverse a list in Python?",
+   "knowledge": false
+  },
+  {
+   "text": "Tell me something interesting",
+   "knowledge": false
+  },
+  {
+   "text": "What's the tallest mountain?",
+   "knowledge": false
+  },
+  {
+   "text": "Can you stop talking",
+   "knowledge": false
+  },
+  {
+   "text": "Please open the door",
+   "knowledge": false
+  },
+  {
+   "text": "Call Dana",
+   "knowledge": false
+  },
+  {
+   "text": "Send an email to the team",
+   "knowledge": false
+  },
+  {
+   "text": "Mark the first task as done",
+   "knowledge": false
+  },
+  {
+   "text": "What's the news today?",
+   "knowledge": false
+  },
+  {
+   "text": "Is it going to rain tomorrow?",
+   "knowledge": false
+  },
+  {
+   "text": "How tall is the Eiffel Tower?",
+   "knowledge": false
+  },
+  {
+   "text": "I'm tired",
+   "knowledge": false
+  },
+  {
+   "text": "What day is it?",
+   "knowledge": false
+  },
+  {
+   "text": "Pretend you are a pirate",
+   "knowledge": false
+  },
+  {
+   "text": "Define entropy",
+   "knowledge": false
+  },
+  {
+   "text": "Who are you?",
+   "knowledge": false
+  },
+  {
+   "text": "Play some music",
+   "knowledge": false
+  },
+  {
+   "text": "What is machine learning?",
+   "knowledge": false
+  }
+ ],
+ "test2": [
+  {
+   "text": "Who is fixing the Lantern rollback test?",
+   "knowledge": true
+  },
+  {
+   "text": "Until when is the GPU host budget approved?",
+   "knowledge": true
+  },
+  {
+   "text": "Where did we record the latency benchmark?",
+   "knowledge": true
+  },
+  {
+   "text": "What's the guest wifi password?",
+   "knowledge": true
+  },
+  {
+   "text": "How many times does Harbor retry a failed job?",
+   "knowledge": true
+  },
+  {
+   "text": "Is Falcon-7B still the default?",
+   "knowledge": true
+  },
+  {
+   "text": "What's the rollback window for Lantern?",
+   "knowledge": true
+  },
+  {
+   "text": "Who is on the Quill credentials follow-up?",
+   "knowledge": true
+  },
+  {
+   "text": "What's the plan for the nightly jobs?",
+   "knowledge": true
+  },
+  {
+   "text": "When is the Lantern launch?",
+   "knowledge": true
+  },
+  {
+   "text": "Which GPU host does Harbor run on?",
+   "knowledge": true
+  },
+  {
+   "text": "Who benchmarked the model latency?",
+   "knowledge": true
+  },
+  {
+   "text": "Is the release signed off?",
+   "knowledge": true
+  },
+  {
+   "text": "What does the incident postmortem list as follow-up?",
+   "knowledge": true
+  },
+  {
+   "text": "Are the build logs audited yet?",
+   "knowledge": true
+  },
+  {
+   "text": "Which model of phone should I buy?",
+   "knowledge": false
+  },
+  {
+   "text": "How does a message queue work in general?",
+   "knowledge": false
+  },
+  {
+   "text": "What is a good retry strategy for HTTP clients?",
+   "knowledge": false
+  },
+  {
+   "text": "Why is the sky blue?",
+   "knowledge": false
+  },
+  {
+   "text": "How do GPU hosts differ from CPU hosts in cloud pricing?",
+   "knowledge": false
+  },
+  {
+   "text": "Explain what a rollback is",
+   "knowledge": false
+  },
+  {
+   "text": "Who invented the transistor?",
+   "knowledge": false
+  },
+  {
+   "text": "What's a good name for a cat?",
+   "knowledge": false
+  },
+  {
+   "text": "How long does it take to fly to Berlin?",
+   "knowledge": false
+  },
+  {
+   "text": "Tell me about the history of Rome",
+   "knowledge": false
+  },
+  {
+   "text": "What is the latency of light in fibre?",
+   "knowledge": false
+  },
+  {
+   "text": "Can you help me plan a birthday party?",
+   "knowledge": false
+  },
+  {
+   "text": "What's the best way to learn Spanish?",
+   "knowledge": false
+  },
+  {
+   "text": "Is it safe to eat raw eggs?",
+   "knowledge": false
+  },
+  {
+   "text": "Wave your hand",
+   "knowledge": false
+  }
+ ],
+ "test3": [
+  {
+   "text": "Who owns the nightly schedule?",
+   "knowledge": true
+  },
+  {
+   "text": "What did the planning meeting say about the restart after config changes?",
+   "knowledge": true
+  },
+  {
+   "text": "Is the vendor support line number saved?",
+   "knowledge": true
+  },
+  {
+   "text": "What's the status of the credentials rotation?",
+   "knowledge": true
+  },
+  {
+   "text": "What was the decision about parking jobs?",
+   "knowledge": true
+  },
+  {
+   "text": "Who audits the logs?",
+   "knowledge": true
+  },
+  {
+   "text": "How long is the deploy dashboard watch?",
+   "knowledge": true
+  },
+  {
+   "text": "Is the benchmark due Thursday?",
+   "knowledge": true
+  },
+  {
+   "text": "What did Dana commit to on Wednesday?",
+   "knowledge": true
+  },
+  {
+   "text": "Which tasks are for Harbor?",
+   "knowledge": true
+  },
+  {
+   "text": "What is the interactive path in Harbor?",
+   "knowledge": true
+  },
+  {
+   "text": "What was raised from three to five?",
+   "knowledge": true
+  },
+  {
+   "text": "Has the checklist been updated for Lantern?",
+   "knowledge": true
+  },
+  {
+   "text": "Who reviews retry settings for Quill?",
+   "knowledge": true
+  },
+  {
+   "text": "What's the launch date after the slip?",
+   "knowledge": true
+  },
+  {
+   "text": "What is the best way to restart a router?",
+   "knowledge": false
+  },
+  {
+   "text": "Who is the president of Brazil?",
+   "knowledge": false
+  },
+  {
+   "text": "How many minutes are in a day?",
+   "knowledge": false
+  },
+  {
+   "text": "Can you recommend a podcast about history?",
+   "knowledge": false
+  },
+  {
+   "text": "What does a project manager do?",
+   "knowledge": false
+  },
+  {
+   "text": "How do I calm down before a presentation?",
+   "knowledge": false
+  },
+  {
+   "text": "What is a benchmark in finance?",
+   "knowledge": false
+  },
+  {
+   "text": "Describe the water cycle",
+   "knowledge": false
+  },
+  {
+   "text": "What's a healthy breakfast?",
+   "knowledge": false
+  },
+  {
+   "text": "How many players are on a football team?",
+   "knowledge": false
+  },
+  {
+   "text": "Why do cats purr?",
+   "knowledge": false
+  },
+  {
+   "text": "Who was Napoleon?",
+   "knowledge": false
+  },
+  {
+   "text": "What is the plural of mouse?",
+   "knowledge": false
+  },
+  {
+   "text": "How do I change a tyre?",
+   "knowledge": false
+  },
+  {
+   "text": "Is a tomato a fruit?",
+   "knowledge": false
+  }
+ ],
+ "test4": [
+  {
+   "text": "Who is the Harbor security owner?",
+   "knowledge": true
+  },
+  {
+   "text": "What does the Lantern runbook say about rolling back?",
+   "knowledge": true
+  },
+  {
+   "text": "Have we parked a job after five retries?",
+   "knowledge": true
+  },
+  {
+   "text": "What is Priya's role in the Lantern review?",
+   "knowledge": true
+  },
+  {
+   "text": "What was the action item for Tomas on Thursday?",
+   "knowledge": true
+  },
+  {
+   "text": "Which note mentions the guest network?",
+   "knowledge": true
+  },
+  {
+   "text": "What happened to the Quill credentials?",
+   "knowledge": true
+  },
+  {
+   "text": "What retry limit did we raise last month?",
+   "knowledge": true
+  },
+  {
+   "text": "Is anything pending for the vendor?",
+   "knowledge": true
+  },
+  {
+   "text": "What did the weekly sync say about security?",
+   "knowledge": true
+  },
+  {
+   "text": "Where do I find the Lantern checklist?",
+   "knowledge": true
+  },
+  {
+   "text": "What was Dana's follow-up after the incident?",
+   "knowledge": true
+  },
+  {
+   "text": "How long is the Lantern rollback?",
+   "knowledge": true
+  },
+  {
+   "text": "Did anyone mention the GPU budget?",
+   "knowledge": true
+  },
+  {
+   "text": "What's the status of the Falcon benchmark?",
+   "knowledge": true
+  },
+  {
+   "text": "What is a good password manager?",
+   "knowledge": false
+  },
+  {
+   "text": "How do I write a cover letter?",
+   "knowledge": false
+  },
+  {
+   "text": "Who discovered penicillin?",
+   "knowledge": false
+  },
+  {
+   "text": "What should I cook tonight?",
+   "knowledge": false
+  },
+  {
+   "text": "How far is the moon?",
+   "knowledge": false
+  },
+  {
+   "text": "Is coffee bad for you?",
+   "knowledge": false
+  },
+  {
+   "text": "What are the symptoms of a cold?",
+   "knowledge": false
+  },
+  {
+   "text": "Can you explain blockchain?",
+   "knowledge": false
+  },
+  {
+   "text": "How do I tie a tie?",
+   "knowledge": false
+  },
+  {
+   "text": "What is the meaning of life?",
+   "knowledge": false
+  },
+  {
+   "text": "Who sings this song?",
+   "knowledge": false
+  },
+  {
+   "text": "Which planet is the hottest?",
+   "knowledge": false
+  },
+  {
+   "text": "How do vaccines work?",
+   "knowledge": false
+  },
+  {
+   "text": "What is a mortgage?",
+   "knowledge": false
+  },
+  {
+   "text": "Please sing happy birthday",
+   "knowledge": false
+  }
+ ]
+}

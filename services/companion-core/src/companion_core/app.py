@@ -776,22 +776,24 @@ def create_app(
                 dsn=db, memory=app.state.memory_store, documents=app.state.rag_store,
                 meetings=app.state.meeting_store, planner=app.state.planner_store, tasks=app.state.task_store,
             )
-        # Measure-only knowledge shadow (Phase 44E follow-up). Off by default; it reads the index and the stores and writes numbers only.
+        # Measure-only knowledge shadow (Phase 44E follow-up). Off by default; it reads the index and the stores and writes aggregate counts only.
         if app.state.knowledge_shadow is None and knowledge_shadow_enabled() and db is not None and owns_meeting_store:
+            shadow_adapters = build_adapters(memory=app.state.memory_store, documents=app.state.rag_store, meetings=app.state.meeting_store,
+                                             planner=app.state.planner_store, tasks=app.state.task_store)
             app.state.knowledge_shadow = knowledge_shadow_from_env(
-                retriever=Retriever(
-                    search=PostgresSearch(db.pool), config=B1A, clock=lambda: datetime.now(UTC),
-                    adapters=build_adapters(memory=app.state.memory_store, documents=app.state.rag_store, meetings=app.state.meeting_store,
-                                            planner=app.state.planner_store, tasks=app.state.task_store),
-                ),
-                tasks=app.state.task_store, planner=app.state.planner_store,
+                retriever=Retriever(search=PostgresSearch(db.pool), config=B1A, clock=lambda: datetime.now(UTC), adapters=shadow_adapters),
+                tasks=app.state.task_store, planner=app.state.planner_store, adapters=shadow_adapters,
             )
+        if app.state.knowledge_shadow is not None:
+            with contextlib.suppress(Exception):  # a shadow that cannot start must not stop the service
+                await app.state.knowledge_shadow.start()
         try:
             yield
         finally:
             if app.state.knowledge_shadow is not None:
-                await app.state.knowledge_shadow.drain()
-                logging.getLogger("companion_core.knowledge_shadow").info("knowledge shadow summary: %s", app.state.knowledge_shadow.summary())
+                with contextlib.suppress(Exception):  # shutdown must complete whatever the shadow does
+                    await app.state.knowledge_shadow.stop()
+                    logging.getLogger("companion_core.knowledge_shadow").info("knowledge shadow summary: %s", app.state.knowledge_shadow.summary())
             if knowledge_indexing is not None:
                 await knowledge_indexing.stop()
             if dispatch_task is not None:

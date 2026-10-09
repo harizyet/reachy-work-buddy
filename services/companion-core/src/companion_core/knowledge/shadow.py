@@ -1,19 +1,18 @@
 """Measure-only shadow evaluation of knowledge retrieval (Phase 44E follow-up; B1a lexical, provisionally selected by the owner 2026-10-09).
 
 Contract, in the order it is enforced:
-- Off unless KNOWLEDGE_SHADOW_ENABLED=true. Off means no object, no query, no file, no connection: the conversation route is byte-for-byte the code
-  it was.
-- After the production reply is final, a snapshot of plain data is queued. Nothing the shadow computes is ever read by the answer path: it
-  cannot add to a prompt, change a reply, a consent state, a draft, a memory, a task, an alarm or the robot, and it has no tool.
-- Authorization is deterministic and conservative: the AccessContext is built from trusted turn state only (a spoken turn is treated as a shared
-  speaker, public records only; a text turn as the owner's private channel, work-private at most; the sensitive tier is never read; the only
-  destination is local). Nothing a model said widens it. Sources are re-read and revalidated by the same code the answer path would use.
-- Bounded: one job at a time, a short queue (the oldest job is dropped when full), a per-job timeout, lexical search only (no embedding model is
-  loaded), a hard cap of items and the 1,500-token budget. A failure, a timeout or a busy queue only increments a counter.
-- Minimal telemetry: numbers and categories only. No query text, no query hash, no record text, no source ids, no titles. The file is created
-  0600. Counters are exposed in memory for tests and logged on shutdown; there is no new endpoint.
-- Reversible: unset the flag and restart; nothing is migrated or written to a database; deleting the telemetry file removes everything it ever
-  recorded. The only thing it reads is the existing index and the authoritative stores.
+- Off unless KNOWLEDGE_SHADOW_ENABLED=true. Off means no object, no query, no file, no connection: the conversation route is the code it was.
+- After the production reply is final, a snapshot of plain data is offered. Nothing the shadow computes is ever read by the answer path: it cannot add
+  to a prompt, change a reply, the model that answers, a consent state, a draft, a memory, a task, an alarm or the robot, and it has no tool.
+- Only qualifying knowledge questions (knowledge/qualify.py) are evaluated; the 50-query criterion counts those evaluated successfully, not chat turns.
+- Authorization is deterministic and conservative: the AccessContext comes from trusted turn state only (a spoken turn is a shared speaker, public
+  records only; a text turn is the private channel, work-private at most; the sensitive tier is never read; the only destination is local). Nothing a
+  model said widens it. Sources are re-read and revalidated by the same code the answer path would use.
+- Bounded: one job at a time, a short queue (the oldest job is dropped when full), a per-job timeout, lexical search only (no embedding model), a cap on
+  items and the 1,500-token budget. A failure, a timeout or a busy queue only increments a counter.
+- Aggregate-only telemetry (knowledge/shadow_telemetry.py): counts and bucketed histograms per hour; no queries, no evidence, no titles, no record ids, no
+  session ids. Attempted, admitted, processed, failed and dropped jobs are separate counts that reconcile.
+- Reversible: unset the flag and restart; nothing is migrated or written to a database; deleting the telemetry file removes everything it recorded.
 """
 
 from __future__ import annotations
@@ -21,12 +20,10 @@ from __future__ import annotations
 import asyncio
 import collections
 import contextlib
-import hashlib
-import json
 import logging
 import os
 import time
-from collections import Counter
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
@@ -35,8 +32,10 @@ from companion_core.knowledge.context import (
     build_context,
     estimate_tokens,
 )
+from companion_core.knowledge.qualify import qualify
 from companion_core.knowledge.retrieval import Retriever
 from companion_core.knowledge.routing import choose_path, route_status
+from companion_core.knowledge.shadow_telemetry import ShadowTelemetry
 from companion_core.planner.store import PlannerStore
 from companion_core.semantic.access import access_for_owner
 from companion_core.semantic.model import AccessContext, SourceFilters
@@ -46,7 +45,8 @@ log = logging.getLogger("companion_core.knowledge_shadow")
 
 DEFAULT_QUEUE = 3
 DEFAULT_TIMEOUT = 2.0
-SKIPPED_HANDLERS = {"slash_command"}
+VOCABULARY_TTL_SECONDS = 900.0
+VOCABULARY_TIMEOUT_SECONDS = 5.0
 
 
 def shadow_enabled() -> bool:
@@ -55,7 +55,7 @@ def shadow_enabled() -> bool:
 
 @dataclass(frozen=True)
 class ShadowTurn:
-    """Snapshot taken after the reply is final. Plain data only; the text is used to run the shadow query and is never stored."""
+    """Snapshot taken after the reply is final. Plain data only; the text is used to qualify and run the query and is never stored."""
 
     session_id: str
     text: str
@@ -75,100 +75,129 @@ class KnowledgeShadow:
     retriever: Retriever
     tasks: TaskStore
     planner: PlannerStore
-    log_path: str
+    telemetry: ShadowTelemetry
+    vocabulary: Callable[[], Awaitable[frozenset[str]]] | None = None
     queue_size: int = DEFAULT_QUEUE
     timeout_seconds: float = DEFAULT_TIMEOUT
     budget_tokens: int = DEFAULT_BUDGET_TOKENS
-    clock: object = lambda: datetime.now(UTC)
-    counters: Counter = field(default_factory=Counter)
+    clock: Callable[[], datetime] = lambda: datetime.now(UTC)
     _pending: collections.deque = field(default_factory=collections.deque)
     _worker: asyncio.Task | None = None
+    _terms: frozenset[str] = frozenset()
+    _terms_at: float = float("-inf")
+    _stopped: bool = False
 
-    def submit(self, turn: ShadowTurn) -> None:
-        """Best effort and non-blocking: never raises, never awaits the work, never builds a backlog."""
-        if turn.production_handler in SKIPPED_HANDLERS or turn.privacy == "sensitive" or not turn.text.strip():
-            self.counters["skipped"] += 1
+    # -- lifecycle (called by the application lifespan) -------------------------------------------------------------------------------
+    async def start(self) -> None:
+        """Prime the vocabulary once; a failure leaves qualification on its record-noun and first-person rules."""
+        self.telemetry.prune(force=True)
+        await self._refresh_vocabulary()
+
+    async def stop(self) -> None:
+        """Stop accepting work, let a running job finish within its limit, count what was still queued, and flush the telemetry."""
+        self._stopped = True
+        worker = self._worker
+        if worker is not None and not worker.done():
+            with contextlib.suppress(asyncio.CancelledError, TimeoutError, Exception):
+                await asyncio.wait_for(asyncio.shield(worker), self.timeout_seconds + 1)
+            if not worker.done():
+                worker.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await worker
+        if self._pending:
+            self.telemetry.count("discarded_at_stop", len(self._pending))
+            self._pending.clear()
+        self.telemetry.flush()
+
+    async def _refresh_vocabulary(self) -> None:
+        if self.vocabulary is None or time.monotonic() - self._terms_at < VOCABULARY_TTL_SECONDS:
             return
+        self._terms_at = time.monotonic()  # a failed refresh is not retried every job
+        with contextlib.suppress(Exception):
+            self._terms = await asyncio.wait_for(self.vocabulary(), VOCABULARY_TIMEOUT_SECONDS)
+
+    # -- request path: constant time, never raises -----------------------------------------------------------------------------------
+    def submit(self, turn: ShadowTurn) -> None:
+        tel = self.telemetry
+        tel.count("attempted")
+        if self._stopped:
+            tel.count("skipped_empty")  # a late turn at shutdown is neither queued nor qualified
+            return
+        if turn.production_handler == "slash_command":
+            tel.count("skipped_slash")
+            return
+        if turn.privacy == "sensitive":
+            tel.count("skipped_sensitive")
+            return
+        if not turn.text.strip():
+            tel.count("skipped_empty")
+            return
+        if not qualify(turn.text, known_terms=self._terms).qualifies:
+            tel.count("not_qualifying")
+            return
+        tel.count("admitted")
         if len(self._pending) >= self.queue_size:
             self._pending.popleft()  # drop the oldest: production never waits behind shadow work
-            self.counters["dropped_busy"] += 1
+            tel.count("dropped_busy")
         self._pending.append(turn)
         if self._worker is None or self._worker.done():
             try:
                 self._worker = asyncio.get_running_loop().create_task(self._drain())
             except RuntimeError:
+                tel.count("discarded_at_stop", len(self._pending))
                 self._pending.clear()
 
+    # -- background ------------------------------------------------------------------------------------------------------------------
     async def _drain(self) -> None:
-        while self._pending:
+        while self._pending and not self._stopped:
             turn = self._pending.popleft()
             started = time.perf_counter()
             try:
-                row = await asyncio.wait_for(self._measure(turn), self.timeout_seconds)
-                row["outcome"] = "ok"
+                await self._refresh_vocabulary()
+                measured = await asyncio.wait_for(self._measure(turn), self.timeout_seconds)
             except TimeoutError:
-                row = {"outcome": "timeout"}
-                self.counters["timeout"] += 1
+                self.telemetry.count("failed_timeout")
+                continue
+            except asyncio.CancelledError:
+                self.telemetry.count("discarded_at_stop")
+                raise
             except Exception:  # noqa: BLE001 - the shadow path must never surface an error
-                row = {"outcome": "error"}
-                self.counters["error"] += 1
-                log.warning("knowledge shadow error", exc_info=False)
-            row["total_ms"] = round((time.perf_counter() - started) * 1000, 1)
-            with contextlib.suppress(OSError):
-                self._write(turn, row)
+                self.telemetry.count("failed_error")
+                log.warning("knowledge shadow job failed", exc_info=False)
+                continue
+            path, intent, numbers = measured
+            self.telemetry.job(path=path, modality=turn.modality, intent=intent, latency_ms=(time.perf_counter() - started) * 1000, measured=numbers)
 
-    async def drain(self) -> None:  # tests and shutdown
-        if self._worker is not None:
-            await asyncio.gather(self._worker, return_exceptions=True)
+    async def drain(self) -> None:  # tests
+        worker = self._worker
+        if worker is not None:
+            await asyncio.gather(worker, return_exceptions=True)
 
-    async def _measure(self, turn: ShadowTurn) -> dict:
+    async def _measure(self, turn: ShadowTurn) -> tuple[str, str | None, dict | None]:
         access = access_for(turn)
         path = choose_path(turn.text, attached_meeting=turn.attached_meeting)
-        row: dict = {"path": path}
-        now = self.clock()
         if path == "phase43":  # the attached-meeting path is Phase 43's; the shadow does not run retrieval beside it
-            return row
-        t = time.perf_counter()
+            return path, None, None
+        now = self.clock()
+        intent = None
         if path == "status":
             routed = await route_status(turn.text, access, tasks=self.tasks, planner=self.planner, now=now)
-            items, note, candidates, dropped = list(routed.items), routed.note, routed.total, dict(routed.dropped)
-            row["intent"] = routed.intent
+            items, note, candidates, dropped, intent = list(routed.items), routed.note, routed.total, dict(routed.dropped), routed.intent
         else:
             result = await self.retriever.retrieve(turn.text, access, SourceFilters(), temporal="current", limit=10)
             items, note, candidates, dropped = list(result.bundle.items), None, len(result.trace.candidates), dict(result.bundle.dropped)
-        row["retrieval_ms"] = round((time.perf_counter() - t) * 1000, 1)
-        t = time.perf_counter()
         built = build_context(items, access, destination="local", budget_tokens=self.budget_tokens, count_tokens=estimate_tokens, now=now,
                               note=note, modality="voice" if turn.modality == "voice" else "text", candidate_count=candidates)
-        row["build_ms"] = round((time.perf_counter() - t) * 1000, 1)
-        kinds = Counter(e.kind for e in built.entries)
-        row.update({
-            "candidates": candidates, "items_returned": len(items), "items_in_context": len(built.entries), "kinds": dict(kinds),
-            "evidence_tokens": built.tokens, "max_sensitivity": built.max_sensitivity.value, "local_only": built.local_only,
-            "revalidation_dropped": dropped, "builder_dropped": built.dropped_counts(),
-            "truncated": any(e.truncated for e in built.entries), "instruction_like": sum(e.instruction_like for e in built.entries),
-        })
-        self.counters[f"path:{path}"] += 1
-        self.counters["measured"] += 1
-        if not items:
-            self.counters["empty"] += 1
-        return row
-
-    def _write(self, turn: ShadowTurn, row: dict) -> None:
-        row = {
-            "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%MZ"),  # minute resolution
-            "session": hashlib.sha256(turn.session_id.encode()).hexdigest()[:12],  # one-way label so sessions can be counted, never joined to text
-            "modality": turn.modality, "query_len": len(turn.text), **row,
+        return path, intent, {
+            "items_returned": len(items), "items_in_context": len(built.entries), "evidence_tokens": built.tokens,
+            "max_sensitivity": built.max_sensitivity.value, "revalidation_dropped": dropped, "builder_dropped": built.dropped_counts(),
         }
-        fd = os.open(self.log_path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
-        with os.fdopen(fd, "a") as handle:
-            handle.write(json.dumps(row, sort_keys=True) + "\n")
 
     def summary(self) -> dict:
-        return dict(self.counters)
+        return dict(self.telemetry.total)
 
 
-def shadow_from_env(*, retriever: Retriever, tasks: TaskStore, planner: PlannerStore) -> KnowledgeShadow | None:
+def shadow_from_env(*, retriever: Retriever, tasks: TaskStore, planner: PlannerStore, adapters: dict | None = None) -> KnowledgeShadow | None:
     """None unless KNOWLEDGE_SHADOW_ENABLED=true and a log path is configured. Bounds come from the environment but are clamped."""
     if not shadow_enabled():
         return None
@@ -176,9 +205,18 @@ def shadow_from_env(*, retriever: Retriever, tasks: TaskStore, planner: PlannerS
     if not path:
         log.warning("KNOWLEDGE_SHADOW_ENABLED is set but KNOWLEDGE_SHADOW_LOG_PATH is not: the knowledge shadow stays off")
         return None
-    queue = min(max(int(os.environ.get("KNOWLEDGE_SHADOW_QUEUE", DEFAULT_QUEUE)), 1), 10)
-    timeout = min(max(float(os.environ.get("KNOWLEDGE_SHADOW_TIMEOUT_SECONDS", DEFAULT_TIMEOUT)), 0.2), 5.0)
-    return KnowledgeShadow(retriever=retriever, tasks=tasks, planner=planner, log_path=path, queue_size=queue, timeout_seconds=timeout)
+    from companion_core.knowledge.qualify import build_vocabulary
+
+    async def vocabulary() -> frozenset[str]:
+        return await build_vocabulary(adapters or {})
+
+    return KnowledgeShadow(
+        retriever=retriever, tasks=tasks, planner=planner,
+        telemetry=ShadowTelemetry(path, retention_days=int(os.environ.get("KNOWLEDGE_SHADOW_RETENTION_DAYS", "90"))),
+        vocabulary=vocabulary if adapters else None,
+        queue_size=min(max(int(os.environ.get("KNOWLEDGE_SHADOW_QUEUE", str(DEFAULT_QUEUE))), 1), 10),
+        timeout_seconds=min(max(float(os.environ.get("KNOWLEDGE_SHADOW_TIMEOUT_SECONDS", str(DEFAULT_TIMEOUT))), 0.2), 5.0),
+    )
 
 
 __all__ = ["KnowledgeShadow", "ShadowTurn", "access_for", "shadow_enabled", "shadow_from_env"]

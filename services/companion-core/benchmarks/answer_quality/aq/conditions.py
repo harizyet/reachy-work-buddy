@@ -23,7 +23,12 @@ from companion_core.knowledge.context import (
 )
 from companion_core.knowledge.retrieval import Retriever
 from companion_core.knowledge.revalidate import _knowledge_item
-from companion_core.knowledge.routing import choose_path, route_status
+from companion_core.knowledge.routing import (
+    choose_path,
+    classify,
+    restricted_reply,
+    route_status,
+)
 from companion_core.meetings import outputs as meeting_outputs
 from companion_core.persona.context import context_message
 from companion_core.semantic.model import SourceFilters
@@ -51,6 +56,7 @@ class Prepared:
     retrieval_dropped: dict[str, int] = field(default_factory=dict)  # what revalidation refused before the builder saw the bundle
     prompt_violations: list[str] = field(default_factory=list)
     skipped: str | None = None
+    fixed_reply: str | None = None  # a deterministic reply that bypasses the model (restricted channel)
 
 
 def base_messages(case: dict[str, Any]) -> list[dict[str, str]]:
@@ -66,7 +72,7 @@ class Conditions:
     def __init__(self, env, built_spec, llm, *, budget: int, minilm_embed=None, flag_instructions: bool = True) -> None:
         self.env, self.spec, self.llm, self.budget = env, built_spec, llm, budget
         self.flag_instructions = flag_instructions
-        self.header, self.note, self.conflicts = "v1", None, False
+        self.header, self.note, self.conflicts, self.template = "v1", None, False, False
         self.meta = source_meta(built_spec)
         self.retrievers: dict[str, Retriever] = {}
         self.embed = minilm_embed
@@ -126,6 +132,7 @@ class Conditions:
         base, *mods = name.split("+")
         self.header = "v2" if "v2" in mods else "v1"
         self.conflicts = "cf" in mods
+        self.template = "tmpl" in mods
         if "routed" in mods:
             path = choose_path(case["question"], attached_meeting=bool(case["attached_meeting"]))
             if path == "phase43":
@@ -139,6 +146,9 @@ class Conditions:
         access = access_context(profile)
         prepared = Prepared(messages=base_messages(case))
         planner, tasks = self.env.stores[1], self.env.stores[2]
+        if self.template and restricted_reply(access) is not None and classify(case["question"]) is not None:
+            prepared.fixed_reply = restricted_reply(access)
+            return prepared
         t = time.perf_counter()
         routed = await route_status(case["question"], access, tasks=tasks, planner=planner, now=NOW)
         prepared.retrieval_ms = (time.perf_counter() - t) * 1000

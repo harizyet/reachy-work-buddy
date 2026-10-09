@@ -1,0 +1,204 @@
+{
+ "pool": {
+  "replies": 486,
+  "unsupported": 42,
+  "correct": 339,
+  "conflict_cases": 90,
+  "conflict_misses": 33,
+  "runs": [
+   "dev2-1500-a",
+   "dev2-1500-b",
+   "dev2-1500-c",
+   "dev2-1500-d",
+   "dev3-1500-a",
+   "dev3-1500-b"
+  ],
+  "by_condition": {
+   "b1a": 120,
+   "b1a+v2": 42,
+   "b1a+routed": 120,
+   "b1a+routed+v2": 42,
+   "oracle": 64,
+   "distractor": 35,
+   "b1a+cf": 21,
+   "b1a+routed+cf": 42
+  }
+ },
+ "unsupported_inference": [
+  {
+   "check": "V0_none",
+   "target": "unsupported",
+   "tp": 0,
+   "fp": 0,
+   "fn": 42,
+   "tn": 444,
+   "precision": null,
+   "recall": 0.0,
+   "flag_rate_on_correct_answers": 0.0
+  },
+  {
+   "check": "V1_lexical",
+   "target": "unsupported",
+   "tp": 38,
+   "fp": 185,
+   "fn": 4,
+   "tn": 259,
+   "precision": 0.17,
+   "recall": 0.905,
+   "flag_rate_on_correct_answers": 0.395
+  },
+  {
+   "check": "V2_anchors",
+   "target": "unsupported",
+   "tp": 33,
+   "fp": 170,
+   "fn": 9,
+   "tn": 274,
+   "precision": 0.163,
+   "recall": 0.786,
+   "flag_rate_on_correct_answers": 0.404
+  },
+  {
+   "check": "V3_cited",
+   "target": "unsupported",
+   "tp": 40,
+   "fp": 271,
+   "fn": 2,
+   "tn": 173,
+   "precision": 0.129,
+   "recall": 0.952,
+   "flag_rate_on_correct_answers": 0.64
+  },
+  {
+   "check": "V5_relevance",
+   "target": "unsupported",
+   "tp": 3,
+   "fp": 74,
+   "fn": 39,
+   "tn": 370,
+   "precision": 0.039,
+   "recall": 0.071,
+   "flag_rate_on_correct_answers": 0.218
+  },
+  {
+   "check": "V1+V2+V5",
+   "target": "unsupported",
+   "tp": 38,
+   "fp": 279,
+   "fn": 4,
+   "tn": 165,
+   "precision": 0.12,
+   "recall": 0.905,
+   "flag_rate_on_correct_answers": 0.625
+  },
+  {
+   "check": "V2+V5",
+   "target": "unsupported",
+   "tp": 35,
+   "fp": 189,
+   "fn": 7,
+   "tn": 255,
+   "precision": 0.156,
+   "recall": 0.833,
+   "flag_rate_on_correct_answers": 0.46
+  },
+  {
+   "check": "V6_llm_support",
+   "target": "unsupported",
+   "tp": 27,
+   "fp": 272,
+   "fn": 15,
+   "tn": 172,
+   "precision": 0.09,
+   "recall": 0.643,
+   "flag_rate_on_correct_answers": 0.549
+  },
+  {
+   "check": "V6+V2+V5",
+   "target": "unsupported",
+   "tp": 37,
+   "fp": 383,
+   "fn": 5,
+   "tn": 61,
+   "precision": 0.088,
+   "recall": 0.881,
+   "flag_rate_on_correct_answers": 0.867
+  }
+ ],
+ "unsupported_gate_effect": {
+  "V0_none": {
+   "correct_after_gate": 339,
+   "fabrications_after_gate": 42,
+   "good_answers_lost_to_the_gate": 0
+  },
+  "V1_lexical": {
+   "correct_after_gate": 281,
+   "fabrications_after_gate": 4,
+   "good_answers_lost_to_the_gate": 96
+  },
+  "V2_anchors": {
+   "correct_after_gate": 252,
+   "fabrications_after_gate": 9,
+   "good_answers_lost_to_the_gate": 120
+  },
+  "V3_cited": {
+   "correct_after_gate": 207,
+   "fabrications_after_gate": 2,
+   "good_answers_lost_to_the_gate": 172
+  },
+  "V5_relevance": {
+   "correct_after_gate": 268,
+   "fabrications_after_gate": 39,
+   "good_answers_lost_to_the_gate": 74
+  },
+  "V1+V2+V5": {
+   "correct_after_gate": 203,
+   "fabrications_after_gate": 4,
+   "good_answers_lost_to_the_gate": 174
+  },
+  "V2+V5": {
+   "correct_after_gate": 235,
+   "fabrications_after_gate": 7,
+   "good_answers_lost_to_the_gate": 139
+  },
+  "V6_llm_support": {
+   "correct_after_gate": 306,
+   "fabrications_after_gate": 15,
+   "good_answers_lost_to_the_gate": 60
+  },
+  "V6+V2+V5": {
+   "correct_after_gate": 208,
+   "fabrications_after_gate": 5,
+   "good_answers_lost_to_the_gate": 168
+  }
+ },
+ "conflict_reporting": [
+  {
+   "check": "V4_conflict",
+   "target": "conflict_miss",
+   "tp": 29,
+   "fp": 15,
+   "fn": 4,
+   "tn": 42,
+   "precision": 0.659,
+   "recall": 0.879,
+   "flag_rate_on_correct_answers": 0.263
+  },
+  {
+   "check": "V6_llm_conflict",
+   "target": "conflict_miss",
+   "tp": 0,
+   "fp": 0,
+   "fn": 33,
+   "tn": 57,
+   "precision": null,
+   "recall": 0.0,
+   "flag_rate_on_correct_answers": 0.0
+  }
+ ],
+ "llm_second_pass_cost": {
+  "calls": 972,
+  "tokens": 261541,
+  "seconds": 133.5059185010614
+ }
+}

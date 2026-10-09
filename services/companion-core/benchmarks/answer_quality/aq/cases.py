@@ -24,9 +24,9 @@ from kbench.fixtures import (
 CATEGORIES = (
     "single_source", "cross_source", "relationship", "temporal", "conflict", "negative", "authorization", "authorization_control",
     "sensitive_partial", "scope", "shared_speaker", "cloud_destination", "injection", "attached_meeting", "voice",
-    "status_routing", "unsupported_inference",
+    "status_routing", "unsupported_inference", "restricted_wording", "supported_control",
 )
-FILES = {"dev": "cases_dev.json", "holdout": "cases_holdout.json", "dev2": "cases_dev2.json"}
+FILES = {"dev": "cases_dev.json", "holdout": "cases_holdout.json", "dev2": "cases_dev2.json", "dev3": "cases_dev3.json"}
 
 
 class CaseError(ValueError):

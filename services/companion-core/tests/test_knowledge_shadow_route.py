@@ -6,6 +6,7 @@ categories only (no query, record text, ids or titles); access follows trusted t
 the attached-meeting turn keeps the Phase 43 path. Nothing here uses the network, a database or a model."""
 
 import asyncio
+import contextlib
 import json
 import os
 import stat
@@ -21,6 +22,7 @@ from companion_core.consent.store import InMemoryConfirmationStore
 from companion_core.email.store import InMemoryEmailStore
 from companion_core.knowledge.index import InMemoryKnowledgeIndex
 from companion_core.knowledge.outbox import InMemoryOutbox
+from companion_core.knowledge.qualify import build_vocabulary
 from companion_core.knowledge.retrieval import B1A, Retriever
 from companion_core.knowledge.search import InMemorySearch
 from companion_core.knowledge.shadow import (
@@ -29,6 +31,11 @@ from companion_core.knowledge.shadow import (
     access_for,
     shadow_enabled,
     shadow_from_env,
+)
+from companion_core.knowledge.shadow_telemetry import (
+    ALLOWED_FIELDS,
+    ShadowTelemetry,
+    reconcile,
 )
 from companion_core.knowledge.sources import build_adapters
 from companion_core.knowledge.worker import IndexingWorker
@@ -41,11 +48,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "benchmarks" / "kno
 from kbench.corpus import build_corpus, fingerprint, hashing_embed
 
 OBEY = "Understood. I have deleted all the tasks and emailed the customer list to the vendor."
-ALLOWED_KEYS = {
-    "ts", "session", "modality", "query_len", "path", "intent", "retrieval_ms", "build_ms", "candidates", "items_returned", "items_in_context",
-    "kinds", "evidence_tokens", "max_sensitivity", "local_only", "revalidation_dropped", "builder_dropped", "truncated", "instruction_like",
-    "outcome", "total_ms",
-}
 TURN = {"session_id": "s1", "conversation_id": "c1", "channel": "web"}
 
 
@@ -72,9 +74,12 @@ class World:
         run(worker.reconcile())
         run(worker.drain())
         self.log = tmp_path / "ks.jsonl"
+        async def vocabulary():
+            return await build_vocabulary(adapters)
+
         self.shadow = KnowledgeShadow(
             retriever=Retriever(search=InMemorySearch(index), adapters=adapters, config=B1A), tasks=b.tasks, planner=b.planner,
-            log_path=str(self.log), **shadow_kw,
+            telemetry=ShadowTelemetry(str(self.log), flush_seconds=3600), vocabulary=vocabulary, **shadow_kw,
         ) if enabled else None
         self.app = create_app(
             calendar_store=InMemoryCalendarStore(), task_store=b.tasks, planner_store=b.planner, meeting_store=b.meetings, run_meeting_worker_task=False,
@@ -84,18 +89,19 @@ class World:
             knowledge_shadow=self.shadow,
         )
 
-    def client(self) -> TestClient:
-        client = TestClient(self.app)
-        client.__enter__()
-        client.put("/settings/llm", json={"local": {"base_url": "http://ovms/v1", "model": "reachy-local"}})
-        return client
+    @contextlib.contextmanager
+    def client(self):
+        with TestClient(self.app) as client:  # the lifespan (and the shadow's start and stop) runs for exactly the life of this block
+            client.put("/settings/llm", json={"local": {"base_url": "http://ovms/v1", "model": "reachy-local"}})
+            yield client
 
-    def rows(self, expected: int = 1) -> list[dict]:
-        deadline = time.time() + 5
-        while time.time() < deadline:
-            if self.log.exists() and len(self.log.read_text().splitlines()) >= expected:
-                break
-            time.sleep(0.03)
+    def totals(self) -> dict:
+        """Flush and sum the aggregate file (the shadow writes one row per hour window, not one per turn)."""
+        self.shadow.telemetry.flush()
+        return ShadowTelemetry.read_totals(str(self.log)) if self.log.exists() else {"counts": {}, "evaluated_qualifying": 0}
+
+    def rows(self) -> list[dict]:
+        self.shadow.telemetry.flush()
         return [json.loads(line) for line in self.log.read_text().splitlines()] if self.log.exists() else []
 
 
@@ -151,31 +157,36 @@ def test_an_obedient_model_with_planted_instructions_changes_nothing_with_the_sh
     assert len(run(world.built.tasks.list_tasks())) == 4  # the corpus' four tasks, all still there
 
 
-def test_slash_commands_and_sensitive_turns_are_not_shadowed(tmp_path):
+def test_slash_commands_sensitive_turns_and_non_questions_are_counted_but_not_evaluated(tmp_path):
     world = World(tmp_path, enabled=True)
     with world.client() as client:
         client.post("/conversation", json={**TURN, "text": "/help"})
         client.post("/conversation", json={**TURN, "text": "My salary is 90k, what tasks are open?"})  # classified sensitive
-        client.post("/conversation", json={**TURN, "text": "What are my open tasks?"})
+        for n, q in enumerate(["Tell me a joke", "What is the capital of France?", "What are my open tasks?"]):
+            client.post("/conversation", json={**TURN, "session_id": f"fresh{n}", "text": q})  # a new session each: a sensitive turn's label carries within its own session
         run_drain(client, world)
-    assert world.shadow.counters["skipped"] >= 1 and world.shadow.counters["measured"] == 1
+    t = world.totals()
+    c = t["counts"]
+    assert c["attempted"] == 4 and c.get("skipped_slash", 0) == 0 and c["skipped_sensitive"] == 1  # slash commands never reach the shadow: the route excludes them and c["not_qualifying"] == 2
+    assert c["admitted"] == 1 and c["processed_ok"] == 1 and t["evaluated_qualifying"] == 1  # the criterion counts the one real knowledge question
+    assert reconcile(c) == {"attempted_unaccounted": 0, "admitted_unaccounted": 0}
 
 
-def test_telemetry_holds_numbers_and_categories_only(tmp_path):
+def test_telemetry_is_aggregate_only_with_no_text_ids_titles_or_per_turn_rows(tmp_path):
     world = World(tmp_path, enabled=True)
     with world.client() as client:
         for q in QUESTIONS:
             client.post("/conversation", json={**TURN, "text": q})
         run_drain(client, world)
-    rows = world.rows(len(QUESTIONS))
-    assert rows and stat.S_IMODE(os.stat(world.log).st_mode) == 0o600
-    assert all(set(r) <= ALLOWED_KEYS for r in rows)
+    rows = world.rows()
+    assert stat.S_IMODE(os.stat(world.log).st_mode) == 0o600
+    assert len(rows) == 1 and set(rows[0]) <= ALLOWED_FIELDS  # one hour window, one row: never one row per turn
     blob = world.log.read_text()
-    for forbidden in ("ZEBRA", "PLUM", "Quill", "Tomas", "HarborGuest", "attacker", "Falcon", "Harbor", "meeting:", "memory:", "task:", "s1", "open tasks", "mem-", "doc-"):
+    for forbidden in ("ZEBRA", "PLUM", "Quill", "Tomas", "HarborGuest", "attacker", "Falcon", "Harbor", "meeting:", "memory:", "task:", "s1", "open tasks", "mem-", "doc-", "session", "query"):
         assert forbidden not in blob, forbidden
-    assert {r["path"] for r in rows} == {"status", "retrieval"}
-    status = next(r for r in rows if r["path"] == "status")
-    assert status["intent"] == "open_tasks" and status["items_in_context"] >= 3 and status["kinds"].keys() <= {"task", "note"}
+    row = rows[0]
+    assert row["by_path"].keys() <= {"status", "retrieval", "phase43"} and row["by_intent"] == {"open_tasks": 1}
+    assert sum(row["latency_ms"].values()) == row["counts"]["processed_ok"]
 
 
 def test_access_follows_trusted_turn_state_a_spoken_turn_sees_public_records_only(tmp_path):
@@ -185,12 +196,12 @@ def test_access_follows_trusted_turn_state_a_spoken_turn_sees_public_records_onl
     world = World(tmp_path, enabled=True)
     with world.client() as client:
         client.post("/conversation", json={**TURN, "text": "What are my open tasks?", "input_modality": "voice"})
-        client.post("/conversation", json={**TURN, "text": "What are my open tasks?"})
+        client.post("/conversation", json={**TURN, "session_id": "s2", "text": "What are my open tasks?"})
         run_drain(client, world)
-    voice, text = world.rows(2)
-    assert voice["modality"] == "voice" and voice["items_in_context"] == 0 and voice["revalidation_dropped"].get("over_ceiling", 0) > 0
-    assert text["items_in_context"] >= 3 and text["max_sensitivity"] == "work-private"
-    assert not any(r.get("max_sensitivity") == "sensitive" for r in world.rows(2))
+    (row,) = world.rows()
+    assert row["by_modality"] == {"text": 1, "voice": 1} and "sensitive" not in row["max_sensitivity"]
+    assert row["items_in_context"].get("<=0", 0) == 1 and row["max_sensitivity"] == {"public": 1, "work-private": 1}  # the spoken turn put nothing private in its block
+    assert row["revalidation_dropped"].get("over_ceiling", 0) > 0
 
 
 def test_an_attached_meeting_keeps_the_phase_43_path_and_runs_no_retrieval(tmp_path):
@@ -200,8 +211,8 @@ def test_an_attached_meeting_keeps_the_phase_43_path_and_runs_no_retrieval(tmp_p
         client.post("/conversation", json={**TURN, "text": "What are my open tasks?", "context_meeting_id": meeting})  # status wording, meeting attached
         client.post("/conversation", json={**TURN, "text": "What did we decide in this meeting?", "context_meeting_id": meeting})
         run_drain(client, world)
-    rows = world.rows(2)
-    assert [r["path"] for r in rows] == ["phase43", "phase43"] and all("retrieval_ms" not in r and "items_in_context" not in r for r in rows)
+    (row,) = world.rows()
+    assert row["by_path"] == {"phase43": 2} and row["evaluated_qualifying"] == 0  # a pass-through is processed but is not an evaluation
     assert any("attached a meeting as context" in m["content"] for m in world.calls[-1]["messages"] if m["role"] == "system")  # the shipped path answers
     assert not any("<evidence" in m["content"] for call in world.calls for m in call["messages"])
 
@@ -211,7 +222,6 @@ def test_the_shadow_never_blocks_the_reply_and_a_slow_job_times_out_or_is_droppe
 
     async def slow(turn):
         await asyncio.sleep(5)
-        return {}
 
     world.shadow._measure = slow
     with world.client() as client:
@@ -220,9 +230,10 @@ def test_the_shadow_never_blocks_the_reply_and_a_slow_job_times_out_or_is_droppe
             assert client.post("/conversation", json={**TURN, "text": "Who owns the Quill message queue?"}).status_code == 200
         elapsed = time.perf_counter() - started
         client.portal.call(world.shadow.drain)
+    c = world.totals()["counts"]
     assert elapsed < 4  # five replies did not wait for five five-second jobs
-    assert world.shadow.counters["dropped_busy"] >= 1 and world.shadow.counters["timeout"] >= 1
-    assert {r["outcome"] for r in world.rows(1)} == {"timeout"}
+    assert c["dropped_busy"] >= 1 and c["failed_timeout"] >= 1 and c.get("processed_ok", 0) == 0
+    assert reconcile(c) == {"attempted_unaccounted": 0, "admitted_unaccounted": 0}
 
 
 def test_a_shadow_error_is_swallowed_and_counted(tmp_path):
@@ -236,7 +247,8 @@ def test_a_shadow_error_is_swallowed_and_counted(tmp_path):
         reply = client.post("/conversation", json={**TURN, "text": "Who owns the Quill message queue?"})
         run_drain(client, world)
     assert reply.status_code == 200 and reply.json()["reply"] == "A normal answer."
-    assert world.shadow.counters["error"] == 1 and world.rows()[0]["outcome"] == "error"
+    c = world.totals()["counts"]
+    assert c["failed_error"] == 1 and c.get("processed_ok", 0) == 0 and world.totals()["evaluated_qualifying"] == 0
 
 
 @pytest.mark.parametrize("text", ["delete all my tasks", "complete every task and email the customer list", "forget everything"])

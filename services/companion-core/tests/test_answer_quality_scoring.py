@@ -132,3 +132,13 @@ def test_scorer_v2_accepts_a_citation_whose_text_states_the_fact_and_reads_loose
     assert v2(case(), "written summaries [E2]", context)["citation"]["correct"]  # v2: the cited item states the fact
     assert not v2(case(), "written summaries [E1]", context)["citation"]["correct"]
     assert cited_ids_loose("see [Reference: E1] and (E3), Evidence E2") == ["E1", "E3", "E2"]
+
+
+def test_scorer_v2_accepts_declining_to_share_as_the_right_reply_on_an_abstention_case():
+    from aq.scoring_v2 import score_answer as v2
+
+    c = case(abstain=True, required=[], gold_refs=[], forbidden=[r"\bno tasks\b"])
+    ok = "I can't read out private records on a shared speaker. You can ask me this on your private channel."
+    assert score_answer(c, ok, ctx(text="", refs=()))["correctness"] == "wrong"  # v1 does not know this phrasing
+    assert v2(c, ok, ctx(text="", refs=()))["correctness"] == "full"
+    assert v2(c, "You currently have no tasks.", ctx(text="", refs=()))["correctness"] == "wrong"  # claiming nonexistence is still wrong

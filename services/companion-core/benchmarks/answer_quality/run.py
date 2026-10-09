@@ -79,7 +79,10 @@ async def run(args) -> dict:
                 prep = await runner.prepare(name, case)
                 if prep.skipped:
                     continue
-                done = llm.complete(prep.messages, max_tokens=150 if case["modality"] == "voice" else 350)
+                if prep.fixed_reply is not None:  # a deterministic reply: no model call, zero model latency
+                    done = llmlib.Completion(prep.fixed_reply, 0.0, 0.0, 0, 0, "fixed")
+                else:
+                    done = llm.complete(prep.messages, max_tokens=150 if case["modality"] == "voice" else 350)
                 scored = (score_v1 if args.scorer == "v1" else score_v2)(case, done.text, {
                     "entries": prep.entries, "has_ids": prep.has_ids, "text": prep.text, "prompt_violations": prep.prompt_violations,
                 })
@@ -108,7 +111,7 @@ async def run(args) -> dict:
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--split", choices=("dev", "dev2", "holdout"), default="dev")
+    p.add_argument("--split", choices=("dev", "dev2", "dev3", "holdout"), default="dev")
     p.add_argument("--conditions", default=",".join(CONDITIONS))
     p.add_argument("--budget", type=int, default=1500, choices=(500, 1000, 1500))
     p.add_argument("--decision-point")
