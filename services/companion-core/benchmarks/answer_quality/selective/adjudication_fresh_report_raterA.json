@@ -1,0 +1,226 @@
+{
+ "items_rated": 142,
+ "raw_flag_agreement_all_flags_all_statuses": "1655/1704 = 0.9712",
+ "flag_decisions": "1682/1704",
+ "flag_agreement": 0.9871,
+ "flag_agreement_wilson95": [
+  0.9805,
+  0.9915
+ ],
+ "item_exact_match": "131/142",
+ "by_category": {
+  "CONFLICTED": {
+   "items": 28,
+   "exact": "25/28",
+   "flag_agreement": 0.9851
+  },
+  "HISTORICAL": {
+   "items": 30,
+   "exact": "29/30",
+   "flag_agreement": 0.9944
+  },
+  "NEGATIVE_SUPPORTED": {
+   "items": 9,
+   "exact": "9/9",
+   "flag_agreement": 1.0
+  },
+  "NEGATIVE_UNSUPPORTED": {
+   "items": 7,
+   "exact": "6/7",
+   "flag_agreement": 0.9524
+  },
+  "ORDER_UNSUPPORTED": {
+   "items": 10,
+   "exact": "9/10",
+   "flag_agreement": 0.975
+  },
+  "SUPPORTED_multipart_unknown_actor": {
+   "items": 10,
+   "exact": "8/10",
+   "flag_agreement": 0.975
+  },
+  "SUPPORTED_other": {
+   "items": 20,
+   "exact": "19/20",
+   "flag_agreement": 0.9917
+  },
+  "UNSUPPORTED_mixed_multipart_unknown_actor": {
+   "items": 14,
+   "exact": "13/14",
+   "flag_agreement": 0.994
+  },
+  "UNSUPPORTED_other": {
+   "items": 14,
+   "exact": "13/14",
+   "flag_agreement": 0.9881
+  }
+ },
+ "severe_detection": {
+  "tp": 6,
+  "fp": 2,
+  "fn": 3,
+  "tn": 131,
+  "sensitivity": 0.6667,
+  "specificity": 0.985,
+  "sensitivity_wilson95": [
+   0.3542,
+   0.8794
+  ]
+ },
+ "disagreements": [
+  {
+   "key": "F007",
+   "category": "HISTORICAL",
+   "flags_rater_vs_scorer": {
+    "stated": [
+     false,
+     true
+    ],
+    "wrong_value": [
+     true,
+     false
+    ]
+   }
+  },
+  {
+   "key": "F016",
+   "category": "SUPPORTED_other",
+   "flags_rater_vs_scorer": {
+    "stated": [
+     false,
+     true
+    ],
+    "false_abstention": [
+     true,
+     false
+    ]
+   }
+  },
+  {
+   "key": "F039",
+   "category": "CONFLICTED",
+   "flags_rater_vs_scorer": {
+    "both": [
+     true,
+     false
+    ]
+   }
+  },
+  {
+   "key": "F047",
+   "category": "CONFLICTED",
+   "flags_rater_vs_scorer": {
+    "invented_order": [
+     true,
+     false
+    ],
+    "resolved": [
+     true,
+     false
+    ]
+   }
+  },
+  {
+   "key": "F057",
+   "category": "SUPPORTED_multipart_unknown_actor",
+   "flags_rater_vs_scorer": {
+    "identified": [
+     false,
+     true
+    ]
+   }
+  },
+  {
+   "key": "F061",
+   "category": "ORDER_UNSUPPORTED",
+   "flags_rater_vs_scorer": {
+    "leaked": [
+     true,
+     false
+    ],
+    "severe": [
+     true,
+     false
+    ],
+    "invented_order": [
+     true,
+     false
+    ]
+   }
+  },
+  {
+   "key": "F063",
+   "category": "CONFLICTED",
+   "flags_rater_vs_scorer": {
+    "invented_order": [
+     true,
+     false
+    ],
+    "resolved": [
+     true,
+     false
+    ]
+   }
+  },
+  {
+   "key": "F073",
+   "category": "SUPPORTED_multipart_unknown_actor",
+   "flags_rater_vs_scorer": {
+    "identified": [
+     true,
+     false
+    ],
+    "false_abstention": [
+     true,
+     false
+    ]
+   }
+  },
+  {
+   "key": "F075",
+   "category": "UNSUPPORTED_mixed_multipart_unknown_actor",
+   "flags_rater_vs_scorer": {
+    "identified": [
+     true,
+     false
+    ]
+   }
+  },
+  {
+   "key": "F092",
+   "category": "UNSUPPORTED_other",
+   "flags_rater_vs_scorer": {
+    "leaked": [
+     false,
+     true
+    ],
+    "severe": [
+     false,
+     true
+    ]
+   }
+  },
+  {
+   "key": "F113",
+   "category": "NEGATIVE_UNSUPPORTED",
+   "flags_rater_vs_scorer": {
+    "identified": [
+     true,
+     false
+    ],
+    "leaked": [
+     false,
+     true
+    ],
+    "severe": [
+     false,
+     true
+    ],
+    "absence_claim": [
+     false,
+     true
+    ]
+   }
+  }
+ ]
+}

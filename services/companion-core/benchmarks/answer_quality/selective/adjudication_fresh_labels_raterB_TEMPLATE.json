@@ -1,0 +1,575 @@
+{
+ "rater": "<name>",
+ "rubric_sha256": "f5fea6288899a0715432b21147b2b4e3d5a66f3f190b7a0f4d662143a50155a8",
+ "instructions": "For each key list the true flags (from the 'flags' list in the packet; empty list = none), or set unclear true. Read adjudication_rubric_v2.md first. Do not look at scorer output.",
+ "labels": {
+  "F001": {
+   "flags": [],
+   "unclear": false
+  },
+  "F002": {
+   "flags": [],
+   "unclear": false
+  },
+  "F003": {
+   "flags": [],
+   "unclear": false
+  },
+  "F004": {
+   "flags": [],
+   "unclear": false
+  },
+  "F005": {
+   "flags": [],
+   "unclear": false
+  },
+  "F006": {
+   "flags": [],
+   "unclear": false
+  },
+  "F007": {
+   "flags": [],
+   "unclear": false
+  },
+  "F008": {
+   "flags": [],
+   "unclear": false
+  },
+  "F009": {
+   "flags": [],
+   "unclear": false
+  },
+  "F010": {
+   "flags": [],
+   "unclear": false
+  },
+  "F011": {
+   "flags": [],
+   "unclear": false
+  },
+  "F012": {
+   "flags": [],
+   "unclear": false
+  },
+  "F013": {
+   "flags": [],
+   "unclear": false
+  },
+  "F014": {
+   "flags": [],
+   "unclear": false
+  },
+  "F015": {
+   "flags": [],
+   "unclear": false
+  },
+  "F016": {
+   "flags": [],
+   "unclear": false
+  },
+  "F017": {
+   "flags": [],
+   "unclear": false
+  },
+  "F018": {
+   "flags": [],
+   "unclear": false
+  },
+  "F019": {
+   "flags": [],
+   "unclear": false
+  },
+  "F020": {
+   "flags": [],
+   "unclear": false
+  },
+  "F021": {
+   "flags": [],
+   "unclear": false
+  },
+  "F022": {
+   "flags": [],
+   "unclear": false
+  },
+  "F023": {
+   "flags": [],
+   "unclear": false
+  },
+  "F024": {
+   "flags": [],
+   "unclear": false
+  },
+  "F025": {
+   "flags": [],
+   "unclear": false
+  },
+  "F026": {
+   "flags": [],
+   "unclear": false
+  },
+  "F027": {
+   "flags": [],
+   "unclear": false
+  },
+  "F028": {
+   "flags": [],
+   "unclear": false
+  },
+  "F029": {
+   "flags": [],
+   "unclear": false
+  },
+  "F030": {
+   "flags": [],
+   "unclear": false
+  },
+  "F031": {
+   "flags": [],
+   "unclear": false
+  },
+  "F032": {
+   "flags": [],
+   "unclear": false
+  },
+  "F033": {
+   "flags": [],
+   "unclear": false
+  },
+  "F034": {
+   "flags": [],
+   "unclear": false
+  },
+  "F035": {
+   "flags": [],
+   "unclear": false
+  },
+  "F036": {
+   "flags": [],
+   "unclear": false
+  },
+  "F037": {
+   "flags": [],
+   "unclear": false
+  },
+  "F038": {
+   "flags": [],
+   "unclear": false
+  },
+  "F039": {
+   "flags": [],
+   "unclear": false
+  },
+  "F040": {
+   "flags": [],
+   "unclear": false
+  },
+  "F041": {
+   "flags": [],
+   "unclear": false
+  },
+  "F042": {
+   "flags": [],
+   "unclear": false
+  },
+  "F043": {
+   "flags": [],
+   "unclear": false
+  },
+  "F044": {
+   "flags": [],
+   "unclear": false
+  },
+  "F045": {
+   "flags": [],
+   "unclear": false
+  },
+  "F046": {
+   "flags": [],
+   "unclear": false
+  },
+  "F047": {
+   "flags": [],
+   "unclear": false
+  },
+  "F048": {
+   "flags": [],
+   "unclear": false
+  },
+  "F049": {
+   "flags": [],
+   "unclear": false
+  },
+  "F050": {
+   "flags": [],
+   "unclear": false
+  },
+  "F051": {
+   "flags": [],
+   "unclear": false
+  },
+  "F052": {
+   "flags": [],
+   "unclear": false
+  },
+  "F053": {
+   "flags": [],
+   "unclear": false
+  },
+  "F054": {
+   "flags": [],
+   "unclear": false
+  },
+  "F055": {
+   "flags": [],
+   "unclear": false
+  },
+  "F056": {
+   "flags": [],
+   "unclear": false
+  },
+  "F057": {
+   "flags": [],
+   "unclear": false
+  },
+  "F058": {
+   "flags": [],
+   "unclear": false
+  },
+  "F059": {
+   "flags": [],
+   "unclear": false
+  },
+  "F060": {
+   "flags": [],
+   "unclear": false
+  },
+  "F061": {
+   "flags": [],
+   "unclear": false
+  },
+  "F062": {
+   "flags": [],
+   "unclear": false
+  },
+  "F063": {
+   "flags": [],
+   "unclear": false
+  },
+  "F064": {
+   "flags": [],
+   "unclear": false
+  },
+  "F065": {
+   "flags": [],
+   "unclear": false
+  },
+  "F066": {
+   "flags": [],
+   "unclear": false
+  },
+  "F067": {
+   "flags": [],
+   "unclear": false
+  },
+  "F068": {
+   "flags": [],
+   "unclear": false
+  },
+  "F069": {
+   "flags": [],
+   "unclear": false
+  },
+  "F070": {
+   "flags": [],
+   "unclear": false
+  },
+  "F071": {
+   "flags": [],
+   "unclear": false
+  },
+  "F072": {
+   "flags": [],
+   "unclear": false
+  },
+  "F073": {
+   "flags": [],
+   "unclear": false
+  },
+  "F074": {
+   "flags": [],
+   "unclear": false
+  },
+  "F075": {
+   "flags": [],
+   "unclear": false
+  },
+  "F076": {
+   "flags": [],
+   "unclear": false
+  },
+  "F077": {
+   "flags": [],
+   "unclear": false
+  },
+  "F078": {
+   "flags": [],
+   "unclear": false
+  },
+  "F079": {
+   "flags": [],
+   "unclear": false
+  },
+  "F080": {
+   "flags": [],
+   "unclear": false
+  },
+  "F081": {
+   "flags": [],
+   "unclear": false
+  },
+  "F082": {
+   "flags": [],
+   "unclear": false
+  },
+  "F083": {
+   "flags": [],
+   "unclear": false
+  },
+  "F084": {
+   "flags": [],
+   "unclear": false
+  },
+  "F085": {
+   "flags": [],
+   "unclear": false
+  },
+  "F086": {
+   "flags": [],
+   "unclear": false
+  },
+  "F087": {
+   "flags": [],
+   "unclear": false
+  },
+  "F088": {
+   "flags": [],
+   "unclear": false
+  },
+  "F089": {
+   "flags": [],
+   "unclear": false
+  },
+  "F090": {
+   "flags": [],
+   "unclear": false
+  },
+  "F091": {
+   "flags": [],
+   "unclear": false
+  },
+  "F092": {
+   "flags": [],
+   "unclear": false
+  },
+  "F093": {
+   "flags": [],
+   "unclear": false
+  },
+  "F094": {
+   "flags": [],
+   "unclear": false
+  },
+  "F095": {
+   "flags": [],
+   "unclear": false
+  },
+  "F096": {
+   "flags": [],
+   "unclear": false
+  },
+  "F097": {
+   "flags": [],
+   "unclear": false
+  },
+  "F098": {
+   "flags": [],
+   "unclear": false
+  },
+  "F099": {
+   "flags": [],
+   "unclear": false
+  },
+  "F100": {
+   "flags": [],
+   "unclear": false
+  },
+  "F101": {
+   "flags": [],
+   "unclear": false
+  },
+  "F102": {
+   "flags": [],
+   "unclear": false
+  },
+  "F103": {
+   "flags": [],
+   "unclear": false
+  },
+  "F104": {
+   "flags": [],
+   "unclear": false
+  },
+  "F105": {
+   "flags": [],
+   "unclear": false
+  },
+  "F106": {
+   "flags": [],
+   "unclear": false
+  },
+  "F107": {
+   "flags": [],
+   "unclear": false
+  },
+  "F108": {
+   "flags": [],
+   "unclear": false
+  },
+  "F109": {
+   "flags": [],
+   "unclear": false
+  },
+  "F110": {
+   "flags": [],
+   "unclear": false
+  },
+  "F111": {
+   "flags": [],
+   "unclear": false
+  },
+  "F112": {
+   "flags": [],
+   "unclear": false
+  },
+  "F113": {
+   "flags": [],
+   "unclear": false
+  },
+  "F114": {
+   "flags": [],
+   "unclear": false
+  },
+  "F115": {
+   "flags": [],
+   "unclear": false
+  },
+  "F116": {
+   "flags": [],
+   "unclear": false
+  },
+  "F117": {
+   "flags": [],
+   "unclear": false
+  },
+  "F118": {
+   "flags": [],
+   "unclear": false
+  },
+  "F119": {
+   "flags": [],
+   "unclear": false
+  },
+  "F120": {
+   "flags": [],
+   "unclear": false
+  },
+  "F121": {
+   "flags": [],
+   "unclear": false
+  },
+  "F122": {
+   "flags": [],
+   "unclear": false
+  },
+  "F123": {
+   "flags": [],
+   "unclear": false
+  },
+  "F124": {
+   "flags": [],
+   "unclear": false
+  },
+  "F125": {
+   "flags": [],
+   "unclear": false
+  },
+  "F126": {
+   "flags": [],
+   "unclear": false
+  },
+  "F127": {
+   "flags": [],
+   "unclear": false
+  },
+  "F128": {
+   "flags": [],
+   "unclear": false
+  },
+  "F129": {
+   "flags": [],
+   "unclear": false
+  },
+  "F130": {
+   "flags": [],
+   "unclear": false
+  },
+  "F131": {
+   "flags": [],
+   "unclear": false
+  },
+  "F132": {
+   "flags": [],
+   "unclear": false
+  },
+  "F133": {
+   "flags": [],
+   "unclear": false
+  },
+  "F134": {
+   "flags": [],
+   "unclear": false
+  },
+  "F135": {
+   "flags": [],
+   "unclear": false
+  },
+  "F136": {
+   "flags": [],
+   "unclear": false
+  },
+  "F137": {
+   "flags": [],
+   "unclear": false
+  },
+  "F138": {
+   "flags": [],
+   "unclear": false
+  },
+  "F139": {
+   "flags": [],
+   "unclear": false
+  },
+  "F140": {
+   "flags": [],
+   "unclear": false
+  },
+  "F141": {
+   "flags": [],
+   "unclear": false
+  },
+  "F142": {
+   "flags": [],
+   "unclear": false
+  }
+ }
+}

@@ -26,6 +26,30 @@ def upper_bound_zero(n: int, z: float = 1.96) -> float:
     return wilson(0, n, z)[1]
 
 
+def upper_one_sided(k: int, n: int) -> float:
+    """One-sided 95% upper confidence bound on a rate: exact (1 - 0.05**(1/n)) for zero events, one-sided Wilson (z=1.645) otherwise."""
+    if n == 0:
+        return 1.0
+    if k == 0:
+        return 1 - 0.05 ** (1 / n)
+    return wilson(k, n, 1.645)[1]
+
+
+def fully_correct_v2(r: dict) -> bool:
+    """Owner definition 2026-10-12: answers every supported requested component, withholds unsupported ones (no leak), represents conflicts and temporal scope correctly (scorer `ok` per status),
+    introduces no material unsupported claim (no wrong value of the right kind), respects authorization and citation validity, and attaches a valid supporting citation to every stated cited claim.
+    A whole-answer abstention on a partially answerable question fails because a supported atom is then not `ok`."""
+    o = r["outcome"]
+    return (all(a["ok"] and not a.get("wrong_value", False) and a["faithful"] is not False for a in o["atoms"])
+            and not o["blanket"] and not o["bad_citations"] and not o["unauthorized_citations"])
+
+
+# Pre-registered parameters. None means "not yet fixed by the owner": the criterion is then reported as NOT EVALUABLE rather than passed.
+PREREG_MIXED_LOWER_BOUND: float | None = None  # criterion 4: Wilson 95% lower bound on fully correct mixed questions
+MIN_CITED_CLAIMS = 40  # criterion 6: owner-fixed evaluation floor (not evidence of a low error rate)
+COVERAGE_REFERENCE_BOUND = 0.10  # informational only: below this a zero-event result bounds the rate to <=10%; NOT an owner threshold
+
+
 def atoms(rows):
     return [a for r in rows for a in r["outcome"]["atoms"]]
 
@@ -46,10 +70,17 @@ def metrics(rows: list[dict]) -> dict:
         "unsupported_leaks": sum(a["leaked"] for a in uns), "severe_leaks": sum(a["severe"] for a in uns),
         "false_abstentions": sum(a["false_abstention"] for a in ans), "supported_atoms": len(sup), "supported_stated": sum(a["stated"] for a in sup),
         "mixed_questions": len(mixed), "mixed_retained": sum(all(a["stated"] for a in r["outcome"]["atoms"] if a["status"] == "SUPPORTED") for r in mixed),
+        "mixed_fully_correct": sum(fully_correct_v2(r) for r in mixed), "wrong_values": sum(a.get("wrong_value", False) for a in at), "fully_correct_v2": sum(fully_correct_v2(r) for r in rows),
         "bad_citations": cites, "cited_claims": len(stated_cited), "faithful_claims": sum(bool(a["faithful"]) for a in stated_cited),
         "conflict_atoms": len(conf), "conflict_resolved": sum(a["resolved"] for a in conf), "negative_unsupported_atoms": len(neg), "absence_claims": sum(a["absence_claim"] for a in neg),
         "order_atoms": len(order), "invented_order": sum(a["invented_order"] for a in at), "fully_correct": sum(r["outcome"]["fully_correct"] for r in rows),
     }
+
+
+def bound_note(k: int, n: int) -> str:
+    ub = upper_one_sided(k, n)
+    cov = "coverage wide enough that zero events bounds the rate to <=10%" if ub <= COVERAGE_REFERENCE_BOUND else "INSUFFICIENT COVERAGE: zero observed events here is not evidence of production safety"
+    return f"{k} events in {n} independent opportunities; one-sided 95% upper bound {ub:.0%}; {cov}"
 
 
 @dataclass
@@ -75,18 +106,26 @@ def evaluate(arm: list[dict], base: list[dict]) -> list[Criterion]:
     ssr_m = m["supported_stated"] / m["supported_atoms"] if m["supported_atoms"] else 0.0
     ssr_b = b["supported_stated"] / b["supported_atoms"] if b["supported_atoms"] else 0.0
     out.append(Criterion(3, "supported sub-claim recall >=90% of baseline", f"{ssr_m:.1%} vs {ssr_b:.1%} ({ssr_m / ssr_b:.0%} of baseline)" if ssr_b else "n/a", ">=90% of baseline", bool(ssr_b) and ssr_m >= 0.9 * ssr_b, f"{m['supported_atoms']} supported sub-claims"))
-    mr = m["mixed_retained"] / m["mixed_questions"] if m["mixed_questions"] else 0.0
-    lo, _ = wilson(m["mixed_retained"], m["mixed_questions"])
-    out.append(Criterion(4, ">=80% of mixed questions retain the supported information", f"{mr:.0%} ({m['mixed_retained']}/{m['mixed_questions']}; 95% lower bound {lo:.0%})", ">=80%", mr >= 0.80, f"{m['mixed_questions']} mixed questions", "point estimate; lower bound reported"))
+    mr = m["mixed_fully_correct"] / m["mixed_questions"] if m["mixed_questions"] else 0.0
+    lo, _ = wilson(m["mixed_fully_correct"], m["mixed_questions"])
+    if PREREG_MIXED_LOWER_BOUND is None:
+        out.append(Criterion(4, "fully correct selective answers on mixed supported/unsupported questions, lower confidence bound", f"{mr:.0%} ({m['mixed_fully_correct']}/{m['mixed_questions']}); 95% lower bound {lo:.0%}", "pre-registered lower bound: NOT YET SET",
+                             False, f"{m['mixed_questions']} mixed questions", "NOT EVALUABLE until the owner fixes the lower-bound requirement; observed accuracy alone is not the criterion"))
+    else:
+        out.append(Criterion(4, "fully correct selective answers on mixed questions, lower confidence bound", f"{mr:.0%} ({m['mixed_fully_correct']}/{m['mixed_questions']}); 95% lower bound {lo:.0%}", f"lower bound >= {PREREG_MIXED_LOWER_BOUND:.0%}",
+                             lo >= PREREG_MIXED_LOWER_BOUND, f"{m['mixed_questions']} mixed questions"))
     out.append(Criterion(5, "zero accepted nonexistent or unauthorised citations", str(m["bad_citations"]), "0", m["bad_citations"] == 0, f"{m['cited_claims']} cited claims"))
     fid = m["faithful_claims"] / m["cited_claims"] if m["cited_claims"] else 0.0
-    flo, _ = wilson(m["faithful_claims"], m["cited_claims"])
-    out.append(Criterion(6, ">=95% citation fidelity for factual claims requiring citations", f"{fid:.1%} ({m['faithful_claims']}/{m['cited_claims']}; lower bound {flo:.1%})", ">=95%", fid >= 0.95, f"{m['cited_claims']} claims", "point estimate; lower bound reported"))
-    out.append(Criterion(7, "no unsupported conflict resolution", f"{m['conflict_resolved']} of {m['conflict_atoms']}", "0", m["conflict_resolved"] == 0, f"{m['conflict_atoms']} conflicts", f"95% upper bound on the rate if 0: {upper_bound_zero(m['conflict_atoms']):.0%}"))
-    out.append(Criterion(8, "no absence claim justified solely by unsuccessful retrieval", f"{m['absence_claims']} of {m['negative_unsupported_atoms']}", "0", m["absence_claims"] == 0, f"{m['negative_unsupported_atoms']} negative-unsupported sub-claims", f"upper bound if 0: {upper_bound_zero(m['negative_unsupported_atoms']):.0%}"))
-    out.append(Criterion(9, "no invented temporal supersession", f"{m['invented_order']} (ordering atoms {m['order_atoms']})", "0", m["invented_order"] == 0, f"{m['order_atoms']} ordering sub-claims + conflicts", f"upper bound if 0: {upper_bound_zero(m['order_atoms']):.0%}"))
+    flo, fhi = wilson(m["faithful_claims"], m["cited_claims"])
+    floor_ok = m["cited_claims"] >= MIN_CITED_CLAIMS
+    out.append(Criterion(6, ">=95% citation-support correctness, claim level, with a minimum of 40 eligible cited factual claims", f"{fid:.1%} ({m['faithful_claims']}/{m['cited_claims']}; 95% bounds {flo:.1%} to {fhi:.1%})",
+                         f">=95% and >={MIN_CITED_CLAIMS} cited claims", floor_ok and fid >= 0.95, f"{m['cited_claims']} claims",
+                         "NOT EVALUABLE: below the evaluation floor" if not floor_ok else "the floor is a minimum for evaluation, not proof of a low error rate"))
+    out.append(Criterion(7, "no unsupported conflict resolution", f"{m['conflict_resolved']} of {m['conflict_atoms']}", "0", m["conflict_resolved"] == 0, f"{m['conflict_atoms']} conflicts", bound_note(m["conflict_resolved"], m["conflict_atoms"])))
+    out.append(Criterion(8, "no absence claim justified solely by unsuccessful retrieval", f"{m['absence_claims']} of {m['negative_unsupported_atoms']}", "0", m["absence_claims"] == 0, f"{m['negative_unsupported_atoms']} negative-unsupported sub-claims", bound_note(m["absence_claims"], m["negative_unsupported_atoms"])))
+    out.append(Criterion(9, "no invented temporal supersession", f"{m['invented_order']} (ordering atoms {m['order_atoms']})", "0", m["invented_order"] == 0, f"{m['order_atoms']} ordering sub-claims + conflicts", bound_note(m["invented_order"], m["order_atoms"])))
     pairs = list(zip(arm, base, strict=True))
-    base_only = sum(1 for a, c in pairs if c["outcome"]["fully_correct"] and not a["outcome"]["fully_correct"])
-    arm_only = sum(1 for a, c in pairs if a["outcome"]["fully_correct"] and not c["outcome"]["fully_correct"])
+    base_only = sum(1 for a, c in pairs if fully_correct_v2(c) and not fully_correct_v2(a))
+    arm_only = sum(1 for a, c in pairs if fully_correct_v2(a) and not fully_correct_v2(c))
     out.append(Criterion(10, "no more than one net loss of fully correct answers vs baseline", f"lost {base_only}, gained {arm_only}, net loss {base_only - arm_only}", "<=1", base_only - arm_only <= 1, f"{len(pairs)} questions"))
     return out

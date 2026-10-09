@@ -1,0 +1,870 @@
+{
+ "rater": "rater_A (the assistant that wrote the scorer; labelled from the blinded packet before any scorer output was viewed)",
+ "rubric_sha256": "f5fea6288899a0715432b21147b2b4e3d5a66f3f190b7a0f4d662143a50155a8",
+ "labelled_on": "2026-10-13",
+ "labels": {
+  "F001": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F002": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F003": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F005": {
+   "flags": [
+    "both"
+   ],
+   "unclear": false
+  },
+  "F006": {
+   "flags": [
+    "both"
+   ],
+   "unclear": false
+  },
+  "F008": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F010": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F014": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F015": {
+   "flags": [
+    "both"
+   ],
+   "unclear": false
+  },
+  "F019": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F021": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F023": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F024": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F025": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F030": {
+   "flags": [
+    "both"
+   ],
+   "unclear": false
+  },
+  "F031": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F032": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F037": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F038": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F041": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F044": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F045": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F049": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F053": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F057": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F058": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F064": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F065": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F067": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F068": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F069": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F072": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F077": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F084": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F085": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F088": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F093": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F095": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F101": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F102": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F103": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F104": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F106": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F107": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F108": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F111": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F115": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F117": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F126": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F130": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F132": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F136": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F137": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F138": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F140": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F141": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F035": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F091": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F094": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F116": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F118": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F121": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F124": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F125": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F139": {
+   "flags": [
+    "stated"
+   ],
+   "unclear": false
+  },
+  "F039": {
+   "flags": [
+    "both"
+   ],
+   "unclear": false
+  },
+  "F055": {
+   "flags": [
+    "both"
+   ],
+   "unclear": false
+  },
+  "F074": {
+   "flags": [
+    "both"
+   ],
+   "unclear": false
+  },
+  "F087": {
+   "flags": [
+    "both"
+   ],
+   "unclear": false
+  },
+  "F089": {
+   "flags": [
+    "both"
+   ],
+   "unclear": false
+  },
+  "F129": {
+   "flags": [
+    "both"
+   ],
+   "unclear": false
+  },
+  "F134": {
+   "flags": [
+    "both"
+   ],
+   "unclear": false
+  },
+  "F004": {
+   "flags": [
+    "leaked",
+    "severe"
+   ],
+   "unclear": false
+  },
+  "F007": {
+   "flags": [
+    "wrong_value"
+   ],
+   "unclear": false
+  },
+  "F050": {
+   "flags": [
+    "wrong_value"
+   ],
+   "unclear": false
+  },
+  "F070": {
+   "flags": [
+    "wrong_value"
+   ],
+   "unclear": false
+  },
+  "F079": {
+   "flags": [
+    "wrong_value"
+   ],
+   "unclear": false
+  },
+  "F110": {
+   "flags": [
+    "wrong_value"
+   ],
+   "unclear": false
+  },
+  "F009": {
+   "flags": [
+    "one_sided"
+   ],
+   "unclear": false
+  },
+  "F011": {
+   "flags": [
+    "one_sided"
+   ],
+   "unclear": false
+  },
+  "F012": {
+   "flags": [
+    "one_sided"
+   ],
+   "unclear": false
+  },
+  "F017": {
+   "flags": [
+    "one_sided"
+   ],
+   "unclear": false
+  },
+  "F048": {
+   "flags": [
+    "one_sided"
+   ],
+   "unclear": false
+  },
+  "F086": {
+   "flags": [
+    "one_sided"
+   ],
+   "unclear": false
+  },
+  "F099": {
+   "flags": [
+    "one_sided"
+   ],
+   "unclear": false
+  },
+  "F112": {
+   "flags": [
+    "one_sided"
+   ],
+   "unclear": false
+  },
+  "F123": {
+   "flags": [
+    "one_sided"
+   ],
+   "unclear": false
+  },
+  "F127": {
+   "flags": [
+    "one_sided"
+   ],
+   "unclear": false
+  },
+  "F135": {
+   "flags": [
+    "one_sided"
+   ],
+   "unclear": false
+  },
+  "F142": {
+   "flags": [
+    "one_sided"
+   ],
+   "unclear": false
+  },
+  "F013": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F018": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F020": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F022": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F026": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F027": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F029": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F033": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F040": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F042": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F054": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F056": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F062": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F066": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F071": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F075": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F076": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F080": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F081": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F082": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F083": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F092": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F096": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F097": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F100": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F105": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F109": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F113": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F120": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F131": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F133": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F052": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F016": {
+   "flags": [
+    "identified",
+    "false_abstention"
+   ],
+   "unclear": false
+  },
+  "F073": {
+   "flags": [
+    "identified",
+    "false_abstention"
+   ],
+   "unclear": false
+  },
+  "F114": {
+   "flags": [
+    "identified",
+    "false_abstention"
+   ],
+   "unclear": false
+  },
+  "F028": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F078": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F128": {
+   "flags": [
+    "identified"
+   ],
+   "unclear": false
+  },
+  "F034": {
+   "flags": [],
+   "unclear": false
+  },
+  "F036": {
+   "flags": [],
+   "unclear": false
+  },
+  "F043": {
+   "flags": [],
+   "unclear": false
+  },
+  "F046": {
+   "flags": [],
+   "unclear": false
+  },
+  "F051": {
+   "flags": [],
+   "unclear": false
+  },
+  "F098": {
+   "flags": [],
+   "unclear": false
+  },
+  "F047": {
+   "flags": [
+    "both",
+    "resolved",
+    "invented_order"
+   ],
+   "unclear": false
+  },
+  "F063": {
+   "flags": [
+    "both",
+    "resolved",
+    "invented_order"
+   ],
+   "unclear": false
+  },
+  "F059": {
+   "flags": [
+    "leaked",
+    "severe",
+    "absence_claim"
+   ],
+   "unclear": false
+  },
+  "F060": {
+   "flags": [
+    "leaked",
+    "severe",
+    "invented_order"
+   ],
+   "unclear": false
+  },
+  "F061": {
+   "flags": [
+    "leaked",
+    "severe",
+    "invented_order"
+   ],
+   "unclear": false
+  },
+  "F090": {
+   "flags": [
+    "leaked",
+    "severe",
+    "invented_order"
+   ],
+   "unclear": false
+  },
+  "F119": {
+   "flags": [
+    "leaked",
+    "severe",
+    "invented_order"
+   ],
+   "unclear": false
+  },
+  "F122": {
+   "flags": [
+    "leaked",
+    "severe"
+   ],
+   "unclear": false
+  }
+ },
+ "notes": {
+  "F004": "affirmed presence of a staging environment with no basis: rubric says leaked; severe marked (specific world claim); rubric text lists only absence/ordering as severe - ambiguity recorded",
+  "F061": "'indicating an update or change' implies an update without direction; marked invented_order (borderline)"
+ }
+}

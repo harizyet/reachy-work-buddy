@@ -155,7 +155,8 @@ def fake_rows(n_mixed=10, leak=0, fa=0):
     return rows
 
 
-def test_the_evaluator_passes_a_perfect_arm_and_fails_each_criterion_for_the_right_reason():
+def test_the_evaluator_passes_a_perfect_arm_and_fails_each_criterion_for_the_right_reason(monkeypatch):
+    monkeypatch.setattr(evaluator, "PREREG_MIXED_LOWER_BOUND", 0.5)  # test value only: the real bound is the owner's to set
     base = fake_rows(40, leak=20)
     good = fake_rows(40, leak=10)
     res = {c.number: c for c in evaluator.evaluate(good, base)}
@@ -165,3 +166,48 @@ def test_the_evaluator_passes_a_perfect_arm_and_fails_each_criterion_for_the_rig
     lossy = {c.number: c for c in evaluator.evaluate(fake_rows(40, leak=0, fa=5), fake_rows(40, leak=0))}
     assert not lossy[2].passed and not lossy[10].passed
     assert evaluator.upper_bound_zero(10) > 0.25 and evaluator.upper_bound_zero(60) < 0.07  # what a clean result on few cases can and cannot show
+
+
+# -- owner decisions 2026-10-12 (criteria forms, fully-correct definition, date semantics) -------------------------------------------------
+
+def _row(atoms, blanket=False, family="mixed"):
+    return {"family": family, "outcome": {"atoms": atoms, "blanket": blanket, "bad_citations": [], "unauthorized_citations": [], "fully_correct": True}}
+
+
+def _atom(status, **kw):
+    base = {"status": status, "stated": False, "ok": True, "faithful": None, "wrong_value": False, "leaked": False, "severe": False, "false_abstention": False, "resolved": False,
+            "absence_claim": False, "invented_order": False}
+    return {**base, **kw}
+
+
+def test_zero_event_upper_bounds_are_one_sided_and_flag_thin_coverage():
+    assert evaluator.upper_one_sided(0, 19) == pytest.approx(1 - 0.05 ** (1 / 19))
+    assert evaluator.upper_one_sided(0, 100) < 0.03 < evaluator.upper_one_sided(0, 6)
+    assert "INSUFFICIENT COVERAGE" in evaluator.bound_note(0, 6)
+    assert "INSUFFICIENT" not in evaluator.bound_note(0, 40)
+
+
+def test_fully_correct_v2_rejects_whole_answer_abstention_and_wrong_values():
+    ok = _row([_atom("SUPPORTED", stated=True), _atom("UNSUPPORTED")])
+    assert evaluator.fully_correct_v2(ok)
+    abstained = _row([_atom("SUPPORTED", ok=False, false_abstention=True), _atom("UNSUPPORTED")], blanket=True)
+    assert not evaluator.fully_correct_v2(abstained)
+    assert not evaluator.fully_correct_v2(_row([_atom("SUPPORTED", stated=True, wrong_value=True)]))
+    assert not evaluator.fully_correct_v2(_row([_atom("SUPPORTED", stated=True, faithful=False)]))
+
+
+def test_criterion_4_is_not_evaluable_without_a_preregistered_bound_and_6_needs_forty_claims():
+    rows = [_row([_atom("SUPPORTED", stated=True, faithful=True)]) for _ in range(30)]
+    by = {c.number: c for c in evaluator.evaluate(rows, rows)}
+    assert not by[4].passed and "NOT EVALUABLE" in by[4].note
+    assert not by[6].passed and "NOT EVALUABLE" in by[6].note  # 30 cited claims < 40
+
+
+def test_ordering_and_conflict_gold_never_rests_on_retrieval_or_creation_time():
+    """Owner date rule: retrieval time and record creation time never establish recency or supersession. Conflict and ordering atoms are built only from same-day memory pairs."""
+    for name in ("cases_dev15.json", "cases_dev16.json"):
+        for case in json.loads((AQ / name).read_text())["cases"]:
+            for a in case["atoms"]:
+                assert a["status"] != "SUPERSEDED"
+                if a["status"] in ("CONFLICTED", "ORDER_UNSUPPORTED"):
+                    assert all(s.startswith("memory:") for s in a["sources"]), (case["id"], a["sources"])

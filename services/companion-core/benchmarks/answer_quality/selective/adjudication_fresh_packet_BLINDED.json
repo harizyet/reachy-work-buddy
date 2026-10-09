@@ -1,0 +1,2929 @@
+{
+ "rubric": "adjudication_rubric_v2.md",
+ "flags": [
+  "stated",
+  "identified",
+  "false_abstention",
+  "leaked",
+  "severe",
+  "wrong_value",
+  "absence_claim",
+  "invented_order",
+  "both",
+  "one_sided",
+  "resolved",
+  "as_current"
+ ],
+ "items": [
+  {
+   "key": "F001",
+   "question": "Who was in the Vesper planning meeting, and when is Ironside Backup support open on weekdays, and what was the old retry limit of the Gantry scheduler?",
+   "reply": "The Vesper planning meeting was attended by Kavya Menon and Bruno Keller.\n\nIronside Backup support is open from 9 to 7 on weekdays, with the support line at 555-0135.\n\nThe old retry limit of the Gantry scheduler was up to 2 times before a job is parked.",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "retry_limit_history of Gantry scheduler",
+    "gold_values": [
+     "2"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6"
+   ]
+  },
+  {
+   "key": "F002",
+   "question": "Which model did Osprey use by default in March, and what are Quarry Data's support hours?",
+   "reply": "According to the owner's records:\n\n- In March, Osprey used the Kestrel-9B model by default [E9].\n- Quarry Data's support hours are 9 to 6 on weekdays [E1].",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "default_model_history of Osprey",
+    "gold_values": [
+     "Kestrel-9B"
+    ],
+    "kind": "model"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F003",
+   "question": "Who owns the Ferry queue?",
+   "reply": "Chiara Rossi owns the Ferry queue [E2].",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "owner of Ferry queue",
+    "gold_values": [
+     "Chiara Rossi"
+    ],
+    "kind": "person"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F004",
+   "question": "Is there a staging environment for Vesper, and who has the on-call duty for Cedar?",
+   "reply": "There is a staging environment for Vesper, as noted in [E3].\n\nFor Cedar, Umar Bello is on call this month, as stated in [E2].",
+   "atom": {
+    "gold_status": "NEGATIVE_UNSUPPORTED",
+    "sub_claim": "staging_env of Vesper",
+    "gold_values": [],
+    "kind": "bool"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F005",
+   "question": "What time is the Tamarind standup?",
+   "reply": "The Tamarind standup is at both 9 and 11, according to your records [E1, E2]. There seems to be a discrepancy.",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "standup of Tamarind",
+    "gold_values": [
+     "9",
+     "11"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F006",
+   "question": "On which day are Vesper design reviews held?",
+   "reply": "The Vesper design reviews are scheduled on both Wednesday and Friday, according to the conflicting records [E1, E2].",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "review_day of Vesper",
+    "gold_values": [
+     "Wednesday",
+     "Friday"
+    ],
+    "kind": "day"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F007",
+   "question": "Which model did Vesper decide to keep, and which host serves Swift-6B, and what was Marlin's default model before October?",
+   "reply": "Vesper decided to keep Kestrel-9B as the default model [E7].\n\nSwift-6B is served on the edge host by both Osprey and Willow [E3, E6].\n\nBefore October, Marlin's default model was Heron-12B, as the Kestrel-3B model had been retired by then [E9].",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "default_model_history of Marlin",
+    "gold_values": [
+     "Kestrel-3B"
+    ],
+    "kind": "model"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F008",
+   "question": "What was Cedar's default model before October?",
+   "reply": "According to the owner's records, Cedar's default model before October was Merlin-2B [E1].",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "default_model_history of Cedar",
+    "gold_values": [
+     "Merlin-2B"
+    ],
+    "kind": "model"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F009",
+   "question": "Which day is the Cedar design review, and what does Bruno Keller review?",
+   "reply": "The Cedar design reviews are scheduled for Thursday [E1, E2]. Bruno Keller is tasked with reviewing the Anvil settings [E3].",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "review_day of Cedar",
+    "gold_values": [
+     "Monday",
+     "Thursday"
+    ],
+    "kind": "day"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3"
+   ]
+  },
+  {
+   "key": "F010",
+   "question": "Where does Swift-20B run, and who owns the Sluice cache, and how many retries did the archived Hopper ingest service architecture allow?",
+   "reply": "Swift-20B runs on the batch host according to the following evidence:\n\n- Sable serves Swift-20B on the batch host [E6].\n- Cedar serves Swift-20B on the batch host [E8].\n\nThe Sluice cache is owned by Tamarind architecture, as stated in:\n\n- Jobs flow through the Sluice cache [E2].\n\nThe archived Hopper ingest service architecture allowed up to 6 retries before parking a failed job, as documented in:\n\n- Jobs flow through the Hopper ingest service. A failed job is retried up to 6 times before it is parked [E1].",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "retry_limit_history of Hopper ingest service",
+    "gold_values": [
+     "6"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F011",
+   "question": "Which day is the Quartz design review, and what is Vera Kovac's deadline for the written summary?",
+   "reply": "The Quartz design reviews are scheduled for Friday [E1]. Vera Kovac's deadline for circulating the written summary is Wednesday [E3].",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "review_day of Quartz",
+    "gold_values": [
+     "Tuesday",
+     "Friday"
+    ],
+    "kind": "day"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3"
+   ]
+  },
+  {
+   "key": "F012",
+   "question": "What time is the Vesper standup?",
+   "reply": "The Vesper standup is at 12. [E7]",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "standup of Vesper",
+    "gold_values": [
+     "10",
+     "12"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F013",
+   "question": "Who audits the Sable build logs?",
+   "reply": "I do not have that in the owner's records.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "incident_auditor of Sable",
+    "gold_values": [],
+    "kind": "person"
+   },
+   "evidence_ids_available": []
+  },
+  {
+   "key": "F014",
+   "question": "Does Quartz have a staging environment, and where does Heron-12B run?",
+   "reply": "Quartz does not have a staging environment [E2].\n\nHeron-12B runs on the CPU host. It serves the model on the fast path for interactive requests and the deep path for scheduled jobs. This applies to both Marlin and Quartz, as described in [E6] and [E7].",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "runs_on of Heron-12B",
+    "gold_values": [
+     "CPU host"
+    ],
+    "kind": "host"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F015",
+   "question": "On which day are Marlin design reviews held?",
+   "reply": "The Marlin design reviews are scheduled on both Tuesday and Friday, according to the conflicting information in the owner's records [E1, E2].",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "review_day of Marlin",
+    "gold_values": [
+     "Tuesday",
+     "Friday"
+    ],
+    "kind": "day"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F016",
+   "question": "What is Vesper's default model?",
+   "reply": "Based on the information provided, Vesper's default model is not explicitly stated. However, we can infer the following:\n\n- The Osprey default model is Swift-6B [E3].\n- The Juniper default model is Merlin-7B [E4].\n- The Marlin default model is Heron-12B [E5].\n\nSince Vesper is described as an internal platform that runs scheduled jobs and serves interactive requests [E6], and there is no specific mention of a default model for Vesper itself, we cannot determine a default model for Vesper from the given evidence. \n\n[E1] mentions that Vesper serves Kestrel-9B on the CPU host, but this does not specify whether Kestrel-9B is the default model for Vesper. \n\nTherefore, I do not have the specific default model for Vesper in the owner's records.",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "default_model of Vesper",
+    "gold_values": [
+     "Kestrel-9B"
+    ],
+    "kind": "model"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F017",
+   "question": "What time is the Marlin standup?",
+   "reply": "The Marlin standup is at 10. [E9]",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "standup of Marlin",
+    "gold_values": [
+     "10",
+     "12"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F018",
+   "question": "What is Jonas Weiss reviewing, and what is the maximum message size of the Conduit stream?",
+   "reply": "Jonas Weiss is reviewing the Gantry settings, as stated in the note [E1].\n\nThe information about the maximum message size of the Conduit stream is not provided in the given evidence. Therefore, I do not have that in the owner's records.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "max_message_size of Quartz",
+    "gold_values": [],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1"
+   ]
+  },
+  {
+   "key": "F019",
+   "question": "Who was in the Quartz planning meeting?",
+   "reply": "Pablo Reyes and Olga Petrova were in the Quartz planning meeting. [E1] [E2] [E3]",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "attends of Quartz",
+    "gold_values": [
+     "Pablo Reyes",
+     "Olga Petrova"
+    ],
+    "kind": "person"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3"
+   ]
+  },
+  {
+   "key": "F020",
+   "question": "What does Dmitri Volkov review, and which host serves Kestrel-9B, and who is responsible for the Conduit stream?",
+   "reply": "The owner's records do not provide specific information about what Dmitri Volkov reviews or who is responsible for the Conduit stream. Therefore, I cannot answer those parts of your question based on the given evidence.\n\nHowever, regarding the host that serves Kestrel-9B, the records indicate:\n\n- Vesper architecture serves Kestrel-9B on the CPU host [E1].\n- Osprey architecture v1 (archived) also serves Kestrel-9B on the CPU host [E4].\n\nBoth Vesper and Osprey architectures serve Kestrel-9B on the CPU host.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "owner of Conduit stream",
+    "gold_values": [],
+    "kind": "person"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F021",
+   "question": "What is Nikhil Rao reviewing?",
+   "reply": "Nikhil Rao is reviewing the Sluice settings, as noted in the Tamarind action items [E1].",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "reviews of Nikhil Rao",
+    "gold_values": [
+     "the Sluice settings"
+    ],
+    "kind": "text"
+   },
+   "evidence_ids_available": [
+    "E1"
+   ]
+  },
+  {
+   "key": "F022",
+   "question": "Who is fixing the Tamarind rollback test, and what is the maximum message size of the Turret API?",
+   "reply": "Rania is fixing the Tamarind rollback test [E1, E2].\n\nThe owner's records do not contain information about the maximum message size of the Turret API.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "max_message_size of Vesper",
+    "gold_values": [],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F023",
+   "question": "Who is fixing the Vesper rollback test, and where does Kestrel-3B run, and which model did Osprey use by default in March?",
+   "reply": "Kavya Menon is fixing the Vesper rollback test [E4].\n\nKestrel-3B runs on the GPU host [E3].\n\nBy default in March, Osprey used the Kestrel-9B model [E5]. However, by October, the Osprey default model had changed to Swift-6B, and Kestrel-9B had been retired [E6].",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "runs_on of Kestrel-3B",
+    "gold_values": [
+     "GPU host"
+    ],
+    "kind": "host"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6"
+   ]
+  },
+  {
+   "key": "F024",
+   "question": "Which model did Vesper decide to keep, and which host serves Swift-6B, and what was Marlin's default model before October?",
+   "reply": "Vesper serves Kestrel-9B on the CPU host. The edge host serves Swift-6B, either through Juniper or Osprey, as both serve Swift-6B on the edge host. Before October, Marlin's default model was Kestrel-3B, according to the archived evidence [E6].",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "default_model_history of Marlin",
+    "gold_values": [
+     "Kestrel-3B"
+    ],
+    "kind": "model"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F025",
+   "question": "Through when is the Tamarind budget approved, and who owns the Ferry queue, and which model did Osprey use by default in March?",
+   "reply": "The Tamarind budget is approved through August [E1]. The Ferry queue is owned by Chiara Rossi [E2]. By default, in March, the Osprey used the Kestrel-9B model [E3]. However, by October, the default model for Osprey changed to Swift-6B, and the Kestrel-9B model was retired [E4].",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "default_model_history of Osprey",
+    "gold_values": [
+     "Kestrel-9B"
+    ],
+    "kind": "model"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4"
+   ]
+  },
+  {
+   "key": "F026",
+   "question": "Who will fix the Willow rollback test, and who has the on-call duty for Sable?",
+   "reply": "The records indicate that Quinn Abbott is on call for Sable this month [E1]. There is no information provided about who will fix the Willow rollback test in the given evidence.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "test_fixer of Willow",
+    "gold_values": [],
+    "kind": "person"
+   },
+   "evidence_ids_available": [
+    "E1"
+   ]
+  },
+  {
+   "key": "F027",
+   "question": "Who audits the Sable build logs?",
+   "reply": "I do not have any information in the owner's records about who audits the Sable build logs. The provided evidence does not include details about log auditing processes.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "incident_auditor of Sable",
+    "gold_values": [],
+    "kind": "person"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F028",
+   "question": "When does the Willow standup start, and which model did Marlin decide to keep?",
+   "reply": "The Willow standup start time is not provided in the given evidence. \n\nRegarding Marlin, the decision was to keep Kestrel-3B as the default model, according to the meeting segment [E10]. However, this decision was later overridden, as the default model for Marlin is now Heron-12B, based on the evidence [E4].",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "standup of Willow",
+    "gold_values": [
+     "10",
+     "12"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F029",
+   "question": "Who will fix the Marlin rollback test, and who has the on-call duty for Osprey, and who signs off Cedar security?",
+   "reply": "Based on the provided evidence:\n\n- Yusuf Demir will fix the Marlin rollback test [E1].\n- Dmitri Volkov has the on-call duty for Osprey this month [E2].\n\nThere is no information regarding who signs off on Cedar security in the given records.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "security_reviewer of Cedar",
+    "gold_values": [],
+    "kind": "person"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F030",
+   "question": "On which day are Marlin design reviews held?",
+   "reply": "Marlin design reviews are listed as being on both Tuesday and Friday. [E1] states they are on Tuesday, while [E2] states they are on Friday. These items disagree.",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "review_day of Marlin",
+    "gold_values": [
+     "Tuesday",
+     "Friday"
+    ],
+    "kind": "day"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F031",
+   "question": "Who is the Cedar lead, and what is Amara Osei's deadline for the written summary, and what was the old retry limit of the Gantry scheduler?",
+   "reply": "The Cedar lead is Liam Oconnor [E3].\n\nAmara Osei's deadline for circulating the written summary is Wednesday [E4].\n\nThe old retry limit of the Gantry scheduler was up to 2 times before a job is parked [E1].",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "retry_limit_history of Gantry scheduler",
+    "gold_values": [
+     "2"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4"
+   ]
+  },
+  {
+   "key": "F032",
+   "question": "How many retries did the archived Hopper ingest service architecture allow, and who attended the Cedar planning meeting?",
+   "reply": "The archived Hopper ingest service architecture allowed up to 6 retries before a job was parked.\n\nThe information about who attended the Cedar planning meeting is not provided in the given evidence. Therefore, I do not have that information in the owner's records.",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "retry_limit_history of Hopper ingest service",
+    "gold_values": [
+     "6"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F033",
+   "question": "When will the Marlin lead be away next?",
+   "reply": "I do not have that in the owner's records.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "vacation of Marlin",
+    "gold_values": [],
+    "kind": "month"
+   },
+   "evidence_ids_available": []
+  },
+  {
+   "key": "F034",
+   "question": "Was the Tamarind design review day updated in one memory after the other memory gave a different answer?",
+   "reply": "The Tamarind design review day was mentioned as both Tuesday [E1] and Thursday [E2] in separate memories. There appears to be a discrepancy between the two records.",
+   "atom": {
+    "gold_status": "ORDER_UNSUPPORTED",
+    "sub_claim": "order_figure of the Tamarind design review day",
+    "gold_values": [
+     "Tuesday",
+     "Thursday"
+    ],
+    "kind": "none"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F035",
+   "question": "Does Quartz have a staging environment, and by when does Umar Bello have to circulate the written summary?",
+   "reply": "According to the owner's records:\n\n- Quartz does not have a staging environment [E3].\n- Umar Bello has to circulate the written summary by Friday [E1].",
+   "atom": {
+    "gold_status": "NEGATIVE_SUPPORTED",
+    "sub_claim": "staging_env of Quartz",
+    "gold_values": [],
+    "kind": "bool"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F036",
+   "question": "Was the Osprey standup time updated in one memory after the other memory gave a different answer?",
+   "reply": "The Osprey standup time was recorded as both 10 and 12 in separate memories [E1, E2].",
+   "atom": {
+    "gold_status": "ORDER_UNSUPPORTED",
+    "sub_claim": "order_figure of the Osprey standup time",
+    "gold_values": [
+     "10",
+     "12"
+    ],
+    "kind": "none"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F037",
+   "question": "Is there a staging environment for Vesper, and what is the retry limit of the Ferry queue?",
+   "reply": "There is no staging environment for Vesper [E5].\n\nThe retry limit for the Ferry queue is 7 times before a job is parked [E8]. However, there is conflicting information regarding the retry limit for Vesper itself, which states it is retried 8 times before being parked [E9]. Please note the discrepancy between these two pieces of information.",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "retry_limit of Ferry queue",
+    "gold_values": [
+     "7"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F038",
+   "question": "Who owns the Conduit stream, and which model does Osprey use by default?",
+   "reply": "The Conduit stream owner is not mentioned in the provided evidence. \n\nOsprey uses the Swift-6B model by default [E2].",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "default_model of Osprey",
+    "gold_values": [
+     "Swift-6B"
+    ],
+    "kind": "model"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F039",
+   "question": "What time is the Cedar standup, and who is on call for Vesper?",
+   "reply": "The Cedar standup times are conflicting:\n- [E1] states it is at 9.\n- [E2] states it is at 11.\n\nFor Vesper on-call:\n- [E3] indicates Ines Duarte is on call for Vesper this month.",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "standup of Cedar",
+    "gold_values": [
+     "9",
+     "11"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3"
+   ]
+  },
+  {
+   "key": "F040",
+   "question": "Who is fixing the Tamarind rollback test, and what is the maximum message size of the Turret API?",
+   "reply": "Based on the provided reference evidence:\n\n- Rania is fixing the Tamarind rollback test.\n\nThe maximum message size of the Turret API is not mentioned in the provided records.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "max_message_size of Vesper",
+    "gold_values": [],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1"
+   ]
+  },
+  {
+   "key": "F041",
+   "question": "What does Yusuf Demir review, and when will the Tamarind lead be away next?",
+   "reply": "From the provided evidence, Yusuf Demir is to review the Relay settings [E2].\n\nHowever, there is no information regarding when the Tamarind lead will be away next. The available records do not include any details about the Tamarind lead's schedule or absence.",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "reviews of Yusuf Demir",
+    "gold_values": [
+     "the Relay settings"
+    ],
+    "kind": "text"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7"
+   ]
+  },
+  {
+   "key": "F042",
+   "question": "What is the maximum message size of the Cobalt auth service?",
+   "reply": "I do not have that in the owner's records.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "max_message_size of Willow",
+    "gold_values": [],
+    "kind": "number"
+   },
+   "evidence_ids_available": []
+  },
+  {
+   "key": "F043",
+   "question": "Was the Willow design review day updated in one memory after the other memory gave a different answer?",
+   "reply": "The Willow design review day was mentioned as both Wednesday and Friday in separate memories [E1, E2]. There appears to be a discrepancy between the two records.",
+   "atom": {
+    "gold_status": "ORDER_UNSUPPORTED",
+    "sub_claim": "order_figure of the Willow design review day",
+    "gold_values": [
+     "Wednesday",
+     "Friday"
+    ],
+    "kind": "none"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F044",
+   "question": "When does the Cedar standup start, and which host serves Merlin-7B?",
+   "reply": "The Cedar standup starts at 11 [E7].\n\nMerlin-7B is served on the batch host by both Juniper and Umbra [E3, E6].",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "runs_on of Merlin-7B",
+    "gold_values": [
+     "batch host"
+    ],
+    "kind": "host"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8"
+   ]
+  },
+  {
+   "key": "F045",
+   "question": "Who owns the Hopper ingest service?",
+   "reply": "Wen Zhao owns the Hopper ingest service, according to the record [E1].",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "owner of Hopper ingest service",
+    "gold_values": [
+     "Wen Zhao"
+    ],
+    "kind": "person"
+   },
+   "evidence_ids_available": [
+    "E1"
+   ]
+  },
+  {
+   "key": "F046",
+   "question": "Was the Sable standup time updated in one memory after the other memory gave a different answer?",
+   "reply": "The Sable standup time was recorded as both 9 and 11 in separate memories [E1, E2]. This indicates a discrepancy in the owner's records.",
+   "atom": {
+    "gold_status": "ORDER_UNSUPPORTED",
+    "sub_claim": "order_figure of the Sable standup time",
+    "gold_values": [
+     "9",
+     "11"
+    ],
+    "kind": "none"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F047",
+   "question": "What time is the Marlin standup?",
+   "reply": "The Marlin standup is at 12, according to the owner's records [E2]. There is a conflicting record stating it is at 10 [E1], but I will use the most recent entry.",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "standup of Marlin",
+    "gold_values": [
+     "10",
+     "12"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F048",
+   "question": "When does the Cedar standup start, and which host serves Merlin-7B?",
+   "reply": "The Cedar standup starts at 11 [E7].\n\nMerlin-7B is served on the batch host by both Juniper and Umbra [E3, E6].",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "standup of Cedar",
+    "gold_values": [
+     "9",
+     "11"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8"
+   ]
+  },
+  {
+   "key": "F049",
+   "question": "By when does Sven Larsen have to circulate the written summary?",
+   "reply": "Sven Larsen has to circulate the written summary by Monday, according to the Cedar action items [E1].",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "deadline of Sven Larsen",
+    "gold_values": [
+     "Monday"
+    ],
+    "kind": "day"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F050",
+   "question": "Who is the Quartz lead, and which model did Tamarind decide to keep, and what was Cedar's default model before October?",
+   "reply": "The Quartz lead is not mentioned in the provided evidence.\n\nTamarind decided to keep Kestrel-3B as the default model [E10].\n\nCedar's default model before October was Swift-20B [E1].",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "default_model_history of Cedar",
+    "gold_values": [
+     "Merlin-2B"
+    ],
+    "kind": "model"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F051",
+   "question": "Was the Quartz design review day updated in one memory after the other memory gave a different answer?",
+   "reply": "The Quartz design review day was mentioned as both Tuesday and Friday in separate memories [E1, E2]. There appears to be a discrepancy between the two records.",
+   "atom": {
+    "gold_status": "ORDER_UNSUPPORTED",
+    "sub_claim": "order_figure of the Quartz design review day",
+    "gold_values": [
+     "Tuesday",
+     "Friday"
+    ],
+    "kind": "none"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F052",
+   "question": "Is there a staging environment for Sable?",
+   "reply": "I do not have that in the owner's records.",
+   "atom": {
+    "gold_status": "NEGATIVE_UNSUPPORTED",
+    "sub_claim": "staging_env of Sable",
+    "gold_values": [],
+    "kind": "bool"
+   },
+   "evidence_ids_available": []
+  },
+  {
+   "key": "F053",
+   "question": "What does Kavya Menon review, and which host serves Heron-4B, and what was the old retry limit of the Anvil builder?",
+   "reply": "Kavya Menon reviews the Turret settings [E6].\n\nHeron-4B is served on the GPU host [E5].\n\nThe old retry limit of the Anvil builder is up to 5 times before a job is parked [E1].",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "retry_limit_history of Anvil builder",
+    "gold_values": [
+     "5"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6"
+   ]
+  },
+  {
+   "key": "F054",
+   "question": "What is the maximum message size of the Sluice cache?",
+   "reply": "I do not have that information in the owner's records. The provided evidence focuses on the retry mechanism and scheduling of the Sluice cache, but does not mention the maximum message size.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "max_message_size of Tamarind",
+    "gold_values": [],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4"
+   ]
+  },
+  {
+   "key": "F055",
+   "question": "On which day are Willow design reviews held?",
+   "reply": "Willow design reviews are held on Wednesday [E1]. However, there is conflicting information as there is also a record stating Willow design reviews are on Friday [E1]. Since both cannot be true simultaneously, you should verify the correct day for Willow design reviews.",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "review_day of Willow",
+    "gold_values": [
+     "Wednesday",
+     "Friday"
+    ],
+    "kind": "day"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F056",
+   "question": "When is the Tamarind lead's next vacation?",
+   "reply": "I do not have information about the Tamarind lead's personal schedule or vacation plans in the provided evidence. The available records are related to Tamarind's architecture, runbook, on-call rotations, and meeting segments, but none of them mention Rania Said's vacation schedule.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "vacation of Tamarind",
+    "gold_values": [],
+    "kind": "month"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F057",
+   "question": "Through when is the Osprey budget approved, and who owns the Cobalt auth service, and who is the security reviewer for Marlin?",
+   "reply": "The Osprey budget is approved through July, as stated in the meeting segment [E1].\n\nThe Cobalt auth service is owned by Tara Brennan, as recorded in her memory [E2].\n\nHowever, the information regarding the security reviewer for Marlin is not provided in the given evidence. Therefore, I do not have that information from the owner's records.",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "owner of Cobalt auth service",
+    "gold_values": [
+     "Tara Brennan"
+    ],
+    "kind": "person"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F058",
+   "question": "Until which month is Vesper funded, and who will fix the Quartz rollback test?",
+   "reply": "Vesper is funded through September according to the owner's records [E1]. There is no information provided about who will fix the Quartz rollback test in the given evidence.",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "budget_through of Vesper",
+    "gold_values": [
+     "September"
+    ],
+    "kind": "month"
+   },
+   "evidence_ids_available": [
+    "E1"
+   ]
+  },
+  {
+   "key": "F059",
+   "question": "Is there a staging environment for Vesper, and what is the retry limit of the Ferry queue?",
+   "reply": "There is no staging environment for Vesper [E5].\n\nThe retry limit for the Ferry queue is 7 times before a job is parked [E8]. However, there is conflicting information regarding the retry limit for Vesper itself, which states it is retried 8 times before being parked [E9]. Please note the discrepancy between these two pieces of information.",
+   "atom": {
+    "gold_status": "NEGATIVE_UNSUPPORTED",
+    "sub_claim": "staging_env of Vesper",
+    "gold_values": [],
+    "kind": "bool"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F060",
+   "question": "Was the Tamarind design review day updated in one memory after the other memory gave a different answer?",
+   "reply": "The Tamarind design review day was mentioned twice in the memory logs, with conflicting information:\n\n- [E1] states that Tamarind design reviews are on Tuesday.\n- [E2] states that Tamarind design reviews are on Thursday.\n\nSince these two pieces of information disagree, it indicates an update or change in the schedule between the two recordings. The most recent recording ([E2]) suggests the day has been changed to Thursday.",
+   "atom": {
+    "gold_status": "ORDER_UNSUPPORTED",
+    "sub_claim": "order_figure of the Tamarind design review day",
+    "gold_values": [
+     "Tuesday",
+     "Thursday"
+    ],
+    "kind": "none"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F061",
+   "question": "Was the Willow design review day updated in one memory after the other memory gave a different answer?",
+   "reply": "The Willow design review day was mentioned twice in the memory logs, with conflicting information:\n\n- [E1] states that Willow design reviews are on Friday.\n- [E2] states that Willow design reviews are on Wednesday.\n\nThese two pieces of information disagree, indicating an update or change in the schedule between the two recordings.",
+   "atom": {
+    "gold_status": "ORDER_UNSUPPORTED",
+    "sub_claim": "order_figure of the Willow design review day",
+    "gold_values": [
+     "Wednesday",
+     "Friday"
+    ],
+    "kind": "none"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F062",
+   "question": "When will the Quartz lead be away next?",
+   "reply": "I do not have that in the owner's records.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "vacation of Quartz",
+    "gold_values": [],
+    "kind": "month"
+   },
+   "evidence_ids_available": []
+  },
+  {
+   "key": "F063",
+   "question": "What time is the Vesper standup?",
+   "reply": "The Vesper standup is at 12, according to the owner's records [E2]. There is a conflicting record stating it is at 10 [E1], but I will use the most recent entry.",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "standup of Vesper",
+    "gold_values": [
+     "10",
+     "12"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F064",
+   "question": "Which model did Marlin use by default in March, and through when is the Osprey budget approved?",
+   "reply": "Marlin used the Kestrel-3B model by default in March [E2]. The Osprey budget is approved through July [E1].",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "default_model_history of Marlin",
+    "gold_values": [
+     "Kestrel-3B"
+    ],
+    "kind": "model"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3"
+   ]
+  },
+  {
+   "key": "F065",
+   "question": "Which model did Osprey use by default in March, and through when is the Quartz budget approved?",
+   "reply": "According to the owner's records:\n\n- In March, the Osprey default model was Kestrel-9B [E4].\n- The Quartz budget approval details are not provided in the given evidence. There is no information regarding the duration of the Quartz budget approval [E1] - [E10].",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "default_model_history of Osprey",
+    "gold_values": [
+     "Kestrel-9B"
+    ],
+    "kind": "model"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F066",
+   "question": "Who is the Willow lead?",
+   "reply": "I do not have that in the owner's records.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "lead of Willow",
+    "gold_values": [],
+    "kind": "person"
+   },
+   "evidence_ids_available": []
+  },
+  {
+   "key": "F067",
+   "question": "Through when is the Tamarind budget approved, and who owns the Ferry queue, and which model did Osprey use by default in March?",
+   "reply": "The Tamarind budget approval and ownership of the Ferry queue are not covered in the provided evidence. Therefore, I cannot provide answers to those specific questions based on the owner's records.\n\nHowever, regarding the Osprey default model in March, according to the evidence:\n\n[E4] As of March, the Osprey default model was Kestrel-9B.",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "default_model_history of Osprey",
+    "gold_values": [
+     "Kestrel-9B"
+    ],
+    "kind": "model"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F068",
+   "question": "What was the old retry limit of the Gantry scheduler?",
+   "reply": "The old retry limit of the Gantry scheduler was up to 2 times before a job is parked, as stated in [E1].",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "retry_limit_history of Gantry scheduler",
+    "gold_values": [
+     "2"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F069",
+   "question": "Who is on call for Sable, and where does Heron-12B run, and which model did Marlin use by default in March?",
+   "reply": "Sable on-call:\nQuinn Abbott is on call for Sable this month.\n\nMarlin architecture:\nHeron-12B runs on the CPU host.\n\nMarlin default model in March:\nAs of March, the Marlin default model was Kestrel-3B.\n\nMarlin default model by October:\nAs of October, the Marlin default model is Heron-12B; the Kestrel-3B model has been retired.",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "default_model_history of Marlin",
+    "gold_values": [
+     "Kestrel-3B"
+    ],
+    "kind": "model"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F070",
+   "question": "What is Marlin's default model, and who is the Vesper lead, and who is going to audit the Quartz build logs after the incident?",
+   "reply": "Marlin's default model is Heron-12B [E1].\n\nThe Vesper lead is Olga Petrova [E10].\n\nAfter the incident, the person going to audit the Quartz build logs is not mentioned in the provided evidence.",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "lead of Vesper",
+    "gold_values": [
+     "Kavya Menon"
+    ],
+    "kind": "person"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F071",
+   "question": "Is there a staging environment for Vesper, and what is Amara Osei's deadline for the written summary?",
+   "reply": "There is no mention of a staging environment for Vesper in the provided evidence. \n\nAmara Osei's deadline for circulating the written summary is Wednesday, as stated in the Juniper action items [E1].",
+   "atom": {
+    "gold_status": "NEGATIVE_UNSUPPORTED",
+    "sub_claim": "staging_env of Vesper",
+    "gold_values": [],
+    "kind": "bool"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8"
+   ]
+  },
+  {
+   "key": "F072",
+   "question": "How many retries did the archived Hopper ingest service architecture allow, and how many times does the Conduit stream retry a failed job?",
+   "reply": "The archived Hopper ingest service allowed up to 6 retries before parking a failed job [E1]. The Conduit stream retries a failed job up to 4 times before parking it [E4].",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "retry_limit_history of Hopper ingest service",
+    "gold_values": [
+     "6"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5"
+   ]
+  },
+  {
+   "key": "F073",
+   "question": "Through when is the Tamarind budget approved, and who owns the Ferry queue, and which model did Osprey use by default in March?",
+   "reply": "The Tamarind budget approval and ownership of the Ferry queue are not covered in the provided evidence. Therefore, I cannot provide answers to those specific questions based on the owner's records.\n\nHowever, regarding the Osprey default model in March, according to the evidence:\n\n[E4] As of March, the Osprey default model was Kestrel-9B.",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "owner of Ferry queue",
+    "gold_values": [
+     "Chiara Rossi"
+    ],
+    "kind": "person"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F074",
+   "question": "On which day are Willow design reviews held?",
+   "reply": "The owner's records contain conflicting information about Willow design reviews. One record states they are on Wednesday [E1], while another states they are on Friday [E2]. Please provide additional context or verify the correct day.",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "review_day of Willow",
+    "gold_values": [
+     "Wednesday",
+     "Friday"
+    ],
+    "kind": "day"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F075",
+   "question": "Who will fix the Quartz rollback test, and who has the on-call duty for Vesper?",
+   "reply": "The records show that Ines Duarte has the on-call duty for Vesper this month [E1]. There is no specific information regarding who will fix the Quartz rollback test in the provided evidence.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "test_fixer of Quartz",
+    "gold_values": [],
+    "kind": "person"
+   },
+   "evidence_ids_available": [
+    "E1"
+   ]
+  },
+  {
+   "key": "F076",
+   "question": "Who is fixing the Sable rollback test?",
+   "reply": "I do not have that in the owner's records.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "test_fixer of Sable",
+    "gold_values": [],
+    "kind": "person"
+   },
+   "evidence_ids_available": []
+  },
+  {
+   "key": "F077",
+   "question": "Who is fixing the Vesper rollback test, and where does Kestrel-3B run, and which model did Osprey use by default in March?",
+   "reply": "From the provided evidence, I do not have specific information about who is fixing the Vesper rollback test. \n\nKestrel-3B runs on the GPU host, according to the document chunk \"Tamarind architecture\" [E3].\n\nBy default in March, Osprey used Kestrel-9B, as recorded in the document chunk \"Osprey architecture v1 (archived)\" [E9]. However, by October, the default model for Osprey had changed to Swift-6B, as mentioned in the document chunk \"Osprey architecture\" [E2].",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "default_model_history of Osprey",
+    "gold_values": [
+     "Kestrel-9B"
+    ],
+    "kind": "model"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F078",
+   "question": "When does the Cedar standup start, and which host serves Merlin-7B?",
+   "reply": "The Cedar standup start time is not provided in the given evidence. However, according to the evidence, Merlin-7B is served on the batch host by both Juniper [E2] and Umbra [E3].",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "standup of Cedar",
+    "gold_values": [
+     "9",
+     "11"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F079",
+   "question": "Which model does Osprey use by default, and by when does Elena Marsh have to circulate the written summary, and how many retries did the archived Hopper ingest service architecture allow?",
+   "reply": "Osprey uses Swift-6B by default, as stated in [E3].\n\nElena Marsh has to circulate the written summary by Tuesday, as noted in [E5].\n\nThe archived Hopper ingest service architecture allowed up to 7 retries before a job was parked, according to [E2].",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "retry_limit_history of Hopper ingest service",
+    "gold_values": [
+     "6"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5"
+   ]
+  },
+  {
+   "key": "F080",
+   "question": "Is there a staging environment for Vesper, and who has the on-call duty for Cedar?",
+   "reply": "There is no staging environment mentioned in the provided evidence. For Cedar on-call duty, Umar Bello is listed as on call for Cedar this month [E1].",
+   "atom": {
+    "gold_status": "NEGATIVE_UNSUPPORTED",
+    "sub_claim": "staging_env of Vesper",
+    "gold_values": [],
+    "kind": "bool"
+   },
+   "evidence_ids_available": [
+    "E1"
+   ]
+  },
+  {
+   "key": "F081",
+   "question": "By when does Pablo Reyes have to circulate the written summary, and who is on call for Cedar, and who is the security reviewer for Osprey?",
+   "reply": "Pablo Reyes has to circulate the written summary by Monday, as stated in the Vesper action items [E2].\n\nFor Cedar, Umar Bello is on call this month, as noted in the \"Cedar on-call\" record [E1].\n\nThe security reviewer for Osprey is not mentioned in the provided evidence.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "security_reviewer of Osprey",
+    "gold_values": [],
+    "kind": "person"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F082",
+   "question": "Who signs off Quartz security?",
+   "reply": "I do not have that in the owner's records.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "security_reviewer of Quartz",
+    "gold_values": [],
+    "kind": "person"
+   },
+   "evidence_ids_available": []
+  },
+  {
+   "key": "F083",
+   "question": "Is there a staging environment for Vesper, and what is the retry limit of the Ferry queue?",
+   "reply": "There is no information provided about a staging environment for Vesper in the given records. However, the retry limit of the Ferry queue is 7 times before a job is parked. [E2]",
+   "atom": {
+    "gold_status": "NEGATIVE_UNSUPPORTED",
+    "sub_claim": "staging_env of Vesper",
+    "gold_values": [],
+    "kind": "bool"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3"
+   ]
+  },
+  {
+   "key": "F084",
+   "question": "What is Tamarind's default model, and when will the Vesper lead be away next?",
+   "reply": "Tamarind's default model is Kestrel-3B, as recorded in [E2].\n\nI do not have information about when the Vesper lead will be away next, as there is no relevant record provided in the given evidence.",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "default_model of Tamarind",
+    "gold_values": [
+     "Kestrel-3B"
+    ],
+    "kind": "model"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F085",
+   "question": "Who was in the Vesper planning meeting, and when is Ironside Backup support open on weekdays, and what was the old retry limit of the Gantry scheduler?",
+   "reply": "I do not have information about who attended the Vesper planning meeting in the provided evidence.\n\nIronside Backup support is open from 9 to 7 on weekdays. The support line is 555-0135.\n\nThe old retry limit of the Gantry scheduler, according to the evidence, was 2 retries before a job is parked [E9]. However, the current retry limit is 3 retries before a job is parked [E10].",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "retry_limit_history of Gantry scheduler",
+    "gold_values": [
+     "2"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F086",
+   "question": "When does the Willow standup start, and which model did Marlin decide to keep?",
+   "reply": "The Willow standup starts at 12. The model Marlin decided to keep is Heron-12B. [E1, E3]",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "standup of Willow",
+    "gold_values": [
+     "10",
+     "12"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3"
+   ]
+  },
+  {
+   "key": "F087",
+   "question": "On which day are Tamarind design reviews held?",
+   "reply": "The Tamarind design reviews are scheduled on both Tuesday and Thursday, according to the owner's records [E1, E2].",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "review_day of Tamarind",
+    "gold_values": [
+     "Tuesday",
+     "Thursday"
+    ],
+    "kind": "day"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F088",
+   "question": "Which model does Osprey use by default, and by when does Elena Marsh have to circulate the written summary, and how many retries did the archived Hopper ingest service architecture allow?",
+   "reply": "Osprey uses Kestrel-9B by default, as stated in the archived document [E1]. Elena Marsh has to circulate the written summary by Tuesday, according to the Marlin action items [E5]. The archived Hopper ingest service allowed up to 6 retries before parking a failed job, as mentioned in the Osprey architecture v1 [E1].",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "retry_limit_history of Hopper ingest service",
+    "gold_values": [
+     "6"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F089",
+   "question": "What time is the Osprey standup?",
+   "reply": "The Osprey standup is at both 10 and 12, according to your records [E1, E2]. There seems to be a discrepancy.",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "standup of Osprey",
+    "gold_values": [
+     "10",
+     "12"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F090",
+   "question": "Was the Cedar design review day updated in one memory after the other memory gave a different answer?",
+   "reply": "The Cedar design review day was mentioned twice in the memory logs, with conflicting information:\n\n- [E1] Cedar design reviews are on Thursday.\n- [E2] Cedar design reviews are on Monday.\n\nSince these two pieces of information disagree, it indicates that the Cedar design review day was updated from Monday to Thursday. The most recent update is [E1], stating that Cedar design reviews are on Thursday.",
+   "atom": {
+    "gold_status": "ORDER_UNSUPPORTED",
+    "sub_claim": "order_figure of the Cedar design review day",
+    "gold_values": [
+     "Monday",
+     "Thursday"
+    ],
+    "kind": "none"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F091",
+   "question": "Does Tamarind have a staging environment?",
+   "reply": "According to the owner's records [E1], Tamarind has no staging environment.",
+   "atom": {
+    "gold_status": "NEGATIVE_SUPPORTED",
+    "sub_claim": "staging_env of Tamarind",
+    "gold_values": [],
+    "kind": "bool"
+   },
+   "evidence_ids_available": [
+    "E1"
+   ]
+  },
+  {
+   "key": "F092",
+   "question": "Who is the security reviewer for Sable?",
+   "reply": "The owner's records do not specify who the security reviewer for Sable is. The records include information about design reviews being on Wednesdays or Thursdays, and Vera Kovac being the Sable lead, but there is no mention of a security reviewer.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "security_reviewer of Sable",
+    "gold_values": [],
+    "kind": "person"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F093",
+   "question": "Who owns the Conduit stream, and who owns the Hopper ingest service?",
+   "reply": "The owner's records state that Wen Zhao owns the Hopper ingest service. There is no information provided about who owns the Conduit stream. [E1]",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "owner of Hopper ingest service",
+    "gold_values": [
+     "Wen Zhao"
+    ],
+    "kind": "person"
+   },
+   "evidence_ids_available": [
+    "E1"
+   ]
+  },
+  {
+   "key": "F094",
+   "question": "Does Quartz have a staging environment, and by when does Umar Bello have to circulate the written summary?",
+   "reply": "Quartz does not have a staging environment, according to the record [E1].\n\nUmar Bello is required to circulate the written summary by Friday, as per the record [E2].",
+   "atom": {
+    "gold_status": "NEGATIVE_SUPPORTED",
+    "sub_claim": "staging_env of Quartz",
+    "gold_values": [],
+    "kind": "bool"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F095",
+   "question": "Which model did Marlin use by default in March, and who attended the Cedar planning meeting?",
+   "reply": "Marlin used Kestrel-3B as the default model in March, according to the record [E3].\n\nThe Cedar planning meeting attendees were Liam Oconnor and Ines Duarte, based on the conversation in [E1].",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "default_model_history of Marlin",
+    "gold_values": [
+     "Kestrel-3B"
+    ],
+    "kind": "model"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4"
+   ]
+  },
+  {
+   "key": "F096",
+   "question": "Who signs off Quartz security?",
+   "reply": "I do not have that information in the owner's records. The provided evidence focuses on deployment procedures, architecture details, on-call responsibilities, and budget approval, but does not mention who signs off on Quartz security.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "security_reviewer of Quartz",
+    "gold_values": [],
+    "kind": "person"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F097",
+   "question": "Who leads Osprey, and who is the security reviewer for Quartz?",
+   "reply": "The lead for Osprey is not mentioned in the provided evidence. The security reviewer for Quartz is also not specified in the given records. Therefore, based on the information available, I cannot provide answers to these questions.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "security_reviewer of Quartz",
+    "gold_values": [],
+    "kind": "person"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F098",
+   "question": "Was the Marlin design review day updated in one memory after the other memory gave a different answer?",
+   "reply": "The Marlin design review day was mentioned as both Tuesday [E1] and Friday [E2] in separate memories recorded on 2026-09-22. The two memories provide conflicting information about the day of the design review.",
+   "atom": {
+    "gold_status": "ORDER_UNSUPPORTED",
+    "sub_claim": "order_figure of the Marlin design review day",
+    "gold_values": [
+     "Tuesday",
+     "Friday"
+    ],
+    "kind": "none"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F099",
+   "question": "On which day are Quartz design reviews held, and what is the rollback window for Sable?",
+   "reply": "Quartz design reviews are held on Friday [E3].\n\nThe rollback window for Sable is within 35 minutes of a failed deploy [E2].",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "review_day of Quartz",
+    "gold_values": [
+     "Tuesday",
+     "Friday"
+    ],
+    "kind": "day"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4"
+   ]
+  },
+  {
+   "key": "F100",
+   "question": "Which model does Quartz use by default, and who attended the Cedar planning meeting, and when is the Osprey lead's next vacation?",
+   "reply": "According to the owner's records:\n\n- Quartz uses the Merlin-2B model by default [E3].\n- The records do not contain information about who attended the Cedar planning meeting.\n- The records also do not contain information about the Osprey lead's next vacation.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "vacation of Osprey",
+    "gold_values": [],
+    "kind": "month"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F101",
+   "question": "What is the retry limit of the Conduit stream, and when is Tidewater Pay support open on weekdays, and what was Cedar's default model before October?",
+   "reply": "The retry limit of the Conduit stream is up to 4 times before a job is parked [E2].\n\nTidewater Pay support is open from 9 to 5 on weekdays, and the support line is 555-0121 [E4].\n\nBefore October, Cedar's default model was Merlin-2B [E5]. As of October, the Cedar default model changed to Swift-20B, and Merlin-2B was retired [E6].",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "support_hours of Tidewater Pay",
+    "gold_values": [
+     "9 to 5"
+    ],
+    "kind": "hours"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6"
+   ]
+  },
+  {
+   "key": "F102",
+   "question": "Where does Swift-20B run, and who owns the Sluice cache, and how many retries did the archived Hopper ingest service architecture allow?",
+   "reply": "Swift-20B runs on the batch host for Cedar and Sable, as stated in [E3] and [E8].\n\nThe Sluice cache is owned by Amara Osei, as recorded in [E9].\n\nThe archived Hopper ingest service architecture allowed up to 6 retries for failed jobs, according to [E4].",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "retry_limit_history of Hopper ingest service",
+    "gold_values": [
+     "6"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F103",
+   "question": "Which model did Marlin use by default in March, and through when is the Osprey budget approved?",
+   "reply": "According to the owner's records:\n\n- Marlin used Kestrel-3B by default in March [E5].\n- The Osprey default model changed from Kestrel-9B to Swift-6B by October [E6] and [E1]. However, there is no specific approval date mentioned for the Osprey budget in the provided evidence. Therefore, I do not have the Osprey budget approval date in the owner's records.",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "default_model_history of Marlin",
+    "gold_values": [
+     "Kestrel-3B"
+    ],
+    "kind": "model"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F104",
+   "question": "How many retries did the archived Anvil builder architecture allow?",
+   "reply": "The archived Anvil builder architecture allowed up to 5 retries before a job was parked. [E1]",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "retry_limit_history of Anvil builder",
+    "gold_values": [
+     "5"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F105",
+   "question": "What is Marlin's default model, and who is the Vesper lead, and who is going to audit the Quartz build logs after the incident?",
+   "reply": "Marlin serves Heron-12B on the CPU host [E3]. Kavya Menon is the Vesper lead [E4]. There is no information available regarding who is going to audit the Quartz build logs after the incident in the provided evidence.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "incident_auditor of Quartz",
+    "gold_values": [],
+    "kind": "person"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4"
+   ]
+  },
+  {
+   "key": "F106",
+   "question": "How many retries did the archived Hopper ingest service architecture allow, and how many times does the Conduit stream retry a failed job?",
+   "reply": "The archived Hopper ingest service architecture allowed up to 6 retries before parking a failed job [E1]. The Conduit stream allows up to 4 retries before parking a failed job [E2].",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "retry_limit_history of Hopper ingest service",
+    "gold_values": [
+     "6"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F107",
+   "question": "What was Marlin's default model before October, and what is the retry limit of the Conduit stream?",
+   "reply": "According to the owner's records:\n\n- Before October, Marlin's default model was Kestrel-3B [E8].\n- The retry limit of the Conduit stream is 4 times [E7].\n\nThese details are based on the information provided in the owner's records.",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "default_model_history of Marlin",
+    "gold_values": [
+     "Kestrel-3B"
+    ],
+    "kind": "model"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F108",
+   "question": "What is the retry limit of the Conduit stream, and when is Tidewater Pay support open on weekdays, and what was Cedar's default model before October?",
+   "reply": "The retry limit of the Conduit stream is up to 4 times before a job is parked [E2].\n\nTidewater Pay support is open from 9 to 5 on weekdays, and the support line is 555-0121 [E4].\n\nBefore October, Cedar's default model was Merlin-2B [E5]. As of October, the Cedar default model changed to Swift-20B, and Merlin-2B was retired [E6].",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "default_model_history of Cedar",
+    "gold_values": [
+     "Merlin-2B"
+    ],
+    "kind": "model"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6"
+   ]
+  },
+  {
+   "key": "F109",
+   "question": "What is the retry limit of the Cobalt auth service, and how large can a Conduit stream message be?",
+   "reply": "The retry limit of the Cobalt auth service is up to 6 retries before a job is parked [E1].\n\nThe size of a Conduit stream message is not mentioned in the provided evidence. Therefore, I do not have that information in the owner's records [E2].",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "max_message_size of Quartz",
+    "gold_values": [],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F110",
+   "question": "Which model did Osprey use by default in March, and which model does Quartz use by default?",
+   "reply": "Osprey used Kestrel-9B as its default model in March [E4].\n\nQuartz uses Swift-6B as its default model [E5]. However, it's important to note that Quartz itself does not serve models; it is an internal platform for scheduling jobs and serving interactive requests. The information provided pertains to the models used by Osprey, not Quartz directly.",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "default_model of Quartz",
+    "gold_values": [
+     "Merlin-2B"
+    ],
+    "kind": "model"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5"
+   ]
+  },
+  {
+   "key": "F111",
+   "question": "What was Marlin's default model before October, and what is the retry limit of the Conduit stream?",
+   "reply": "According to the owner's records:\n\n- Before October, Marlin's default model was Kestrel-3B [E8].\n- The retry limit of the Conduit stream is 4 times [E7].\n\nThese details are based on the information provided in the owner's records.",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "retry_limit of Conduit stream",
+    "gold_values": [
+     "4"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F112",
+   "question": "On which day are Quartz design reviews held, and what is the rollback window for Sable?",
+   "reply": "Quartz design reviews are held on Tuesday [E6].\n\nThe rollback window for Sable is 35 minutes after a failed deploy [E2].",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "review_day of Quartz",
+    "gold_values": [
+     "Tuesday",
+     "Friday"
+    ],
+    "kind": "day"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F113",
+   "question": "Is there a staging environment for Vesper, and who has the on-call duty for Osprey?",
+   "reply": "There is no direct reference to a staging environment for Vesper in the provided evidence. However, it is mentioned that Osprey has a staging environment [E3].\n\nFor Osprey's on-call duty, the evidence states that Dmitri Volkov is on call for Osprey this month [E2].",
+   "atom": {
+    "gold_status": "NEGATIVE_UNSUPPORTED",
+    "sub_claim": "staging_env of Vesper",
+    "gold_values": [],
+    "kind": "bool"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F114",
+   "question": "Who will fix the Quartz rollback test, and what is Vesper's default model?",
+   "reply": "The owner's records do not provide information about who will fix the Quartz rollback test or what Vesper's default model is. The provided evidence focuses on the architecture of Vesper and does not include details about specific tasks or models. [E1] [E2] [E3]",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "default_model of Vesper",
+    "gold_values": [
+     "Kestrel-9B"
+    ],
+    "kind": "model"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3"
+   ]
+  },
+  {
+   "key": "F115",
+   "question": "When does the Quartz standup start, and until which month is Vesper funded?",
+   "reply": "The Quartz standup starts at 12. The funding for Vesper is approved through September [E1].",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "budget_through of Vesper",
+    "gold_values": [
+     "September"
+    ],
+    "kind": "month"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3"
+   ]
+  },
+  {
+   "key": "F116",
+   "question": "Does Quartz have a staging environment, and who is on call for Cedar?",
+   "reply": "Quartz does not have a staging environment [E3].\n\nUmar Bello is on call for Cedar this month [E2].",
+   "atom": {
+    "gold_status": "NEGATIVE_SUPPORTED",
+    "sub_claim": "staging_env of Quartz",
+    "gold_values": [],
+    "kind": "bool"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F117",
+   "question": "What is Willow's default model, and until which month is Quartz funded, and who signs off Willow security?",
+   "reply": "Willow's default model is Swift-6B [E4].\n\nQuartz is funded until at least October 2026, as there is no information indicating otherwise [E7, E8].\n\nThere is no specific information provided about who signs off on Willow security [E1, E2, E3, E4, E5, E6, E7, E8, E9, E10].",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "default_model of Willow",
+    "gold_values": [
+     "Swift-6B"
+    ],
+    "kind": "model"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F118",
+   "question": "Does Quartz have a staging environment, and where does Heron-12B run?",
+   "reply": "Quartz has no staging environment [E7].\n\nHeron-12B runs on the CPU host served by Marlin [E3] and Thistle [E6].",
+   "atom": {
+    "gold_status": "NEGATIVE_SUPPORTED",
+    "sub_claim": "staging_env of Quartz",
+    "gold_values": [],
+    "kind": "bool"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7"
+   ]
+  },
+  {
+   "key": "F119",
+   "question": "Was the Quartz design review day updated in one memory after the other memory gave a different answer?",
+   "reply": "The Quartz design review day was mentioned twice in the memory logs, with conflicting information:\n\n- [E1] Quartz design reviews are on Friday.\n- [E8] Quartz design reviews are on Tuesday.\n\nSince these two pieces of information disagree, it indicates that the Quartz design review day was updated from Tuesday to Friday at some point between the recording of [E8] and [E1].",
+   "atom": {
+    "gold_status": "ORDER_UNSUPPORTED",
+    "sub_claim": "order_figure of the Quartz design review day",
+    "gold_values": [
+     "Tuesday",
+     "Friday"
+    ],
+    "kind": "none"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F120",
+   "question": "How large can a Turret API message be?",
+   "reply": "I do not have that information in the owner's records [E1].",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "max_message_size of Vesper",
+    "gold_values": [],
+    "kind": "number"
+   },
+   "evidence_ids_available": []
+  },
+  {
+   "key": "F121",
+   "question": "Does Quartz have a staging environment, and who is on call for Osprey?",
+   "reply": "Quartz does not have a staging environment [E1].\n\nFor Osprey on-call, Dmitri Volkov is on call for Osprey this month [E2].",
+   "atom": {
+    "gold_status": "NEGATIVE_SUPPORTED",
+    "sub_claim": "staging_env of Quartz",
+    "gold_values": [],
+    "kind": "bool"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F122",
+   "question": "Who will fix the Quartz rollback test, and who has the on-call duty for Vesper?",
+   "reply": "The task to fix the Quartz rollback test is assigned to Pablo Reyes [E4]. For Vesper, Ines Duarte is on call this month [E3].",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "test_fixer of Quartz",
+    "gold_values": [],
+    "kind": "person"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F123",
+   "question": "Which day is the Cedar design review, and what does Bruno Keller review?",
+   "reply": "The Cedar design review is on Monday [E1]. Bruno Keller is to review the Anvil settings [E3].",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "review_day of Cedar",
+    "gold_values": [
+     "Monday",
+     "Thursday"
+    ],
+    "kind": "day"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F124",
+   "question": "Does Quartz have a staging environment, and by when does Amara Osei have to circulate the written summary?",
+   "reply": "Quartz does not have a staging environment, according to the record [E1].\n\nAmara Osei needs to circulate the written summary by Wednesday, as stated in the record [E2].",
+   "atom": {
+    "gold_status": "NEGATIVE_SUPPORTED",
+    "sub_claim": "staging_env of Quartz",
+    "gold_values": [],
+    "kind": "bool"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F125",
+   "question": "Does Quartz have a staging environment, and who is on call for Osprey?",
+   "reply": "Quartz does not have a staging environment, according to the record [E4].\n\nDmitri Volkov is on call for Osprey this month, as stated in the record [E2].",
+   "atom": {
+    "gold_status": "NEGATIVE_SUPPORTED",
+    "sub_claim": "staging_env of Quartz",
+    "gold_values": [],
+    "kind": "bool"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F126",
+   "question": "What does Kavya Menon review, and which host serves Heron-4B, and what was the old retry limit of the Anvil builder?",
+   "reply": "Kavya Menon reviews the Turret settings [E6].\n\nHeron-4B is served on the GPU host [E5].\n\nThe old retry limit of the Anvil builder is up to 5 times before a job is parked [E1].",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "runs_on of Heron-4B",
+    "gold_values": [
+     "GPU host"
+    ],
+    "kind": "host"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6"
+   ]
+  },
+  {
+   "key": "F127",
+   "question": "When does the Sable standup start, and what is Tamarind's default model?",
+   "reply": "The Sable standup starts at 11 [E5]. Tamarind's default model is not mentioned in the provided evidence. [E1] [E2] [E3] [E4] [E5]",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "standup of Sable",
+    "gold_values": [
+     "9",
+     "11"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5"
+   ]
+  },
+  {
+   "key": "F128",
+   "question": "What time is the Cedar standup, and who is on call for Vesper?",
+   "reply": "The owner's records do not include the specific time for the Cedar standup. However, Umar Bello is on call for Vesper this month. [E1]",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "standup of Cedar",
+    "gold_values": [
+     "9",
+     "11"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F129",
+   "question": "On which day are Tamarind design reviews held?",
+   "reply": "Tamarind design reviews are listed as being on both Tuesday and Thursday. [E1] and [E2] provide conflicting information.",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "review_day of Tamarind",
+    "gold_values": [
+     "Tuesday",
+     "Thursday"
+    ],
+    "kind": "day"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F130",
+   "question": "Which model did Osprey use by default in March, and what are Quarry Data's support hours?",
+   "reply": "According to the owner's records:\n\n- In March, Osprey used the Kestrel-9B model by default [E9].\n- Quarry Data's support hours are 9 to 6 on weekdays [E1].",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "support_hours of Quarry Data",
+    "gold_values": [
+     "9 to 6"
+    ],
+    "kind": "hours"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F131",
+   "question": "What is the rollback window for Cedar, and who is the security reviewer for Marlin?",
+   "reply": "The rollback window for Cedar is 15 minutes after a failed deploy, as documented in the Cedar runbook [E2].\n\nI do not have any information regarding the security reviewer for Marlin in the provided evidence.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "security_reviewer of Marlin",
+    "gold_values": [],
+    "kind": "person"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2"
+   ]
+  },
+  {
+   "key": "F132",
+   "question": "Is there a staging environment for Vesper, and who has the on-call duty for Cedar?",
+   "reply": "There is a staging environment for Vesper, as noted in [E3].\n\nFor Cedar, Umar Bello is on call this month, as stated in [E2].",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "on_call of Cedar",
+    "gold_values": [
+     "Umar Bello"
+    ],
+    "kind": "person"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F133",
+   "question": "Who will fix the Willow rollback test?",
+   "reply": "I do not have that in the owner's records.",
+   "atom": {
+    "gold_status": "UNSUPPORTED",
+    "sub_claim": "test_fixer of Willow",
+    "gold_values": [],
+    "kind": "person"
+   },
+   "evidence_ids_available": []
+  },
+  {
+   "key": "F134",
+   "question": "On which day are Vesper design reviews held?",
+   "reply": "Vesper design reviews are listed as being on both Wednesday and Friday. [E1] and [E8] provide these conflicting dates.",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "review_day of Vesper",
+    "gold_values": [
+     "Wednesday",
+     "Friday"
+    ],
+    "kind": "day"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F135",
+   "question": "Which day is the Quartz design review, and what is Vera Kovac's deadline for the written summary?",
+   "reply": "The Quartz design review is on Tuesday [E2] and Vera Kovac's deadline for circulating the written summary is by Wednesday [E1].",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "review_day of Quartz",
+    "gold_values": [
+     "Tuesday",
+     "Friday"
+    ],
+    "kind": "day"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F136",
+   "question": "What does Wen Zhao review, and how large can a Turret API message be?",
+   "reply": "Wen Zhao is tasked to review the Prism settings.\n\nThe information about the maximum size of a Turret API message is not provided in the given reference evidence. [E1] only mentions Wen Zhao's task to review the Prism settings.",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "reviews of Wen Zhao",
+    "gold_values": [
+     "the Prism settings"
+    ],
+    "kind": "text"
+   },
+   "evidence_ids_available": [
+    "E1"
+   ]
+  },
+  {
+   "key": "F137",
+   "question": "Who is on call for Sable, and where does Heron-12B run, and which model did Marlin use by default in March?",
+   "reply": "Sable is on call for by Quinn Abbott this month [E9].\n\nHeron-12B runs on the batch host [E4].\n\nBy default, Marlin used Kestrel-3B as the model in March [E7], but as of October, the default model for Marlin is Heron-12B [E6] [E2].",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "default_model_history of Marlin",
+    "gold_values": [
+     "Kestrel-3B"
+    ],
+    "kind": "model"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F138",
+   "question": "What was decided about Cedar's default model, and who is the security reviewer for Sable?",
+   "reply": "The decision to keep Swift-20B as the default model was made during the Cedar planning meeting on 2026-10-09 [E1]. However, the owner's records do not contain information about the security reviewer for Sable.",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "decision of Cedar",
+    "gold_values": [
+     "keep Swift-20B as the default model"
+    ],
+    "kind": "model"
+   },
+   "evidence_ids_available": [
+    "E1"
+   ]
+  },
+  {
+   "key": "F139",
+   "question": "Does Quartz have a staging environment, and where does Heron-12B run?",
+   "reply": "Quartz does not have a staging environment [E2].\n\nHeron-12B runs on the CPU host. It serves the model on the fast path for interactive requests and the deep path for scheduled jobs. This applies to both Marlin and Quartz, as described in [E6] and [E7].",
+   "atom": {
+    "gold_status": "NEGATIVE_SUPPORTED",
+    "sub_claim": "staging_env of Quartz",
+    "gold_values": [],
+    "kind": "bool"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F140",
+   "question": "Which model did Marlin use by default in March, and who attended the Cedar planning meeting?",
+   "reply": "Marlin used Kestrel-3B as the default model in March, according to the record [E3].\n\nThe Cedar planning meeting attendees were Liam Oconnor and Ines Duarte, based on the conversation in [E1].",
+   "atom": {
+    "gold_status": "SUPPORTED",
+    "sub_claim": "attends of Cedar",
+    "gold_values": [
+     "Liam Oconnor",
+     "Ines Duarte"
+    ],
+    "kind": "person"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4"
+   ]
+  },
+  {
+   "key": "F141",
+   "question": "What was the old retry limit of the Gantry scheduler?",
+   "reply": "The old retry limit of the Gantry scheduler was up to 2 times before a job is parked, according to the archived document [E1].",
+   "atom": {
+    "gold_status": "HISTORICAL",
+    "sub_claim": "retry_limit_history of Gantry scheduler",
+    "gold_values": [
+     "2"
+    ],
+    "kind": "number"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E10",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8",
+    "E9"
+   ]
+  },
+  {
+   "key": "F142",
+   "question": "Which day is the Sable design review, and what does Bruno Keller review?",
+   "reply": "The Sable design review is on Thursday [E1].\n\nBruno Keller is to review the Anvil settings [E2].",
+   "atom": {
+    "gold_status": "CONFLICTED",
+    "sub_claim": "review_day of Sable",
+    "gold_values": [
+     "Wednesday",
+     "Thursday"
+    ],
+    "kind": "day"
+   },
+   "evidence_ids_available": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8"
+   ]
+  }
+ ]
+}
