@@ -148,6 +148,12 @@ class PostgresMemoryStore:
             row = await cur.fetchone()
             return _from_row(row) if row else None
 
+    async def get_by_source(self, source: str) -> MemoryRecord | None:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(f"SELECT {_COLUMNS} FROM memories WHERE source = %s ORDER BY created_at LIMIT 1", (source,))
+            row = await cur.fetchone()
+            return _from_row(row) if row else None
+
     async def forget(self, memory_id: str) -> MemoryRecord | None:
         now = datetime.now(UTC)
         async with self._pool.connection() as conn:

@@ -1,6 +1,6 @@
 # Phase 44E: selective shadow telemetry policy (retention, deletion, intervals, shutdown, disclosure) — 2026-10-10
 
-**Scope: the aggregate file written by `knowledge/selective_shadow.py` (committed `26b16f0`), which is OFF by default and has never run outside tests.** This page states what the code does today, verified by tests and one measurement on 2026-10-10, and lists the residual risks and the proposed hardening, which is **not implemented**. The sibling retrieval shadow ([`shadow_telemetry.py`](../services/companion-core/src/companion_core/knowledge/shadow_telemetry.py)) has the same row and flush pattern; its limits below apply equally. Evidence: [shadow verification record](verification/phase-44e-selective-shadow-2026-10-10.md).
+**Scope: the aggregate file written by `knowledge/selective_shadow.py` (committed `26b16f0`; the hardening below is implemented and tested locally, uncommitted), which is OFF by default and has never run outside tests.** This page states what the code does today, verified by tests and one measurement on 2026-10-10, and lists the residual risks and the proposed hardening, which is **not implemented**. The sibling retrieval shadow ([`shadow_telemetry.py`](../services/companion-core/src/companion_core/knowledge/shadow_telemetry.py)) has the same row and flush pattern; its limits below apply equally. Evidence: [shadow verification record](verification/phase-44e-selective-shadow-2026-10-10.md).
 
 ## 1. What is stored
 
@@ -9,8 +9,8 @@ One JSON line per flush: `schema`, `window_start` (the UTC hour) and `groups`, a
 ## 2. Aggregation intervals
 
 - **Window:** the UTC hour (`window_start`).
-- **Flush:** every 300 s while counts exist, when the hour rolls over, and at shutdown. Each flush **appends one row for the current hour with the counts since the previous flush**; a consumer sums rows. An hour with no activity writes no row.
-- **Residual (measured 2026-10-10):** because rows are appended per flush, two flushes in one hour give two rows, so the file's row structure reveals activity at roughly five-minute resolution, not hourly. Counts are small (a quiet owner produces tens of turns a day), and a row with a count of 1 identifies one event's category and approximate time.
+- **Flush:** every 300 s while counts exist, when the hour rolls over, and at shutdown. Since the 2026-10-10 hardening **each flush merges its counts into the single row of the current hour and rewrites the file atomically** (a 0600 temporary file, fsync, replace), so repeated flushes and restarts leave exactly one row per hour and the file carries no finer timing than the hour. A legacy file that has several rows per hour is folded into one at start-up. An hour with no activity writes no row. A failed write keeps the counts and retries at the next flush.
+- **Reporting/export:** `python -m companion_core.knowledge.selective_shadow report <file> [--min-cell 5] [--by day]` (or `selective_shadow.report`) is the only export an operator should read. It sums hourly rows over the period or per day and **suppresses every cell below the threshold** (default 5, never below 2), with complementary suppression inside a group (when one cell is hidden the smallest visible cell is hidden too, so a hidden value cannot be recovered by subtracting from a self-reconciling group such as the funnel). Hidden counts are never printed, only how many cells were hidden. Raw hourly rows remain in the 0600 file for the owner.
 
 ## 3. Retention and deletion
 
@@ -26,14 +26,14 @@ One JSON line per flush: `schema`, `window_start` (the UTC hour) and `groups`, a
 
 | Protection in place | Limit |
 |---|---|
-| Counters are categories from a fixed vocabulary; no text, hash, id or identity | A category can still describe a rare event |
-| Hour-level window label; no finer timestamp is written | Multiple rows per hour (section 2) leak finer timing through row separation |
+| Counters are categories from a fixed vocabulary; no text, hash, id or identity | A category can still describe a rare event; the report suppresses cells under 5 |
+| One merged row per hour; no finer timestamp is written (hardened 2026-10-10) | The hour itself is visible in the raw file |
 | Sensitivity recorded only as the maximum cited bucket (`none`, `public`, `work-private`); no `sensitive` bucket exists; restricted records change no counter (tested, text and voice) | A cell of 1 still says a work-private citation happened in that period |
 | Spoken turns are assessed with public access only, so a shared-speaker turn can never raise a higher-trust counter | A `voice` cell reveals that a spoken knowledge turn occurred |
 | 0600 file, local host only, 30-day retention, delete-to-erase | Anyone with host or backup access can read it |
 | Single-owner deployment: the only data subject is the owner | The model changes if a second person ever uses the system |
 
-**Proposed hardening (not implemented, needs a decision):** (a) merge a flush into the existing row of the same hour so there is one row per hour (removes the intra-hour resolution); (b) small-cell suppression in the reporting reader: totals below a minimum count (for example 5 per cell, to be chosen) are reported as "fewer than N"; (c) optionally roll rows older than 7 days up to daily rows; (d) keep the log path outside off-host backup scope. None changes the foreground path.
+**Implemented hardening (2026-10-10):** one row per hour merged across flushes and restarts; atomic rewrites; small-cell suppression with complementary suppression in the report/export; retention and shutdown regression tests (`tests/test_selective_shadow_telemetry.py`). **Still open:** rolling rows older than 7 days up to daily rows (optional); keeping the log path outside off-host backup scope; applying the same merge to the older retrieval shadow file (`shadow_telemetry.py`, OFF, unchanged).
 
 ## 6. Failure containment (verified)
 

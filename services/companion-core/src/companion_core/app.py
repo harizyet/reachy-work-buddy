@@ -155,7 +155,7 @@ import logging
 import os
 import re
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from datetime import time as dtime
@@ -267,6 +267,9 @@ from companion_core.meetings.speech_clients import (
 )
 from companion_core.meetings.store import MeetingNotCancellableError, MeetingStore
 from companion_core.meetings.worker import MeetingWorker
+from companion_core.memory import candidate_service
+from companion_core.memory.candidate_routes import install_candidate_routes
+from companion_core.memory.candidates import CandidateStore, PostgresCandidateStore
 from companion_core.memory.postgres_store import PostgresMemoryStore
 from companion_core.memory.store import MemoryStore
 from companion_core.persona.context import context_message
@@ -629,7 +632,11 @@ def create_app(
     knowledge_shadow: KnowledgeShadow | None = None,
     selective_answerer: selective_answer.SelectiveAnswerer | None = None,
     selective_shadow_observer: selective_shadow.SelectiveShadow | None = None,
+    memory_candidate_store: CandidateStore | None = None,
+    candidate_digester: candidate_service.KeyedDigester | None = None,
+    candidate_privacy_state: Callable[[], Awaitable[dict | None]] | None = None,
 ) -> FastAPI:
+    candidates_on, capture_on = candidate_service.candidates_enabled(), candidate_service.capture_enabled()  # read once: routes and lifespan always agree
     hub_base_url = hub_base_url or os.environ.get("REACHY_HUB_URL", "http://reachy-hub:8000")
     coding_agent_base_url = coding_agent_base_url or os.environ.get(
         "CODING_AGENT_SERVICE_URL", "http://coding-agent-service:8000"
@@ -808,6 +815,28 @@ def create_app(
             )
         elif app.state.selective_answerer is None and selective_answer.selective_enabled():
             logging.getLogger("companion_core.knowledge_selective").warning("selective answering is enabled but there is no database: it stays off")
+        # Phase 44F memory candidates. Both flags default off; with the first off nothing is built, no table is read and the routes do not exist.
+        candidate_store = candidate_task = None
+        if candidates_on:
+            candidate_store = memory_candidate_store
+            if candidate_store is None and db is not None and owns_memory_store:
+                candidate_store = await PostgresCandidateStore.connect(db)
+            if candidate_store is None:
+                logging.getLogger("companion_core.memory_candidates").warning("memory candidates are enabled but there is no candidate store: they stay off")
+            else:
+                if app.state.candidate_service is None:
+                    app.state.candidate_service = candidate_service.CandidateService(candidate_store, app.state.memory_store, app.state.planner_store)
+                if capture_on:
+                    digester = candidate_digester or candidate_service.digester_from_env()
+
+                    async def hub_privacy_state() -> dict | None:
+                        return await app.state.hub_client.get_privacy_state()
+
+                    if digester is not None:
+                        app.state.candidate_capture = candidate_service.CandidateCapture(
+                            store=candidate_store, memory=app.state.memory_store, digester=digester, privacy_state=candidate_privacy_state or hub_privacy_state,
+                            channels=candidate_service.allowed_channels())
+                candidate_task = asyncio.create_task(candidate_service.maintenance_loop(app.state.candidate_service))
         # Phase 44E selective shadow: classifies and assesses internally after the reply is final and never releases anything. Off unless its own flag, retrieval and a log path are set.
         if app.state.selective_shadow is None and selective_shadow.selective_shadow_enabled() and db is not None and owns_meeting_store:
             observer_adapters = build_adapters(memory=app.state.memory_store, documents=app.state.rag_store, meetings=app.state.meeting_store,
@@ -829,6 +858,17 @@ def create_app(
         try:
             yield
         finally:
+            if candidate_task is not None:
+                candidate_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await candidate_task
+            if app.state.candidate_capture is not None:
+                with contextlib.suppress(Exception):
+                    await app.state.candidate_capture.stop()
+                    logging.getLogger("companion_core.memory_candidates").info("memory candidate capture summary: %s", app.state.candidate_capture.summary())
+            if candidate_store is not None and memory_candidate_store is None:
+                with contextlib.suppress(Exception):
+                    await candidate_store.close()
             if app.state.selective_shadow is not None:
                 with contextlib.suppress(Exception):  # shutdown must complete whatever the shadow does
                     await app.state.selective_shadow.stop()
@@ -923,6 +963,10 @@ def create_app(
     app.state.conversation_store = conversation_store
     app.state.shadow_router = shadow_router
     app.state.knowledge_shadow = knowledge_shadow  # measure-only; None unless KNOWLEDGE_SHADOW_ENABLED (see knowledge/shadow.py)
+    app.state.candidate_service = None  # Phase 44F: built in the lifespan only when MEMORY_CANDIDATES_ENABLED is true
+    app.state.candidate_capture = None  # ... and capture only when MEMORY_CANDIDATES_CAPTURE_ENABLED is also true
+    if candidates_on and memory_candidate_store is not None and memory_store is not None and planner_store is not None:
+        app.state.candidate_service = candidate_service.CandidateService(memory_candidate_store, memory_store, planner_store)  # all stores injected: no lifespan needed
     app.state.selective_shadow = selective_shadow_observer  # measure-only; None unless KNOWLEDGE_SELECTIVE_SHADOW_ENABLED and KNOWLEDGE_RETRIEVAL_ENABLED (see knowledge/selective_shadow.py)
     app.state.selective_answerer = selective_answerer  # None unless BOTH KNOWLEDGE_RETRIEVAL_ENABLED and KNOWLEDGE_SELECTIVE_ANSWERING_ENABLED (see knowledge/selective_answer.py)
     if llm_settings_store is not None:
@@ -1697,6 +1741,13 @@ def create_app(
                     session_id=turn.session_id, text=turn.text, modality=str(turn.input_modality.value), privacy=str(privacy.value),
                     production_handler=production_handler, attached_meeting=bool(turn.context_meeting_id),
                 ))
+        capture = app.state.candidate_capture
+        if capture is not None and not slash_input:
+            with contextlib.suppress(Exception):  # off the critical path: nothing in it may reach the production turn
+                capture.submit(candidate_service.CaptureTurn(
+                    session_id=turn.session_id, conversation_id=turn.conversation_id, turn_index=len(history), channel=turn.channel, text=turn.text,
+                    modality=str(turn.input_modality.value), production_handler=production_handler, attached_meeting=bool(turn.context_meeting_id),
+                    privacy_label=str(privacy.value)))
         sshadow = app.state.selective_shadow
         if sshadow is not None and not slash_input:
             with contextlib.suppress(Exception):  # measure-only: nothing in it may reach the production turn
@@ -1707,6 +1758,9 @@ def create_app(
         return ConversationTurnResponse(
             reply=reply, turn_count=len(history), privacy=privacy, web_search=web_search, context_meeting=context_title,
         )
+
+    if candidates_on:
+        install_candidate_routes(app, capture_on=capture_on)
 
     async def selective_turn(turn: ConversationTurnRequest):
         answerer = app.state.selective_answerer

@@ -14,6 +14,7 @@ const NAV = [
   { to: '/reminders', label: 'Reminders', end: false },
   { to: '/alarms', label: 'Alarms', end: false },
   { to: '/notes', label: 'Notes', end: false },
+  { to: '/memory', label: 'Memory', end: false },
   { to: '/activity', label: 'Activity', end: false },
   { to: '/brain', label: 'Brain', end: false },
   { to: '/coding', label: 'Coding agents', end: false },

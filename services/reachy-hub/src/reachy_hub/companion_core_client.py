@@ -26,6 +26,10 @@ from shared.protocols.brain_api import (
     BRAIN_NODES,
     BRAIN_SUMMARY,
 )
+from shared.protocols.memory_candidates_api import (
+    MEMORY_CANDIDATES,
+    MEMORY_CANDIDATES_FORGET_CONVERSATION,
+)
 from shared.protocols.operator_api import (
     LLM_SETTINGS,
     LLM_USAGE,
@@ -187,6 +191,27 @@ class CompanionCoreClient:
             files={"audio": (filename, audio_bytes, content_type)},
             timeout=httpx.Timeout(600.0, connect=10.0, pool=10.0),
         )
+        resp.raise_for_status()
+        return resp.json()
+
+    # Phase 44F: memory-candidate review. Core decides everything; the hub only forwards a fixed, validated body for the owner session.
+    async def list_memory_candidates(self) -> dict[str, Any]:
+        resp = await self._client.get(MEMORY_CANDIDATES, timeout=10.0)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def accept_memory_candidate(self, candidate_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        resp = await self._client.post(f"{MEMORY_CANDIDATES}/{candidate_id}/accept", json=body, timeout=15.0)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def reject_memory_candidate(self, candidate_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        resp = await self._client.post(f"{MEMORY_CANDIDATES}/{candidate_id}/reject", json=body, timeout=10.0)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def forget_candidate_conversation(self, body: dict[str, Any]) -> dict[str, Any]:
+        resp = await self._client.post(MEMORY_CANDIDATES_FORGET_CONVERSATION, json=body, timeout=10.0)
         resp.raise_for_status()
         return resp.json()
 

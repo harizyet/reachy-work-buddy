@@ -8,6 +8,7 @@ import { ChatPage } from '../features/chat/ChatPage';
 import { CodingPage } from '../features/coding/CodingPage';
 import { MeetingsPage } from '../features/meetings/MeetingsPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
+import { MemorySuggestionsPage } from '../features/memory/MemorySuggestionsPage';
 import { NotesPage } from '../features/notes/NotesPage';
 import { OverviewPage } from '../features/overview/OverviewPage';
 import { RemindersPage } from '../features/planner/RemindersPage';
@@ -54,6 +55,7 @@ export function AppRoutes() {
         <Route path="settings" element={<SettingsPage />} />
         <Route path="settings/:tab" element={<SettingsPage />} />
         <Route path="notes" element={<NotesPage />} />
+        <Route path="memory" element={<MemorySuggestionsPage />} />
         <Route path="activity" element={<ActivityPage />} />
         <Route path="*" element={<NotFound />} />
       </Route>

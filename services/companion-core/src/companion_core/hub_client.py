@@ -9,6 +9,7 @@ from typing import Any
 
 import httpx
 
+from shared.protocols.memory_candidates_api import PRIVACY_STATE
 from shared.protocols.operator_api import (
     ROBOT_VOICE_WAKE,
     ROBOTS,
@@ -73,6 +74,12 @@ class HubClient:
         See AGENTS.md for the owner-present exception this requires when
         driving a real daemon's wake-up motion."""
         resp = await self._client.post(ROBOTS_RESUME, params={"wake_up": wake_up})
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get_privacy_state(self) -> dict[str, Any]:
+        """Phase 44F: whether privacy mode (no wake listening on any registered robot) is on. The caller treats any failure or a missing field as "unknown" and does not capture."""
+        resp = await self._client.get(PRIVACY_STATE, timeout=1.5)
         resp.raise_for_status()
         return resp.json()
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-SCHEMA_REVISION = "027_knowledge_index"
+SCHEMA_REVISION = "028_memory_candidates"
 
 
 async def check_schema(conn) -> None:

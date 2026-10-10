@@ -121,46 +121,81 @@ class SelectiveShadowTelemetry:
         self.count("latency_ms", bucket(ms, LATENCY_EDGES))
 
     def flush(self) -> None:
+        """Merge the counts since the last flush into the single row of the current hour (created if absent) and rewrite the file atomically. Repeated flushes and restarts therefore leave exactly
+        one row per hour, so the file's structure carries no finer timing than the hour. A failed write keeps the counts for the next flush instead of losing them."""
         buf, window = self._buf, self._window
         self._last_flush = time.monotonic()
         if window is None or not any(buf.values()):
             return
-        row = {"schema": SCHEMA_VERSION, "window_start": window.strftime("%Y-%m-%dT%H:00Z"), "groups": {g: dict(sorted(c.items())) for g, c in sorted(buf.items()) if c}}
+        groups = {g: dict(sorted(c.items())) for g, c in sorted(buf.items()) if c}
+        row = {"schema": SCHEMA_VERSION, "window_start": window.strftime("%Y-%m-%dT%H:00Z"), "groups": groups}
         assert set(row) <= ALLOWED_FIELDS
         self._buf = collections.defaultdict(Counter)
         try:
-            self.prune()
-            fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
-            with os.fdopen(fd, "a") as handle:
-                handle.write(json.dumps(row, sort_keys=True) + "\n")
+            self._rewrite(add=row)
         except OSError:
+            for group, counts in groups.items():
+                self._buf[group].update(counts)  # retried at the next flush
             self.total["funnel"]["telemetry_write_failed"] += 1
 
+    def _rewrite(self, add: dict | None = None) -> int:
+        """Read the file, drop rows past retention and unparsable lines, merge `add` into the row of its hour, write the result through a 0600 temporary file and an atomic replace. Returns the number
+        of rows removed. Nothing is written when there is nothing to add and nothing to change."""
+        cutoff = (self._clock() - timedelta(days=self.retention_days)).strftime("%Y-%m-%dT%H:00Z")
+        rows: dict[str, dict] = {}
+        removed = lines_read = 0
+
+        def merge(start: str, groups: dict) -> None:
+            merged = rows.setdefault(start, {"schema": SCHEMA_VERSION, "window_start": start, "groups": {}})["groups"]
+            for group, counts in groups.items():
+                cell = merged.setdefault(group, {})
+                for name, n in counts.items():
+                    cell[name] = cell.get(name, 0) + int(n)
+
+        if self.path.exists():
+            for line in self.path.read_text().splitlines():
+                lines_read += 1
+                try:
+                    row = json.loads(line)
+                    start, groups = row["window_start"], row["groups"]
+                    if not isinstance(start, str) or not isinstance(groups, dict):
+                        raise TypeError
+                except (ValueError, KeyError, TypeError):
+                    removed += 1
+                    continue
+                if start < cutoff:
+                    removed += 1
+                    continue
+                merge(start, groups)  # also folds a legacy file that had several rows per hour into one
+        if add is not None:
+            merge(add["window_start"], add["groups"])
+        if add is None and not removed and lines_read == len(rows):
+            return 0
+        text = "".join(json.dumps({**v, "groups": {g: dict(sorted(c.items())) for g, c in sorted(v["groups"].items())}}, sort_keys=True) + "\n" for _k, v in sorted(rows.items()))
+        fd, tmp = tempfile.mkstemp(dir=self.path.parent, prefix=".kss-")
+        try:
+            with os.fdopen(fd, "w") as handle:
+                handle.write(text)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.chmod(tmp, 0o600)
+            os.replace(tmp, self.path)
+        except OSError:
+            with contextlib.suppress(OSError):
+                os.unlink(tmp)
+            raise
+        return removed
+
     def prune(self, *, force: bool = False) -> int:
+        """Retention: remove rows older than the retention period (at start-up, forced, and at most once a day otherwise). Also merges any legacy duplicate rows of an hour."""
         if not force and time.monotonic() - self._last_prune < 86400:
             return 0
         self._last_prune = time.monotonic()
-        if not self.path.exists():
+        try:
+            return self._rewrite()
+        except OSError:
+            self.total["funnel"]["telemetry_write_failed"] += 1
             return 0
-        cutoff = (self._clock() - timedelta(days=self.retention_days)).strftime("%Y-%m-%dT%H:00Z")
-        kept, removed = [], 0
-        for line in self.path.read_text().splitlines():
-            try:
-                row = json.loads(line)
-            except ValueError:
-                removed += 1
-                continue
-            if row.get("window_start", "") >= cutoff:
-                kept.append(line)
-            else:
-                removed += 1
-        if removed:
-            fd, tmp = tempfile.mkstemp(dir=self.path.parent, prefix=".kss-")
-            with os.fdopen(fd, "w") as handle:
-                handle.write("".join(line + "\n" for line in kept))
-            os.chmod(tmp, 0o600)
-            os.replace(tmp, self.path)
-        return removed
 
     @staticmethod
     def read_totals(path: str) -> dict[str, dict[str, int]]:
@@ -169,6 +204,66 @@ class SelectiveShadowTelemetry:
             for group, counts in json.loads(line)["groups"].items():
                 totals[group].update(counts)
         return {g: dict(c) for g, c in totals.items()}
+
+
+DEFAULT_MIN_CELL = 5
+
+
+def report(path: str, *, min_cell: int = DEFAULT_MIN_CELL, by: str = "period") -> dict:
+    """The only export an operator should read. Sums the hourly rows over the whole file (`by="period"`) or per UTC day (`by="day"`), and **suppresses every cell below `min_cell`** (clamped to at
+    least 2): a small count identifies one event. Suppression is complementary inside a group: when exactly one cell of a group is hidden, the smallest visible cell of that group is hidden too, so a
+    single hidden value cannot be recovered by subtracting from the other cells of a self-reconciling group (the funnel). Hidden counts are never printed, only how many cells were hidden. Rows are
+    hourly at best; no hour is ever reported."""
+    k = max(int(min_cell), 2)
+    buckets: dict[str, dict[str, Counter]] = collections.defaultdict(lambda: collections.defaultdict(Counter))
+    first = last = None
+    if Path(path).exists():
+        for line in Path(path).read_text().splitlines():
+            row = json.loads(line)
+            day = row["window_start"][:10]
+            first, last = min(first or day, day), max(last or day, day)
+            key = day if by == "day" else "period"
+            for group, counts in row["groups"].items():
+                buckets[key][group].update(counts)
+
+    def hide(groups: dict[str, Counter]) -> tuple[dict, int]:
+        visible: dict[str, dict[str, int]] = {}
+        hidden = 0
+        for group, counts in sorted(groups.items()):
+            cells = {name: n for name, n in counts.items() if n >= k}
+            gone = [name for name, n in counts.items() if n < k]
+            if len(gone) == 1 and cells:
+                smallest = min(cells, key=lambda name: (cells[name], name))
+                del cells[smallest]
+                gone.append(smallest)
+            hidden += len(gone)
+            if cells:
+                visible[group] = dict(sorted(cells.items()))
+        return visible, hidden
+
+    out: dict = {"min_cell": k, "first_day": first, "last_day": last}
+    if by == "day":
+        out["days"] = {}
+        for day, groups in sorted(buckets.items()):
+            visible, hidden = hide(groups)
+            out["days"][day] = {"groups": visible, "suppressed_cells": hidden}
+    else:
+        visible, hidden = hide(buckets.get("period", {}))
+        out.update({"groups": visible, "suppressed_cells": hidden})
+    return out
+
+
+def main(argv: list[str] | None = None) -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Suppressed report of the selective shadow telemetry file (counts below --min-cell are never printed).")
+    parser.add_argument("command", choices=["report"])
+    parser.add_argument("path")
+    parser.add_argument("--min-cell", type=int, default=DEFAULT_MIN_CELL)
+    parser.add_argument("--by", choices=["period", "day"], default="period")
+    args = parser.parse_args(argv)
+    print(json.dumps(report(args.path, min_cell=args.min_cell, by=args.by), indent=1, sort_keys=True))
+    return 0
 
 
 def reconcile(funnel: dict[str, int], pending: int = 0) -> int:
@@ -307,4 +402,8 @@ def from_env(*, retriever: Retriever, index_count: Callable[[], Awaitable[int]],
         queue_size=min(max(int(os.environ.get("KNOWLEDGE_SELECTIVE_SHADOW_QUEUE", str(DEFAULT_QUEUE))), 1), 20), timeout_seconds=timeout)
 
 
-__all__ = ["ALLOWED_FIELDS", "SHADOW_FLAG", "VOCABULARY", "SelectiveShadow", "SelectiveShadowTelemetry", "SelectiveShadowTurn", "from_env", "production_path", "reconcile", "selective_shadow_enabled"]
+__all__ = ["ALLOWED_FIELDS", "DEFAULT_MIN_CELL", "SHADOW_FLAG", "VOCABULARY", "SelectiveShadow", "SelectiveShadowTelemetry", "SelectiveShadowTurn", "from_env", "main", "production_path", "reconcile", "report", "selective_shadow_enabled"]
+
+
+if __name__ == "__main__":  # python -m companion_core.knowledge.selective_shadow report <path>
+    raise SystemExit(main())

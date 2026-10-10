@@ -48,6 +48,7 @@ class MemoryStore(Protocol):
         knowledge layer say why a record is not retrievable. Does not stamp last_accessed."""
         ...
 
+    async def get_by_source(self, source: str) -> MemoryRecord | None: ...
     async def forget(self, memory_id: str) -> MemoryRecord | None: ...
     async def restore(self, memory_id: str) -> MemoryRecord | None: ...
     async def find_forgotten(self, query: str) -> list[MemoryRecord]: ...
@@ -112,6 +113,10 @@ class InMemoryMemoryStore:
 
     async def get_any(self, memory_id: str) -> MemoryRecord | None:
         return self._records.get(memory_id)
+
+    async def get_by_source(self, source: str) -> MemoryRecord | None:
+        """Any record (forgotten or expired too) whose provenance string is exactly `source`; used so an accepted candidate can never be turned into a second memory."""
+        return next((r for r in self._records.values() if r.source == source), None)
 
     async def forget(self, memory_id: str) -> MemoryRecord | None:
         record = self._records.get(memory_id)

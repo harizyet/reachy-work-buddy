@@ -169,6 +169,7 @@ from reachy_hub.interruption_policy import (
     is_occupied,
 )
 from reachy_hub.keyring import Keyring
+from reachy_hub.memory_candidates import install_memory_candidate_routes
 from reachy_hub.notification_queue import NotificationQueue, QueuedNotification
 from reachy_hub.occupancy import MediaPipeFaceDetector, PersonDetector, check_occupancy
 from reachy_hub.operator import install_operator_routes, require_csrf
@@ -228,6 +229,7 @@ from shared.models.session import (
 from shared.models.web_chat import ChatCreate, ChatRecord, ChatTurn
 from shared.models.websearch import TurnWebSearch
 from shared.protocols.commands import TELEGRAM_COMMANDS
+from shared.protocols.memory_candidates_api import PRIVACY_STATE
 from shared.protocols.operator_api import (
     CHAT,
     CHATS,
@@ -973,6 +975,16 @@ def create_app(
     )
     install_owner_recognition_routes(app, require_owner_session, app.state.enrollment_store)
     install_brain_routes(app, require_owner_session, companion_core_client)  # Phase 47D: read-only, owner session only
+    install_memory_candidate_routes(app, require_owner_session, companion_core_client)  # Phase 44F: owner session plus CSRF; core decides (and 404s) when the feature is off
+
+    @app.get(PRIVACY_STATE, dependencies=[Depends(require_remote_auth)])
+    async def privacy_state() -> dict:
+        """Phase 44F: the smallest read companion-core needs before it may propose a memory candidate. Privacy mode is "no wake listening": on when no registered robot is armed (so on when there
+        is no robot). Any failure here is an error response, which core treats as unknown and does not capture."""
+        manager = app.state.robot_voice_manager
+        robots = await app.state.registry.list()
+        armed = any(manager.arm_for(robot.robot_id) is not None for robot in robots)
+        return {"privacy_mode": not armed, "robots": len(robots)}
 
     async def stop_voice_on_logout() -> None:
         await robot_voice_manager.stop_all("Owner logged out")
