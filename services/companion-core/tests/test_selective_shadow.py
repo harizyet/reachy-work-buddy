@@ -339,3 +339,73 @@ def test_the_live_answerer_and_the_shadow_coexist_and_the_shadow_still_releases_
     t = world.totals()
     assert t["production_path"] == {"selective": 1} and t["outcome"]["answered_supported"] == 1
     assert world.shadow.answerer.stats.counts == {}  # the shadow never touches the live counters
+
+
+# -- follow-up: a shadow cannot create a partial foreground response or delay ordinary conversation ----------------------------------------------
+
+def test_a_failing_or_crashing_submit_cannot_alter_or_truncate_the_reply(tmp_path, monkeypatch):
+    base = World(tmp_path / "base" if (tmp_path / "base").mkdir() is None else tmp_path, shadow=False)
+    with base.client() as client:
+        expected = base.ask(client, QUILL_Q)
+    world = World(tmp_path)
+    monkeypatch.setattr(world.shadow, "submit", lambda turn: (_ for _ in ()).throw(RuntimeError("shadow exploded mid-submit")))
+    with world.client() as client:
+        got = world.ask(client, QUILL_Q)
+        assert got == expected and got["reply"] == LLM_ANSWER and got["turn_count"] == expected["turn_count"]  # whole response, same status and body
+        assert client.post("/conversation", json={**TURN, "session_id": "z", "text": QUILL_Q}).status_code == 200
+
+
+def test_the_reply_is_decided_before_the_shadow_sees_the_turn_and_the_offer_is_constant_time(tmp_path):
+    world = World(tmp_path)
+    seen = []
+    real = world.shadow.submit
+
+    def spy(turn):
+        seen.append(turn.privacy)  # the label of the finished reply; the shadow is offered a snapshot of plain data, not the response object
+        real(turn)
+
+    world.shadow.submit = spy
+    with world.client() as client:
+        got = world.ask(client, QUILL_Q)
+        world.drain(client)
+    assert got["reply"] == LLM_ANSWER and seen == [got["privacy"]]
+    started = time.perf_counter()
+    for i in range(500):
+        world.shadow.submit(ss.SelectiveShadowTurn(f"s{i}", QUILL_Q, "text", "work-private", "generic_chat", False))
+    assert (time.perf_counter() - started) / 500 < 0.005  # measured about 3 microseconds per offer; the bound is generous
+    run(world.shadow.stop())
+
+
+def test_shadow_work_never_stalls_the_event_loop_for_long():
+    """Jobs run on the service's event loop. Measured with a 1 ms heartbeat while 120 offered jobs ran (typed, ambiguous, untyped and chat questions over 15 retrieved records): the
+    longest gap was about 30 ms. The bound here is several times that, so only a real regression (an unbounded loop, a blocking call) trips it."""
+    import tempfile
+
+    world = World(Path(tempfile.mkdtemp()), extra=FERRY)
+    questions = [QUILL_Q, OWNER_Q, "How many retries before a failed Harbor job is parked?", "Who owns the Quill message queue and who runs the Harbor scheduler?", "Who attended the Lantern review?", "Tell me a joke"]
+
+    async def scenario():
+        shadow = world.shadow
+        await shadow.start()
+        gaps, stop = [], False
+
+        async def beat():
+            last = time.perf_counter()
+            while not stop:
+                await asyncio.sleep(0.001)
+                now = time.perf_counter()
+                gaps.append(now - last)
+                last = now
+
+        heartbeat = asyncio.create_task(beat())
+        await asyncio.sleep(0.05)
+        gaps.clear()
+        for i in range(120):
+            shadow.submit(ss.SelectiveShadowTurn(f"s{i}", questions[i % len(questions)], "text", "work-private", "generic_chat", False))
+        await shadow.drain()
+        stop = True
+        await heartbeat
+        await shadow.stop()
+        return max(gaps)
+
+    assert run(scenario()) < 0.25
