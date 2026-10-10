@@ -1,0 +1,1567 @@
+{
+ "cases": [
+  {
+   "id": "N01",
+   "category": "notes",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "note:21c9940d-7490-4f07-8608-9eefeb05c76f"
+   ],
+   "n_returned": 4,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.25,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "note:21c9940d-7490-4f07-8608-9eefeb05c76f",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#3",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [
+    "meeting",
+    "note"
+   ],
+   "latency_ms": 14.9
+  },
+  {
+   "id": "N02",
+   "category": "notes",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "note:4f826f08-202f-4fc9-b120-935716633a99"
+   ],
+   "n_returned": 1,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "note:4f826f08-202f-4fc9-b120-935716633a99",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [
+    "note"
+   ],
+   "latency_ms": 2.1
+  },
+  {
+   "id": "N03",
+   "category": "notes",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "note:15236f41-8c37-42fa-8886-e0b8cc11ccbb"
+   ],
+   "n_returned": 3,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.3333333333333333,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "note:15236f41-8c37-42fa-8886-e0b8cc11ccbb",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#21",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "note:21c9940d-7490-4f07-8608-9eefeb05c76f",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [
+    "meeting",
+    "note"
+   ],
+   "latency_ms": 5.6
+  },
+  {
+   "id": "N04",
+   "category": "notes",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "note:21c9940d-7490-4f07-8608-9eefeb05c76f"
+   ],
+   "n_returned": 5,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.2,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "note:21c9940d-7490-4f07-8608-9eefeb05c76f",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#16",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#11",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#21",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [
+    "meeting",
+    "note"
+   ],
+   "latency_ms": 12.1
+  },
+  {
+   "id": "N05",
+   "category": "notes",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "note:4f826f08-202f-4fc9-b120-935716633a99"
+   ],
+   "n_returned": 1,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "note:4f826f08-202f-4fc9-b120-935716633a99",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [
+    "note"
+   ],
+   "latency_ms": 2.2
+  },
+  {
+   "id": "N06",
+   "category": "notes",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "note:21c9940d-7490-4f07-8608-9eefeb05c76f"
+   ],
+   "n_returned": 6,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.2,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "note:21c9940d-7490-4f07-8608-9eefeb05c76f",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#11",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#16",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#3",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [
+    "meeting",
+    "note"
+   ],
+   "latency_ms": 3.7
+  },
+  {
+   "id": "N07",
+   "category": "notes",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "note:15236f41-8c37-42fa-8886-e0b8cc11ccbb"
+   ],
+   "n_returned": 2,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.5,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "note:15236f41-8c37-42fa-8886-e0b8cc11ccbb",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [
+    "meeting",
+    "note"
+   ],
+   "latency_ms": 2.0
+  },
+  {
+   "id": "M01",
+   "category": "meeting facts",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "meeting:d24bcab2-3846-440c-843d-0b31c9479012"
+   ],
+   "n_returned": 10,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#16",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#19",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#18",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [
+    "meeting"
+   ],
+   "latency_ms": 2.4
+  },
+  {
+   "id": "M02",
+   "category": "meeting facts",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "meeting:d24bcab2-3846-440c-843d-0b31c9479012"
+   ],
+   "n_returned": 10,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#15",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#30",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#16",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [
+    "meeting"
+   ],
+   "latency_ms": 2.0
+  },
+  {
+   "id": "M03",
+   "category": "meeting facts",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "meeting:d24bcab2-3846-440c-843d-0b31c9479012"
+   ],
+   "n_returned": 8,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#48",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#49",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#39",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [
+    "meeting"
+   ],
+   "latency_ms": 2.1
+  },
+  {
+   "id": "M04",
+   "category": "meeting facts",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "meeting:d24bcab2-3846-440c-843d-0b31c9479012"
+   ],
+   "n_returned": 6,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#56",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#54",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#55",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [
+    "meeting"
+   ],
+   "latency_ms": 1.9
+  },
+  {
+   "id": "M05",
+   "category": "meeting facts",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "meeting:d24bcab2-3846-440c-843d-0b31c9479012"
+   ],
+   "n_returned": 10,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#70",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#76",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#33",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#7",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [
+    "meeting"
+   ],
+   "latency_ms": 2.1
+  },
+  {
+   "id": "M06",
+   "category": "meeting facts",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "meeting:d24bcab2-3846-440c-843d-0b31c9479012"
+   ],
+   "n_returned": 8,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#11",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#22",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#3",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [
+    "meeting"
+   ],
+   "latency_ms": 2.2
+  },
+  {
+   "id": "M07",
+   "category": "meeting facts (accepted corrections)",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "meeting:d24bcab2-3846-440c-843d-0b31c9479012"
+   ],
+   "n_returned": 8,
+   "first_hit_rank": 3,
+   "hit_at": {
+    "1": false,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.8,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#4",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "note:21c9940d-7490-4f07-8608-9eefeb05c76f",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#3",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [
+    "meeting",
+    "note"
+   ],
+   "latency_ms": 2.2
+  },
+  {
+   "id": "M08",
+   "category": "meeting facts (generated outputs)",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "meeting:d24bcab2-3846-440c-843d-0b31c9479012"
+   ],
+   "n_returned": 5,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#34",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#37",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#40",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [
+    "meeting"
+   ],
+   "latency_ms": 6.7
+  },
+  {
+   "id": "M09",
+   "category": "meeting facts",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "meeting:d24bcab2-3846-440c-843d-0b31c9479012"
+   ],
+   "n_returned": 10,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#42",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#15",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#43",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [
+    "meeting"
+   ],
+   "latency_ms": 4.9
+  },
+  {
+   "id": "X01",
+   "category": "cross-source",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "note:21c9940d-7490-4f07-8608-9eefeb05c76f",
+    "meeting:d24bcab2-3846-440c-843d-0b31c9479012"
+   ],
+   "n_returned": 4,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "note:21c9940d-7490-4f07-8608-9eefeb05c76f",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#3",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [
+    "meeting",
+    "note"
+   ],
+   "latency_ms": 4.5
+  },
+  {
+   "id": "X02",
+   "category": "cross-source",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "note:21c9940d-7490-4f07-8608-9eefeb05c76f",
+    "meeting:d24bcab2-3846-440c-843d-0b31c9479012"
+   ],
+   "n_returned": 5,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "note:21c9940d-7490-4f07-8608-9eefeb05c76f",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#4",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#3",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [
+    "meeting",
+    "note"
+   ],
+   "latency_ms": 3.1
+  },
+  {
+   "id": "H01",
+   "category": "historical (production has no superseded data)",
+   "access": "owner",
+   "temporal": "include_historical",
+   "expected_sources": [
+    "note:21c9940d-7490-4f07-8608-9eefeb05c76f"
+   ],
+   "n_returned": 4,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.25,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "note:21c9940d-7490-4f07-8608-9eefeb05c76f",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#3",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [
+    "meeting",
+    "note"
+   ],
+   "latency_ms": 3.6
+  },
+  {
+   "id": "H02",
+   "category": "historical (production has no superseded data)",
+   "access": "owner",
+   "temporal": "include_historical",
+   "expected_sources": [
+    "meeting:d24bcab2-3846-440c-843d-0b31c9479012"
+   ],
+   "n_returned": 10,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#16",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#15",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#17",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [
+    "meeting"
+   ],
+   "latency_ms": 2.8
+  },
+  {
+   "id": "A01",
+   "category": "absent facts",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 5,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#66",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#15",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#27",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#54",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#64",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [
+    "meeting"
+   ],
+   "latency_ms": 2.5
+  },
+  {
+   "id": "A02",
+   "category": "absent facts",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 0,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [],
+   "latency_ms": 0.7
+  },
+  {
+   "id": "A03",
+   "category": "absent facts",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 0,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [],
+   "latency_ms": 0.5
+  },
+  {
+   "id": "A04",
+   "category": "absent facts",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 0,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [],
+   "latency_ms": 1.4
+  },
+  {
+   "id": "A05",
+   "category": "absent facts",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 0,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [],
+   "latency_ms": 2.7
+  },
+  {
+   "id": "A06",
+   "category": "absent facts",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 0,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [],
+   "latency_ms": 1.8
+  },
+  {
+   "id": "F01",
+   "category": "forgotten memory (query taken from the forgotten record's own words)",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 0,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [],
+   "latency_ms": 2.1
+  },
+  {
+   "id": "F02",
+   "category": "forgotten memory (longer query)",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 0,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [],
+   "latency_ms": 2.6
+  },
+  {
+   "id": "R01",
+   "category": "restricted (shared speaker, public ceiling)",
+   "access": "shared",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 0,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [],
+   "latency_ms": 2.0
+  },
+  {
+   "id": "R02",
+   "category": "restricted (shared speaker, public ceiling)",
+   "access": "shared",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 0,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [],
+   "latency_ms": 0.8
+  },
+  {
+   "id": "R03",
+   "category": "restricted (shared speaker, public ceiling)",
+   "access": "shared",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 0,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [],
+   "latency_ms": 1.2
+  },
+  {
+   "id": "R04",
+   "category": "restricted (shared speaker, public ceiling)",
+   "access": "shared",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 0,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [],
+   "latency_ms": 0.6
+  },
+  {
+   "id": "R05",
+   "category": "restricted (shared speaker, public ceiling)",
+   "access": "shared",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 0,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [],
+   "latency_ms": 0.5
+  },
+  {
+   "id": "S01",
+   "category": "project scope (production has no scoped records; unscoped must not leak into a scoped caller)",
+   "access": "scope:alpha",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 4,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [
+    {
+     "ref": "note:21c9940d-7490-4f07-8608-9eefeb05c76f",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#3",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [
+    "meeting",
+    "note"
+   ],
+   "latency_ms": 2.5,
+   "violations_original_harness": [
+    "cross_scope:note:21c9940d-7490-4f07-8608-9eefeb05c76f",
+    "cross_scope:meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+    "cross_scope:meeting:d24bcab2-3846-440c-843d-0b31c9479012#3",
+    "cross_scope:meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+    "forbidden_present:note:21c9940d-7490-4f07-8608-9eefeb05c76f:unscoped record to a scoped caller"
+   ],
+   "reclassified_by_design_D8": [
+    "cross_scope:note:21c9940d-7490-4f07-8608-9eefeb05c76f",
+    "cross_scope:meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+    "cross_scope:meeting:d24bcab2-3846-440c-843d-0b31c9479012#3",
+    "cross_scope:meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+    "forbidden_present:note:21c9940d-7490-4f07-8608-9eefeb05c76f:unscoped record to a scoped caller"
+   ]
+  },
+  {
+   "id": "S02",
+   "category": "project scope (as above)",
+   "access": "scope:alpha",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 4,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#16",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#15",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "top5_source_types": [
+    "meeting"
+   ],
+   "latency_ms": 1.9,
+   "violations_original_harness": [
+    "cross_scope:meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+    "cross_scope:meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+    "cross_scope:meeting:d24bcab2-3846-440c-843d-0b31c9479012#16",
+    "cross_scope:meeting:d24bcab2-3846-440c-843d-0b31c9479012#15",
+    "forbidden_present:meeting:d24bcab2-3846-440c-843d-0b31c9479012:unscoped meeting to a scoped caller"
+   ],
+   "reclassified_by_design_D8": [
+    "cross_scope:meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+    "cross_scope:meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+    "cross_scope:meeting:d24bcab2-3846-440c-843d-0b31c9479012#16",
+    "cross_scope:meeting:d24bcab2-3846-440c-843d-0b31c9479012#15",
+    "forbidden_present:meeting:d24bcab2-3846-440c-843d-0b31c9479012:unscoped meeting to a scoped caller"
+   ]
+  }
+ ]
+}

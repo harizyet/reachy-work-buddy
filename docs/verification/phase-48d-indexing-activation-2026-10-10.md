@@ -71,7 +71,7 @@ Preceded by a graceful stop of core to read the 48B in-memory summary (see the f
 | Delete and rebuild from sources | demonstrated on the restored copy (section 5), not repeated on production |
 | Retrieval, selective answering, shadow | not set; core environment shows only `KNOWLEDGE_INDEXING_ENABLED=true` |
 
-Impact after activation (14:37 to 14:50 UTC): chat p50 0.35 s, p95 0.37 s (baseline 0.36 / 0.69); swap in/out 0 in all 5 samples; swap in use 7,780 MB (unchanged); PostgreSQL connections 3 (1 active, 2 idle); restart counts 0 on all containers; core memory 410 MB (the loaded MiniLM, about +325 MB); core CPU about 0.8% of a core in steady state over 30 s (an early `docker stats` reading of 15 to 25% was the startup reconciliation); no error or traceback in core logs; the bounded monitor (900 s) raised nothing after the restart. No stop condition (chat p95 >10%, restart, swap churn, dropped meeting jobs, 25 or more PgBouncer-fronted backends) was reached.
+Impact after activation (about 14:37 to 14:44 UTC): chat p50 0.35 s, p95 0.37 s (baseline 0.36 / 0.69); swap in/out 0 in all 5 samples; swap in use 7,780 MB (unchanged); PostgreSQL connections 3 (1 active, 2 idle); restart counts 0 on all containers; core memory 410 MB (the loaded MiniLM, about +325 MB); core CPU about 0.8% of a core in steady state over 30 s (an early `docker stats` reading of 15 to 25% was the startup reconciliation); no error or traceback in core logs; the bounded monitor (900 s) raised nothing after the restart. No stop condition (chat p95 >10%, restart, swap churn, dropped meeting jobs, 25 or more PgBouncer-fronted backends) was reached.
 
 ## 8. Findings
 

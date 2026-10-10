@@ -1,0 +1,173 @@
+{
+ "phase": "48E",
+ "set": "synthetic-after-mutation",
+ "note": "synthetic records (ids syn-*) added to a restored copy; no owner content",
+ "cases": [
+  {
+   "id": "TF1",
+   "category": "stale index (trigger removes the row at once): forgotten",
+   "query": "warehouse door code osprey",
+   "expect": [],
+   "forbid": [
+    {
+     "source_type": "memory",
+     "source_id": "syn-m-tforget",
+     "why": "forgotten"
+    }
+   ]
+  },
+  {
+   "id": "TD1",
+   "category": "stale index (trigger): deleted",
+   "query": "archive shelf code gecko",
+   "expect": [],
+   "forbid": [
+    {
+     "source_type": "note",
+     "source_id": "syn-n-tdel",
+     "why": "deleted"
+    }
+   ]
+  },
+  {
+   "id": "VF1",
+   "category": "stale index, revalidation only: forgotten",
+   "query": "server rack key lynx hook",
+   "expect": [],
+   "forbid": [
+    {
+     "source_type": "memory",
+     "source_id": "syn-m-vforget",
+     "why": "forgotten behind a stale index"
+    }
+   ]
+  },
+  {
+   "id": "VE1",
+   "category": "stale index, revalidation only: expired",
+   "query": "conference room booking code ibis",
+   "expect": [],
+   "forbid": [
+    {
+     "source_type": "memory",
+     "source_id": "syn-m-vexpire",
+     "why": "expired behind a stale index"
+    }
+   ]
+  },
+  {
+   "id": "VE2",
+   "category": "stale index, revalidation only: expired (historical mode)",
+   "query": "conference room booking code ibis",
+   "expect": [],
+   "temporal": "include_historical",
+   "forbid": [
+    {
+     "source_type": "memory",
+     "source_id": "syn-m-vexpire",
+     "why": "expired, historical mode"
+    }
+   ]
+  },
+  {
+   "id": "VR1",
+   "category": "stale index, revalidation only: reclassified sensitive",
+   "query": "vendor negotiation floor price marmot",
+   "expect": [],
+   "forbid": [
+    {
+     "source_type": "memory",
+     "source_id": "syn-m-vreclass",
+     "why": "reclassified above ceiling behind a stale index"
+    }
+   ]
+  },
+  {
+   "id": "VR2",
+   "category": "reclassified sensitive is still reachable at a sensitive ceiling",
+   "query": "vendor negotiation floor price marmot",
+   "expect": [
+    {
+     "source_type": "memory",
+     "source_id": "syn-m-vreclass"
+    }
+   ],
+   "access": "owner_sensitive"
+  },
+  {
+   "id": "VD1",
+   "category": "stale index, revalidation only: deleted",
+   "query": "spare laptop password hint axolotl",
+   "expect": [],
+   "forbid": [
+    {
+     "source_type": "note",
+     "source_id": "syn-n-vdel",
+     "why": "deleted behind a stale index"
+    }
+   ]
+  },
+  {
+   "id": "VN1",
+   "category": "stale index, revalidation only: note reclassified sensitive",
+   "query": "acquisition target code named manatee",
+   "expect": [],
+   "forbid": [
+    {
+     "source_type": "note",
+     "source_id": "syn-n-vreclass",
+     "why": "reclassified above ceiling"
+    }
+   ]
+  },
+  {
+   "id": "VN2",
+   "category": "note reclassified is reachable at a sensitive ceiling",
+   "query": "acquisition target code named manatee",
+   "expect": [
+    {
+     "source_type": "note",
+     "source_id": "syn-n-vreclass"
+    }
+   ],
+   "access": "owner_sensitive"
+  },
+  {
+   "id": "VS1",
+   "category": "stale index, revalidation only: rescoped alpha to beta, alpha caller",
+   "query": "migration runbook tamarin",
+   "expect": [],
+   "access": "scope:alpha",
+   "forbid": [
+    {
+     "source_type": "note",
+     "source_id": "syn-n-vrescope",
+     "why": "now beta-scoped, alpha caller"
+    }
+   ]
+  },
+  {
+   "id": "VS2",
+   "category": "rescoped note is reachable by a beta caller",
+   "query": "migration runbook tamarin",
+   "expect": [
+    {
+     "source_type": "note",
+     "source_id": "syn-n-vrescope"
+    }
+   ],
+   "access": "scope:beta"
+  },
+  {
+   "id": "VC1",
+   "category": "unchanged records unaffected by the mutations",
+   "query": "preferred standup time nine thirty",
+   "expect": [
+    {
+     "source_type": "memory",
+     "source_id": "syn-m-fact"
+    }
+   ]
+  }
+ ]
+}

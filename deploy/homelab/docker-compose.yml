@@ -471,6 +471,8 @@ services:
       # SHADOW_ROUTER_URL points at the separate semantic-router sidecar.
       # Phase 44B: the knowledge index worker (builds a derived index from the stores; nothing searches it yet). Off by default.
       KNOWLEDGE_INDEXING_ENABLED: ${KNOWLEDGE_INDEXING_ENABLED:-false}
+      # Phase 48E: retrieval over the index. On its own it changes no reply: the cited answerer and the selective shadow each need their own flag, which Compose deliberately does not pass.
+      KNOWLEDGE_RETRIEVAL_ENABLED: ${KNOWLEDGE_RETRIEVAL_ENABLED:-false}
       # Phase 48A/48B: memory-candidate review routes and (separately) capture of candidates from the owner's text. Both off by default; capture needs review on and an armed robot (docs/phase-48.md).
       MEMORY_CANDIDATES_ENABLED: ${MEMORY_CANDIDATES_ENABLED:-false}
       MEMORY_CANDIDATES_CAPTURE_ENABLED: ${MEMORY_CANDIDATES_CAPTURE_ENABLED:-false}

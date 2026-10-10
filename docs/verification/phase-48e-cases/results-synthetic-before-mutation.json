@@ -1,0 +1,1575 @@
+{
+ "cases": [
+  {
+   "id": "MF1",
+   "category": "memory facts",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "memory:syn-m-fact"
+   ],
+   "n_returned": 4,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.25,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "memory:syn-m-fact",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#48",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#49",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "meeting",
+    "memory"
+   ],
+   "latency_ms": 6.9
+  },
+  {
+   "id": "MF2",
+   "category": "memory facts (restricted: shared speaker)",
+   "access": "shared",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 0,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [],
+   "latency_ms": 2.1
+  },
+  {
+   "id": "MF3",
+   "category": "memory facts (public to shared)",
+   "access": "shared",
+   "temporal": "current",
+   "expected_sources": [
+    "memory:syn-m-pub"
+   ],
+   "n_returned": 1,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "memory:syn-m-pub",
+     "kind": "memory",
+     "sensitivity": "public",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "memory"
+   ],
+   "latency_ms": 1.0
+  },
+  {
+   "id": "MF4",
+   "category": "memory facts",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "memory:syn-m-pub"
+   ],
+   "n_returned": 1,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "memory:syn-m-pub",
+     "kind": "memory",
+     "sensitivity": "public",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "memory"
+   ],
+   "latency_ms": 1.1
+  },
+  {
+   "id": "MF5",
+   "category": "memory facts",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "memory:syn-m-fact"
+   ],
+   "n_returned": 2,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.5,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "memory:syn-m-fact",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "note:4f826f08-202f-4fc9-b120-935716633a99",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "memory",
+    "note"
+   ],
+   "latency_ms": 1.2
+  },
+  {
+   "id": "TK1",
+   "category": "tasks",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "task:syn-t-open"
+   ],
+   "n_returned": 3,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.3333333333333333,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "task:syn-t-open",
+     "kind": "task",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "memory:syn-m-vreclass",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "note:4f826f08-202f-4fc9-b120-935716633a99",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "memory",
+    "note",
+    "task"
+   ],
+   "latency_ms": 1.8
+  },
+  {
+   "id": "RM1",
+   "category": "reminders",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "reminder:syn-r-1"
+   ],
+   "n_returned": 1,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "reminder:syn-r-1",
+     "kind": "reminder",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "reminder"
+   ],
+   "latency_ms": 1.0
+  },
+  {
+   "id": "SE1",
+   "category": "sensitive (owner private channel)",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 0,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [],
+   "latency_ms": 0.6
+  },
+  {
+   "id": "SE2",
+   "category": "sensitive (trusted sensitive ceiling)",
+   "access": "owner_sensitive",
+   "temporal": "current",
+   "expected_sources": [
+    "memory:syn-m-sens"
+   ],
+   "n_returned": 1,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "memory:syn-m-sens",
+     "kind": "memory",
+     "sensitivity": "sensitive",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "memory"
+   ],
+   "latency_ms": 1.0
+  },
+  {
+   "id": "SE3",
+   "category": "sensitive (owner private channel)",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 0,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [],
+   "latency_ms": 0.5
+  },
+  {
+   "id": "SE4",
+   "category": "sensitive (trusted sensitive ceiling)",
+   "access": "owner_sensitive",
+   "temporal": "current",
+   "expected_sources": [
+    "note:syn-n-sens"
+   ],
+   "n_returned": 1,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "note:syn-n-sens",
+     "kind": "note",
+     "sensitivity": "sensitive",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "note"
+   ],
+   "latency_ms": 0.8
+  },
+  {
+   "id": "SE5",
+   "category": "sensitive (shared speaker)",
+   "access": "shared",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 0,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [],
+   "latency_ms": 0.4
+  },
+  {
+   "id": "PS1",
+   "category": "project scope",
+   "access": "scope:alpha",
+   "temporal": "current",
+   "expected_sources": [
+    "memory:syn-m-alpha"
+   ],
+   "n_returned": 1,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "memory:syn-m-alpha",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": "alpha",
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "memory"
+   ],
+   "latency_ms": 0.8
+  },
+  {
+   "id": "PS2",
+   "category": "project scope (cross-scope)",
+   "access": "scope:alpha",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 1,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [
+    {
+     "ref": "memory:syn-m-alpha",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": "alpha",
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "memory"
+   ],
+   "latency_ms": 0.7
+  },
+  {
+   "id": "PS3",
+   "category": "project scope",
+   "access": "scope:alpha",
+   "temporal": "current",
+   "expected_sources": [
+    "note:syn-n-alpha"
+   ],
+   "n_returned": 4,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.25,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "note:syn-n-alpha",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": "alpha",
+     "authority": "source"
+    },
+    {
+     "ref": "memory:syn-m-alpha",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": "alpha",
+     "authority": "source"
+    },
+    {
+     "ref": "note:syn-n-vrescope",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": "alpha",
+     "authority": "source"
+    },
+    {
+     "ref": "task:syn-t-alpha",
+     "kind": "task",
+     "sensitivity": "work-private",
+     "scope": "alpha",
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "memory",
+    "note",
+    "task"
+   ],
+   "latency_ms": 1.5
+  },
+  {
+   "id": "PS4",
+   "category": "project scope (cross-scope)",
+   "access": "scope:alpha",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 1,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [
+    {
+     "ref": "note:syn-n-alpha",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": "alpha",
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "note"
+   ],
+   "latency_ms": 0.7
+  },
+  {
+   "id": "PS5",
+   "category": "project scope",
+   "access": "scope:beta",
+   "temporal": "current",
+   "expected_sources": [
+    "memory:syn-m-beta"
+   ],
+   "n_returned": 1,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "memory:syn-m-beta",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": "beta",
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "memory"
+   ],
+   "latency_ms": 0.7
+  },
+  {
+   "id": "PS6",
+   "category": "project scope (cross-scope)",
+   "access": "scope:beta",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 1,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [
+    {
+     "ref": "memory:syn-m-beta",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": "beta",
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "memory"
+   ],
+   "latency_ms": 0.7
+  },
+  {
+   "id": "PS7",
+   "category": "project scope",
+   "access": "scope:alpha",
+   "temporal": "current",
+   "expected_sources": [
+    "task:syn-t-alpha"
+   ],
+   "n_returned": 2,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.5,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "task:syn-t-alpha",
+     "kind": "task",
+     "sensitivity": "work-private",
+     "scope": "alpha",
+     "authority": "source"
+    },
+    {
+     "ref": "memory:syn-m-vexpire",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [
+    "memory:syn-m-vexpire"
+   ],
+   "top5_source_types": [
+    "memory",
+    "task"
+   ],
+   "latency_ms": 1.0
+  },
+  {
+   "id": "PS8",
+   "category": "project scope (cross-scope)",
+   "access": "scope:beta",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 1,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [
+    {
+     "ref": "memory:syn-m-vexpire",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [
+    "memory:syn-m-vexpire"
+   ],
+   "top5_source_types": [
+    "memory"
+   ],
+   "latency_ms": 1.0
+  },
+  {
+   "id": "PS9",
+   "category": "project scope (unrestricted owner sees all)",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "memory:syn-m-alpha"
+   ],
+   "n_returned": 2,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.5,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "memory:syn-m-alpha",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": "alpha",
+     "authority": "source"
+    },
+    {
+     "ref": "memory:syn-m-beta",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": "beta",
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "memory"
+   ],
+   "latency_ms": 1.0
+  },
+  {
+   "id": "FE1",
+   "category": "forgotten",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 0,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [],
+   "latency_ms": 0.6
+  },
+  {
+   "id": "FE2",
+   "category": "expired",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 7,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#4",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "memory:syn-m-tforget",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "memory:syn-m-vexpire",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "meeting",
+    "memory"
+   ],
+   "latency_ms": 3.4
+  },
+  {
+   "id": "FE3",
+   "category": "expired (include_historical)",
+   "access": "owner",
+   "temporal": "include_historical",
+   "expected_sources": [],
+   "n_returned": 7,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#4",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "memory:syn-m-tforget",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "memory:syn-m-vexpire",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "meeting",
+    "memory"
+   ],
+   "latency_ms": 3.0
+  },
+  {
+   "id": "FE4",
+   "category": "forgotten (include_historical)",
+   "access": "owner",
+   "temporal": "include_historical",
+   "expected_sources": [],
+   "n_returned": 0,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [],
+   "latency_ms": 0.5
+  },
+  {
+   "id": "CF1",
+   "category": "conflicting facts (both versions must surface)",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "memory:syn-m-deploy1",
+    "memory:syn-m-deploy2"
+   ],
+   "n_returned": 2,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "memory:syn-m-deploy1",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "memory:syn-m-deploy2",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "memory"
+   ],
+   "latency_ms": 1.3
+  },
+  {
+   "id": "CF2",
+   "category": "conflicting facts",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "memory:syn-m-deploy2"
+   ],
+   "n_returned": 2,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.5,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "memory:syn-m-deploy2",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "memory:syn-m-deploy1",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "memory"
+   ],
+   "latency_ms": 1.1
+  },
+  {
+   "id": "XS1",
+   "category": "cross-source",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "note:syn-n-alpha",
+    "note:syn-n-beta"
+   ],
+   "n_returned": 2,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "note:syn-n-alpha",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": "alpha",
+     "authority": "source"
+    },
+    {
+     "ref": "note:syn-n-beta",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": "beta",
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "note"
+   ],
+   "latency_ms": 1.2
+  },
+  {
+   "id": "XS2",
+   "category": "cross-source",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "memory:syn-m-alpha",
+    "memory:syn-m-beta"
+   ],
+   "n_returned": 2,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "memory:syn-m-alpha",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": "alpha",
+     "authority": "source"
+    },
+    {
+     "ref": "memory:syn-m-beta",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": "beta",
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "memory"
+   ],
+   "latency_ms": 1.0
+  },
+  {
+   "id": "NG1",
+   "category": "absent",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 0,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [],
+   "latency_ms": 0.6
+  },
+  {
+   "id": "NG2",
+   "category": "absent (restricted term to shared)",
+   "access": "shared",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 0,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [],
+   "latency_ms": 0.4
+  },
+  {
+   "id": "V0a",
+   "category": "pre-mutation control (will be forgotten, trigger on)",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "memory:syn-m-tforget"
+   ],
+   "n_returned": 7,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.2,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "memory:syn-m-tforget",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#4",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "memory:syn-m-vexpire",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "meeting",
+    "memory"
+   ],
+   "latency_ms": 3.1
+  },
+  {
+   "id": "V0b",
+   "category": "pre-mutation control (will be deleted, trigger on)",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "note:syn-n-tdel"
+   ],
+   "n_returned": 7,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.2,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "note:syn-n-tdel",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#4",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "memory:syn-m-tforget",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "meeting",
+    "memory",
+    "note"
+   ],
+   "latency_ms": 2.9
+  },
+  {
+   "id": "V0c",
+   "category": "pre-mutation control (will be forgotten, index left stale)",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "memory:syn-m-vforget"
+   ],
+   "n_returned": 2,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.5,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "memory:syn-m-vforget",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "note:4f826f08-202f-4fc9-b120-935716633a99",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "memory",
+    "note"
+   ],
+   "latency_ms": 1.9
+  },
+  {
+   "id": "V0d",
+   "category": "pre-mutation control (will expire, index left stale)",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "memory:syn-m-vexpire"
+   ],
+   "n_returned": 8,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.2,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "memory:syn-m-vexpire",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "task:syn-t-alpha",
+     "kind": "task",
+     "sensitivity": "work-private",
+     "scope": "alpha",
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#4",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "meeting",
+    "memory",
+    "task"
+   ],
+   "latency_ms": 3.2
+  },
+  {
+   "id": "V0e",
+   "category": "pre-mutation control (will be reclassified sensitive, index stale)",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "memory:syn-m-vreclass"
+   ],
+   "n_returned": 3,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.3333333333333333,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "memory:syn-m-vreclass",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "note:4f826f08-202f-4fc9-b120-935716633a99",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "task:syn-t-open",
+     "kind": "task",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "memory",
+    "note",
+    "task"
+   ],
+   "latency_ms": 1.4
+  },
+  {
+   "id": "V0f",
+   "category": "pre-mutation control (will be deleted, index stale)",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "note:syn-n-vdel"
+   ],
+   "n_returned": 1,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 1.0,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "note:syn-n-vdel",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "note"
+   ],
+   "latency_ms": 0.8
+  },
+  {
+   "id": "V0g",
+   "category": "pre-mutation control (will be reclassified sensitive, index stale)",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "note:syn-n-vreclass"
+   ],
+   "n_returned": 8,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.2,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "note:syn-n-vreclass",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#4",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#48",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "meeting",
+    "note"
+   ],
+   "latency_ms": 3.4
+  },
+  {
+   "id": "V0h",
+   "category": "pre-mutation control (will be rescoped alpha to beta, index stale)",
+   "access": "scope:alpha",
+   "temporal": "current",
+   "expected_sources": [
+    "note:syn-n-vrescope"
+   ],
+   "n_returned": 5,
+   "first_hit_rank": 2,
+   "hit_at": {
+    "1": false,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.2,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "note:21c9940d-7490-4f07-8608-9eefeb05c76f",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "note:syn-n-vrescope",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": "alpha",
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#3",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [
+    "note:21c9940d-7490-4f07-8608-9eefeb05c76f",
+    "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+    "meeting:d24bcab2-3846-440c-843d-0b31c9479012#3",
+    "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes"
+   ],
+   "top5_source_types": [
+    "meeting",
+    "note"
+   ],
+   "latency_ms": 3.6
+  }
+ ]
+}

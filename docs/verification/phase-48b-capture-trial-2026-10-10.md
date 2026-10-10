@@ -33,7 +33,7 @@ Verify at the end: `sha256sum` of those four files at `HEAD` matches, the runnin
 ## 1b. End-of-window procedure
 
 1. Run `python3 tools/memory_candidate_trial_report.py --since 2026-10-10T14:06:00Z` and save the output here.
-2. Capture the in-memory duplicate/cap/exclusion summary. It has no read route (adding one would change the frozen code) and is printed to core's log when core stops, so stop core gracefully and read the line: `docker stop -t 30 reachy-homelab-companion-core-1`, then `docker logs reachy-homelab-companion-core-1 2>&1 | grep "capture summary"` (numbers only, no content). Do this before starting core again; start it with the same flags (`docker compose -p reachy-homelab --env-file .env up -d --no-build --no-deps companion-core`, with `SEARXNG_SECRET_KEY` exported). A kill or crash loses the tally, so avoid `docker kill`. The counters cover the whole window only if core ran without any restart; any earlier restart prints its own partial summary, so record every restart here.
+2. Capture the in-memory duplicate/cap/exclusion counters **from the read-only route added on 2026-10-10 (commit `9c8214a`)**, before any restart of core: `docker exec reachy-homelab-companion-core-1 python3 -c "import os,urllib.request;print(urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8000/memory-candidates/capture-counters',headers={'X-Reachy-Service-Token':os.environ['ACCOUNTS_SERVICE_TOKEN']})).read().decode())"` (numbers only and the process start time; service-token protected; no reset or write operation; core only, no hub proxy). The counters live in process memory and start from zero at every core start, so read and record them **before every restart** and sum the segments. (The original plan of reading a shutdown log line never worked: that line is never logged.)
 3. Combine with the owner's tally (section 4) into the acceptance report below: precision, counts, gate verdict, and ACCEPT / ACCEPT WITH CHANGES / REJECT. No tuning is implemented until that report is complete.
 
 **Defect found 2026-10-10 14:34 UTC: step 2 does not work.** The `capture summary` line is logged at INFO and no logging is configured, so a graceful stop prints no summary (verified). Until the owner decides (proposal: raise that one log call in `app.py` to WARNING, or add a read-only counters route; neither touches the four frozen capture files), the duplicate/cap/exclusion tallies cannot be read at the end of the window. The durable counters (proposed, accepted, edited, rejected, suppressed) are unaffected.
@@ -43,8 +43,14 @@ Restart log (any restart of core during the window must be recorded):
 | Time (UTC) | Reason | In-memory summary |
 |---|---|---|
 | 2026-10-10 14:34:37 to 14:34:59 | planned: Phase 48D indexing activation (`KNOWLEDGE_INDEXING_ENABLED=true`; same image, capture flags and rules unchanged) | not recoverable (the logging defect above). Durable counters at that time: 0 proposed, 0 candidates, 0 suppressions |
+| 2026-10-10 14:45:23 to 14:45:25 | planned: deploy of the read-only counters route (image `027ed2d6437e`, commit `9c8214a`, capture files unchanged) | not recoverable: the old process had no route and no log line (all counters of this segment were zero or exclusions; durable counters still 0 proposed) |
+| 2026-10-10 14:46:19 | planned: Phase 48E (`KNOWLEDGE_RETRIEVAL_ENABLED=true`; same image, capture flags unchanged) | read before the restart: `{"attempted":1,"no_match":1}` (that one attempt is the owner-side verification probe "What is two plus two?", sent directly to core, not owner usage) |
+
+Counter segments from `process_started_at` 14:46:23 UTC: my two verification probes (`attempted 2, no_match 2` at 14:50) are not owner usage and are to be subtracted from the final tally. The trial boundary list above is the whole record; the window continues, not restarted.
 
 Frozen items re-verified after that restart: image `15ce11cf8ad9` unchanged, `candidate_service.py` hash unchanged.
+
+**Telemetry fix (owner-directed, instrumentation only, 2026-10-10).** `GET /memory-candidates/capture-counters` (core only; `shared/protocols/memory_candidates_api.py`, `app.py`): integer counters and `process_started_at`, nothing else; behind core's service token (401 without it); no reset or mutation; absent when review is off; capture never reads it. Tests: numbers only with canary session ids and sentences absent from the body, unauthorised and mutating requests refused, capture identical with and without reads, flag behaviour. The four frozen capture files are byte-identical (hashes above re-checked after the deploy) and no capture rule, limit, eligibility or text handling changed. The old shutdown-summary log line is left as it was.
 
 ## 2. Rules for the window
 

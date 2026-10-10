@@ -1,0 +1,647 @@
+{
+ "cases": [
+  {
+   "id": "TF1",
+   "category": "stale index (trigger removes the row at once): forgotten",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 3,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#4",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "meeting"
+   ],
+   "latency_ms": 4.4
+  },
+  {
+   "id": "TD1",
+   "category": "stale index (trigger): deleted",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 3,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#4",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "meeting"
+   ],
+   "latency_ms": 3.0
+  },
+  {
+   "id": "VF1",
+   "category": "stale index, revalidation only: forgotten",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 1,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [
+    {
+     "ref": "note:4f826f08-202f-4fc9-b120-935716633a99",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "note"
+   ],
+   "latency_ms": 1.3
+  },
+  {
+   "id": "VE1",
+   "category": "stale index, revalidation only: expired",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 4,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [
+    {
+     "ref": "task:syn-t-alpha",
+     "kind": "task",
+     "sensitivity": "work-private",
+     "scope": "alpha",
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#4",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "meeting",
+    "task"
+   ],
+   "latency_ms": 2.4
+  },
+  {
+   "id": "VE2",
+   "category": "stale index, revalidation only: expired (historical mode)",
+   "access": "owner",
+   "temporal": "include_historical",
+   "expected_sources": [],
+   "n_returned": 4,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [
+    {
+     "ref": "task:syn-t-alpha",
+     "kind": "task",
+     "sensitivity": "work-private",
+     "scope": "alpha",
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#4",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "meeting",
+    "task"
+   ],
+   "latency_ms": 3.4
+  },
+  {
+   "id": "VR1",
+   "category": "stale index, revalidation only: reclassified sensitive",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 2,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [
+    {
+     "ref": "note:4f826f08-202f-4fc9-b120-935716633a99",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "task:syn-t-open",
+     "kind": "task",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "note",
+    "task"
+   ],
+   "latency_ms": 1.2
+  },
+  {
+   "id": "VR2",
+   "category": "reclassified sensitive is still reachable at a sensitive ceiling",
+   "access": "owner_sensitive",
+   "temporal": "current",
+   "expected_sources": [
+    "memory:syn-m-vreclass"
+   ],
+   "n_returned": 3,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.3333333333333333,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "memory:syn-m-vreclass",
+     "kind": "memory",
+     "sensitivity": "sensitive",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "note:4f826f08-202f-4fc9-b120-935716633a99",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "task:syn-t-open",
+     "kind": "task",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "memory",
+    "note",
+    "task"
+   ],
+   "latency_ms": 1.4
+  },
+  {
+   "id": "VD1",
+   "category": "stale index, revalidation only: deleted",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 0,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [],
+   "latency_ms": 0.5
+  },
+  {
+   "id": "VN1",
+   "category": "stale index, revalidation only: note reclassified sensitive",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 4,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#4",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#48",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "meeting"
+   ],
+   "latency_ms": 2.4
+  },
+  {
+   "id": "VN2",
+   "category": "note reclassified is reachable at a sensitive ceiling",
+   "access": "owner_sensitive",
+   "temporal": "current",
+   "expected_sources": [
+    "note:syn-n-vreclass"
+   ],
+   "n_returned": 5,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.2,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "note:syn-n-vreclass",
+     "kind": "note",
+     "sensitivity": "sensitive",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#4",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#48",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "meeting",
+    "note"
+   ],
+   "latency_ms": 2.1
+  },
+  {
+   "id": "VS1",
+   "category": "stale index, revalidation only: rescoped alpha to beta, alpha caller",
+   "access": "scope:alpha",
+   "temporal": "current",
+   "expected_sources": [],
+   "n_returned": 4,
+   "first_hit_rank": null,
+   "hit_at": {
+    "1": false,
+    "3": false,
+    "5": false
+   },
+   "precision_at_5": null,
+   "all_expected_in_top5": null,
+   "top5": [
+    {
+     "ref": "note:21c9940d-7490-4f07-8608-9eefeb05c76f",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#3",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [
+    "note:21c9940d-7490-4f07-8608-9eefeb05c76f",
+    "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+    "meeting:d24bcab2-3846-440c-843d-0b31c9479012#3",
+    "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes"
+   ],
+   "top5_source_types": [
+    "meeting",
+    "note"
+   ],
+   "latency_ms": 2.0
+  },
+  {
+   "id": "VS2",
+   "category": "rescoped note is reachable by a beta caller",
+   "access": "scope:beta",
+   "temporal": "current",
+   "expected_sources": [
+    "note:syn-n-vrescope"
+   ],
+   "n_returned": 5,
+   "first_hit_rank": 2,
+   "hit_at": {
+    "1": false,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.2,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "note:21c9940d-7490-4f07-8608-9eefeb05c76f",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "note:syn-n-vrescope",
+     "kind": "note",
+     "sensitivity": "work-private",
+     "scope": "beta",
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#3",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes",
+     "kind": "meeting_minutes",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [
+    "note:21c9940d-7490-4f07-8608-9eefeb05c76f",
+    "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+    "meeting:d24bcab2-3846-440c-843d-0b31c9479012#3",
+    "meeting:d24bcab2-3846-440c-843d-0b31c9479012#minutes"
+   ],
+   "top5_source_types": [
+    "meeting",
+    "note"
+   ],
+   "latency_ms": 2.3
+  },
+  {
+   "id": "VC1",
+   "category": "unchanged records unaffected by the mutations",
+   "access": "owner",
+   "temporal": "current",
+   "expected_sources": [
+    "memory:syn-m-fact"
+   ],
+   "n_returned": 4,
+   "first_hit_rank": 1,
+   "hit_at": {
+    "1": true,
+    "3": true,
+    "5": true
+   },
+   "precision_at_5": 0.25,
+   "all_expected_in_top5": true,
+   "top5": [
+    {
+     "ref": "memory:syn-m-fact",
+     "kind": "memory",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#48",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#49",
+     "kind": "meeting_segment",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "source"
+    },
+    {
+     "ref": "meeting:d24bcab2-3846-440c-843d-0b31c9479012#summary",
+     "kind": "meeting_summary",
+     "sensitivity": "work-private",
+     "scope": null,
+     "authority": "model_generated"
+    }
+   ],
+   "dropped": {},
+   "violations": [],
+   "unscoped_items_shown_to_scoped_caller": [],
+   "top5_source_types": [
+    "meeting",
+    "memory"
+   ],
+   "latency_ms": 3.3
+  }
+ ]
+}
