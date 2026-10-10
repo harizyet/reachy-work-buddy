@@ -1,6 +1,6 @@
 # Phase 48A: memory candidate review, rehearsal and production activation, 2026-10-10
 
-**Status: rehearsal PASSED on a disposable stack; review-only ENABLED in production (core recreated). Capture is OFF and stays off: the robot-state dependency in capture must be removed and tested first ([Phase 48 section 4](../phase-48.md#4-48b--supervised-candidate-capture)). The owner's browser check of the Memory page is still pending.** The robot was not involved at any point.
+**Status: 48A COMPLETE. Rehearsal PASSED on a disposable stack; review-only ENABLED in production (core recreated); the owner confirmed in a production browser that the Memory page renders correctly (2026-10-10). Capture was OFF at this point and was enabled later under 48B ([trial log](phase-48b-capture-trial-2026-10-10.md)).** The robot was not involved at any point.
 
 ## 1. Rehearsal (disposable, then removed)
 
@@ -31,5 +31,5 @@ Rollback: set `MEMORY_CANDIDATES_ENABLED=false` (or remove the two lines) and re
 
 ## 3. Open
 
-1. Owner browser check of `/web/#/memory` in production (empty queue expected). The hub-through-Caddy path was not exercised by me because it needs the owner's login.
-2. Capture eligibility must stop depending on robot wake-arm state (48B blocker).
+1. ~~Owner browser check of `/web/#/memory` in production~~ DONE: the owner confirmed the page renders correctly.
+2. ~~Capture eligibility must stop depending on robot wake-arm state~~ DONE under 48B.

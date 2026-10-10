@@ -27,7 +27,7 @@ from pathlib import Path
 
 PG, CORE, HUB, PGB = "reachy-homelab-postgres-1", "reachy-homelab-companion-core-1", "reachy-homelab-reachy-hub-1", "reachy-homelab-pgbouncer-1"
 VLLM_HEALTH = "http://localhost:8003/health"
-REQUIRED_REVISION = "027_knowledge_index"
+REQUIRED_REVISION = ("027_knowledge_index", "028_memory_candidates")  # 028 added by Phase 44F; the index schema is unchanged
 # Mandatory abort gates (the 44B contention and trial limits, plus the Phase 45 PgBouncer limits).
 GATES = {"pg_connections": 85, "waiting_samples": 3, "maxwait_s": 2, "health_ms": 3000, "load": 14.0, "min_available_mb": 3000}
 
@@ -106,7 +106,7 @@ def preflight() -> list[tuple[str, bool, str]]:
     def add(name: str, ok: bool, detail: str) -> None:
         checks.append((name, bool(ok), detail))
 
-    add("database revision", psql("select version_num from alembic_version") == REQUIRED_REVISION, psql("select version_num from alembic_version"))
+    add("database revision", psql("select version_num from alembic_version") in REQUIRED_REVISION, psql("select version_num from alembic_version"))
     flag = sh("docker", "exec", CORE, "printenv", "KNOWLEDGE_INDEXING_ENABLED")
     add("indexing flag is false", flag == "false", flag or "unset")
     add("shadow flag is not set", sh("docker", "exec", CORE, "printenv", "KNOWLEDGE_SHADOW_ENABLED") in ("", "false"), "must stay off for the trial")

@@ -36,7 +36,15 @@ Verify at the end: `sha256sum` of those four files at `HEAD` matches, the runnin
 2. Capture the in-memory duplicate/cap/exclusion summary. It has no read route (adding one would change the frozen code) and is printed to core's log when core stops, so stop core gracefully and read the line: `docker stop -t 30 reachy-homelab-companion-core-1`, then `docker logs reachy-homelab-companion-core-1 2>&1 | grep "capture summary"` (numbers only, no content). Do this before starting core again; start it with the same flags (`docker compose -p reachy-homelab --env-file .env up -d --no-build --no-deps companion-core`, with `SEARXNG_SECRET_KEY` exported). A kill or crash loses the tally, so avoid `docker kill`. The counters cover the whole window only if core ran without any restart; any earlier restart prints its own partial summary, so record every restart here.
 3. Combine with the owner's tally (section 4) into the acceptance report below: precision, counts, gate verdict, and ACCEPT / ACCEPT WITH CHANGES / REJECT. No tuning is implemented until that report is complete.
 
-Restart log (any restart of core during the window must be recorded with its summary line): none yet.
+**Defect found 2026-10-10 14:34 UTC: step 2 does not work.** The `capture summary` line is logged at INFO and no logging is configured, so a graceful stop prints no summary (verified). Until the owner decides (proposal: raise that one log call in `app.py` to WARNING, or add a read-only counters route; neither touches the four frozen capture files), the duplicate/cap/exclusion tallies cannot be read at the end of the window. The durable counters (proposed, accepted, edited, rejected, suppressed) are unaffected.
+
+Restart log (any restart of core during the window must be recorded):
+
+| Time (UTC) | Reason | In-memory summary |
+|---|---|---|
+| 2026-10-10 14:34:37 to 14:34:59 | planned: Phase 48D indexing activation (`KNOWLEDGE_INDEXING_ENABLED=true`; same image, capture flags and rules unchanged) | not recoverable (the logging defect above). Durable counters at that time: 0 proposed, 0 candidates, 0 suppressions |
+
+Frozen items re-verified after that restart: image `15ce11cf8ad9` unchanged, `candidate_service.py` hash unchanged.
 
 ## 2. Rules for the window
 

@@ -47,6 +47,8 @@ Each stage that changes production needs the owner's go-ahead for that stage. Ap
 
 ## 3. 48A — Enable memory candidate review
 
+**COMPLETE (2026-10-10).** Disposable rehearsal passed; review enabled in production; the owner confirmed in a production browser that the Memory page renders correctly ([record](verification/phase-48a-review-activation-2026-10-10.md)).
+
 Set `MEMORY_CANDIDATES_ENABLED=true`, `MEMORY_CANDIDATES_CAPTURE_ENABLED=false`.
 
 Purpose: expose the built candidate review API, verify the React Memory page, and verify accept, edit+accept, reject and suppress.
@@ -106,15 +108,19 @@ Promotion gate: at least 80% of surfaced candidates judged useful or reasonable;
 
 ## 5. 48C — Knowledge indexing operational readiness
 
+**COMPLETE for the small-corpus activation (2026-10-10).** The owner waived the off-host backup for this 48D activation only (about 85 index rows; derived index and outbox only; the general off-host requirement stands for operations that risk authoritative data), subject to a fresh local dump, row counts, a synthetic benchmark on a disposable stack, an idle baseline and a rehearsed rollback. All were done: [record](verification/phase-48d-indexing-activation-2026-10-10.md). Stop conditions used: chat p95 regression over 10%, any OOM or service restart, sustained swap churn or growth (the 7.8 GB of swapped cold pages is not a blocker; active si/so traffic is the measure), dropped meeting jobs, 25 or more PgBouncer-fronted backends.
+
 Close the operational blockers from the [closure report](phase-44-closure-report.md#3-operationally-blocked). The migration-028 backup waiver was for disposable data and does **not** extend to indexing the real corpus.
 
 Required: off-host backup; isolated restore; fresh memory baseline (host available memory read 3.4 GB on 2026-10-10 against 7.7 GB at the trial minimum); database-connection, disk and CPU baselines; bulk-indexing contention test; rollback rehearsal.
 
 Record: available RAM, PostgreSQL size, records by source, index row estimate, indexing wall time, CPU and memory peaks, DB connections, effect on vLLM TTFT and decode, on meeting transcription/diarization, and on normal API latency. Ceilings come from the measured hardware, not arbitrary numbers, for example: chat p95 regression under 10%, no OOM, no model eviction, no dropped meeting jobs, DB pool below its configured ceiling.
 
-The off-host backup is the known hard part: the backup programme is paused and the NAS offers no usable transfer path ([plan](postgres-backup-implementation-plan.md)). 48D cannot start until that has an owner decision. A read-only idle baseline and prerequisite status is recorded in [the 48C baseline](verification/phase-48c-baseline-2026-10-10.md). 48C preparation is non-invasive documentation and checks only while the 48B window is open; indexing is not activated during it without separate approval.
+The off-host backup is the known hard part: the backup programme is paused and the NAS offers no usable transfer path ([plan](postgres-backup-implementation-plan.md)). Resolved for the small-corpus 48D activation by the owner's scoped waiver (see below). A read-only idle baseline and prerequisite status is recorded in [the 48C baseline](verification/phase-48c-baseline-2026-10-10.md). 48C preparation is non-invasive documentation and checks only while the 48B window is open; indexing is not activated during it without separate approval.
 
 ## 6. 48D — Enable indexing and backfill
+
+**COMPLETE (2026-10-10, 14:35 UTC).** `KNOWLEDGE_INDEXING_ENABLED=true`; retrieval, selective answering and shadow remain off. 83 rows indexed in under 20 s; sources byte-identical before and after; no drift or orphans; chat p95 unaffected; no restart. Evidence and findings: [record](verification/phase-48d-indexing-activation-2026-10-10.md). **48E needs the owner's approval.**
 
 Set `KNOWLEDGE_INDEXING_ENABLED=true` with retrieval, shadow and selective answering all OFF, so indexing cannot affect replies. Backfill every supported source type: memories, documents, meetings, notes, tasks, reminders.
 
@@ -202,3 +208,5 @@ Robot work follows the standing safety rules in [AGENTS.md](../AGENTS.md); this 
 | 2026-10-10 | 48B | Capture eligibility refactor implemented (`0304ab8`) and verified on a disposable stack built from that commit (Web, Android, Telegram contract, robot voice both ways, unauthenticated, sensitive, flag combinations, one memory and one receipt, reply parity; no robot). Not deployed; production capture still OFF. Record: [48B](verification/phase-48b-capture-eligibility-2026-10-10.md). Awaiting owner approval of 48B activation. |
 | 2026-10-10 | 48B | Owner decisions: robot voice ineligible until Phase 32 (`ROBOT_VOICE_ELIGIBLE = False`, `d899e14`, regression test armed robot + unverified voice = 0 candidates); 48B activation approved. Core rebuilt from a clean worktree of `d899e14`, recreated alone at 14:06 UTC with `MEMORY_CANDIDATES_CAPTURE_ENABLED=true`; queue empty. Supervised trial open, rules frozen. Record: [trial log](verification/phase-48b-capture-trial-2026-10-10.md). |
 | 2026-10-10 | 48B/48C | Capture implementation and rules frozen for the evidence window (hashes and end-of-window procedure in the trial log). Read-only 48C baseline taken: corpus is tiny (about 85 index rows), swap nearly full, off-host backup still unmet; no indexing or load. Record: [48C baseline](verification/phase-48c-baseline-2026-10-10.md). |
+| 2026-10-10 | 48A | **COMPLETE.** Owner confirmed the production Memory page renders correctly in a browser. |
+| 2026-10-10 | 48C/48D | Off-host backup waived for this small index activation (owner). Fresh dump verified readable, source checksums recorded, synthetic benchmark on a disposable stack (chat +6.4% p95, swap static), idle baseline, rehearsal of disable/rebuild/rollback on a restored copy. `KNOWLEDGE_INDEXING_ENABLED=true` at 14:35 UTC; 83 rows, sources unchanged, no stop condition. Finding: the 48B end-of-window summary line is never logged (see trial log). Retrieval stays off; awaiting approval for 48E. Record: [48D](verification/phase-48d-indexing-activation-2026-10-10.md). |
