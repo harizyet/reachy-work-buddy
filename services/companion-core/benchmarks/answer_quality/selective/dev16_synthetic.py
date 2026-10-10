@@ -187,6 +187,9 @@ class MockService:
 
             def do_POST(self):
                 body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+                if self.path == "/tokenize":  # the tokenizer endpoint the context builder uses: a deterministic count, no inference
+                    svc.requests.append(("POST-tokenize", self.path))
+                    return self._json({"count": max(1, len(str(body.get("prompt", ""))) // 4)})
                 svc.requests.append(("POST", self.path, body.get("temperature"), body.get("seed"), body.get("max_tokens")))
                 n = sum(1 for q in svc.requests if q[0] == "POST")
                 if svc.fail_after is not None and n > svc.fail_after:

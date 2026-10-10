@@ -1,0 +1,11 @@
+{
+ "purpose": "retrieval-only probe, no model call",
+ "cases": 10,
+ "two_fresh_builds_identical_ordered_evidence": 2,
+ "two_fresh_builds_identical_set": 5,
+ "build1_vs_smoke_identical_ordered": 2,
+ "build1_vs_smoke_identical_set": 6,
+ "smoke_vs_pilot_identical_ordered": 0,
+ "smoke_vs_pilot_identical_set": 3,
+ "pilot_cases_compared": 8
+}

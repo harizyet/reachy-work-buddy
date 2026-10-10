@@ -1,14 +1,22 @@
 {
  "argv": [
-  "dev16_rehearsal.py",
+  "services/companion-core/benchmarks/answer_quality/selective/dev16_rehearsal.py",
   "--harness-fixes",
   "--structured",
   "--context",
   "--text"
  ],
- "authorization_sha256": "e7f73e862533d07afcc32725e4f972418752cae656fc408a6e866827c866b1c7",
- "env": {},
+ "authorization_sha256": "051000fe0ad911a01db3dd9f8055f76963aa3394fb3c09e5b6950c70b33dfa12",
+ "env": {
+  "AQ_PG_CONTAINER": "kbench-r3-pg-13866",
+  "AQ_PG_IMAGE_DIGEST": "sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b"
+ },
  "files": {
+  "benchmark_database_builder": {
+   "path": "services/companion-core/benchmarks/knowledge_retrieval/kbench/pg_env.py",
+   "sha256": "a37f07e72672fe0180641170eaca1b19fcfd63694b8898d5e69245365364693e",
+   "verified": true
+  },
   "candidate_arm": {
    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_candidate_arm.py",
    "sha256": "dde0404f58d17a08a98e003c87cac34935bff10b106db72585a550a1bde47906",
@@ -54,6 +62,11 @@
    "sha256": "e8f27b7375882b7c35dd7290fc889471a6db0ff6f623957634ebbce836c5892f",
    "verified": true
   },
+  "embedding_module": {
+   "path": "services/companion-core/src/companion_core/rag/embeddings.py",
+   "sha256": "7e0e8fbc5ad6cf9c67c7eedb2060470b5d33724119e6273eddcefd5bafa80ed2",
+   "verified": true
+  },
   "evaluator": {
    "path": "services/companion-core/benchmarks/answer_quality/selective/evaluator.py",
    "sha256": "d364af6bbf7f5328f09952347ceabb4454a27cf94950f7009157a90cf99e8f27",
@@ -61,7 +74,7 @@
   },
   "freeze_proposal_tool": {
    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_freeze_proposal.py",
-   "sha256": "8d2cf02c1376d86e0362bc3e72a1310232a215d8c1068e0d4a4d67a6893077e5",
+   "sha256": "06e490995a1911f6e00bb7322c31e20ce6e57edee616984b62e7cec127201bfd",
    "verified": true
   },
   "i2b_eval": {
@@ -76,22 +89,37 @@
   },
   "p0_config": {
    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_p0_config.json",
-   "sha256": "0cf4d699c32115a7f57db6175af4cffbfe8406866ada9e31a2faea39cbe8865f",
+   "sha256": "d645e91342bd631bed52dcbb19c8b241055661230ffb8bc075c75ba9bd7227d5",
    "verified": true
   },
   "p0_module": {
    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_p0.py",
-   "sha256": "1cee0b68fe4d2f7ca7282621d50e1b4712a3f9a73c6dbd1ace0a7a07b9042ae5",
+   "sha256": "8631bd66b530e3fdd87a35bb77c712e3d975555bc7577c69e963cf7f8a8f5afe",
+   "verified": true
+  },
+  "reproducibility_probe": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_p0_reproducibility.py",
+   "sha256": "868727459f4222c13a7089e538b5fd6a69fc00d361c77fa050a40c30ef5c6e6c",
    "verified": true
   },
   "runner": {
    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_runner.py",
-   "sha256": "6f6916ffb1ac06533e4ac2bea964e583325dad4dddce0bd598ff3b2039ddae86",
+   "sha256": "6423ff936e32f58ce6354f5246a773a8eef6406acfb1efeedf862774d841c95a",
    "verified": true
   },
   "scoring": {
    "path": "services/companion-core/benchmarks/answer_quality/aq/scoring.py",
    "sha256": "6bfb790efdf6a2cb4909e3966c74da0aab5fa92032ceca2c3d10c702a001a1f2",
+   "verified": true
+  },
+  "synthetic_fixtures": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_synthetic.py",
+   "sha256": "f8f4ca6135b105f19bac47f0ed5a2c61f60a33cf76fcc322d70e2b403da9be88",
+   "verified": true
+  },
+  "tiebreak_probe": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_p0_tiebreak_probe.py",
+   "sha256": "6ed1589032666e67dafe1d9ddf24caa770808abfa5b36ceb3ce095892263ee1b",
    "verified": true
   }
  },
@@ -103,8 +131,12 @@
   "case_count": 173,
   "case_ids_sha256": "8970c01874233ed0ac8fa6195fa330a3f57f34bf577d7514113a5c9e03cc4f1a",
   "commit": "rehearsal-commit",
-  "created_at": "2026-10-10T05:12:20.573930+00:00",
+  "created_at": "2026-10-10T05:50:40.751015+00:00",
   "files": {
+   "benchmark_database_builder": {
+    "path": "services/companion-core/benchmarks/knowledge_retrieval/kbench/pg_env.py",
+    "sha256": "a37f07e72672fe0180641170eaca1b19fcfd63694b8898d5e69245365364693e"
+   },
    "candidate_arm": {
     "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_candidate_arm.py",
     "sha256": "dde0404f58d17a08a98e003c87cac34935bff10b106db72585a550a1bde47906"
@@ -141,13 +173,17 @@
     "path": "services/companion-core/benchmarks/answer_quality/selective/deterministic_criteria.py",
     "sha256": "e8f27b7375882b7c35dd7290fc889471a6db0ff6f623957634ebbce836c5892f"
    },
+   "embedding_module": {
+    "path": "services/companion-core/src/companion_core/rag/embeddings.py",
+    "sha256": "7e0e8fbc5ad6cf9c67c7eedb2060470b5d33724119e6273eddcefd5bafa80ed2"
+   },
    "evaluator": {
     "path": "services/companion-core/benchmarks/answer_quality/selective/evaluator.py",
     "sha256": "d364af6bbf7f5328f09952347ceabb4454a27cf94950f7009157a90cf99e8f27"
    },
    "freeze_proposal_tool": {
     "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_freeze_proposal.py",
-    "sha256": "8d2cf02c1376d86e0362bc3e72a1310232a215d8c1068e0d4a4d67a6893077e5"
+    "sha256": "06e490995a1911f6e00bb7322c31e20ce6e57edee616984b62e7cec127201bfd"
    },
    "i2b_eval": {
     "path": "services/companion-core/benchmarks/answer_quality/selective/i2b_eval.py",
@@ -159,25 +195,37 @@
    },
    "p0_config": {
     "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_p0_config.json",
-    "sha256": "0cf4d699c32115a7f57db6175af4cffbfe8406866ada9e31a2faea39cbe8865f"
+    "sha256": "d645e91342bd631bed52dcbb19c8b241055661230ffb8bc075c75ba9bd7227d5"
    },
    "p0_module": {
     "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_p0.py",
-    "sha256": "1cee0b68fe4d2f7ca7282621d50e1b4712a3f9a73c6dbd1ace0a7a07b9042ae5"
+    "sha256": "8631bd66b530e3fdd87a35bb77c712e3d975555bc7577c69e963cf7f8a8f5afe"
+   },
+   "reproducibility_probe": {
+    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_p0_reproducibility.py",
+    "sha256": "868727459f4222c13a7089e538b5fd6a69fc00d361c77fa050a40c30ef5c6e6c"
    },
    "runner": {
     "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_runner.py",
-    "sha256": "6f6916ffb1ac06533e4ac2bea964e583325dad4dddce0bd598ff3b2039ddae86"
+    "sha256": "6423ff936e32f58ce6354f5246a773a8eef6406acfb1efeedf862774d841c95a"
    },
    "scoring": {
     "path": "services/companion-core/benchmarks/answer_quality/aq/scoring.py",
     "sha256": "6bfb790efdf6a2cb4909e3966c74da0aab5fa92032ceca2c3d10c702a001a1f2"
+   },
+   "synthetic_fixtures": {
+    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_synthetic.py",
+    "sha256": "f8f4ca6135b105f19bac47f0ed5a2c61f60a33cf76fcc322d70e2b403da9be88"
+   },
+   "tiebreak_probe": {
+    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_p0_tiebreak_probe.py",
+    "sha256": "6ed1589032666e67dafe1d9ddf24caa770808abfa5b36ceb3ce095892263ee1b"
    }
   },
   "purpose": "rehearsal",
   "seed": 20261012
  },
- "manifest_sha256": "9925bd4a7b10409fd17462afa37cd52b7096c4ccfcd8ff9819c95d07d12b862a",
+ "manifest_sha256": "0d7ea36edac09ebc3c47bec9b87e45779d33b3a9f0139425de0d6053706f2909",
  "mode": "rehearsal",
  "p0_effective_config": {
   "arm": "P0",
@@ -212,7 +260,9 @@
     "../../src/companion_core/knowledge/revalidate.py": "d08e8794c4cfbc7f88723819cc95bed831f888ab227d928ef8cc1bf62a63a91e",
     "../../src/companion_core/knowledge/search.py": "cfff762975d37e97ee5d826b4add54c4e318b07c5ac9744f6249de08f1314f0c",
     "../../src/companion_core/persona/context.py": "766cc144c91210d88c78990be73e8cfde9d7f35cd4ca81233e79eefbe8c60637",
+    "../../src/companion_core/rag/embeddings.py": "7e0e8fbc5ad6cf9c67c7eedb2060470b5d33724119e6273eddcefd5bafa80ed2",
     "../knowledge_retrieval/kbench/fixtures.py": "118ca5a94b01a4011e89387e3dd926c50604d382c8177b4f2e4bc5ac806526d4",
+    "../knowledge_retrieval/kbench/pg_env.py": "a37f07e72672fe0180641170eaca1b19fcfd63694b8898d5e69245365364693e",
     "../knowledge_retrieval/kbench/security.py": "973676669a2458ee436725c7dc1015610b348a364e0d7bb1328bfa12ecb5365a",
     "aq/conditions.py": "6da335a5055458d268d5e99437a60959e1ff0fc87362b3780dac85979f39e964",
     "aq/conditions_g.py": "59ddd19d48b72e7d08d5ea17ce0d37a8ff5cdedd0d5888de59f4f5f675e141c2",
@@ -235,6 +285,13 @@
    "temperature": 0
   },
   "definition": "today's retrieval and prompt plus the 44H unclaimed-action boundary, production default model; the b1a arm of selective/pilot.py",
+  "environment": {
+   "database": "disposable PostgreSQL with pgvector; image digest supplied in AQ_PG_IMAGE_DIGEST (required; verified against `docker inspect` when AQ_PG_CONTAINER names the container); server version and pgvector extension version read from the server and recorded",
+   "embedding_model": "sentence-transformers/all-MiniLM-L6-v2, identity (cache revision and weights sha256) recorded; it must already be cached",
+   "offline": "HF_HUB_OFFLINE=1 and TRANSFORMERS_OFFLINE=1 for the whole inference path, restored afterwards; a missing cached dependency FAILS the run, nothing is downloaded and no non-loopback connection is made",
+   "record_ids": "STABLE: derived from the logical record key by kbench.pg_env.stable_ids, so equal-rank ties are broken the same way in every build (a function of the corpus, not of the build)",
+   "served_model": "the full /v1/models response is recorded"
+  },
   "evidence_context": {
    "builder": "companion_core.knowledge.context.build_context",
    "clock_now": "2026-10-08T12:00:00+00:00",
@@ -313,5 +370,5 @@
  "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.43",
  "python": "3.13.15 (main, Sep  1 2026, 14:18:08) [Clang 22.1.3 ]",
  "run_id": "run-rehearsal-dev15",
- "started_at": "2026-10-10T05:12:20.884711+00:00"
+ "started_at": "2026-10-10T05:50:41.132277+00:00"
 }

@@ -30,8 +30,13 @@ ROLES = {  # role -> path relative to the repository root
     "deterministic_criteria": "services/companion-core/benchmarks/answer_quality/selective/deterministic_criteria.py",
     "i2b_eval": "services/companion-core/benchmarks/answer_quality/selective/i2b_eval.py",
     "freeze_proposal_tool": "services/companion-core/benchmarks/answer_quality/selective/dev16_freeze_proposal.py",
+    "benchmark_database_builder": "services/companion-core/benchmarks/knowledge_retrieval/kbench/pg_env.py",
+    "embedding_module": "services/companion-core/src/companion_core/rag/embeddings.py",
+    "reproducibility_probe": "services/companion-core/benchmarks/answer_quality/selective/dev16_p0_reproducibility.py",
+    "tiebreak_probe": "services/companion-core/benchmarks/answer_quality/selective/dev16_p0_tiebreak_probe.py",
+    "synthetic_fixtures": "services/companion-core/benchmarks/answer_quality/selective/dev16_synthetic.py",
 }
-AT_FREEZE = ["cases (the dev16 cases file: hash, count, ordered-id hash)", "bank files (the unseen phrasing banks)", "commit (the commit the owner freezes at)", "seed (the review and shuffle seed)", "authorisation file (created by the owner, bound to the final manifest hash)"]
+AT_FREEZE = ["cases (the dev16 cases file: hash, count, ordered-id hash)", "bank files (the unseen phrasing banks)", "commit (the commit the owner freezes at)", "seed (the review and shuffle seed): 16044, approved prospectively by the owner", "authorisation file (created by the owner, bound to the final manifest hash)", "AQ_PG_IMAGE_DIGEST and AQ_PG_CONTAINER (the disposable database image, verified at run time)"]
 
 
 def main() -> None:

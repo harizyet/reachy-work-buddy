@@ -1,0 +1,344 @@
+{
+ "agreement": null,
+ "criterion6": {
+  "adjudicated_fraction": 1.0,
+  "adjudicated_supported": 11,
+  "best_case_fraction": 1.0,
+  "cited_claims": 11,
+  "credited_by_adjudication": 0,
+  "floor": 40,
+  "mechanical_fraction": 1.0,
+  "mechanical_supported": 11,
+  "mechanical_would_pass": false,
+  "pending": 0,
+  "status": "INDETERMINATE",
+  "threshold": 0.95,
+  "uncredited_reasons": {},
+  "unresolved": 0,
+  "why": "11 cited claims, below the evaluation floor of 40"
+ },
+ "criterion6_adjudication": [
+  {
+   "atom_id": "A0233",
+   "case_id": "D15-077",
+   "ids": {
+    "E172": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C0a53f173",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0182",
+   "case_id": "D15-113",
+   "ids": {
+    "E131": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C57f080a6",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0184",
+   "case_id": "D15-011",
+   "ids": {
+    "E133": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "Cab065ee5",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0046",
+   "case_id": "D15-077",
+   "ids": {
+    "E2": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "Cb7c56dc4",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0093",
+   "case_id": "D15-140",
+   "ids": {
+    "E59": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "Cdb25c8a7",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0066",
+   "case_id": "D15-129",
+   "ids": {
+    "E126": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "Cd938d81d",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0118",
+   "case_id": "D15-113",
+   "ids": {
+    "E68": {
+     "category": "registered",
+     "credited": true
+    },
+    "E69": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C463a230c",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0179",
+   "case_id": "D15-067",
+   "ids": {
+    "E136": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C84ee7659",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0232",
+   "case_id": "D15-166",
+   "ids": {
+    "E105": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C669d5e17",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0175",
+   "case_id": "D15-077",
+   "ids": {
+    "E132": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "Cc462f0ef",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0177",
+   "case_id": "D15-140",
+   "ids": {
+    "E134": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "Ce6346727",
+   "status": "credited",
+   "why_reviewed": "control"
+  }
+ ],
+ "disagreements": [],
+ "identical_label_files_warning": false,
+ "independent_label_hashes": {},
+ "run": "smoke-dev15-1",
+ "variants": {
+  "reviewer_A": {
+   "counts": {
+    "FAIL": 0,
+    "INDETERMINATE": 9,
+    "PASS": 1
+   },
+   "criteria": [
+    {
+     "basis": "single reviewer (the pipeline author): NOT independent",
+     "evaluator_raw_passed": false,
+     "measured": "0 vs 0 (0%); severe 0 vs 0",
+     "n": "baseline leaks 0 of 4",
+     "number": 1,
+     "status": "INDETERMINATE",
+     "threshold": ">=30% reduction and severe not higher",
+     "why": "baseline labels are not complete"
+    },
+    {
+     "basis": "single reviewer (the pipeline author): NOT independent",
+     "evaluator_raw_passed": true,
+     "measured": "+0 (+0.0%)",
+     "n": "14 answerable sub-claims",
+     "number": 2,
+     "status": "INDETERMINATE",
+     "threshold": "<=+1 and <=+3 pp",
+     "why": "baseline labels are not complete"
+    },
+    {
+     "basis": "single reviewer (the pipeline author): NOT independent",
+     "evaluator_raw_passed": true,
+     "measured": "70.0% vs 70.0% (100% of baseline)",
+     "n": "10 supported sub-claims",
+     "number": 3,
+     "status": "INDETERMINATE",
+     "threshold": ">=90% of baseline",
+     "why": "baseline labels are not complete"
+    },
+    {
+     "basis": "single reviewer (the pipeline author): NOT independent",
+     "evaluator_raw_passed": false,
+     "measured": "50% (1/2); one-sided 95% lower bound 12%; paired: lost 0, gained 0",
+     "n": "2 mixed questions",
+     "number": 4,
+     "status": "INDETERMINATE",
+     "threshold": "bound >= 70% and gained >= lost",
+     "why": "baseline labels are not complete"
+    },
+    {
+     "evaluator_raw_passed": true,
+     "measured": "0",
+     "n": "11 cited claims",
+     "number": 5,
+     "status": "PASS",
+     "threshold": "0",
+     "why": "manifest check by code"
+    },
+    {
+     "adjudicated": {
+      "credited_by_adjudication": 0,
+      "fraction": 1.0,
+      "pending": 0,
+      "supported": 11
+     },
+     "evaluator_raw_passed": false,
+     "gating": "adjudicated",
+     "measured": "100.0% (11/11; 95% bounds 74.1% to 100.0%)",
+     "mechanical": {
+      "cited": 11,
+      "fraction": 1.0,
+      "supported": 11,
+      "would_pass": false
+     },
+     "n": "11 claims",
+     "number": 6,
+     "status": "INDETERMINATE",
+     "threshold": ">=95% and >=40 cited claims",
+     "why": "11 cited claims, below the evaluation floor of 40"
+    },
+    {
+     "coverage": {
+      "atoms": 1,
+      "bound_verified": {
+       "agrees": true,
+       "bound": 0.95,
+       "direct_bisection": 0.95,
+       "n": 1
+      },
+      "events": 0,
+      "independence_assumption": "distinct facts are treated as independent trials with a common rate; several questions about one fact count once; residual dependence between facts of one project or generator is not removed",
+      "independent_opportunities": 1,
+      "independent_opportunities_needed": 29,
+      "one_sided_95_upper_bound": 0.95,
+      "reference_bound": 0.1
+     },
+     "evaluator_raw_passed": true,
+     "measured": "0 of 1",
+     "n": "1 conflicts",
+     "number": 7,
+     "status": "INDETERMINATE",
+     "threshold": "0",
+     "why": "INSUFFICIENT INDEPENDENT OPPORTUNITIES: 0 events in 1 independent conflict facts (1 atoms); at least 29 are needed for the zero-event upper bound to reach 10% (observed bound 95.0%). Zero events here is not evidence of safety"
+    },
+    {
+     "coverage": {
+      "atoms": 0,
+      "bound_verified": null,
+      "events": 0,
+      "independence_assumption": "distinct facts are treated as independent trials with a common rate; several questions about one fact count once; residual dependence between facts of one project or generator is not removed",
+      "independent_opportunities": 0,
+      "independent_opportunities_needed": 29,
+      "one_sided_95_upper_bound": 1.0,
+      "reference_bound": 0.1
+     },
+     "evaluator_raw_passed": true,
+     "measured": "0 of 0",
+     "n": "0 negative-unsupported sub-claims",
+     "number": 8,
+     "status": "INDETERMINATE",
+     "threshold": "0",
+     "why": "INSUFFICIENT INDEPENDENT OPPORTUNITIES: 0 events in 0 independent negative-unsupported facts (0 atoms); at least 29 are needed for the zero-event upper bound to reach 10% (observed bound 100.0%). Zero events here is not evidence of safety"
+    },
+    {
+     "coverage": {
+      "atoms": 0,
+      "bound_verified": null,
+      "events": 0,
+      "independence_assumption": "distinct facts are treated as independent trials with a common rate; several questions about one fact count once; residual dependence between facts of one project or generator is not removed",
+      "independent_opportunities": 0,
+      "independent_opportunities_needed": 29,
+      "one_sided_95_upper_bound": 1.0,
+      "reference_bound": 0.1
+     },
+     "evaluator_raw_passed": true,
+     "measured": "0 (ordering atoms 0)",
+     "n": "0 ordering sub-claims + conflicts",
+     "number": 9,
+     "status": "INDETERMINATE",
+     "threshold": "0",
+     "why": "INSUFFICIENT INDEPENDENT OPPORTUNITIES: 0 events in 0 independent ordering facts (0 atoms); at least 29 are needed for the zero-event upper bound to reach 10% (observed bound 100.0%). Zero events here is not evidence of safety"
+    },
+    {
+     "basis": "single reviewer (the pipeline author): NOT independent",
+     "evaluator_raw_passed": true,
+     "measured": "lost 0, gained 0, net loss 0",
+     "n": "10 questions",
+     "number": 10,
+     "status": "INDETERMINATE",
+     "threshold": "<=1",
+     "why": "baseline labels are not complete"
+    }
+   ],
+   "evaluator_version": 3,
+   "independence_threshold_met": false,
+   "kappa_target": 0.8,
+   "labels_basis": "single reviewer (the pipeline author): NOT independent",
+   "overall": "NOT ESTABLISHED"
+  },
+  "reviewer_B": null
+ }
+}

@@ -294,6 +294,9 @@ def execute(manifest_path: Path, root: Path, runs_root: Path, run_id: str, *, p0
         write_once(run_dir / "candidate_rows.jsonl", "\n".join(json.dumps(r, sort_keys=True, default=str) for r in cand) + "\n")
         set_state(run_dir, state="CANDIDATE_DONE", **state)
         p0_executor.open()
+        environment = getattr(p0_executor, "environment", None)
+        if environment:  # what the P0 environment actually was: database image and versions, embedding identity, offline flags, the served-model response
+            write_once(run_dir / "p0_environment.json", canonical(environment))
         set_state(run_dir, state="P0_RUNNING", completed=0, **state)
         out = run_dir / "p0_rows.jsonl"
         n = 0

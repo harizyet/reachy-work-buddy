@@ -1,0 +1,11 @@
+{
+ "decision": "AUTHORIZE_ACCEPTANCE_EXECUTION",
+ "manifest_sha256": "09e69bae9b064da99ed2e5fdd2794a5022e1455f87e217bf32a0ed5736636f51",
+ "run_id": "smoke-dev15-1",
+ "authorized_by": "owner decision, Phase 44 'Final P0 execution-path verification' (2026-10-10): development-only smoke test on consumed dev15 cases",
+ "authorized_at": "2026-10-10T05:27:41.849532+00:00",
+ "expires_at": "2026-10-10T08:27:41.849532+00:00",
+ "single_use": true,
+ "p0_model_calls_authorized": true,
+ "purpose": "rehearsal"
+}

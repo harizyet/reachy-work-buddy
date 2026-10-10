@@ -1,0 +1,39 @@
+{
+ "purpose": "P0 retrieval/prompt reproducibility across independent disposable databases; no model call, no server contact; consumed dev15 data",
+ "stable_ids": true,
+ "mode": "two stable builds",
+ "cases": 173,
+ "profiles": [
+  "owner_private",
+  "owner_sensitive",
+  "shared_speaker",
+  "harbor_only",
+  "owner_cloud"
+ ],
+ "comparisons": 865,
+ "differences": {
+  "evidence_real_ids": 0,
+  "evidence_logical": 0,
+  "dropped": 0,
+  "messages_sha256": 0
+ },
+ "difference_examples": {},
+ "identical_store_ids_across_builds": true,
+ "stable_id_namespace": "5b3f0a54-8c7d-5e2a-9a41-16044a000001",
+ "all_ids_are_uuid5": true,
+ "access_violations_build_a": 0,
+ "access_violations_build_b": 0,
+ "evidence_refs_resolve_to_known_stores": true,
+ "comparisons_with_no_evidence": 225,
+ "dev15_questions_with_an_equal_score_tie_in_the_top_10": 173,
+ "duplicate_content_fixture": {
+  "duplicate_records_retrieved": 6,
+  "tied_score_values_among_duplicates": [
+   0.411764711
+  ],
+  "same_order_in_both_builds": true,
+  "same_ids_in_both_builds": true,
+  "duplicates_really_tie": true
+ },
+ "STATUS": "REPRODUCIBLE"
+}

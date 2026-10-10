@@ -1,0 +1,2 @@
+{"event": "START", "run_id": "mocked-1", "manifest_sha256": "1dc3a9b3757b33d073f8e6ff0b3751fe0954afb574008bca2a0e3efa690624d3", "authorization_sha256": "fa63b54bd93bedf0b0385c3d66cac11718d7f6a2bc2d06a5b35af24811d15a76", "at": "2026-10-10T05:50:49.915638+00:00"}
+{"event": "COMPLETE", "run_id": "mocked-1", "manifest_sha256": "1dc3a9b3757b33d073f8e6ff0b3751fe0954afb574008bca2a0e3efa690624d3", "authorization_sha256": "fa63b54bd93bedf0b0385c3d66cac11718d7f6a2bc2d06a5b35af24811d15a76", "at": "2026-10-10T05:51:01.592262+00:00"}

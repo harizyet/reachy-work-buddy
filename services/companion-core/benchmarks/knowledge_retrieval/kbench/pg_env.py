@@ -4,10 +4,13 @@ the server comes from KBENCH_DATABASE_URL (or DATABASE_MIGRATION_TEST_URL) and m
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
+import itertools
 import os
 import tempfile
 import time
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -34,6 +37,33 @@ from shared.models.memory import MemoryType
 from shared.models.response import Privacy
 
 DIM = 384
+STABLE_ID_NAMESPACE = uuid.UUID("5b3f0a54-8c7d-5e2a-9a41-16044a000001")  # fixed namespace for benchmark record ids (see `stable_ids`)
+
+
+@contextlib.contextmanager
+def stable_ids(logical_key: str, enabled: bool = True):
+    """While a benchmark record is created, make every `uuid.uuid4()` the stores and models call return an id derived from the record's LOGICAL key (`uuid5(namespace, key#n)`, n counting the calls for this record).
+    Why: the search orders equal ranks by `ref_key`, which embeds the store id; with random ids the order of tied records (and which tie survives the result limit) changes every time the disposable database is
+    rebuilt, so a baseline measured on it is not reproducible. Stable ids make the tie-break a function of the corpus, not of the build. Nothing in the retrieval query, its relevance scoring, access control or
+    admission is touched; this affects only the ids of rows in a throwaway database. The database NAME is generated with the name `uuid4` imported at module load, which is not patched."""
+    if not enabled:
+        yield
+        return
+    original, counter = uuid.uuid4, itertools.count()
+    uuid.uuid4 = lambda: uuid.uuid5(STABLE_ID_NAMESPACE, f"{logical_key}#{next(counter)}")
+    try:
+        yield
+    finally:
+        uuid.uuid4 = original
+
+
+async def database_facts(env: PgCorpus) -> dict:
+    """What the database server itself reports about its version and the pgvector extension (provenance of the benchmark environment)."""
+    async with env.pool.connection() as conn:
+        version = (await (await conn.execute("SHOW server_version")).fetchone())[0]
+        full = (await (await conn.execute("SELECT version()")).fetchone())[0]
+        ext = await (await conn.execute("SELECT extversion FROM pg_extension WHERE extname = 'vector'")).fetchone()
+    return {"server_version": version, "version_string": full, "pgvector_extension": ext[0] if ext else None}
 
 
 def hashing_embed_384(texts: list[str]) -> list[list[float]]:
@@ -98,7 +128,7 @@ class PgCorpus:
             conn.execute(f'DROP DATABASE IF EXISTS "{self.name}" WITH (FORCE)')
 
 
-async def build_pg_corpus(spec: dict[str, Any], embed_fn, embedding_model: str) -> PgCorpus:
+async def build_pg_corpus(spec: dict[str, Any], embed_fn, embedding_model: str, *, stable: bool = False) -> PgCorpus:
     admin = admin_url()
     name = "kbench_" + uuid4().hex[:12]
     with psycopg.connect(admin, autocommit=True) as conn:
@@ -122,22 +152,25 @@ async def build_pg_corpus(spec: dict[str, Any], embed_fn, embedding_model: str) 
 
     with psycopg.connect(dsn, autocommit=True) as conn:
         for item in spec["memories"]:
-            record = await memory.add_memory(
-                content=item["text"], source="benchmark", type=MemoryType(item["type"]), project_scope=item["scope"],
-                sensitivity=Privacy(item["sensitivity"]),
-                expires_at=datetime.fromisoformat(item["expires"]) if item.get("expires") else None,
-            )
+            with stable_ids(f"memory:{item['id']}", stable):
+                record = await memory.add_memory(
+                    content=item["text"], source="benchmark", type=MemoryType(item["type"]), project_scope=item["scope"],
+                    sensitivity=Privacy(item["sensitivity"]),
+                    expires_at=datetime.fromisoformat(item["expires"]) if item.get("expires") else None,
+                )
             conn.execute("UPDATE memories SET created_at = %s WHERE id = %s", (datetime.fromisoformat(item["created"]), record.id))
             link("memory", item["id"], record.id)
             if item.get("forgotten"):
                 await memory.forget(record.id)
         for doc in spec["documents"]:
-            chunks = await documents.ingest_document(title=doc["title"], content=doc["content"], source=doc["source"],
-                                                     sensitivity=Privacy(doc["sensitivity"]), project_scope=doc["scope"])
+            with stable_ids(f"document:{doc['id']}", stable):
+                chunks = await documents.ingest_document(title=doc["title"], content=doc["content"], source=doc["source"],
+                                                         sensitivity=Privacy(doc["sensitivity"]), project_scope=doc["scope"])
             link("document", doc["id"], chunks[0].document_id)
         for entry in spec["meetings"]:
-            m = await meetings.create_meeting(title=entry["title"], audio=b"x", source_filename="m.wav", content_type="audio/wav",
-                                              project_scope=entry["scope"], sensitivity=Privacy(entry["sensitivity"]))
+            with stable_ids(f"meeting:{entry['id']}", stable):
+                m = await meetings.create_meeting(title=entry["title"], audio=b"x", source_filename="m.wav", content_type="audio/wav",
+                                                  project_scope=entry["scope"], sensitivity=Privacy(entry["sensitivity"]))
             segments = [{k: v for k, v in s.items() if k != "speaker"} for s in entry["segments"]]
             diar = [{"start": s["start"], "end": s["end"], "speaker": s["speaker"]} for s in entry["segments"]]
             conn.execute("UPDATE meetings SET transcript_segments = %s, diarization_segments = %s, status = 'aligning' WHERE id = %s",
@@ -147,16 +180,19 @@ async def build_pg_corpus(spec: dict[str, Any], embed_fn, embedding_model: str) 
                 await meetings.set_correction(m.id, int(index_), text)
             link("meeting", entry["id"], m.id)
         for note in spec["notes"]:
-            record = await planner.add_note(note["title"], note["body"], sensitivity=Privacy(note["sensitivity"]), project_scope=note["scope"])
+            with stable_ids(f"note:{note['id']}", stable):
+                record = await planner.add_note(note["title"], note["body"], sensitivity=Privacy(note["sensitivity"]), project_scope=note["scope"])
             link("note", note["id"], record.id)
         for task in spec["tasks"]:
-            record = await tasks.add_task(task["text"], sensitivity=Privacy(task["sensitivity"]), project_scope=task["scope"])
+            with stable_ids(f"task:{task['id']}", stable):
+                record = await tasks.add_task(task["text"], sensitivity=Privacy(task["sensitivity"]), project_scope=task["scope"])
             if task["done"]:
                 await tasks.complete_task(record.id)
             link("task", task["id"], record.id)
         for reminder in spec["reminders"]:
-            record = await planner.add_reminder(reminder["text"], datetime.fromisoformat("2030-01-01T10:00:00+00:00"),
-                                                sensitivity=Privacy(reminder["sensitivity"]))
+            with stable_ids(f"reminder:{reminder['id']}", stable):
+                record = await planner.add_reminder(reminder["text"], datetime.fromisoformat("2030-01-01T10:00:00+00:00"),
+                                                    sensitivity=Privacy(reminder["sensitivity"]))
             link("reminder", reminder["id"], record.id)
     started = time.perf_counter()
     await worker.drain(max_rounds=10000)

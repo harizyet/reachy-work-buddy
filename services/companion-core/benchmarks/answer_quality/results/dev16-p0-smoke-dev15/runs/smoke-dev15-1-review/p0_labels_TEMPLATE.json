@@ -1,0 +1,146 @@
+{
+ "Q01cd9a18": {
+  "atoms": {
+   "A0179": {
+    "cited": [],
+    "label": null
+   },
+   "A0193": {
+    "cited": [],
+    "label": null
+   }
+  },
+  "blanket": null
+ },
+ "Q2e141523": {
+  "atoms": {
+   "A0118": {
+    "cited": [],
+    "label": null
+   },
+   "A0182": {
+    "cited": [],
+    "label": null
+   }
+  },
+  "blanket": null
+ },
+ "Q33feb829": {
+  "atoms": {
+   "A0134": {
+    "cited": [],
+    "label": null
+   },
+   "A0232": {
+    "cited": [],
+    "label": null
+   }
+  },
+  "blanket": null
+ },
+ "Q49bac243": {
+  "atoms": {
+   "A0066": {
+    "cited": [],
+    "label": null
+   },
+   "A0172": {
+    "cited": [],
+    "label": null
+   }
+  },
+  "blanket": null
+ },
+ "Q6659e442": {
+  "atoms": {
+   "A0184": {
+    "cited": [],
+    "label": null
+   }
+  },
+  "blanket": null
+ },
+ "Q8448b2a5": {
+  "atoms": {
+   "A0169": {
+    "cited": [],
+    "label": null
+   }
+  },
+  "blanket": null
+ },
+ "Q8b7d226c": {
+  "atoms": {
+   "A0093": {
+    "cited": [],
+    "label": null
+   },
+   "A0177": {
+    "cited": [],
+    "label": null
+   }
+  },
+  "blanket": null
+ },
+ "Qc10d7cc8": {
+  "atoms": {
+   "A0179": {
+    "cited": [],
+    "label": null
+   },
+   "A0193": {
+    "cited": [],
+    "label": null
+   }
+  },
+  "blanket": null
+ },
+ "Qd2a9bdd7": {
+  "atoms": {
+   "A0179": {
+    "cited": [],
+    "label": null
+   },
+   "A0193": {
+    "cited": [],
+    "label": null
+   }
+  },
+  "blanket": null
+ },
+ "Qe617b950": {
+  "atoms": {
+   "A0046": {
+    "cited": [],
+    "label": null
+   },
+   "A0175": {
+    "cited": [],
+    "label": null
+   },
+   "A0233": {
+    "cited": [],
+    "label": null
+   }
+  },
+  "blanket": null
+ },
+ "Qf6600e4d": {
+  "atoms": {
+   "A0169": {
+    "cited": [],
+    "label": null
+   }
+  },
+  "blanket": null
+ },
+ "Qfc9f7769": {
+  "atoms": {
+   "A0184": {
+    "cited": [],
+    "label": null
+   }
+  },
+  "blanket": null
+ }
+}

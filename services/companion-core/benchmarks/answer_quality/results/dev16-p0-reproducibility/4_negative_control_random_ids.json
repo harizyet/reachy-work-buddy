@@ -1,0 +1,96 @@
+{
+ "purpose": "P0 retrieval/prompt reproducibility across independent disposable databases; no model call, no server contact; consumed dev15 data",
+ "stable_ids": false,
+ "mode": "random-ids negative control",
+ "cases": 173,
+ "profiles": [
+  "owner_private",
+  "owner_sensitive",
+  "shared_speaker",
+  "harbor_only",
+  "owner_cloud"
+ ],
+ "comparisons": 865,
+ "differences": {
+  "evidence_real_ids": 519,
+  "evidence_logical": 519,
+  "dropped": 19,
+  "messages_sha256": 519
+ },
+ "difference_examples": {
+  "evidence_real_ids": [
+   [
+    "D15-002",
+    "owner_cloud"
+   ],
+   [
+    "D15-002",
+    "owner_private"
+   ],
+   [
+    "D15-002",
+    "owner_sensitive"
+   ]
+  ],
+  "evidence_logical": [
+   [
+    "D15-002",
+    "owner_cloud"
+   ],
+   [
+    "D15-002",
+    "owner_private"
+   ],
+   [
+    "D15-002",
+    "owner_sensitive"
+   ]
+  ],
+  "dropped": [
+   [
+    "D15-020",
+    "owner_cloud"
+   ],
+   [
+    "D15-020",
+    "owner_private"
+   ],
+   [
+    "D15-020",
+    "owner_sensitive"
+   ]
+  ],
+  "messages_sha256": [
+   [
+    "D15-002",
+    "owner_cloud"
+   ],
+   [
+    "D15-002",
+    "owner_private"
+   ],
+   [
+    "D15-002",
+    "owner_sensitive"
+   ]
+  ]
+ },
+ "identical_store_ids_across_builds": false,
+ "stable_id_namespace": "5b3f0a54-8c7d-5e2a-9a41-16044a000001",
+ "all_ids_are_uuid5": false,
+ "access_violations_build_a": 0,
+ "access_violations_build_b": 0,
+ "evidence_refs_resolve_to_known_stores": true,
+ "comparisons_with_no_evidence": 225,
+ "dev15_questions_with_an_equal_score_tie_in_the_top_10": 173,
+ "duplicate_content_fixture": {
+  "duplicate_records_retrieved": 6,
+  "tied_score_values_among_duplicates": [
+   0.411764711
+  ],
+  "same_order_in_both_builds": false,
+  "same_ids_in_both_builds": false,
+  "duplicates_really_tie": true
+ },
+ "STATUS": "BLOCKER: the P0 retrieval path is not reproducible; do not declare reproducibility"
+}

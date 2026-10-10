@@ -1,0 +1,2 @@
+{"event": "START", "run_id": "smoke-dev15-1", "manifest_sha256": "09e69bae9b064da99ed2e5fdd2794a5022e1455f87e217bf32a0ed5736636f51", "authorization_sha256": "ae717aa6ff1f6ed2bf221080be2dbe2251d8a03389d01dc8d6748801513f1ed7", "at": "2026-10-10T05:27:48.633643+00:00"}
+{"event": "COMPLETE", "run_id": "smoke-dev15-1", "manifest_sha256": "09e69bae9b064da99ed2e5fdd2794a5022e1455f87e217bf32a0ed5736636f51", "authorization_sha256": "ae717aa6ff1f6ed2bf221080be2dbe2251d8a03389d01dc8d6748801513f1ed7", "at": "2026-10-10T05:28:21.761290+00:00"}

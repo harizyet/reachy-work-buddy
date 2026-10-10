@@ -1,0 +1,44 @@
+{
+ "purpose": "production-path rehearsal with a mock model service; no production inference",
+ "state": "COMPLETE",
+ "rows": 10,
+ "completions_sent_to_the_mock": 10,
+ "tokenizer_calls_to_the_mock": 88,
+ "connection_attempts": 100,
+ "non_loopback_connection_attempts": [],
+ "environment_artifact": {
+  "database": {
+   "declared_digest": "sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b",
+   "disposable": true,
+   "docker_image_id": "sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b",
+   "pg_env_sha256": "a37f07e72672fe0180641170eaca1b19fcfd63694b8898d5e69245365364693e",
+   "pgvector_extension": "0.8.6",
+   "record_ids": "stable (kbench.pg_env.stable_ids)",
+   "server_version": "16.15 (Debian 16.15-1.pgdg12+2)",
+   "verified_by_docker": true,
+   "version_string": "PostgreSQL 16.15 (Debian 16.15-1.pgdg12+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit"
+  },
+  "embedding_model": {
+   "model": "sentence-transformers/all-MiniLM-L6-v2",
+   "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+   "weights_file": "model.safetensors",
+   "weights_sha256": "53aa51172d142c89d9012cce15ae4d6cc0ca6895895114379cacb4fab128d9db"
+  },
+  "offline_during_run": {
+   "HF_HUB_OFFLINE": "1",
+   "TRANSFORMERS_OFFLINE": "1"
+  },
+  "served_models_response_recorded": true
+ },
+ "environment_restored_after_run": true,
+ "env_before": {
+  "HF_HUB_OFFLINE": null,
+  "TRANSFORMERS_OFFLINE": null,
+  "KBENCH_CORPUS": null
+ },
+ "env_after": {
+  "HF_HUB_OFFLINE": null,
+  "TRANSFORMERS_OFFLINE": null,
+  "KBENCH_CORPUS": null
+ }
+}

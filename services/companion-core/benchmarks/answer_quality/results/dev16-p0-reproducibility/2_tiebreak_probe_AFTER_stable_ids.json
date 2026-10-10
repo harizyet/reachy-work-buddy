@@ -1,0 +1,17 @@
+{
+ "stable_ids": true,
+ "limit": 40,
+ "results": {
+  "queries": 173,
+  "P1_scores_identical": 173,
+  "sequences_differ": 0,
+  "P3_within_group_order_is_ref_key_order": 173,
+  "P4_contained_groups_same_membership": 173,
+  "differences_outside_tie_groups": 0,
+  "P5_cut_membership_differs": 0,
+  "queries_with_any_tie_group": 173,
+  "store_ids_identical_across_builds": 1
+ },
+ "examples": [],
+ "outside_tie_group_details": []
+}

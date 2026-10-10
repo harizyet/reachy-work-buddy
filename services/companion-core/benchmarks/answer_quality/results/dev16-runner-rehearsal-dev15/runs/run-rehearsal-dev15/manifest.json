@@ -2,8 +2,12 @@
  "case_count": 173,
  "case_ids_sha256": "8970c01874233ed0ac8fa6195fa330a3f57f34bf577d7514113a5c9e03cc4f1a",
  "commit": "rehearsal-commit",
- "created_at": "2026-10-10T05:12:20.573930+00:00",
+ "created_at": "2026-10-10T05:50:40.751015+00:00",
  "files": {
+  "benchmark_database_builder": {
+   "path": "services/companion-core/benchmarks/knowledge_retrieval/kbench/pg_env.py",
+   "sha256": "a37f07e72672fe0180641170eaca1b19fcfd63694b8898d5e69245365364693e"
+  },
   "candidate_arm": {
    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_candidate_arm.py",
    "sha256": "dde0404f58d17a08a98e003c87cac34935bff10b106db72585a550a1bde47906"
@@ -40,13 +44,17 @@
    "path": "services/companion-core/benchmarks/answer_quality/selective/deterministic_criteria.py",
    "sha256": "e8f27b7375882b7c35dd7290fc889471a6db0ff6f623957634ebbce836c5892f"
   },
+  "embedding_module": {
+   "path": "services/companion-core/src/companion_core/rag/embeddings.py",
+   "sha256": "7e0e8fbc5ad6cf9c67c7eedb2060470b5d33724119e6273eddcefd5bafa80ed2"
+  },
   "evaluator": {
    "path": "services/companion-core/benchmarks/answer_quality/selective/evaluator.py",
    "sha256": "d364af6bbf7f5328f09952347ceabb4454a27cf94950f7009157a90cf99e8f27"
   },
   "freeze_proposal_tool": {
    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_freeze_proposal.py",
-   "sha256": "8d2cf02c1376d86e0362bc3e72a1310232a215d8c1068e0d4a4d67a6893077e5"
+   "sha256": "06e490995a1911f6e00bb7322c31e20ce6e57edee616984b62e7cec127201bfd"
   },
   "i2b_eval": {
    "path": "services/companion-core/benchmarks/answer_quality/selective/i2b_eval.py",
@@ -58,19 +66,31 @@
   },
   "p0_config": {
    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_p0_config.json",
-   "sha256": "0cf4d699c32115a7f57db6175af4cffbfe8406866ada9e31a2faea39cbe8865f"
+   "sha256": "d645e91342bd631bed52dcbb19c8b241055661230ffb8bc075c75ba9bd7227d5"
   },
   "p0_module": {
    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_p0.py",
-   "sha256": "1cee0b68fe4d2f7ca7282621d50e1b4712a3f9a73c6dbd1ace0a7a07b9042ae5"
+   "sha256": "8631bd66b530e3fdd87a35bb77c712e3d975555bc7577c69e963cf7f8a8f5afe"
+  },
+  "reproducibility_probe": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_p0_reproducibility.py",
+   "sha256": "868727459f4222c13a7089e538b5fd6a69fc00d361c77fa050a40c30ef5c6e6c"
   },
   "runner": {
    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_runner.py",
-   "sha256": "6f6916ffb1ac06533e4ac2bea964e583325dad4dddce0bd598ff3b2039ddae86"
+   "sha256": "6423ff936e32f58ce6354f5246a773a8eef6406acfb1efeedf862774d841c95a"
   },
   "scoring": {
    "path": "services/companion-core/benchmarks/answer_quality/aq/scoring.py",
    "sha256": "6bfb790efdf6a2cb4909e3966c74da0aab5fa92032ceca2c3d10c702a001a1f2"
+  },
+  "synthetic_fixtures": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_synthetic.py",
+   "sha256": "f8f4ca6135b105f19bac47f0ed5a2c61f60a33cf76fcc322d70e2b403da9be88"
+  },
+  "tiebreak_probe": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_p0_tiebreak_probe.py",
+   "sha256": "6ed1589032666e67dafe1d9ddf24caa770808abfa5b36ceb3ce095892263ee1b"
   }
  },
  "purpose": "rehearsal",

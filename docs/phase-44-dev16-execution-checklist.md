@@ -123,6 +123,7 @@ P0 semantic-adjudication packet (every P0 reply and every gold atom, plus a seed
 **Preparation (before the freeze)**
 - C1 regenerate and review `dev16_p0_config.json` if any pinned production file changed (`dev16_p0.write_declared()`); `verify_declared()` empty for P0 and the candidate.
 - C2 dry-check the production retrieval path of `RealP0Executor` (Postgres test corpus) and a real model server **under a separate, explicit authorisation for model calls** (C9), on dev15 only. The adapter itself has been exercised against a disposable mock.
+- C2b export `KBENCH_DATABASE_URL` (a DISPOSABLE PostgreSQL with pgvector), `AQ_PG_IMAGE_DIGEST` (its image digest) and `AQ_PG_CONTAINER` (its container name, so docker verifies the digest); the embedding model must already be cached (the run is offline and fails closed otherwise); see the [P0 reproducibility correction](verification/phase-44-dev16-p0-reproducibility-correction-2026-10-10.md).
 - C3 commit the new files; `candidate_freeze.py --check` passes; working tree clean for listed files.
 - C4 build the real manifest with `build_manifest` (dev16 cases hashed here for the first time) and have the owner review its hashes against `ACCEPTANCE_FREEZE_PROPOSAL.json`.
 - C5 write the single-use authorisation file bound to that manifest hash and a run id; set `AQ_DEV16_APPROVAL` to its path.

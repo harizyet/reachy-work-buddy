@@ -1,0 +1,5 @@
+REFUSED:
+- a run for this manifest already exists (complete, failed, aborted or interrupted): one shot only
+- the ledger already records an attempt for this manifest
+- the authorisation is bound to a different run id
+- this authorisation was already used

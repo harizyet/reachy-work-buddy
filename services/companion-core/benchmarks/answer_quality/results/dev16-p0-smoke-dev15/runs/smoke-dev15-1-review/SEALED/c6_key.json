@@ -1,0 +1,260 @@
+{
+ "key": {
+  "C0a53f173": {
+   "atom_id": "A0233",
+   "case_id": "D15-077",
+   "why": "control"
+  },
+  "C463a230c": {
+   "atom_id": "A0118",
+   "case_id": "D15-113",
+   "why": "control"
+  },
+  "C57f080a6": {
+   "atom_id": "A0182",
+   "case_id": "D15-113",
+   "why": "control"
+  },
+  "C669d5e17": {
+   "atom_id": "A0232",
+   "case_id": "D15-166",
+   "why": "control"
+  },
+  "C84ee7659": {
+   "atom_id": "A0179",
+   "case_id": "D15-067",
+   "why": "control"
+  },
+  "Cab065ee5": {
+   "atom_id": "A0184",
+   "case_id": "D15-011",
+   "why": "control"
+  },
+  "Cb7c56dc4": {
+   "atom_id": "A0046",
+   "case_id": "D15-077",
+   "why": "control"
+  },
+  "Cc462f0ef": {
+   "atom_id": "A0175",
+   "case_id": "D15-077",
+   "why": "control"
+  },
+  "Cd938d81d": {
+   "atom_id": "A0066",
+   "case_id": "D15-129",
+   "why": "control"
+  },
+  "Cdb25c8a7": {
+   "atom_id": "A0093",
+   "case_id": "D15-140",
+   "why": "control"
+  },
+  "Ce6346727": {
+   "atom_id": "A0177",
+   "case_id": "D15-140",
+   "why": "control"
+  }
+ },
+ "selected": [
+  {
+   "atom_id": "A0233",
+   "case_id": "D15-077",
+   "cited_ids": [
+    "E172"
+   ],
+   "gold": [
+    "2"
+   ],
+   "mechanical": true,
+   "question": "Who is the Cedar lead, and what is Amara Osei's deadline for the written summary, and what was the old retry limit of the Gantry scheduler?",
+   "registered": {
+    "E172": true
+   },
+   "reply": "The lead of Cedar is Liam Oconnor [E2].\nThe deadline for Amara Osei's written summary is Wednesday [E132].\nPreviously, the retry limit of the Gantry scheduler was 2 retries [E172].",
+   "subject": "Gantry scheduler",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0182",
+   "case_id": "D15-113",
+   "cited_ids": [
+    "E131"
+   ],
+   "gold": [
+    "the Anvil settings"
+   ],
+   "mechanical": true,
+   "question": "Which day is the Sable design review, and what does Bruno Keller review?",
+   "registered": {
+    "E131": true
+   },
+   "reply": "The records disagree on the design review day for Sable: one record says Wednesday [E68]; another says Thursday [E69]. They do not say which applies.\nBruno Keller reviews Anvil settings [E131].",
+   "subject": "Bruno Keller",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0184",
+   "case_id": "D15-011",
+   "cited_ids": [
+    "E133"
+   ],
+   "gold": [
+    "the Hopper settings"
+   ],
+   "mechanical": true,
+   "question": "What does Dmitri Volkov review?",
+   "registered": {
+    "E133": true
+   },
+   "reply": "Dmitri Volkov reviews Hopper settings [E133].",
+   "subject": "Dmitri Volkov",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0046",
+   "case_id": "D15-077",
+   "cited_ids": [
+    "E2"
+   ],
+   "gold": [
+    "Liam Oconnor"
+   ],
+   "mechanical": true,
+   "question": "Who is the Cedar lead, and what is Amara Osei's deadline for the written summary, and what was the old retry limit of the Gantry scheduler?",
+   "registered": {
+    "E2": true
+   },
+   "reply": "The lead of Cedar is Liam Oconnor [E2].\nThe deadline for Amara Osei's written summary is Wednesday [E132].\nPreviously, the retry limit of the Gantry scheduler was 2 retries [E172].",
+   "subject": "Cedar",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0093",
+   "case_id": "D15-140",
+   "cited_ids": [
+    "E59"
+   ],
+   "gold": [],
+   "mechanical": true,
+   "question": "Does Quartz have a staging environment, and by when does Umar Bello have to circulate the written summary?",
+   "registered": {
+    "E59": true
+   },
+   "reply": "The records say there is no staging environment for Quartz [E59].\nThe deadline for Umar Bello's written summary is Friday [E134].",
+   "subject": "Quartz",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0066",
+   "case_id": "D15-129",
+   "cited_ids": [
+    "E126"
+   ],
+   "gold": [
+    "Quinn Abbott"
+   ],
+   "mechanical": true,
+   "question": "Who will fix the Willow rollback test, and who has the on-call duty for Sable?",
+   "registered": {
+    "E126": true
+   },
+   "reply": "The records do not say the person fixing the Willow rollback test.\nThe person on call for Sable is Quinn Abbott [E126] (the record says \"this month\").",
+   "subject": "Sable",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0118",
+   "case_id": "D15-113",
+   "cited_ids": [
+    "E68",
+    "E69"
+   ],
+   "gold": [
+    "Wednesday",
+    "Thursday"
+   ],
+   "mechanical": true,
+   "question": "Which day is the Sable design review, and what does Bruno Keller review?",
+   "registered": {
+    "E68": true,
+    "E69": true
+   },
+   "reply": "The records disagree on the design review day for Sable: one record says Wednesday [E68]; another says Thursday [E69]. They do not say which applies.\nBruno Keller reviews Anvil settings [E131].",
+   "subject": "Sable",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0179",
+   "case_id": "D15-067",
+   "cited_ids": [
+    "E136"
+   ],
+   "gold": [
+    "Tuesday"
+   ],
+   "mechanical": true,
+   "question": "What is Quinn Abbott's deadline for the written summary, and who signs off Tamarind security?",
+   "registered": {
+    "E136": true
+   },
+   "reply": "The deadline for Quinn Abbott's written summary is Tuesday [E136].\nThe records do not say the security reviewer for Tamarind.",
+   "subject": "Quinn Abbott",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0232",
+   "case_id": "D15-166",
+   "cited_ids": [
+    "E105"
+   ],
+   "gold": [
+    "Kestrel-9B"
+   ],
+   "mechanical": true,
+   "question": "Which model did Osprey use by default in March, and what are Quarry Data's support hours?",
+   "registered": {
+    "E105": true
+   },
+   "reply": "Previously, the default model of Osprey was Kestrel-9B [E105].\nThe records do not say the weekday support hours of Quarry Data.",
+   "subject": "Osprey",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0175",
+   "case_id": "D15-077",
+   "cited_ids": [
+    "E132"
+   ],
+   "gold": [
+    "Wednesday"
+   ],
+   "mechanical": true,
+   "question": "Who is the Cedar lead, and what is Amara Osei's deadline for the written summary, and what was the old retry limit of the Gantry scheduler?",
+   "registered": {
+    "E132": true
+   },
+   "reply": "The lead of Cedar is Liam Oconnor [E2].\nThe deadline for Amara Osei's written summary is Wednesday [E132].\nPreviously, the retry limit of the Gantry scheduler was 2 retries [E172].",
+   "subject": "Amara Osei",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0177",
+   "case_id": "D15-140",
+   "cited_ids": [
+    "E134"
+   ],
+   "gold": [
+    "Friday"
+   ],
+   "mechanical": true,
+   "question": "Does Quartz have a staging environment, and by when does Umar Bello have to circulate the written summary?",
+   "registered": {
+    "E134": true
+   },
+   "reply": "The records say there is no staging environment for Quartz [E59].\nThe deadline for Umar Bello's written summary is Friday [E134].",
+   "subject": "Umar Bello",
+   "why": "control"
+  }
+ ]
+}

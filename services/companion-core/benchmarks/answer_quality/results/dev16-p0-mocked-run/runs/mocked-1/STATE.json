@@ -1,0 +1,7 @@
+{
+ "completed": 10,
+ "manifest_sha256": "1dc3a9b3757b33d073f8e6ff0b3751fe0954afb574008bca2a0e3efa690624d3",
+ "run_id": "mocked-1",
+ "state": "COMPLETE",
+ "updated_at": "2026-10-10T05:51:01.591215+00:00"
+}

@@ -1,0 +1,42 @@
+{
+ "stable_ids": false,
+ "limit": 40,
+ "results": {
+  "queries": 173,
+  "P1_scores_identical": 173,
+  "sequences_differ": 165,
+  "P3_within_group_order_is_ref_key_order": 173,
+  "P4_contained_groups_same_membership": 173,
+  "differences_outside_tie_groups": 0,
+  "P5_cut_membership_differs": 94,
+  "queries_with_any_tie_group": 173,
+  "store_ids_identical_across_builds": 0
+ },
+ "examples": [
+  {
+   "query": "By when does Olga Petrova have to circulate the written summary, and how many ti",
+   "tie_groups_sizes": [
+    15,
+    6,
+    11,
+    6
+   ]
+  },
+  {
+   "query": "By when does Pablo Reyes have to circulate the written summary, and who is on ca",
+   "tie_groups_sizes": [
+    2,
+    8,
+    28
+   ]
+  },
+  {
+   "query": "By when does Sven Larsen have to circulate the written summary?",
+   "tie_groups_sizes": [
+    7,
+    3
+   ]
+  }
+ ],
+ "outside_tie_group_details": []
+}

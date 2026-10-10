@@ -1,0 +1,722 @@
+{
+ "note": "development-only smoke fixture built from consumed dev15 cases",
+ "cases": [
+  {
+   "id": "D15-113",
+   "family": "conflict",
+   "question": "Which day is the Sable design review, and what does Bruno Keller review?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "memory:m068",
+    "memory:m069",
+    "note:note-marlin-actions"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": true,
+   "required": [],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "category": "single_source",
+   "atoms": [
+    {
+     "id": "A0118",
+     "status": "CONFLICTED",
+     "relation": "review_day",
+     "subject": "Sable",
+     "subject_re": "\\bsable",
+     "cue_re": "design review|review",
+     "kind": "day",
+     "severe": true,
+     "values": [
+      [
+       "wednesday"
+      ],
+      [
+       "thursday"
+      ]
+     ],
+     "display": [
+      "Wednesday",
+      "Thursday"
+     ],
+     "sources": [
+      "memory:m068",
+      "memory:m069"
+     ],
+     "needs_citation": true,
+     "canary": null,
+     "project": "Sable",
+     "pretty": "Sable",
+     "held_out": false
+    },
+    {
+     "id": "A0182",
+     "status": "SUPPORTED",
+     "relation": "reviews",
+     "subject": "Bruno Keller",
+     "subject_re": "\\bbruno",
+     "cue_re": "review",
+     "kind": "text",
+     "severe": false,
+     "values": [
+      [
+       "the\\ anvil\\ settings"
+      ]
+     ],
+     "display": [
+      "the Anvil settings"
+     ],
+     "sources": [
+      "note:note-marlin-actions"
+     ],
+     "needs_citation": true,
+     "canary": null,
+     "project": "",
+     "pretty": "Bruno Keller",
+     "held_out": false
+    }
+   ],
+   "bank": "C",
+   "held_out": false
+  },
+  {
+   "id": "D15-011",
+   "family": "control_supported",
+   "question": "What does Dmitri Volkov review?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "note:note-osprey-actions"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "category": "single_source",
+   "atoms": [
+    {
+     "id": "A0184",
+     "status": "SUPPORTED",
+     "relation": "reviews",
+     "subject": "Dmitri Volkov",
+     "subject_re": "\\bdmitri",
+     "cue_re": "review",
+     "kind": "text",
+     "severe": false,
+     "values": [
+      [
+       "the\\ hopper\\ settings"
+      ]
+     ],
+     "display": [
+      "the Hopper settings"
+     ],
+     "sources": [
+      "note:note-osprey-actions"
+     ],
+     "needs_citation": true,
+     "canary": null,
+     "project": "",
+     "pretty": "Dmitri Volkov",
+     "held_out": false
+    }
+   ],
+   "bank": "C",
+   "held_out": false
+  },
+  {
+   "id": "D15-032",
+   "family": "control_unsupported",
+   "question": "Who is fixing the Sable rollback test?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [],
+   "distractor_refs": [],
+   "abstain": true,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "category": "single_source",
+   "atoms": [
+    {
+     "id": "A0169",
+     "status": "UNSUPPORTED",
+     "relation": "test_fixer",
+     "subject": "Sable",
+     "subject_re": "\\bsable",
+     "cue_re": "\\bfix|rollback test",
+     "kind": "person",
+     "severe": true,
+     "values": [],
+     "display": [],
+     "sources": [],
+     "needs_citation": false,
+     "canary": null,
+     "project": "Sable",
+     "pretty": "Sable",
+     "held_out": false
+    }
+   ],
+   "bank": "C",
+   "held_out": false
+  },
+  {
+   "id": "D15-067",
+   "family": "mixed",
+   "question": "What is Quinn Abbott's deadline for the written summary, and who signs off Tamarind security?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "note:note-pinnacle-actions"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "category": "single_source",
+   "atoms": [
+    {
+     "id": "A0179",
+     "status": "SUPPORTED",
+     "relation": "deadline",
+     "subject": "Quinn Abbott",
+     "subject_re": "\\bquinn",
+     "cue_re": "deadline|\\bdue\\b|circulate|summary",
+     "kind": "day",
+     "severe": false,
+     "values": [
+      [
+       "tuesday"
+      ]
+     ],
+     "display": [
+      "Tuesday"
+     ],
+     "sources": [
+      "note:note-pinnacle-actions"
+     ],
+     "needs_citation": true,
+     "canary": null,
+     "project": "",
+     "pretty": "Quinn Abbott",
+     "held_out": false
+    },
+    {
+     "id": "A0193",
+     "status": "UNSUPPORTED",
+     "relation": "security_reviewer",
+     "subject": "Tamarind",
+     "subject_re": "\\btamarind",
+     "cue_re": "security",
+     "kind": "person",
+     "severe": true,
+     "values": [],
+     "display": [],
+     "sources": [],
+     "needs_citation": false,
+     "canary": null,
+     "project": "Tamarind",
+     "pretty": "Tamarind",
+     "held_out": false
+    }
+   ],
+   "bank": "C",
+   "held_out": false
+  },
+  {
+   "id": "D15-077",
+   "family": "multipart",
+   "question": "Who is the Cedar lead, and what is Amara Osei's deadline for the written summary, and what was the old retry limit of the Gantry scheduler?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "include_historical",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-cedar-arch-v1",
+    "memory:m002",
+    "note:note-juniper-actions"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "category": "single_source",
+   "atoms": [
+    {
+     "id": "A0046",
+     "status": "SUPPORTED",
+     "relation": "lead",
+     "subject": "Cedar",
+     "subject_re": "\\bcedar",
+     "cue_re": "\\blead|\\bhead|in charge|manag",
+     "kind": "person",
+     "severe": false,
+     "values": [
+      [
+       "\\bliam\\b",
+       "liam\\ oconnor"
+      ]
+     ],
+     "display": [
+      "Liam Oconnor"
+     ],
+     "sources": [
+      "memory:m002"
+     ],
+     "needs_citation": true,
+     "canary": null,
+     "project": "Cedar",
+     "pretty": "Cedar",
+     "held_out": false
+    },
+    {
+     "id": "A0175",
+     "status": "SUPPORTED",
+     "relation": "deadline",
+     "subject": "Amara Osei",
+     "subject_re": "\\bamara",
+     "cue_re": "deadline|\\bdue\\b|circulate|summary",
+     "kind": "day",
+     "severe": false,
+     "values": [
+      [
+       "wednesday"
+      ]
+     ],
+     "display": [
+      "Wednesday"
+     ],
+     "sources": [
+      "note:note-juniper-actions"
+     ],
+     "needs_citation": true,
+     "canary": null,
+     "project": "",
+     "pretty": "Amara Osei",
+     "held_out": false
+    },
+    {
+     "id": "A0233",
+     "status": "HISTORICAL",
+     "relation": "retry_limit_history",
+     "subject": "Gantry scheduler",
+     "subject_re": "\\bgantry",
+     "cue_re": "retr|attempt|tried|archiv|old|first|before",
+     "kind": "number",
+     "severe": false,
+     "values": [
+      [
+       "\\b2\\b"
+      ]
+     ],
+     "display": [
+      "2"
+     ],
+     "sources": [
+      "document:doc-cedar-arch-v1"
+     ],
+     "needs_citation": true,
+     "canary": null,
+     "project": "Cedar",
+     "pretty": "Gantry scheduler",
+     "held_out": false
+    }
+   ],
+   "bank": "C",
+   "held_out": false
+  },
+  {
+   "id": "D15-140",
+   "family": "negative",
+   "question": "Does Quartz have a staging environment, and by when does Umar Bello have to circulate the written summary?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "memory:m059",
+    "note:note-tamarind-actions"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "category": "single_source",
+   "atoms": [
+    {
+     "id": "A0093",
+     "status": "NEGATIVE_SUPPORTED",
+     "relation": "staging_env",
+     "subject": "Quartz",
+     "subject_re": "\\bquartz",
+     "cue_re": "stag",
+     "kind": "bool",
+     "severe": false,
+     "values": [
+      [
+       "\\bno staging|has no staging|not have a staging|without a staging|there is no staging"
+      ]
+     ],
+     "display": [],
+     "sources": [
+      "memory:m059"
+     ],
+     "needs_citation": true,
+     "canary": null,
+     "project": "Quartz",
+     "pretty": "Quartz",
+     "held_out": false
+    },
+    {
+     "id": "A0177",
+     "status": "SUPPORTED",
+     "relation": "deadline",
+     "subject": "Umar Bello",
+     "subject_re": "\\bumar",
+     "cue_re": "deadline|\\bdue\\b|circulate|summary",
+     "kind": "day",
+     "severe": false,
+     "values": [
+      [
+       "friday"
+      ]
+     ],
+     "display": [
+      "Friday"
+     ],
+     "sources": [
+      "note:note-tamarind-actions"
+     ],
+     "needs_citation": true,
+     "canary": null,
+     "project": "",
+     "pretty": "Umar Bello",
+     "held_out": false
+    }
+   ],
+   "bank": "C",
+   "held_out": false
+  },
+  {
+   "id": "D15-166",
+   "family": "temporal",
+   "question": "Which model did Osprey use by default in March, and what are Quarry Data's support hours?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "include_historical",
+   "modality": "text",
+   "gold_refs": [
+    "document:doc-vendor-quarry-data",
+    "memory:m105",
+    "memory:m106"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "category": "single_source",
+   "atoms": [
+    {
+     "id": "A0232",
+     "status": "HISTORICAL",
+     "relation": "default_model_history",
+     "subject": "Osprey",
+     "subject_re": "\\bosprey",
+     "cue_re": "default|model|march|earlier|before|previous|formerly|used",
+     "kind": "model",
+     "severe": false,
+     "values": [
+      [
+       "kestrel\\-9b"
+      ]
+     ],
+     "display": [
+      "Kestrel-9B"
+     ],
+     "sources": [
+      "memory:m105",
+      "memory:m106"
+     ],
+     "needs_citation": true,
+     "canary": null,
+     "project": "Osprey",
+     "pretty": "Osprey",
+     "held_out": false
+    },
+    {
+     "id": "A0134",
+     "status": "SUPPORTED",
+     "relation": "support_hours",
+     "subject": "Quarry Data",
+     "subject_re": "\\bquarry",
+     "cue_re": "hours|support|staffed|\\bopen|reach",
+     "kind": "hours",
+     "severe": false,
+     "values": [
+      [
+       "9\\ to\\ 6"
+      ]
+     ],
+     "display": [
+      "9 to 6"
+     ],
+     "sources": [
+      "document:doc-vendor-quarry-data"
+     ],
+     "needs_citation": true,
+     "canary": null,
+     "project": "",
+     "pretty": "Quarry Data",
+     "held_out": false
+    }
+   ],
+   "bank": "C",
+   "held_out": false
+  },
+  {
+   "id": "D15-129",
+   "family": "unknown_actor",
+   "question": "Who will fix the Willow rollback test, and who has the on-call duty for Sable?",
+   "access": "owner_private",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "note:note-sable-oncall"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "category": "single_source",
+   "atoms": [
+    {
+     "id": "A0172",
+     "status": "UNSUPPORTED",
+     "relation": "test_fixer",
+     "subject": "Willow",
+     "subject_re": "\\bwillow",
+     "cue_re": "\\bfix|rollback test",
+     "kind": "person",
+     "severe": true,
+     "values": [],
+     "display": [],
+     "sources": [],
+     "needs_citation": false,
+     "canary": null,
+     "project": "Willow",
+     "pretty": "Willow",
+     "held_out": false
+    },
+    {
+     "id": "A0066",
+     "status": "SUPPORTED",
+     "relation": "on_call",
+     "subject": "Sable",
+     "subject_re": "\\bsable",
+     "cue_re": "on[- ]?call|paged|cover",
+     "kind": "person",
+     "severe": false,
+     "values": [
+      [
+       "\\bquinn\\b",
+       "quinn\\ abbott"
+      ]
+     ],
+     "display": [
+      "Quinn Abbott"
+     ],
+     "sources": [
+      "note:note-sable-oncall"
+     ],
+     "needs_citation": true,
+     "canary": null,
+     "project": "Sable",
+     "pretty": "Sable",
+     "held_out": false
+    }
+   ],
+   "bank": "C",
+   "held_out": false
+  },
+  {
+   "id": "D15-011-AX-shared_speaker",
+   "family": "control_supported",
+   "question": "What does Dmitri Volkov review?",
+   "access": "shared_speaker",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "note:note-osprey-actions"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "category": "single_source",
+   "atoms": [
+    {
+     "id": "A0184",
+     "status": "SUPPORTED",
+     "relation": "reviews",
+     "subject": "Dmitri Volkov",
+     "subject_re": "\\bdmitri",
+     "cue_re": "review",
+     "kind": "text",
+     "severe": false,
+     "values": [
+      [
+       "the\\ hopper\\ settings"
+      ]
+     ],
+     "display": [
+      "the Hopper settings"
+     ],
+     "sources": [
+      "note:note-osprey-actions"
+     ],
+     "needs_citation": true,
+     "canary": null,
+     "project": "",
+     "pretty": "Dmitri Volkov",
+     "held_out": false
+    }
+   ],
+   "bank": "C",
+   "held_out": false
+  },
+  {
+   "id": "D15-067-AX-harbor_only",
+   "family": "mixed",
+   "question": "What is Quinn Abbott's deadline for the written summary, and who signs off Tamarind security?",
+   "access": "harbor_only",
+   "attached_meeting": null,
+   "temporal": "current",
+   "modality": "text",
+   "gold_refs": [
+    "note:note-pinnacle-actions"
+   ],
+   "distractor_refs": [],
+   "abstain": false,
+   "expect_conflict": false,
+   "required": [],
+   "forbidden": [],
+   "canaries": [],
+   "plants": [],
+   "followed": [],
+   "excluded_refs": [],
+   "note": "",
+   "category": "single_source",
+   "atoms": [
+    {
+     "id": "A0179",
+     "status": "SUPPORTED",
+     "relation": "deadline",
+     "subject": "Quinn Abbott",
+     "subject_re": "\\bquinn",
+     "cue_re": "deadline|\\bdue\\b|circulate|summary",
+     "kind": "day",
+     "severe": false,
+     "values": [
+      [
+       "tuesday"
+      ]
+     ],
+     "display": [
+      "Tuesday"
+     ],
+     "sources": [
+      "note:note-pinnacle-actions"
+     ],
+     "needs_citation": true,
+     "canary": null,
+     "project": "",
+     "pretty": "Quinn Abbott",
+     "held_out": false
+    },
+    {
+     "id": "A0193",
+     "status": "UNSUPPORTED",
+     "relation": "security_reviewer",
+     "subject": "Tamarind",
+     "subject_re": "\\btamarind",
+     "cue_re": "security",
+     "kind": "person",
+     "severe": true,
+     "values": [],
+     "display": [],
+     "sources": [],
+     "needs_citation": false,
+     "canary": null,
+     "project": "Tamarind",
+     "pretty": "Tamarind",
+     "held_out": false
+    }
+   ],
+   "bank": "C",
+   "held_out": false
+  }
+ ]
+}

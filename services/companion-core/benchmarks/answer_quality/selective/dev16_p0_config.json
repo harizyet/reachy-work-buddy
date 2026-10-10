@@ -31,7 +31,9 @@
    "../../src/companion_core/knowledge/revalidate.py": "d08e8794c4cfbc7f88723819cc95bed831f888ab227d928ef8cc1bf62a63a91e",
    "../../src/companion_core/knowledge/search.py": "cfff762975d37e97ee5d826b4add54c4e318b07c5ac9744f6249de08f1314f0c",
    "../../src/companion_core/persona/context.py": "766cc144c91210d88c78990be73e8cfde9d7f35cd4ca81233e79eefbe8c60637",
+   "../../src/companion_core/rag/embeddings.py": "7e0e8fbc5ad6cf9c67c7eedb2060470b5d33724119e6273eddcefd5bafa80ed2",
    "../knowledge_retrieval/kbench/fixtures.py": "118ca5a94b01a4011e89387e3dd926c50604d382c8177b4f2e4bc5ac806526d4",
+   "../knowledge_retrieval/kbench/pg_env.py": "a37f07e72672fe0180641170eaca1b19fcfd63694b8898d5e69245365364693e",
    "../knowledge_retrieval/kbench/security.py": "973676669a2458ee436725c7dc1015610b348a364e0d7bb1328bfa12ecb5365a",
    "aq/conditions.py": "6da335a5055458d268d5e99437a60959e1ff0fc87362b3780dac85979f39e964",
    "aq/conditions_g.py": "59ddd19d48b72e7d08d5ea17ce0d37a8ff5cdedd0d5888de59f4f5f675e141c2",
@@ -54,6 +56,13 @@
   "temperature": 0
  },
  "definition": "today's retrieval and prompt plus the 44H unclaimed-action boundary, production default model; the b1a arm of selective/pilot.py",
+ "environment": {
+  "database": "disposable PostgreSQL with pgvector; image digest supplied in AQ_PG_IMAGE_DIGEST (required; verified against `docker inspect` when AQ_PG_CONTAINER names the container); server version and pgvector extension version read from the server and recorded",
+  "embedding_model": "sentence-transformers/all-MiniLM-L6-v2, identity (cache revision and weights sha256) recorded; it must already be cached",
+  "offline": "HF_HUB_OFFLINE=1 and TRANSFORMERS_OFFLINE=1 for the whole inference path, restored afterwards; a missing cached dependency FAILS the run, nothing is downloaded and no non-loopback connection is made",
+  "record_ids": "STABLE: derived from the logical record key by kbench.pg_env.stable_ids, so equal-rank ties are broken the same way in every build (a function of the corpus, not of the build)",
+  "served_model": "the full /v1/models response is recorded"
+ },
  "evidence_context": {
   "builder": "companion_core.knowledge.context.build_context",
   "clock_now": "2026-10-08T12:00:00+00:00",
