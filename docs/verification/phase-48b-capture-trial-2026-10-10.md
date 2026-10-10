@@ -46,6 +46,9 @@ Restart log (any restart of core during the window must be recorded):
 | 2026-10-10 14:45:23 to 14:45:25 | planned: deploy of the read-only counters route (image `027ed2d6437e`, commit `9c8214a`, capture files unchanged) | not recoverable: the old process had no route and no log line (all counters of this segment were zero or exclusions; durable counters still 0 proposed) |
 | 2026-10-10 14:46:19 | planned: Phase 48E (`KNOWLEDGE_RETRIEVAL_ENABLED=true`; same image, capture flags unchanged) | read before the restart: `{"attempted":1,"no_match":1}` (that one attempt is the owner-side verification probe "What is two plus two?", sent directly to core, not owner usage) |
 
+| 2026-10-10 14:56:34 | planned: Phase 48F selective shadow (`KNOWLEDGE_SELECTIVE_SHADOW_ENABLED=true`; same image, capture unchanged) | read before the restart: `{"attempted":2,"no_match":2}` (the two 48E probes) |
+| 2026-10-10 15:02:30 | planned: graceful stop to flush and verify the selective-shadow telemetry (same image, flags) | read before the restart: `{"attempted":2,"no_match":2}` (the two 48F probes at 14:57; not owner usage) |
+
 Counter segments from `process_started_at` 14:46:23 UTC: my two verification probes (`attempted 2, no_match 2` at 14:50) are not owner usage and are to be subtracted from the final tally. The trial boundary list above is the whole record; the window continues, not restarted.
 
 Frozen items re-verified after that restart: image `15ce11cf8ad9` unchanged, `candidate_service.py` hash unchanged.

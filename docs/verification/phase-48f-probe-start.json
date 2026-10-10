@@ -1,0 +1,550 @@
+{
+ "phase": "48F",
+ "note": "categories only; question and reply text are in the private directory",
+ "probe_cases_sha256": "145bd80237a9f4b48091a621b3e4a529115bdb555d8c6f035ecba35664fe2e5d",
+ "cases": [
+  {
+   "id": "PN01",
+   "category": "note fact",
+   "modality": "text",
+   "truth": "answerable",
+   "klass": "ineligible",
+   "reason": "status_question",
+   "anchors": [],
+   "clauses": 0,
+   "typed_clauses": 0
+  },
+  {
+   "id": "PN02",
+   "category": "note fact",
+   "modality": "text",
+   "truth": "answerable",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "first_person_or_team",
+    "record_noun",
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "PN03",
+   "category": "note fact",
+   "modality": "text",
+   "truth": "answerable",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "PN04",
+   "category": "note fact",
+   "modality": "text",
+   "truth": "answerable",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "first_person_or_team",
+    "record_noun",
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "PN05",
+   "category": "note fact",
+   "modality": "text",
+   "truth": "answerable",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "PN06",
+   "category": "note fact",
+   "modality": "text",
+   "truth": "answerable",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "first_person_or_team"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "PN07",
+   "category": "note fact",
+   "modality": "text",
+   "truth": "answerable",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "first_person_or_team",
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "PN08",
+   "category": "note fact",
+   "modality": "text",
+   "truth": "answerable",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "record_noun",
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "PM01",
+   "category": "meeting fact",
+   "modality": "text",
+   "truth": "answerable",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "record_noun",
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "PM02",
+   "category": "meeting fact",
+   "modality": "text",
+   "truth": "answerable",
+   "klass": "typed",
+   "reason": null,
+   "anchors": [
+    "record_noun",
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 1,
+   "state": "unsupported",
+   "zero_evidence_qualified": true,
+   "citations": 0,
+   "privacy": "public",
+   "cited_sources": [],
+   "cites_only_allowed_sources": null
+  },
+  {
+   "id": "PM03",
+   "category": "meeting fact",
+   "modality": "text",
+   "truth": "answerable",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "record_noun",
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "PM04",
+   "category": "meeting fact",
+   "modality": "text",
+   "truth": "answerable",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "PM05",
+   "category": "meeting fact",
+   "modality": "text",
+   "truth": "answerable",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "record_noun",
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "PM06",
+   "category": "meeting fact",
+   "modality": "text",
+   "truth": "answerable",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "record_noun",
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "PM07",
+   "category": "meeting fact",
+   "modality": "text",
+   "truth": "answerable",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "PM08",
+   "category": "meeting fact",
+   "modality": "text",
+   "truth": "answerable",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "record_noun",
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "ST01",
+   "category": "status",
+   "modality": "text",
+   "truth": "status",
+   "klass": "ineligible",
+   "reason": "status_question",
+   "anchors": [],
+   "clauses": 0,
+   "typed_clauses": 0
+  },
+  {
+   "id": "ST02",
+   "category": "status",
+   "modality": "text",
+   "truth": "status",
+   "klass": "ineligible",
+   "reason": "status_question",
+   "anchors": [],
+   "clauses": 0,
+   "typed_clauses": 0
+  },
+  {
+   "id": "ST03",
+   "category": "status",
+   "modality": "text",
+   "truth": "status",
+   "klass": "ineligible",
+   "reason": "status_question",
+   "anchors": [],
+   "clauses": 0,
+   "typed_clauses": 0
+  },
+  {
+   "id": "AB01",
+   "category": "absent",
+   "modality": "text",
+   "truth": "absent",
+   "klass": "ineligible",
+   "reason": "not_knowledge",
+   "anchors": [],
+   "clauses": 0,
+   "typed_clauses": 0
+  },
+  {
+   "id": "AB02",
+   "category": "absent",
+   "modality": "text",
+   "truth": "absent",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "first_person_or_team",
+    "record_noun"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "AB03",
+   "category": "absent",
+   "modality": "text",
+   "truth": "absent",
+   "klass": "ineligible",
+   "reason": "not_knowledge",
+   "anchors": [],
+   "clauses": 0,
+   "typed_clauses": 0
+  },
+  {
+   "id": "AB04",
+   "category": "absent",
+   "modality": "text",
+   "truth": "absent",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "AB05",
+   "category": "absent",
+   "modality": "text",
+   "truth": "absent",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "first_person_or_team"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "AB06",
+   "category": "absent",
+   "modality": "text",
+   "truth": "absent",
+   "klass": "ineligible",
+   "reason": "not_knowledge",
+   "anchors": [],
+   "clauses": 0,
+   "typed_clauses": 0
+  },
+  {
+   "id": "AB07",
+   "category": "absent",
+   "modality": "text",
+   "truth": "absent",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "first_person_or_team",
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "AB08",
+   "category": "absent",
+   "modality": "text",
+   "truth": "absent",
+   "klass": "ineligible",
+   "reason": "not_knowledge",
+   "anchors": [],
+   "clauses": 0,
+   "typed_clauses": 0
+  },
+  {
+   "id": "AB09",
+   "category": "absent",
+   "modality": "text",
+   "truth": "absent",
+   "klass": "ineligible",
+   "reason": "not_knowledge",
+   "anchors": [],
+   "clauses": 0,
+   "typed_clauses": 0
+  },
+  {
+   "id": "AB10",
+   "category": "absent",
+   "modality": "text",
+   "truth": "absent",
+   "klass": "ineligible",
+   "reason": "not_knowledge",
+   "anchors": [],
+   "clauses": 0,
+   "typed_clauses": 0
+  },
+  {
+   "id": "LR01",
+   "category": "loosely related",
+   "modality": "text",
+   "truth": "absent",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "record_noun",
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "LR02",
+   "category": "loosely related",
+   "modality": "text",
+   "truth": "absent",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "first_person_or_team",
+    "record_noun",
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "LR03",
+   "category": "loosely related",
+   "modality": "text",
+   "truth": "absent",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "record_noun",
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "LR04",
+   "category": "loosely related",
+   "modality": "text",
+   "truth": "absent",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "LR05",
+   "category": "loosely related",
+   "modality": "text",
+   "truth": "absent",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "LR06",
+   "category": "loosely related",
+   "modality": "text",
+   "truth": "absent",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "RS01",
+   "category": "restricted voice",
+   "modality": "voice",
+   "truth": "restricted",
+   "klass": "ineligible",
+   "reason": "status_question",
+   "anchors": [],
+   "clauses": 0,
+   "typed_clauses": 0
+  },
+  {
+   "id": "RS02",
+   "category": "restricted voice",
+   "modality": "voice",
+   "truth": "restricted",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "record_noun",
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "RS03",
+   "category": "restricted voice",
+   "modality": "voice",
+   "truth": "restricted",
+   "klass": "untyped",
+   "reason": "not_understood",
+   "anchors": [
+    "first_person_or_team",
+    "record_noun",
+    "known_term"
+   ],
+   "clauses": 1,
+   "typed_clauses": 0
+  },
+  {
+   "id": "NK01",
+   "category": "not knowledge",
+   "modality": "text",
+   "truth": "not_knowledge",
+   "klass": "ineligible",
+   "reason": "not_knowledge",
+   "anchors": [],
+   "clauses": 0,
+   "typed_clauses": 0
+  },
+  {
+   "id": "NK02",
+   "category": "not knowledge",
+   "modality": "text",
+   "truth": "not_knowledge",
+   "klass": "ineligible",
+   "reason": "not_knowledge",
+   "anchors": [],
+   "clauses": 0,
+   "typed_clauses": 0
+  },
+  {
+   "id": "NK03",
+   "category": "not knowledge",
+   "modality": "text",
+   "truth": "not_knowledge",
+   "klass": "ineligible",
+   "reason": "not_knowledge",
+   "anchors": [],
+   "clauses": 0,
+   "typed_clauses": 0
+  },
+  {
+   "id": "NK04",
+   "category": "not knowledge",
+   "modality": "text",
+   "truth": "not_knowledge",
+   "klass": "ineligible",
+   "reason": "not_knowledge",
+   "anchors": [],
+   "clauses": 0,
+   "typed_clauses": 0
+  }
+ ]
+}

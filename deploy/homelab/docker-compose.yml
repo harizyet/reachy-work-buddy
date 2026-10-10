@@ -473,6 +473,10 @@ services:
       KNOWLEDGE_INDEXING_ENABLED: ${KNOWLEDGE_INDEXING_ENABLED:-false}
       # Phase 48E: retrieval over the index. On its own it changes no reply: the cited answerer and the selective shadow each need their own flag, which Compose deliberately does not pass.
       KNOWLEDGE_RETRIEVAL_ENABLED: ${KNOWLEDGE_RETRIEVAL_ENABLED:-false}
+      # Phase 48F: measure-only selective shadow (aggregate counters, one JSON line per hour, no text). Needs retrieval on. KNOWLEDGE_SELECTIVE_ANSWERING_ENABLED is deliberately NOT passed: the live cited answerer
+      # stays off until it is separately approved.
+      KNOWLEDGE_SELECTIVE_SHADOW_ENABLED: ${KNOWLEDGE_SELECTIVE_SHADOW_ENABLED:-false}
+      KNOWLEDGE_SELECTIVE_SHADOW_LOG_PATH: ${KNOWLEDGE_SELECTIVE_SHADOW_LOG_PATH:-}
       # Phase 48A/48B: memory-candidate review routes and (separately) capture of candidates from the owner's text. Both off by default; capture needs review on and an armed robot (docs/phase-48.md).
       MEMORY_CANDIDATES_ENABLED: ${MEMORY_CANDIDATES_ENABLED:-false}
       MEMORY_CANDIDATES_CAPTURE_ENABLED: ${MEMORY_CANDIDATES_CAPTURE_ENABLED:-false}
