@@ -1,0 +1,53 @@
+{
+ "database": {
+  "declared_digest": "sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b",
+  "disposable": true,
+  "docker_image_id": "sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b",
+  "pg_env_sha256": "a37f07e72672fe0180641170eaca1b19fcfd63694b8898d5e69245365364693e",
+  "pgvector_extension": "0.8.6",
+  "record_ids": "stable (kbench.pg_env.stable_ids)",
+  "server_version": "16.15 (Debian 16.15-1.pgdg12+2)",
+  "verified_by_docker": true,
+  "version_string": "PostgreSQL 16.15 (Debian 16.15-1.pgdg12+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit"
+ },
+ "embedding_model": {
+  "model": "sentence-transformers/all-MiniLM-L6-v2",
+  "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+  "weights_file": "model.safetensors",
+  "weights_sha256": "53aa51172d142c89d9012cce15ae4d6cc0ca6895895114379cacb4fab128d9db"
+ },
+ "offline": {
+  "HF_HUB_OFFLINE": "1",
+  "TRANSFORMERS_OFFLINE": "1"
+ },
+ "served_models_response": {
+  "data": [
+   {
+    "created": 1791612690,
+    "id": "reachy-local",
+    "max_model_len": 8192,
+    "object": "model",
+    "owned_by": "vllm",
+    "parent": null,
+    "permission": [
+     {
+      "allow_create_engine": false,
+      "allow_fine_tuning": false,
+      "allow_logprobs": true,
+      "allow_sampling": true,
+      "allow_search_indices": false,
+      "allow_view": true,
+      "created": 1791612690,
+      "group": null,
+      "id": "modelperm-9b70dfc7fc50d26d",
+      "is_blocking": false,
+      "object": "model_permission",
+      "organization": "*"
+     }
+    ],
+    "root": "Qwen/Qwen2.5-7B-Instruct-AWQ"
+   }
+  ],
+  "object": "list"
+ }
+}

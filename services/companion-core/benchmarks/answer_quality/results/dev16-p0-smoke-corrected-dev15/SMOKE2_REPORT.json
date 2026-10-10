@@ -1,0 +1,399 @@
+{
+ "purpose": "corrected-P0 development smoke test verification; consumed dev15 cases; not an acceptance artifact; no statement about any system's quality",
+ "ok": true,
+ "problems": [],
+ "cases": 10,
+ "state": "COMPLETE",
+ "errors": 0,
+ "latency_ms": {
+  "min": 282,
+  "median": 1243.0,
+  "max": 2446,
+  "total": 12936
+ },
+ "finish_reasons": [
+  "stop"
+ ],
+ "access_variants": {
+  "D15-011-AX-shared_speaker": {
+   "access": "shared_speaker",
+   "retrieved": []
+  },
+  "D15-067-AX-harbor_only": {
+   "access": "harbor_only",
+   "retrieved": [
+    "reminder:rem-4"
+   ]
+  }
+ },
+ "environment": {
+  "image_digest_matches_declared": true,
+  "verified_by_docker": true,
+  "postgres_version": "16.15 (Debian 16.15-1.pgdg12+2)",
+  "pgvector": "0.8.6",
+  "stable_ids": true,
+  "pg_env_sha_matches_file": true,
+  "embedding": {
+   "model": "sentence-transformers/all-MiniLM-L6-v2",
+   "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+   "weights_file": "model.safetensors",
+   "weights_sha256": "53aa51172d142c89d9012cce15ae4d6cc0ca6895895114379cacb4fab128d9db"
+  },
+  "offline_flags": {
+   "HF_HUB_OFFLINE": "1",
+   "TRANSFORMERS_OFFLINE": "1"
+  },
+  "served_models_ids": [
+   "reachy-local"
+  ],
+  "served_model_root": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+  "max_model_len": 8192,
+  "p0_effective_config_matches_declared": true,
+  "git_head": "9fa658f3a0159e31cb98b5198d14a94f88e754b9",
+  "mode": "rehearsal",
+  "seed_in_manifest": 16044
+ },
+ "cross_check_against_deterministic_preparation": {
+  "live_tokenizer_fresh_build_same_ordered_evidence": 10,
+  "live_tokenizer_fresh_build_same_message_hash": 10,
+  "offline_counter_fresh_build_same_ordered_evidence": 10,
+  "cases": 10,
+  "offline_counter_differences": []
+ },
+ "per_case": [
+  {
+   "id": "D15-113",
+   "access": "owner_private",
+   "family": "conflict",
+   "latency_ms": 834,
+   "prompt_tokens": 805,
+   "completion_tokens": 26,
+   "finish_reason": "stop",
+   "evidence_entries": 8,
+   "retrieved_refs": [
+    "document:doc-sable-arch#0",
+    "document:doc-sable-arch#2",
+    "document:doc-sable-runbook#0",
+    "meeting:mt-vesper#1",
+    "meeting:mt-vesper#10",
+    "meeting:mt-vesper#11",
+    "memory:m068",
+    "memory:m069",
+    "note:note-marlin-actions"
+   ],
+   "reply_cites": [
+    "E1",
+    "E2"
+   ],
+   "cites_not_in_manifest": [],
+   "violations": {},
+   "unauthorised_entries": [],
+   "missing_fields": [],
+   "extra_fields": [],
+   "messages_sha256": "65c33fe8084b0dfd07cb7ce86cba401bdb89dc8d0eed25db4ee29407a90e9ac4",
+   "messages_sha256_ok": true,
+   "arm_ok": true,
+   "question_ok": true,
+   "family_ok": true
+  },
+  {
+   "id": "D15-011",
+   "access": "owner_private",
+   "family": "control_supported",
+   "latency_ms": 2446,
+   "prompt_tokens": 848,
+   "completion_tokens": 97,
+   "finish_reason": "stop",
+   "evidence_entries": 10,
+   "retrieved_refs": [
+    "memory:m009",
+    "memory:m022",
+    "memory:m048",
+    "memory:m055",
+    "memory:m070",
+    "memory:m086",
+    "note:note-osprey-actions",
+    "note:note-osprey-oncall",
+    "note:note-umbra-oncall",
+    "note:note-willow-oncall"
+   ],
+   "reply_cites": [
+    "E1",
+    "E2"
+   ],
+   "cites_not_in_manifest": [],
+   "violations": {},
+   "unauthorised_entries": [],
+   "missing_fields": [],
+   "extra_fields": [],
+   "messages_sha256": "495cede81753e3271adbd739397d1149453a0aa46b164eb5bbae93c821580b61",
+   "messages_sha256_ok": true,
+   "arm_ok": true,
+   "question_ok": true,
+   "family_ok": true
+  },
+  {
+   "id": "D15-032",
+   "access": "owner_private",
+   "family": "control_unsupported",
+   "latency_ms": 683,
+   "prompt_tokens": 854,
+   "completion_tokens": 21,
+   "finish_reason": "stop",
+   "evidence_entries": 10,
+   "retrieved_refs": [
+    "document:doc-sable-runbook#1",
+    "meeting:mt-cedar#10",
+    "meeting:mt-juniper#16",
+    "meeting:mt-marlin#16",
+    "meeting:mt-osprey#9",
+    "meeting:mt-tamarind#11",
+    "meeting:mt-vesper#17",
+    "task:task-sable",
+    "task:task-tamarind",
+    "task:task-vesper"
+   ],
+   "reply_cites": [
+    "E1"
+   ],
+   "cites_not_in_manifest": [],
+   "violations": {},
+   "unauthorised_entries": [],
+   "missing_fields": [],
+   "extra_fields": [],
+   "messages_sha256": "70cdfb3d360614ad36202de00e9683b089faceda3582f588aa6fcc7202fc91aa",
+   "messages_sha256_ok": true,
+   "arm_ok": true,
+   "question_ok": true,
+   "family_ok": true
+  },
+  {
+   "id": "D15-067",
+   "access": "owner_private",
+   "family": "mixed",
+   "latency_ms": 1596,
+   "prompt_tokens": 900,
+   "completion_tokens": 55,
+   "finish_reason": "stop",
+   "evidence_entries": 9,
+   "retrieved_refs": [
+    "document:doc-tamarind-arch#0",
+    "document:doc-tamarind-arch#2",
+    "document:doc-tamarind-runbook#0",
+    "meeting:mt-juniper#0",
+    "meeting:mt-juniper#10",
+    "meeting:mt-juniper#12",
+    "note:note-pinnacle-actions",
+    "note:note-tamarind-actions",
+    "note:note-tamarind-oncall"
+   ],
+   "reply_cites": [
+    "E2"
+   ],
+   "cites_not_in_manifest": [],
+   "violations": {},
+   "unauthorised_entries": [],
+   "missing_fields": [],
+   "extra_fields": [],
+   "messages_sha256": "418801976b1699f99b4883b08dd4f2473c0f1187430e11140ff235b1d8b388dc",
+   "messages_sha256_ok": true,
+   "arm_ok": true,
+   "question_ok": true,
+   "family_ok": true
+  },
+  {
+   "id": "D15-077",
+   "access": "owner_private",
+   "family": "multipart",
+   "latency_ms": 2306,
+   "prompt_tokens": 982,
+   "completion_tokens": 94,
+   "finish_reason": "stop",
+   "evidence_entries": 10,
+   "retrieved_refs": [
+    "document:doc-cedar-arch#0",
+    "document:doc-cedar-arch#1",
+    "document:doc-cedar-arch#2",
+    "document:doc-cedar-arch-v1#0",
+    "document:doc-cedar-arch-v1#1",
+    "document:doc-cedar-runbook#0",
+    "meeting:mt-cedar#9",
+    "meeting:mt-tamarind#10",
+    "note:note-cedar-actions",
+    "note:note-juniper-actions"
+   ],
+   "reply_cites": [
+    "E1",
+    "E2",
+    "E4",
+    "E7"
+   ],
+   "cites_not_in_manifest": [],
+   "violations": {},
+   "unauthorised_entries": [],
+   "missing_fields": [],
+   "extra_fields": [],
+   "messages_sha256": "9b51885b19510cb0e40d143184811f67a09864a0095cfb9089de5c2eaa67ede6",
+   "messages_sha256_ok": true,
+   "arm_ok": true,
+   "question_ok": true,
+   "family_ok": true
+  },
+  {
+   "id": "D15-140",
+   "access": "owner_private",
+   "family": "negative",
+   "latency_ms": 1174,
+   "prompt_tokens": 1002,
+   "completion_tokens": 41,
+   "finish_reason": "stop",
+   "evidence_entries": 10,
+   "retrieved_refs": [
+    "document:doc-quartz-arch#0",
+    "memory:m059",
+    "note:note-cedar-actions",
+    "note:note-juniper-actions",
+    "note:note-marlin-actions",
+    "note:note-osprey-actions",
+    "note:note-pinnacle-actions",
+    "note:note-quartz-actions",
+    "note:note-tamarind-actions",
+    "note:note-vesper-actions"
+   ],
+   "reply_cites": [
+    "E1",
+    "E3"
+   ],
+   "cites_not_in_manifest": [],
+   "violations": {},
+   "unauthorised_entries": [],
+   "missing_fields": [],
+   "extra_fields": [],
+   "messages_sha256": "c244cb74139ed3ab6eb67cb0955fde19cda3191c63baf20506c29e0eafd6536d",
+   "messages_sha256_ok": true,
+   "arm_ok": true,
+   "question_ok": true,
+   "family_ok": true
+  },
+  {
+   "id": "D15-166",
+   "access": "owner_private",
+   "family": "temporal",
+   "latency_ms": 1393,
+   "prompt_tokens": 1033,
+   "completion_tokens": 48,
+   "finish_reason": "stop",
+   "evidence_entries": 10,
+   "retrieved_refs": [
+    "document:doc-osprey-arch#2",
+    "document:doc-vendor-brightwell-mail#0",
+    "document:doc-vendor-falconer-logs#0",
+    "document:doc-vendor-ironside-backup#0",
+    "document:doc-vendor-nimbus-metrics#0",
+    "document:doc-vendor-quarry-data#0",
+    "document:doc-vendor-tidewater-pay#0",
+    "document:doc-vesper-arch#2",
+    "memory:m105",
+    "memory:m106"
+   ],
+   "reply_cites": [
+    "E1",
+    "E9"
+   ],
+   "cites_not_in_manifest": [],
+   "violations": {},
+   "unauthorised_entries": [],
+   "missing_fields": [],
+   "extra_fields": [],
+   "messages_sha256": "4d7e952a91a02036be34f14287a5b4cf9f7041079c865c2d610cbd6543e3587c",
+   "messages_sha256_ok": true,
+   "arm_ok": true,
+   "question_ok": true,
+   "family_ok": true
+  },
+  {
+   "id": "D15-129",
+   "access": "owner_private",
+   "family": "unknown_actor",
+   "latency_ms": 910,
+   "prompt_tokens": 887,
+   "completion_tokens": 31,
+   "finish_reason": "stop",
+   "evidence_entries": 10,
+   "retrieved_refs": [
+    "document:doc-sable-runbook#1",
+    "document:doc-willow-runbook#1",
+    "meeting:mt-cedar#10",
+    "meeting:mt-marlin#16",
+    "meeting:mt-osprey#9",
+    "meeting:mt-vesper#17",
+    "note:note-sable-oncall",
+    "note:note-willow-oncall",
+    "task:task-sable",
+    "task:task-willow"
+   ],
+   "reply_cites": [
+    "E1",
+    "E2"
+   ],
+   "cites_not_in_manifest": [],
+   "violations": {},
+   "unauthorised_entries": [],
+   "missing_fields": [],
+   "extra_fields": [],
+   "messages_sha256": "33ed71ea5a460ecdcdda072adbbcba053b06f2350350f5da1be3999df0f36e68",
+   "messages_sha256_ok": true,
+   "arm_ok": true,
+   "question_ok": true,
+   "family_ok": true
+  },
+  {
+   "id": "D15-011-AX-shared_speaker",
+   "access": "shared_speaker",
+   "family": "control_supported",
+   "latency_ms": 282,
+   "prompt_tokens": 367,
+   "completion_tokens": 12,
+   "finish_reason": "stop",
+   "evidence_entries": 0,
+   "retrieved_refs": [],
+   "reply_cites": [],
+   "cites_not_in_manifest": [],
+   "violations": {},
+   "unauthorised_entries": [],
+   "missing_fields": [],
+   "extra_fields": [],
+   "messages_sha256": "aa8567f17b6b6acd2523e4aef9beefc1553f23a45cca7559063eedbd5e7b1f0b",
+   "messages_sha256_ok": true,
+   "arm_ok": true,
+   "question_ok": true,
+   "family_ok": true
+  },
+  {
+   "id": "D15-067-AX-harbor_only",
+   "access": "harbor_only",
+   "family": "mixed",
+   "latency_ms": 1312,
+   "prompt_tokens": 401,
+   "completion_tokens": 56,
+   "finish_reason": "stop",
+   "evidence_entries": 1,
+   "retrieved_refs": [
+    "reminder:rem-4"
+   ],
+   "reply_cites": [
+    "E1"
+   ],
+   "cites_not_in_manifest": [],
+   "violations": {},
+   "unauthorised_entries": [],
+   "missing_fields": [],
+   "extra_fields": [],
+   "messages_sha256": "1f57cf0dccc43bac9259b6dbdea92a1b97542a41daf95b2cd407e50eb3fa7055",
+   "messages_sha256_ok": true,
+   "arm_ok": true,
+   "question_ok": true,
+   "family_ok": true
+  }
+ ]
+}

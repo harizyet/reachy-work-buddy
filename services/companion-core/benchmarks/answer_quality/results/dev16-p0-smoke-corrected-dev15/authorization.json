@@ -1,0 +1,11 @@
+{
+ "decision": "AUTHORIZE_ACCEPTANCE_EXECUTION",
+ "manifest_sha256": "fc31275aa9a32fc5761d392fe93994d22c08725c536cbc99c98cc43a9a948755",
+ "run_id": "smoke2-corrected-1",
+ "authorized_by": "owner decision, Phase 44 'Final corrected P0 smoke test approved' (2026-10-10): exactly one development-only smoke test on the same ten consumed dev15 cases",
+ "authorized_at": "2026-10-10T06:11:22.965924+00:00",
+ "expires_at": "2026-10-10T09:11:22.965924+00:00",
+ "single_use": true,
+ "p0_model_calls_authorized": true,
+ "purpose": "rehearsal"
+}

@@ -1,0 +1,375 @@
+{
+ "argv": [
+  "services/companion-core/benchmarks/answer_quality/selective/dev16_runner.py",
+  "--harness-fixes",
+  "--structured",
+  "--context",
+  "--text"
+ ],
+ "authorization_sha256": "fc40f8a8996efbdf93235f3d127006e2d65a76f6c04eab2f6a5621bd8249578a",
+ "env": {
+  "AQ_DEV16_APPROVAL": "/home/hariz/reachy-work-buddy/services/companion-core/benchmarks/answer_quality/results/dev16-p0-smoke-corrected-dev15/authorization.json",
+  "AQ_PG_CONTAINER": "kbench-smoke2-pg-355100",
+  "AQ_PG_IMAGE_DIGEST": "sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b"
+ },
+ "files": {
+  "benchmark_database_builder": {
+   "path": "services/companion-core/benchmarks/knowledge_retrieval/kbench/pg_env.py",
+   "sha256": "a37f07e72672fe0180641170eaca1b19fcfd63694b8898d5e69245365364693e",
+   "verified": true
+  },
+  "candidate_arm": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_candidate_arm.py",
+   "sha256": "dde0404f58d17a08a98e003c87cac34935bff10b106db72585a550a1bde47906",
+   "verified": true
+  },
+  "candidate_config": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_candidate_config.json",
+   "sha256": "556aa9911472377cbde26eca8dcc5b9309a0b5c59fa536241454dfccde42acba",
+   "verified": true
+  },
+  "candidate_manifest": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/CANDIDATE_FREEZE_2026-10-10.sha256",
+   "sha256": "b095e9beb02f5573f8c57da92bd4b2ab0141943203b91bbcb096112a1cc122a9",
+   "verified": true
+  },
+  "cases": {
+   "path": "services/companion-core/benchmarks/answer_quality/results/dev16-p0-smoke-corrected-dev15/cases_smoke_dev15.json",
+   "sha256": "3842bf082e32c6cb63af97d15115f10f885d6314ec33aa5809bb21c74f5a90ff",
+   "verified": true
+  },
+  "corpus": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/corpus_v4.json",
+   "sha256": "c9863cb97c626f63213817faa8025434442106f9d0974a0642f6f30bda25a066",
+   "verified": true
+  },
+  "criteria_module": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_criteria.py",
+   "sha256": "40788f977e4dae9fa9a072a422a0eaad68557c25d83bf0b34464f3fee1a41754",
+   "verified": true
+  },
+  "criterion6_module": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_criterion6.py",
+   "sha256": "ff2d11aaa565795ed96595524f50f237390ec1565b97ad2bfd04036896baaada",
+   "verified": true
+  },
+  "criterion6_rules": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_criterion6_rules.json",
+   "sha256": "9141ed6d6bd60425143c3ea37370914f69297739d9f122941ceba063b9ff79bf",
+   "verified": true
+  },
+  "deterministic_criteria": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/deterministic_criteria.py",
+   "sha256": "e8f27b7375882b7c35dd7290fc889471a6db0ff6f623957634ebbce836c5892f",
+   "verified": true
+  },
+  "embedding_module": {
+   "path": "services/companion-core/src/companion_core/rag/embeddings.py",
+   "sha256": "7e0e8fbc5ad6cf9c67c7eedb2060470b5d33724119e6273eddcefd5bafa80ed2",
+   "verified": true
+  },
+  "evaluator": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/evaluator.py",
+   "sha256": "d364af6bbf7f5328f09952347ceabb4454a27cf94950f7009157a90cf99e8f27",
+   "verified": true
+  },
+  "freeze_proposal_tool": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_freeze_proposal.py",
+   "sha256": "06e490995a1911f6e00bb7322c31e20ce6e57edee616984b62e7cec127201bfd",
+   "verified": true
+  },
+  "i2b_eval": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/i2b_eval.py",
+   "sha256": "f09da998446712ff33d5db33e31a2275855a07042a041e310f46091c3e025e2b",
+   "verified": true
+  },
+  "p0_adjudication": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/p0_adjudication.py",
+   "sha256": "85eb4feec10a15ecbeabc012caeb97d8c195973d0b25c8a88b983da44e5bf16e",
+   "verified": true
+  },
+  "p0_config": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_p0_config.json",
+   "sha256": "d645e91342bd631bed52dcbb19c8b241055661230ffb8bc075c75ba9bd7227d5",
+   "verified": true
+  },
+  "p0_module": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_p0.py",
+   "sha256": "8631bd66b530e3fdd87a35bb77c712e3d975555bc7577c69e963cf7f8a8f5afe",
+   "verified": true
+  },
+  "reproducibility_probe": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_p0_reproducibility.py",
+   "sha256": "868727459f4222c13a7089e538b5fd6a69fc00d361c77fa050a40c30ef5c6e6c",
+   "verified": true
+  },
+  "runner": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_runner.py",
+   "sha256": "6423ff936e32f58ce6354f5246a773a8eef6406acfb1efeedf862774d841c95a",
+   "verified": true
+  },
+  "scoring": {
+   "path": "services/companion-core/benchmarks/answer_quality/aq/scoring.py",
+   "sha256": "6bfb790efdf6a2cb4909e3966c74da0aab5fa92032ceca2c3d10c702a001a1f2",
+   "verified": true
+  },
+  "synthetic_fixtures": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_synthetic.py",
+   "sha256": "f8f4ca6135b105f19bac47f0ed5a2c61f60a33cf76fcc322d70e2b403da9be88",
+   "verified": true
+  },
+  "tiebreak_probe": {
+   "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_p0_tiebreak_probe.py",
+   "sha256": "6ed1589032666e67dafe1d9ddf24caa770808abfa5b36ceb3ce095892263ee1b",
+   "verified": true
+  }
+ },
+ "git": {
+  "dirty_tracked": [],
+  "head": "9fa658f3a0159e31cb98b5198d14a94f88e754b9"
+ },
+ "manifest": {
+  "case_count": 10,
+  "case_ids_sha256": "2c7f8ad1eca9d5e44076c45052c769db3c7203897b71370c0113ccda6f861979",
+  "commit": "9fa658f3a0159e31cb98b5198d14a94f88e754b9",
+  "created_at": "2026-10-10T06:11:22.960762+00:00",
+  "files": {
+   "benchmark_database_builder": {
+    "path": "services/companion-core/benchmarks/knowledge_retrieval/kbench/pg_env.py",
+    "sha256": "a37f07e72672fe0180641170eaca1b19fcfd63694b8898d5e69245365364693e"
+   },
+   "candidate_arm": {
+    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_candidate_arm.py",
+    "sha256": "dde0404f58d17a08a98e003c87cac34935bff10b106db72585a550a1bde47906"
+   },
+   "candidate_config": {
+    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_candidate_config.json",
+    "sha256": "556aa9911472377cbde26eca8dcc5b9309a0b5c59fa536241454dfccde42acba"
+   },
+   "candidate_manifest": {
+    "path": "services/companion-core/benchmarks/answer_quality/selective/CANDIDATE_FREEZE_2026-10-10.sha256",
+    "sha256": "b095e9beb02f5573f8c57da92bd4b2ab0141943203b91bbcb096112a1cc122a9"
+   },
+   "cases": {
+    "path": "services/companion-core/benchmarks/answer_quality/results/dev16-p0-smoke-corrected-dev15/cases_smoke_dev15.json",
+    "sha256": "3842bf082e32c6cb63af97d15115f10f885d6314ec33aa5809bb21c74f5a90ff"
+   },
+   "corpus": {
+    "path": "services/companion-core/benchmarks/answer_quality/selective/corpus_v4.json",
+    "sha256": "c9863cb97c626f63213817faa8025434442106f9d0974a0642f6f30bda25a066"
+   },
+   "criteria_module": {
+    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_criteria.py",
+    "sha256": "40788f977e4dae9fa9a072a422a0eaad68557c25d83bf0b34464f3fee1a41754"
+   },
+   "criterion6_module": {
+    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_criterion6.py",
+    "sha256": "ff2d11aaa565795ed96595524f50f237390ec1565b97ad2bfd04036896baaada"
+   },
+   "criterion6_rules": {
+    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_criterion6_rules.json",
+    "sha256": "9141ed6d6bd60425143c3ea37370914f69297739d9f122941ceba063b9ff79bf"
+   },
+   "deterministic_criteria": {
+    "path": "services/companion-core/benchmarks/answer_quality/selective/deterministic_criteria.py",
+    "sha256": "e8f27b7375882b7c35dd7290fc889471a6db0ff6f623957634ebbce836c5892f"
+   },
+   "embedding_module": {
+    "path": "services/companion-core/src/companion_core/rag/embeddings.py",
+    "sha256": "7e0e8fbc5ad6cf9c67c7eedb2060470b5d33724119e6273eddcefd5bafa80ed2"
+   },
+   "evaluator": {
+    "path": "services/companion-core/benchmarks/answer_quality/selective/evaluator.py",
+    "sha256": "d364af6bbf7f5328f09952347ceabb4454a27cf94950f7009157a90cf99e8f27"
+   },
+   "freeze_proposal_tool": {
+    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_freeze_proposal.py",
+    "sha256": "06e490995a1911f6e00bb7322c31e20ce6e57edee616984b62e7cec127201bfd"
+   },
+   "i2b_eval": {
+    "path": "services/companion-core/benchmarks/answer_quality/selective/i2b_eval.py",
+    "sha256": "f09da998446712ff33d5db33e31a2275855a07042a041e310f46091c3e025e2b"
+   },
+   "p0_adjudication": {
+    "path": "services/companion-core/benchmarks/answer_quality/selective/p0_adjudication.py",
+    "sha256": "85eb4feec10a15ecbeabc012caeb97d8c195973d0b25c8a88b983da44e5bf16e"
+   },
+   "p0_config": {
+    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_p0_config.json",
+    "sha256": "d645e91342bd631bed52dcbb19c8b241055661230ffb8bc075c75ba9bd7227d5"
+   },
+   "p0_module": {
+    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_p0.py",
+    "sha256": "8631bd66b530e3fdd87a35bb77c712e3d975555bc7577c69e963cf7f8a8f5afe"
+   },
+   "reproducibility_probe": {
+    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_p0_reproducibility.py",
+    "sha256": "868727459f4222c13a7089e538b5fd6a69fc00d361c77fa050a40c30ef5c6e6c"
+   },
+   "runner": {
+    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_runner.py",
+    "sha256": "6423ff936e32f58ce6354f5246a773a8eef6406acfb1efeedf862774d841c95a"
+   },
+   "scoring": {
+    "path": "services/companion-core/benchmarks/answer_quality/aq/scoring.py",
+    "sha256": "6bfb790efdf6a2cb4909e3966c74da0aab5fa92032ceca2c3d10c702a001a1f2"
+   },
+   "synthetic_fixtures": {
+    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_synthetic.py",
+    "sha256": "f8f4ca6135b105f19bac47f0ed5a2c61f60a33cf76fcc322d70e2b403da9be88"
+   },
+   "tiebreak_probe": {
+    "path": "services/companion-core/benchmarks/answer_quality/selective/dev16_p0_tiebreak_probe.py",
+    "sha256": "6ed1589032666e67dafe1d9ddf24caa770808abfa5b36ceb3ce095892263ee1b"
+   }
+  },
+  "purpose": "rehearsal",
+  "seed": 16044
+ },
+ "manifest_sha256": "fc31275aa9a32fc5761d392fe93994d22c08725c536cbc99c98cc43a9a948755",
+ "mode": "rehearsal",
+ "p0_effective_config": {
+  "arm": "P0",
+  "computed": {
+   "client": {
+    "base_default_or_env": "http://localhost:8003",
+    "model": "reachy-local",
+    "nothink": false,
+    "seed": 44
+   },
+   "clock_now": "2026-10-08T12:00:00+00:00",
+   "message_roles": [
+    "system",
+    "system",
+    "system",
+    "user"
+   ],
+   "retrieval_config_b1a": {
+    "candidates": 40,
+    "limit": 10,
+    "name": "B1a",
+    "prefilter": true,
+    "rerank": false,
+    "rerank_pool": 20,
+    "rrf_k": 60,
+    "vector": false
+   },
+   "source_sha256": {
+    "../../../../shared/models/persona.py": "f27aedb1ee82a148fa2ba0fd5c8393d416c80c8682f63a3943ccdac5c7ff2af8",
+    "../../src/companion_core/knowledge/context.py": "19068a208dd4b16e416fd4328d23bef15a20062201e460084244d5d442006b62",
+    "../../src/companion_core/knowledge/retrieval.py": "fc4fbfbdadc05a573456f3503193bde4ee151ee3d2fc0664a70ee66072e38dc0",
+    "../../src/companion_core/knowledge/revalidate.py": "d08e8794c4cfbc7f88723819cc95bed831f888ab227d928ef8cc1bf62a63a91e",
+    "../../src/companion_core/knowledge/search.py": "cfff762975d37e97ee5d826b4add54c4e318b07c5ac9744f6249de08f1314f0c",
+    "../../src/companion_core/persona/context.py": "766cc144c91210d88c78990be73e8cfde9d7f35cd4ca81233e79eefbe8c60637",
+    "../../src/companion_core/rag/embeddings.py": "7e0e8fbc5ad6cf9c67c7eedb2060470b5d33724119e6273eddcefd5bafa80ed2",
+    "../knowledge_retrieval/kbench/fixtures.py": "118ca5a94b01a4011e89387e3dd926c50604d382c8177b4f2e4bc5ac806526d4",
+    "../knowledge_retrieval/kbench/pg_env.py": "a37f07e72672fe0180641170eaca1b19fcfd63694b8898d5e69245365364693e",
+    "../knowledge_retrieval/kbench/security.py": "973676669a2458ee436725c7dc1015610b348a364e0d7bb1328bfa12ecb5365a",
+    "aq/conditions.py": "6da335a5055458d268d5e99437a60959e1ff0fc87362b3780dac85979f39e964",
+    "aq/conditions_g.py": "59ddd19d48b72e7d08d5ea17ce0d37a8ff5cdedd0d5888de59f4f5f675e141c2",
+    "aq/conditions_g2.py": "c5ae35c303c7b274677d3bc7cf9fcc138846c187e344a5ee1fa626c063dfbae8",
+    "aq/llm.py": "03281a260b63b641355c72ca28c62af13bc7c6ad2c2f9f5ec5b51c821c7c3164",
+    "selective/pilot.py": "d51a0c390d7ba3d33ad8c98f841c62bd47475de70dab0e77bf404edc97161ef7"
+   },
+   "system_message_sha256": [
+    "3bd643a8a8ab7da03e4bc95dd4ef0d34a1e6709103a2fc33db7bb960e6244d01",
+    "87f03787ca86d080af9eb679c80633225cd337e66cf8922d90e6a259a6349387",
+    "0ba73c9614b01d7c2a0dc690283255733e5d07acc58948ba5fef5c5f64a0bc00"
+   ],
+   "voice_instruction_sha256": "21cdf8482995e322ed1cfc74ae295a7908ac44622561825dd29821850a61dc62"
+  },
+  "decoding": {
+   "max_tokens": 350,
+   "n": 1,
+   "other": "server defaults; none overridden",
+   "seed": 44,
+   "temperature": 0
+  },
+  "definition": "today's retrieval and prompt plus the 44H unclaimed-action boundary, production default model; the b1a arm of selective/pilot.py",
+  "environment": {
+   "database": "disposable PostgreSQL with pgvector; image digest supplied in AQ_PG_IMAGE_DIGEST (required; verified against `docker inspect` when AQ_PG_CONTAINER names the container); server version and pgvector extension version read from the server and recorded",
+   "embedding_model": "sentence-transformers/all-MiniLM-L6-v2, identity (cache revision and weights sha256) recorded; it must already be cached",
+   "offline": "HF_HUB_OFFLINE=1 and TRANSFORMERS_OFFLINE=1 for the whole inference path, restored afterwards; a missing cached dependency FAILS the run, nothing is downloaded and no non-loopback connection is made",
+   "record_ids": "STABLE: derived from the logical record key by kbench.pg_env.stable_ids, so equal-rank ties are broken the same way in every build (a function of the corpus, not of the build)",
+   "served_model": "the full /v1/models response is recorded"
+  },
+  "evidence_context": {
+   "builder": "companion_core.knowledge.context.build_context",
+   "clock_now": "2026-10-08T12:00:00+00:00",
+   "destination": "'cloud' if the profile allows it, else 'local'",
+   "evidence_ids": "E1.. in the builder's order",
+   "flag_conflicts": false,
+   "flag_instructions": true,
+   "header_version": "v1",
+   "include_historical": "case.temporal == 'include_historical'",
+   "note": null,
+   "token_budget": 1500,
+   "token_counter": "the model server's /tokenize"
+  },
+  "harness": {
+   "budget_tokens": 1500,
+   "class": "aq.conditions_g2.GConditions2",
+   "condition": "b1a",
+   "modifiers": [],
+   "pilot_script": "selective/pilot.py (reference only; the acceptance runner calls the same steps)"
+  },
+  "input_order": {
+   "cases": "the frozen cases file order, one case at a time, no batching, no shuffling",
+   "evidence_order": "the builder's order of the retrieval bundle (no re-ranking by the harness)",
+   "messages": [
+    "system: persona prompt",
+    "system: action boundary instruction (44H)",
+    "system: current date and time",
+    "system: spoken-reply instruction (voice cases only)",
+    "system/user: evidence block, immediately before the user turn",
+    "user: the question"
+   ]
+  },
+  "model": {
+   "client": "aq.llm.Local",
+   "endpoint_default": "http://localhost:8003",
+   "nothink": false,
+   "served_name": "reachy-local",
+   "stream": true,
+   "stream_options": {
+    "include_usage": true
+   },
+   "underlying": "Qwen2.5-7B (production default); the served name is verified from /v1/models at run time"
+  },
+  "output_schema": {
+   "labels": "none: P0 rows carry no outcome; flags come only from blinded human labels",
+   "manifest": "{evidence id: {refs: [logical record refs], authorized: bool}} exactly as the builder rendered it",
+   "reply": "free text, at most 350 tokens, citing evidence ids as [E<n>]",
+   "row": [
+    "id",
+    "family",
+    "arm",
+    "question",
+    "reply",
+    "manifest",
+    "ms",
+    "prompt_tokens",
+    "completion_tokens",
+    "finish_reason",
+    "messages_sha256"
+   ]
+  },
+  "retrieval": {
+   "access": "the case's access profile through kbench.security.access_context",
+   "conflict_flag": false,
+   "coverage_note": false,
+   "index_prefilter": true,
+   "limit": 10,
+   "pinned_sources": "the case's attached meeting if any, else none",
+   "retriever": "companion_core.knowledge.retrieval.Retriever with RetrievalConfig B1A (lexical, no vector, no rerank)",
+   "revalidation": "retrieval-time revalidation (44B) as shipped",
+   "sufficiency_gate": false,
+   "temporal": "the case's temporal field"
+  },
+  "runs": "exactly one P0 run per acceptance; no retries, no resumption, no second sample"
+ },
+ "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.43",
+ "python": "3.13.15 (main, Sep  1 2026, 14:18:08) [Clang 22.1.3 ]",
+ "run_id": "smoke2-corrected-1",
+ "started_at": "2026-10-10T06:11:30.084689+00:00"
+}

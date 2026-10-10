@@ -1,0 +1,5 @@
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 12029.44it/s]
+
+real	0m25.070s
+user	0m33.178s
+sys	0m1.749s

@@ -1,0 +1,2 @@
+{"event": "START", "run_id": "smoke2-corrected-1", "manifest_sha256": "fc31275aa9a32fc5761d392fe93994d22c08725c536cbc99c98cc43a9a948755", "authorization_sha256": "fc40f8a8996efbdf93235f3d127006e2d65a76f6c04eab2f6a5621bd8249578a", "at": "2026-10-10T06:11:30.079327+00:00"}
+{"event": "COMPLETE", "run_id": "smoke2-corrected-1", "manifest_sha256": "fc31275aa9a32fc5761d392fe93994d22c08725c536cbc99c98cc43a9a948755", "authorization_sha256": "fc40f8a8996efbdf93235f3d127006e2d65a76f6c04eab2f6a5621bd8249578a", "at": "2026-10-10T06:11:53.988065+00:00"}
