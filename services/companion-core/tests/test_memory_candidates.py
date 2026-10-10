@@ -8,6 +8,7 @@ candidate store is invisible to recall, the index, retrieval and prompts; captur
 import asyncio
 import contextlib
 import json
+import types
 from datetime import UTC, datetime, timedelta
 
 import httpx
@@ -48,7 +49,7 @@ def run(coro):
 
 
 class World:
-    def __init__(self, monkeypatch, *, enabled=True, capture=True, privacy=None, reply="An ordinary reply.", store=None, channels=None):
+    def __init__(self, monkeypatch, *, enabled=True, capture=True, privacy=None, reply="An ordinary reply.", store=None, channels=None, token=None):
         for name, on in ((cs.ENABLED_FLAG, enabled), (cs.CAPTURE_FLAG, capture)):
             (monkeypatch.setenv(name, "true") if on else monkeypatch.delenv(name, raising=False))
         (monkeypatch.setenv(cs.CHANNELS_ENV, channels) if channels else monkeypatch.delenv(cs.CHANNELS_ENV, raising=False))
@@ -74,7 +75,8 @@ class World:
             llm_settings_store=InMemoryLLMSettingsStore(), llm_usage_store=InMemoryLLMUsageStore(), persona_store=InMemoryPersonaStore(),
             search_settings_store=InMemorySearchSettingsStore(), run_email_dispatch_task=False, llm_transport=httpx.MockTransport(llm),
             transport=httpx.MockTransport(lambda r: httpx.Response(200, json={})), memory_candidate_store=self.store, candidate_digester=cs.KeyedDigester(KEYRING),
-            candidate_privacy_state=state,
+            candidate_privacy_state=state, **({"accounts_service_token": token, "account_service": types.SimpleNamespace()} if token else {}),  # a token turns on core's service-token middleware; the accounts service itself is not used here
+
         )
 
     @contextlib.contextmanager
@@ -576,3 +578,61 @@ def test_a_slow_privacy_lookup_does_not_delay_the_reply(monkeypatch):
         client.post("/conversation", json={"session_id": "s", "conversation_id": "c", "channel": "reachy", "text": SAY, "input_modality": "voice"})
         assert time.perf_counter() - started < 3
     assert world.pending() == []
+
+
+# -- Phase 48B instrumentation: read-only aggregate counters ----------------------------------------------------------------------------------
+
+COUNTERS = "/memory-candidates/capture-counters"
+TOKEN = "t" * 32
+
+
+def test_the_counters_route_returns_numbers_only_and_never_content(monkeypatch):
+    world = World(monkeypatch, token=TOKEN)
+    with world.client() as client:
+        client.headers["X-Reachy-Service-Token"] = TOKEN
+        world.say(client, SAY, session="sess-canary-7731", conversation="conv-canary-7731")
+        world.say(client, SAY, session="sess-canary-7732", conversation="conv-canary-7732")  # a duplicate of a pending candidate
+        world.say(client, "I always take my medication at nine.", session="sess-canary-7733", conversation="conv-canary-7733")  # sensitive text
+        world.say(client, "Tell me a joke", session="sess-canary-7734", conversation="conv-canary-7734")
+        body = client.get(COUNTERS).json()
+        assert client.get("/memory-candidates").json()["candidates"][0]["text"] == SAY  # the review surface still shows content; the counters never do
+    assert set(body) == {"capture_enabled", "process_started_at", "counters"} and body["capture_enabled"] is True
+    counters = body["counters"]
+    assert counters["created"] == 1 and counters["attempted"] == 4 and counters["excluded_sensitive_text"] == 1 and counters["no_match"] == 1
+    assert counters.get("skipped_duplicate", 0) + counters.get("duplicate_memory", 0) >= 1  # the duplicate is visible as a count
+    assert all(isinstance(k, str) and type(v) is int for k, v in counters.items())
+    text = json.dumps(body)
+    for forbidden in (SAY, "canary", "medication", "joke", "web"):
+        assert forbidden not in text
+
+
+def test_the_counters_route_is_read_only_and_rejects_unauthorised_requests(monkeypatch):
+    world = World(monkeypatch, token=TOKEN)
+    with world.client() as client:
+        assert client.get(COUNTERS).status_code == 401  # no service token
+        assert client.get(COUNTERS, headers={"X-Reachy-Service-Token": "wrong" * 8}).status_code == 401
+        client.headers["X-Reachy-Service-Token"] = TOKEN
+        for method in ("post", "put", "patch", "delete"):
+            assert getattr(client, method)(COUNTERS).status_code in (404, 405, 422)  # no mutation or reset operation exists
+        assert client.get(COUNTERS).status_code == 200
+        assert client.get(COUNTERS, params={"reset": "true"}).json()["counters"] == client.get(COUNTERS).json()["counters"]
+
+
+def test_the_counters_route_does_not_change_capture_and_follows_the_flags(monkeypatch):
+    with_reads, without = World(monkeypatch, token=TOKEN), World(monkeypatch, token=TOKEN)
+    with with_reads.client() as a, without.client() as b:
+        for c in (a, b):
+            c.headers["X-Reachy-Service-Token"] = TOKEN
+        for i, text in enumerate((SAY, SAY2, "Tell me a joke")):
+            with_reads.say(a, text, session=f"s{i}")
+            a.get(COUNTERS)
+            without.say(b, text, session=f"s{i}")
+    assert [c.text for c in with_reads.pending()] == [c.text for c in without.pending()] and with_reads.app.state.candidate_capture.summary() == without.app.state.candidate_capture.summary()
+    off = World(monkeypatch, capture=False, token=TOKEN)  # review on, capture off
+    with off.client() as c:
+        c.headers["X-Reachy-Service-Token"] = TOKEN
+        assert c.get(COUNTERS).json()["capture_enabled"] is False and c.get(COUNTERS).json()["counters"] == {}
+    gone = World(monkeypatch, enabled=False, capture=False, token=TOKEN)  # review off: the route does not exist
+    with gone.client() as c:
+        c.headers["X-Reachy-Service-Token"] = TOKEN
+        assert c.get(COUNTERS).status_code == 404

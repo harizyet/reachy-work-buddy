@@ -338,6 +338,7 @@ from shared.models.websearch import (
     SearchSource,
     TurnWebSearch,
 )
+from shared.protocols.memory_candidates_api import MEMORY_CANDIDATES_CAPTURE_COUNTERS
 from shared.protocols.operator_api import (
     LLM_SETTINGS,
     LLM_USAGE,
@@ -964,6 +965,7 @@ def create_app(
     app.state.shadow_router = shadow_router
     app.state.knowledge_shadow = knowledge_shadow  # measure-only; None unless KNOWLEDGE_SHADOW_ENABLED (see knowledge/shadow.py)
     app.state.candidate_service = None  # Phase 44F: built in the lifespan only when MEMORY_CANDIDATES_ENABLED is true
+    app.state.process_started_at = datetime.now(UTC).isoformat()
     app.state.candidate_capture = None  # ... and capture only when MEMORY_CANDIDATES_CAPTURE_ENABLED is also true
     if candidates_on and memory_candidate_store is not None and memory_store is not None and planner_store is not None:
         app.state.candidate_service = candidate_service.CandidateService(memory_candidate_store, memory_store, planner_store)  # all stores injected: no lifespan needed
@@ -1761,6 +1763,14 @@ def create_app(
 
     if candidates_on:
         install_candidate_routes(app, capture_on=capture_on)
+
+        @app.get(MEMORY_CANDIDATES_CAPTURE_COUNTERS)
+        async def candidate_capture_counters() -> dict:
+            """Phase 48B instrumentation, read-only: the capture counters (what the shutdown summary was meant to print) as numbers only, since this process started. Service-token protected like every core
+            route; no reset, no content. Nothing in capture reads this route, so its presence or absence cannot change capture."""
+            capture = app.state.candidate_capture
+            counters = {k: v for k, v in (capture.summary() if capture is not None else {}).items() if isinstance(k, str) and k.isidentifier() and type(v) is int}
+            return {"capture_enabled": capture is not None, "process_started_at": app.state.process_started_at, "counters": counters}
 
     async def selective_turn(turn: ConversationTurnRequest):
         answerer = app.state.selective_answerer
