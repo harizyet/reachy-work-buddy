@@ -55,10 +55,18 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
   meant to validate a severe-hallucination detector **failed its formal
   validation and was stopped on 2026-10-10**; the scorer is research-only and
   not used for any enforcement. B-1 is the primary release candidate but is
-  **not ready for formal acceptance** (free-text question decomposition, a
-  gold-independent relation registry and coverage are open). See
-  [Phase 44](phase-44.md), the [integration plan](phase-44-selective-answering-integration-plan.md)
-  and the [I-1/I-2 record](verification/phase-44-selective-i1-i2-2026-10-10.md).
+  **not ready for formal acceptance** (the 2026-10-10 follow-up added a
+  gold-independent entity and relation registry and a question decomposer;
+  unseen phrasing, the baseline-relative dev16 criteria and the held-out
+  relations are open). See [Phase 44](phase-44.md), the
+  [integration plan](phase-44-selective-answering-integration-plan.md), the
+  [I-1/I-2 record](verification/phase-44-selective-i1-i2-2026-10-10.md) and the
+  [I-2 follow-up](verification/phase-44-selective-i2-followup-2026-10-10.md) and the
+  [final development pass](verification/phase-44-selective-final-dev-pass-2026-10-10.md)
+  (dev15: 294/307, 160/173 fully correct, 0 unsupported; the three held-out
+  relations are now defined and the candidate is frozen by hash; the
+  [readiness report](phase-44-dev16-deterministic-criteria-draft.md) lists the
+  open decisions; dev16 not frozen or run; not ready for formal acceptance).
 - **Meeting intelligence (27):** upload, transcription and diarization reached
   ALIGNING in the real homelab with a short synthetic single-speaker clip.
   Real multi-speaker/30–60 minute acceptance, resource measurements,

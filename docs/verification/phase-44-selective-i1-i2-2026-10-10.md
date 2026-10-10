@@ -2,6 +2,8 @@
 
 Owner approval, 2026-10-10: *proceed with I-1 and I-2 only; implement the scoped-search negative renderer without production wiring; evaluate the deterministic typed-template path offline against dev15; separate mechanically checkable properties from semantic claims; defer I-3; do not run or freeze dev16; no second reviewer, so no independent-validation claim; scorer v3 stays research-only.* Production is unchanged: the 7B is the default, 44H is active, indexing, retrieval and shadow are off, 44F is unimplemented, and nothing here is wired, deployed or activated. **No model was called.** dev16 was not used. Plan: [integration plan](../phase-44-selective-answering-integration-plan.md); contract: [Stage B design 3.1](../phase-44-selective-stage-b-design.md#31-absence-semantics-rubric-v5-2026-10-10-evidence-contract).
 
+**Follow-up (same day): the next-step list in section 5 was carried out in the [I-2 follow-up](phase-44-selective-i2-followup-2026-10-10.md); the figures in this record are the first run and are unchanged.**
+
 Reading note: the dev15 specs, subject patterns and component asks come from the gold atoms (same author as the pipeline), so the dev15 figures measure the state logic and sentence reading, **not generalisation**. Replies were read by one reader (the author): **NO INDEPENDENT HUMAN REVIEW**.
 
 ## 1. I-1: what was built (source only; `knowledge/answerability_b1`, still imported by nothing in production)
