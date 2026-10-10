@@ -44,14 +44,14 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
 
 ## Implemented but not fully accepted
 
-- **Semantic knowledge and selective answering (44):** deployed, all with
+- **Semantic knowledge and selective answering (44): ENGINEERING COMPLETE (2026-10-10), NOT DEPLOYED beyond the items below, research acceptance outstanding.** The authoritative handover is the [Phase 44 closure report](phase-44-closure-report.md). Complete for the local milestone and pushed: selective answering integration, the selective shadow with hardened telemetry, and 44F memory-candidate capture and review (migration 028 and its rollback exist but **have not been applied to production**; every new flag is OFF and absent from Compose). Deferred by explicit decision: 44C and 44G. Blocked operationally: production indexing and retrieval (off-host backup, isolated restore, memory baseline, bulk-load contention, rehearsed rollback). Not done: dev16 acceptance and independent validation. Earlier deployed state:
+  deployed, all with
   indexing, retrieval and shadow OFF: migrations 026 (source sensitivity) and
   027 (knowledge index and outbox), and the 44H unclaimed-action boundary in
   core. Robot acceptance of the 44A deployment, a browser pass and Telegram
   receipt of the smoke reminder were still pending when recorded in
   [HANDOVER](../HANDOVER.md). **Not deployed:** the selective-answering work
-  (Stage B-1, a deterministic cited answer layer, source and tests only, wired
-  nowhere), 44F, retrieval and shadow rollout. The scorer-v3 research that was
+  (Stage B-1 and its integration, behind OFF flags), 44F, retrieval and shadow rollout. The scorer-v3 research that was
   meant to validate a severe-hallucination detector **failed its formal
   validation and was stopped on 2026-10-10**; the scorer is research-only and
   not used for any enforcement. B-1 is the primary release candidate but is
