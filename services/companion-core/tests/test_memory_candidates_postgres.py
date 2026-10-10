@@ -248,7 +248,7 @@ def test_the_whole_workflow_on_the_production_lifespan_with_a_restart(dsn, monke
     with client:
         configure(client)
         assert client.app.state.candidate_service.store._pool is client.app.state.task_store._pool  # the one shared bounded pool
-        assert say(client, SAY)["reply"] == "An ordinary reply." and asked["privacy"] == 1
+        assert say(client, SAY)["reply"] == "An ordinary reply." and asked["privacy"] == 0  # a typed web turn never asks about the robot
         assert sql(dsn, "SELECT count(*) FROM memories") == memories_before  # a candidate is not a memory
         (c,) = client.get("/memory-candidates").json()["candidates"]
         assert c["text"] == SAY
@@ -292,13 +292,15 @@ async def _stale_recover(client, dsn, c2):
 
 
 @pytest.mark.parametrize(("state", "why"), [({"privacy_mode": True}, "privacy mode on"), ({}, "field missing"), ("error", "hub error"), ({"privacy_mode": "false"}, "not a boolean")])
-def test_privacy_mode_on_or_unknown_on_the_hub_disables_capture(dsn, monkeypatch, tmp_path, state, why):
+def test_privacy_mode_on_or_unknown_on_the_hub_disables_robot_voice_capture_only(dsn, monkeypatch, tmp_path, state, why):
     client, asked = boot(dsn, monkeypatch, tmp_path, hub_state=state)
     with client:
         configure(client)
-        say(client, SAY)
+        say(client, SAY, channel="reachy", input_modality="voice")
         assert asked["privacy"] == 1, why
-    assert sql(dsn, "SELECT count(*) FROM memory_candidates") == [(0,)] and sql(dsn, "SELECT count(*) FROM memories") == [(0,)]
+        say(client, "I always take notes by hand.", session="typed")  # the same hub state does not stop a typed web turn
+        assert asked["privacy"] == 1, why
+    assert sql(dsn, "SELECT count(*) FROM memory_candidates") == [(1,)] and sql(dsn, "SELECT count(*) FROM memories") == [(0,)]
 
 
 def test_a_missing_keyring_keeps_capture_off_but_review_works(dsn, monkeypatch, tmp_path):
@@ -309,3 +311,29 @@ def test_a_missing_keyring_keeps_capture_off_but_review_works(dsn, monkeypatch, 
         assert client.app.state.candidate_service is not None and client.app.state.candidate_capture is None
         say(client, SAY)
         assert client.get("/memory-candidates").json() == {"candidates": [], "capture_enabled": False}
+
+
+def test_an_unauthenticated_request_reaches_nothing_and_proposes_nothing(dsn, monkeypatch, tmp_path):
+    """Phase 48B: the service token is core's authentication boundary; a turn without it is refused before any handler or capture runs."""
+    client, asked = boot(dsn, monkeypatch, tmp_path)
+    with client:
+        configure(client)
+        bare = TestClient(client.app)
+        for channel in ("web", "telegram", "reachy"):
+            assert bare.post("/conversation", json={"session_id": "s", "conversation_id": "c", "channel": channel, "text": SAY, "input_modality": "voice" if channel == "reachy" else "text"}).status_code == 401
+        assert client.app.state.candidate_capture.summary().get("attempted", 0) == 0 and asked["privacy"] == 0
+    assert sql(dsn, "SELECT count(*) FROM memory_candidates") == [(0,)]
+
+
+def test_a_captured_web_turn_with_no_robot_is_accepted_into_exactly_one_memory_and_one_receipt(dsn, monkeypatch, tmp_path):
+    client, asked = boot(dsn, monkeypatch, tmp_path, hub_state={"privacy_mode": True, "robots": 0})  # no robot at all, as on a web-only deployment
+    with client:
+        configure(client)
+        assert say(client, SAY)["reply"] == "An ordinary reply."
+        (c,) = client.get("/memory-candidates").json()["candidates"]
+        for _ in range(3):
+            assert client.post(f"/memory-candidates/{c['id']}/accept", json={}).status_code in (200, 409)
+        assert client.post(f"/memory-candidates/{c['id']}/accept", json={}).status_code == 200
+    assert asked["privacy"] == 0
+    assert sql(dsn, f"SELECT count(*) FROM memories WHERE source = 'candidate:{c['id']}'") == [(1,)]
+    assert sql(dsn, "SELECT count(*) FROM action_receipts WHERE action_type = 'memory.created'") == [(1,)]

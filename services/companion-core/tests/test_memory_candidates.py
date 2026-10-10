@@ -164,22 +164,55 @@ def test_nothing_is_proposed_from_excluded_sources(monkeypatch, name, kwargs, te
     assert [m.source for m in world.memories()] == (["conversation"] if name == "handled_by_memory_capture" else []), name  # only the owner's explicit "remember" handler writes
 
 
-def test_privacy_mode_on_unknown_or_unreadable_disables_capture_and_only_an_explicit_off_allows_it(monkeypatch):
-    for label, state in (("on", {"privacy_mode": True}), ("unknown_field", {}), ("no_state", None), ("garbage", "yes"), ("raises", "raise"), ("string_false", {"privacy_mode": "false"}), ("null", {"privacy_mode": None})):
-        world = World(monkeypatch, privacy=state if state != "raise" else "raise")
-        if state is None:
-            world = World(monkeypatch)
-            world.app.state.candidate_capture = None
-
+def test_robot_voice_needs_an_explicit_privacy_off_and_nothing_else_does(monkeypatch):
+    for label, state in (("on", {"privacy_mode": True}), ("unknown_field", {}), ("garbage", "yes"), ("raises", "raise"), ("string_false", {"privacy_mode": "false"}), ("null", {"privacy_mode": None})):
+        world = World(monkeypatch, privacy=state)
         with world.client() as client:
-            if state is None:
-                world.app.state.candidate_capture.privacy_state = lambda: _none()
-            world.say(client, SAY)
-        assert world.pending() == [], label
+            world.say(client, SAY, channel="reachy", voice=True)
+        assert world.pending() == [] and world.privacy_calls == 1, label
     world = World(monkeypatch, privacy={"privacy_mode": False})
     with world.client() as client:
-        world.say(client, SAY)
-    assert len(world.pending()) == 1
+        world.say(client, SAY, channel="reachy", voice=True)
+    (c,) = world.pending()
+    assert c.channel == "reachy" and world.privacy_calls == 1 and world.memories() == []
+
+
+@pytest.mark.parametrize("channel", ["web", "phone", "telegram"])
+@pytest.mark.parametrize("state", [{"privacy_mode": True}, {}, "raise"])
+def test_private_text_capture_is_independent_of_embodiment_privacy_and_never_asks_the_hub(monkeypatch, channel, state):
+    """Phase 48B: no robot online, none armed, a broken hub: an owner-authenticated typed turn still proposes, and the privacy lookup is never made."""
+    world = World(monkeypatch, privacy=state)
+    with world.client() as client:
+        world.say(client, SAY, channel=channel)
+    (c,) = world.pending()
+    assert c.channel == channel and world.privacy_calls == 0 and world.memories() == []
+
+
+@pytest.mark.parametrize(("channel", "voice"), [("web", True), ("phone", True), ("telegram", True), ("reachy", False), ("smoke-signal", False)])
+def test_only_the_robot_takes_spoken_turns_and_the_robot_takes_nothing_typed(monkeypatch, channel, voice):
+    world = World(monkeypatch, privacy={"privacy_mode": False})
+    with world.client() as client:
+        world.say(client, SAY, channel=channel, voice=voice)
+    assert world.pending() == [] and world.privacy_calls == 0
+
+
+def test_a_sensitive_labelled_turn_is_excluded_on_every_channel(monkeypatch):
+    world = World(monkeypatch, privacy={"privacy_mode": False})
+    with world.client() as client:
+        for channel, voice in (("web", False), ("phone", False), ("telegram", False), ("reachy", True)):
+            world.say(client, "I always take my medication at nine.", channel=channel, voice=voice, session=channel)
+    assert world.pending() == []
+
+
+@pytest.mark.parametrize("enabled", [False, True])
+def test_no_channel_proposes_when_capture_or_review_is_off(monkeypatch, enabled):
+    """capture off with review on, and capture on with review off (the flag that would build an inaccessible queue): no candidate, no lookup, no routes."""
+    world = World(monkeypatch, enabled=enabled, capture=not enabled)
+    with world.client() as client:
+        for channel, voice in (("web", False), ("phone", False), ("telegram", False), ("reachy", True)):
+            world.say(client, SAY, channel=channel, voice=voice, session=channel)
+        assert (client.get("/memory-candidates").status_code == 200) is enabled
+    assert world.app.state.candidate_capture is None and world.privacy_calls == 0 and run(world.store.list_pending(datetime.now(UTC))) == []
 
 
 async def _none():
@@ -519,6 +552,6 @@ def test_a_slow_privacy_lookup_does_not_delay_the_reply(monkeypatch):
     with world.client() as client:
         world.app.state.candidate_capture.privacy_state = slow
         started = time.perf_counter()
-        client.post("/conversation", json={"session_id": "s", "conversation_id": "c", "channel": "web", "text": SAY})
+        client.post("/conversation", json={"session_id": "s", "conversation_id": "c", "channel": "reachy", "text": SAY, "input_modality": "voice"})
         assert time.perf_counter() - started < 3
     assert world.pending() == []

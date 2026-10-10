@@ -979,7 +979,7 @@ def create_app(
 
     @app.get(PRIVACY_STATE, dependencies=[Depends(require_remote_auth)])
     async def privacy_state() -> dict:
-        """Phase 44F: the smallest read companion-core needs before it may propose a memory candidate. Privacy mode is "no wake listening": on when no registered robot is armed (so on when there
+        """Phase 44F/48B: the smallest read companion-core needs before it may propose a memory candidate from a ROBOT-VOICE turn (typed turns never ask). Privacy mode is "no wake listening": on when no registered robot is armed (so on when there
         is no robot). Any failure here is an error response, which core treats as unknown and does not capture."""
         manager = app.state.robot_voice_manager
         robots = await app.state.registry.list()

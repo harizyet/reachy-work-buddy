@@ -1,8 +1,9 @@
 """Memory candidates: capture and review (Phase 44F; docs/phase-44f-implementation-proposal.md).
 
 CAPTURE proposes a candidate from the owner's own message, after the reply is final, off the request path. It is OFF unless MEMORY_CANDIDATES_ENABLED and MEMORY_CANDIDATES_CAPTURE_ENABLED are
-both true. Exclusions come from trusted turn state only: spoken turns, channels that are not owner-authenticated text channels, turns another handler answered, attached meetings, turns
-the production classifier labelled sensitive, sensitive text, and privacy mode on or UNKNOWN (the hub lookup fails closed). Assistant text, retrieved records and attachments are not inputs.
+both true. Eligibility comes from trusted turn state only (Phase 48B): typed turns on the owner-authenticated channels (web, android as web, telegram, phone) are eligible with no reference to the robot; a spoken
+turn is eligible only on the robot channel and only when the hub reports an explicit `privacy_mode: false` (embodiment privacy applies to robot-origin turns only; unknown fails closed). Always excluded: any other
+channel or modality, turns another handler answered, attached meetings, turns the production classifier labelled sensitive, and sensitive text. Assistant text, retrieved records and attachments are not inputs.
 REVIEW is the only path to memory: accept calls the existing `add_memory`, writes the existing `memory.created` receipt, and is idempotent (retries, double clicks and crashes cannot create a
 second memory: a state machine, a unique index on the memory source, and a lookup before every insert).
 """
@@ -43,7 +44,12 @@ log = logging.getLogger("companion_core.memory_candidates")
 ENABLED_FLAG = "MEMORY_CANDIDATES_ENABLED"
 CAPTURE_FLAG = "MEMORY_CANDIDATES_CAPTURE_ENABLED"
 CHANNELS_ENV = "MEMORY_CANDIDATES_CHANNELS"
-DEFAULT_CHANNELS = frozenset({"web", "telegram", "phone"})  # owner-authenticated text channels; "reachy" (the robot in the room) is deliberately absent
+# Memory capture policy is decided from the interaction: the channel and modality the hub assigned to an owner-authenticated turn (hub /messages needs the owner session or bearer token, Telegram is
+# the owner's private chat only, and core itself requires the service token). Typed turns on these channels never consult the robot. "reachy" is the robot's voice channel: only there does embodiment
+# privacy (the hub's wake-arm state) apply, because it is the only channel whose input is ambient audio.
+PRIVATE_TEXT_CHANNELS = frozenset({"web", "telegram", "phone"})
+ROBOT_CHANNEL = "reachy"
+DEFAULT_CHANNELS = PRIVATE_TEXT_CHANNELS | {ROBOT_CHANNEL}
 DEFAULT_EXPIRY_DAYS: dict[MemoryType, int | None] = {MemoryType.PROFILE: None, MemoryType.WORKING: 30, MemoryType.EPISODIC: 90}
 _RANK = {Privacy.PUBLIC: 0, Privacy.WORK_PRIVATE: 1, Privacy.SENSITIVE: 2}
 _RECEIPT_NAMESPACE = uuid.UUID("5f0a6e0e-44f0-4f44-9f44-0a44f0a44f44")
@@ -141,10 +147,11 @@ class CandidateCapture:
         c["attempted"] += 1
         if self._stopped:
             return
-        if turn.modality != "text":
-            c["excluded_spoken"] += 1
-        elif turn.channel.lower() not in self.channels:
+        channel = turn.channel.lower()
+        if channel not in self.channels:
             c["excluded_channel"] += 1
+        elif (turn.modality == "voice") != (channel == ROBOT_CHANNEL):
+            c["excluded_spoken" if turn.modality != "text" else "excluded_channel"] += 1  # only the robot channel takes spoken turns, and it takes nothing else
         elif turn.production_handler != "generic_chat":
             c["excluded_handled"] += 1  # a handler answered it (memory.capture, tasks, commands ...): no double capture
         elif turn.attached_meeting:
@@ -192,14 +199,15 @@ class CandidateCapture:
 
     async def _propose(self, turn: CaptureTurn, proposal: rules.Proposal) -> None:
         c = self.counters
-        # Privacy mode: ON or UNKNOWN both disable capture. Only an explicit `privacy_mode: false` from the hub allows it.
-        try:
-            state = await asyncio.wait_for(self.privacy_state(), 1.5)
-        except Exception:  # noqa: BLE001
-            state = None
-        if not isinstance(state, dict) or state.get("privacy_mode") is not False:
-            c["excluded_privacy_unknown" if not isinstance(state, dict) or "privacy_mode" not in state else "excluded_privacy_mode"] += 1
-            return
+        # Embodiment privacy constrains robot-origin turns only. ON or UNKNOWN both disable them; only an explicit `privacy_mode: false` from the hub allows one.
+        if turn.channel.lower() == ROBOT_CHANNEL:
+            try:
+                state = await asyncio.wait_for(self.privacy_state(), 1.5)
+            except Exception:  # noqa: BLE001
+                state = None
+            if not isinstance(state, dict) or state.get("privacy_mode") is not False:
+                c["excluded_privacy_unknown" if not isinstance(state, dict) or "privacy_mode" not in state else "excluded_privacy_mode"] += 1
+                return
         wanted = rules.normalise(proposal.text)
         existing = [rules.normalise(m.content) for m in await self.memory.list_memories()]
         if wanted in existing:
