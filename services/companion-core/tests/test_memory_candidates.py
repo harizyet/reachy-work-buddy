@@ -164,7 +164,25 @@ def test_nothing_is_proposed_from_excluded_sources(monkeypatch, name, kwargs, te
     assert [m.source for m in world.memories()] == (["conversation"] if name == "handled_by_memory_capture" else []), name  # only the owner's explicit "remember" handler writes
 
 
-def test_robot_voice_needs_an_explicit_privacy_off_and_nothing_else_does(monkeypatch):
+def test_an_armed_robot_with_unverified_voice_proposes_nothing(monkeypatch):
+    """Phase 48 owner decision: the speaker is not verified, so robot voice is ineligible even with the robot armed (privacy off), and the hub is not even asked."""
+    assert cs.ROBOT_VOICE_ELIGIBLE is False
+    world = World(monkeypatch, privacy={"privacy_mode": False, "robots": 1})
+    with world.client() as client:
+        world.say(client, SAY, channel="reachy", voice=True)
+        world.say(client, "I always sit by the window", channel="reachy", voice=True, session="s2")
+    assert world.pending() == [] and world.privacy_calls == 0 and world.memories() == []
+    assert world.app.state.candidate_capture.summary()["excluded_robot_unverified"] == 2
+
+
+@pytest.fixture
+def robot_trusted(monkeypatch):
+    """The retained wake/privacy logic for the future Phase 32 integration; not a Phase 48 behaviour."""
+    monkeypatch.setattr(cs, "ROBOT_VOICE_ELIGIBLE", True)
+
+
+@pytest.mark.usefixtures("robot_trusted")
+def test_retained_robot_logic_needs_an_explicit_privacy_off_and_nothing_else_does(monkeypatch):
     for label, state in (("on", {"privacy_mode": True}), ("unknown_field", {}), ("garbage", "yes"), ("raises", "raise"), ("string_false", {"privacy_mode": "false"}), ("null", {"privacy_mode": None})):
         world = World(monkeypatch, privacy=state)
         with world.client() as client:
@@ -188,6 +206,7 @@ def test_private_text_capture_is_independent_of_embodiment_privacy_and_never_ask
     assert c.channel == channel and world.privacy_calls == 0 and world.memories() == []
 
 
+@pytest.mark.usefixtures("robot_trusted")
 @pytest.mark.parametrize(("channel", "voice"), [("web", True), ("phone", True), ("telegram", True), ("reachy", False), ("smoke-signal", False)])
 def test_only_the_robot_takes_spoken_turns_and_the_robot_takes_nothing_typed(monkeypatch, channel, voice):
     world = World(monkeypatch, privacy={"privacy_mode": False})
@@ -196,6 +215,7 @@ def test_only_the_robot_takes_spoken_turns_and_the_robot_takes_nothing_typed(mon
     assert world.pending() == [] and world.privacy_calls == 0
 
 
+@pytest.mark.usefixtures("robot_trusted")
 def test_a_sensitive_labelled_turn_is_excluded_on_every_channel(monkeypatch):
     world = World(monkeypatch, privacy={"privacy_mode": False})
     with world.client() as client:
@@ -541,6 +561,7 @@ def test_a_failing_store_or_a_crashing_submit_never_changes_or_delays_a_reply(mo
         assert crash.say(client, SAY) == expected
 
 
+@pytest.mark.usefixtures("robot_trusted")
 def test_a_slow_privacy_lookup_does_not_delay_the_reply(monkeypatch):
     import time
 

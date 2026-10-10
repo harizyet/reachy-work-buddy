@@ -293,6 +293,7 @@ async def _stale_recover(client, dsn, c2):
 
 @pytest.mark.parametrize(("state", "why"), [({"privacy_mode": True}, "privacy mode on"), ({}, "field missing"), ("error", "hub error"), ({"privacy_mode": "false"}, "not a boolean")])
 def test_privacy_mode_on_or_unknown_on_the_hub_disables_robot_voice_capture_only(dsn, monkeypatch, tmp_path, state, why):
+    monkeypatch.setattr(cs, "ROBOT_VOICE_ELIGIBLE", True)  # the retained logic; robot voice is ineligible by default in Phase 48
     client, asked = boot(dsn, monkeypatch, tmp_path, hub_state=state)
     with client:
         configure(client)

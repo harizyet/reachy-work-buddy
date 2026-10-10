@@ -1,8 +1,7 @@
 """Memory candidates: capture and review (Phase 44F; docs/phase-44f-implementation-proposal.md).
 
 CAPTURE proposes a candidate from the owner's own message, after the reply is final, off the request path. It is OFF unless MEMORY_CANDIDATES_ENABLED and MEMORY_CANDIDATES_CAPTURE_ENABLED are
-both true. Eligibility comes from trusted turn state only (Phase 48B): typed turns on the owner-authenticated channels (web, android as web, telegram, phone) are eligible with no reference to the robot; a spoken
-turn is eligible only on the robot channel and only when the hub reports an explicit `privacy_mode: false` (embodiment privacy applies to robot-origin turns only; unknown fails closed). Always excluded: any other
+both true. Eligibility comes from trusted turn state only (Phase 48B): typed turns on the owner-authenticated channels (web, android as web, telegram, phone) are eligible with no reference to the robot; robot-origin turns are NOT eligible in Phase 48 (ROBOT_VOICE_ELIGIBLE is False until owner verification exists); the retained logic would admit a spoken robot turn only when the hub reports an explicit `privacy_mode: false` (unknown fails closed). Always excluded: any other
 channel or modality, turns another handler answered, attached meetings, turns the production classifier labelled sensitive, and sensitive text. Assistant text, retrieved records and attachments are not inputs.
 REVIEW is the only path to memory: accept calls the existing `add_memory`, writes the existing `memory.created` receipt, and is idempotent (retries, double clicks and crashes cannot create a
 second memory: a state machine, a unique index on the memory source, and a lookup before every insert).
@@ -49,6 +48,9 @@ CHANNELS_ENV = "MEMORY_CANDIDATES_CHANNELS"
 # privacy (the hub's wake-arm state) apply, because it is the only channel whose input is ambient audio.
 PRIVATE_TEXT_CHANNELS = frozenset({"web", "telegram", "phone"})
 ROBOT_CHANNEL = "reachy"
+# Owner decision, 2026-10-10: robot voice is NOT eligible in Phase 48. An armed robot does not show that the speaker is the owner (speaker verification is Phase 32), and nearby people must not be able to
+# populate the owner's candidate queue. The wake-arm/privacy handling below is kept for that future integration; flip this only when owner verification provides trust evidence. Not an environment setting.
+ROBOT_VOICE_ELIGIBLE = False
 DEFAULT_CHANNELS = PRIVATE_TEXT_CHANNELS | {ROBOT_CHANNEL}
 DEFAULT_EXPIRY_DAYS: dict[MemoryType, int | None] = {MemoryType.PROFILE: None, MemoryType.WORKING: 30, MemoryType.EPISODIC: 90}
 _RANK = {Privacy.PUBLIC: 0, Privacy.WORK_PRIVATE: 1, Privacy.SENSITIVE: 2}
@@ -148,7 +150,9 @@ class CandidateCapture:
         if self._stopped:
             return
         channel = turn.channel.lower()
-        if channel not in self.channels:
+        if channel == ROBOT_CHANNEL and not ROBOT_VOICE_ELIGIBLE:
+            c["excluded_robot_unverified"] += 1
+        elif channel not in self.channels:
             c["excluded_channel"] += 1
         elif (turn.modality == "voice") != (channel == ROBOT_CHANNEL):
             c["excluded_spoken" if turn.modality != "text" else "excluded_channel"] += 1  # only the robot channel takes spoken turns, and it takes nothing else

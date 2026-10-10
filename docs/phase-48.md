@@ -89,12 +89,12 @@ Two concepts that were conflated as "privacy" are separated:
 | authenticated private Web chat | yes |
 | authenticated private Android chat | yes |
 | authenticated owner Telegram (authenticated private owner channel) | yes |
-| robot voice | only under its own existing voice/privacy/trust rules (embodiment privacy applies here, and only here) |
+| robot voice | **no, deferred (owner, 2026-10-10)**: an armed robot does not show the speaker is the owner, and nearby people must not populate the owner's candidate queue. Re-enable when Phase 32 owner verification provides trust evidence. The wake-arm/privacy logic is retained for that integration (`ROBOT_VOICE_ELIGIBLE = False` in code, not an environment setting) |
 | shared, public or untrusted channel | no |
 | sensitive turn | no, unless the existing memory/privacy policy explicitly permits it |
 | `MEMORY_CANDIDATES_CAPTURE_ENABLED` false (or review flag off) | never; remains the global kill switch |
 
-This is the smallest change that removes the robot dependency, not an auth or privacy rewrite. It keeps the existing exclusions (sensitive text, assistant text, retrieved or attached content) and adds no endpoint or client-supplied trust field. **Implemented in `0304ab8` (2026-10-10), not deployed:** channel and modality decide eligibility; only robot-voice turns consult `GET /privacy/state`. Evidence: [48B record](verification/phase-48b-capture-eligibility-2026-10-10.md).
+This is the smallest change that removes the robot dependency, not an auth or privacy rewrite. It keeps the existing exclusions (sensitive text, assistant text, retrieved or attached content) and adds no endpoint or client-supplied trust field. **Implemented in `0304ab8` (2026-10-10), not deployed:** channel and modality decide eligibility; robot-voice turns are ineligible in Phase 48 (the retained logic would consult `GET /privacy/state` only for them). Evidence: [48B record](verification/phase-48b-capture-eligibility-2026-10-10.md).
 
 ### 4.3 Trial
 

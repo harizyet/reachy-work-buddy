@@ -18,6 +18,10 @@ Before: every capture first asked the hub `GET /privacy/state`, which says "priv
 
 **Behavioural note for the owner.** Robot voice is now eligible whenever a robot is armed, as the target policy says. Speaker identity is not verified (Phase 32), so anyone speaking near an armed robot can produce a proposal; proposals still need the owner's text review and are capped at 5 per hour and 20 per day. A one-line default (`DEFAULT_CHANNELS`) removes the robot channel if the owner prefers.
 
+## 1a. Owner decision after this record: robot voice is ineligible (2026-10-10)
+
+Speaker identity is not verified, so an armed robot does not establish that the speaker is the owner. `ROBOT_VOICE_ELIGIBLE = False` (a code constant, not an environment setting) makes every robot-origin turn ineligible (counter `excluded_robot_unverified`, no hub lookup). The wake-arm/privacy logic stays for the future Phase 32 integration and is exercised by tests that set the constant true. Regression test `test_an_armed_robot_with_unverified_voice_proposes_nothing`: armed robot (privacy off) + robot voice = 0 candidates. **Robot-origin memory capture is deferred until owner verification is available.** In the table below, the two robot-voice rows describe the retained logic as first built (the stub-armed case would now give 0).
+
 ## 2. Automated tests
 
 85 candidate tests pass (unit, real-PostgreSQL production lifespan, hub), covering: typed web/phone/telegram capture with privacy on, unknown, or the hub down, and the hub never consulted; robot voice for each privacy state; spoken-on-other-channel and typed-on-robot exclusions; sensitive turns on every channel; each flag combination across every channel; a bare request refused with 401 and nothing captured; a web turn on a database with no robot accepted into exactly one memory and one `memory.created` receipt. Full suites on the committed tree: companion-core, reachy-hub and shared 2,393 passed, 20 skipped, **3 failed, all known baseline failures** (`test_reconcile_repairs...`, `test_historical_mode_reaches_the_prefilter...`, hub `test_spoken_command_text_does_not_actuate_the_robot`). `ruff` clean.
