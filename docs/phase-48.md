@@ -1,6 +1,6 @@
 # Phase 48 — Phase 44 activation and operational acceptance
 
-**Status: PROPOSED 2026-10-10; 48A preparation started the same day. Nothing in this phase is activated.** Every Phase 44 flag is still OFF in production ([deployment record](verification/phase-44-deployment-2026-10-10.md)).
+**Status: IN PROGRESS. 48A rehearsal passed and `MEMORY_CANDIDATES_ENABLED=true` is live in production (2026-10-10, review only, capture off; [record](verification/phase-48a-review-activation-2026-10-10.md)); the owner's browser check is pending. Every other Phase 44 flag is still OFF.**
 
 Phase 44 is engineering-complete and deployed, but its capabilities are disabled behind feature flags. Phase 48 converts that code into capabilities that are proven on the owner's real data and then used, limited, or rejected on evidence. **It adds no cognitive feature:** no new memory architecture, GraphRAG, relationship store, model-based candidate extractor, curiosity engine or entity graph (all remain deferred, see the [closure report](phase-44-closure-report.md#2-deferred-by-explicit-decision)).
 
@@ -198,3 +198,4 @@ Robot work follows the standing safety rules in [AGENTS.md](../AGENTS.md); this 
 | 2026-10-10 | all | Phase proposed and documented. Production flag state read: none of the six flags set (only `KNOWLEDGE_INDEXING_ENABLED=false` is in core's environment). |
 | 2026-10-10 | 48A | Compose pass-through added for both memory-candidate flags (default false; not deployed, running core unchanged). Robot-armed coupling of capture confirmed in code. |
 | 2026-10-10 | 48B | Owner decision: memory is channel-independent from the robot. Capture policy separated from embodiment privacy (section 4); coupling is an activation blocker; capture stays off until fixed and tested. Robot is not a gate before 48H. |
+| 2026-10-10 | 48A | Disposable-stack rehearsal with the production images passed (idempotent accept, edit, reject, suppress, forget, capture-off, UI, rollback). `MEMORY_CANDIDATES_ENABLED=true` set in production, core-only recreate, capture OFF, queue empty. Record: [48A](verification/phase-48a-review-activation-2026-10-10.md). Awaiting the owner's browser check. |

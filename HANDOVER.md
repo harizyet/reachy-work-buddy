@@ -6,7 +6,7 @@ The [documentation index](docs/README.md) defines ownership;
 
 ## Phase 48 (proposed 2026-10-10; read with the Phase 44 section below)
 
-[docs/phase-48.md](docs/phase-48.md) activates the disabled Phase 44 flags in stages 48A to 48H (no new features). **Production is unchanged: all six flags are OFF and none of the memory-candidate flags is in Compose.** Current step: 48A preparation (see the progress log in the phase page). A production flag change, core recreate or capture trial needs the owner's go-ahead for that stage.
+[docs/phase-48.md](docs/phase-48.md) activates the disabled Phase 44 flags in stages 48A to 48H (no new features). **Production: `MEMORY_CANDIDATES_ENABLED=true` since 2026-10-10 13:43 UTC (review only, queue empty; [48A record](docs/verification/phase-48a-review-activation-2026-10-10.md)); capture and all knowledge flags are OFF.** Rollback: set the flag false in `deploy/homelab/.env` and `up -d --no-build --no-deps companion-core`. Next: the owner checks the Memory page; then the **48B blocker**: make capture eligibility depend on channel trust (Web, Android, owner Telegram; robot voice under its own rules), not on the robot being wake-armed (`GET /privacy/state` in the hub, `_propose` in `memory/candidate_service.py`), with tests, before capture is enabled. The robot is not a gate until the 48H regression.
 
 ## Phase 44 where things stand (2026-10-10; read this first)
 
