@@ -1,0 +1,2 @@
+{"event": "START", "run_id": "run-rehearsal-dev15", "manifest_sha256": "9925bd4a7b10409fd17462afa37cd52b7096c4ccfcd8ff9819c95d07d12b862a", "authorization_sha256": "e7f73e862533d07afcc32725e4f972418752cae656fc408a6e866827c866b1c7", "at": "2026-10-10T05:12:20.883442+00:00"}
+{"event": "COMPLETE", "run_id": "run-rehearsal-dev15", "manifest_sha256": "9925bd4a7b10409fd17462afa37cd52b7096c4ccfcd8ff9819c95d07d12b862a", "authorization_sha256": "e7f73e862533d07afcc32725e4f972418752cae656fc408a6e866827c866b1c7", "at": "2026-10-10T05:12:23.053693+00:00"}

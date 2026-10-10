@@ -1,0 +1,130 @@
+{
+ "formal_acceptance_directory_exists": false,
+ "purpose": "synthetic end-to-end CLI rehearsal; mock service only; nothing about any real system",
+ "scenarios": [
+  {
+   "cases": 140,
+   "counts": {
+    "FAIL": 0,
+    "INDETERMINATE": 0,
+    "PASS": 10
+   },
+   "criteria": {
+    "1": "PASS",
+    "2": "PASS",
+    "3": "PASS",
+    "4": "PASS",
+    "5": "PASS",
+    "6": "PASS",
+    "7": "PASS",
+    "8": "PASS",
+    "9": "PASS",
+    "10": "PASS"
+   },
+   "criterion6": {
+    "adjudicated_fraction": 1.0,
+    "cited_claims": 75,
+    "credited_by_adjudication": 8,
+    "mechanical_fraction": 0.8933333333333333,
+    "status": "PASS"
+   },
+   "evaluate_exit": 0,
+   "kappa": 0.9677202420981844,
+   "overall": {
+    "reconciled": "ACCEPTED",
+    "reviewer_A": "ACCEPTED",
+    "reviewer_B": "ACCEPTED"
+   },
+   "p0_posts": 140,
+   "run_exit": 0,
+   "scenario": "good",
+   "second_run_exit": 1,
+   "second_run_refused": true
+  },
+  {
+   "cases": 80,
+   "counts": {
+    "FAIL": 0,
+    "INDETERMINATE": 3,
+    "PASS": 7
+   },
+   "criteria": {
+    "1": "PASS",
+    "2": "PASS",
+    "3": "PASS",
+    "4": "PASS",
+    "5": "PASS",
+    "6": "PASS",
+    "7": "INDETERMINATE",
+    "8": "INDETERMINATE",
+    "9": "INDETERMINATE",
+    "10": "PASS"
+   },
+   "criterion6": {
+    "adjudicated_fraction": 1.0,
+    "cited_claims": 55,
+    "credited_by_adjudication": 0,
+    "mechanical_fraction": 1.0,
+    "status": "PASS"
+   },
+   "evaluate_exit": 0,
+   "kappa": 0.9573522878720568,
+   "overall": {
+    "reconciled": "NOT ESTABLISHED",
+    "reviewer_A": "NOT ESTABLISHED",
+    "reviewer_B": "NOT ESTABLISHED"
+   },
+   "p0_posts": 80,
+   "run_exit": 0,
+   "scenario": "thin",
+   "second_run_exit": 1,
+   "second_run_refused": true
+  },
+  {
+   "cases": 140,
+   "counts": {
+    "FAIL": 1,
+    "INDETERMINATE": 0,
+    "PASS": 9
+   },
+   "criteria": {
+    "1": "PASS",
+    "2": "PASS",
+    "3": "PASS",
+    "4": "PASS",
+    "5": "PASS",
+    "6": "PASS",
+    "7": "FAIL",
+    "8": "PASS",
+    "9": "PASS",
+    "10": "PASS"
+   },
+   "criterion6": {
+    "adjudicated_fraction": 1.0,
+    "cited_claims": 75,
+    "credited_by_adjudication": 30,
+    "mechanical_fraction": 0.6,
+    "status": "PASS"
+   },
+   "evaluate_exit": 0,
+   "kappa": 0.9754613174935489,
+   "overall": {
+    "reconciled": "REJECTED",
+    "reviewer_A": "REJECTED",
+    "reviewer_B": "REJECTED"
+   },
+   "p0_posts": 140,
+   "run_exit": 0,
+   "scenario": "bad",
+   "second_run_exit": 1,
+   "second_run_refused": true
+  }
+ ],
+ "service_failure_mid_run": {
+  "exit": 3,
+  "rerun_exit": 1,
+  "rerun_refused": true,
+  "rows_flushed": 40,
+  "state": "ABORTED"
+ }
+}

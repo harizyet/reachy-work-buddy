@@ -1,0 +1,40 @@
+{
+  "version": 2,
+  "locked": "These rules are fixed and hashed into the acceptance manifest BEFORE any acceptance data exists. dev16_criterion6.py refuses to adjudicate if this file's SHA-256 differs from the manifest's.",
+  "threshold": {
+    "min_fraction": 0.95,
+    "min_cited_claims": 40,
+    "unchanged_from_evaluator_v3": true
+  },
+  "gating": "adjudicated",
+  "also_reported": "mechanical",
+  "retrospective_changes": "none: frozen results and the mechanical verdict are never edited; adjudication outputs are new files",
+  "unit": "one cited claim = (case id, gold atom id) for which evaluator.claim_supported is not None",
+  "evidence_universe": {
+    "definition": "A cited record is IN the evidence universe of a case iff (a) it appears in the evaluated reply's evidence manifest, (b) kbench.security.violations(record, the case's access profile) is empty (not forgotten, not expired, within the sensitivity ceiling, within project scope, destination permitted), and (c) it is not in the case's excluded_refs.",
+    "who_decides": "code, from the corpus facts and the case; reviewers are shown these facts and never judge them"
+  },
+  "reviewer_question": "Does the cited record, read with its admissible context (its title and, for a meeting segment, its resolved speaker, both shown), support this specific claim (right subject, relation, value, time scope)? Answer SUPPORTS with a verbatim span quoted from the record, DOES_NOT_SUPPORT, or UNRESOLVABLE when the claim, the passage and the admissible context do not settle it. Judge only what the record literally says; a decision is not a deployment; a relative time such as 'this month' is never resolved to a calendar period. Never infer a binding from a name's absence or presence alone.",
+  "category_derivation": {
+    "1": "reviewer says SUPPORTS, the record is in the evidence universe, and it is not a registered source of the atom: a supported claim citing an authorised, in-scope record omitted from the evaluation manifest. ELIGIBLE for credit.",
+    "2": "reviewer says SUPPORTS but the record is NOT in the evidence universe (unauthorised or out of scope): NOT eligible, never credited.",
+    "3": "reviewer says DOES_NOT_SUPPORT: NOT eligible, never credited.",
+    "unresolved": "reviewer says UNRESOLVABLE: the case stays unresolved. It is never credited and is never counted as supported or as unsupported by the reviewer; it is reported."
+  },
+  "span_check": "the quoted span must occur verbatim in the record text or its shown title after collapsing whitespace and ignoring case; a SUPPORTS with no valid span is void",
+  "quorum": "category 1 is credited only when BOTH independent reviewers (A and B) say SUPPORTS with a valid span for that record; one reviewer, a disagreement, an UNRESOLVABLE or a void span is not credited",
+  "credit_rule": "a cited claim is credited iff every cited id is either a registered source that supports it (mechanical) or a category-1 record under the quorum. Any cited id that is category 2 or 3 leaves the claim uncredited. Unauthorised citations remain criterion-5 failures regardless.",
+  "reviewed_population": {
+    "mechanically_unsupported_claims": "all",
+    "claims_whose_cited_record_text_does_not_contain_the_atom_subject": "all, as a DIAGNOSTIC only: the absence of an explicit subject name is not evidence of incorrect or non-direct binding and never decides an outcome; it only sends the claim to a reviewer and is reported as a flag. Semantic support is established from the claim, the cited passage and the admissible context (title, resolved speaker)",
+    "controls": "30 mechanically supported claims drawn by seed (manifest seed) from the remainder, mixed in the same shuffled stream; reviewers are not told which claims are controls or the mechanical verdict"
+  },
+  "reporting": "criterion 6 is reported with BOTH figures: mechanical = faithful / cited and adjudicated = (faithful + credited) / cited, each with the same >= 95% threshold and 40-claim floor; every adjudicated claim is listed by case id with quoted span and both reviewers' answers",
+  "status_rules": {
+    "PASS": "cited >= 40 and adjudicated >= 0.95",
+    "FAIL": "cited >= 40 and even crediting every still-pending or unresolved eligible claim would leave the fraction below 0.95",
+    "INDETERMINATE": "cited < 40, or crediting pending or unresolved claims could still change the verdict (for example reviewer B unassigned, or an UNRESOLVABLE answer)"
+  },
+  "independence": "no independence is claimed unless reviewer B is confirmed, has completed the review, and agreement is reported; reviewer A is the pipeline author",
+  "category_grounding": "registration = the case's registered gold sources; authorisation and scope = the corpus facts of the case's access profile (kbench.security.violations), the case's excluded_refs and the evaluation manifest. All are authoritative case metadata; none is inferred from any model output"
+}

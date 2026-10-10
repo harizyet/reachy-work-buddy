@@ -1,0 +1,36 @@
+{
+ "criterion6": {
+  "adjudicated_fraction": 0.9581151832460733,
+  "best_case_fraction": 1.0,
+  "cited_claims": 191,
+  "mechanical_fraction": 0.9581151832460733,
+  "mechanical_supported": 183,
+  "pending": 8,
+  "status": "PASS"
+ },
+ "overall_without_labels": "NOT ESTABLISHED",
+ "packet_sizes": {
+  "c6_cited_claims_total": 191,
+  "c6_claims_reviewed": 54,
+  "c6_controls": 30,
+  "c6_mechanically_unsupported": 8,
+  "p0_control_replies": 35,
+  "p0_parts": 373,
+  "p0_replies": 208
+ },
+ "purpose": "rehearsal on consumed dev15 data; P0 replies replayed, no model call",
+ "run": "run-rehearsal-dev15",
+ "state": "COMPLETE",
+ "statuses_without_labels": {
+  "1": "INDETERMINATE",
+  "2": "INDETERMINATE",
+  "3": "INDETERMINATE",
+  "4": "INDETERMINATE",
+  "5": "PASS",
+  "6": "PASS",
+  "7": "INDETERMINATE",
+  "8": "INDETERMINATE",
+  "9": "INDETERMINATE",
+  "10": "INDETERMINATE"
+ }
+}

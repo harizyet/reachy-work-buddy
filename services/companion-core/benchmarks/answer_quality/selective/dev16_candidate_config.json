@@ -1,0 +1,20 @@
+{
+ "admission_policy": {
+  "allow_context": true,
+  "auth_max_age_s": 60.0,
+  "clock_skew_s": 2.0,
+  "equivalences": [],
+  "expected_policy_version": "p1",
+  "qualified_object_check": true
+ },
+ "arm": "candidate",
+ "authorisation_model": "per case: kbench.security.violations(record, the case's access profile) empty -> authorised; checked_at = now - 3 s; policy 'p1'; acl revision 1",
+ "decomposer_and_registry": "companion_core.knowledge.answerability_b1.questions / registry (frozen by CANDIDATE_FREEZE_2026-10-10.sha256)",
+ "evaluation_clock_now": "2026-10-13T12:00:00+00:00",
+ "evidence_ids": "one id per distinct record in pool order (i2_eval.build_world)",
+ "output": "one evaluator row per case, same order as the frozen cases file",
+ "path": "deterministic selective answering (Stage B-1), no model",
+ "planner": "i2b_eval.make_planners(world, cases)['T-new']  (question text only; entity registry = grammar + entries harvested from the record pool)",
+ "relation_definitions_sha256": "20dfeee1208e0f97c5540f1aead93d3043578de158eb22f3f756351bb48f5ede",
+ "row_builder": "deterministic_criteria.question_row with a per-case world view"
+}

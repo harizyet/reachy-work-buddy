@@ -1,0 +1,1266 @@
+{
+ "key": {
+  "C04690015": {
+   "atom_id": "A0140",
+   "case_id": "D15-057",
+   "why": "not_direct_diagnostic"
+  },
+  "C06aa1a80": {
+   "atom_id": "A0158",
+   "case_id": "D15-007",
+   "why": "not_direct_diagnostic"
+  },
+  "C06b036cb": {
+   "atom_id": "A0152",
+   "case_id": "D15-172",
+   "why": "control"
+  },
+  "C0d8d3d28": {
+   "atom_id": "A0153",
+   "case_id": "D15-162",
+   "why": "not_direct_diagnostic"
+  },
+  "C0fcff45e": {
+   "atom_id": "A0234",
+   "case_id": "D15-089",
+   "why": "control"
+  },
+  "C116867f0": {
+   "atom_id": "A0046",
+   "case_id": "D15-077",
+   "why": "control"
+  },
+  "C12180855": {
+   "atom_id": "A0156",
+   "case_id": "D15-052",
+   "why": "not_direct_diagnostic"
+  },
+  "C2226d1db": {
+   "atom_id": "A0093",
+   "case_id": "D15-152",
+   "why": "control"
+  },
+  "C264ba06b": {
+   "atom_id": "A0136",
+   "case_id": "D15-008",
+   "why": "control"
+  },
+  "C270f9971": {
+   "atom_id": "A0142",
+   "case_id": "D15-091",
+   "why": "not_direct_diagnostic"
+  },
+  "C39e49c7b": {
+   "atom_id": "A0138",
+   "case_id": "D15-043",
+   "why": "not_direct_diagnostic"
+  },
+  "C3ac33c0a": {
+   "atom_id": "A0230",
+   "case_id": "D15-164",
+   "why": "control"
+  },
+  "C3f04dcff": {
+   "atom_id": "A0141",
+   "case_id": "D15-071",
+   "why": "not_direct_diagnostic"
+  },
+  "C514e36cb": {
+   "atom_id": "A0153",
+   "case_id": "D15-084",
+   "why": "not_direct_diagnostic"
+  },
+  "C552b560e": {
+   "atom_id": "A0160",
+   "case_id": "D15-005",
+   "why": "not_direct_diagnostic"
+  },
+  "C692e5895": {
+   "atom_id": "A0145",
+   "case_id": "D15-068",
+   "why": "control"
+  },
+  "C6c618dc5": {
+   "atom_id": "A0008",
+   "case_id": "D15-132",
+   "why": "mechanically_unsupported"
+  },
+  "C6edfbff2": {
+   "atom_id": "A0008",
+   "case_id": "D15-139",
+   "why": "mechanically_unsupported"
+  },
+  "C752a393a": {
+   "atom_id": "A0186",
+   "case_id": "D15-089",
+   "why": "control"
+  },
+  "C7cf6fadd": {
+   "atom_id": "A0099",
+   "case_id": "D15-100",
+   "why": "control"
+  },
+  "C7d2cc160": {
+   "atom_id": "A0042",
+   "case_id": "D15-094",
+   "why": "control"
+  },
+  "C800c5bf7": {
+   "atom_id": "A0142",
+   "case_id": "D15-003",
+   "why": "not_direct_diagnostic"
+  },
+  "C871cfc48": {
+   "atom_id": "A0117",
+   "case_id": "D15-097",
+   "why": "control"
+  },
+  "C89f16c26": {
+   "atom_id": "A0157",
+   "case_id": "D15-073",
+   "why": "not_direct_diagnostic"
+  },
+  "C8ee05e7e": {
+   "atom_id": "A0059",
+   "case_id": "D15-075",
+   "why": "control"
+  },
+  "C91ead630": {
+   "atom_id": "A0089",
+   "case_id": "D15-066",
+   "why": "control"
+  },
+  "C93a68bcc": {
+   "atom_id": "A0153",
+   "case_id": "D15-164",
+   "why": "not_direct_diagnostic"
+  },
+  "C9678d118": {
+   "atom_id": "A0010",
+   "case_id": "D15-130",
+   "why": "mechanically_unsupported"
+  },
+  "C970245c8": {
+   "atom_id": "A0146",
+   "case_id": "D15-062",
+   "why": "control"
+  },
+  "C98b97530": {
+   "atom_id": "A0069",
+   "case_id": "D15-048",
+   "why": "control"
+  },
+  "C9904474b": {
+   "atom_id": "A0158",
+   "case_id": "D15-093",
+   "why": "not_direct_diagnostic"
+  },
+  "C9ce01fee": {
+   "atom_id": "A0113",
+   "case_id": "D15-103",
+   "why": "control"
+  },
+  "C9d52332e": {
+   "atom_id": "A0007",
+   "case_id": "D15-059",
+   "why": "mechanically_unsupported"
+  },
+  "C9f8b3822": {
+   "atom_id": "A0161",
+   "case_id": "D15-117",
+   "why": "control"
+  },
+  "Ca4031f1a": {
+   "atom_id": "A0010",
+   "case_id": "D15-125",
+   "why": "mechanically_unsupported"
+  },
+  "Cab121cc9": {
+   "atom_id": "A0066",
+   "case_id": "D15-076",
+   "why": "control"
+  },
+  "Cbaa6a073": {
+   "atom_id": "A0002",
+   "case_id": "D15-083",
+   "why": "control"
+  },
+  "Cc109b11c": {
+   "atom_id": "A0008",
+   "case_id": "D15-081",
+   "why": "mechanically_unsupported"
+  },
+  "Cc6e9e317": {
+   "atom_id": "A0045",
+   "case_id": "D15-086",
+   "why": "control"
+  },
+  "Ccd3065b7": {
+   "atom_id": "A0149",
+   "case_id": "D15-094",
+   "why": "control"
+  },
+  "Cd002eca8": {
+   "atom_id": "A0234",
+   "case_id": "D15-074",
+   "why": "control"
+  },
+  "Cd0a53f7d": {
+   "atom_id": "A0007",
+   "case_id": "D15-120",
+   "why": "mechanically_unsupported"
+  },
+  "Cd3114d9c": {
+   "atom_id": "A0232",
+   "case_id": "D15-166",
+   "why": "control"
+  },
+  "Cdd16c869": {
+   "atom_id": "A0180",
+   "case_id": "D15-041",
+   "why": "control"
+  },
+  "Cde16f820": {
+   "atom_id": "A0154",
+   "case_id": "D15-017",
+   "why": "not_direct_diagnostic"
+  },
+  "Ce5ffc182": {
+   "atom_id": "A0161",
+   "case_id": "D15-055",
+   "why": "control"
+  },
+  "Ceae449da": {
+   "atom_id": "A0232",
+   "case_id": "D15-172",
+   "why": "control"
+  },
+  "Ceb89b75e": {
+   "atom_id": "A0178",
+   "case_id": "D15-078",
+   "why": "control"
+  },
+  "Cecaead70": {
+   "atom_id": "A0138",
+   "case_id": "D15-107",
+   "why": "not_direct_diagnostic"
+  },
+  "Ced6e1c70": {
+   "atom_id": "A0160",
+   "case_id": "D15-092",
+   "why": "not_direct_diagnostic"
+  },
+  "Cf4758d30": {
+   "atom_id": "A0010",
+   "case_id": "D15-072",
+   "why": "mechanically_unsupported"
+  },
+  "Cf9f3e1ab": {
+   "atom_id": "A0087",
+   "case_id": "D15-142",
+   "why": "control"
+  },
+  "Cfa4f2df0": {
+   "atom_id": "A0114",
+   "case_id": "D15-106",
+   "why": "control"
+  },
+  "Cfdfd6976": {
+   "atom_id": "A0232",
+   "case_id": "D15-082",
+   "why": "control"
+  }
+ },
+ "selected": [
+  {
+   "atom_id": "A0142",
+   "case_id": "D15-003",
+   "cited_ids": [
+    "E245"
+   ],
+   "gold": [
+    "keep Kestrel-9B as the default model"
+   ],
+   "mechanical": true,
+   "question": "Which model did Vesper decide to keep?",
+   "registered": {
+    "E245": true
+   },
+   "reply": "The records say the decision for Vesper was to keep Kestrel-9B as the default model [E245]. They do not say whether it has been carried out.",
+   "subject": "Vesper",
+   "why": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0160",
+   "case_id": "D15-005",
+   "cited_ids": [
+    "E299"
+   ],
+   "gold": [
+    "Pablo Reyes",
+    "Olga Petrova"
+   ],
+   "mechanical": true,
+   "question": "Who was in the Quartz planning meeting?",
+   "registered": {
+    "E299": true
+   },
+   "reply": "The attendees of the Quartz planning meeting are Pablo Reyes and Olga Petrova [E299].",
+   "subject": "Quartz",
+   "why": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0158",
+   "case_id": "D15-007",
+   "cited_ids": [
+    "E297"
+   ],
+   "gold": [
+    "Kavya Menon",
+    "Bruno Keller"
+   ],
+   "mechanical": true,
+   "question": "Who was in the Vesper planning meeting?",
+   "registered": {
+    "E297": true
+   },
+   "reply": "The attendees of the Vesper planning meeting are Kavya Menon and Bruno Keller [E297].",
+   "subject": "Vesper",
+   "why": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0154",
+   "case_id": "D15-017",
+   "cited_ids": [
+    "E293"
+   ],
+   "gold": [
+    "Yusuf Demir",
+    "Umar Bello"
+   ],
+   "mechanical": true,
+   "question": "Who was in the Marlin planning meeting?",
+   "registered": {
+    "E293": true
+   },
+   "reply": "The attendees of the Marlin planning meeting are Yusuf Demir and Umar Bello [E293].",
+   "subject": "Marlin",
+   "why": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0138",
+   "case_id": "D15-043",
+   "cited_ids": [
+    "E189"
+   ],
+   "gold": [
+    "keep Heron-12B as the default model"
+   ],
+   "mechanical": true,
+   "question": "Which model did Marlin decide to keep, and who signs off Willow security?",
+   "registered": {
+    "E189": true
+   },
+   "reply": "The records say the decision for Marlin was to keep Heron-12B as the default model [E189]. They do not say whether it has been carried out.\nThe records do not say the security reviewer for Willow.",
+   "subject": "Marlin",
+   "why": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0156",
+   "case_id": "D15-052",
+   "cited_ids": [
+    "E295"
+   ],
+   "gold": [
+    "Farid Haddad",
+    "Wen Zhao"
+   ],
+   "mechanical": true,
+   "question": "Who attended the Osprey planning meeting, and when is the Marlin lead's next vacation?",
+   "registered": {
+    "E295": true
+   },
+   "reply": "The attendees of the Osprey planning meeting are Farid Haddad and Wen Zhao [E295].\nThe records do not say the next time away for the Marlin lead.",
+   "subject": "Osprey",
+   "why": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0140",
+   "case_id": "D15-057",
+   "cited_ids": [
+    "E223"
+   ],
+   "gold": [
+    "keep Swift-6B as the default model"
+   ],
+   "mechanical": true,
+   "question": "Which model did Osprey decide to keep, and how large can a Turret API message be?",
+   "registered": {
+    "E223": true
+   },
+   "reply": "The records say the decision for Osprey was to keep Swift-6B as the default model [E223]. They do not say whether it has been carried out.\nThe records do not say the maximum message size of the Turret API.",
+   "subject": "Osprey",
+   "why": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0007",
+   "case_id": "D15-059",
+   "cited_ids": [
+    "E100"
+   ],
+   "gold": [
+    "Swift-20B"
+   ],
+   "mechanical": false,
+   "question": "What is Cedar's default model, and how large can a Sluice cache message be?",
+   "registered": {
+    "E100": false
+   },
+   "reply": "The default model of Cedar is Swift-20B [E100].\nThe records do not say the maximum message size of the Sluice cache.",
+   "subject": "Cedar",
+   "why": "mechanically_unsupported"
+  },
+  {
+   "atom_id": "A0141",
+   "case_id": "D15-071",
+   "cited_ids": [
+    "E233"
+   ],
+   "gold": [
+    "keep Kestrel-3B as the default model"
+   ],
+   "mechanical": true,
+   "question": "Who is the Quartz lead, and which model did Tamarind decide to keep, and what was Cedar's default model before October?",
+   "registered": {
+    "E233": true
+   },
+   "reply": "The lead of Quartz is Pablo Reyes [E57].\nThe records say the decision for Tamarind was to keep Kestrel-3B as the default model [E233]. They do not say whether it has been carried out.\nPreviously, the default model of Cedar was Merlin-2B [E99].",
+   "subject": "Tamarind",
+   "why": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0010",
+   "case_id": "D15-072",
+   "cited_ids": [
+    "E106"
+   ],
+   "gold": [
+    "Swift-6B"
+   ],
+   "mechanical": false,
+   "question": "Which model does Osprey use by default, and by when does Elena Marsh have to circulate the written summary, and how many retries did the archived Hopper ingest service architecture allow?",
+   "registered": {
+    "E106": false
+   },
+   "reply": "The default model of Osprey is Swift-6B [E106].\nThe deadline for Elena Marsh's written summary is Tuesday [E131].\nPreviously, the retry limit of the Hopper ingest service was 6 retries [E175].",
+   "subject": "Osprey",
+   "why": "mechanically_unsupported"
+  },
+  {
+   "atom_id": "A0157",
+   "case_id": "D15-073",
+   "cited_ids": [
+    "E296"
+   ],
+   "gold": [
+    "Rania Said",
+    "Amara Osei"
+   ],
+   "mechanical": true,
+   "question": "Who was in the Tamarind planning meeting, and who has the on-call duty for Tamarind, and who will fix the Willow rollback test?",
+   "registered": {
+    "E296": true
+   },
+   "reply": "The attendees of the Tamarind planning meeting are Rania Said and Amara Osei [E296].\nThe person on call for Tamarind is Quinn Abbott [E118] (the record says \"this month\").\nThe records do not say the person fixing the Willow rollback test.",
+   "subject": "Tamarind",
+   "why": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0008",
+   "case_id": "D15-081",
+   "cited_ids": [
+    "E102"
+   ],
+   "gold": [
+    "Heron-12B"
+   ],
+   "mechanical": false,
+   "question": "What is Marlin's default model, and who is the Vesper lead, and who is going to audit the Quartz build logs after the incident?",
+   "registered": {
+    "E102": false
+   },
+   "reply": "The default model of Marlin is Heron-12B [E102].\nThe lead of Vesper is Kavya Menon [E44].\nThe records do not say the person who audits the Quartz build logs.",
+   "subject": "Marlin",
+   "why": "mechanically_unsupported"
+  },
+  {
+   "atom_id": "A0153",
+   "case_id": "D15-084",
+   "cited_ids": [
+    "E292"
+   ],
+   "gold": [
+    "Liam Oconnor",
+    "Ines Duarte"
+   ],
+   "mechanical": true,
+   "question": "Which model does Quartz use by default, and who attended the Cedar planning meeting, and when is the Osprey lead's next vacation?",
+   "registered": {
+    "E292": true
+   },
+   "reply": "The records do not say the default model of Quartz. A record says Merlin-2B was decided on for the default model of Quartz, but the records do not say it is in place [E279].\nThe attendees of the Cedar planning meeting are Liam Oconnor and Ines Duarte [E292].\nThe records do not say the next time away for the Osprey lead.",
+   "subject": "Cedar",
+   "why": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0142",
+   "case_id": "D15-091",
+   "cited_ids": [
+    "E245"
+   ],
+   "gold": [
+    "keep Kestrel-9B as the default model"
+   ],
+   "mechanical": true,
+   "question": "Which model did Vesper decide to keep, and which host serves Swift-6B, and what was Marlin's default model before October?",
+   "registered": {
+    "E245": true
+   },
+   "reply": "The records say the decision for Vesper was to keep Kestrel-9B as the default model [E245]. They do not say whether it has been carried out.\nThe host running Swift-6B is the edge host [E144] [E160].\nPreviously, the default model of Marlin was Kestrel-3B [E101].",
+   "subject": "Vesper",
+   "why": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0160",
+   "case_id": "D15-092",
+   "cited_ids": [
+    "E299"
+   ],
+   "gold": [
+    "Pablo Reyes",
+    "Olga Petrova"
+   ],
+   "mechanical": true,
+   "question": "Who attended the Quartz planning meeting, and what is Ines Duarte reviewing, and when is the Vesper lead's next vacation?",
+   "registered": {
+    "E299": true
+   },
+   "reply": "The attendees of the Quartz planning meeting are Pablo Reyes and Olga Petrova [E299].\nInes Duarte reviews Conduit settings [E137].\nThe records do not say the next time away for the Vesper lead.",
+   "subject": "Quartz",
+   "why": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0158",
+   "case_id": "D15-093",
+   "cited_ids": [
+    "E297"
+   ],
+   "gold": [
+    "Kavya Menon",
+    "Bruno Keller"
+   ],
+   "mechanical": true,
+   "question": "Who was in the Vesper planning meeting, and when is Ironside Backup support open on weekdays, and what was the old retry limit of the Gantry scheduler?",
+   "registered": {
+    "E297": true
+   },
+   "reply": "The attendees of the Vesper planning meeting are Kavya Menon and Bruno Keller [E297].\nThe weekday support hours of Ironside Backup are 9 to 7 [E167].\nPreviously, the retry limit of the Gantry scheduler was 2 retries [E172].",
+   "subject": "Vesper",
+   "why": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0138",
+   "case_id": "D15-107",
+   "cited_ids": [
+    "E189"
+   ],
+   "gold": [
+    "keep Heron-12B as the default model"
+   ],
+   "mechanical": true,
+   "question": "When does the Willow standup start, and which model did Marlin decide to keep?",
+   "registered": {
+    "E189": true
+   },
+   "reply": "The records disagree on the standup time for Willow: one record says 10 [E84]; another says 12 [E85]. They do not say which applies.\nThe records say the decision for Marlin was to keep Heron-12B as the default model [E189]. They do not say whether it has been carried out.",
+   "subject": "Marlin",
+   "why": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0007",
+   "case_id": "D15-120",
+   "cited_ids": [
+    "E100"
+   ],
+   "gold": [
+    "Swift-20B"
+   ],
+   "mechanical": false,
+   "question": "Who is fixing the Sable rollback test, and which model does Cedar use by default?",
+   "registered": {
+    "E100": false
+   },
+   "reply": "The records do not say the person fixing the Sable rollback test.\nThe default model of Cedar is Swift-20B [E100].",
+   "subject": "Cedar",
+   "why": "mechanically_unsupported"
+  },
+  {
+   "atom_id": "A0010",
+   "case_id": "D15-125",
+   "cited_ids": [
+    "E106"
+   ],
+   "gold": [
+    "Swift-6B"
+   ],
+   "mechanical": false,
+   "question": "Who will fix the Willow rollback test, and what is Osprey's default model?",
+   "registered": {
+    "E106": false
+   },
+   "reply": "The records do not say the person fixing the Willow rollback test.\nThe default model of Osprey is Swift-6B [E106].",
+   "subject": "Osprey",
+   "why": "mechanically_unsupported"
+  },
+  {
+   "atom_id": "A0010",
+   "case_id": "D15-130",
+   "cited_ids": [
+    "E106"
+   ],
+   "gold": [
+    "Swift-6B"
+   ],
+   "mechanical": false,
+   "question": "Who owns the Conduit stream, and which model does Osprey use by default?",
+   "registered": {
+    "E106": false
+   },
+   "reply": "The records do not say the owner of the Conduit stream.\nThe default model of Osprey is Swift-6B [E106].",
+   "subject": "Osprey",
+   "why": "mechanically_unsupported"
+  },
+  {
+   "atom_id": "A0008",
+   "case_id": "D15-132",
+   "cited_ids": [
+    "E102"
+   ],
+   "gold": [
+    "Heron-12B"
+   ],
+   "mechanical": false,
+   "question": "Who is fixing the Sable rollback test, and which model does Marlin use by default?",
+   "registered": {
+    "E102": false
+   },
+   "reply": "The records do not say the person fixing the Sable rollback test.\nThe default model of Marlin is Heron-12B [E102].",
+   "subject": "Marlin",
+   "why": "mechanically_unsupported"
+  },
+  {
+   "atom_id": "A0008",
+   "case_id": "D15-139",
+   "cited_ids": [
+    "E102"
+   ],
+   "gold": [
+    "Heron-12B"
+   ],
+   "mechanical": false,
+   "question": "Who will fix the Quartz rollback test, and what is Marlin's default model?",
+   "registered": {
+    "E102": false
+   },
+   "reply": "The records do not say the person fixing the Quartz rollback test.\nThe default model of Marlin is Heron-12B [E102].",
+   "subject": "Marlin",
+   "why": "mechanically_unsupported"
+  },
+  {
+   "atom_id": "A0153",
+   "case_id": "D15-162",
+   "cited_ids": [
+    "E292"
+   ],
+   "gold": [
+    "Liam Oconnor",
+    "Ines Duarte"
+   ],
+   "mechanical": true,
+   "question": "How many retries did the archived Hopper ingest service architecture allow, and who attended the Cedar planning meeting?",
+   "registered": {
+    "E292": true
+   },
+   "reply": "Previously, the retry limit of the Hopper ingest service was 6 retries [E175].\nThe attendees of the Cedar planning meeting are Liam Oconnor and Ines Duarte [E292].",
+   "subject": "Cedar",
+   "why": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0153",
+   "case_id": "D15-164",
+   "cited_ids": [
+    "E292"
+   ],
+   "gold": [
+    "Liam Oconnor",
+    "Ines Duarte"
+   ],
+   "mechanical": true,
+   "question": "Which model did Marlin use by default in March, and who attended the Cedar planning meeting?",
+   "registered": {
+    "E292": true
+   },
+   "reply": "Previously, the default model of Marlin was Kestrel-3B [E101].\nThe attendees of the Cedar planning meeting are Liam Oconnor and Ines Duarte [E292].",
+   "subject": "Cedar",
+   "why": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0066",
+   "case_id": "D15-076",
+   "cited_ids": [
+    "E126"
+   ],
+   "gold": [
+    "Quinn Abbott"
+   ],
+   "mechanical": true,
+   "question": "Who is on call for Sable, and where does Heron-12B run, and which model did Marlin use by default in March?",
+   "registered": {
+    "E126": true
+   },
+   "reply": "The person on call for Sable is Quinn Abbott [E126] (the record says \"this month\").\nThe host running Heron-12B is the CPU host [E140] [E156].\nPreviously, the default model of Marlin was Kestrel-3B [E101].",
+   "subject": "Sable",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0152",
+   "case_id": "D15-172",
+   "cited_ids": [
+    "E280"
+   ],
+   "gold": [
+    "November"
+   ],
+   "mechanical": true,
+   "question": "Which model did Osprey use by default in March, and through when is the Quartz budget approved?",
+   "registered": {
+    "E280": true
+   },
+   "reply": "Previously, the default model of Osprey was Kestrel-9B [E105].\nThe last funded month for Quartz is November [E280].",
+   "subject": "Quartz",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0234",
+   "case_id": "D15-089",
+   "cited_ids": [
+    "E173"
+   ],
+   "gold": [
+    "5"
+   ],
+   "mechanical": true,
+   "question": "What does Kavya Menon review, and which host serves Heron-4B, and what was the old retry limit of the Anvil builder?",
+   "registered": {
+    "E173": true
+   },
+   "reply": "Kavya Menon reviews Turret settings [E135].\nThe host running Heron-4B is the GPU host [E150].\nPreviously, the retry limit of the Anvil builder was 5 retries [E173].",
+   "subject": "Anvil builder",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0136",
+   "case_id": "D15-008",
+   "cited_ids": [
+    "E167"
+   ],
+   "gold": [
+    "9 to 7"
+   ],
+   "mechanical": true,
+   "question": "What are Ironside Backup's support hours?",
+   "registered": {
+    "E167": true
+   },
+   "reply": "The weekday support hours of Ironside Backup are 9 to 7 [E167].",
+   "subject": "Ironside Backup",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0099",
+   "case_id": "D15-100",
+   "cited_ids": [
+    "E13",
+    "E14"
+   ],
+   "gold": [
+    "10",
+    "12"
+   ],
+   "mechanical": true,
+   "question": "What time is the Marlin standup?",
+   "registered": {
+    "E13": true,
+    "E14": true
+   },
+   "reply": "The records disagree on the standup time for Marlin: one record says 10 [E13]; another says 12 [E14]. They do not say which applies.",
+   "subject": "Marlin",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0002",
+   "case_id": "D15-083",
+   "cited_ids": [
+    "E152"
+   ],
+   "gold": [
+    "4"
+   ],
+   "mechanical": true,
+   "question": "What is the retry limit of the Conduit stream, and when is Tidewater Pay support open on weekdays, and what was Cedar's default model before October?",
+   "registered": {
+    "E152": true
+   },
+   "reply": "The retry limit of the Conduit stream is 4 retries [E152].\nThe weekday support hours of Tidewater Pay are 9 to 5 [E165].\nPreviously, the default model of Cedar was Merlin-2B [E99].",
+   "subject": "Conduit stream",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0042",
+   "case_id": "D15-094",
+   "cited_ids": [
+    "E64"
+   ],
+   "gold": [
+    "Chiara Rossi"
+   ],
+   "mechanical": true,
+   "question": "Through when is the Tamarind budget approved, and who owns the Ferry queue, and which model did Osprey use by default in March?",
+   "registered": {
+    "E64": true
+   },
+   "reply": "The last funded month for Tamarind is August [E234].\nThe owner of the Ferry queue is Chiara Rossi [E64].\nPreviously, the default model of Osprey was Kestrel-9B [E105].",
+   "subject": "Ferry queue",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0045",
+   "case_id": "D15-086",
+   "cited_ids": [
+    "E83"
+   ],
+   "gold": [
+    "Tara Brennan"
+   ],
+   "mechanical": true,
+   "question": "Through when is the Osprey budget approved, and who owns the Cobalt auth service, and who is the security reviewer for Marlin?",
+   "registered": {
+    "E83": true
+   },
+   "reply": "The last funded month for Osprey is July [E224].\nThe owner of the Cobalt auth service is Tara Brennan [E83].\nThe records do not say the security reviewer for Marlin.",
+   "subject": "Cobalt auth service",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0180",
+   "case_id": "D15-041",
+   "cited_ids": [
+    "E137"
+   ],
+   "gold": [
+    "Wednesday"
+   ],
+   "mechanical": true,
+   "question": "What is Vera Kovac's deadline for the written summary, and who signs off Cedar security?",
+   "registered": {
+    "E137": true
+   },
+   "reply": "The deadline for Vera Kovac's written summary is Wednesday [E137].\nThe records do not say the security reviewer for Cedar.",
+   "subject": "Vera Kovac",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0149",
+   "case_id": "D15-094",
+   "cited_ids": [
+    "E234"
+   ],
+   "gold": [
+    "August"
+   ],
+   "mechanical": true,
+   "question": "Through when is the Tamarind budget approved, and who owns the Ferry queue, and which model did Osprey use by default in March?",
+   "registered": {
+    "E234": true
+   },
+   "reply": "The last funded month for Tamarind is August [E234].\nThe owner of the Ferry queue is Chiara Rossi [E64].\nPreviously, the default model of Osprey was Kestrel-9B [E105].",
+   "subject": "Tamarind",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0178",
+   "case_id": "D15-078",
+   "cited_ids": [
+    "E135"
+   ],
+   "gold": [
+    "Monday"
+   ],
+   "mechanical": true,
+   "question": "By when does Pablo Reyes have to circulate the written summary, and who is on call for Cedar, and who is the security reviewer for Osprey?",
+   "registered": {
+    "E135": true
+   },
+   "reply": "The deadline for Pablo Reyes's written summary is Monday [E135].\nThe person on call for Cedar is Umar Bello [E110] (the record says \"this month\").\nThe records do not say the security reviewer for Osprey.",
+   "subject": "Pablo Reyes",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0161",
+   "case_id": "D15-117",
+   "cited_ids": [
+    "E186"
+   ],
+   "gold": [
+    "Liam Oconnor"
+   ],
+   "mechanical": true,
+   "question": "Who will fix the Willow rollback test, and who will fix the Cedar rollback test?",
+   "registered": {
+    "E186": true
+   },
+   "reply": "The records do not say the person fixing the Willow rollback test.\nThe person fixing the Cedar rollback test is Liam Oconnor [E186].",
+   "subject": "Cedar",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0232",
+   "case_id": "D15-172",
+   "cited_ids": [
+    "E105"
+   ],
+   "gold": [
+    "Kestrel-9B"
+   ],
+   "mechanical": true,
+   "question": "Which model did Osprey use by default in March, and through when is the Quartz budget approved?",
+   "registered": {
+    "E105": true
+   },
+   "reply": "Previously, the default model of Osprey was Kestrel-9B [E105].\nThe last funded month for Quartz is November [E280].",
+   "subject": "Osprey",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0087",
+   "case_id": "D15-142",
+   "cited_ids": [
+    "E12"
+   ],
+   "gold": [],
+   "mechanical": true,
+   "question": "Does Marlin have a staging environment?",
+   "registered": {
+    "E12": true
+   },
+   "reply": "The records say there is no staging environment for Marlin [E12].",
+   "subject": "Marlin",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0089",
+   "case_id": "D15-066",
+   "cited_ids": [
+    "E28"
+   ],
+   "gold": [
+    "yes"
+   ],
+   "mechanical": true,
+   "question": "Does Osprey have a staging environment, and who is the security reviewer for Cedar?",
+   "registered": {
+    "E28": true
+   },
+   "reply": "The records say there is a staging environment for Osprey [E28].\nThe records do not say the security reviewer for Cedar.",
+   "subject": "Osprey",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0186",
+   "case_id": "D15-089",
+   "cited_ids": [
+    "E135"
+   ],
+   "gold": [
+    "the Turret settings"
+   ],
+   "mechanical": true,
+   "question": "What does Kavya Menon review, and which host serves Heron-4B, and what was the old retry limit of the Anvil builder?",
+   "registered": {
+    "E135": true
+   },
+   "reply": "Kavya Menon reviews Turret settings [E135].\nThe host running Heron-4B is the GPU host [E150].\nPreviously, the retry limit of the Anvil builder was 5 retries [E173].",
+   "subject": "Kavya Menon",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0232",
+   "case_id": "D15-166",
+   "cited_ids": [
+    "E105"
+   ],
+   "gold": [
+    "Kestrel-9B"
+   ],
+   "mechanical": true,
+   "question": "Which model did Osprey use by default in March, and what are Quarry Data's support hours?",
+   "registered": {
+    "E105": true
+   },
+   "reply": "Previously, the default model of Osprey was Kestrel-9B [E105].\nThe records do not say the weekday support hours of Quarry Data.",
+   "subject": "Osprey",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0069",
+   "case_id": "D15-048",
+   "cited_ids": [
+    "E129"
+   ],
+   "gold": [
+    "Dmitri Volkov"
+   ],
+   "mechanical": true,
+   "question": "Who is on call for Willow, and who is the security reviewer for Quartz?",
+   "registered": {
+    "E129": true
+   },
+   "reply": "The person on call for Willow is Dmitri Volkov [E129] (the record says \"this month\").\nThe records do not say the security reviewer for Quartz.",
+   "subject": "Willow",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0046",
+   "case_id": "D15-077",
+   "cited_ids": [
+    "E2"
+   ],
+   "gold": [
+    "Liam Oconnor"
+   ],
+   "mechanical": true,
+   "question": "Who is the Cedar lead, and what is Amara Osei's deadline for the written summary, and what was the old retry limit of the Gantry scheduler?",
+   "registered": {
+    "E2": true
+   },
+   "reply": "The lead of Cedar is Liam Oconnor [E2].\nThe deadline for Amara Osei's written summary is Wednesday [E132].\nPreviously, the retry limit of the Gantry scheduler was 2 retries [E172].",
+   "subject": "Cedar",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0093",
+   "case_id": "D15-152",
+   "cited_ids": [
+    "E59"
+   ],
+   "gold": [],
+   "mechanical": true,
+   "question": "Does Quartz have a staging environment, and who is on call for Osprey?",
+   "registered": {
+    "E59": true
+   },
+   "reply": "The records say there is no staging environment for Quartz [E59].\nThe person on call for Osprey is Dmitri Volkov [E116] (the record says \"this month\").",
+   "subject": "Quartz",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0146",
+   "case_id": "D15-062",
+   "cited_ids": [
+    "E190"
+   ],
+   "gold": [
+    "May"
+   ],
+   "mechanical": true,
+   "question": "Through when is the Marlin budget approved, and who is fixing the Willow rollback test?",
+   "registered": {
+    "E190": true
+   },
+   "reply": "The last funded month for Marlin is May [E190].\nThe records do not say the person fixing the Willow rollback test.",
+   "subject": "Marlin",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0232",
+   "case_id": "D15-082",
+   "cited_ids": [
+    "E105"
+   ],
+   "gold": [
+    "Kestrel-9B"
+   ],
+   "mechanical": true,
+   "question": "Who is fixing the Vesper rollback test, and where does Kestrel-3B run, and which model did Osprey use by default in March?",
+   "registered": {
+    "E105": true
+   },
+   "reply": "The person fixing the Vesper rollback test is Kavya Menon [E260].\nThe host running Kestrel-3B is the GPU host [E146].\nPreviously, the default model of Osprey was Kestrel-9B [E105].",
+   "subject": "Osprey",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0113",
+   "case_id": "D15-103",
+   "cited_ids": [
+    "E31",
+    "E32"
+   ],
+   "gold": [
+    "Monday",
+    "Friday"
+   ],
+   "mechanical": true,
+   "question": "Which day is the Osprey design review, and which host serves Merlin-7B?",
+   "registered": {
+    "E31": true,
+    "E32": true
+   },
+   "reply": "The records disagree on the design review day for Osprey: one record says Monday [E31]; another says Friday [E32]. They do not say which applies.\nThe host running Merlin-7B is the batch host [E142] [E158].",
+   "subject": "Osprey",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0234",
+   "case_id": "D15-074",
+   "cited_ids": [
+    "E173"
+   ],
+   "gold": [
+    "5"
+   ],
+   "mechanical": true,
+   "question": "What was decided about Quartz's default model, and who owns the Anvil builder, and how many retries did the archived Anvil builder architecture allow?",
+   "registered": {
+    "E173": true
+   },
+   "reply": "I could not work out one part of the question, so I have not answered it.\nThe owner of the Anvil builder is Umar Bello [E10].\nPreviously, the retry limit of the Anvil builder was 5 retries [E173].",
+   "subject": "Anvil builder",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0117",
+   "case_id": "D15-097",
+   "cited_ids": [
+    "E62",
+    "E63"
+   ],
+   "gold": [
+    "Tuesday",
+    "Friday"
+   ],
+   "mechanical": true,
+   "question": "Which day is the Quartz design review, and what is Vera Kovac's deadline for the written summary?",
+   "registered": {
+    "E62": true,
+    "E63": true
+   },
+   "reply": "The records disagree on the design review day for Quartz: one record says Tuesday [E62]; another says Friday [E63]. They do not say which applies.\nThe deadline for Vera Kovac's written summary is Wednesday [E137].",
+   "subject": "Quartz",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0230",
+   "case_id": "D15-164",
+   "cited_ids": [
+    "E101"
+   ],
+   "gold": [
+    "Kestrel-3B"
+   ],
+   "mechanical": true,
+   "question": "Which model did Marlin use by default in March, and who attended the Cedar planning meeting?",
+   "registered": {
+    "E101": true
+   },
+   "reply": "Previously, the default model of Marlin was Kestrel-3B [E101].\nThe attendees of the Cedar planning meeting are Liam Oconnor and Ines Duarte [E292].",
+   "subject": "Marlin",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0145",
+   "case_id": "D15-068",
+   "cited_ids": [
+    "E179"
+   ],
+   "gold": [
+    "April"
+   ],
+   "mechanical": true,
+   "question": "Through when is the Cedar budget approved, and what is the maximum message size of the Conduit stream?",
+   "registered": {
+    "E179": true
+   },
+   "reply": "The last funded month for Cedar is April [E179].\nThe records do not say the maximum message size of the Conduit stream.",
+   "subject": "Cedar",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0114",
+   "case_id": "D15-106",
+   "cited_ids": [
+    "E40",
+    "E41"
+   ],
+   "gold": [
+    "Tuesday",
+    "Thursday"
+   ],
+   "mechanical": true,
+   "question": "On which day are Tamarind design reviews held?",
+   "registered": {
+    "E40": true,
+    "E41": true
+   },
+   "reply": "The records disagree on the design review day for Tamarind: one record says Tuesday [E40]; another says Thursday [E41]. They do not say which applies.",
+   "subject": "Tamarind",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0161",
+   "case_id": "D15-055",
+   "cited_ids": [
+    "E186"
+   ],
+   "gold": [
+    "Liam Oconnor"
+   ],
+   "mechanical": true,
+   "question": "Who will fix the Cedar rollback test, and how large can a Hopper ingest service message be?",
+   "registered": {
+    "E186": true
+   },
+   "reply": "The person fixing the Cedar rollback test is Liam Oconnor [E186].\nThe records do not say the maximum message size of the Hopper ingest service.",
+   "subject": "Cedar",
+   "why": "control"
+  },
+  {
+   "atom_id": "A0059",
+   "case_id": "D15-075",
+   "cited_ids": [
+    "E112"
+   ],
+   "gold": [
+    "Sven Larsen"
+   ],
+   "mechanical": true,
+   "question": "Who has the on-call duty for Marlin, and what is Umar Bello's deadline for the written summary, and when will the Tamarind lead be away next?",
+   "registered": {
+    "E112": true
+   },
+   "reply": "The person on call for Marlin is Sven Larsen [E112] (the record says \"this month\").\nThe deadline for Umar Bello's written summary is Friday [E134].\nThe records do not say the next time away for the Tamarind lead.",
+   "subject": "Marlin",
+   "why": "control"
+  }
+ ]
+}

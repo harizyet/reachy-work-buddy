@@ -1,0 +1,1024 @@
+{
+ "agreement": null,
+ "criterion6": {
+  "adjudicated_fraction": 0.9581151832460733,
+  "adjudicated_supported": 183,
+  "best_case_fraction": 1.0,
+  "cited_claims": 191,
+  "credited_by_adjudication": 0,
+  "floor": 40,
+  "mechanical_fraction": 0.9581151832460733,
+  "mechanical_supported": 183,
+  "mechanical_would_pass": true,
+  "pending": 8,
+  "status": "PASS",
+  "threshold": 0.95,
+  "uncredited_reasons": {},
+  "unresolved": 0,
+  "why": "adjudicated figure meets the threshold"
+ },
+ "criterion6_adjudication": [
+  {
+   "atom_id": "A0142",
+   "case_id": "D15-003",
+   "ids": {
+    "E245": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C800c5bf7",
+   "status": "credited",
+   "why_reviewed": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0160",
+   "case_id": "D15-005",
+   "ids": {
+    "E299": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C552b560e",
+   "status": "credited",
+   "why_reviewed": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0158",
+   "case_id": "D15-007",
+   "ids": {
+    "E297": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C06aa1a80",
+   "status": "credited",
+   "why_reviewed": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0154",
+   "case_id": "D15-017",
+   "ids": {
+    "E293": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "Cde16f820",
+   "status": "credited",
+   "why_reviewed": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0138",
+   "case_id": "D15-043",
+   "ids": {
+    "E189": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C39e49c7b",
+   "status": "credited",
+   "why_reviewed": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0156",
+   "case_id": "D15-052",
+   "ids": {
+    "E295": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C12180855",
+   "status": "credited",
+   "why_reviewed": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0140",
+   "case_id": "D15-057",
+   "ids": {
+    "E223": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C04690015",
+   "status": "credited",
+   "why_reviewed": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0007",
+   "case_id": "D15-059",
+   "ids": {
+    "E100": {
+     "category": "pending",
+     "credited": false,
+     "facts": {
+      "excluded": false,
+      "in_manifest": true,
+      "in_universe": true,
+      "violations": []
+     },
+     "why": "no reviewer answered"
+    }
+   },
+   "mechanical": false,
+   "oid": "C9d52332e",
+   "status": "pending",
+   "why_reviewed": "mechanically_unsupported"
+  },
+  {
+   "atom_id": "A0141",
+   "case_id": "D15-071",
+   "ids": {
+    "E233": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C3f04dcff",
+   "status": "credited",
+   "why_reviewed": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0010",
+   "case_id": "D15-072",
+   "ids": {
+    "E106": {
+     "category": "pending",
+     "credited": false,
+     "facts": {
+      "excluded": false,
+      "in_manifest": true,
+      "in_universe": true,
+      "violations": []
+     },
+     "why": "no reviewer answered"
+    }
+   },
+   "mechanical": false,
+   "oid": "Cf4758d30",
+   "status": "pending",
+   "why_reviewed": "mechanically_unsupported"
+  },
+  {
+   "atom_id": "A0157",
+   "case_id": "D15-073",
+   "ids": {
+    "E296": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C89f16c26",
+   "status": "credited",
+   "why_reviewed": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0008",
+   "case_id": "D15-081",
+   "ids": {
+    "E102": {
+     "category": "pending",
+     "credited": false,
+     "facts": {
+      "excluded": false,
+      "in_manifest": true,
+      "in_universe": true,
+      "violations": []
+     },
+     "why": "no reviewer answered"
+    }
+   },
+   "mechanical": false,
+   "oid": "Cc109b11c",
+   "status": "pending",
+   "why_reviewed": "mechanically_unsupported"
+  },
+  {
+   "atom_id": "A0153",
+   "case_id": "D15-084",
+   "ids": {
+    "E292": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C514e36cb",
+   "status": "credited",
+   "why_reviewed": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0142",
+   "case_id": "D15-091",
+   "ids": {
+    "E245": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C270f9971",
+   "status": "credited",
+   "why_reviewed": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0160",
+   "case_id": "D15-092",
+   "ids": {
+    "E299": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "Ced6e1c70",
+   "status": "credited",
+   "why_reviewed": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0158",
+   "case_id": "D15-093",
+   "ids": {
+    "E297": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C9904474b",
+   "status": "credited",
+   "why_reviewed": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0138",
+   "case_id": "D15-107",
+   "ids": {
+    "E189": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "Cecaead70",
+   "status": "credited",
+   "why_reviewed": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0007",
+   "case_id": "D15-120",
+   "ids": {
+    "E100": {
+     "category": "pending",
+     "credited": false,
+     "facts": {
+      "excluded": false,
+      "in_manifest": true,
+      "in_universe": true,
+      "violations": []
+     },
+     "why": "no reviewer answered"
+    }
+   },
+   "mechanical": false,
+   "oid": "Cd0a53f7d",
+   "status": "pending",
+   "why_reviewed": "mechanically_unsupported"
+  },
+  {
+   "atom_id": "A0010",
+   "case_id": "D15-125",
+   "ids": {
+    "E106": {
+     "category": "pending",
+     "credited": false,
+     "facts": {
+      "excluded": false,
+      "in_manifest": true,
+      "in_universe": true,
+      "violations": []
+     },
+     "why": "no reviewer answered"
+    }
+   },
+   "mechanical": false,
+   "oid": "Ca4031f1a",
+   "status": "pending",
+   "why_reviewed": "mechanically_unsupported"
+  },
+  {
+   "atom_id": "A0010",
+   "case_id": "D15-130",
+   "ids": {
+    "E106": {
+     "category": "pending",
+     "credited": false,
+     "facts": {
+      "excluded": false,
+      "in_manifest": true,
+      "in_universe": true,
+      "violations": []
+     },
+     "why": "no reviewer answered"
+    }
+   },
+   "mechanical": false,
+   "oid": "C9678d118",
+   "status": "pending",
+   "why_reviewed": "mechanically_unsupported"
+  },
+  {
+   "atom_id": "A0008",
+   "case_id": "D15-132",
+   "ids": {
+    "E102": {
+     "category": "pending",
+     "credited": false,
+     "facts": {
+      "excluded": false,
+      "in_manifest": true,
+      "in_universe": true,
+      "violations": []
+     },
+     "why": "no reviewer answered"
+    }
+   },
+   "mechanical": false,
+   "oid": "C6c618dc5",
+   "status": "pending",
+   "why_reviewed": "mechanically_unsupported"
+  },
+  {
+   "atom_id": "A0008",
+   "case_id": "D15-139",
+   "ids": {
+    "E102": {
+     "category": "pending",
+     "credited": false,
+     "facts": {
+      "excluded": false,
+      "in_manifest": true,
+      "in_universe": true,
+      "violations": []
+     },
+     "why": "no reviewer answered"
+    }
+   },
+   "mechanical": false,
+   "oid": "C6edfbff2",
+   "status": "pending",
+   "why_reviewed": "mechanically_unsupported"
+  },
+  {
+   "atom_id": "A0153",
+   "case_id": "D15-162",
+   "ids": {
+    "E292": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C0d8d3d28",
+   "status": "credited",
+   "why_reviewed": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0153",
+   "case_id": "D15-164",
+   "ids": {
+    "E292": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C93a68bcc",
+   "status": "credited",
+   "why_reviewed": "not_direct_diagnostic"
+  },
+  {
+   "atom_id": "A0066",
+   "case_id": "D15-076",
+   "ids": {
+    "E126": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "Cab121cc9",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0152",
+   "case_id": "D15-172",
+   "ids": {
+    "E280": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C06b036cb",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0234",
+   "case_id": "D15-089",
+   "ids": {
+    "E173": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C0fcff45e",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0136",
+   "case_id": "D15-008",
+   "ids": {
+    "E167": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C264ba06b",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0099",
+   "case_id": "D15-100",
+   "ids": {
+    "E13": {
+     "category": "registered",
+     "credited": true
+    },
+    "E14": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C7cf6fadd",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0002",
+   "case_id": "D15-083",
+   "ids": {
+    "E152": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "Cbaa6a073",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0042",
+   "case_id": "D15-094",
+   "ids": {
+    "E64": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C7d2cc160",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0045",
+   "case_id": "D15-086",
+   "ids": {
+    "E83": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "Cc6e9e317",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0180",
+   "case_id": "D15-041",
+   "ids": {
+    "E137": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "Cdd16c869",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0149",
+   "case_id": "D15-094",
+   "ids": {
+    "E234": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "Ccd3065b7",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0178",
+   "case_id": "D15-078",
+   "ids": {
+    "E135": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "Ceb89b75e",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0161",
+   "case_id": "D15-117",
+   "ids": {
+    "E186": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C9f8b3822",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0232",
+   "case_id": "D15-172",
+   "ids": {
+    "E105": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "Ceae449da",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0087",
+   "case_id": "D15-142",
+   "ids": {
+    "E12": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "Cf9f3e1ab",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0089",
+   "case_id": "D15-066",
+   "ids": {
+    "E28": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C91ead630",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0186",
+   "case_id": "D15-089",
+   "ids": {
+    "E135": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C752a393a",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0232",
+   "case_id": "D15-166",
+   "ids": {
+    "E105": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "Cd3114d9c",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0069",
+   "case_id": "D15-048",
+   "ids": {
+    "E129": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C98b97530",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0046",
+   "case_id": "D15-077",
+   "ids": {
+    "E2": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C116867f0",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0093",
+   "case_id": "D15-152",
+   "ids": {
+    "E59": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C2226d1db",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0146",
+   "case_id": "D15-062",
+   "ids": {
+    "E190": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C970245c8",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0232",
+   "case_id": "D15-082",
+   "ids": {
+    "E105": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "Cfdfd6976",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0113",
+   "case_id": "D15-103",
+   "ids": {
+    "E31": {
+     "category": "registered",
+     "credited": true
+    },
+    "E32": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C9ce01fee",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0234",
+   "case_id": "D15-074",
+   "ids": {
+    "E173": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "Cd002eca8",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0117",
+   "case_id": "D15-097",
+   "ids": {
+    "E62": {
+     "category": "registered",
+     "credited": true
+    },
+    "E63": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C871cfc48",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0230",
+   "case_id": "D15-164",
+   "ids": {
+    "E101": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C3ac33c0a",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0145",
+   "case_id": "D15-068",
+   "ids": {
+    "E179": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C692e5895",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0114",
+   "case_id": "D15-106",
+   "ids": {
+    "E40": {
+     "category": "registered",
+     "credited": true
+    },
+    "E41": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "Cfa4f2df0",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0161",
+   "case_id": "D15-055",
+   "ids": {
+    "E186": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "Ce5ffc182",
+   "status": "credited",
+   "why_reviewed": "control"
+  },
+  {
+   "atom_id": "A0059",
+   "case_id": "D15-075",
+   "ids": {
+    "E112": {
+     "category": "registered",
+     "credited": true
+    }
+   },
+   "mechanical": true,
+   "oid": "C8ee05e7e",
+   "status": "credited",
+   "why_reviewed": "control"
+  }
+ ],
+ "disagreements": [],
+ "identical_label_files_warning": false,
+ "independent_label_hashes": {},
+ "run": "run-rehearsal-dev15",
+ "variants": {
+  "reviewer_A": {
+   "counts": {
+    "FAIL": 0,
+    "INDETERMINATE": 8,
+    "PASS": 2
+   },
+   "criteria": [
+    {
+     "basis": "single reviewer (the pipeline author): NOT independent",
+     "evaluator_raw_passed": false,
+     "measured": "0 vs 0 (0%); severe 0 vs 0",
+     "n": "baseline leaks 0 of 103",
+     "number": 1,
+     "status": "INDETERMINATE",
+     "threshold": ">=30% reduction and severe not higher",
+     "why": "baseline labels are not complete"
+    },
+    {
+     "basis": "single reviewer (the pipeline author): NOT independent",
+     "evaluator_raw_passed": true,
+     "measured": "+0 (+0.0%)",
+     "n": "204 answerable sub-claims",
+     "number": 2,
+     "status": "INDETERMINATE",
+     "threshold": "<=+1 and <=+3 pp",
+     "why": "baseline labels are not complete"
+    },
+    {
+     "basis": "single reviewer (the pipeline author): NOT independent",
+     "evaluator_raw_passed": true,
+     "measured": "91.6% vs 91.6% (100% of baseline)",
+     "n": "154 supported sub-claims",
+     "number": 3,
+     "status": "INDETERMINATE",
+     "threshold": ">=90% of baseline",
+     "why": "baseline labels are not complete"
+    },
+    {
+     "basis": "single reviewer (the pipeline author): NOT independent",
+     "evaluator_raw_passed": true,
+     "measured": "87% (26/30); one-sided 95% lower bound 73%; paired: lost 0, gained 0",
+     "n": "30 mixed questions",
+     "number": 4,
+     "status": "INDETERMINATE",
+     "threshold": "bound >= 70% and gained >= lost",
+     "why": "baseline labels are not complete"
+    },
+    {
+     "evaluator_raw_passed": true,
+     "measured": "0",
+     "n": "191 cited claims",
+     "number": 5,
+     "status": "PASS",
+     "threshold": "0",
+     "why": "manifest check by code"
+    },
+    {
+     "adjudicated": {
+      "credited_by_adjudication": 0,
+      "fraction": 0.9581151832460733,
+      "pending": 8,
+      "supported": 183
+     },
+     "evaluator_raw_passed": true,
+     "gating": "adjudicated",
+     "measured": "95.8% (183/191; 95% bounds 92.0% to 97.9%)",
+     "mechanical": {
+      "cited": 191,
+      "fraction": 0.9581151832460733,
+      "supported": 183,
+      "would_pass": true
+     },
+     "n": "191 claims",
+     "number": 6,
+     "status": "PASS",
+     "threshold": ">=95% and >=40 cited claims",
+     "why": "adjudicated figure meets the threshold"
+    },
+    {
+     "coverage": {
+      "atoms": 19,
+      "bound_verified": {
+       "agrees": true,
+       "bound": 0.17074972298248092,
+       "direct_bisection": 0.17074972298248098,
+       "n": 16
+      },
+      "events": 0,
+      "independence_assumption": "distinct facts are treated as independent trials with a common rate; several questions about one fact count once; residual dependence between facts of one project or generator is not removed",
+      "independent_opportunities": 16,
+      "independent_opportunities_needed": 29,
+      "one_sided_95_upper_bound": 0.1707,
+      "reference_bound": 0.1
+     },
+     "evaluator_raw_passed": true,
+     "measured": "0 of 19",
+     "n": "19 conflicts",
+     "number": 7,
+     "status": "INDETERMINATE",
+     "threshold": "0",
+     "why": "INSUFFICIENT INDEPENDENT OPPORTUNITIES: 0 events in 16 independent conflict facts (19 atoms); at least 29 are needed for the zero-event upper bound to reach 10% (observed bound 17.1%). Zero events here is not evidence of safety"
+    },
+    {
+     "coverage": {
+      "atoms": 6,
+      "bound_verified": {
+       "agrees": true,
+       "bound": 0.6315968501359612,
+       "direct_bisection": 0.6315968501359612,
+       "n": 3
+      },
+      "events": 0,
+      "independence_assumption": "distinct facts are treated as independent trials with a common rate; several questions about one fact count once; residual dependence between facts of one project or generator is not removed",
+      "independent_opportunities": 3,
+      "independent_opportunities_needed": 29,
+      "one_sided_95_upper_bound": 0.6316,
+      "reference_bound": 0.1
+     },
+     "evaluator_raw_passed": true,
+     "measured": "0 of 6",
+     "n": "6 negative-unsupported sub-claims",
+     "number": 8,
+     "status": "INDETERMINATE",
+     "threshold": "0",
+     "why": "INSUFFICIENT INDEPENDENT OPPORTUNITIES: 0 events in 3 independent negative-unsupported facts (6 atoms); at least 29 are needed for the zero-event upper bound to reach 10% (observed bound 63.2%). Zero events here is not evidence of safety"
+    },
+    {
+     "coverage": {
+      "atoms": 9,
+      "bound_verified": {
+       "agrees": true,
+       "bound": 0.2831288355631135,
+       "direct_bisection": 0.2831288355631135,
+       "n": 9
+      },
+      "events": 0,
+      "independence_assumption": "distinct facts are treated as independent trials with a common rate; several questions about one fact count once; residual dependence between facts of one project or generator is not removed",
+      "independent_opportunities": 9,
+      "independent_opportunities_needed": 29,
+      "one_sided_95_upper_bound": 0.2831,
+      "reference_bound": 0.1
+     },
+     "evaluator_raw_passed": true,
+     "measured": "0 (ordering atoms 9)",
+     "n": "9 ordering sub-claims + conflicts",
+     "number": 9,
+     "status": "INDETERMINATE",
+     "threshold": "0",
+     "why": "INSUFFICIENT INDEPENDENT OPPORTUNITIES: 0 events in 9 independent ordering facts (9 atoms); at least 29 are needed for the zero-event upper bound to reach 10% (observed bound 28.3%). Zero events here is not evidence of safety"
+    },
+    {
+     "basis": "single reviewer (the pipeline author): NOT independent",
+     "evaluator_raw_passed": true,
+     "measured": "lost 0, gained 0, net loss 0",
+     "n": "173 questions",
+     "number": 10,
+     "status": "INDETERMINATE",
+     "threshold": "<=1",
+     "why": "baseline labels are not complete"
+    }
+   ],
+   "evaluator_version": 3,
+   "independence_threshold_met": false,
+   "kappa_target": 0.8,
+   "labels_basis": "single reviewer (the pipeline author): NOT independent",
+   "overall": "NOT ESTABLISHED"
+  },
+  "reviewer_B": null
+ }
+}

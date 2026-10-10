@@ -1,0 +1,131 @@
+{
+ "arm": "P0",
+ "computed": {
+  "client": {
+   "base_default_or_env": "http://localhost:8003",
+   "model": "reachy-local",
+   "nothink": false,
+   "seed": 44
+  },
+  "clock_now": "2026-10-08T12:00:00+00:00",
+  "message_roles": [
+   "system",
+   "system",
+   "system",
+   "user"
+  ],
+  "retrieval_config_b1a": {
+   "candidates": 40,
+   "limit": 10,
+   "name": "B1a",
+   "prefilter": true,
+   "rerank": false,
+   "rerank_pool": 20,
+   "rrf_k": 60,
+   "vector": false
+  },
+  "source_sha256": {
+   "../../../../shared/models/persona.py": "f27aedb1ee82a148fa2ba0fd5c8393d416c80c8682f63a3943ccdac5c7ff2af8",
+   "../../src/companion_core/knowledge/context.py": "19068a208dd4b16e416fd4328d23bef15a20062201e460084244d5d442006b62",
+   "../../src/companion_core/knowledge/retrieval.py": "fc4fbfbdadc05a573456f3503193bde4ee151ee3d2fc0664a70ee66072e38dc0",
+   "../../src/companion_core/knowledge/revalidate.py": "d08e8794c4cfbc7f88723819cc95bed831f888ab227d928ef8cc1bf62a63a91e",
+   "../../src/companion_core/knowledge/search.py": "cfff762975d37e97ee5d826b4add54c4e318b07c5ac9744f6249de08f1314f0c",
+   "../../src/companion_core/persona/context.py": "766cc144c91210d88c78990be73e8cfde9d7f35cd4ca81233e79eefbe8c60637",
+   "../knowledge_retrieval/kbench/fixtures.py": "118ca5a94b01a4011e89387e3dd926c50604d382c8177b4f2e4bc5ac806526d4",
+   "../knowledge_retrieval/kbench/security.py": "973676669a2458ee436725c7dc1015610b348a364e0d7bb1328bfa12ecb5365a",
+   "aq/conditions.py": "6da335a5055458d268d5e99437a60959e1ff0fc87362b3780dac85979f39e964",
+   "aq/conditions_g.py": "59ddd19d48b72e7d08d5ea17ce0d37a8ff5cdedd0d5888de59f4f5f675e141c2",
+   "aq/conditions_g2.py": "c5ae35c303c7b274677d3bc7cf9fcc138846c187e344a5ee1fa626c063dfbae8",
+   "aq/llm.py": "03281a260b63b641355c72ca28c62af13bc7c6ad2c2f9f5ec5b51c821c7c3164",
+   "selective/pilot.py": "d51a0c390d7ba3d33ad8c98f841c62bd47475de70dab0e77bf404edc97161ef7"
+  },
+  "system_message_sha256": [
+   "3bd643a8a8ab7da03e4bc95dd4ef0d34a1e6709103a2fc33db7bb960e6244d01",
+   "87f03787ca86d080af9eb679c80633225cd337e66cf8922d90e6a259a6349387",
+   "0ba73c9614b01d7c2a0dc690283255733e5d07acc58948ba5fef5c5f64a0bc00"
+  ],
+  "voice_instruction_sha256": "21cdf8482995e322ed1cfc74ae295a7908ac44622561825dd29821850a61dc62"
+ },
+ "decoding": {
+  "max_tokens": 350,
+  "n": 1,
+  "other": "server defaults; none overridden",
+  "seed": 44,
+  "temperature": 0
+ },
+ "definition": "today's retrieval and prompt plus the 44H unclaimed-action boundary, production default model; the b1a arm of selective/pilot.py",
+ "evidence_context": {
+  "builder": "companion_core.knowledge.context.build_context",
+  "clock_now": "2026-10-08T12:00:00+00:00",
+  "destination": "'cloud' if the profile allows it, else 'local'",
+  "evidence_ids": "E1.. in the builder's order",
+  "flag_conflicts": false,
+  "flag_instructions": true,
+  "header_version": "v1",
+  "include_historical": "case.temporal == 'include_historical'",
+  "note": null,
+  "token_budget": 1500,
+  "token_counter": "the model server's /tokenize"
+ },
+ "harness": {
+  "budget_tokens": 1500,
+  "class": "aq.conditions_g2.GConditions2",
+  "condition": "b1a",
+  "modifiers": [],
+  "pilot_script": "selective/pilot.py (reference only; the acceptance runner calls the same steps)"
+ },
+ "input_order": {
+  "cases": "the frozen cases file order, one case at a time, no batching, no shuffling",
+  "evidence_order": "the builder's order of the retrieval bundle (no re-ranking by the harness)",
+  "messages": [
+   "system: persona prompt",
+   "system: action boundary instruction (44H)",
+   "system: current date and time",
+   "system: spoken-reply instruction (voice cases only)",
+   "system/user: evidence block, immediately before the user turn",
+   "user: the question"
+  ]
+ },
+ "model": {
+  "client": "aq.llm.Local",
+  "endpoint_default": "http://localhost:8003",
+  "nothink": false,
+  "served_name": "reachy-local",
+  "stream": true,
+  "stream_options": {
+   "include_usage": true
+  },
+  "underlying": "Qwen2.5-7B (production default); the served name is verified from /v1/models at run time"
+ },
+ "output_schema": {
+  "labels": "none: P0 rows carry no outcome; flags come only from blinded human labels",
+  "manifest": "{evidence id: {refs: [logical record refs], authorized: bool}} exactly as the builder rendered it",
+  "reply": "free text, at most 350 tokens, citing evidence ids as [E<n>]",
+  "row": [
+   "id",
+   "family",
+   "arm",
+   "question",
+   "reply",
+   "manifest",
+   "ms",
+   "prompt_tokens",
+   "completion_tokens",
+   "finish_reason",
+   "messages_sha256"
+  ]
+ },
+ "retrieval": {
+  "access": "the case's access profile through kbench.security.access_context",
+  "conflict_flag": false,
+  "coverage_note": false,
+  "index_prefilter": true,
+  "limit": 10,
+  "pinned_sources": "the case's attached meeting if any, else none",
+  "retriever": "companion_core.knowledge.retrieval.Retriever with RetrievalConfig B1A (lexical, no vector, no rerank)",
+  "revalidation": "retrieval-time revalidation (44B) as shipped",
+  "sufficiency_gate": false,
+  "temporal": "the case's temporal field"
+ },
+ "runs": "exactly one P0 run per acceptance; no retries, no resumption, no second sample"
+}
