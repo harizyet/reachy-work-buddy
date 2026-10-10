@@ -94,7 +94,7 @@ Two concepts that were conflated as "privacy" are separated:
 | sensitive turn | no, unless the existing memory/privacy policy explicitly permits it |
 | `MEMORY_CANDIDATES_CAPTURE_ENABLED` false (or review flag off) | never; remains the global kill switch |
 
-This is the smallest change that removes the robot dependency, not an auth or privacy rewrite. It keeps the existing exclusions (sensitive text, assistant text, retrieved or attached content) and adds no endpoint. Implementation and tests are recorded in the progress log when done.
+This is the smallest change that removes the robot dependency, not an auth or privacy rewrite. It keeps the existing exclusions (sensitive text, assistant text, retrieved or attached content) and adds no endpoint or client-supplied trust field. **Implemented in `0304ab8` (2026-10-10), not deployed:** channel and modality decide eligibility; only robot-voice turns consult `GET /privacy/state`. Evidence: [48B record](verification/phase-48b-capture-eligibility-2026-10-10.md).
 
 ### 4.3 Trial
 
@@ -199,3 +199,4 @@ Robot work follows the standing safety rules in [AGENTS.md](../AGENTS.md); this 
 | 2026-10-10 | 48A | Compose pass-through added for both memory-candidate flags (default false; not deployed, running core unchanged). Robot-armed coupling of capture confirmed in code. |
 | 2026-10-10 | 48B | Owner decision: memory is channel-independent from the robot. Capture policy separated from embodiment privacy (section 4); coupling is an activation blocker; capture stays off until fixed and tested. Robot is not a gate before 48H. |
 | 2026-10-10 | 48A | Disposable-stack rehearsal with the production images passed (idempotent accept, edit, reject, suppress, forget, capture-off, UI, rollback). `MEMORY_CANDIDATES_ENABLED=true` set in production, core-only recreate, capture OFF, queue empty. Record: [48A](verification/phase-48a-review-activation-2026-10-10.md). Awaiting the owner's browser check. |
+| 2026-10-10 | 48B | Capture eligibility refactor implemented (`0304ab8`) and verified on a disposable stack built from that commit (Web, Android, Telegram contract, robot voice both ways, unauthenticated, sensitive, flag combinations, one memory and one receipt, reply parity; no robot). Not deployed; production capture still OFF. Record: [48B](verification/phase-48b-capture-eligibility-2026-10-10.md). Awaiting owner approval of 48B activation. |
