@@ -4,6 +4,10 @@ Current session snapshot: 2026-10-10 (Phase 44 selective answering: see "Phase 4
 The [documentation index](docs/README.md) defines ownership;
 [project state](docs/project-state.md) owns deployment limits and open acceptance.
 
+## Phase 48 (proposed 2026-10-10; read with the Phase 44 section below)
+
+[docs/phase-48.md](docs/phase-48.md) activates the disabled Phase 44 flags in stages 48A to 48H (no new features). **Production is unchanged: all six flags are OFF and none of the memory-candidate flags is in Compose.** Current step: 48A preparation (see the progress log in the phase page). A production flag change, core recreate or capture trial needs the owner's go-ahead for that stage.
+
 ## Phase 44 where things stand (2026-10-10; read this first)
 
 - **Production:** unchanged. Qwen2.5-7B is the default; the 44H unclaimed-action boundary is live; indexing, retrieval and shadow are OFF; Phase 44F is not implemented; nothing from the selective-answering work is wired, deployed or activated. No database migration is pending.
