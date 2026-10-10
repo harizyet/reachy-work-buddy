@@ -16,6 +16,28 @@
 
 The robot is not part of this trial or its acceptance. Not exercised: Android on a device and the Telegram poll loop against production (the owner's own use is the test).
 
+## 1a. Freeze (owner, 2026-10-10)
+
+From observation start, the capture implementation and rules are **frozen**: candidate patterns, limits, eligibility, sensitivity handling and scoring are not tuned unless a privacy, security or data-integrity defect is found (it would be logged here and would end the clean sample). Flags stay `MEMORY_CANDIDATES_ENABLED=true`, `MEMORY_CANDIDATES_CAPTURE_ENABLED=true`; robot voice stays ineligible until Phase 32. No content is logged or exposed beyond the existing owner review surface. Do not manufacture a scripted dataset: a few controlled checks per channel (Web, Android, Telegram) prove each channel works; the evidence comes from normal use.
+
+| Frozen item | Value |
+|---|---|
+| Image | `reachy-homelab-companion-core` `15ce11cf8ad9` (commit `d899e14`), started 14:06 UTC |
+| `memory/candidate_service.py` | sha256 `8965cc18b285c8c8b495769e389ad872bd6dddb7fb7f5c8c59f59eccc2e57e68` |
+| `memory/candidate_rules.py` | `9ef3dec7de1b0eb73c13311d6ec9e9499e659cabbac07c51569955bfd3ec7d43` |
+| `memory/candidates.py` | `c18e810efa7b371ecc5863d962a229421f0e17804d083ab280e5ed821b51eb5c` |
+| `memory/candidate_routes.py` | `6b5cc7a58340d89c0967357b697f61e3adbf8bf565fafedfa0b641bf31b6c43a` |
+
+Verify at the end: `sha256sum` of those four files at `HEAD` matches, the running container image id is unchanged, and `docker inspect` shows no restart other than the intended end-of-window one.
+
+## 1b. End-of-window procedure
+
+1. Run `python3 tools/memory_candidate_trial_report.py --since 2026-10-10T14:06:00Z` and save the output here.
+2. Capture the in-memory duplicate/cap/exclusion summary. It has no read route (adding one would change the frozen code) and is printed to core's log when core stops, so stop core gracefully and read the line: `docker stop -t 30 reachy-homelab-companion-core-1`, then `docker logs reachy-homelab-companion-core-1 2>&1 | grep "capture summary"` (numbers only, no content). Do this before starting core again; start it with the same flags (`docker compose -p reachy-homelab --env-file .env up -d --no-build --no-deps companion-core`, with `SEARXNG_SECRET_KEY` exported). A kill or crash loses the tally, so avoid `docker kill`. The counters cover the whole window only if core ran without any restart; any earlier restart prints its own partial summary, so record every restart here.
+3. Combine with the owner's tally (section 4) into the acceptance report below: precision, counts, gate verdict, and ACCEPT / ACCEPT WITH CHANGES / REJECT. No tuning is implemented until that report is complete.
+
+Restart log (any restart of core during the window must be recorded with its summary line): none yet.
+
 ## 2. Rules for the window
 
 - Use ordinary interactions through Web, Android and owner Telegram. Capture needs short first-person statements of preference or fact matching the deterministic rules; the rules and ceilings (5 per hour, 20 per day, pending expire after 14 days) are **not tuned during the window** unless a privacy or security bug is found; any such change is logged below and ends the clean sample.
