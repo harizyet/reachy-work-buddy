@@ -215,7 +215,7 @@ def test_the_world_level_detector_used_above_is_not_vacuous():
 
 # -- readable composition ----------------------------------------------------------------------------------------------------------------
 
-def test_compose_puts_answers_first_then_findings_then_one_merged_not_established_line():
+def test_compose_keeps_the_question_order_and_merges_only_adjacent_not_established_parts():
     from companion_core.knowledge.answerability_b1 import compose
     from companion_core.knowledge.answerability_b1.contract import Claim
 
@@ -223,8 +223,8 @@ def test_compose_puts_answers_first_then_findings_then_one_merged_not_establishe
     scoped = Claim("c2", State.NEGATIVE_UNSUPPORTED, "A search of the Osprey wiki found no runbook for Osprey [E2]; not searched: the shared drive. That does not show there is none.", (("the Osprey wiki", ("E2",)),), False, ("scoped_search_negative",), "runbook for Osprey", True)
     u1 = Claim("c3", State.UNSUPPORTED, "The records do not say the vacation of Cedar.", (), False, ("no_admitted_record",), "vacation of Cedar")
     u2 = Claim("c4", State.UNSUPPORTED, "The records do not say the lead of Marlin.", (), False, ("no_admitted_record",), "lead of Marlin")
-    out = compose([u1, scoped, answered, u2])
-    assert out.split("\n") == [answered.text, scoped.text, "The records do not say the vacation of Cedar or the lead of Marlin."]
+    assert compose([u1, scoped, answered, u2]).split("\n") == [u1.text, scoped.text, answered.text, u2.text]  # not adjacent: nothing is moved
+    assert compose([answered, scoped, u1, u2]).split("\n") == [answered.text, scoped.text, "The records do not say the vacation of Cedar or the lead of Marlin."]  # adjacent: one line
     assert compose([u1]) == u1.text and compose([]) == ""
 
 

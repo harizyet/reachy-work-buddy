@@ -1,0 +1,665 @@
+{
+ "reader": "the author of the pipeline (single reader); NO INDEPENDENT HUMAN REVIEW",
+ "rubric": "see review_packet.py header; written before reading",
+ "sample_frozen_before_any_new_reply": true,
+ "arms_read": "gold-spec (G-registry) and question-text-only (T-new): the two replies were identical for all 42 sampled dev15 questions, so each is rated once",
+ "overall": {
+  "n": 51,
+  "readability": {
+   "3": 31,
+   "2": 20
+  },
+  "semantics": {
+   "C": 42,
+   "P": 9
+  },
+  "implication": {
+   "N": 36,
+   "M": 15
+  }
+ },
+ "by_stratum": {
+  "unconstrained draw": {
+   "n": 4,
+   "readability": {
+    "3": 3,
+    "2": 1
+   },
+   "semantics": {
+    "C": 3,
+    "P": 1
+   },
+   "implication": {
+    "N": 2,
+    "M": 2
+   }
+  },
+  "supported (every part answerable)": {
+   "n": 4,
+   "readability": {
+    "3": 2,
+    "2": 2
+   },
+   "semantics": {
+    "C": 3,
+    "P": 1
+   },
+   "implication": {
+    "N": 3,
+    "M": 1
+   }
+  },
+  "abstained (every part withheld)": {
+   "n": 4,
+   "readability": {
+    "3": 2,
+    "2": 2
+   },
+   "semantics": {
+    "C": 4
+   },
+   "implication": {
+    "N": 4
+   }
+  },
+  "partial (an answerable part and a withheld part)": {
+   "n": 8,
+   "readability": {
+    "3": 7,
+    "2": 1
+   },
+   "semantics": {
+    "C": 8
+   },
+   "implication": {
+    "M": 2,
+    "N": 6
+   }
+  },
+  "ambiguous (old reply was an unclear-records reply)": {
+   "n": 5,
+   "readability": {
+    "2": 5
+   },
+   "semantics": {
+    "P": 5
+   },
+   "implication": {
+    "M": 5
+   }
+  },
+  "historical": {
+   "n": 5,
+   "readability": {
+    "3": 2,
+    "2": 3
+   },
+   "semantics": {
+    "C": 3,
+    "P": 2
+   },
+   "implication": {
+    "N": 3,
+    "M": 2
+   }
+  },
+  "conflicted": {
+   "n": 5,
+   "readability": {
+    "3": 3,
+    "2": 2
+   },
+   "semantics": {
+    "C": 5
+   },
+   "implication": {
+    "N": 4,
+    "M": 1
+   }
+  },
+  "negative (existence)": {
+   "n": 4,
+   "readability": {
+    "3": 4
+   },
+   "semantics": {
+    "C": 4
+   },
+   "implication": {
+    "N": 2,
+    "M": 2
+   }
+  },
+  "ordering": {
+   "n": 3,
+   "readability": {
+    "2": 3
+   },
+   "semantics": {
+    "C": 3
+   },
+   "implication": {
+    "N": 3
+   }
+  },
+  "existence sweep: incomplete_scope": {
+   "n": 6,
+   "readability": {
+    "2": 1,
+    "3": 5
+   },
+   "semantics": {
+    "C": 6
+   },
+   "implication": {
+    "N": 6
+   }
+  },
+  "existence sweep: explicit_absence": {
+   "n": 1,
+   "readability": {
+    "3": 1
+   },
+   "semantics": {
+    "C": 1
+   },
+   "implication": {
+    "N": 1
+   }
+  },
+  "existence sweep: source_disagreement": {
+   "n": 1,
+   "readability": {
+    "3": 1
+   },
+   "semantics": {
+    "C": 1
+   },
+   "implication": {
+    "N": 1
+   }
+  },
+  "existence sweep: unauthorized_only": {
+   "n": 1,
+   "readability": {
+    "3": 1
+   },
+   "semantics": {
+    "C": 1
+   },
+   "implication": {
+    "N": 1
+   }
+  }
+ },
+ "items": [
+  {
+   "item": "R01",
+   "question_id": "D15-005",
+   "stratum": "unconstrained draw",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "R02",
+   "question_id": "D15-020",
+   "stratum": "supported (every part answerable)",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "R03",
+   "question_id": "D15-023",
+   "stratum": "abstained (every part withheld)",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "R04",
+   "question_id": "D15-028",
+   "stratum": "abstained (every part withheld)",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "R05",
+   "question_id": "D15-037",
+   "stratum": "abstained (every part withheld)",
+   "readability": 2,
+   "semantics": "C",
+   "implication": "N",
+   "note": "'the next days off for the Willow lead' is stilted"
+  },
+  {
+   "item": "R06",
+   "question_id": "D15-045",
+   "stratum": "partial (an answerable part and a withheld part)",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "M",
+   "note": "a meeting's 'the decision is to keep X as the default model' is rendered as 'the default model ... is X': a decision stated as a present fact"
+  },
+  {
+   "item": "R07",
+   "question_id": "D15-048",
+   "stratum": "unconstrained draw",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "M",
+   "note": "the note says 'on call for Willow this month'; the reply drops 'this month' and states it as present fact"
+  },
+  {
+   "item": "R08",
+   "question_id": "D15-050",
+   "stratum": "partial (an answerable part and a withheld part)",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "R09",
+   "question_id": "D15-057",
+   "stratum": "partial (an answerable part and a withheld part)",
+   "readability": 2,
+   "semantics": "C",
+   "implication": "N",
+   "note": "'The planning decision ... is keep Swift-6B as the default model': ungrammatical decision phrase"
+  },
+  {
+   "item": "R10",
+   "question_id": "D15-065",
+   "stratum": "partial (an answerable part and a withheld part)",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "R11",
+   "question_id": "D15-072",
+   "stratum": "supported (every part answerable)",
+   "readability": 2,
+   "semantics": "P",
+   "implication": "M",
+   "note": "the default-model part (gold supported) is withheld as 'unclear'; answered parts come before it, reordering against the question; 'records ... are unclear' blames the records for a reading limit"
+  },
+  {
+   "item": "R12",
+   "question_id": "D15-073",
+   "stratum": "partial (an answerable part and a withheld part)",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "R13",
+   "question_id": "D15-076",
+   "stratum": "ambiguous (old reply was an unclear-records reply)",
+   "readability": 2,
+   "semantics": "P",
+   "implication": "M",
+   "note": "historical default model withheld as 'unclear' (same cause as R11)"
+  },
+  {
+   "item": "R14",
+   "question_id": "D15-077",
+   "stratum": "historical",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "R15",
+   "question_id": "D15-080",
+   "stratum": "partial (an answerable part and a withheld part)",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "R16",
+   "question_id": "D15-083",
+   "stratum": "historical",
+   "readability": 2,
+   "semantics": "P",
+   "implication": "M",
+   "note": "'The weekday support hours ... is' (agreement); historical default model withheld as 'unclear'"
+  },
+  {
+   "item": "R17",
+   "question_id": "D15-089",
+   "stratum": "historical",
+   "readability": 2,
+   "semantics": "C",
+   "implication": "N",
+   "note": "'is Turret settings' (no article for a text value)"
+  },
+  {
+   "item": "R18",
+   "question_id": "D15-093",
+   "stratum": "supported (every part answerable)",
+   "readability": 2,
+   "semantics": "C",
+   "implication": "N",
+   "note": "'The weekday support hours ... is' (agreement)"
+  },
+  {
+   "item": "R19",
+   "question_id": "D15-098",
+   "stratum": "conflicted",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "R20",
+   "question_id": "D15-107",
+   "stratum": "conflicted",
+   "readability": 2,
+   "semantics": "C",
+   "implication": "N",
+   "note": "'is keep Heron-12B ...' ungrammatical decision phrase; answered part first, conflict second"
+  },
+  {
+   "item": "R21",
+   "question_id": "D15-110",
+   "stratum": "conflicted",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "R22",
+   "question_id": "D15-113",
+   "stratum": "conflicted",
+   "readability": 2,
+   "semantics": "C",
+   "implication": "N",
+   "note": "'is Anvil settings' (no article)"
+  },
+  {
+   "item": "R23",
+   "question_id": "D15-114",
+   "stratum": "conflicted",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "M",
+   "note": "on_call 'this month' dropped (as R07)"
+  },
+  {
+   "item": "R24",
+   "question_id": "D15-122",
+   "stratum": "partial (an answerable part and a withheld part)",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "R25",
+   "question_id": "D15-123",
+   "stratum": "partial (an answerable part and a withheld part)",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "M",
+   "note": "on_call 'this month' dropped (as R07)"
+  },
+  {
+   "item": "R26",
+   "question_id": "D15-125",
+   "stratum": "unconstrained draw",
+   "readability": 2,
+   "semantics": "P",
+   "implication": "M",
+   "note": "default model (gold supported) withheld as 'unclear'; withheld part order differs from the question"
+  },
+  {
+   "item": "R27",
+   "question_id": "D15-126",
+   "stratum": "unconstrained draw",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "R28",
+   "question_id": "D15-141",
+   "stratum": "negative (existence)",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "R29",
+   "question_id": "D15-147",
+   "stratum": "negative (existence)",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "M",
+   "note": "on_call 'this month' dropped (as R07)"
+  },
+  {
+   "item": "R30",
+   "question_id": "D15-150",
+   "stratum": "negative (existence)",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "M",
+   "note": "on_call 'this month' dropped (as R07)"
+  },
+  {
+   "item": "R31",
+   "question_id": "D15-151",
+   "stratum": "negative (existence)",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "R32",
+   "question_id": "D15-153",
+   "stratum": "ambiguous (old reply was an unclear-records reply)",
+   "readability": 2,
+   "semantics": "P",
+   "implication": "M",
+   "note": "single-claim reply that gives nothing: history withheld as 'unclear' although the older value is stated in the records (a two-model sentence)"
+  },
+  {
+   "item": "R33",
+   "question_id": "D15-155",
+   "stratum": "abstained (every part withheld)",
+   "readability": 2,
+   "semantics": "C",
+   "implication": "N",
+   "note": "'for the design review day for Osprey' (double 'for')"
+  },
+  {
+   "item": "R34",
+   "question_id": "D15-157",
+   "stratum": "ambiguous (old reply was an unclear-records reply)",
+   "readability": 2,
+   "semantics": "P",
+   "implication": "M",
+   "note": "historical default model withheld as 'unclear'"
+  },
+  {
+   "item": "R35",
+   "question_id": "D15-158",
+   "stratum": "ordering",
+   "readability": 2,
+   "semantics": "C",
+   "implication": "N",
+   "note": "'for the standup time for Vesper' (double 'for')"
+  },
+  {
+   "item": "R36",
+   "question_id": "D15-159",
+   "stratum": "historical",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "R37",
+   "question_id": "D15-160",
+   "stratum": "ambiguous (old reply was an unclear-records reply)",
+   "readability": 2,
+   "semantics": "P",
+   "implication": "M",
+   "note": "historical default model withheld as 'unclear'"
+  },
+  {
+   "item": "R38",
+   "question_id": "D15-162",
+   "stratum": "supported (every part answerable)",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "R39",
+   "question_id": "D15-164",
+   "stratum": "ambiguous (old reply was an unclear-records reply)",
+   "readability": 2,
+   "semantics": "P",
+   "implication": "M",
+   "note": "historical default model withheld as 'unclear'"
+  },
+  {
+   "item": "R40",
+   "question_id": "D15-165",
+   "stratum": "ordering",
+   "readability": 2,
+   "semantics": "C",
+   "implication": "N",
+   "note": "double 'for'"
+  },
+  {
+   "item": "R41",
+   "question_id": "D15-167",
+   "stratum": "ordering",
+   "readability": 2,
+   "semantics": "C",
+   "implication": "N",
+   "note": "double 'for'"
+  },
+  {
+   "item": "R42",
+   "question_id": "D15-170",
+   "stratum": "historical",
+   "readability": 2,
+   "semantics": "P",
+   "implication": "M",
+   "note": "historical default model withheld as 'unclear'"
+  },
+  {
+   "item": "S01",
+   "condition": "incomplete_scope",
+   "subject": "Tamarind",
+   "relation": "oncall_rotation",
+   "readability": 2,
+   "semantics": "C",
+   "implication": "N",
+   "note": "'a search of the pager schedule for Tamarind ... no on-call rotation for Tamarind' repeats the subject"
+  },
+  {
+   "item": "S02",
+   "condition": "incomplete_scope",
+   "subject": "Vesper",
+   "relation": "runbook",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "S03",
+   "condition": "incomplete_scope",
+   "subject": "Osprey",
+   "relation": "escalation_channel",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "S04",
+   "condition": "incomplete_scope",
+   "subject": "Vesper",
+   "relation": "escalation_channel",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "S05",
+   "condition": "incomplete_scope",
+   "subject": "Sable",
+   "relation": "escalation_channel",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "S06",
+   "condition": "incomplete_scope",
+   "subject": "Marlin",
+   "relation": "escalation_channel",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "S07",
+   "condition": "explicit_absence",
+   "subject": "Vesper",
+   "relation": "runbook",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "S08",
+   "condition": "source_disagreement",
+   "subject": "Marlin",
+   "relation": "oncall_rotation",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": ""
+  },
+  {
+   "item": "S09",
+   "condition": "unauthorized_only",
+   "subject": "Quartz",
+   "relation": "runbook",
+   "readability": 3,
+   "semantics": "C",
+   "implication": "N",
+   "note": "the unauthorised record is invisible, as designed"
+  }
+ ]
+}

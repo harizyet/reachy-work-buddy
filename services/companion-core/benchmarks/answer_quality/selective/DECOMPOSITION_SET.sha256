@@ -1,0 +1,3 @@
+# Freeze of the labelled question-structure set, 2026-10-09T23:16:09+00:00. Written BEFORE the typed registry and the question decomposer existed; verified by decomp_eval.py before every run. Nothing listed may change.
+396ae40342eae95c422614851be5ee72f0b27375fc61849bd158bd5288151a0a  decomposition_set.py
+5008a0d9e5d5415eaa4f5b7e8374d23294c883bc819333c4a0c5c814c20d94e2  decomposition_dev_set.json

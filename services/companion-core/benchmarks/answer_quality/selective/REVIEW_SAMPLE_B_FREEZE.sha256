@@ -1,0 +1,3 @@
+# Freeze of the prospective review sample for the changed wording, 2026-10-10T00:17:40+00:00. Drawn from dev15 gold structure only (never from a reply), excluding the earlier frozen 51-sample. Nothing listed may change.
+135d66434eb716df3cee4d46774eabb40ceb3f1a20ac65e2bcea143155cd4f39  review_sample_b.py
+96529d3ca20a77747cac5d3172d3d415c8631a68be15c53ee1081e37014cbfd3  review_sample_b_frozen.json

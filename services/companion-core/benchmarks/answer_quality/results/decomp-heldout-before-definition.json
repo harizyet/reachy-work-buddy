@@ -1,0 +1,1982 @@
+{
+ "counts": {
+  "questions": 52,
+  "exact": 21,
+  "count_ok": 52,
+  "parts_expected": 42,
+  "parts_found_exact": 10,
+  "missed_parts": 32,
+  "invented_structures": 0,
+  "withheld_clauses_expected": 20,
+  "withheld_clauses_produced": 52,
+  "questions_with_invented": 0
+ },
+ "fields": {
+  "parts": 42,
+  "subject_ok": 14,
+  "relation_ok": 10,
+  "ask_ok": 10,
+  "scope_ok": 10,
+  "period_ok": 10,
+  "located": 10,
+  "object_ok": 10
+ },
+ "by_category": {
+  "release_day": {
+   "questions": 16,
+   "exact": 6,
+   "invented": 0,
+   "missed": 10
+  },
+  "escalation": {
+   "questions": 15,
+   "exact": 7,
+   "invented": 0,
+   "missed": 8
+  },
+  "approver": {
+   "questions": 19,
+   "exact": 8,
+   "invented": 0,
+   "missed": 12
+  },
+  "mixed": {
+   "questions": 2,
+   "exact": 0,
+   "invented": 0,
+   "missed": 2
+  }
+ },
+ "withhold_reasons": {
+  "no_relation_cue": 45,
+  "pronoun_reference": 4,
+  "unsupported_question_type": 1,
+  "answer_type_mismatch": 2
+ },
+ "failures": [
+  {
+   "id": "H001",
+   "cat": "release_day",
+   "hard": false,
+   "q": "Which day does Cobalt release?",
+   "want": [
+    [
+     "Cobalt",
+     "release_day",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "cobalt",
+     "release_day"
+    ]
+   ]
+  },
+  {
+   "id": "H002",
+   "cat": "release_day",
+   "hard": false,
+   "q": "What is Drift's release day?",
+   "want": [
+    [
+     "Drift",
+     "release_day",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "drift",
+     "release_day"
+    ]
+   ]
+  },
+  {
+   "id": "H003",
+   "cat": "release_day",
+   "hard": false,
+   "q": "On which day do Fennel releases go out?",
+   "want": [
+    [
+     "Fennel",
+     "release_day",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "fennel",
+     "release_day"
+    ]
+   ]
+  },
+  {
+   "id": "H004",
+   "cat": "release_day",
+   "hard": false,
+   "q": "When does Grove ship?",
+   "want": [
+    [
+     "Grove",
+     "release_day",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "grove",
+     "release_day"
+    ]
+   ]
+  },
+  {
+   "id": "H005",
+   "cat": "release_day",
+   "hard": true,
+   "q": "What day of the week is the Mistral release?",
+   "want": [
+    [
+     "Mistral",
+     "release_day",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "mistral",
+     "release_day"
+    ]
+   ]
+  },
+  {
+   "id": "H006",
+   "cat": "release_day",
+   "hard": false,
+   "q": "Which weekday does Nimbus usually release on?",
+   "want": [
+    [
+     "Nimbus",
+     "release_day",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "nimbus",
+     "release_day"
+    ]
+   ]
+  },
+  {
+   "id": "H007",
+   "cat": "release_day",
+   "hard": false,
+   "q": "What day are Onyx releases cut?",
+   "want": [
+    [
+     "Onyx",
+     "release_day",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "onyx",
+     "release_day"
+    ]
+   ]
+  },
+  {
+   "id": "H008",
+   "cat": "release_day",
+   "hard": false,
+   "q": "Could you tell me Paprika's release day?",
+   "want": [
+    [
+     "Paprika",
+     "release_day",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "paprika",
+     "release_day"
+    ]
+   ]
+  },
+  {
+   "id": "H009",
+   "cat": "release_day",
+   "hard": false,
+   "q": "What is Cobalt's release day, and who owns the Ember API?",
+   "want": [
+    [
+     "Cobalt",
+     "release_day",
+     "value",
+     "any",
+     null
+    ],
+    [
+     "Ember API",
+     "owner",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Ember API",
+     "owner",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "cobalt",
+     "release_day"
+    ]
+   ]
+  },
+  {
+   "id": "H010",
+   "cat": "release_day",
+   "hard": false,
+   "q": "Who is the Cobalt lead and which day does Cobalt release?",
+   "want": [
+    [
+     "Cobalt",
+     "lead",
+     "value",
+     "any",
+     null
+    ],
+    [
+     "Cobalt",
+     "release_day",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Cobalt",
+     "lead",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "cobalt",
+     "release_day"
+    ]
+   ]
+  },
+  {
+   "id": "H017",
+   "cat": "escalation",
+   "hard": false,
+   "q": "Who is the escalation contact for Cobalt?",
+   "want": [
+    [
+     "Cobalt",
+     "escalation_contact",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "cobalt",
+     "escalation_contact"
+    ]
+   ]
+  },
+  {
+   "id": "H018",
+   "cat": "escalation",
+   "hard": false,
+   "q": "Who should I escalate Drift incidents to?",
+   "want": [
+    [
+     "Drift",
+     "escalation_contact",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "drift",
+     "escalation_contact"
+    ]
+   ]
+  },
+  {
+   "id": "H019",
+   "cat": "escalation",
+   "hard": false,
+   "q": "Who do I escalate to for Fennel outages?",
+   "want": [
+    [
+     "Fennel",
+     "escalation_contact",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "fennel",
+     "escalation_contact"
+    ]
+   ]
+  },
+  {
+   "id": "H020",
+   "cat": "escalation",
+   "hard": false,
+   "q": "Who handles escalations for Grove?",
+   "want": [
+    [
+     "Grove",
+     "escalation_contact",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "grove",
+     "escalation_contact"
+    ]
+   ]
+  },
+  {
+   "id": "H021",
+   "cat": "escalation",
+   "hard": false,
+   "q": "Who is the escalation point for the Ember API?",
+   "want": [
+    [
+     "Ember API",
+     "escalation_contact",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "ember api",
+     "escalation_contact"
+    ]
+   ]
+  },
+  {
+   "id": "H022",
+   "cat": "escalation",
+   "hard": false,
+   "q": "Which person do we escalate Mistral problems to?",
+   "want": [
+    [
+     "Mistral",
+     "escalation_contact",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "mistral",
+     "escalation_contact"
+    ]
+   ]
+  },
+  {
+   "id": "H023",
+   "cat": "escalation",
+   "hard": false,
+   "q": "Who is the Onyx escalation contact?",
+   "want": [
+    [
+     "Onyx",
+     "escalation_contact",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "onyx",
+     "escalation_contact"
+    ]
+   ]
+  },
+  {
+   "id": "H024",
+   "cat": "escalation",
+   "hard": false,
+   "q": "Who is on call for Paprika, and who is the escalation contact for Paprika?",
+   "want": [
+    [
+     "Paprika",
+     "on_call",
+     "value",
+     "any",
+     null
+    ],
+    [
+     "Paprika",
+     "escalation_contact",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Paprika",
+     "on_call",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "paprika",
+     "escalation_contact"
+    ]
+   ]
+  },
+  {
+   "id": "H032",
+   "cat": "approver",
+   "hard": false,
+   "q": "Who approved the Cobalt release?",
+   "want": [
+    [
+     "Cobalt",
+     "approver",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "cobalt",
+     "approver"
+    ]
+   ]
+  },
+  {
+   "id": "H033",
+   "cat": "approver",
+   "hard": false,
+   "q": "Who is the release approver for Drift?",
+   "want": [
+    [
+     "Drift",
+     "approver",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "drift",
+     "approver"
+    ]
+   ]
+  },
+  {
+   "id": "H034",
+   "cat": "approver",
+   "hard": false,
+   "q": "Who approves Fennel releases?",
+   "want": [
+    [
+     "Fennel",
+     "approver",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "fennel",
+     "approver"
+    ]
+   ]
+  },
+  {
+   "id": "H035",
+   "cat": "approver",
+   "hard": true,
+   "q": "Who signed off the Grove release?",
+   "want": [
+    [
+     "Grove",
+     "approver",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "grove",
+     "approver"
+    ]
+   ]
+  },
+  {
+   "id": "H036",
+   "cat": "approver",
+   "hard": false,
+   "q": "Who has to approve the Mistral release?",
+   "want": [
+    [
+     "Mistral",
+     "approver",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "mistral",
+     "approver"
+    ]
+   ]
+  },
+  {
+   "id": "H037",
+   "cat": "approver",
+   "hard": false,
+   "q": "Who is the approver for Nimbus?",
+   "want": [
+    [
+     "Nimbus",
+     "approver",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "nimbus",
+     "approver"
+    ]
+   ]
+  },
+  {
+   "id": "H038",
+   "cat": "approver",
+   "hard": false,
+   "q": "Who approves releases for Onyx?",
+   "want": [
+    [
+     "Onyx",
+     "approver",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "onyx",
+     "approver"
+    ]
+   ]
+  },
+  {
+   "id": "H039",
+   "cat": "approver",
+   "hard": false,
+   "q": "Which person approved the Paprika release?",
+   "want": [
+    [
+     "Paprika",
+     "approver",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "paprika",
+     "approver"
+    ]
+   ]
+  },
+  {
+   "id": "H040",
+   "cat": "approver",
+   "hard": false,
+   "q": "Who approved the Cobalt release and who owns the Ember API?",
+   "want": [
+    [
+     "Cobalt",
+     "approver",
+     "value",
+     "any",
+     null
+    ],
+    [
+     "Ember API",
+     "owner",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Ember API",
+     "owner",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "cobalt",
+     "approver"
+    ]
+   ]
+  },
+  {
+   "id": "H041",
+   "cat": "approver",
+   "hard": false,
+   "q": "Who approved the Drift release, and which day does Drift release?",
+   "want": [
+    [
+     "Drift",
+     "approver",
+     "value",
+     "any",
+     null
+    ],
+    [
+     "Drift",
+     "release_day",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 2,
+   "reasons": [
+    "no_relation_cue",
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "drift",
+     "approver"
+    ],
+    [
+     "drift",
+     "release_day"
+    ]
+   ]
+  },
+  {
+   "id": "H047",
+   "cat": "approver",
+   "hard": false,
+   "q": "Who approved the Cobalt release in March?",
+   "want": [
+    [
+     "Cobalt",
+     "approver",
+     "value",
+     "past",
+     [
+      "in",
+      "march"
+     ]
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "cobalt",
+     "approver"
+    ]
+   ]
+  },
+  {
+   "id": "H051",
+   "cat": "mixed",
+   "hard": false,
+   "q": "Who leads Cobalt, who is the Cobalt escalation contact and which day does it release?",
+   "want": [
+    [
+     "Cobalt",
+     "lead",
+     "value",
+     "any",
+     null
+    ],
+    [
+     "Cobalt",
+     "escalation_contact",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 1,
+   "got": [
+    [
+     "Cobalt",
+     "lead",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 2,
+   "reasons": [
+    "no_relation_cue",
+    "pronoun_reference"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "cobalt",
+     "escalation_contact"
+    ]
+   ]
+  },
+  {
+   "id": "H052",
+   "cat": "mixed",
+   "hard": false,
+   "q": "What is Drift's default model, who approved the Drift release, and who is on call for Drift?",
+   "want": [
+    [
+     "Drift",
+     "default_model",
+     "value",
+     "any",
+     null
+    ],
+    [
+     "Drift",
+     "approver",
+     "value",
+     "any",
+     null
+    ],
+    [
+     "Drift",
+     "on_call",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Drift",
+     "default_model",
+     "value",
+     "any",
+     null
+    ],
+    [
+     "Drift",
+     "on_call",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "drift",
+     "approver"
+    ]
+   ]
+  }
+ ],
+ "failures_not_marked_hard": [
+  {
+   "id": "H001",
+   "cat": "release_day",
+   "hard": false,
+   "q": "Which day does Cobalt release?",
+   "want": [
+    [
+     "Cobalt",
+     "release_day",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "cobalt",
+     "release_day"
+    ]
+   ]
+  },
+  {
+   "id": "H002",
+   "cat": "release_day",
+   "hard": false,
+   "q": "What is Drift's release day?",
+   "want": [
+    [
+     "Drift",
+     "release_day",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "drift",
+     "release_day"
+    ]
+   ]
+  },
+  {
+   "id": "H003",
+   "cat": "release_day",
+   "hard": false,
+   "q": "On which day do Fennel releases go out?",
+   "want": [
+    [
+     "Fennel",
+     "release_day",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "fennel",
+     "release_day"
+    ]
+   ]
+  },
+  {
+   "id": "H004",
+   "cat": "release_day",
+   "hard": false,
+   "q": "When does Grove ship?",
+   "want": [
+    [
+     "Grove",
+     "release_day",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "grove",
+     "release_day"
+    ]
+   ]
+  },
+  {
+   "id": "H006",
+   "cat": "release_day",
+   "hard": false,
+   "q": "Which weekday does Nimbus usually release on?",
+   "want": [
+    [
+     "Nimbus",
+     "release_day",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "nimbus",
+     "release_day"
+    ]
+   ]
+  },
+  {
+   "id": "H007",
+   "cat": "release_day",
+   "hard": false,
+   "q": "What day are Onyx releases cut?",
+   "want": [
+    [
+     "Onyx",
+     "release_day",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "onyx",
+     "release_day"
+    ]
+   ]
+  },
+  {
+   "id": "H008",
+   "cat": "release_day",
+   "hard": false,
+   "q": "Could you tell me Paprika's release day?",
+   "want": [
+    [
+     "Paprika",
+     "release_day",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "paprika",
+     "release_day"
+    ]
+   ]
+  },
+  {
+   "id": "H009",
+   "cat": "release_day",
+   "hard": false,
+   "q": "What is Cobalt's release day, and who owns the Ember API?",
+   "want": [
+    [
+     "Cobalt",
+     "release_day",
+     "value",
+     "any",
+     null
+    ],
+    [
+     "Ember API",
+     "owner",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Ember API",
+     "owner",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "cobalt",
+     "release_day"
+    ]
+   ]
+  },
+  {
+   "id": "H010",
+   "cat": "release_day",
+   "hard": false,
+   "q": "Who is the Cobalt lead and which day does Cobalt release?",
+   "want": [
+    [
+     "Cobalt",
+     "lead",
+     "value",
+     "any",
+     null
+    ],
+    [
+     "Cobalt",
+     "release_day",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Cobalt",
+     "lead",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "cobalt",
+     "release_day"
+    ]
+   ]
+  },
+  {
+   "id": "H017",
+   "cat": "escalation",
+   "hard": false,
+   "q": "Who is the escalation contact for Cobalt?",
+   "want": [
+    [
+     "Cobalt",
+     "escalation_contact",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "cobalt",
+     "escalation_contact"
+    ]
+   ]
+  },
+  {
+   "id": "H018",
+   "cat": "escalation",
+   "hard": false,
+   "q": "Who should I escalate Drift incidents to?",
+   "want": [
+    [
+     "Drift",
+     "escalation_contact",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "drift",
+     "escalation_contact"
+    ]
+   ]
+  },
+  {
+   "id": "H019",
+   "cat": "escalation",
+   "hard": false,
+   "q": "Who do I escalate to for Fennel outages?",
+   "want": [
+    [
+     "Fennel",
+     "escalation_contact",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "fennel",
+     "escalation_contact"
+    ]
+   ]
+  },
+  {
+   "id": "H020",
+   "cat": "escalation",
+   "hard": false,
+   "q": "Who handles escalations for Grove?",
+   "want": [
+    [
+     "Grove",
+     "escalation_contact",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "grove",
+     "escalation_contact"
+    ]
+   ]
+  },
+  {
+   "id": "H021",
+   "cat": "escalation",
+   "hard": false,
+   "q": "Who is the escalation point for the Ember API?",
+   "want": [
+    [
+     "Ember API",
+     "escalation_contact",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "ember api",
+     "escalation_contact"
+    ]
+   ]
+  },
+  {
+   "id": "H022",
+   "cat": "escalation",
+   "hard": false,
+   "q": "Which person do we escalate Mistral problems to?",
+   "want": [
+    [
+     "Mistral",
+     "escalation_contact",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "mistral",
+     "escalation_contact"
+    ]
+   ]
+  },
+  {
+   "id": "H023",
+   "cat": "escalation",
+   "hard": false,
+   "q": "Who is the Onyx escalation contact?",
+   "want": [
+    [
+     "Onyx",
+     "escalation_contact",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "onyx",
+     "escalation_contact"
+    ]
+   ]
+  },
+  {
+   "id": "H024",
+   "cat": "escalation",
+   "hard": false,
+   "q": "Who is on call for Paprika, and who is the escalation contact for Paprika?",
+   "want": [
+    [
+     "Paprika",
+     "on_call",
+     "value",
+     "any",
+     null
+    ],
+    [
+     "Paprika",
+     "escalation_contact",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Paprika",
+     "on_call",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "paprika",
+     "escalation_contact"
+    ]
+   ]
+  },
+  {
+   "id": "H032",
+   "cat": "approver",
+   "hard": false,
+   "q": "Who approved the Cobalt release?",
+   "want": [
+    [
+     "Cobalt",
+     "approver",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "cobalt",
+     "approver"
+    ]
+   ]
+  },
+  {
+   "id": "H033",
+   "cat": "approver",
+   "hard": false,
+   "q": "Who is the release approver for Drift?",
+   "want": [
+    [
+     "Drift",
+     "approver",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "drift",
+     "approver"
+    ]
+   ]
+  },
+  {
+   "id": "H034",
+   "cat": "approver",
+   "hard": false,
+   "q": "Who approves Fennel releases?",
+   "want": [
+    [
+     "Fennel",
+     "approver",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "fennel",
+     "approver"
+    ]
+   ]
+  },
+  {
+   "id": "H036",
+   "cat": "approver",
+   "hard": false,
+   "q": "Who has to approve the Mistral release?",
+   "want": [
+    [
+     "Mistral",
+     "approver",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "mistral",
+     "approver"
+    ]
+   ]
+  },
+  {
+   "id": "H037",
+   "cat": "approver",
+   "hard": false,
+   "q": "Who is the approver for Nimbus?",
+   "want": [
+    [
+     "Nimbus",
+     "approver",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "nimbus",
+     "approver"
+    ]
+   ]
+  },
+  {
+   "id": "H038",
+   "cat": "approver",
+   "hard": false,
+   "q": "Who approves releases for Onyx?",
+   "want": [
+    [
+     "Onyx",
+     "approver",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "onyx",
+     "approver"
+    ]
+   ]
+  },
+  {
+   "id": "H039",
+   "cat": "approver",
+   "hard": false,
+   "q": "Which person approved the Paprika release?",
+   "want": [
+    [
+     "Paprika",
+     "approver",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "paprika",
+     "approver"
+    ]
+   ]
+  },
+  {
+   "id": "H040",
+   "cat": "approver",
+   "hard": false,
+   "q": "Who approved the Cobalt release and who owns the Ember API?",
+   "want": [
+    [
+     "Cobalt",
+     "approver",
+     "value",
+     "any",
+     null
+    ],
+    [
+     "Ember API",
+     "owner",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Ember API",
+     "owner",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "cobalt",
+     "approver"
+    ]
+   ]
+  },
+  {
+   "id": "H041",
+   "cat": "approver",
+   "hard": false,
+   "q": "Who approved the Drift release, and which day does Drift release?",
+   "want": [
+    [
+     "Drift",
+     "approver",
+     "value",
+     "any",
+     null
+    ],
+    [
+     "Drift",
+     "release_day",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 2,
+   "reasons": [
+    "no_relation_cue",
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "drift",
+     "approver"
+    ],
+    [
+     "drift",
+     "release_day"
+    ]
+   ]
+  },
+  {
+   "id": "H047",
+   "cat": "approver",
+   "hard": false,
+   "q": "Who approved the Cobalt release in March?",
+   "want": [
+    [
+     "Cobalt",
+     "approver",
+     "value",
+     "past",
+     [
+      "in",
+      "march"
+     ]
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "cobalt",
+     "approver"
+    ]
+   ]
+  },
+  {
+   "id": "H051",
+   "cat": "mixed",
+   "hard": false,
+   "q": "Who leads Cobalt, who is the Cobalt escalation contact and which day does it release?",
+   "want": [
+    [
+     "Cobalt",
+     "lead",
+     "value",
+     "any",
+     null
+    ],
+    [
+     "Cobalt",
+     "escalation_contact",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 1,
+   "got": [
+    [
+     "Cobalt",
+     "lead",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 2,
+   "reasons": [
+    "no_relation_cue",
+    "pronoun_reference"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "cobalt",
+     "escalation_contact"
+    ]
+   ]
+  },
+  {
+   "id": "H052",
+   "cat": "mixed",
+   "hard": false,
+   "q": "What is Drift's default model, who approved the Drift release, and who is on call for Drift?",
+   "want": [
+    [
+     "Drift",
+     "default_model",
+     "value",
+     "any",
+     null
+    ],
+    [
+     "Drift",
+     "approver",
+     "value",
+     "any",
+     null
+    ],
+    [
+     "Drift",
+     "on_call",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Drift",
+     "default_model",
+     "value",
+     "any",
+     null
+    ],
+    [
+     "Drift",
+     "on_call",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "drift",
+     "approver"
+    ]
+   ]
+  }
+ ],
+ "marked_hard_total": 5,
+ "marked_hard_failed": 2
+}

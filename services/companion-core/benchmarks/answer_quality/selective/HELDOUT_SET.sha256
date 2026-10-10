@@ -1,0 +1,3 @@
+# Freeze of the held-out-relation question-structure set, 2026-10-10T00:09:51+00:00. Written BEFORE release_day, escalation_contact and approver were defined in registry.py; verified by decomp_eval.py --set heldout before every run. Nothing listed may change.
+57a0d962519e4daa6b1363452588267a7608bfcaf60e8cb1c19d632e480495bb  decomposition_heldout_set.py
+ccce346e7751bb94f9fa4045434da7279289e0aa42ad39e502445aa5f0936682  decomposition_heldout_set.json

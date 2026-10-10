@@ -1,0 +1,187 @@
+REGRESSION CHECK on the 51 PREVIOUSLY INSPECTED items (development material the author has already read). Before = the previous iteration's reply, after = this pass.
+
+### R01  D15-005  [unconstrained draw]  (identical)
+Q: Who was in the Quartz planning meeting?
+
+### R02  D15-020  [supported (every part answerable)]  (identical)
+Q: What is the rollback window for Marlin?
+
+### R03  D15-023  [abstained (every part withheld)]  (identical)
+Q: Who signs off Quartz security?
+
+### R04  D15-028  [abstained (every part withheld)]  (identical)
+Q: Who is the security reviewer for Sable?
+
+### R05  D15-037  [abstained (every part withheld)]  (CHANGED)
+Q: When will the Willow lead be away next?
+BEFORE: 'The records do not say the next days off for the Willow lead.'
+AFTER : 'The records do not say the next time away for the Willow lead.'
+
+### R06  D15-045  [partial (an answerable part and a withheld part)]  (CHANGED)
+Q: What is Tamarind's default model, and when will the Vesper lead be away next?
+BEFORE: 'The default model of Tamarind is Kestrel-3B [E233].\nThe records do not say the next days off for the Vesper lead.'
+AFTER : 'The records do not say the default model of Tamarind. A record says Kestrel-3B was decided on for the default model of Tamarind, but the records do not say it is in place [E233].\nThe records do not say the next time away for the Vesper lead.'
+
+### R07  D15-048  [unconstrained draw]  (CHANGED)
+Q: Who is on call for Willow, and who is the security reviewer for Quartz?
+BEFORE: 'The person on call for Willow is Dmitri Volkov [E129].\nThe records do not say the security reviewer for Quartz.'
+AFTER : 'The person on call for Willow is Dmitri Volkov [E129] (the record says "this month").\nThe records do not say the security reviewer for Quartz.'
+
+### R08  D15-050  [partial (an answerable part and a withheld part)]  (identical)
+Q: Who leads Osprey, and who is the security reviewer for Quartz?
+
+### R09  D15-057  [partial (an answerable part and a withheld part)]  (CHANGED)
+Q: Which model did Osprey decide to keep, and how large can a Turret API message be?
+BEFORE: 'The planning decision for Osprey is keep Swift-6B as the default model [E223].\nThe records do not say the maximum message size of the Turret API.'
+AFTER : 'The records say the decision for Osprey was to keep Swift-6B as the default model [E223]. They do not say whether it has been carried out.\nThe records do not say the maximum message size of the Turret API.'
+
+### R10  D15-065  [partial (an answerable part and a withheld part)]  (identical)
+Q: What is the retry limit of the Cobalt auth service, and how large can a Conduit stream message be?
+
+### R11  D15-072  [supported (every part answerable)]  (CHANGED)
+Q: Which model does Osprey use by default, and by when does Elena Marsh have to circulate the written summary, and how many retries did the archived Hopper ingest service architecture allow?
+BEFORE: "The deadline for Elena Marsh's written summary is Tuesday [E131].\nPreviously, the retry limit of the Hopper ingest service was 6 retries [E175].\nThe records on the default model of Osprey are unclear, so I will not pick an answer."
+AFTER : "The default model of Osprey is Swift-6B [E106].\nThe deadline for Elena Marsh's written summary is Tuesday [E131].\nPreviously, the retry limit of the Hopper ingest service was 6 retries [E175]."
+
+### R12  D15-073  [partial (an answerable part and a withheld part)]  (CHANGED)
+Q: Who was in the Tamarind planning meeting, and who has the on-call duty for Tamarind, and who will fix the Willow rollback test?
+BEFORE: 'The attendees of the Tamarind planning meeting are Rania Said and Amara Osei [E296].\nThe person on call for Tamarind is Quinn Abbott [E118].\nThe records do not say the person fixing the Willow rollback test.'
+AFTER : 'The attendees of the Tamarind planning meeting are Rania Said and Amara Osei [E296].\nThe person on call for Tamarind is Quinn Abbott [E118] (the record says "this month").\nThe records do not say the person fixing the Willow rollback test.'
+
+### R13  D15-076  [ambiguous (old reply was an unclear-records reply)]  (CHANGED)
+Q: Who is on call for Sable, and where does Heron-12B run, and which model did Marlin use by default in March?
+BEFORE: 'The person on call for Sable is Quinn Abbott [E126].\nThe host running Heron-12B is the CPU host [E140] [E156].\nThe records on the default model of Marlin are unclear, so I will not pick an answer.'
+AFTER : 'The person on call for Sable is Quinn Abbott [E126] (the record says "this month").\nThe host running Heron-12B is the CPU host [E140] [E156].\nPreviously, the default model of Marlin was Kestrel-3B [E101].'
+
+### R14  D15-077  [historical]  (identical)
+Q: Who is the Cedar lead, and what is Amara Osei's deadline for the written summary, and what was the old retry limit of the Gantry scheduler?
+
+### R15  D15-080  [partial (an answerable part and a withheld part)]  (CHANGED)
+Q: By when does Olga Petrova have to circulate the written summary, and how many times does the Ferry queue retry a failed job, and when is the Sable lead's next vacation?
+BEFORE: "The deadline for Olga Petrova's written summary is Thursday [E133].\nThe retry limit of the Ferry queue is 7 retries [E154].\nThe records do not say the next days off for the Sable lead."
+AFTER : "The deadline for Olga Petrova's written summary is Thursday [E133].\nThe retry limit of the Ferry queue is 7 retries [E154].\nThe records do not say the next time away for the Sable lead."
+
+### R16  D15-083  [historical]  (CHANGED)
+Q: What is the retry limit of the Conduit stream, and when is Tidewater Pay support open on weekdays, and what was Cedar's default model before October?
+BEFORE: 'The retry limit of the Conduit stream is 4 retries [E152].\nThe weekday support hours of Tidewater Pay is 9 to 5 [E165].\nThe records on the default model of Cedar are unclear, so I will not pick an answer.'
+AFTER : 'The retry limit of the Conduit stream is 4 retries [E152].\nThe weekday support hours of Tidewater Pay are 9 to 5 [E165].\nPreviously, the default model of Cedar was Merlin-2B [E99].'
+
+### R17  D15-089  [historical]  (CHANGED)
+Q: What does Kavya Menon review, and which host serves Heron-4B, and what was the old retry limit of the Anvil builder?
+BEFORE: 'The review assigned to Kavya Menon is Turret settings [E135].\nThe host running Heron-4B is the GPU host [E150].\nPreviously, the retry limit of the Anvil builder was 5 retries [E173].'
+AFTER : 'Kavya Menon reviews Turret settings [E135].\nThe host running Heron-4B is the GPU host [E150].\nPreviously, the retry limit of the Anvil builder was 5 retries [E173].'
+
+### R18  D15-093  [supported (every part answerable)]  (CHANGED)
+Q: Who was in the Vesper planning meeting, and when is Ironside Backup support open on weekdays, and what was the old retry limit of the Gantry scheduler?
+BEFORE: 'The attendees of the Vesper planning meeting are Kavya Menon and Bruno Keller [E297].\nThe weekday support hours of Ironside Backup is 9 to 7 [E167].\nPreviously, the retry limit of the Gantry scheduler was 2 retries [E172].'
+AFTER : 'The attendees of the Vesper planning meeting are Kavya Menon and Bruno Keller [E297].\nThe weekday support hours of Ironside Backup are 9 to 7 [E167].\nPreviously, the retry limit of the Gantry scheduler was 2 retries [E172].'
+
+### R19  D15-098  [conflicted]  (identical)
+Q: What time is the Vesper standup?
+
+### R20  D15-107  [conflicted]  (CHANGED)
+Q: When does the Willow standup start, and which model did Marlin decide to keep?
+BEFORE: 'The planning decision for Marlin is keep Heron-12B as the default model [E189].\nThe records disagree on the standup time for Willow: one record says 10 [E84]; another says 12 [E85]. They do not say which applies.'
+AFTER : 'The records disagree on the standup time for Willow: one record says 10 [E84]; another says 12 [E85]. They do not say which applies.\nThe records say the decision for Marlin was to keep Heron-12B as the default model [E189]. They do not say whether it has been carried out.'
+
+### R21  D15-110  [conflicted]  (identical)
+Q: What time is the Osprey standup?
+
+### R22  D15-113  [conflicted]  (CHANGED)
+Q: Which day is the Sable design review, and what does Bruno Keller review?
+BEFORE: 'The review assigned to Bruno Keller is Anvil settings [E131].\nThe records disagree on the design review day for Sable: one record says Wednesday [E68]; another says Thursday [E69]. They do not say which applies.'
+AFTER : 'The records disagree on the design review day for Sable: one record says Wednesday [E68]; another says Thursday [E69]. They do not say which applies.\nBruno Keller reviews Anvil settings [E131].'
+
+### R23  D15-114  [conflicted]  (CHANGED)
+Q: What time is the Cedar standup, and who is on call for Vesper?
+BEFORE: 'The person on call for Vesper is Ines Duarte [E120].\nThe records disagree on the standup time for Cedar: one record says 9 [E5]; another says 11 [E6]. They do not say which applies.'
+AFTER : 'The records disagree on the standup time for Cedar: one record says 9 [E5]; another says 11 [E6]. They do not say which applies.\nThe person on call for Vesper is Ines Duarte [E120] (the record says "this month").'
+
+### R24  D15-122  [partial (an answerable part and a withheld part)]  (CHANGED)
+Q: Who owns the Conduit stream, and who is fixing the Cedar rollback test?
+BEFORE: 'The person fixing the Cedar rollback test is Liam Oconnor [E186].\nThe records do not say the owner of the Conduit stream.'
+AFTER : 'The records do not say the owner of the Conduit stream.\nThe person fixing the Cedar rollback test is Liam Oconnor [E186].'
+
+### R25  D15-123  [partial (an answerable part and a withheld part)]  (CHANGED)
+Q: Who will fix the Quartz rollback test, and who has the on-call duty for Vesper?
+BEFORE: 'The person on call for Vesper is Ines Duarte [E120].\nThe records do not say the person fixing the Quartz rollback test.'
+AFTER : 'The records do not say the person fixing the Quartz rollback test.\nThe person on call for Vesper is Ines Duarte [E120] (the record says "this month").'
+
+### R26  D15-125  [unconstrained draw]  (CHANGED)
+Q: Who will fix the Willow rollback test, and what is Osprey's default model?
+BEFORE: 'The records on the default model of Osprey are unclear, so I will not pick an answer.\nThe records do not say the person fixing the Willow rollback test.'
+AFTER : 'The records do not say the person fixing the Willow rollback test.\nThe default model of Osprey is Swift-6B [E106].'
+
+### R27  D15-126  [unconstrained draw]  (CHANGED)
+Q: Who owns the Conduit stream, and who owns the Gantry scheduler?
+BEFORE: 'The owner of the Gantry scheduler is Ines Duarte [E1].\nThe records do not say the owner of the Conduit stream.'
+AFTER : 'The records do not say the owner of the Conduit stream.\nThe owner of the Gantry scheduler is Ines Duarte [E1].'
+
+### R28  D15-141  [negative (existence)]  (identical)
+Q: Is there a staging environment for Willow?
+
+### R29  D15-147  [negative (existence)]  (CHANGED)
+Q: Is there a staging environment for Vesper, and who has the on-call duty for Cedar?
+BEFORE: 'The person on call for Cedar is Umar Bello [E110].\nThe records I searched do not mention a staging environment for Vesper.'
+AFTER : 'The records I searched do not mention a staging environment for Vesper.\nThe person on call for Cedar is Umar Bello [E110] (the record says "this month").'
+
+### R30  D15-150  [negative (existence)]  (CHANGED)
+Q: Does Quartz have a staging environment, and who is on call for Cedar?
+BEFORE: 'The records say there is no staging environment for Quartz [E59].\nThe person on call for Cedar is Umar Bello [E110].'
+AFTER : 'The records say there is no staging environment for Quartz [E59].\nThe person on call for Cedar is Umar Bello [E110] (the record says "this month").'
+
+### R31  D15-151  [negative (existence)]  (CHANGED)
+Q: Is there a staging environment for Vesper, and what is the retry limit of the Ferry queue?
+BEFORE: 'The retry limit of the Ferry queue is 7 retries [E154].\nThe records I searched do not mention a staging environment for Vesper.'
+AFTER : 'The records I searched do not mention a staging environment for Vesper.\nThe retry limit of the Ferry queue is 7 retries [E154].'
+
+### R32  D15-153  [ambiguous (old reply was an unclear-records reply)]  (CHANGED)
+Q: What was Cedar's default model before October?
+BEFORE: 'The records on the default model of Cedar are unclear, so I will not pick an answer.'
+AFTER : 'Previously, the default model of Cedar was Merlin-2B [E99].'
+
+### R33  D15-155  [abstained (every part withheld)]  (CHANGED)
+Q: Was the Osprey design review day updated in one memory after the other memory gave a different answer?
+BEFORE: 'The records give Monday [E31] and Friday [E32] for the design review day for Osprey, but nothing in them dates one before the other.'
+AFTER : 'On the design review day for Osprey, the records give Monday [E31] and Friday [E32], but nothing in them dates one before the other.'
+
+### R34  D15-157  [ambiguous (old reply was an unclear-records reply)]  (CHANGED)
+Q: What was Marlin's default model before October, and what is the retry limit of the Conduit stream?
+BEFORE: 'The retry limit of the Conduit stream is 4 retries [E152].\nThe records on the default model of Marlin are unclear, so I will not pick an answer.'
+AFTER : 'Previously, the default model of Marlin was Kestrel-3B [E101].\nThe retry limit of the Conduit stream is 4 retries [E152].'
+
+### R35  D15-158  [ordering]  (CHANGED)
+Q: Which of the two memories about the Vesper standup time is more recent?
+BEFORE: 'The records give 10 [E46] and 12 [E47] for the standup time for Vesper, but nothing in them dates one before the other.'
+AFTER : 'On the standup time for Vesper, the records give 10 [E46] and 12 [E47], but nothing in them dates one before the other.'
+
+### R36  D15-159  [historical]  (identical)
+Q: What was the old retry limit of the Gantry scheduler?
+
+### R37  D15-160  [ambiguous (old reply was an unclear-records reply)]  (CHANGED)
+Q: Which model did Osprey use by default in March, and which model does Quartz use by default?
+BEFORE: 'The default model of Quartz is Merlin-2B [E279].\nThe records on the default model of Osprey are unclear, so I will not pick an answer.'
+AFTER : 'Previously, the default model of Osprey was Kestrel-9B [E105].\nThe records do not say the default model of Quartz. A record says Merlin-2B was decided on for the default model of Quartz, but the records do not say it is in place [E279].'
+
+### R38  D15-162  [supported (every part answerable)]  (identical)
+Q: How many retries did the archived Hopper ingest service architecture allow, and who attended the Cedar planning meeting?
+
+### R39  D15-164  [ambiguous (old reply was an unclear-records reply)]  (CHANGED)
+Q: Which model did Marlin use by default in March, and who attended the Cedar planning meeting?
+BEFORE: 'The attendees of the Cedar planning meeting are Liam Oconnor and Ines Duarte [E292].\nThe records on the default model of Marlin are unclear, so I will not pick an answer.'
+AFTER : 'Previously, the default model of Marlin was Kestrel-3B [E101].\nThe attendees of the Cedar planning meeting are Liam Oconnor and Ines Duarte [E292].'
+
+### R40  D15-165  [ordering]  (CHANGED)
+Q: Was the Marlin design review day updated in one memory after the other memory gave a different answer?
+BEFORE: 'The records give Tuesday [E15] and Friday [E16] for the design review day for Marlin, but nothing in them dates one before the other.'
+AFTER : 'On the design review day for Marlin, the records give Tuesday [E15] and Friday [E16], but nothing in them dates one before the other.'
+
+### R41  D15-167  [ordering]  (CHANGED)
+Q: Was the Tamarind design review day updated in one memory after the other memory gave a different answer?
+BEFORE: 'The records give Tuesday [E40] and Thursday [E41] for the design review day for Tamarind, but nothing in them dates one before the other.'
+AFTER : 'On the design review day for Tamarind, the records give Tuesday [E40] and Thursday [E41], but nothing in them dates one before the other.'
+
+### R42  D15-170  [historical]  (CHANGED)
+Q: Which model did Marlin use by default in March, and through when is the Osprey budget approved?
+BEFORE: 'The last funded month for Osprey is July [E224].\nThe records on the default model of Marlin are unclear, so I will not pick an answer.'
+AFTER : 'Previously, the default model of Marlin was Kestrel-3B [E101].\nThe last funded month for Osprey is July [E224].'

@@ -1,0 +1,291 @@
+PROSPECTIVE DEVELOPMENT REVIEW PACKET (changed wording). Single reader: NO INDEPENDENT HUMAN REVIEW. dev15 = design set.
+
+### B01  D15-003  [decision relation (decision template)]
+Q: Which model did Vesper decide to keep?
+GOLD: [('decision', 'Vesper', 'SUPPORTED', ['keep Kestrel-9B as the default model'])]
+BEFORE: 'The planning decision for Vesper is keep Kestrel-9B as the default model [E245].'
+AFTER : 'The records say the decision for Vesper was to keep Kestrel-9B as the default model [E245]. They do not say whether it has been carried out.'   (CHANGED)
+    E245 = meeting:mt-vesper#2: 'So the decision is to keep Kestrel-9B as the default model. So the decision is to keep Kestrel-9B as the default model. Kavya Menon'
+
+### B02  D15-006  [review text (review template)]
+Q: What is Ines Duarte reviewing?
+GOLD: [('reviews', 'Ines Duarte', 'SUPPORTED', ['the Conduit settings'])]
+BEFORE: 'The review assigned to Ines Duarte is Conduit settings [E137].'
+AFTER : 'Ines Duarte reviews Conduit settings [E137].'   (CHANGED)
+    E137 = note:note-quartz-actions: 'Vera Kovac to circulate the written summary by Wednesday. Ines Duarte to review the Conduit settings.'
+
+### B03  D15-008  [support hours (plural agreement)]
+Q: What are Ironside Backup's support hours?
+GOLD: [('support_hours', 'Ironside Backup', 'SUPPORTED', ['9 to 7'])]
+BEFORE: 'The weekday support hours of Ironside Backup is 9 to 7 [E167].'
+AFTER : 'The weekday support hours of Ironside Backup are 9 to 7 [E167].'   (CHANGED)
+    E167 = document:doc-vendor-ironside-backup: '# Support\nIronside Backup support hours are 9 to 7 on weekdays. The support line is 555-0135.\n'
+
+### B04  D15-019  [default model, current (decision versus configured)]
+Q: What is Vesper's default model?
+GOLD: [('default_model', 'Vesper', 'SUPPORTED', ['Kestrel-9B'])]
+BEFORE: 'The default model of Vesper is Kestrel-9B [E245].'
+AFTER : 'The records do not say the default model of Vesper. A record says Kestrel-9B was decided on for the default model of Vesper, but the records do not say it is in place [E245].'   (CHANGED)
+    E245 = meeting:mt-vesper#2: 'So the decision is to keep Kestrel-9B as the default model. So the decision is to keep Kestrel-9B as the default model. Kavya Menon'
+
+### B05  D15-043  [decision relation (decision template)]
+Q: Which model did Marlin decide to keep, and who signs off Willow security?
+GOLD: [('decision', 'Marlin', 'SUPPORTED', ['keep Heron-12B as the default model']), ('security_reviewer', 'Willow', 'UNSUPPORTED', [])]
+BEFORE: 'The planning decision for Marlin is keep Heron-12B as the default model [E189].\nThe records do not say the security reviewer for Willow.'
+AFTER : 'The records say the decision for Marlin was to keep Heron-12B as the default model [E189]. They do not say whether it has been carried out.\nThe records do not say the security reviewer for Willow.'   (CHANGED)
+    E189 = meeting:mt-marlin#2: 'So the decision is to keep Heron-12B as the default model. So the decision is to keep Heron-12B as the default model. Yusuf Demir'
+
+### B06  D15-044  [review text (review template)]
+Q: What is Jonas Weiss reviewing, and what is the maximum message size of the Conduit stream?
+GOLD: [('reviews', 'Jonas Weiss', 'SUPPORTED', ['the Gantry settings']), ('max_message_size', 'Conduit stream', 'UNSUPPORTED', [])]
+BEFORE: 'The review assigned to Jonas Weiss is Gantry settings [E130].\nThe records do not say the maximum message size of the Conduit stream.'
+AFTER : 'Jonas Weiss reviews Gantry settings [E130].\nThe records do not say the maximum message size of the Conduit stream.'   (CHANGED)
+    E130 = note:note-cedar-actions: 'Sven Larsen to circulate the written summary by Monday. Jonas Weiss to review the Gantry settings.'
+
+### B07  D15-052  [vacation (reworded label)]
+Q: Who attended the Osprey planning meeting, and when is the Marlin lead's next vacation?
+GOLD: [('attends', 'Osprey', 'SUPPORTED', ['Farid Haddad', 'Wen Zhao']), ('vacation', 'Marlin', 'UNSUPPORTED', [])]
+BEFORE: 'The attendees of the Osprey planning meeting are Farid Haddad and Wen Zhao [E295].\nThe records do not say the next days off for the Marlin lead.'
+AFTER : 'The attendees of the Osprey planning meeting are Farid Haddad and Wen Zhao [E295].\nThe records do not say the next time away for the Marlin lead.'   (CHANGED)
+    E295 = meeting:mt-osprey: 'Farid Haddad Wen Zhao'
+
+### B08  D15-056  [on call (relative time kept)]
+Q: Who is on call for Vesper, and what is the maximum message size of the Hopper ingest service?
+GOLD: [('on_call', 'Vesper', 'SUPPORTED', ['Ines Duarte']), ('max_message_size', 'Hopper ingest service', 'UNSUPPORTED', [])]
+BEFORE: 'The person on call for Vesper is Ines Duarte [E120].\nThe records do not say the maximum message size of the Hopper ingest service.'
+AFTER : 'The person on call for Vesper is Ines Duarte [E120] (the record says "this month").\nThe records do not say the maximum message size of the Hopper ingest service.'   (CHANGED)
+    E120 = note:note-vesper-oncall: 'Ines Duarte is on call for Vesper this month.'
+
+### B09  D15-063  [on call (relative time kept)]
+Q: Who has the on-call duty for Quartz, and who signs off Osprey security?
+GOLD: [('on_call', 'Quartz', 'SUPPORTED', ['Pablo Reyes']), ('security_reviewer', 'Osprey', 'UNSUPPORTED', [])]
+BEFORE: 'The person on call for Quartz is Pablo Reyes [E124].\nThe records do not say the security reviewer for Osprey.'
+AFTER : 'The person on call for Quartz is Pablo Reyes [E124] (the record says "this month").\nThe records do not say the security reviewer for Osprey.'   (CHANGED)
+    E124 = note:note-quartz-oncall: 'Pablo Reyes is on call for Quartz this month.'
+
+### B10  D15-070  [default model, current (decision versus configured)]
+Q: Which model does Sable use by default, and when is the Vesper lead's next vacation?
+GOLD: [('default_model', 'Sable', 'SUPPORTED', ['Swift-20B']), ('vacation', 'Vesper', 'UNSUPPORTED', [])]
+BEFORE: 'The records do not say the default model of Sable or the next days off for the Vesper lead.'
+AFTER : 'The records do not say the default model of Sable or the next time away for the Vesper lead.'   (CHANGED)
+
+### B11  D15-071  [default model, history (explicit transition)]
+Q: Who is the Quartz lead, and which model did Tamarind decide to keep, and what was Cedar's default model before October?
+GOLD: [('lead', 'Quartz', 'SUPPORTED', ['Pablo Reyes']), ('decision', 'Tamarind', 'SUPPORTED', ['keep Kestrel-3B as the default model']), ('default_model_history', 'Cedar', 'HISTORICAL', ['Merlin-2B'])]
+BEFORE: 'The lead of Quartz is Pablo Reyes [E57].\nThe planning decision for Tamarind is keep Kestrel-3B as the default model [E233].\nThe records on the default model of Cedar are unclear, so I will not pick an answer.'
+AFTER : 'The lead of Quartz is Pablo Reyes [E57].\nThe records say the decision for Tamarind was to keep Kestrel-3B as the default model [E233]. They do not say whether it has been carried out.\nPreviously, the default model of Cedar was Merlin-2B [E99].'   (CHANGED)
+    E233 = meeting:mt-tamarind#2: 'So the decision is to keep Kestrel-3B as the default model. So the decision is to keep Kestrel-3B as the default model. Rania Said'
+    E57 = memory:m057: 'Pablo Reyes is the Quartz lead.'
+    E99 = memory:m099: 'As of March, the Cedar default model was Merlin-2B.'
+
+### B12  D15-074  [decision relation (decision template)]
+Q: What was decided about Quartz's default model, and who owns the Anvil builder, and how many retries did the archived Anvil builder architecture allow?
+GOLD: [('decision', 'Quartz', 'SUPPORTED', ['keep Merlin-2B as the default model']), ('owner', 'Anvil builder', 'SUPPORTED', ['Umar Bello']), ('retry_limit_history', 'Anvil builder', 'HISTORICAL', ['5'])]
+BEFORE: 'The owner of the Anvil builder is Umar Bello [E10].\nPreviously, the retry limit of the Anvil builder was 5 retries [E173].\nI could not work out one part of the question, so I have not answered it.'
+AFTER : 'I could not work out one part of the question, so I have not answered it.\nThe owner of the Anvil builder is Umar Bello [E10].\nPreviously, the retry limit of the Anvil builder was 5 retries [E173].'   (CHANGED)
+    E10 = memory:m010: 'Umar Bello owns the Anvil builder.'
+    E173 = document:doc-marlin-arch-v1: '# Jobs\nJobs flow through the Anvil builder. A failed job is retried up to 5 times before it is parked.\n\n# Model serving\nMarlin serves Kestrel-3B on the CPU host.\n'
+
+### B13  D15-075  [vacation (reworded label)]
+Q: Who has the on-call duty for Marlin, and what is Umar Bello's deadline for the written summary, and when will the Tamarind lead be away next?
+GOLD: [('on_call', 'Marlin', 'SUPPORTED', ['Sven Larsen']), ('deadline', 'Umar Bello', 'SUPPORTED', ['Friday']), ('vacation', 'Tamarind', 'UNSUPPORTED', [])]
+BEFORE: "The person on call for Marlin is Sven Larsen [E112].\nThe deadline for Umar Bello's written summary is Friday [E134].\nThe records do not say the next days off for the Tamarind lead."
+AFTER : 'The person on call for Marlin is Sven Larsen [E112] (the record says "this month").\nThe deadline for Umar Bello\'s written summary is Friday [E134].\nThe records do not say the next time away for the Tamarind lead.'   (CHANGED)
+    E112 = note:note-marlin-oncall: 'Sven Larsen is on call for Marlin this month.'
+    E134 = note:note-tamarind-actions: 'Umar Bello to circulate the written summary by Friday. Nikhil Rao to review the Sluice settings.'
+
+### B14  D15-082  [default model, history (explicit transition)]
+Q: Who is fixing the Vesper rollback test, and where does Kestrel-3B run, and which model did Osprey use by default in March?
+GOLD: [('test_fixer', 'Vesper', 'SUPPORTED', ['Kavya Menon']), ('runs_on', 'Kestrel-3B', 'SUPPORTED', ['GPU host']), ('default_model_history', 'Osprey', 'HISTORICAL', ['Kestrel-9B'])]
+BEFORE: 'The person fixing the Vesper rollback test is Kavya Menon [E260].\nThe host running Kestrel-3B is the GPU host [E146].\nThe records on the default model of Osprey are unclear, so I will not pick an answer.'
+AFTER : 'The person fixing the Vesper rollback test is Kavya Menon [E260].\nThe host running Kestrel-3B is the GPU host [E146].\nPreviously, the default model of Osprey was Kestrel-9B [E105].'   (CHANGED)
+    E105 = memory:m105: 'As of March, the Osprey default model was Kestrel-9B.'
+    E146 = document:doc-tamarind-arch: '# Overview\nTamarind is an internal platform. It runs scheduled jobs and serves interactive requests.\n\n# Jobs\nJobs flow through the Sluice cache. A failed job is retried up to 5 times before it is parked.\n\n# Model serving\nTamarind '
+    E260 = meeting:mt-vesper#17: 'I will fix the Vesper rollback test. I will fix the Vesper rollback test. Kavya Menon'
+
+### B15  D15-085  [support hours (plural agreement)]
+Q: Is there a staging environment for Cedar, and when is Quarry Data support open on weekdays, and how large can a Conduit stream message be?
+GOLD: [('staging_env', 'Cedar', 'SUPPORTED', ['yes']), ('support_hours', 'Quarry Data', 'SUPPORTED', ['9 to 6']), ('max_message_size', 'Conduit stream', 'UNSUPPORTED', [])]
+BEFORE: 'The records say there is a staging environment for Cedar [E4].\nThe records do not say the weekday support hours of Quarry Data or the maximum message size of the Conduit stream.'
+AFTER : 'The records say there is a staging environment for Cedar [E4].\nThe records do not say the weekday support hours of Quarry Data or the maximum message size of the Conduit stream.'   (identical)
+    E4 = memory:m004: 'Cedar has a staging environment.'
+
+### B16  D15-086  [three or more parts (question order kept)]
+Q: Through when is the Osprey budget approved, and who owns the Cobalt auth service, and who is the security reviewer for Marlin?
+GOLD: [('budget_through', 'Osprey', 'SUPPORTED', ['July']), ('owner', 'Cobalt auth service', 'SUPPORTED', ['Tara Brennan']), ('security_reviewer', 'Marlin', 'UNSUPPORTED', [])]
+BEFORE: 'The last funded month for Osprey is July [E224].\nThe owner of the Cobalt auth service is Tara Brennan [E83].\nThe records do not say the security reviewer for Marlin.'
+AFTER : 'The last funded month for Osprey is July [E224].\nThe owner of the Cobalt auth service is Tara Brennan [E83].\nThe records do not say the security reviewer for Marlin.'   (identical)
+    E224 = meeting:mt-osprey#3: 'The budget for Osprey is approved through July. The budget for Osprey is approved through July. Farid Haddad'
+    E83 = memory:m083: 'Tara Brennan owns the Cobalt auth service.'
+
+### B17  D15-087  [three or more parts (question order kept)]
+Q: What is Willow's default model, and until which month is Quartz funded, and who signs off Willow security?
+GOLD: [('default_model', 'Willow', 'SUPPORTED', ['Swift-6B']), ('budget_through', 'Quartz', 'SUPPORTED', ['November']), ('security_reviewer', 'Willow', 'UNSUPPORTED', [])]
+BEFORE: 'The last funded month for Quartz is November [E280].\nThe records do not say the default model of Willow or the security reviewer for Willow.'
+AFTER : 'The records do not say the default model of Willow.\nThe last funded month for Quartz is November [E280].\nThe records do not say the security reviewer for Willow.'   (CHANGED)
+    E280 = meeting:mt-quartz#3: 'The budget for Quartz is approved through November. The budget for Quartz is approved through November. Pablo Reyes'
+
+### B18  D15-088  [three or more parts (question order kept)]
+Q: Where does Swift-20B run, and who owns the Sluice cache, and how many retries did the archived Hopper ingest service architecture allow?
+GOLD: [('runs_on', 'Swift-20B', 'SUPPORTED', ['batch host']), ('owner', 'Sluice cache', 'SUPPORTED', ['Amara Osei']), ('retry_limit_history', 'Hopper ingest service', 'HISTORICAL', ['6'])]
+BEFORE: 'The host running Swift-20B is the batch host [E138] [E154].\nThe owner of the Sluice cache is Amara Osei [E34].\nPreviously, the retry limit of the Hopper ingest service was 6 retries [E175].'
+AFTER : 'The host running Swift-20B is the batch host [E138] [E154].\nThe owner of the Sluice cache is Amara Osei [E34].\nPreviously, the retry limit of the Hopper ingest service was 6 retries [E175].'   (identical)
+    E138 = document:doc-cedar-arch: '# Overview\nCedar is an internal platform. It runs scheduled jobs and serves interactive requests.\n\n# Jobs\nJobs flow through the Gantry scheduler. A failed job is retried up to 3 times before it is parked.\n\n# Model serving\nCedar se'
+    E154 = document:doc-sable-arch: '# Overview\nSable is an internal platform. It runs scheduled jobs and serves interactive requests.\n\n# Jobs\nJobs flow through the Ferry queue. A failed job is retried up to 7 times before it is parked.\n\n# Model serving\nSable serves '
+    E175 = document:doc-osprey-arch-v1: '# Jobs\nJobs flow through the Hopper ingest service. A failed job is retried up to 6 times before it is parked.\n\n# Model serving\nOsprey serves Kestrel-9B on the CPU host.\n'
+    E34 = memory:m034: 'Amara Osei owns the Sluice cache.'
+
+### B19  D15-091  [default model, history (explicit transition)]
+Q: Which model did Vesper decide to keep, and which host serves Swift-6B, and what was Marlin's default model before October?
+GOLD: [('decision', 'Vesper', 'SUPPORTED', ['keep Kestrel-9B as the default model']), ('runs_on', 'Swift-6B', 'SUPPORTED', ['edge host']), ('default_model_history', 'Marlin', 'HISTORICAL', ['Kestrel-3B'])]
+BEFORE: 'The planning decision for Vesper is keep Kestrel-9B as the default model [E245].\nThe host running Swift-6B is the edge host [E144] [E160].\nThe records on the default model of Marlin are unclear, so I will not pick an answer.'
+AFTER : 'The records say the decision for Vesper was to keep Kestrel-9B as the default model [E245]. They do not say whether it has been carried out.\nThe host running Swift-6B is the edge host [E144] [E160].\nPreviously, the default model of Marlin was Kestrel-3B [E101].'   (CHANGED)
+    E101 = memory:m101: 'As of March, the Marlin default model was Kestrel-3B.'
+    E144 = document:doc-osprey-arch: '# Overview\nOsprey is an internal platform. It runs scheduled jobs and serves interactive requests.\n\n# Jobs\nJobs flow through the Hopper ingest service. A failed job is retried up to 7 times before it is parked.\n\n# Model serving\nOs'
+    E160 = document:doc-willow-arch: '# Overview\nWillow is an internal platform. It runs scheduled jobs and serves interactive requests.\n\n# Jobs\nJobs flow through the Cobalt auth service. A failed job is retried up to 6 times before it is parked.\n\n# Model serving\nWill'
+    E245 = meeting:mt-vesper#2: 'So the decision is to keep Kestrel-9B as the default model. So the decision is to keep Kestrel-9B as the default model. Kavya Menon'
+
+### B20  D15-095  [three or more parts (question order kept)]
+Q: What does Dmitri Volkov review, and which host serves Kestrel-9B, and who is responsible for the Conduit stream?
+GOLD: [('reviews', 'Dmitri Volkov', 'SUPPORTED', ['the Hopper settings']), ('runs_on', 'Kestrel-9B', 'SUPPORTED', ['CPU host']), ('owner', 'Conduit stream', 'UNSUPPORTED', [])]
+BEFORE: 'The review assigned to Dmitri Volkov is Hopper settings [E133].\nThe host running Kestrel-9B is the CPU host [E148].\nThe records do not say the owner of the Conduit stream.'
+AFTER : 'Dmitri Volkov reviews Hopper settings [E133].\nThe host running Kestrel-9B is the CPU host [E148].\nThe records do not say the owner of the Conduit stream.'   (CHANGED)
+    E133 = note:note-osprey-actions: 'Olga Petrova to circulate the written summary by Thursday. Dmitri Volkov to review the Hopper settings.'
+    E148 = document:doc-vesper-arch: '# Overview\nVesper is an internal platform. It runs scheduled jobs and serves interactive requests.\n\n# Jobs\nJobs flow through the Turret API. A failed job is retried up to 3 times before it is parked.\n\n# Model serving\nVesper serves'
+
+### B21  D15-120  [default model, current (decision versus configured)]
+Q: Who is fixing the Sable rollback test, and which model does Cedar use by default?
+GOLD: [('test_fixer', 'Sable', 'UNSUPPORTED', []), ('default_model', 'Cedar', 'SUPPORTED', ['Swift-20B'])]
+BEFORE: 'The records on the default model of Cedar are unclear, so I will not pick an answer.\nThe records do not say the person fixing the Sable rollback test.'
+AFTER : 'The records do not say the person fixing the Sable rollback test.\nThe default model of Cedar is Swift-20B [E100].'   (CHANGED)
+    E100 = memory:m100: 'As of October, the Cedar default model is Swift-20B; the Merlin-2B model has been retired.'
+
+### B22  D15-131  [on call (relative time kept)]
+Q: Who will fix the Quartz rollback test, and who has the on-call duty for Tamarind?
+GOLD: [('test_fixer', 'Quartz', 'UNSUPPORTED', []), ('on_call', 'Tamarind', 'SUPPORTED', ['Quinn Abbott'])]
+BEFORE: 'The person on call for Tamarind is Quinn Abbott [E118].\nThe records do not say the person fixing the Quartz rollback test.'
+AFTER : 'The records do not say the person fixing the Quartz rollback test.\nThe person on call for Tamarind is Quinn Abbott [E118] (the record says "this month").'   (CHANGED)
+    E118 = note:note-tamarind-oncall: 'Quinn Abbott is on call for Tamarind this month.'
+
+### B23  D15-132  [default model, current (decision versus configured)]
+Q: Who is fixing the Sable rollback test, and which model does Marlin use by default?
+GOLD: [('test_fixer', 'Sable', 'UNSUPPORTED', []), ('default_model', 'Marlin', 'SUPPORTED', ['Heron-12B'])]
+BEFORE: 'The records on the default model of Marlin are unclear, so I will not pick an answer.\nThe records do not say the person fixing the Sable rollback test.'
+AFTER : 'The records do not say the person fixing the Sable rollback test.\nThe default model of Marlin is Heron-12B [E102].'   (CHANGED)
+    E102 = memory:m102: 'As of October, the Marlin default model is Heron-12B; the Kestrel-3B model has been retired.'
+
+### B24  D15-149  [on call (relative time kept)]
+Q: Is there a staging environment for Vesper, and who has the on-call duty for Osprey?
+GOLD: [('staging_env', 'Vesper', 'NEGATIVE_UNSUPPORTED', []), ('on_call', 'Osprey', 'SUPPORTED', ['Dmitri Volkov'])]
+BEFORE: 'The person on call for Osprey is Dmitri Volkov [E116].\nThe records I searched do not mention a staging environment for Vesper.'
+AFTER : 'The records I searched do not mention a staging environment for Vesper.\nThe person on call for Osprey is Dmitri Volkov [E116] (the record says "this month").'   (CHANGED)
+    E116 = note:note-osprey-oncall: 'Dmitri Volkov is on call for Osprey this month.'
+
+### B25  D15-166  [default model, history (explicit transition)]
+Q: Which model did Osprey use by default in March, and what are Quarry Data's support hours?
+GOLD: [('default_model_history', 'Osprey', 'HISTORICAL', ['Kestrel-9B']), ('support_hours', 'Quarry Data', 'SUPPORTED', ['9 to 6'])]
+BEFORE: 'The records on the default model of Osprey are unclear, so I will not pick an answer.\nThe records do not say the weekday support hours of Quarry Data.'
+AFTER : 'Previously, the default model of Osprey was Kestrel-9B [E105].\nThe records do not say the weekday support hours of Quarry Data.'   (CHANGED)
+    E105 = memory:m105: 'As of March, the Osprey default model was Kestrel-9B.'
+
+### B26  D15-169  [ordering (reworded ordering sentence)]
+Q: Was the Quartz design review day updated in one memory after the other memory gave a different answer?
+GOLD: [('order_figure', 'Quartz', 'ORDER_UNSUPPORTED', ['Tuesday', 'Friday'])]
+BEFORE: 'The records give Tuesday [E62] and Friday [E63] for the design review day for Quartz, but nothing in them dates one before the other.'
+AFTER : 'On the design review day for Quartz, the records give Tuesday [E62] and Friday [E63], but nothing in them dates one before the other.'   (CHANGED)
+    E62 = memory:m062: 'Quartz design reviews are on Tuesday.'
+    E63 = memory:m063: 'Quartz design reviews are on Friday.'
+
+### B27  D15-171  [ordering (reworded ordering sentence)]
+Q: Was the Cedar design review day updated in one memory after the other memory gave a different answer?
+GOLD: [('order_figure', 'Cedar', 'ORDER_UNSUPPORTED', ['Monday', 'Thursday'])]
+BEFORE: 'The records give Monday [E7] and Thursday [E8] for the design review day for Cedar, but nothing in them dates one before the other.'
+AFTER : 'On the design review day for Cedar, the records give Monday [E7] and Thursday [E8], but nothing in them dates one before the other.'   (CHANGED)
+    E7 = memory:m007: 'Cedar design reviews are on Monday.'
+    E8 = memory:m008: 'Cedar design reviews are on Thursday.'
+
+### B28  D15-173  [ordering (reworded ordering sentence)]
+Q: Was the Osprey standup time updated in one memory after the other memory gave a different answer?
+GOLD: [('order_figure', 'Osprey', 'ORDER_UNSUPPORTED', ['10', '12'])]
+BEFORE: 'The records give 10 [E29] and 12 [E30] for the standup time for Osprey, but nothing in them dates one before the other.'
+AFTER : 'On the standup time for Osprey, the records give 10 [E29] and 12 [E30], but nothing in them dates one before the other.'   (CHANGED)
+    E29 = memory:m029: 'The Osprey standup is at 10.'
+    E30 = memory:m030: 'The Osprey standup is at 12.'
+
+
+FRESH SYNTHETIC PROBES (transition_probes.py)
+
+### T01  state check OK: expected ['SUPPORTED'] got ['SUPPORTED']
+Q: What is Bramble's default model?
+  record document:p1: 'As of September, the Bramble default model is Falcon-8B; the Wren-3B model has been retired.' (third_party)
+REPLY: 'The default model of Bramble is Falcon-8B [E1].'
+
+### T02  state check OK: expected ['UNSUPPORTED'] got ['UNSUPPORTED']
+Q: What was Bramble's default model before September?
+  record document:p1: 'As of September, the Bramble default model is Falcon-8B; the Wren-3B model has been retired.' (third_party)
+REPLY: 'The records do not say the default model of Bramble.'
+
+### T03  state check OK: expected ['HISTORICAL'] got ['HISTORICAL']
+Q: What was Bramble's default model before September?
+  record document:p1: 'As of September, the Bramble default model is Falcon-8B; the Wren-3B model has been retired.' (third_party)
+  record document:p2: 'As of June, the Bramble default model was Wren-3B.' (third_party)
+REPLY: 'Previously, the default model of Bramble was Wren-3B [E2].'
+
+### T04  state check OK: expected ['UNSUPPORTED'] got ['UNSUPPORTED']
+Q: Which model does Pebble use by default?
+  record meeting:p3: 'We agreed to move the Pebble default model to Lynx-7B.' (attendee)
+REPLY: 'The records do not say the default model of Pebble. A record says Lynx-7B was decided on for the default model of Pebble, but the records do not say it is in place [E1].'
+
+### T05  state check OK: expected ['UNSUPPORTED'] got ['UNSUPPORTED']
+Q: Which model does Pebble use by default?
+  record note:p4: 'The Pebble default model will be switched to Lynx-7B next quarter.' (owner)
+REPLY: 'The records do not say the default model of Pebble. A record says Lynx-7B is planned for the default model of Pebble, but the records do not say it is in place [E1].'
+
+### T06  state check OK: expected ['SUPPORTED'] got ['SUPPORTED']
+Q: Which model does Pebble use by default?
+  record note:p5: 'The Pebble default model was switched from Wren-3B to Lynx-7B.' (owner)
+REPLY: 'The default model of Pebble is Lynx-7B [E1].'
+
+### T07  state check OK: expected ['SUPPORTED'] got ['SUPPORTED']
+Q: What is Quill's default model?
+  record note:p6: 'Quill rolled back its default model from Falcon-8B to Wren-3B.' (owner)
+REPLY: 'The default model of Quill is Wren-3B [E1].'
+
+### T08  state check OK: expected ['CONFLICTED'] got ['CONFLICTED']
+Q: What is Quill's default model?
+  record document:p7: 'The Quill default model is Wren-3B.' (third_party)
+  record note:p8: 'As of October, the Quill default model is Falcon-8B; the Wren-3B model has been retired.' (owner)
+REPLY: 'The records disagree on the default model of Quill: one record says Wren-3B [E1]; another says Falcon-8B [E2]. They do not say which applies.'
+
+### T09  state check OK: expected ['SUPPORTED'] got ['SUPPORTED']
+Q: Who is on call for Tern?
+  record note:p9: 'Imani Okafor is on call for Tern this week.' (owner)
+REPLY: 'The person on call for Tern is Imani Okafor [E1] (the record says "this week").'
+
+### T10  state check OK: expected ['UNSUPPORTED'] got ['UNSUPPORTED']
+Q: Who is on call for Tern?
+  record note:p9: 'Imani Okafor is on call for Tern this week.' (owner)
+  record note:p10: 'Imani Okafor is on call for Tern next week.' (owner)
+REPLY: 'The records word the time of the person on call for Tern differently, so I have not picked an answer.'
+
+### T11  state check OK: expected ['SUPPORTED', 'SUPPORTED'] got ['SUPPORTED', 'SUPPORTED']
+Q: Which day does Marten release, and who approved the Marten release?
+  record note:p11: 'Marten releases every Wednesday.' (owner)
+  record note:p12: 'Hana Sorensen approved the Marten release.' (owner)
+REPLY: 'The release day for Marten is Wednesday [E1].\nThe approver of the Marten release is Hana Sorensen [E2].'
+
+### T12  state check OK: expected ['SUBJECT_TYPE_WITHHELD', 'SUPPORTED'] got ['SUBJECT_TYPE_WITHHELD', 'SUPPORTED']
+Q: Who is the escalation contact for Heron-9B, and who owns the Dune gateway?
+  record note:p13: 'Chidi Mbeki owns the Dune gateway.' (owner)
+REPLY: 'I could not work out one part of the question, so I have not answered it.\nThe owner of the Dune gateway is Chidi Mbeki [E1].'
+
+### T13  state check OK: expected ['SUPPORTED', 'UNSUPPORTED', 'SUPPORTED'] got ['SUPPORTED', 'UNSUPPORTED', 'SUPPORTED']
+Q: Who is the escalation contact for Marten, who is on call for Marten, and who owns the Dune gateway?
+  record note:p14: 'Escalate serious Marten problems to Joon Park.' (owner)
+  record note:p13: 'Chidi Mbeki owns the Dune gateway.' (owner)
+REPLY: 'The escalation contact for Marten is Joon Park [E1].\nThe records do not say the person on call for Marten.\nThe owner of the Dune gateway is Chidi Mbeki [E2].'
+
+### T14  state check OK: expected ['SUPPORTED'] got ['SUPPORTED']
+Q: What did Marten decide?
+  record meeting:p15: 'So the decision is to keep Lynx-7B as the default model.' (attendee)
+REPLY: 'The records say the decision for Marten was to keep Lynx-7B as the default model [E1]. They do not say whether it has been carried out.'

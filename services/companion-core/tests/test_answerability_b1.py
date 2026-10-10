@@ -320,14 +320,14 @@ def test_ambiguous_evidence_is_not_admitted_and_never_asserted(text, reason):
     r = admit(comp("owner"), [i], auth(i), now=NOW, spec=SPECS["owner"], known_subjects=KNOWN, policy=POLICY)
     assert r.facts == () and r.ambiguous == (("memory:m1", reason),)
     _plan, t, c = run(comp("owner"), [i])
-    assert t.state is State.UNSUPPORTED and "Chiara" not in c.text and "unclear" in c.text
+    assert t.state is State.UNSUPPORTED and "Chiara" not in c.text and "cannot read safely" in c.text
 
 
 def test_ambiguity_on_the_requested_proposition_means_no_value_is_chosen_even_next_to_a_clean_record():
     clean, murky = item("memory:m1", "Chiara Rossi owns the Ferry queue."), item("memory:m2", "Bruno Keller might own the Ferry queue.")
     _, t, c = run(comp("owner"), [clean, murky])
     assert t.state is State.UNSUPPORTED and t.values == () and "ambiguity_on_requested_proposition" in t.reasons
-    assert c.text == "The records on the owner of Ferry queue are unclear, so I will not pick an answer." and "Chiara" not in c.text and "Bruno" not in c.text
+    assert c.text == "One record about the owner of Ferry queue is worded in a way I cannot read safely, so I have not answered it." and "Chiara" not in c.text and "Bruno" not in c.text
 
 
 def test_ambiguity_is_applied_at_the_smallest_proposition_independent_components_keep_their_answers():
@@ -567,7 +567,7 @@ def test_a_first_person_statement_is_attributed_only_through_an_authoritative_re
     assert t.state is State.SUPPORTED and t.values == (("Liam Oconnor", ("meeting:mt-cedar#10",)),) and "[E1]" in c.text and t.component.relation == "test_fixer"
     for bad in ("SPEAKER_00", None, "Liam"):
         _, t2, c2 = run_s(comp("test_fixer", "Cedar"), [seg(speaker=bad)])
-        assert t2.state is State.UNSUPPORTED and "unclear" in c2.text and "Liam" not in c2.text
+        assert t2.state is State.UNSUPPORTED and "cannot read safely" in c2.text and "Liam" not in c2.text
     _, t3, _ = run_s(comp("test_fixer", "Cedar"), [seg(author="attendee")])
     assert t3.state is State.UNSUPPORTED
 

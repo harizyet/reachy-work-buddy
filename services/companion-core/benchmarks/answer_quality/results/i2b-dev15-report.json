@@ -1,0 +1,2508 @@
+{
+ "scope": "dev15 only; no model; dev16 untouched; the recorded first-run report (i2-dev15-report.json) is not modified",
+ "arms": {
+  "G-old": {
+   "counts": {
+    "unsupported_claim": 0,
+    "conflict_resolved": 0,
+    "wrong_value": 0,
+    "history_as_current": 0,
+    "purity_fail": 0,
+    "citation_error": 0,
+    "citation_missing": 0,
+    "authorization_failure": 0,
+    "answered_without_citation": 0,
+    "spurious_answered": 0,
+    "not_understood_impure": 0,
+    "ask_or_scope_mismatch": 0,
+    "questions": 173,
+    "questions_with_untyped_clause": 0,
+    "untyped_clauses": 0,
+    "questions_all_clauses_untyped": 0,
+    "spurious_components": 0,
+    "questions_with_spurious": 0,
+    "atoms": 307,
+    "typed": 307,
+    "exact": 267,
+    "answered_values": 136,
+    "gold_answerable": 178,
+    "cited_values": 193,
+    "questions_fully_correct": 137,
+    "questions_atoms_all_exact": 137,
+    "false_abstention": 40,
+    "false_abstention_cause:evidence": 40,
+    "false_abstention_reason:no_admitted_record": 27,
+    "purity_checked": 162,
+    "false_abstention_reason:no_record_marked_past": 13,
+    "false_abstention_reason:ambiguous_record_on_same_subject": 13,
+    "false_abstention_reason:ambiguity_on_requested_proposition": 13
+   },
+   "exact_by_gold": {
+    "SUPPORTED": {
+     "SUPPORTED": 127,
+     "UNSUPPORTED": 27
+    },
+    "UNSUPPORTED": {
+     "UNSUPPORTED": 88
+    },
+    "HISTORICAL": {
+     "UNSUPPORTED": 13,
+     "HISTORICAL": 11
+    },
+    "CONFLICTED": {
+     "CONFLICTED": 19
+    },
+    "NEGATIVE_SUPPORTED": {
+     "NEGATIVE_SUPPORTED": 7
+    },
+    "NEGATIVE_UNSUPPORTED": {
+     "NEGATIVE_UNSUPPORTED": 6
+    },
+    "ORDER_UNSUPPORTED": {
+     "ORDER_UNSUPPORTED": 9
+    }
+   },
+   "partial_answers": {
+    "mixed_questions": 73,
+    "supported_part_answered": 69,
+    "withheld_parts_correct": 73,
+    "both": 69
+   },
+   "untyped_reasons": {},
+   "reply_length_words": {
+    "median": 22,
+    "p90": 35,
+    "max": 48
+   },
+   "citations_per_reply_median": 1
+  },
+  "G-typed": {
+   "counts": {
+    "unsupported_claim": 0,
+    "conflict_resolved": 0,
+    "wrong_value": 0,
+    "history_as_current": 0,
+    "purity_fail": 0,
+    "citation_error": 0,
+    "citation_missing": 0,
+    "authorization_failure": 0,
+    "answered_without_citation": 0,
+    "spurious_answered": 0,
+    "not_understood_impure": 0,
+    "ask_or_scope_mismatch": 0,
+    "questions": 173,
+    "questions_with_untyped_clause": 0,
+    "untyped_clauses": 0,
+    "questions_all_clauses_untyped": 0,
+    "spurious_components": 0,
+    "questions_with_spurious": 0,
+    "atoms": 307,
+    "typed": 307,
+    "exact": 296,
+    "answered_values": 165,
+    "gold_answerable": 178,
+    "cited_values": 222,
+    "questions_fully_correct": 162,
+    "questions_atoms_all_exact": 162,
+    "false_abstention": 11,
+    "false_abstention_cause:evidence": 11,
+    "false_abstention_reason:no_admitted_record": 11,
+    "purity_checked": 133
+   },
+   "exact_by_gold": {
+    "SUPPORTED": {
+     "SUPPORTED": 143,
+     "UNSUPPORTED": 11
+    },
+    "UNSUPPORTED": {
+     "UNSUPPORTED": 88
+    },
+    "HISTORICAL": {
+     "HISTORICAL": 24
+    },
+    "CONFLICTED": {
+     "CONFLICTED": 19
+    },
+    "NEGATIVE_SUPPORTED": {
+     "NEGATIVE_SUPPORTED": 7
+    },
+    "NEGATIVE_UNSUPPORTED": {
+     "NEGATIVE_UNSUPPORTED": 6
+    },
+    "ORDER_UNSUPPORTED": {
+     "ORDER_UNSUPPORTED": 9
+    }
+   },
+   "partial_answers": {
+    "mixed_questions": 83,
+    "supported_part_answered": 80,
+    "withheld_parts_correct": 83,
+    "both": 80
+   },
+   "untyped_reasons": {},
+   "reply_length_words": {
+    "median": 22,
+    "p90": 35,
+    "max": 61
+   },
+   "citations_per_reply_median": 1
+  },
+  "G-registry": {
+   "counts": {
+    "unsupported_claim": 0,
+    "conflict_resolved": 0,
+    "wrong_value": 0,
+    "history_as_current": 0,
+    "purity_fail": 0,
+    "citation_error": 0,
+    "citation_missing": 0,
+    "authorization_failure": 0,
+    "answered_without_citation": 0,
+    "spurious_answered": 0,
+    "not_understood_impure": 0,
+    "ask_or_scope_mismatch": 0,
+    "questions": 173,
+    "questions_with_untyped_clause": 0,
+    "untyped_clauses": 0,
+    "questions_all_clauses_untyped": 0,
+    "spurious_components": 0,
+    "questions_with_spurious": 0,
+    "atoms": 307,
+    "typed": 307,
+    "exact": 296,
+    "answered_values": 165,
+    "gold_answerable": 178,
+    "cited_values": 240,
+    "questions_fully_correct": 162,
+    "questions_atoms_all_exact": 162,
+    "false_abstention": 11,
+    "false_abstention_cause:evidence": 11,
+    "false_abstention_reason:no_admitted_record": 11,
+    "purity_checked": 133
+   },
+   "exact_by_gold": {
+    "SUPPORTED": {
+     "SUPPORTED": 143,
+     "UNSUPPORTED": 11
+    },
+    "UNSUPPORTED": {
+     "UNSUPPORTED": 88
+    },
+    "HISTORICAL": {
+     "HISTORICAL": 24
+    },
+    "CONFLICTED": {
+     "CONFLICTED": 19
+    },
+    "NEGATIVE_SUPPORTED": {
+     "NEGATIVE_SUPPORTED": 7
+    },
+    "NEGATIVE_UNSUPPORTED": {
+     "NEGATIVE_UNSUPPORTED": 6
+    },
+    "ORDER_UNSUPPORTED": {
+     "ORDER_UNSUPPORTED": 9
+    }
+   },
+   "partial_answers": {
+    "mixed_questions": 83,
+    "supported_part_answered": 80,
+    "withheld_parts_correct": 83,
+    "both": 80
+   },
+   "untyped_reasons": {},
+   "reply_length_words": {
+    "median": 23,
+    "p90": 36,
+    "max": 61
+   },
+   "citations_per_reply_median": 1,
+   "revocation": {
+    "revoked_claims_tested": 174,
+    "revoked_withheld": 160,
+    "stale_claims_tested": 174,
+    "stale_withheld": 160,
+    "revoked_resupported_by_other_authorised_record": 14,
+    "stale_resupported_by_other_authorised_record": 14
+   }
+  },
+  "T-old": {
+   "counts": {
+    "unsupported_claim": 0,
+    "conflict_resolved": 0,
+    "wrong_value": 0,
+    "history_as_current": 0,
+    "purity_fail": 0,
+    "citation_error": 0,
+    "citation_missing": 0,
+    "authorization_failure": 0,
+    "answered_without_citation": 0,
+    "spurious_answered": 0,
+    "not_understood_impure": 0,
+    "ask_or_scope_mismatch": 0,
+    "questions": 173,
+    "questions_with_untyped_clause": 124,
+    "untyped_clauses": 160,
+    "questions_all_clauses_untyped": 59,
+    "spurious_components": 0,
+    "questions_with_spurious": 0,
+    "atoms": 307,
+    "typed": 147,
+    "exact": 145,
+    "answered_values": 87,
+    "gold_answerable": 91,
+    "cited_values": 124,
+    "questions_fully_correct": 48,
+    "questions_atoms_all_exact": 48,
+    "not_typed": 160,
+    "false_abstention": 89,
+    "false_abstention_cause:not_typed": 87,
+    "not_understood_checked": 160,
+    "purity_checked": 51,
+    "false_abstention_cause:evidence": 2,
+    "false_abstention_reason:no_admitted_record": 2
+   },
+   "exact_by_gold": {
+    "SUPPORTED": {
+     "SUPPORTED": 89,
+     "NOT_TYPED": 63,
+     "UNSUPPORTED": 2
+    },
+    "UNSUPPORTED": {
+     "UNSUPPORTED": 34,
+     "NOT_TYPED": 54
+    },
+    "HISTORICAL": {
+     "NOT_TYPED": 24
+    },
+    "CONFLICTED": {
+     "CONFLICTED": 9,
+     "NOT_TYPED": 10
+    },
+    "NEGATIVE_SUPPORTED": {
+     "NEGATIVE_SUPPORTED": 7
+    },
+    "NEGATIVE_UNSUPPORTED": {
+     "NEGATIVE_UNSUPPORTED": 6
+    },
+    "ORDER_UNSUPPORTED": {
+     "NOT_TYPED": 9
+    }
+   },
+   "partial_answers": {
+    "mixed_questions": 51,
+    "supported_part_answered": 41,
+    "withheld_parts_correct": 24,
+    "both": 18
+   },
+   "untyped_reasons": {},
+   "reply_length_words": {
+    "median": 18,
+    "p90": 36,
+    "max": 43
+   },
+   "citations_per_reply_median": 1
+  },
+  "T-grammar": {
+   "counts": {
+    "unsupported_claim": 0,
+    "conflict_resolved": 0,
+    "wrong_value": 0,
+    "history_as_current": 0,
+    "purity_fail": 0,
+    "citation_error": 0,
+    "citation_missing": 0,
+    "authorization_failure": 0,
+    "answered_without_citation": 0,
+    "spurious_answered": 0,
+    "not_understood_impure": 0,
+    "ask_or_scope_mismatch": 0,
+    "questions": 173,
+    "questions_with_untyped_clause": 2,
+    "untyped_clauses": 2,
+    "questions_all_clauses_untyped": 0,
+    "spurious_components": 0,
+    "questions_with_spurious": 0,
+    "atoms": 307,
+    "typed": 305,
+    "exact": 294,
+    "answered_values": 163,
+    "gold_answerable": 176,
+    "cited_values": 238,
+    "questions_fully_correct": 160,
+    "questions_atoms_all_exact": 160,
+    "false_abstention": 13,
+    "false_abstention_cause:evidence": 11,
+    "false_abstention_reason:no_admitted_record": 11,
+    "purity_checked": 133,
+    "not_typed": 2,
+    "false_abstention_cause:not_typed": 2,
+    "not_understood_checked": 2
+   },
+   "exact_by_gold": {
+    "SUPPORTED": {
+     "SUPPORTED": 141,
+     "UNSUPPORTED": 11,
+     "NOT_TYPED": 2
+    },
+    "UNSUPPORTED": {
+     "UNSUPPORTED": 88
+    },
+    "HISTORICAL": {
+     "HISTORICAL": 24
+    },
+    "CONFLICTED": {
+     "CONFLICTED": 19
+    },
+    "NEGATIVE_SUPPORTED": {
+     "NEGATIVE_SUPPORTED": 7
+    },
+    "NEGATIVE_UNSUPPORTED": {
+     "NEGATIVE_UNSUPPORTED": 6
+    },
+    "ORDER_UNSUPPORTED": {
+     "ORDER_UNSUPPORTED": 9
+    }
+   },
+   "partial_answers": {
+    "mixed_questions": 82,
+    "supported_part_answered": 79,
+    "withheld_parts_correct": 82,
+    "both": 79
+   },
+   "untyped_reasons": {
+    "ambiguous_relation": 2
+   },
+   "reply_length_words": {
+    "median": 23,
+    "p90": 35,
+    "max": 61
+   },
+   "citations_per_reply_median": 1
+  },
+  "T-new": {
+   "counts": {
+    "unsupported_claim": 0,
+    "conflict_resolved": 0,
+    "wrong_value": 0,
+    "history_as_current": 0,
+    "purity_fail": 0,
+    "citation_error": 0,
+    "citation_missing": 0,
+    "authorization_failure": 0,
+    "answered_without_citation": 0,
+    "spurious_answered": 0,
+    "not_understood_impure": 0,
+    "ask_or_scope_mismatch": 0,
+    "questions": 173,
+    "questions_with_untyped_clause": 2,
+    "untyped_clauses": 2,
+    "questions_all_clauses_untyped": 0,
+    "spurious_components": 0,
+    "questions_with_spurious": 0,
+    "atoms": 307,
+    "typed": 305,
+    "exact": 294,
+    "answered_values": 163,
+    "gold_answerable": 176,
+    "cited_values": 238,
+    "questions_fully_correct": 160,
+    "questions_atoms_all_exact": 160,
+    "false_abstention": 13,
+    "false_abstention_cause:evidence": 11,
+    "false_abstention_reason:no_admitted_record": 11,
+    "purity_checked": 133,
+    "not_typed": 2,
+    "false_abstention_cause:not_typed": 2,
+    "not_understood_checked": 2
+   },
+   "exact_by_gold": {
+    "SUPPORTED": {
+     "SUPPORTED": 141,
+     "UNSUPPORTED": 11,
+     "NOT_TYPED": 2
+    },
+    "UNSUPPORTED": {
+     "UNSUPPORTED": 88
+    },
+    "HISTORICAL": {
+     "HISTORICAL": 24
+    },
+    "CONFLICTED": {
+     "CONFLICTED": 19
+    },
+    "NEGATIVE_SUPPORTED": {
+     "NEGATIVE_SUPPORTED": 7
+    },
+    "NEGATIVE_UNSUPPORTED": {
+     "NEGATIVE_UNSUPPORTED": 6
+    },
+    "ORDER_UNSUPPORTED": {
+     "ORDER_UNSUPPORTED": 9
+    }
+   },
+   "partial_answers": {
+    "mixed_questions": 82,
+    "supported_part_answered": 79,
+    "withheld_parts_correct": 82,
+    "both": 79
+   },
+   "untyped_reasons": {
+    "ambiguous_relation": 2
+   },
+   "reply_length_words": {
+    "median": 23,
+    "p90": 35,
+    "max": 61
+   },
+   "citations_per_reply_median": 1,
+   "revocation": {
+    "revoked_claims_tested": 172,
+    "revoked_withheld": 158,
+    "stale_claims_tested": 172,
+    "stale_withheld": 158,
+    "revoked_resupported_by_other_authorised_record": 14,
+    "stale_resupported_by_other_authorised_record": 14
+   }
+  },
+  "T-renamed": {
+   "counts": {
+    "unsupported_claim": 0,
+    "conflict_resolved": 0,
+    "wrong_value": 0,
+    "history_as_current": 0,
+    "purity_fail": 0,
+    "citation_error": 0,
+    "citation_missing": 0,
+    "authorization_failure": 0,
+    "answered_without_citation": 0,
+    "spurious_answered": 0,
+    "not_understood_impure": 0,
+    "ask_or_scope_mismatch": 0,
+    "questions": 173,
+    "questions_with_untyped_clause": 2,
+    "untyped_clauses": 2,
+    "questions_all_clauses_untyped": 0,
+    "spurious_components": 0,
+    "questions_with_spurious": 0,
+    "atoms": 307,
+    "typed": 305,
+    "exact": 294,
+    "answered_values": 163,
+    "gold_answerable": 176,
+    "cited_values": 238,
+    "questions_fully_correct": 160,
+    "questions_atoms_all_exact": 160,
+    "false_abstention": 13,
+    "false_abstention_cause:evidence": 11,
+    "false_abstention_reason:no_admitted_record": 11,
+    "purity_checked": 133,
+    "not_typed": 2,
+    "false_abstention_cause:not_typed": 2,
+    "not_understood_checked": 2
+   },
+   "exact_by_gold": {
+    "SUPPORTED": {
+     "SUPPORTED": 141,
+     "UNSUPPORTED": 11,
+     "NOT_TYPED": 2
+    },
+    "UNSUPPORTED": {
+     "UNSUPPORTED": 88
+    },
+    "HISTORICAL": {
+     "HISTORICAL": 24
+    },
+    "CONFLICTED": {
+     "CONFLICTED": 19
+    },
+    "NEGATIVE_SUPPORTED": {
+     "NEGATIVE_SUPPORTED": 7
+    },
+    "NEGATIVE_UNSUPPORTED": {
+     "NEGATIVE_UNSUPPORTED": 6
+    },
+    "ORDER_UNSUPPORTED": {
+     "ORDER_UNSUPPORTED": 9
+    }
+   },
+   "partial_answers": {
+    "mixed_questions": 82,
+    "supported_part_answered": 79,
+    "withheld_parts_correct": 82,
+    "both": 79
+   },
+   "untyped_reasons": {
+    "ambiguous_relation": 2
+   },
+   "reply_length_words": {
+    "median": 23,
+    "p90": 35,
+    "max": 61
+   },
+   "citations_per_reply_median": 1
+  }
+ },
+ "renamed_world": {
+  "names_replaced": 86,
+  "questions": 173,
+  "replies_identical_after_mapping": 173,
+  "states_identical": 173
+ },
+ "problems": {
+  "G-old": {
+   "false_abstention": [
+    [
+     "D15-003",
+     "A0142",
+     "decision",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-019",
+     "A0012",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-043",
+     "A0138",
+     "decision",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-045",
+     "A0011",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-054",
+     "A0137",
+     "decision",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-057",
+     "A0140",
+     "decision",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-059",
+     "A0007",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-070",
+     "A0015",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-071",
+     "A0141",
+     "decision",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-071",
+     "A0229",
+     "default_model_history",
+     "HISTORICAL",
+     "UNSUPPORTED",
+     [
+      "no_record_marked_past",
+      "ambiguous_record_on_same_subject",
+      "ambiguity_on_requested_proposition"
+     ]
+    ],
+    [
+     "D15-072",
+     "A0010",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-074",
+     "A0144",
+     "decision",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-076",
+     "A0230",
+     "default_model_history",
+     "HISTORICAL",
+     "UNSUPPORTED",
+     [
+      "no_record_marked_past",
+      "ambiguous_record_on_same_subject",
+      "ambiguity_on_requested_proposition"
+     ]
+    ],
+    [
+     "D15-081",
+     "A0008",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-082",
+     "A0232",
+     "default_model_history",
+     "HISTORICAL",
+     "UNSUPPORTED",
+     [
+      "no_record_marked_past",
+      "ambiguous_record_on_same_subject",
+      "ambiguity_on_requested_proposition"
+     ]
+    ],
+    [
+     "D15-083",
+     "A0229",
+     "default_model_history",
+     "HISTORICAL",
+     "UNSUPPORTED",
+     [
+      "no_record_marked_past",
+      "ambiguous_record_on_same_subject",
+      "ambiguity_on_requested_proposition"
+     ]
+    ],
+    [
+     "D15-084",
+     "A0014",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-085",
+     "A0134",
+     "support_hours",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-087",
+     "A0018",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-091",
+     "A0142",
+     "decision",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-091",
+     "A0230",
+     "default_model_history",
+     "HISTORICAL",
+     "UNSUPPORTED",
+     [
+      "no_record_marked_past",
+      "ambiguous_record_on_same_subject",
+      "ambiguity_on_requested_proposition"
+     ]
+    ],
+    [
+     "D15-094",
+     "A0232",
+     "default_model_history",
+     "HISTORICAL",
+     "UNSUPPORTED",
+     [
+      "no_record_marked_past",
+      "ambiguous_record_on_same_subject",
+      "ambiguity_on_requested_proposition"
+     ]
+    ],
+    [
+     "D15-105",
+     "A0011",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-107",
+     "A0138",
+     "decision",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-119",
+     "A0012",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-120",
+     "A0007",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-125",
+     "A0010",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-130",
+     "A0010",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-132",
+     "A0008",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-137",
+     "A0014",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-139",
+     "A0008",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-153",
+     "A0229",
+     "default_model_history",
+     "HISTORICAL",
+     "UNSUPPORTED",
+     [
+      "no_record_marked_past",
+      "ambiguous_record_on_same_subject",
+      "ambiguity_on_requested_proposition"
+     ]
+    ],
+    [
+     "D15-157",
+     "A0230",
+     "default_model_history",
+     "HISTORICAL",
+     "UNSUPPORTED",
+     [
+      "no_record_marked_past",
+      "ambiguous_record_on_same_subject",
+      "ambiguity_on_requested_proposition"
+     ]
+    ],
+    [
+     "D15-160",
+     "A0232",
+     "default_model_history",
+     "HISTORICAL",
+     "UNSUPPORTED",
+     [
+      "no_record_marked_past",
+      "ambiguous_record_on_same_subject",
+      "ambiguity_on_requested_proposition"
+     ]
+    ],
+    [
+     "D15-160",
+     "A0014",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-164",
+     "A0230",
+     "default_model_history",
+     "HISTORICAL",
+     "UNSUPPORTED",
+     [
+      "no_record_marked_past",
+      "ambiguous_record_on_same_subject",
+      "ambiguity_on_requested_proposition"
+     ]
+    ],
+    [
+     "D15-166",
+     "A0232",
+     "default_model_history",
+     "HISTORICAL",
+     "UNSUPPORTED",
+     [
+      "no_record_marked_past",
+      "ambiguous_record_on_same_subject",
+      "ambiguity_on_requested_proposition"
+     ]
+    ],
+    [
+     "D15-166",
+     "A0134",
+     "support_hours",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-170",
+     "A0230",
+     "default_model_history",
+     "HISTORICAL",
+     "UNSUPPORTED",
+     [
+      "no_record_marked_past",
+      "ambiguous_record_on_same_subject",
+      "ambiguity_on_requested_proposition"
+     ]
+    ],
+    [
+     "D15-172",
+     "A0232",
+     "default_model_history",
+     "HISTORICAL",
+     "UNSUPPORTED",
+     [
+      "no_record_marked_past",
+      "ambiguous_record_on_same_subject",
+      "ambiguity_on_requested_proposition"
+     ]
+    ]
+   ]
+  },
+  "G-typed": {
+   "false_abstention": [
+    [
+     "D15-019",
+     "A0012",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-045",
+     "A0011",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-070",
+     "A0015",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-084",
+     "A0014",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-085",
+     "A0134",
+     "support_hours",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-087",
+     "A0018",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-105",
+     "A0011",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-119",
+     "A0012",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-137",
+     "A0014",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-160",
+     "A0014",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-166",
+     "A0134",
+     "support_hours",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ]
+   ]
+  },
+  "G-registry": {
+   "false_abstention": [
+    [
+     "D15-019",
+     "A0012",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-045",
+     "A0011",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-070",
+     "A0015",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-084",
+     "A0014",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-085",
+     "A0134",
+     "support_hours",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-087",
+     "A0018",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-105",
+     "A0011",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-119",
+     "A0012",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-137",
+     "A0014",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-160",
+     "A0014",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-166",
+     "A0134",
+     "support_hours",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ]
+   ]
+  },
+  "T-old": {
+   "false_abstention": [
+    [
+     "D15-002",
+     "A0185",
+     "reviews",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-003",
+     "A0142",
+     "decision",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-006",
+     "A0188",
+     "reviews",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-011",
+     "A0184",
+     "reviews",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-014",
+     "A0037",
+     "owner",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-019",
+     "A0012",
+     "default_model",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-043",
+     "A0138",
+     "decision",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-044",
+     "A0181",
+     "reviews",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-045",
+     "A0011",
+     "default_model",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-049",
+     "A0030",
+     "rollback_window",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-051",
+     "A0182",
+     "reviews",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-053",
+     "A0033",
+     "rollback_window",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-054",
+     "A0137",
+     "decision",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-055",
+     "A0161",
+     "test_fixer",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-057",
+     "A0140",
+     "decision",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-058",
+     "A0165",
+     "test_fixer",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-059",
+     "A0007",
+     "default_model",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-061",
+     "A0183",
+     "reviews",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-064",
+     "A0164",
+     "test_fixer",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-065",
+     "A0006",
+     "retry_limit",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-069",
+     "A0187",
+     "reviews",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-070",
+     "A0015",
+     "default_model",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-071",
+     "A0141",
+     "decision",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-071",
+     "A0229",
+     "default_model_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-072",
+     "A0010",
+     "default_model",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-072",
+     "A0236",
+     "retry_limit_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-074",
+     "A0144",
+     "decision",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-074",
+     "A0234",
+     "retry_limit_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-076",
+     "A0230",
+     "default_model_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-077",
+     "A0233",
+     "retry_limit_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-079",
+     "A0162",
+     "test_fixer",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-080",
+     "A0003",
+     "retry_limit",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-081",
+     "A0008",
+     "default_model",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-082",
+     "A0166",
+     "test_fixer",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-082",
+     "A0232",
+     "default_model_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-083",
+     "A0002",
+     "retry_limit",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-083",
+     "A0229",
+     "default_model_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-084",
+     "A0014",
+     "default_model",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-085",
+     "A0134",
+     "support_hours",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-086",
+     "A0045",
+     "owner",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-087",
+     "A0018",
+     "default_model",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-088",
+     "A0236",
+     "retry_limit_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-089",
+     "A0186",
+     "reviews",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-089",
+     "A0234",
+     "retry_limit_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-090",
+     "A0185",
+     "reviews",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-091",
+     "A0142",
+     "decision",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-091",
+     "A0230",
+     "default_model_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-092",
+     "A0188",
+     "reviews",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-093",
+     "A0233",
+     "retry_limit_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-094",
+     "A0232",
+     "default_model_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-095",
+     "A0184",
+     "reviews",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-099",
+     "A0027",
+     "rollback_window",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-105",
+     "A0011",
+     "default_model",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-107",
+     "A0138",
+     "decision",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-111",
+     "A0182",
+     "reviews",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-113",
+     "A0182",
+     "reviews",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-117",
+     "A0161",
+     "test_fixer",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-118",
+     "A0037",
+     "owner",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-119",
+     "A0012",
+     "default_model",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-120",
+     "A0007",
+     "default_model",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-122",
+     "A0161",
+     "test_fixer",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-124",
+     "A0006",
+     "retry_limit",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-125",
+     "A0010",
+     "default_model",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-127",
+     "A0164",
+     "test_fixer",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-130",
+     "A0010",
+     "default_model",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-132",
+     "A0008",
+     "default_model",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-133",
+     "A0003",
+     "retry_limit",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-136",
+     "A0045",
+     "owner",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-137",
+     "A0014",
+     "default_model",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-138",
+     "A0003",
+     "retry_limit",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-139",
+     "A0008",
+     "default_model",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-151",
+     "A0003",
+     "retry_limit",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-153",
+     "A0229",
+     "default_model_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-154",
+     "A0236",
+     "retry_limit_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-154",
+     "A0002",
+     "retry_limit",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-156",
+     "A0234",
+     "retry_limit_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-157",
+     "A0230",
+     "default_model_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-157",
+     "A0002",
+     "retry_limit",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-159",
+     "A0233",
+     "retry_limit_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-160",
+     "A0232",
+     "default_model_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-160",
+     "A0014",
+     "default_model",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-162",
+     "A0236",
+     "retry_limit_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-164",
+     "A0230",
+     "default_model_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-166",
+     "A0232",
+     "default_model_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-166",
+     "A0134",
+     "support_hours",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-168",
+     "A0236",
+     "retry_limit_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-168",
+     "A0045",
+     "owner",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-170",
+     "A0230",
+     "default_model_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-172",
+     "A0232",
+     "default_model_history",
+     "HISTORICAL",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ]
+   ]
+  },
+  "T-grammar": {
+   "false_abstention": [
+    [
+     "D15-019",
+     "A0012",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-045",
+     "A0011",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-054",
+     "A0137",
+     "decision",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-070",
+     "A0015",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-074",
+     "A0144",
+     "decision",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-084",
+     "A0014",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-085",
+     "A0134",
+     "support_hours",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-087",
+     "A0018",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-105",
+     "A0011",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-119",
+     "A0012",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-137",
+     "A0014",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-160",
+     "A0014",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-166",
+     "A0134",
+     "support_hours",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ]
+   ]
+  },
+  "T-new": {
+   "false_abstention": [
+    [
+     "D15-019",
+     "A0012",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-045",
+     "A0011",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-054",
+     "A0137",
+     "decision",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-070",
+     "A0015",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-074",
+     "A0144",
+     "decision",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-084",
+     "A0014",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-085",
+     "A0134",
+     "support_hours",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-087",
+     "A0018",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-105",
+     "A0011",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-119",
+     "A0012",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-137",
+     "A0014",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-160",
+     "A0014",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-166",
+     "A0134",
+     "support_hours",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ]
+   ]
+  },
+  "T-renamed": {
+   "false_abstention": [
+    [
+     "D15-019",
+     "A0012",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-045",
+     "A0011",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-054",
+     "A0137",
+     "decision",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-070",
+     "A0015",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-074",
+     "A0144",
+     "decision",
+     "SUPPORTED",
+     "NOT_TYPED",
+     [
+      "not_typed"
+     ]
+    ],
+    [
+     "D15-084",
+     "A0014",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-085",
+     "A0134",
+     "support_hours",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-087",
+     "A0018",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-105",
+     "A0011",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-119",
+     "A0012",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-137",
+     "A0014",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-160",
+     "A0014",
+     "default_model",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ],
+    [
+     "D15-166",
+     "A0134",
+     "support_hours",
+     "SUPPORTED",
+     "UNSUPPORTED",
+     [
+      "no_admitted_record"
+     ]
+    ]
+   ]
+  }
+ }
+}

@@ -1,0 +1,154 @@
+{
+ "probes": 14,
+ "state_matches": 14,
+ "checks": [
+  {
+   "id": "T01",
+   "expected": [
+    "SUPPORTED"
+   ],
+   "got": [
+    "SUPPORTED"
+   ],
+   "ok": true
+  },
+  {
+   "id": "T02",
+   "expected": [
+    "UNSUPPORTED"
+   ],
+   "got": [
+    "UNSUPPORTED"
+   ],
+   "ok": true
+  },
+  {
+   "id": "T03",
+   "expected": [
+    "HISTORICAL"
+   ],
+   "got": [
+    "HISTORICAL"
+   ],
+   "ok": true
+  },
+  {
+   "id": "T04",
+   "expected": [
+    "UNSUPPORTED"
+   ],
+   "got": [
+    "UNSUPPORTED"
+   ],
+   "ok": true
+  },
+  {
+   "id": "T05",
+   "expected": [
+    "UNSUPPORTED"
+   ],
+   "got": [
+    "UNSUPPORTED"
+   ],
+   "ok": true
+  },
+  {
+   "id": "T06",
+   "expected": [
+    "SUPPORTED"
+   ],
+   "got": [
+    "SUPPORTED"
+   ],
+   "ok": true
+  },
+  {
+   "id": "T07",
+   "expected": [
+    "SUPPORTED"
+   ],
+   "got": [
+    "SUPPORTED"
+   ],
+   "ok": true
+  },
+  {
+   "id": "T08",
+   "expected": [
+    "CONFLICTED"
+   ],
+   "got": [
+    "CONFLICTED"
+   ],
+   "ok": true
+  },
+  {
+   "id": "T09",
+   "expected": [
+    "SUPPORTED"
+   ],
+   "got": [
+    "SUPPORTED"
+   ],
+   "ok": true
+  },
+  {
+   "id": "T10",
+   "expected": [
+    "UNSUPPORTED"
+   ],
+   "got": [
+    "UNSUPPORTED"
+   ],
+   "ok": true
+  },
+  {
+   "id": "T11",
+   "expected": [
+    "SUPPORTED",
+    "SUPPORTED"
+   ],
+   "got": [
+    "SUPPORTED",
+    "SUPPORTED"
+   ],
+   "ok": true
+  },
+  {
+   "id": "T12",
+   "expected": [
+    "SUBJECT_TYPE_WITHHELD",
+    "SUPPORTED"
+   ],
+   "got": [
+    "SUBJECT_TYPE_WITHHELD",
+    "SUPPORTED"
+   ],
+   "ok": true
+  },
+  {
+   "id": "T13",
+   "expected": [
+    "SUPPORTED",
+    "UNSUPPORTED",
+    "SUPPORTED"
+   ],
+   "got": [
+    "SUPPORTED",
+    "UNSUPPORTED",
+    "SUPPORTED"
+   ],
+   "ok": true
+  },
+  {
+   "id": "T14",
+   "expected": [
+    "SUPPORTED"
+   ],
+   "got": [
+    "SUPPORTED"
+   ],
+   "ok": true
+  }
+ ]
+}

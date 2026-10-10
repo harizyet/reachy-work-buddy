@@ -1,0 +1,36 @@
+### S01  seed 101  condition=incomplete_scope  oncall_rotation / Tamarind
+REPLY: 'A search of the pager schedule for Tamarind found no on-call rotation for Tamarind [E158]; not searched: the vendor roster. That does not show there is none.'
+  E158 = note:note-oncall_rotation-tamarind-scope: 'Checked the pager schedule for Tamarind only and found no rotation there. The vendor roster was not checked.'
+
+### S02  seed 102  condition=incomplete_scope  runbook / Vesper
+REPLY: 'A search of the Vesper wiki found no runbook for Vesper [E158]; not searched: the shared drive. That does not show there is none.'
+  E158 = note:note-runbook-vesper-scope: 'Searched the Vesper wiki only for a runbook and found none there. The shared drive was not checked.'
+
+### S03  seed 101  condition=incomplete_scope  escalation_channel / Osprey
+REPLY: 'A search of the Osprey chat space found no escalation channel for Osprey [E154]; not searched: other spaces. That does not show there is none.'
+  E154 = note:note-escalation_channel-osprey-scope: 'Looked in the Osprey chat space only for an escalation channel and found none there. Other spaces were not searched.'
+
+### S04  seed 101  condition=incomplete_scope  escalation_channel / Vesper
+REPLY: 'A search of the Vesper chat space found no escalation channel for Vesper [E159]; not searched: other spaces. That does not show there is none.'
+  E159 = note:note-escalation_channel-vesper-scope: 'Looked in the Vesper chat space only for an escalation channel and found none there. Other spaces were not searched.'
+
+### S05  seed 102  condition=incomplete_scope  escalation_channel / Sable
+REPLY: 'A search of the Sable chat space found no escalation channel for Sable [E155]; not searched: other spaces. That does not show there is none.'
+  E155 = note:note-escalation_channel-sable-scope: 'Looked in the Sable chat space only for an escalation channel and found none there. Other spaces were not searched.'
+
+### S06  seed 102  condition=incomplete_scope  escalation_channel / Marlin
+REPLY: 'A search of the Marlin chat space found no escalation channel for Marlin [E156]; not searched: other spaces. That does not show there is none.'
+  E156 = note:note-escalation_channel-marlin-scope: 'Looked in the Marlin chat space only for an escalation channel and found none there. Other spaces were not searched.'
+
+### S07  seed 101  condition=explicit_absence  runbook / Vesper
+REPLY: 'The records say there is no runbook for Vesper [E116].'
+  E116 = memory:m116: 'Vesper has no runbook.'
+
+### S08  seed 101  condition=source_disagreement  oncall_rotation / Marlin
+REPLY: 'The records disagree on whether there is an on-call rotation for Marlin: one says there is [E117], another says there is not [E118]. They do not say which applies.'
+  E117 = memory:m117: 'Marlin has an on-call rotation.'
+  E118 = memory:m118: 'Marlin has no on-call rotation.'
+
+### S09  seed 102  condition=unauthorized_only  runbook / Quartz
+REPLY: 'The records I searched do not mention a runbook for Quartz.'
+  (the only record that mentions it is not authorised for this profile and is not shown)

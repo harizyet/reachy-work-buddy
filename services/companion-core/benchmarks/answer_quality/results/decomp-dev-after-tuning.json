@@ -1,0 +1,455 @@
+{
+ "counts": {
+  "questions": 164,
+  "exact": 154,
+  "count_ok": 161,
+  "parts_expected": 160,
+  "parts_found_exact": 150,
+  "missed_parts": 10,
+  "invented_structures": 1,
+  "withheld_clauses_expected": 40,
+  "withheld_clauses_produced": 53,
+  "questions_with_invented": 1
+ },
+ "fields": {
+  "parts": 160,
+  "subject_ok": 151,
+  "relation_ok": 150,
+  "ask_ok": 150,
+  "scope_ok": 150,
+  "period_ok": 150,
+  "located": 150,
+  "object_ok": 150
+ },
+ "by_category": {
+  "single": {
+   "questions": 55,
+   "exact": 55,
+   "invented": 0,
+   "missed": 0
+  },
+  "existence": {
+   "questions": 4,
+   "exact": 3,
+   "invented": 0,
+   "missed": 2
+  },
+  "phrasing": {
+   "questions": 12,
+   "exact": 8,
+   "invented": 0,
+   "missed": 4
+  },
+  "temporal": {
+   "questions": 18,
+   "exact": 17,
+   "invented": 0,
+   "missed": 0
+  },
+  "ordering": {
+   "questions": 6,
+   "exact": 5,
+   "invented": 0,
+   "missed": 1
+  },
+  "coordination": {
+   "questions": 23,
+   "exact": 21,
+   "invented": 0,
+   "missed": 3
+  },
+  "partial": {
+   "questions": 7,
+   "exact": 7,
+   "invented": 0,
+   "missed": 0
+  },
+  "uncertain": {
+   "questions": 27,
+   "exact": 26,
+   "invented": 1,
+   "missed": 0
+  },
+  "unseen": {
+   "questions": 12,
+   "exact": 12,
+   "invented": 0,
+   "missed": 0
+  }
+ },
+ "withhold_reasons": {
+  "no_relation_cue": 12,
+  "not_a_question_clause": 5,
+  "no_subject": 6,
+  "unsupported_period": 4,
+  "weak_ordering_cue": 1,
+  "pronoun_reference": 8,
+  "unsupported_question_type": 2,
+  "value_in_question": 3,
+  "unsupported_qualifier": 1,
+  "ambiguous_subject": 1,
+  "answer_type_mismatch": 2,
+  "subject_type_mismatch": 5,
+  "ambiguous_relation": 1,
+  "existence_mismatch": 2
+ },
+ "failures": [
+  {
+   "id": "L058",
+   "cat": "existence",
+   "hard": true,
+   "q": "Do Lantern and Cedar have a staging environment?",
+   "want": [
+    [
+     "Lantern",
+     "staging_env",
+     "existence",
+     "any",
+     null
+    ],
+    [
+     "Cedar",
+     "staging_env",
+     "existence",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 2,
+   "reasons": [
+    "no_relation_cue",
+    "not_a_question_clause"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "lantern",
+     "staging_env"
+    ],
+    [
+     "cedar",
+     "staging_env"
+    ]
+   ]
+  },
+  {
+   "id": "L066",
+   "cat": "phrasing",
+   "hard": true,
+   "q": "who owns the relay gateway",
+   "want": [
+    [
+     "Relay gateway",
+     "owner",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_subject"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "relay gateway",
+     "owner"
+    ]
+   ]
+  },
+  {
+   "id": "L067",
+   "cat": "phrasing",
+   "hard": true,
+   "q": "what is harbor's default model?",
+   "want": [
+    [
+     "Harbor",
+     "default_model",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_subject"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "harbor",
+     "default_model"
+    ]
+   ]
+  },
+  {
+   "id": "L068",
+   "cat": "phrasing",
+   "hard": true,
+   "q": "Whose is the Prism dashboard?",
+   "want": [
+    [
+     "Prism dashboard",
+     "owner",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "prism dashboard",
+     "owner"
+    ]
+   ]
+  },
+  {
+   "id": "L069",
+   "cat": "phrasing",
+   "hard": true,
+   "q": "What's the biggest message the Sluice cache accepts?",
+   "want": [
+    [
+     "Sluice cache",
+     "max_message_size",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "sluice cache",
+     "max_message_size"
+    ]
+   ]
+  },
+  {
+   "id": "L089",
+   "cat": "temporal",
+   "hard": false,
+   "q": "What is the old and current retry limit of the Shale store?",
+   "want": [],
+   "want_unc": 1,
+   "got": [],
+   "got_unc": 2,
+   "reasons": [
+    "no_relation_cue",
+    "not_a_question_clause"
+   ],
+   "invented": [],
+   "missed": []
+  },
+  {
+   "id": "L094",
+   "cat": "ordering",
+   "hard": true,
+   "q": "Which is newer, the Lantern standup time in one memory or in the other?",
+   "want": [
+    [
+     "Lantern",
+     "standup",
+     "ordering",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 3,
+   "reasons": [
+    "no_relation_cue",
+    "not_a_question_clause",
+    "not_a_question_clause"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "lantern",
+     "standup"
+    ]
+   ]
+  },
+  {
+   "id": "L104",
+   "cat": "coordination",
+   "hard": true,
+   "q": "Who leads and who is on call for Cedar?",
+   "want": [
+    [
+     "Cedar",
+     "lead",
+     "value",
+     "any",
+     null
+    ],
+    [
+     "Cedar",
+     "on_call",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Cedar",
+     "on_call",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 1,
+   "reasons": [
+    "no_subject"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "cedar",
+     "lead"
+    ]
+   ]
+  },
+  {
+   "id": "L105",
+   "cat": "coordination",
+   "hard": true,
+   "q": "What is the retry limit and the maximum message size of the Beacon queue?",
+   "want": [
+    [
+     "Beacon queue",
+     "retry_limit",
+     "value",
+     "any",
+     null
+    ],
+    [
+     "Beacon queue",
+     "max_message_size",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 2,
+   "reasons": [
+    "no_subject",
+    "not_a_question_clause"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "beacon queue",
+     "retry_limit"
+    ],
+    [
+     "beacon queue",
+     "max_message_size"
+    ]
+   ]
+  },
+  {
+   "id": "L152",
+   "cat": "uncertain",
+   "hard": false,
+   "q": "Who is on call for Harbor and Lantern together?",
+   "want": [],
+   "want_unc": 1,
+   "got": [
+    [
+     "Harbor",
+     "on_call",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [
+    [
+     "harbor",
+     "on_call"
+    ]
+   ],
+   "missed": []
+  }
+ ],
+ "failures_not_marked_hard": [
+  {
+   "id": "L089",
+   "cat": "temporal",
+   "hard": false,
+   "q": "What is the old and current retry limit of the Shale store?",
+   "want": [],
+   "want_unc": 1,
+   "got": [],
+   "got_unc": 2,
+   "reasons": [
+    "no_relation_cue",
+    "not_a_question_clause"
+   ],
+   "invented": [],
+   "missed": []
+  },
+  {
+   "id": "L152",
+   "cat": "uncertain",
+   "hard": false,
+   "q": "Who is on call for Harbor and Lantern together?",
+   "want": [],
+   "want_unc": 1,
+   "got": [
+    [
+     "Harbor",
+     "on_call",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [
+    [
+     "harbor",
+     "on_call"
+    ]
+   ],
+   "missed": []
+  }
+ ],
+ "marked_hard_total": 14,
+ "marked_hard_failed": 8
+}

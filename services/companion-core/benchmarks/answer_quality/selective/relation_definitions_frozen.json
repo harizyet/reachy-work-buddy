@@ -1,0 +1,929 @@
+{
+ "count": 24,
+ "defined_in_final_development_pass": [
+  "release_day",
+  "escalation_contact",
+  "approver"
+ ],
+ "relations": [
+  {
+   "allows_next": false,
+   "answer_kinds": [],
+   "co_types": [],
+   "cues": [
+    "\\bown(?:s|ed|er|ers|ership)?\\b",
+    "\\bresponsib\\w*",
+    "\\baccountab\\w*",
+    "\\bin charge\\b",
+    "\\blooks? after\\b",
+    "\\bmaintain(?:s|ed|er|ers)?\\b"
+   ],
+   "holder_role": null,
+   "kind": "person",
+   "label": "owner of {S}",
+   "many": false,
+   "name": "owner",
+   "negation": null,
+   "object_words": [],
+   "plural": false,
+   "prefix": "",
+   "presence": null,
+   "qcues": [
+    "\\bown(?:s|ed|er|ers|ership)?\\b",
+    "\\bresponsib\\w*",
+    "\\baccountab\\w*",
+    "\\bin charge of\\b",
+    "\\blooks? after\\b",
+    "\\bmaintain(?:s|ed|er|ers)?\\b"
+   ],
+   "sentence": "",
+   "sentence_past": "",
+   "speaker_ok": true,
+   "structured": null,
+   "subject_types": [
+    "project",
+    "system"
+   ],
+   "text_pattern": null,
+   "unit": "",
+   "value_types": [
+    "person",
+    "vendor"
+   ]
+  },
+  {
+   "allows_next": false,
+   "answer_kinds": [],
+   "co_types": [],
+   "cues": [
+    "\\blead(?:s|er|ers|ing)?\\b",
+    "\\bhead(?:s|ed)?\\b",
+    "\\bmanag(?:e|es|ed|er|ers|ing)\\b",
+    "\\bin charge\\b"
+   ],
+   "holder_role": null,
+   "kind": "person",
+   "label": "lead of {S}",
+   "many": false,
+   "name": "lead",
+   "negation": null,
+   "object_words": [],
+   "plural": false,
+   "prefix": "",
+   "presence": null,
+   "qcues": [
+    "\\blead(?:s|er|ers|ing)?\\b",
+    "\\bheads?\\b",
+    "\\bmanag(?:e|es|ed|er|ers|ing)\\b",
+    "\\bin charge of\\b"
+   ],
+   "sentence": "",
+   "sentence_past": "",
+   "speaker_ok": true,
+   "structured": null,
+   "subject_types": [
+    "project"
+   ],
+   "text_pattern": null,
+   "unit": "",
+   "value_types": [
+    "person",
+    "vendor"
+   ]
+  },
+  {
+   "allows_next": false,
+   "answer_kinds": [],
+   "co_types": [],
+   "cues": [
+    "\\bretr(?:y|ies|ied|ying)\\b",
+    "\\battempts?\\b",
+    "\\btried\\b"
+   ],
+   "holder_role": null,
+   "kind": "number",
+   "label": "retry limit of {S}",
+   "many": false,
+   "name": "retry_limit",
+   "negation": null,
+   "object_words": [],
+   "plural": false,
+   "prefix": "",
+   "presence": null,
+   "qcues": [
+    "\\bretr(?:y|ies|ied|ying)\\b",
+    "\\battempts?\\b"
+   ],
+   "sentence": "",
+   "sentence_past": "",
+   "speaker_ok": true,
+   "structured": null,
+   "subject_types": [
+    "project",
+    "system"
+   ],
+   "text_pattern": null,
+   "unit": "retries",
+   "value_types": []
+  },
+  {
+   "allows_next": false,
+   "answer_kinds": [],
+   "co_types": [],
+   "cues": [
+    "\\bdefault\\b"
+   ],
+   "holder_role": null,
+   "kind": "model",
+   "label": "default model of {S}",
+   "many": false,
+   "name": "default_model",
+   "negation": null,
+   "object_words": [],
+   "plural": false,
+   "prefix": "",
+   "presence": null,
+   "qcues": [
+    "\\bdefault(?:s|ed)?\\b"
+   ],
+   "sentence": "",
+   "sentence_past": "",
+   "speaker_ok": true,
+   "structured": null,
+   "subject_types": [
+    "project"
+   ],
+   "text_pattern": null,
+   "unit": "",
+   "value_types": [
+    "model"
+   ]
+  },
+  {
+   "allows_next": false,
+   "answer_kinds": [
+    "model",
+    "text"
+   ],
+   "co_types": [],
+   "cues": [
+    "\\bdecision\\b",
+    "\\bdecid(?:e|ed|es|ing)\\b",
+    "\\bagree[ds]?\\b",
+    "\\bsettled? on\\b"
+   ],
+   "holder_role": null,
+   "kind": "text",
+   "label": "planning decision for {S}",
+   "many": false,
+   "name": "decision",
+   "negation": null,
+   "object_words": [],
+   "plural": false,
+   "prefix": "",
+   "presence": null,
+   "qcues": [
+    "\\bdecid(?:e|ed|es|ing)\\b",
+    "\\bdecisions?\\b",
+    "\\bagree[ds]?\\b",
+    "\\bsettled? on\\b"
+   ],
+   "sentence": "The records say the decision for {S} was to {V}. They do not say whether it has been carried out.",
+   "sentence_past": "Previously, the decision for {S} was to {V}.",
+   "speaker_ok": true,
+   "structured": null,
+   "subject_types": [
+    "project"
+   ],
+   "text_pattern": "\\b(?:decision is to|decided to|agreed to)\\s+(?P<value>[^.;,]{3,80}?)\\s*(?:[.;]|$)",
+   "unit": "",
+   "value_types": [
+    "model"
+   ]
+  },
+  {
+   "allows_next": false,
+   "answer_kinds": [],
+   "co_types": [
+    "project",
+    "system"
+   ],
+   "cues": [
+    "\\bhosts?\\b",
+    "\\bhosted\\b",
+    "\\bruns? on\\b",
+    "\\brunning on\\b",
+    "\\bserv(?:e|es|ed|ing)\\b",
+    "\\bdeployed on\\b",
+    "\\bhardware\\b",
+    "\\bmachine\\b"
+   ],
+   "holder_role": null,
+   "kind": "host",
+   "label": "host running {S}",
+   "many": false,
+   "name": "runs_on",
+   "negation": null,
+   "object_words": [],
+   "plural": false,
+   "prefix": "the ",
+   "presence": null,
+   "qcues": [
+    "\\bhosts?\\b",
+    "\\bruns?\\b",
+    "\\brunning\\b",
+    "\\bserv(?:e|es|ed|ing)\\b",
+    "\\bhardware\\b",
+    "\\bmachines?\\b"
+   ],
+   "sentence": "",
+   "sentence_past": "",
+   "speaker_ok": true,
+   "structured": null,
+   "subject_types": [
+    "model"
+   ],
+   "text_pattern": null,
+   "unit": "",
+   "value_types": [
+    "host"
+   ]
+  },
+  {
+   "allows_next": false,
+   "answer_kinds": [],
+   "co_types": [],
+   "cues": [
+    "\\broll(?:s|ed|ing)?[\\s-]?back\\b(?!\\s+tests?)",
+    "\\bundo\\b",
+    "\\brevert\\w*"
+   ],
+   "holder_role": null,
+   "kind": "number",
+   "label": "rollback window for {S}",
+   "many": false,
+   "name": "rollback_window",
+   "negation": null,
+   "object_words": [],
+   "plural": false,
+   "prefix": "",
+   "presence": null,
+   "qcues": [
+    "\\broll(?:s|ed|ing)?[\\s-]?back\\b(?!\\s+tests?)",
+    "\\bundo\\b",
+    "\\brevert\\w*"
+   ],
+   "sentence": "",
+   "sentence_past": "",
+   "speaker_ok": true,
+   "structured": null,
+   "subject_types": [
+    "project"
+   ],
+   "text_pattern": null,
+   "unit": "minutes",
+   "value_types": []
+  },
+  {
+   "allows_next": false,
+   "answer_kinds": [
+    "hours",
+    "time"
+   ],
+   "co_types": [],
+   "cues": [
+    "\\bsupport\\b",
+    "\\bhours\\b",
+    "\\bstaffed\\b"
+   ],
+   "holder_role": null,
+   "kind": "hours",
+   "label": "weekday support hours of {S}",
+   "many": false,
+   "name": "support_hours",
+   "negation": null,
+   "object_words": [],
+   "plural": true,
+   "prefix": "",
+   "presence": null,
+   "qcues": [
+    "\\bsupport\\b",
+    "\\bhours\\b",
+    "\\bstaffed\\b"
+   ],
+   "sentence": "",
+   "sentence_past": "",
+   "speaker_ok": true,
+   "structured": null,
+   "subject_types": [
+    "vendor"
+   ],
+   "text_pattern": null,
+   "unit": "",
+   "value_types": []
+  },
+  {
+   "allows_next": false,
+   "answer_kinds": [],
+   "co_types": [],
+   "cues": [
+    "\\breview(?:s|ed|ing)?\\b"
+   ],
+   "holder_role": null,
+   "kind": "text",
+   "label": "review assigned to {S}",
+   "many": false,
+   "name": "reviews",
+   "negation": null,
+   "object_words": [],
+   "plural": false,
+   "prefix": "",
+   "presence": null,
+   "qcues": [
+    "\\breview(?:s|ed|ing)?\\b"
+   ],
+   "sentence": "{S} reviews {V}.",
+   "sentence_past": "Previously, {S} reviewed {V}.",
+   "speaker_ok": true,
+   "structured": null,
+   "subject_types": [
+    "person"
+   ],
+   "text_pattern": "\\breview(?:s|ing)?\\s+(?:the\\s+)?(?P<value>[A-Z][\\w-]*(?: [\\w-]+){0,4}?)\\s*(?:[.;]|$)",
+   "unit": "",
+   "value_types": []
+  },
+  {
+   "allows_next": false,
+   "answer_kinds": [],
+   "co_types": [],
+   "cues": [
+    "\\bon[\\s-]?call\\b",
+    "\\bpager\\b",
+    "\\bpaged\\b"
+   ],
+   "holder_role": null,
+   "kind": "person",
+   "label": "person on call for {S}",
+   "many": false,
+   "name": "on_call",
+   "negation": null,
+   "object_words": [],
+   "plural": false,
+   "prefix": "",
+   "presence": null,
+   "qcues": [
+    "\\bon[\\s-]?call\\b",
+    "\\bpager\\b",
+    "\\bpaged\\b"
+   ],
+   "sentence": "",
+   "sentence_past": "",
+   "speaker_ok": true,
+   "structured": null,
+   "subject_types": [
+    "project"
+   ],
+   "text_pattern": null,
+   "unit": "",
+   "value_types": [
+    "person",
+    "vendor"
+   ]
+  },
+  {
+   "allows_next": false,
+   "answer_kinds": [
+    "day",
+    "month"
+   ],
+   "co_types": [],
+   "cues": [
+    "\\bbudget\\w*",
+    "\\bfund(?:ed|ing|s)?\\b",
+    "\\bapproved through\\b"
+   ],
+   "holder_role": null,
+   "kind": "month",
+   "label": "last funded month for {S}",
+   "many": false,
+   "name": "budget_through",
+   "negation": null,
+   "object_words": [],
+   "plural": false,
+   "prefix": "",
+   "presence": null,
+   "qcues": [
+    "\\bbudget\\w*",
+    "\\bfund(?:ed|ing|s)?\\b",
+    "\\bapproved through\\b"
+   ],
+   "sentence": "",
+   "sentence_past": "",
+   "speaker_ok": true,
+   "structured": null,
+   "subject_types": [
+    "project"
+   ],
+   "text_pattern": null,
+   "unit": "",
+   "value_types": []
+  },
+  {
+   "allows_next": false,
+   "answer_kinds": [
+    "day",
+    "month"
+   ],
+   "co_types": [],
+   "cues": [
+    "\\bdeadline\\b",
+    "\\bdue\\b",
+    "\\bcirculate\\b"
+   ],
+   "holder_role": null,
+   "kind": "day",
+   "label": "deadline for {S}'s written summary",
+   "many": false,
+   "name": "deadline",
+   "negation": null,
+   "object_words": [],
+   "plural": false,
+   "prefix": "",
+   "presence": null,
+   "qcues": [
+    "\\bdeadline\\b",
+    "\\bdue\\b",
+    "\\bcirculate\\b",
+    "\\bwritten summary\\b"
+   ],
+   "sentence": "",
+   "sentence_past": "",
+   "speaker_ok": true,
+   "structured": null,
+   "subject_types": [
+    "person"
+   ],
+   "text_pattern": null,
+   "unit": "",
+   "value_types": []
+  },
+  {
+   "allows_next": false,
+   "answer_kinds": [],
+   "co_types": [],
+   "cues": [
+    "\\bstaging\\b"
+   ],
+   "holder_role": null,
+   "kind": "existence",
+   "label": "staging environment for {S}",
+   "many": false,
+   "name": "staging_env",
+   "negation": "\\b(?:has no|does not have|there is no|no|without)\\b",
+   "object_words": [],
+   "plural": false,
+   "prefix": "",
+   "presence": "\\b(?:has an?|there is an?|have an?)\\b",
+   "qcues": [
+    "\\bstaging\\b"
+   ],
+   "sentence": "",
+   "sentence_past": "",
+   "speaker_ok": true,
+   "structured": null,
+   "subject_types": [
+    "project"
+   ],
+   "text_pattern": null,
+   "unit": "",
+   "value_types": []
+  },
+  {
+   "allows_next": false,
+   "answer_kinds": [],
+   "co_types": [],
+   "cues": [
+    "\\bfix\\w*",
+    "\\broll[\\s-]?back tests?\\b"
+   ],
+   "holder_role": null,
+   "kind": "person",
+   "label": "person fixing the {S} rollback test",
+   "many": false,
+   "name": "test_fixer",
+   "negation": null,
+   "object_words": [
+    "rollback",
+    "test"
+   ],
+   "plural": false,
+   "prefix": "",
+   "presence": null,
+   "qcues": [
+    "\\broll[\\s-]?back tests?\\b"
+   ],
+   "sentence": "",
+   "sentence_past": "",
+   "speaker_ok": true,
+   "structured": null,
+   "subject_types": [
+    "project"
+   ],
+   "text_pattern": null,
+   "unit": "",
+   "value_types": [
+    "person",
+    "vendor"
+   ]
+  },
+  {
+   "allows_next": false,
+   "answer_kinds": [],
+   "co_types": [],
+   "cues": [
+    "\\bsecurity\\b"
+   ],
+   "holder_role": null,
+   "kind": "person",
+   "label": "security reviewer for {S}",
+   "many": false,
+   "name": "security_reviewer",
+   "negation": null,
+   "object_words": [],
+   "plural": false,
+   "prefix": "",
+   "presence": null,
+   "qcues": [
+    "\\bsecurity(?:\\s+review\\w*)?\\b"
+   ],
+   "sentence": "",
+   "sentence_past": "",
+   "speaker_ok": true,
+   "structured": null,
+   "subject_types": [
+    "project"
+   ],
+   "text_pattern": null,
+   "unit": "",
+   "value_types": [
+    "person",
+    "vendor"
+   ]
+  },
+  {
+   "allows_next": false,
+   "answer_kinds": [],
+   "co_types": [],
+   "cues": [
+    "\\bmax(?:imum)?\\b.*\\bmessage",
+    "\\bmessage size\\b",
+    "\\bmessages?\\b.*\\b(?:size|limit)\\b"
+   ],
+   "holder_role": null,
+   "kind": "number",
+   "label": "maximum message size of {S}",
+   "many": false,
+   "name": "max_message_size",
+   "negation": null,
+   "object_words": [],
+   "plural": false,
+   "prefix": "",
+   "presence": null,
+   "qcues": [
+    "\\bmessage size\\b",
+    "\\b(?:large|big|long)\\b.*\\bmessages?\\b",
+    "\\bmessages?\\b.*\\b(?:large|big|size)\\b",
+    "\\bmax(?:imum)?\\b.*\\bmessages?\\b",
+    "\\bsize limit\\b"
+   ],
+   "sentence": "",
+   "sentence_past": "",
+   "speaker_ok": true,
+   "structured": null,
+   "subject_types": [
+    "system"
+   ],
+   "text_pattern": null,
+   "unit": "",
+   "value_types": []
+  },
+  {
+   "allows_next": true,
+   "answer_kinds": [
+    "day",
+    "month"
+   ],
+   "co_types": [],
+   "cues": [
+    "\\bvacation\\b",
+    "\\bholiday\\b",
+    "\\baway\\b",
+    "\\bout of (?:the )?office\\b",
+    "\\bdays? off\\b",
+    "\\bon leave\\b"
+   ],
+   "holder_role": "lead",
+   "kind": "month",
+   "label": "next time away for the {S} lead",
+   "many": false,
+   "name": "vacation",
+   "negation": null,
+   "object_words": [],
+   "plural": false,
+   "prefix": "",
+   "presence": null,
+   "qcues": [
+    "\\bvacations?\\b",
+    "\\bholidays?\\b",
+    "\\baway\\b",
+    "\\bout of (?:the )?office\\b",
+    "\\bdays? off\\b",
+    "\\bon leave\\b"
+   ],
+   "sentence": "",
+   "sentence_past": "",
+   "speaker_ok": true,
+   "structured": null,
+   "subject_types": [
+    "project"
+   ],
+   "text_pattern": null,
+   "unit": "",
+   "value_types": []
+  },
+  {
+   "allows_next": false,
+   "answer_kinds": [],
+   "co_types": [],
+   "cues": [
+    "\\baudit\\w*"
+   ],
+   "holder_role": null,
+   "kind": "person",
+   "label": "person who audits the {S} build logs",
+   "many": false,
+   "name": "incident_auditor",
+   "negation": null,
+   "object_words": [],
+   "plural": false,
+   "prefix": "",
+   "presence": null,
+   "qcues": [
+    "\\baudit(?:s|ed|ing|or|ors)?\\b"
+   ],
+   "sentence": "",
+   "sentence_past": "",
+   "speaker_ok": true,
+   "structured": null,
+   "subject_types": [
+    "project"
+   ],
+   "text_pattern": null,
+   "unit": "",
+   "value_types": [
+    "person",
+    "vendor"
+   ]
+  },
+  {
+   "allows_next": false,
+   "answer_kinds": [
+    "hours",
+    "time"
+   ],
+   "co_types": [],
+   "cues": [
+    "\\bstand-?ups?\\b"
+   ],
+   "holder_role": null,
+   "kind": "time",
+   "label": "standup time for {S}",
+   "many": false,
+   "name": "standup",
+   "negation": null,
+   "object_words": [],
+   "plural": false,
+   "prefix": "",
+   "presence": null,
+   "qcues": [
+    "\\bstand-?ups?\\b"
+   ],
+   "sentence": "",
+   "sentence_past": "",
+   "speaker_ok": true,
+   "structured": null,
+   "subject_types": [
+    "project"
+   ],
+   "text_pattern": null,
+   "unit": "",
+   "value_types": []
+  },
+  {
+   "allows_next": false,
+   "answer_kinds": [],
+   "co_types": [],
+   "cues": [
+    "\\bdesign reviews?\\b",
+    "\\breview day\\b"
+   ],
+   "holder_role": null,
+   "kind": "day",
+   "label": "design review day for {S}",
+   "many": false,
+   "name": "review_day",
+   "negation": null,
+   "object_words": [],
+   "plural": false,
+   "prefix": "",
+   "presence": null,
+   "qcues": [
+    "\\bdesign reviews?\\b",
+    "\\breview day\\b"
+   ],
+   "sentence": "",
+   "sentence_past": "",
+   "speaker_ok": true,
+   "structured": null,
+   "subject_types": [
+    "project"
+   ],
+   "text_pattern": null,
+   "unit": "",
+   "value_types": []
+  },
+  {
+   "allows_next": false,
+   "answer_kinds": [
+    "day"
+   ],
+   "co_types": [],
+   "cues": [
+    "\\brelease day\\b",
+    "\\breleases?\\s+(?:go(?:es)?\\s+(?:out|live)|ship|shipped|land|happen)\\b",
+    "\\breleases\\s+(?:on|every|each)\\b",
+    "\\bships?\\s+(?:on|every|each)\\b",
+    "\\bcuts?\\s+(?:a\\s+|the\\s+)?releases?\\b",
+    "\\breleases are (?:cut|shipped|published)\\b",
+    "\\bis released (?:on|every|each)\\b"
+   ],
+   "holder_role": null,
+   "kind": "day",
+   "label": "release day for {S}",
+   "many": false,
+   "name": "release_day",
+   "negation": null,
+   "object_words": [],
+   "plural": false,
+   "prefix": "",
+   "presence": null,
+   "qcues": [
+    "\\brelease day\\b",
+    "\\bdays?\\b[^?;,]*\\b(?:releas(?:e|es|ed|ing)|ship(?:s|ped|ping)?)\\b(?![^?;,]*\\bapprov)",
+    "\\bwhen\\s+(?:does|do|will|is|are)\\b(?![^?;,]*\\b(?:approv|last|latest|previous|first|next|newest))[^?;,]*\\b(?:releas(?:e|es)|ships?)\\b",
+    "\\bweekday\\b[^?;,]*\\b(?:releas\\w+|ship\\w*)\\b"
+   ],
+   "sentence": "",
+   "sentence_past": "",
+   "speaker_ok": true,
+   "structured": null,
+   "subject_types": [
+    "project"
+   ],
+   "text_pattern": null,
+   "unit": "",
+   "value_types": []
+  },
+  {
+   "allows_next": false,
+   "answer_kinds": [],
+   "co_types": [],
+   "cues": [
+    "\\bescalat\\w*"
+   ],
+   "holder_role": null,
+   "kind": "person",
+   "label": "escalation contact for {S}",
+   "many": false,
+   "name": "escalation_contact",
+   "negation": null,
+   "object_words": [
+    "incident",
+    "incidents",
+    "outage",
+    "outages",
+    "problem",
+    "problems",
+    "issue",
+    "issues",
+    "alert",
+    "alerts"
+   ],
+   "plural": false,
+   "prefix": "",
+   "presence": null,
+   "qcues": [
+    "\\bescalat\\w*"
+   ],
+   "sentence": "",
+   "sentence_past": "",
+   "speaker_ok": false,
+   "structured": null,
+   "subject_types": [
+    "project",
+    "system"
+   ],
+   "text_pattern": null,
+   "unit": "",
+   "value_types": [
+    "person",
+    "vendor"
+   ]
+  },
+  {
+   "allows_next": false,
+   "answer_kinds": [],
+   "co_types": [],
+   "cues": [
+    "\\bapprov\\w*\\b[^.;]*\\breleases?\\b",
+    "\\breleases?\\b[^.;]*\\bapprov\\w*\\b",
+    "\\bsign(?:s|ed)? off\\b[^.;]*\\breleases?\\b"
+   ],
+   "holder_role": null,
+   "kind": "person",
+   "label": "approver of the {S} release",
+   "many": false,
+   "name": "approver",
+   "negation": null,
+   "object_words": [
+    "release",
+    "releases"
+   ],
+   "plural": false,
+   "prefix": "",
+   "presence": null,
+   "qcues": [
+    "(?<!budget )(?<!spending )(?<!expense )(?<!purchase )\\bapprovers?\\b",
+    "\\b(?:who(?:m)?|which (?:person|people|engineers?))\\b[^?;,]*?\\bapprov(?:e|es|ed|ing)\\b[^?;,]*\\breleas\\w*",
+    "\\bwho\\b[^?;,]*\\bsign(?:s|ed)? off\\b[^?;,]*\\breleas\\w*"
+   ],
+   "sentence": "",
+   "sentence_past": "",
+   "speaker_ok": false,
+   "structured": null,
+   "subject_types": [
+    "project"
+   ],
+   "text_pattern": null,
+   "unit": "",
+   "value_types": [
+    "person",
+    "vendor"
+   ]
+  },
+  {
+   "allows_next": false,
+   "answer_kinds": [],
+   "co_types": [],
+   "cues": [
+    "\\battend\\w*",
+    "\\bparticipa\\w*",
+    "\\bjoined\\b",
+    "\\btook part\\b",
+    "\\bspoke\\b"
+   ],
+   "holder_role": null,
+   "kind": "person",
+   "label": "attendees of the {S} planning meeting",
+   "many": true,
+   "name": "attends",
+   "negation": null,
+   "object_words": [],
+   "plural": false,
+   "prefix": "",
+   "presence": null,
+   "qcues": [
+    "\\battend\\w*",
+    "\\bparticipa\\w*",
+    "\\bjoined\\b",
+    "\\btook part\\b",
+    "\\bspoke\\b",
+    "\\bwho (?:was|were) (?:in|at|there)\\b"
+   ],
+   "sentence": "",
+   "sentence_past": "",
+   "speaker_ok": true,
+   "structured": "attendees",
+   "subject_types": [
+    "meeting"
+   ],
+   "text_pattern": null,
+   "unit": "",
+   "value_types": [
+    "person",
+    "vendor"
+   ]
+  }
+ ]
+}

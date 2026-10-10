@@ -1,0 +1,130 @@
+{
+ "seed": 20261011,
+ "frozen_before_any_reply_was_chosen_from": true,
+ "excluded_prior_sample": 42,
+ "dev15": [
+  {
+   "id": "D15-003",
+   "stratum": "decision relation (decision template)"
+  },
+  {
+   "id": "D15-006",
+   "stratum": "review text (review template)"
+  },
+  {
+   "id": "D15-008",
+   "stratum": "support hours (plural agreement)"
+  },
+  {
+   "id": "D15-019",
+   "stratum": "default model, current (decision versus configured)"
+  },
+  {
+   "id": "D15-043",
+   "stratum": "decision relation (decision template)"
+  },
+  {
+   "id": "D15-044",
+   "stratum": "review text (review template)"
+  },
+  {
+   "id": "D15-052",
+   "stratum": "vacation (reworded label)"
+  },
+  {
+   "id": "D15-056",
+   "stratum": "on call (relative time kept)"
+  },
+  {
+   "id": "D15-063",
+   "stratum": "on call (relative time kept)"
+  },
+  {
+   "id": "D15-070",
+   "stratum": "default model, current (decision versus configured)"
+  },
+  {
+   "id": "D15-071",
+   "stratum": "default model, history (explicit transition)"
+  },
+  {
+   "id": "D15-074",
+   "stratum": "decision relation (decision template)"
+  },
+  {
+   "id": "D15-075",
+   "stratum": "vacation (reworded label)"
+  },
+  {
+   "id": "D15-082",
+   "stratum": "default model, history (explicit transition)"
+  },
+  {
+   "id": "D15-085",
+   "stratum": "support hours (plural agreement)"
+  },
+  {
+   "id": "D15-086",
+   "stratum": "three or more parts (question order kept)"
+  },
+  {
+   "id": "D15-087",
+   "stratum": "three or more parts (question order kept)"
+  },
+  {
+   "id": "D15-088",
+   "stratum": "three or more parts (question order kept)"
+  },
+  {
+   "id": "D15-091",
+   "stratum": "default model, history (explicit transition)"
+  },
+  {
+   "id": "D15-095",
+   "stratum": "three or more parts (question order kept)"
+  },
+  {
+   "id": "D15-120",
+   "stratum": "default model, current (decision versus configured)"
+  },
+  {
+   "id": "D15-131",
+   "stratum": "on call (relative time kept)"
+  },
+  {
+   "id": "D15-132",
+   "stratum": "default model, current (decision versus configured)"
+  },
+  {
+   "id": "D15-149",
+   "stratum": "on call (relative time kept)"
+  },
+  {
+   "id": "D15-166",
+   "stratum": "default model, history (explicit transition)"
+  },
+  {
+   "id": "D15-169",
+   "stratum": "ordering (reworded ordering sentence)"
+  },
+  {
+   "id": "D15-171",
+   "stratum": "ordering (reworded ordering sentence)"
+  },
+  {
+   "id": "D15-173",
+   "stratum": "ordering (reworded ordering sentence)"
+  }
+ ],
+ "strata_counts": {
+  "decision relation (decision template)": 3,
+  "review text (review template)": 2,
+  "vacation (reworded label)": 2,
+  "support hours (plural agreement)": 2,
+  "ordering (reworded ordering sentence)": 3,
+  "on call (relative time kept)": 4,
+  "default model, history (explicit transition)": 4,
+  "default model, current (decision versus configured)": 4,
+  "three or more parts (question order kept)": 4
+ }
+}

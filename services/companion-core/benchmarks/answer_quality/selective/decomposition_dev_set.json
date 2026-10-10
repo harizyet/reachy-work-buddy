@@ -1,0 +1,2747 @@
+{
+ "version": 1,
+ "purpose": "labelled question structures for the deterministic question-side decomposer (development set, not an acceptance set)",
+ "items": [
+  {
+   "id": "L001",
+   "cat": "single",
+   "q": "Who owns the Relay gateway?",
+   "parts": [
+    {
+     "subject": "Relay gateway",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L002",
+   "cat": "single",
+   "q": "Who is responsible for the Beacon queue?",
+   "parts": [
+    {
+     "subject": "Beacon queue",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L003",
+   "cat": "single",
+   "q": "Who looks after the Kiln scheduler?",
+   "parts": [
+    {
+     "subject": "Kiln scheduler",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L004",
+   "cat": "single",
+   "q": "Who maintains the Pylon gateway?",
+   "parts": [
+    {
+     "subject": "Pylon gateway",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L005",
+   "cat": "single",
+   "q": "Who leads Harbor?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L006",
+   "cat": "single",
+   "q": "Who is the Lantern lead?",
+   "parts": [
+    {
+     "subject": "Lantern",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L007",
+   "cat": "single",
+   "q": "Who heads Meadow?",
+   "parts": [
+    {
+     "subject": "Meadow",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L008",
+   "cat": "single",
+   "q": "Who manages Zenith?",
+   "parts": [
+    {
+     "subject": "Zenith",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L009",
+   "cat": "single",
+   "q": "What is the retry limit of the Shale store?",
+   "parts": [
+    {
+     "subject": "Shale store",
+     "relation": "retry_limit",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "number"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L010",
+   "cat": "single",
+   "q": "How many attempts does the Vault auth service allow?",
+   "parts": [
+    {
+     "subject": "Vault auth service",
+     "relation": "retry_limit",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "number"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L011",
+   "cat": "single",
+   "q": "How many times does the Loom stream retry a failed job?",
+   "parts": [
+    {
+     "subject": "Loom stream",
+     "relation": "retry_limit",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "number"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L012",
+   "cat": "single",
+   "q": "What is Harbor's default model?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "default_model",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "model"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L013",
+   "cat": "single",
+   "q": "Which model does Aspen use by default?",
+   "parts": [
+    {
+     "subject": "Aspen",
+     "relation": "default_model",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "model"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L014",
+   "cat": "single",
+   "q": "What model does Briar default to?",
+   "parts": [
+    {
+     "subject": "Briar",
+     "relation": "default_model",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "model"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L015",
+   "cat": "single",
+   "q": "Which model did Lantern decide to keep?",
+   "parts": [
+    {
+     "subject": "Lantern",
+     "relation": "decision",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "text"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L016",
+   "cat": "single",
+   "q": "What was decided for Zenith?",
+   "parts": [
+    {
+     "subject": "Zenith",
+     "relation": "decision",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "text"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L017",
+   "cat": "single",
+   "q": "Where does Falcon-4B run?",
+   "parts": [
+    {
+     "subject": "Falcon-4B",
+     "relation": "runs_on",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "host"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L018",
+   "cat": "single",
+   "q": "Which host serves Wren-3B?",
+   "parts": [
+    {
+     "subject": "Wren-3B",
+     "relation": "runs_on",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "host"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L019",
+   "cat": "single",
+   "q": "On which machine does Raven-13B run?",
+   "parts": [
+    {
+     "subject": "Raven-13B",
+     "relation": "runs_on",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "host"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L020",
+   "cat": "single",
+   "q": "What hardware does Lynx-7B run on?",
+   "parts": [
+    {
+     "subject": "Lynx-7B",
+     "relation": "runs_on",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "host"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L021",
+   "cat": "single",
+   "q": "How long do I have to roll back a failed Harbor deploy?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "rollback_window",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "number"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L022",
+   "cat": "single",
+   "q": "What is the rollback window for Lantern?",
+   "parts": [
+    {
+     "subject": "Lantern",
+     "relation": "rollback_window",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "number"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L023",
+   "cat": "single",
+   "q": "Within how many minutes must Meadow be rolled back?",
+   "parts": [
+    {
+     "subject": "Meadow",
+     "relation": "rollback_window",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "number"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L024",
+   "cat": "single",
+   "q": "What are Acme Freight's support hours?",
+   "parts": [
+    {
+     "subject": "Acme Freight",
+     "relation": "support_hours",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "hours"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L025",
+   "cat": "single",
+   "q": "When is Zephyr Telecom support open on weekdays?",
+   "parts": [
+    {
+     "subject": "Zephyr Telecom",
+     "relation": "support_hours",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "hours"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L026",
+   "cat": "single",
+   "q": "What hours is Borealis Cloud staffed?",
+   "parts": [
+    {
+     "subject": "Borealis Cloud",
+     "relation": "support_hours",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "hours"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L027",
+   "cat": "single",
+   "q": "What does Nadia Orlov review?",
+   "parts": [
+    {
+     "subject": "Nadia Orlov",
+     "relation": "reviews",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "text"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L028",
+   "cat": "single",
+   "q": "Which settings is Marco Bianchi reviewing?",
+   "parts": [
+    {
+     "subject": "Marco Bianchi",
+     "relation": "reviews",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "text"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L029",
+   "cat": "single",
+   "q": "Who is on call for Harbor?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "on_call",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L030",
+   "cat": "single",
+   "q": "Who has the pager for Lantern?",
+   "parts": [
+    {
+     "subject": "Lantern",
+     "relation": "on_call",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L031",
+   "cat": "single",
+   "q": "Who covers on-call duty for Cedar?",
+   "parts": [
+    {
+     "subject": "Cedar",
+     "relation": "on_call",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L032",
+   "cat": "single",
+   "q": "Until which month is Harbor funded?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "budget_through",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "month"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L033",
+   "cat": "single",
+   "q": "Through when is Lantern's budget approved?",
+   "parts": [
+    {
+     "subject": "Lantern",
+     "relation": "budget_through",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "month"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L034",
+   "cat": "single",
+   "q": "What is Priya Nair's deadline for the written summary?",
+   "parts": [
+    {
+     "subject": "Priya Nair",
+     "relation": "deadline",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "day"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L035",
+   "cat": "single",
+   "q": "By when does Kofi Mensah have to circulate the summary?",
+   "parts": [
+    {
+     "subject": "Kofi Mensah",
+     "relation": "deadline",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "day"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L036",
+   "cat": "single",
+   "q": "Who will fix the Harbor rollback test?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "test_fixer",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L037",
+   "cat": "single",
+   "q": "Who is working on the Lantern rollback test?",
+   "parts": [
+    {
+     "subject": "Lantern",
+     "relation": "test_fixer",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L038",
+   "cat": "single",
+   "q": "Who is the security reviewer for Harbor?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "security_reviewer",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L039",
+   "cat": "single",
+   "q": "Who signs off Lantern security?",
+   "parts": [
+    {
+     "subject": "Lantern",
+     "relation": "security_reviewer",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L040",
+   "cat": "single",
+   "q": "Who reviews security for Cedar?",
+   "parts": [
+    {
+     "subject": "Cedar",
+     "relation": "security_reviewer",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L041",
+   "cat": "single",
+   "q": "How large can a Mosaic search index message be?",
+   "parts": [
+    {
+     "subject": "Mosaic search index",
+     "relation": "max_message_size",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "number"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L042",
+   "cat": "single",
+   "q": "What is the maximum message size of the Beacon queue?",
+   "parts": [
+    {
+     "subject": "Beacon queue",
+     "relation": "max_message_size",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "number"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L043",
+   "cat": "single",
+   "q": "How big can a Cinder cache message be?",
+   "parts": [
+    {
+     "subject": "Cinder cache",
+     "relation": "max_message_size",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "number"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L044",
+   "cat": "single",
+   "q": "When will the Osprey lead be away next?",
+   "parts": [
+    {
+     "subject": "Osprey",
+     "relation": "vacation",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "month"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L045",
+   "cat": "single",
+   "q": "When is the Harbor lead's next vacation?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "vacation",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "month"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L046",
+   "cat": "single",
+   "q": "When is the Cedar lead on holiday?",
+   "parts": [
+    {
+     "subject": "Cedar",
+     "relation": "vacation",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "month"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L047",
+   "cat": "single",
+   "q": "Who audits the Cedar build logs?",
+   "parts": [
+    {
+     "subject": "Cedar",
+     "relation": "incident_auditor",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L048",
+   "cat": "single",
+   "q": "What time is the Harbor standup?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "standup",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "time"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L049",
+   "cat": "single",
+   "q": "When does the Quartz stand-up start?",
+   "parts": [
+    {
+     "subject": "Quartz",
+     "relation": "standup",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "time"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L050",
+   "cat": "single",
+   "q": "Which day is the Harbor design review?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "review_day",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "day"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L051",
+   "cat": "single",
+   "q": "On which day are Lantern design reviews held?",
+   "parts": [
+    {
+     "subject": "Lantern",
+     "relation": "review_day",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "day"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L052",
+   "cat": "single",
+   "q": "Who was in the Harbor planning meeting?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "attends",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L053",
+   "cat": "single",
+   "q": "Who attended the Garnet planning meeting?",
+   "parts": [
+    {
+     "subject": "Garnet",
+     "relation": "attends",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L054",
+   "cat": "single",
+   "q": "Who took part in the Lantern meeting?",
+   "parts": [
+    {
+     "subject": "Lantern",
+     "relation": "attends",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L055",
+   "cat": "single",
+   "q": "Who is in charge of the Ferry queue?",
+   "parts": [
+    {
+     "subject": "Ferry queue",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L056",
+   "cat": "existence",
+   "q": "Does Harbor have a staging environment?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "staging_env",
+     "ask": "existence",
+     "scope": "any",
+     "period": null,
+     "obj": "existence"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L057",
+   "cat": "existence",
+   "q": "Is there a staging environment for Garnet?",
+   "parts": [
+    {
+     "subject": "Garnet",
+     "relation": "staging_env",
+     "ask": "existence",
+     "scope": "any",
+     "period": null,
+     "obj": "existence"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L058",
+   "cat": "existence",
+   "q": "Do Lantern and Cedar have a staging environment?",
+   "parts": [
+    {
+     "subject": "Lantern",
+     "relation": "staging_env",
+     "ask": "existence",
+     "scope": "any",
+     "period": null,
+     "obj": "existence"
+    },
+    {
+     "subject": "Cedar",
+     "relation": "staging_env",
+     "ask": "existence",
+     "scope": "any",
+     "period": null,
+     "obj": "existence"
+    }
+   ],
+   "unc": 0,
+   "hard": true
+  },
+  {
+   "id": "L059",
+   "cat": "existence",
+   "q": "Has Meadow got a staging environment?",
+   "parts": [
+    {
+     "subject": "Meadow",
+     "relation": "staging_env",
+     "ask": "existence",
+     "scope": "any",
+     "period": null,
+     "obj": "existence"
+    }
+   ],
+   "unc": 0,
+   "hard": true
+  },
+  {
+   "id": "L060",
+   "cat": "phrasing",
+   "q": "Could you tell me who owns the Ember API?",
+   "parts": [
+    {
+     "subject": "Ember API",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L061",
+   "cat": "phrasing",
+   "q": "Can you tell me Harbor's default model?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "default_model",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "model"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L062",
+   "cat": "phrasing",
+   "q": "I'd like to know who leads Lantern.",
+   "parts": [
+    {
+     "subject": "Lantern",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L063",
+   "cat": "phrasing",
+   "q": "Tell me who is on call for Harbor.",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "on_call",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L064",
+   "cat": "phrasing",
+   "q": "Please say what the retry limit of the Glint dashboard is",
+   "parts": [
+    {
+     "subject": "Glint dashboard",
+     "relation": "retry_limit",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "number"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L065",
+   "cat": "phrasing",
+   "q": "Do you know who owns the Atlas search index?",
+   "parts": [
+    {
+     "subject": "Atlas search index",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L066",
+   "cat": "phrasing",
+   "q": "who owns the relay gateway",
+   "parts": [
+    {
+     "subject": "Relay gateway",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": true
+  },
+  {
+   "id": "L067",
+   "cat": "phrasing",
+   "q": "what is harbor's default model?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "default_model",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "model"
+    }
+   ],
+   "unc": 0,
+   "hard": true
+  },
+  {
+   "id": "L068",
+   "cat": "phrasing",
+   "q": "Whose is the Prism dashboard?",
+   "parts": [
+    {
+     "subject": "Prism dashboard",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": true
+  },
+  {
+   "id": "L069",
+   "cat": "phrasing",
+   "q": "What's the biggest message the Sluice cache accepts?",
+   "parts": [
+    {
+     "subject": "Sluice cache",
+     "relation": "max_message_size",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "number"
+    }
+   ],
+   "unc": 0,
+   "hard": true
+  },
+  {
+   "id": "L070",
+   "cat": "phrasing",
+   "q": "Which engineer is on the pager for Quartz?",
+   "parts": [
+    {
+     "subject": "Quartz",
+     "relation": "on_call",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L071",
+   "cat": "phrasing",
+   "q": "Which of our people leads Aspen?",
+   "parts": [
+    {
+     "subject": "Aspen",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": true
+  },
+  {
+   "id": "L072",
+   "cat": "temporal",
+   "q": "Who used to own the Ferry queue?",
+   "parts": [
+    {
+     "subject": "Ferry queue",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "past",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L073",
+   "cat": "temporal",
+   "q": "What was Harbor's previous default model?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "default_model",
+     "ask": "value",
+     "scope": "past",
+     "period": null,
+     "obj": "model"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L074",
+   "cat": "temporal",
+   "q": "Which model did Aspen use by default in February?",
+   "parts": [
+    {
+     "subject": "Aspen",
+     "relation": "default_model",
+     "ask": "value",
+     "scope": "past",
+     "period": [
+      "in",
+      "february"
+     ],
+     "obj": "model"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L075",
+   "cat": "temporal",
+   "q": "What was Willow's default model before November?",
+   "parts": [
+    {
+     "subject": "Willow",
+     "relation": "default_model",
+     "ask": "value",
+     "scope": "past",
+     "period": [
+      "before",
+      "november"
+     ],
+     "obj": "model"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L076",
+   "cat": "temporal",
+   "q": "How many retries did the archived Kiln scheduler architecture allow?",
+   "parts": [
+    {
+     "subject": "Kiln scheduler",
+     "relation": "retry_limit",
+     "ask": "value",
+     "scope": "past",
+     "period": null,
+     "obj": "number"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L077",
+   "cat": "temporal",
+   "q": "What was the old retry limit of the Lattice store?",
+   "parts": [
+    {
+     "subject": "Lattice store",
+     "relation": "retry_limit",
+     "ask": "value",
+     "scope": "past",
+     "period": null,
+     "obj": "number"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L078",
+   "cat": "temporal",
+   "q": "Which model was Lantern formerly using by default?",
+   "parts": [
+    {
+     "subject": "Lantern",
+     "relation": "default_model",
+     "ask": "value",
+     "scope": "past",
+     "period": null,
+     "obj": "model"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L079",
+   "cat": "temporal",
+   "q": "What is Harbor's current default model?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "default_model",
+     "ask": "value",
+     "scope": "current",
+     "period": null,
+     "obj": "model"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L080",
+   "cat": "temporal",
+   "q": "Who is on call for Cedar right now?",
+   "parts": [
+    {
+     "subject": "Cedar",
+     "relation": "on_call",
+     "ask": "value",
+     "scope": "current",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L081",
+   "cat": "temporal",
+   "q": "Who currently leads Meadow?",
+   "parts": [
+    {
+     "subject": "Meadow",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "current",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L082",
+   "cat": "temporal",
+   "q": "What is the retry limit of the Conduit stream today?",
+   "parts": [
+    {
+     "subject": "Conduit stream",
+     "relation": "retry_limit",
+     "ask": "value",
+     "scope": "current",
+     "period": null,
+     "obj": "number"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L083",
+   "cat": "temporal",
+   "q": "What was the Harbor default model in 2025?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L084",
+   "cat": "temporal",
+   "q": "Who was on call for Cedar last week?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L085",
+   "cat": "temporal",
+   "q": "Who is on call for Lantern this month?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L086",
+   "cat": "temporal",
+   "q": "What did Aspen use by default after March?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L087",
+   "cat": "temporal",
+   "q": "What was the Zenith default model as of June?",
+   "parts": [
+    {
+     "subject": "Zenith",
+     "relation": "default_model",
+     "ask": "value",
+     "scope": "past",
+     "period": [
+      "as of",
+      "june"
+     ],
+     "obj": "model"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L088",
+   "cat": "temporal",
+   "q": "Before November, which model did Sable use by default?",
+   "parts": [
+    {
+     "subject": "Sable",
+     "relation": "default_model",
+     "ask": "value",
+     "scope": "past",
+     "period": [
+      "before",
+      "november"
+     ],
+     "obj": "model"
+    }
+   ],
+   "unc": 0,
+   "hard": true
+  },
+  {
+   "id": "L089",
+   "cat": "temporal",
+   "q": "What is the old and current retry limit of the Shale store?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L090",
+   "cat": "ordering",
+   "q": "Was the Harbor design review day updated after the other memory gave a different answer?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "review_day",
+     "ask": "ordering",
+     "scope": "any",
+     "period": null,
+     "obj": "order"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L091",
+   "cat": "ordering",
+   "q": "Has the Harbor standup time changed?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "standup",
+     "ask": "ordering",
+     "scope": "any",
+     "period": null,
+     "obj": "order"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L092",
+   "cat": "ordering",
+   "q": "Did the Quartz design review day get replaced by a newer record?",
+   "parts": [
+    {
+     "subject": "Quartz",
+     "relation": "review_day",
+     "ask": "ordering",
+     "scope": "any",
+     "period": null,
+     "obj": "order"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L093",
+   "cat": "ordering",
+   "q": "Which Cedar standup time is more recent?",
+   "parts": [
+    {
+     "subject": "Cedar",
+     "relation": "standup",
+     "ask": "ordering",
+     "scope": "any",
+     "period": null,
+     "obj": "order"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L094",
+   "cat": "ordering",
+   "q": "Which is newer, the Lantern standup time in one memory or in the other?",
+   "parts": [
+    {
+     "subject": "Lantern",
+     "relation": "standup",
+     "ask": "ordering",
+     "scope": "any",
+     "period": null,
+     "obj": "order"
+    }
+   ],
+   "unc": 0,
+   "hard": true
+  },
+  {
+   "id": "L095",
+   "cat": "ordering",
+   "q": "What is the latest Harbor standup time?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L096",
+   "cat": "coordination",
+   "q": "Who owns the Ferry queue, and who leads Marlin?",
+   "parts": [
+    {
+     "subject": "Ferry queue",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Marlin",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L097",
+   "cat": "coordination",
+   "q": "Where does Swift-6B run and who is on call for Sable?",
+   "parts": [
+    {
+     "subject": "Swift-6B",
+     "relation": "runs_on",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "host"
+    },
+    {
+     "subject": "Sable",
+     "relation": "on_call",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L098",
+   "cat": "coordination",
+   "q": "Who leads Harbor; who is on call for Lantern?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Lantern",
+     "relation": "on_call",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L099",
+   "cat": "coordination",
+   "q": "Who leads Harbor? Who is on call for Lantern?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Lantern",
+     "relation": "on_call",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L100",
+   "cat": "coordination",
+   "q": "Who owns the Beacon queue, who leads Meadow, and what is Zenith's default model?",
+   "parts": [
+    {
+     "subject": "Beacon queue",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Meadow",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Zenith",
+     "relation": "default_model",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "model"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L101",
+   "cat": "coordination",
+   "q": "Who leads Harbor and Lantern?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Lantern",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": true
+  },
+  {
+   "id": "L102",
+   "cat": "coordination",
+   "q": "Who owns the Ember API and the Kiln scheduler?",
+   "parts": [
+    {
+     "subject": "Ember API",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Kiln scheduler",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": true
+  },
+  {
+   "id": "L103",
+   "cat": "coordination",
+   "q": "What are Harbor's default model and rollback window?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "default_model",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "model"
+    },
+    {
+     "subject": "Harbor",
+     "relation": "rollback_window",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "number"
+    }
+   ],
+   "unc": 0,
+   "hard": true
+  },
+  {
+   "id": "L104",
+   "cat": "coordination",
+   "q": "Who leads and who is on call for Cedar?",
+   "parts": [
+    {
+     "subject": "Cedar",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Cedar",
+     "relation": "on_call",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": true
+  },
+  {
+   "id": "L105",
+   "cat": "coordination",
+   "q": "What is the retry limit and the maximum message size of the Beacon queue?",
+   "parts": [
+    {
+     "subject": "Beacon queue",
+     "relation": "retry_limit",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "number"
+    },
+    {
+     "subject": "Beacon queue",
+     "relation": "max_message_size",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "number"
+    }
+   ],
+   "unc": 0,
+   "hard": true
+  },
+  {
+   "id": "L106",
+   "cat": "coordination",
+   "q": "Who is on call for Harbor and who fixes the Harbor rollback test?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "on_call",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Harbor",
+     "relation": "test_fixer",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L107",
+   "cat": "coordination",
+   "q": "Is there a staging environment for Cedar, and what is Harbor's default model?",
+   "parts": [
+    {
+     "subject": "Cedar",
+     "relation": "staging_env",
+     "ask": "existence",
+     "scope": "any",
+     "period": null,
+     "obj": "existence"
+    },
+    {
+     "subject": "Harbor",
+     "relation": "default_model",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "model"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L108",
+   "cat": "coordination",
+   "q": "Who owns the Ferry queue, and what time is the Cedar standup, and who audits the Lantern build logs?",
+   "parts": [
+    {
+     "subject": "Ferry queue",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Cedar",
+     "relation": "standup",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "time"
+    },
+    {
+     "subject": "Lantern",
+     "relation": "incident_auditor",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L109",
+   "cat": "coordination",
+   "q": "Who was in the Harbor planning meeting, and who has the on-call duty for Harbor, and who will fix the Lantern rollback test?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "attends",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Harbor",
+     "relation": "on_call",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Lantern",
+     "relation": "test_fixer",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L110",
+   "cat": "coordination",
+   "q": "What was Sable's default model before November, and what is the retry limit of the Relay gateway?",
+   "parts": [
+    {
+     "subject": "Sable",
+     "relation": "default_model",
+     "ask": "value",
+     "scope": "past",
+     "period": [
+      "before",
+      "november"
+     ],
+     "obj": "model"
+    },
+    {
+     "subject": "Relay gateway",
+     "relation": "retry_limit",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "number"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L111",
+   "cat": "coordination",
+   "q": "Which model did Vesper use by default in February, and which model does Willow use by default?",
+   "parts": [
+    {
+     "subject": "Vesper",
+     "relation": "default_model",
+     "ask": "value",
+     "scope": "past",
+     "period": [
+      "in",
+      "february"
+     ],
+     "obj": "model"
+    },
+    {
+     "subject": "Willow",
+     "relation": "default_model",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "model"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L112",
+   "cat": "coordination",
+   "q": "Who owns the Ferry queue, and also what are Quarry Data's support hours?",
+   "parts": [
+    {
+     "subject": "Ferry queue",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Quarry Data",
+     "relation": "support_hours",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "hours"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L113",
+   "cat": "coordination",
+   "q": "Who leads Harbor as well as who owns the Ferry queue?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Ferry queue",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L114",
+   "cat": "coordination",
+   "q": "Who is the Wren lead, and who covers Wren's on-call?",
+   "parts": [
+    {
+     "subject": "Wren",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Wren",
+     "relation": "on_call",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L115",
+   "cat": "coordination",
+   "q": "How many times does the Cobalt auth service retry a failed job, and who owns the Cobalt auth service?",
+   "parts": [
+    {
+     "subject": "Cobalt auth service",
+     "relation": "retry_limit",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "number"
+    },
+    {
+     "subject": "Cobalt auth service",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L116",
+   "cat": "coordination",
+   "q": "Who owns the Ferry queue, or who leads Marlin?",
+   "parts": [
+    {
+     "subject": "Ferry queue",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Marlin",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L117",
+   "cat": "coordination",
+   "q": "When will the Cedar lead be on vacation, and who leads Marlin?",
+   "parts": [
+    {
+     "subject": "Cedar",
+     "relation": "vacation",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "month"
+    },
+    {
+     "subject": "Marlin",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L118",
+   "cat": "coordination",
+   "q": "Who leads Harbor, who owns the Beacon queue, who is on call for Lantern, and what time is the Meadow standup?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Beacon queue",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Lantern",
+     "relation": "on_call",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Meadow",
+     "relation": "standup",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "time"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L119",
+   "cat": "partial",
+   "q": "Does Harbor have a staging environment, and who is on call for it?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "staging_env",
+     "ask": "existence",
+     "scope": "any",
+     "period": null,
+     "obj": "existence"
+    }
+   ],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L120",
+   "cat": "partial",
+   "q": "Who owns the Ferry queue, and what is its retry limit?",
+   "parts": [
+    {
+     "subject": "Ferry queue",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L121",
+   "cat": "partial",
+   "q": "Who leads Harbor and what do they review?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L122",
+   "cat": "partial",
+   "q": "Who is the Cedar lead and when are they away?",
+   "parts": [
+    {
+     "subject": "Cedar",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L123",
+   "cat": "partial",
+   "q": "Who owns the Ferry queue, and why?",
+   "parts": [
+    {
+     "subject": "Ferry queue",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L124",
+   "cat": "partial",
+   "q": "Who leads Harbor, and how many employees does Lantern have?",
+   "parts": [
+    {
+     "subject": "Harbor",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L125",
+   "cat": "partial",
+   "q": "What is Cedar's favourite colour, and who leads Marlin?",
+   "parts": [
+    {
+     "subject": "Marlin",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L126",
+   "cat": "uncertain",
+   "q": "Who owns it?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L127",
+   "cat": "uncertain",
+   "q": "What is its retry limit?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L128",
+   "cat": "uncertain",
+   "q": "And who leads that project?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L129",
+   "cat": "uncertain",
+   "q": "What about their standup?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L130",
+   "cat": "uncertain",
+   "q": "What is Cedar's favourite colour?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L131",
+   "cat": "uncertain",
+   "q": "How many employees does Harbor have?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L132",
+   "cat": "uncertain",
+   "q": "Why did Cedar switch models?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L133",
+   "cat": "uncertain",
+   "q": "Summarise the Harbor project.",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L134",
+   "cat": "uncertain",
+   "q": "Is Pablo Reyes the Cedar lead?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L135",
+   "cat": "uncertain",
+   "q": "Is Cedar's default model Kestrel-3B?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L136",
+   "cat": "uncertain",
+   "q": "Does the Ferry queue retry 5 times?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L137",
+   "cat": "uncertain",
+   "q": "Is the Harbor standup on Monday?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L138",
+   "cat": "uncertain",
+   "q": "Who owns the Ferry queue at Cedar?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L139",
+   "cat": "uncertain",
+   "q": "Who is on call?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L140",
+   "cat": "uncertain",
+   "q": "What is the retry limit?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L141",
+   "cat": "uncertain",
+   "q": "Where is the Harbor lead?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L142",
+   "cat": "uncertain",
+   "q": "Who is the rollback window for Cedar?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L143",
+   "cat": "uncertain",
+   "q": "Tell me about Cedar.",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L144",
+   "cat": "uncertain",
+   "q": "Who runs Cedar?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L145",
+   "cat": "uncertain",
+   "q": "Who is in charge of Cedar?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L146",
+   "cat": "uncertain",
+   "q": "Does Cedar have a lead?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L147",
+   "cat": "uncertain",
+   "q": "Which staging environment does Harbor use?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L148",
+   "cat": "uncertain",
+   "q": "Does the Ferry queue have a staging environment?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L149",
+   "cat": "uncertain",
+   "q": "Who owns Pablo Reyes?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L150",
+   "cat": "uncertain",
+   "q": "Who leads Swift-6B?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L151",
+   "cat": "uncertain",
+   "q": "Which host serves Harbor?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L152",
+   "cat": "uncertain",
+   "q": "Who is on call for Harbor and Lantern together?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "L153",
+   "cat": "unseen",
+   "q": "Who owns the Zeta stream?",
+   "parts": [
+    {
+     "subject": "Zeta stream",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L154",
+   "cat": "unseen",
+   "q": "Which host serves Orca-30B?",
+   "parts": [
+    {
+     "subject": "Orca-30B",
+     "relation": "runs_on",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "host"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L155",
+   "cat": "unseen",
+   "q": "Which host serves Pika-1.5B?",
+   "parts": [
+    {
+     "subject": "Pika-1.5B",
+     "relation": "runs_on",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "host"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L156",
+   "cat": "unseen",
+   "q": "What are Northwind Traders' support hours?",
+   "parts": [
+    {
+     "subject": "Northwind Traders",
+     "relation": "support_hours",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "hours"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L157",
+   "cat": "unseen",
+   "q": "What does Anna-Marie Oduya review?",
+   "parts": [
+    {
+     "subject": "Anna-Marie Oduya",
+     "relation": "reviews",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "text"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L158",
+   "cat": "unseen",
+   "q": "What does Liam O'Connor review?",
+   "parts": [
+    {
+     "subject": "Liam O'Connor",
+     "relation": "reviews",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "text"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L159",
+   "cat": "unseen",
+   "q": "Who leads Tidewater?",
+   "parts": [
+    {
+     "subject": "Tidewater",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L160",
+   "cat": "unseen",
+   "q": "What is the retry limit of the Orbit worker?",
+   "parts": [
+    {
+     "subject": "Orbit worker",
+     "relation": "retry_limit",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "number"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L161",
+   "cat": "unseen",
+   "q": "Who owns the Krait message broker?",
+   "parts": [
+    {
+     "subject": "Krait message broker",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L162",
+   "cat": "unseen",
+   "q": "Who owns the Mica database?",
+   "parts": [
+    {
+     "subject": "Mica database",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L163",
+   "cat": "unseen",
+   "q": "What is Ibex's default model?",
+   "parts": [
+    {
+     "subject": "Ibex",
+     "relation": "default_model",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "model"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "L164",
+   "cat": "unseen",
+   "q": "Who is on call for Nightjar?",
+   "parts": [
+    {
+     "subject": "Nightjar",
+     "relation": "on_call",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  }
+ ]
+}

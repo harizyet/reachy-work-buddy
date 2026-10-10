@@ -1,0 +1,1285 @@
+{
+ "reader": "the author of the pipeline (single reader); NO INDEPENDENT HUMAN REVIEW",
+ "rubric": "unchanged from the earlier review (review_packet.py header): readability 3/2/1, semantics C/P/W, implication N/M/X",
+ "prospective_sample_frozen_before_reading": true,
+ "defect_found_by_the_prospective_review": "B11 and B14 (first render): a historical answer carried \"A record says <value> was decided on ... but the records do not say it is in place\" although another record states that value as configured; the note was wrong for those answers. Fixed (the note is dropped when any current record states the value as configured or deployed, and is never added to a question about the past) and covered by tests; the packet was rebuilt and re-read.",
+ "prospective_dev15": {
+  "tally": {
+   "n": 28,
+   "readability": {
+    "3": 28
+   },
+   "semantics": {
+    "C": 22,
+    "P": 6
+   },
+   "implication": {
+    "N": 23,
+    "M": 5
+   }
+  },
+  "items": [
+   {
+    "item": "B01",
+    "question_id": "D15-003",
+    "stratum": "decision relation (decision template)",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "B02",
+    "question_id": "D15-006",
+    "stratum": "review text (review template)",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "B03",
+    "question_id": "D15-008",
+    "stratum": "support hours (plural agreement)",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "B04",
+    "question_id": "D15-019",
+    "stratum": "default model, current (decision versus configured)",
+    "readability": 3,
+    "semantics": "P",
+    "implication": "N",
+    "note": "default model withheld by design (only a decision); reported as a decision"
+   },
+   {
+    "item": "B05",
+    "question_id": "D15-043",
+    "stratum": "decision relation (decision template)",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "B06",
+    "question_id": "D15-044",
+    "stratum": "review text (review template)",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "B07",
+    "question_id": "D15-052",
+    "stratum": "vacation (reworded label)",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "B08",
+    "question_id": "D15-056",
+    "stratum": "on call (relative time kept)",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "M",
+    "note": "\"this month\" kept as the record's own words, unanchored"
+   },
+   {
+    "item": "B09",
+    "question_id": "D15-063",
+    "stratum": "on call (relative time kept)",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "M",
+    "note": "\"this month\" kept as the record's own words, unanchored"
+   },
+   {
+    "item": "B10",
+    "question_id": "D15-070",
+    "stratum": "default model, current (decision versus configured)",
+    "readability": 3,
+    "semantics": "P",
+    "implication": "N",
+    "note": "the document says \"serves\", never \"default\": withheld"
+   },
+   {
+    "item": "B11",
+    "question_id": "D15-071",
+    "stratum": "default model, history (explicit transition)",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "B12",
+    "question_id": "D15-074",
+    "stratum": "decision relation (decision template)",
+    "readability": 3,
+    "semantics": "P",
+    "implication": "N",
+    "note": "the decision clause is not typed (two relation cues); the other two parts answered, question order kept"
+   },
+   {
+    "item": "B13",
+    "question_id": "D15-075",
+    "stratum": "vacation (reworded label)",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "M",
+    "note": "\"this month\" kept as the record's own words, unanchored"
+   },
+   {
+    "item": "B14",
+    "question_id": "D15-082",
+    "stratum": "default model, history (explicit transition)",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "B15",
+    "question_id": "D15-085",
+    "stratum": "support hours (plural agreement)",
+    "readability": 3,
+    "semantics": "P",
+    "implication": "N",
+    "note": "Quarry Data support document is excluded as instruction-bearing"
+   },
+   {
+    "item": "B16",
+    "question_id": "D15-086",
+    "stratum": "three or more parts (question order kept)",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "B17",
+    "question_id": "D15-087",
+    "stratum": "three or more parts (question order kept)",
+    "readability": 3,
+    "semantics": "P",
+    "implication": "N",
+    "note": "the Willow document says \"serves\", never \"default\": withheld"
+   },
+   {
+    "item": "B18",
+    "question_id": "D15-088",
+    "stratum": "three or more parts (question order kept)",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "B19",
+    "question_id": "D15-091",
+    "stratum": "default model, history (explicit transition)",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "B20",
+    "question_id": "D15-095",
+    "stratum": "three or more parts (question order kept)",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "B21",
+    "question_id": "D15-120",
+    "stratum": "default model, current (decision versus configured)",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "B22",
+    "question_id": "D15-131",
+    "stratum": "on call (relative time kept)",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "M",
+    "note": "\"this month\" kept as the record's own words, unanchored"
+   },
+   {
+    "item": "B23",
+    "question_id": "D15-132",
+    "stratum": "default model, current (decision versus configured)",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "B24",
+    "question_id": "D15-149",
+    "stratum": "on call (relative time kept)",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "M",
+    "note": "\"this month\" kept as the record's own words, unanchored"
+   },
+   {
+    "item": "B25",
+    "question_id": "D15-166",
+    "stratum": "default model, history (explicit transition)",
+    "readability": 3,
+    "semantics": "P",
+    "implication": "N",
+    "note": "Quarry Data support document excluded"
+   },
+   {
+    "item": "B26",
+    "question_id": "D15-169",
+    "stratum": "ordering (reworded ordering sentence)",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "B27",
+    "question_id": "D15-171",
+    "stratum": "ordering (reworded ordering sentence)",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "B28",
+    "question_id": "D15-173",
+    "stratum": "ordering (reworded ordering sentence)",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   }
+  ]
+ },
+ "fresh_probes": {
+  "tally": {
+   "n": 14,
+   "readability": {
+    "3": 13,
+    "2": 1
+   },
+   "semantics": {
+    "C": 14
+   },
+   "implication": {
+    "N": 11,
+    "M": 3
+   }
+  },
+  "items": [
+   {
+    "item": "T01",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "T02",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "T03",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "T04",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "T05",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "T06",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "M",
+    "note": "a past-tense completed switch is stated as the current value (\"is\")"
+   },
+   {
+    "item": "T07",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "M",
+    "note": "same for a rollback"
+   },
+   {
+    "item": "T08",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "T09",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "M",
+    "note": "\"this week\" kept, unanchored"
+   },
+   {
+    "item": "T10",
+    "readability": 2,
+    "semantics": "C",
+    "implication": "N",
+    "note": "stilted but accurate"
+   },
+   {
+    "item": "T11",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "T12",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "T13",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   },
+   {
+    "item": "T14",
+    "readability": 3,
+    "semantics": "C",
+    "implication": "N",
+    "note": ""
+   }
+  ]
+ },
+ "regression_51_previously_inspected": {
+  "tally_after": {
+   "n": 51,
+   "readability": {
+    "3": 50,
+    "2": 1
+   },
+   "semantics": {
+    "C": 49,
+    "P": 2
+   },
+   "implication": {
+    "N": 44,
+    "M": 7
+   }
+  },
+  "tally_before": {
+   "n": 51,
+   "readability": {
+    "3": 31,
+    "2": 20
+   },
+   "semantics": {
+    "C": 42,
+    "P": 9
+   },
+   "implication": {
+    "N": 36,
+    "M": 15
+   }
+  },
+  "replies_changed": 30,
+  "items": [
+   {
+    "item": "R01",
+    "question_id": "D15-005",
+    "stratum": "unconstrained draw",
+    "reply_changed": false,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": ""
+   },
+   {
+    "item": "R02",
+    "question_id": "D15-020",
+    "stratum": "supported (every part answerable)",
+    "reply_changed": false,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": ""
+   },
+   {
+    "item": "R03",
+    "question_id": "D15-023",
+    "stratum": "abstained (every part withheld)",
+    "reply_changed": false,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": ""
+   },
+   {
+    "item": "R04",
+    "question_id": "D15-028",
+    "stratum": "abstained (every part withheld)",
+    "reply_changed": false,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": ""
+   },
+   {
+    "item": "R05",
+    "question_id": "D15-037",
+    "stratum": "abstained (every part withheld)",
+    "reply_changed": true,
+    "before": {
+     "readability": 2,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "\"next time away\" replaces the stilted \"next days off\""
+   },
+   {
+    "item": "R06",
+    "question_id": "D15-045",
+    "stratum": "partial (an answerable part and a withheld part)",
+    "reply_changed": true,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "M"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "P",
+     "implication": "N"
+    },
+    "note": "default model withheld by design: the only record is a decision; reported as a decision (gold counts it supported)"
+   },
+   {
+    "item": "R07",
+    "question_id": "D15-048",
+    "stratum": "unconstrained draw",
+    "reply_changed": true,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "M"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "M"
+    },
+    "note": "\"this month\" kept as the record's own words; it stays unanchored (no date in the records)"
+   },
+   {
+    "item": "R08",
+    "question_id": "D15-050",
+    "stratum": "partial (an answerable part and a withheld part)",
+    "reply_changed": false,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": ""
+   },
+   {
+    "item": "R09",
+    "question_id": "D15-057",
+    "stratum": "partial (an answerable part and a withheld part)",
+    "reply_changed": true,
+    "before": {
+     "readability": 2,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "decision reported as a decision, with \"do not say whether it has been carried out\""
+   },
+   {
+    "item": "R10",
+    "question_id": "D15-065",
+    "stratum": "partial (an answerable part and a withheld part)",
+    "reply_changed": false,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": ""
+   },
+   {
+    "item": "R11",
+    "question_id": "D15-072",
+    "stratum": "supported (every part answerable)",
+    "reply_changed": true,
+    "before": {
+     "readability": 2,
+     "semantics": "P",
+     "implication": "M"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "the default model is now answered from the transition sentence; order kept"
+   },
+   {
+    "item": "R12",
+    "question_id": "D15-073",
+    "stratum": "partial (an answerable part and a withheld part)",
+    "reply_changed": true,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "M"
+    },
+    "note": "\"this month\" kept, unanchored"
+   },
+   {
+    "item": "R13",
+    "question_id": "D15-076",
+    "stratum": "ambiguous (old reply was an unclear-records reply)",
+    "reply_changed": true,
+    "before": {
+     "readability": 2,
+     "semantics": "P",
+     "implication": "M"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "M"
+    },
+    "note": "history answered; \"this month\" kept, unanchored"
+   },
+   {
+    "item": "R14",
+    "question_id": "D15-077",
+    "stratum": "historical",
+    "reply_changed": false,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": ""
+   },
+   {
+    "item": "R15",
+    "question_id": "D15-080",
+    "stratum": "partial (an answerable part and a withheld part)",
+    "reply_changed": true,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "label wording"
+   },
+   {
+    "item": "R16",
+    "question_id": "D15-083",
+    "stratum": "historical",
+    "reply_changed": true,
+    "before": {
+     "readability": 2,
+     "semantics": "P",
+     "implication": "M"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "history answered, agreement fixed"
+   },
+   {
+    "item": "R17",
+    "question_id": "D15-089",
+    "stratum": "historical",
+    "reply_changed": true,
+    "before": {
+     "readability": 2,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "review sentence reads naturally"
+   },
+   {
+    "item": "R18",
+    "question_id": "D15-093",
+    "stratum": "supported (every part answerable)",
+    "reply_changed": true,
+    "before": {
+     "readability": 2,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "agreement fixed"
+   },
+   {
+    "item": "R19",
+    "question_id": "D15-098",
+    "stratum": "conflicted",
+    "reply_changed": false,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": ""
+   },
+   {
+    "item": "R20",
+    "question_id": "D15-107",
+    "stratum": "conflicted",
+    "reply_changed": true,
+    "before": {
+     "readability": 2,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "question order kept; decision wording fixed"
+   },
+   {
+    "item": "R21",
+    "question_id": "D15-110",
+    "stratum": "conflicted",
+    "reply_changed": false,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": ""
+   },
+   {
+    "item": "R22",
+    "question_id": "D15-113",
+    "stratum": "conflicted",
+    "reply_changed": true,
+    "before": {
+     "readability": 2,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "question order kept; review sentence"
+   },
+   {
+    "item": "R23",
+    "question_id": "D15-114",
+    "stratum": "conflicted",
+    "reply_changed": true,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "M"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "M"
+    },
+    "note": "question order kept; \"this month\" kept, unanchored"
+   },
+   {
+    "item": "R24",
+    "question_id": "D15-122",
+    "stratum": "partial (an answerable part and a withheld part)",
+    "reply_changed": true,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "question order kept"
+   },
+   {
+    "item": "R25",
+    "question_id": "D15-123",
+    "stratum": "partial (an answerable part and a withheld part)",
+    "reply_changed": true,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "M"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "M"
+    },
+    "note": "question order kept; \"this month\" kept, unanchored"
+   },
+   {
+    "item": "R26",
+    "question_id": "D15-125",
+    "stratum": "unconstrained draw",
+    "reply_changed": true,
+    "before": {
+     "readability": 2,
+     "semantics": "P",
+     "implication": "M"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "default model now answered"
+   },
+   {
+    "item": "R27",
+    "question_id": "D15-126",
+    "stratum": "unconstrained draw",
+    "reply_changed": true,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "question order kept"
+   },
+   {
+    "item": "R28",
+    "question_id": "D15-141",
+    "stratum": "negative (existence)",
+    "reply_changed": false,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": ""
+   },
+   {
+    "item": "R29",
+    "question_id": "D15-147",
+    "stratum": "negative (existence)",
+    "reply_changed": true,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "M"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "M"
+    },
+    "note": "\"this month\" kept, unanchored"
+   },
+   {
+    "item": "R30",
+    "question_id": "D15-150",
+    "stratum": "negative (existence)",
+    "reply_changed": true,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "M"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "M"
+    },
+    "note": "\"this month\" kept, unanchored"
+   },
+   {
+    "item": "R31",
+    "question_id": "D15-151",
+    "stratum": "negative (existence)",
+    "reply_changed": true,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "question order kept"
+   },
+   {
+    "item": "R32",
+    "question_id": "D15-153",
+    "stratum": "ambiguous (old reply was an unclear-records reply)",
+    "reply_changed": true,
+    "before": {
+     "readability": 2,
+     "semantics": "P",
+     "implication": "M"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "history answered (was \"unclear\")"
+   },
+   {
+    "item": "R33",
+    "question_id": "D15-155",
+    "stratum": "abstained (every part withheld)",
+    "reply_changed": true,
+    "before": {
+     "readability": 2,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "doubled \"for\" removed"
+   },
+   {
+    "item": "R34",
+    "question_id": "D15-157",
+    "stratum": "ambiguous (old reply was an unclear-records reply)",
+    "reply_changed": true,
+    "before": {
+     "readability": 2,
+     "semantics": "P",
+     "implication": "M"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "history answered (was \"unclear\")"
+   },
+   {
+    "item": "R35",
+    "question_id": "D15-158",
+    "stratum": "ordering",
+    "reply_changed": true,
+    "before": {
+     "readability": 2,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "doubled \"for\" removed"
+   },
+   {
+    "item": "R36",
+    "question_id": "D15-159",
+    "stratum": "historical",
+    "reply_changed": false,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": ""
+   },
+   {
+    "item": "R37",
+    "question_id": "D15-160",
+    "stratum": "ambiguous (old reply was an unclear-records reply)",
+    "reply_changed": true,
+    "before": {
+     "readability": 2,
+     "semantics": "P",
+     "implication": "M"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "P",
+     "implication": "N"
+    },
+    "note": "Osprey history answered; the Quartz default model is withheld by design (only a decision), reported as a decision"
+   },
+   {
+    "item": "R38",
+    "question_id": "D15-162",
+    "stratum": "supported (every part answerable)",
+    "reply_changed": false,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": ""
+   },
+   {
+    "item": "R39",
+    "question_id": "D15-164",
+    "stratum": "ambiguous (old reply was an unclear-records reply)",
+    "reply_changed": true,
+    "before": {
+     "readability": 2,
+     "semantics": "P",
+     "implication": "M"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "history answered (was \"unclear\")"
+   },
+   {
+    "item": "R40",
+    "question_id": "D15-165",
+    "stratum": "ordering",
+    "reply_changed": true,
+    "before": {
+     "readability": 2,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "doubled \"for\" removed"
+   },
+   {
+    "item": "R41",
+    "question_id": "D15-167",
+    "stratum": "ordering",
+    "reply_changed": true,
+    "before": {
+     "readability": 2,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "doubled \"for\" removed"
+   },
+   {
+    "item": "R42",
+    "question_id": "D15-170",
+    "stratum": "historical",
+    "reply_changed": true,
+    "before": {
+     "readability": 2,
+     "semantics": "P",
+     "implication": "M"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "history answered (was \"unclear\")"
+   },
+   {
+    "item": "S01",
+    "condition": "incomplete_scope",
+    "reply_changed": false,
+    "before": {
+     "readability": 2,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 2,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "'a search of the pager schedule for Tamarind ... no on-call rotation for Tamarind' repeats the subject; existence-sweep packet re-rendered: byte-identical to the earlier one"
+   },
+   {
+    "item": "S02",
+    "condition": "incomplete_scope",
+    "reply_changed": false,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "existence-sweep packet re-rendered: byte-identical to the earlier one"
+   },
+   {
+    "item": "S03",
+    "condition": "incomplete_scope",
+    "reply_changed": false,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "existence-sweep packet re-rendered: byte-identical to the earlier one"
+   },
+   {
+    "item": "S04",
+    "condition": "incomplete_scope",
+    "reply_changed": false,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "existence-sweep packet re-rendered: byte-identical to the earlier one"
+   },
+   {
+    "item": "S05",
+    "condition": "incomplete_scope",
+    "reply_changed": false,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "existence-sweep packet re-rendered: byte-identical to the earlier one"
+   },
+   {
+    "item": "S06",
+    "condition": "incomplete_scope",
+    "reply_changed": false,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "existence-sweep packet re-rendered: byte-identical to the earlier one"
+   },
+   {
+    "item": "S07",
+    "condition": "explicit_absence",
+    "reply_changed": false,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "existence-sweep packet re-rendered: byte-identical to the earlier one"
+   },
+   {
+    "item": "S08",
+    "condition": "source_disagreement",
+    "reply_changed": false,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "existence-sweep packet re-rendered: byte-identical to the earlier one"
+   },
+   {
+    "item": "S09",
+    "condition": "unauthorized_only",
+    "reply_changed": false,
+    "before": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "after": {
+     "readability": 3,
+     "semantics": "C",
+     "implication": "N"
+    },
+    "note": "the unauthorised record is invisible, as designed; existence-sweep packet re-rendered: byte-identical to the earlier one"
+   }
+  ]
+ }
+}

@@ -8,7 +8,7 @@ Nothing here calls a model. `render_claim` is also a complete deterministic rend
 from __future__ import annotations
 
 import re
-from collections.abc import Collection, Mapping
+from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -124,24 +124,51 @@ def _negative_unsupported_text(ticket: Ticket, label: str, eid_for: Mapping[str,
     return " ".join(x for x in sentences if x) + caveat, tuple(cites)
 
 
-def render_claim(ticket: Ticket, label: str, eid_for: Mapping[str, str], unit: str = "", prefix: str = "", plural: bool = False) -> tuple[str, tuple[tuple[str, tuple[str, ...]], ...]]:
+def _pending_note(ticket: Ticket, label: str, eid_for: Mapping[str, str], unit: str, prefix: str) -> str:
+    """Decided and planned values are reported as what they are. Nothing here says the value is in effect: a decision is not a deployment and a plan is not a change."""
+    out = []
+    for value, status, refs in ticket.pending:
+        cite = _cite(tuple(dict.fromkeys(eid_for[r] for r in refs)))
+        what = "was decided on" if status == "decided" else "is planned"
+        out.append(f" A record says {_fmt(value, unit, prefix)} {what} for the {label}, but the records do not say it is in place {cite}.")
+    return "".join(out)
+
+
+def _tp(ticket: Ticket) -> str:
+    """The record's own relative-time wording, quoted, so a claim made "this month" is not restated as a plain present fact. The records carry no date that would anchor it."""
+    return f' (the record says "{ticket.time_phrase}")' if ticket.time_phrase else ""
+
+
+def render_claim(ticket: Ticket, label: str, eid_for: Mapping[str, str], unit: str = "", prefix: str = "", plural: bool = False, spec: RelationSpec | None = None) -> tuple[str, tuple[tuple[str, tuple[str, ...]], ...]]:
     """(text, claim-level citations) for one ticket. Raises KeyError when a supporting record has no evidence id (the caller then withholds the component)."""
     cites = tuple((v, tuple(dict.fromkeys(eid_for[r] for r in refs))) for v, refs in ticket.values)
     tuple((v, tuple(dict.fromkeys(eid_for[r] for r in refs))) for v, refs in ticket.history)
     caveat = " Another record on this could not be read reliably, so it is not used." if ticket.ambiguous_refs else ""
     s = ticket.state
+    if "clause_not_understood" in ticket.reasons:  # the question side could not type this clause: say nothing about the records, only that this part was not answered
+        return NOT_UNDERSTOOD, ()
     if "ambiguity_on_requested_proposition" in ticket.reasons and not ticket.values:
-        return f"The records on the {label} are unclear, so I will not pick an answer.", ()
+        if "value_stated_retired_in_another_record" in ticket.reasons:
+            return f"One record says a value of the {label} is in use and another says it is retired, so I have not picked an answer.", ()
+        if "relative_time_differs_between_records" in ticket.reasons:
+            return f"The records word the time of the {label} differently, so I have not picked an answer.", ()
+        return f"One record about the {label} is worded in a way I cannot read safely, so I have not answered it.", ()
+    pending = _pending_note(ticket, label, eid_for, unit, prefix) if ticket.component.ask is Ask.VALUE else ""
+    subject = ticket.component.subject
     if s is State.SUPPORTED and ticket.component.ask is Ask.EXISTENCE:
         return f"The records say there is {_a(label)} {_cite(cites[0][1])}.{caveat}", cites
     if s is State.SUPPORTED and ticket.component.ask is Ask.ORDERING:
         basis = {"explicit_supersession": "a record explicitly says it replaces the other", "explicit_effective_start": "the records state different effective start dates"}[ticket.ordering_basis]
-        return f"For the {label}: {', '.join(f'{_fmt(v, unit)} {_cite(e)}' for v, e in cites)}; {basis}.{caveat}", cites
+        return f"On the {label}: {', '.join(f'{_fmt(v, unit)} {_cite(e)}' for v, e in cites)}; {basis}.{caveat}", cites
     if s is State.SUPPORTED:
-        return f"The {label} {'are' if plural else 'is'} {_values_text(cites, unit, prefix)}.{caveat}", cites
+        if spec and spec.sentence:
+            return spec.sentence.replace("{S}", subject).replace("{V}", _values_text(cites, unit, prefix) + _tp(ticket)) + caveat + pending, cites
+        return f"The {label} {'are' if plural else 'is'} {_values_text(cites, unit, prefix)}{_tp(ticket)}.{caveat}{pending}", cites
     if s is State.HISTORICAL:
         now_note = " The records do not say what it is now." if ticket.component.scope is not Scope.PAST else ""
-        return f"Previously, the {label} {'were' if plural else 'was'} {_values_text(cites, unit, prefix)}.{now_note}{caveat}", cites
+        if spec and spec.sentence_past:
+            return spec.sentence_past.replace("{S}", subject).replace("{V}", _values_text(cites, unit, prefix) + _tp(ticket)) + now_note + caveat + pending, cites
+        return f"Previously, the {label} {'were' if plural else 'was'} {_values_text(cites, unit, prefix)}{_tp(ticket)}.{now_note}{caveat}{pending}", cites
     if s is State.CONFLICTED:
         if ticket.component.ask is Ask.EXISTENCE:
             return f"The records disagree on whether there is {_a(label)}: one says there is {_cite(cites[1][1])}, another says there is not {_cite(cites[0][1])}. They do not say which applies.{caveat}", cites
@@ -155,14 +182,14 @@ def render_claim(ticket: Ticket, label: str, eid_for: Mapping[str, str], unit: s
         return f"The records I searched do not mention {_a(label)}.{caveat}", ()
     if s is State.ORDER_UNSUPPORTED:
         if len(cites) >= 2:
-            return f"The records give {' and '.join(f'{_fmt(v, unit)} {_cite(e)}' for v, e in cites)} for the {label}, but nothing in them dates one before the other.{caveat}", cites
+            return f"On the {label}, the records give {' and '.join(f'{_fmt(v, unit)} {_cite(e)}' for v, e in cites)}, but nothing in them dates one before the other.{caveat}", cites
         return f"Nothing in the records establishes an order for the {label}.{caveat}", ()
-    return f"The records do not say the {label}.{caveat}", ()  # UNSUPPORTED
+    return f"The records do not say the {label}.{caveat}{pending}", ()  # UNSUPPORTED
 
 
+NOT_UNDERSTOOD = "I could not work out one part of the question, so I have not answered it."
 _PLAIN_UNSUPPORTED = ("no_admitted_record",)
 _PLAIN_UNKNOWN = ("no_record_asserts_presence_or_absence",)
-_ANSWERED = (State.SUPPORTED, State.HISTORICAL, State.NEGATIVE_SUPPORTED)
 
 
 def _join(items: list[str]) -> str:
@@ -170,40 +197,63 @@ def _join(items: list[str]) -> str:
 
 
 def compose(claims: Collection[Claim]) -> str:
-    """Readable deterministic answer: (1) answered parts in question order, (2) findings that are not answers but say something (conflicts, orderings, scoped searches, caveats), (3) ONE merged line for parts
-    the records simply do not cover. Nothing is added: every sentence is a claim's own code-written text, except the merged line, which uses only the components' labels. A single claim is returned as is."""
+    """Readable deterministic answer, in the order the question asked. Adjacent parts the records simply do not cover are merged into one line, and adjacent parts the question side could not work out are merged into
+    one line; everything else is the claim's own code-written text on its own line. Nothing is added: the merged lines use only the components' labels. A single claim is returned as is."""
     claims = list(claims)
     if len(claims) <= 1:
         return " ".join(c.text for c in claims)
-    answered = [c for c in claims if c.state in _ANSWERED]
-    plain_value = [c for c in claims if c.state is State.UNSUPPORTED and c.reasons == _PLAIN_UNSUPPORTED and c.label]
-    plain_exist = [c for c in claims if c.state is State.NEGATIVE_UNSUPPORTED and c.reasons == _PLAIN_UNKNOWN and c.label]
-    merged = {id(c) for c in (*plain_value, *plain_exist)}
-    findings = [c for c in claims if c not in answered and id(c) not in merged]
-    lines = [c.text for c in answered] + [c.text for c in findings]
-    if len(plain_value) + len(plain_exist) == 1:
-        lines.append((plain_value or plain_exist)[0].text)
-    elif plain_value or plain_exist:
-        if plain_value:
-            lines.append(f"The records do not say {_join(['the ' + c.label for c in plain_value])}.")
-        if plain_exist:
-            lines.append(f"The records I searched do not mention {_join([_a(c.label) for c in plain_exist])}.")
+
+    def kind(c: Claim) -> str:
+        if "clause_not_understood" in c.reasons:
+            return "unclear"
+        if c.state is State.UNSUPPORTED and c.reasons == _PLAIN_UNSUPPORTED and c.label:
+            return "value"
+        if c.state is State.NEGATIVE_UNSUPPORTED and c.reasons == _PLAIN_UNKNOWN and c.label:
+            return "exist"
+        return "other"
+
+    lines: list[str] = []
+    i = 0
+    while i < len(claims):
+        k = kind(claims[i])
+        if k == "other":
+            lines.append(claims[i].text)
+            i += 1
+            continue
+        group = {"unclear"} if k == "unclear" else {"value", "exist"}
+        j = i
+        while j < len(claims) and kind(claims[j]) in group:
+            j += 1
+        run = claims[i:j]
+        i = j
+        if k == "unclear":
+            lines.append(run[0].text if len(run) == 1 else f"I could not work out {len(run)} parts of the question, so I have not answered them.")
+            continue
+        values, exists = [c for c in run if kind(c) == "value"], [c for c in run if kind(c) == "exist"]
+        if len(run) == 1:
+            lines.append(run[0].text)
+            continue
+        if values:
+            lines.append(f"The records do not say {_join(['the ' + c.label for c in values])}.")
+        if exists:
+            lines.append(f"The records I searched do not mention {_join([_a(c.label) for c in exists])}.")
     return "\n".join(lines)
 
 
 def _claim(ticket: Ticket, spec: RelationSpec | None, eid_for: Mapping[str, str]) -> Claim:
     label = _label(ticket.component, spec)
     try:
-        text, cites = render_claim(ticket, label, eid_for, spec.unit if spec else "", spec.prefix if spec else "", bool(spec and spec.many))
+        text, cites = render_claim(ticket, label, eid_for, spec.unit if spec else "", spec.prefix if spec else "", bool(spec and (spec.many or spec.plural)), spec)
     except KeyError:
         down = Ticket(ticket.component, _empty_state(ticket.component), ("supporting_record_not_citable",), ambiguous_refs=ticket.ambiguous_refs, discovery_refs=ticket.discovery_refs)
         text, cites = render_claim(down, label, eid_for)
         return Claim(ticket.component.id, down.state, text, (), False, down.reasons, label, ticket.component.ask is Ask.EXISTENCE)
-    return Claim(ticket.component.id, ticket.state, text, cites, ticket.state in (State.SUPPORTED, State.HISTORICAL) and ticket.component.ask is Ask.VALUE, ticket.reasons, label, ticket.component.ask is Ask.EXISTENCE)
+    reasons = (*ticket.reasons, "pending_not_in_effect") if ticket.pending else ticket.reasons  # a claim that carries a decision or plan note is never merged into the label-only "not established" line
+    return Claim(ticket.component.id, ticket.state, text, cites, ticket.state in (State.SUPPORTED, State.HISTORICAL) and ticket.component.ask is Ask.VALUE, reasons, label, ticket.component.ask is Ask.EXISTENCE)
 
 
 def build_plan(components: Collection[Component], items: Collection[DiscoveryItem], auths: Mapping[str, AuthDecision], *, now: datetime, specs: Mapping[str, RelationSpec],
-               eids: Mapping[str, str], known_subjects: Collection[str], policy: AdmissionPolicy, fallback: bool = False, structured: Collection = ()) -> Plan:
+               eids: Mapping[str, str], known_subjects: Collection[str] | Callable[[Component], Collection[str]], policy: AdmissionPolicy, fallback: bool = False, structured: Collection = ()) -> Plan:
     supersessions = find_supersessions(items, auths, now=now, policy=policy)
     tickets: list[Ticket] = []
     claims: list[Claim] = []
@@ -213,7 +263,7 @@ def build_plan(components: Collection[Component], items: Collection[DiscoveryIte
         try:
             if comp.relation is not None and spec is None:
                 raise LookupError("no relation spec")
-            result = admit(comp, items, auths, now=now, spec=spec, known_subjects=known_subjects, policy=policy, structured=structured)
+            result = admit(comp, items, auths, now=now, spec=spec, known_subjects=known_subjects(comp) if callable(known_subjects) else known_subjects, policy=policy, structured=structured)
             ticket = decide(comp, result, supersessions, many=bool(spec and spec.many))
             claim = _claim(ticket, spec, eids)
         except Exception as exc:  # one component failing never takes the others down; it is withheld with distinct wording  # noqa: BLE001

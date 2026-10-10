@@ -1,0 +1,795 @@
+{
+ "version": "heldout-relations-1",
+ "purpose": "question-structure labels for release_day, escalation_contact and approver; authored before the relations were defined",
+ "items": [
+  {
+   "id": "H001",
+   "cat": "release_day",
+   "q": "Which day does Cobalt release?",
+   "parts": [
+    {
+     "subject": "Cobalt",
+     "relation": "release_day",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "day"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H002",
+   "cat": "release_day",
+   "q": "What is Drift's release day?",
+   "parts": [
+    {
+     "subject": "Drift",
+     "relation": "release_day",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "day"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H003",
+   "cat": "release_day",
+   "q": "On which day do Fennel releases go out?",
+   "parts": [
+    {
+     "subject": "Fennel",
+     "relation": "release_day",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "day"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H004",
+   "cat": "release_day",
+   "q": "When does Grove ship?",
+   "parts": [
+    {
+     "subject": "Grove",
+     "relation": "release_day",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "day"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H005",
+   "cat": "release_day",
+   "q": "What day of the week is the Mistral release?",
+   "parts": [
+    {
+     "subject": "Mistral",
+     "relation": "release_day",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "day"
+    }
+   ],
+   "unc": 0,
+   "hard": true
+  },
+  {
+   "id": "H006",
+   "cat": "release_day",
+   "q": "Which weekday does Nimbus usually release on?",
+   "parts": [
+    {
+     "subject": "Nimbus",
+     "relation": "release_day",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "day"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H007",
+   "cat": "release_day",
+   "q": "What day are Onyx releases cut?",
+   "parts": [
+    {
+     "subject": "Onyx",
+     "relation": "release_day",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "day"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H008",
+   "cat": "release_day",
+   "q": "Could you tell me Paprika's release day?",
+   "parts": [
+    {
+     "subject": "Paprika",
+     "relation": "release_day",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "day"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H009",
+   "cat": "release_day",
+   "q": "What is Cobalt's release day, and who owns the Ember API?",
+   "parts": [
+    {
+     "subject": "Cobalt",
+     "relation": "release_day",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "day"
+    },
+    {
+     "subject": "Ember API",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H010",
+   "cat": "release_day",
+   "q": "Who is the Cobalt lead and which day does Cobalt release?",
+   "parts": [
+    {
+     "subject": "Cobalt",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Cobalt",
+     "relation": "release_day",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "day"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H011",
+   "cat": "release_day",
+   "q": "Which day was the Drift release approved?",
+   "parts": [],
+   "unc": 1,
+   "hard": true
+  },
+  {
+   "id": "H012",
+   "cat": "release_day",
+   "q": "Is the Fennel release on a Friday?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "H013",
+   "cat": "release_day",
+   "q": "Which day will Grove release next month?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "H014",
+   "cat": "release_day",
+   "q": "When was the last Nimbus release?",
+   "parts": [],
+   "unc": 1,
+   "hard": true
+  },
+  {
+   "id": "H015",
+   "cat": "release_day",
+   "q": "What is the release schedule for Onyx?",
+   "parts": [],
+   "unc": 1,
+   "hard": true
+  },
+  {
+   "id": "H016",
+   "cat": "release_day",
+   "q": "How many releases did Drift ship?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "H017",
+   "cat": "escalation",
+   "q": "Who is the escalation contact for Cobalt?",
+   "parts": [
+    {
+     "subject": "Cobalt",
+     "relation": "escalation_contact",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H018",
+   "cat": "escalation",
+   "q": "Who should I escalate Drift incidents to?",
+   "parts": [
+    {
+     "subject": "Drift",
+     "relation": "escalation_contact",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H019",
+   "cat": "escalation",
+   "q": "Who do I escalate to for Fennel outages?",
+   "parts": [
+    {
+     "subject": "Fennel",
+     "relation": "escalation_contact",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H020",
+   "cat": "escalation",
+   "q": "Who handles escalations for Grove?",
+   "parts": [
+    {
+     "subject": "Grove",
+     "relation": "escalation_contact",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H021",
+   "cat": "escalation",
+   "q": "Who is the escalation point for the Ember API?",
+   "parts": [
+    {
+     "subject": "Ember API",
+     "relation": "escalation_contact",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H022",
+   "cat": "escalation",
+   "q": "Which person do we escalate Mistral problems to?",
+   "parts": [
+    {
+     "subject": "Mistral",
+     "relation": "escalation_contact",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H023",
+   "cat": "escalation",
+   "q": "Who is the Onyx escalation contact?",
+   "parts": [
+    {
+     "subject": "Onyx",
+     "relation": "escalation_contact",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H024",
+   "cat": "escalation",
+   "q": "Who is on call for Paprika, and who is the escalation contact for Paprika?",
+   "parts": [
+    {
+     "subject": "Paprika",
+     "relation": "on_call",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Paprika",
+     "relation": "escalation_contact",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H025",
+   "cat": "escalation",
+   "q": "Who should I escalate to?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "H026",
+   "cat": "escalation",
+   "q": "Who do they escalate to?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "H027",
+   "cat": "escalation",
+   "q": "Who is the escalation contact for Cobalt this week?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "H028",
+   "cat": "escalation",
+   "q": "Is Olga Petrova the escalation contact for Drift?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "H029",
+   "cat": "escalation",
+   "q": "Who owns the Kiln scheduler and who is its escalation contact?",
+   "parts": [
+    {
+     "subject": "Kiln scheduler",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "H030",
+   "cat": "escalation",
+   "q": "Who is the escalation contact?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "H031",
+   "cat": "escalation",
+   "q": "Why was the Cobalt incident escalated?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "H032",
+   "cat": "approver",
+   "q": "Who approved the Cobalt release?",
+   "parts": [
+    {
+     "subject": "Cobalt",
+     "relation": "approver",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H033",
+   "cat": "approver",
+   "q": "Who is the release approver for Drift?",
+   "parts": [
+    {
+     "subject": "Drift",
+     "relation": "approver",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H034",
+   "cat": "approver",
+   "q": "Who approves Fennel releases?",
+   "parts": [
+    {
+     "subject": "Fennel",
+     "relation": "approver",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H035",
+   "cat": "approver",
+   "q": "Who signed off the Grove release?",
+   "parts": [
+    {
+     "subject": "Grove",
+     "relation": "approver",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": true
+  },
+  {
+   "id": "H036",
+   "cat": "approver",
+   "q": "Who has to approve the Mistral release?",
+   "parts": [
+    {
+     "subject": "Mistral",
+     "relation": "approver",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H037",
+   "cat": "approver",
+   "q": "Who is the approver for Nimbus?",
+   "parts": [
+    {
+     "subject": "Nimbus",
+     "relation": "approver",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H038",
+   "cat": "approver",
+   "q": "Who approves releases for Onyx?",
+   "parts": [
+    {
+     "subject": "Onyx",
+     "relation": "approver",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H039",
+   "cat": "approver",
+   "q": "Which person approved the Paprika release?",
+   "parts": [
+    {
+     "subject": "Paprika",
+     "relation": "approver",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H040",
+   "cat": "approver",
+   "q": "Who approved the Cobalt release and who owns the Ember API?",
+   "parts": [
+    {
+     "subject": "Cobalt",
+     "relation": "approver",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Ember API",
+     "relation": "owner",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H041",
+   "cat": "approver",
+   "q": "Who approved the Drift release, and which day does Drift release?",
+   "parts": [
+    {
+     "subject": "Drift",
+     "relation": "approver",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Drift",
+     "relation": "release_day",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "day"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H042",
+   "cat": "approver",
+   "q": "Who approved the budget for Fennel?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "H043",
+   "cat": "approver",
+   "q": "Who is the budget approver for Grove?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "H044",
+   "cat": "approver",
+   "q": "Who approved it?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "H045",
+   "cat": "approver",
+   "q": "Has Pablo Reyes approved the Cobalt release?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "H046",
+   "cat": "approver",
+   "q": "Who approved the Cobalt release last month?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "H047",
+   "cat": "approver",
+   "q": "Who approved the Cobalt release in March?",
+   "parts": [
+    {
+     "subject": "Cobalt",
+     "relation": "approver",
+     "ask": "value",
+     "scope": "past",
+     "period": [
+      "in",
+      "march"
+     ],
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H048",
+   "cat": "approver",
+   "q": "Who can approve a release?",
+   "parts": [],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "H049",
+   "cat": "approver",
+   "q": "Through when is Nimbus's budget approved?",
+   "parts": [
+    {
+     "subject": "Nimbus",
+     "relation": "budget_through",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "month"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H050",
+   "cat": "approver",
+   "q": "Until which month is the Onyx budget approved?",
+   "parts": [
+    {
+     "subject": "Onyx",
+     "relation": "budget_through",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "month"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  },
+  {
+   "id": "H051",
+   "cat": "mixed",
+   "q": "Who leads Cobalt, who is the Cobalt escalation contact and which day does it release?",
+   "parts": [
+    {
+     "subject": "Cobalt",
+     "relation": "lead",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Cobalt",
+     "relation": "escalation_contact",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 1,
+   "hard": false
+  },
+  {
+   "id": "H052",
+   "cat": "mixed",
+   "q": "What is Drift's default model, who approved the Drift release, and who is on call for Drift?",
+   "parts": [
+    {
+     "subject": "Drift",
+     "relation": "default_model",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "model"
+    },
+    {
+     "subject": "Drift",
+     "relation": "approver",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    },
+    {
+     "subject": "Drift",
+     "relation": "on_call",
+     "ask": "value",
+     "scope": "any",
+     "period": null,
+     "obj": "person"
+    }
+   ],
+   "unc": 0,
+   "hard": false
+  }
+ ]
+}

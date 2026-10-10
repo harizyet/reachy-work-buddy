@@ -1,0 +1,147 @@
+{
+ "counts": {
+  "questions": 52,
+  "exact": 50,
+  "count_ok": 52,
+  "parts_expected": 42,
+  "parts_found_exact": 41,
+  "missed_parts": 1,
+  "invented_structures": 1,
+  "withheld_clauses_expected": 20,
+  "withheld_clauses_produced": 20,
+  "questions_with_invented": 1
+ },
+ "fields": {
+  "parts": 42,
+  "subject_ok": 41,
+  "relation_ok": 41,
+  "ask_ok": 41,
+  "scope_ok": 41,
+  "period_ok": 41,
+  "located": 41,
+  "object_ok": 41
+ },
+ "by_category": {
+  "release_day": {
+   "questions": 16,
+   "exact": 15,
+   "invented": 1,
+   "missed": 0
+  },
+  "escalation": {
+   "questions": 15,
+   "exact": 15,
+   "invented": 0,
+   "missed": 0
+  },
+  "approver": {
+   "questions": 19,
+   "exact": 18,
+   "invented": 0,
+   "missed": 1
+  },
+  "mixed": {
+   "questions": 2,
+   "exact": 2,
+   "invented": 0,
+   "missed": 0
+  }
+ },
+ "withhold_reasons": {
+  "no_relation_cue": 6,
+  "unsupported_period": 3,
+  "no_subject": 3,
+  "pronoun_reference": 4,
+  "value_in_question": 1,
+  "unsupported_question_type": 1,
+  "answer_type_mismatch": 2
+ },
+ "failures": [
+  {
+   "id": "H014",
+   "cat": "release_day",
+   "hard": true,
+   "q": "When was the last Nimbus release?",
+   "want": [],
+   "want_unc": 1,
+   "got": [
+    [
+     "Nimbus",
+     "release_day",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "nimbus",
+     "release_day"
+    ]
+   ],
+   "missed": []
+  },
+  {
+   "id": "H039",
+   "cat": "approver",
+   "hard": false,
+   "q": "Which person approved the Paprika release?",
+   "want": [
+    [
+     "Paprika",
+     "approver",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "paprika",
+     "approver"
+    ]
+   ]
+  }
+ ],
+ "failures_not_marked_hard": [
+  {
+   "id": "H039",
+   "cat": "approver",
+   "hard": false,
+   "q": "Which person approved the Paprika release?",
+   "want": [
+    [
+     "Paprika",
+     "approver",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "paprika",
+     "approver"
+    ]
+   ]
+  }
+ ],
+ "marked_hard_total": 5,
+ "marked_hard_failed": 1
+}

@@ -15,6 +15,7 @@ from collections.abc import Collection, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
+from companion_core.knowledge.answerability_b1 import transitions
 from companion_core.knowledge.answerability_b1.types import (
     _TOKEN,
     AUTHORITATIVE,
@@ -43,7 +44,7 @@ _TITLE_PAST = re.compile(r"archived|\(old\)|\bv\d\b", re.IGNORECASE)
 _NUMWORDS = {"one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10", "eleven": "11", "twelve": "12"}
 _VALUE_PATTERNS = {
     "number": re.compile(r"\b(\d+)\b|\b(" + "|".join(_NUMWORDS) + r")\b", re.IGNORECASE),
-    "day": re.compile(r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", re.IGNORECASE),
+    "day": re.compile(r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?\b", re.IGNORECASE),  # "on Thursdays" is the recurring form of Thursday
     "month": re.compile(r"\b(january|february|march|april|may|june|july|august|september|october|november|december)\b", re.IGNORECASE),
     "model": re.compile(r"\b([A-Z][a-z]+-\d+B)\b"),
     "host": re.compile(r"\b((?:gpu|cpu|edge|batch) host)\b", re.IGNORECASE),
@@ -170,7 +171,7 @@ def _values(kind: str, sentence: str, exclude: Collection[str]) -> list[str]:
     found = []
     for m in _VALUE_PATTERNS[kind].finditer(sentence):
         raw = next(g for g in m.groups() if g)
-        low = raw.lower()
+        low = raw.lower().rstrip("s") if kind == "day" else raw.lower()  # no weekday name ends in "s": the plural is the recurring form of the same day
         if kind == "person" and any(low == e or low in e or e in low for e in skip):
             continue
         if low in skip:
@@ -244,7 +245,8 @@ def _object_covered(sentence: str, component: Component, spec: RelationSpec) -> 
     return all(tok.lower() in allowed for tok in rest[1:])  # rest[0] is the verb
 
 
-_NP_BOUNDARY = frozenset(["is", "are", "was", "were", "be", "been", "being", "has", "have", "had", "will", "would", "can", "could", "may", "might", "shall", "should", "and", "or", "but", "nor", "of", "for", "in", "on", "at", "by", "with", "to", "from", "as", "than", "that", "this", "these", "those", "the", "a", "an", "it", "its", "their", "his", "her", "not", "no", "also", "still", "now", "currently", "then", "so", "who", "which", "when", "where", "while", "after", "before", "until", "since", "because", "if", "up", "down", "out", "over", "under", "through", "into", "about", "per", "via", "each", "every", "all", "both"])
+_CHANGE_VERB = re.compile(r"(?:switched|switches|moved|moves|changed|changes|migrated|upgraded|downgraded|rolled|deployed|replaced|adopted|promoted|decided|agreed|updated|kept|keeps|chose|picked)$", re.IGNORECASE)  # "Cedar switched its default model": a verb of change, not a qualifier noun
+_NP_BOUNDARY = frozenset(["is", "are", "was", "were", "be", "been", "being", "has", "have", "had", "will", "would", "can", "could", "may", "might", "shall", "should", "and", "or", "but", "nor", "of", "for", "in", "on", "at", "by", "with", "to", "from", "as", "than", "that", "this", "these", "those", "the", "a", "an", "it", "its", "their", "his", "her", "not", "no", "also", "still", "now", "currently", "then", "so", "who", "which", "when", "where", "while", "after", "before", "until", "since", "because", "if", "up", "down", "out", "over", "under", "through", "into", "about", "per", "via", "each", "every", "all", "both", "next", "last", "previous", "today", "tonight", "tomorrow", "yesterday"])
 
 
 def _qualified_object(sentence: str, own: re.Pattern, component: Component, spec: RelationSpec, policy: AdmissionPolicy, cue_res: list[re.Pattern]) -> bool:
@@ -255,7 +257,7 @@ def _qualified_object(sentence: str, own: re.Pattern, component: Component, spec
     A caller-supplied authoritative equivalence (`policy.equivalences`) lifts the rule for that exact phrase."""
     subject_words = {w.lower() for phrase in (component.subject, *component.aliases) for w in re.findall(r"[A-Za-z0-9]+", phrase)}
     relation_words = {w.lower() for phrase in (spec.words, *spec.object_words) for w in re.findall(r"[A-Za-z0-9]+", phrase)}
-    stems = [s.lower() for c in spec.cues for s in re.findall(r"[A-Za-z]{3,}", c)]
+    stems = [s.lower() for c in spec.cues for s in re.findall(r"[A-Za-z]{3,}", re.sub(r"\w\?", "", re.sub(r"\\[A-Za-z]", " ", c)))]  # "releases?" yields the stem "release", not "releases"  # regex escapes (\b, \s) removed first, or "\bdesign" would yield the stem "bdesign"
 
     def is_relation(word: str) -> bool:
         return word in relation_words or any(word.startswith(s) for s in stems)
@@ -278,7 +280,7 @@ def _qualified_object(sentence: str, own: re.Pattern, component: Component, spec
                 continue
             return False
         low = tok.lower()
-        if not (tok[0].isalnum()) or low in _NP_BOUNDARY or is_relation(low):
+        if not (tok[0].isalnum()) or low in _NP_BOUNDARY or is_relation(low) or (_CHANGE_VERB.match(low) and not any(c.search(sentence[: m.start()]) for c in cue_res)):
             return False
         phrase.append(low)
         if " ".join(phrase) in policy.equivalences:
@@ -319,8 +321,8 @@ def admit(component: Component, items: Collection[DiscoveryItem], auths: Mapping
     other_re = _alias_re(others) if others else None
     cue_res = [re.compile(c, re.IGNORECASE) for c in spec.cues] if spec else []
 
-    def fact(ref, value, polarity, scope, sentence, prov, binding):
-        facts.append(AdmittedFact(component.id, ref, value, polarity, scope, sentence, prov, binding, _token=_TOKEN))
+    def fact(ref, value, polarity, scope, sentence, prov, binding, status=transitions.CONFIGURED):
+        facts.append(AdmittedFact(component.id, ref, value, polarity, scope, sentence, prov, binding, status, _token=_TOKEN))
 
     for item in items:
         prov, problems = parse_provenance(item.ref, item.provenance, now, policy)
@@ -355,7 +357,10 @@ def admit(component: Component, items: Collection[DiscoveryItem], auths: Mapping
             if direct and policy.qualified_object_check and spec.kind != "existence" and _qualified_object(sentence, own, component, spec, policy, cue_res):
                 continue  # about a qualified object of the subject (its schedule, plan, runbook...), not about the subject: asserts nothing for it
             evidence = f"{context_prev} {sentence}" if context_prev else sentence
-            scope = _fact_scope(evidence, prov, item.title, now)
+            # explicit value transitions (transitions.py): the value(s) are read from the HEAD of the sentence (a retirement tail or the old side of "from X to Y" is cut off, so "has been retired" does not make
+            # the new value past); the cut-off values are kept with their own status. Existence and free-text relations carry no transition.
+            stmt = transitions.read(sentence, spec.kind) if spec.kind in ("model", "host", "number", "day", "month", "hours", "time", "person") else transitions.Statement(sentence, transitions.CONFIGURED)
+            scope = _fact_scope(f"{context_prev} {stmt.head}" if context_prev else stmt.head, prov, item.title, now)
             if _HEDGE.search(sentence):
                 item_amb = item_amb or _Amb("hedged", scope)
                 continue
@@ -389,7 +394,7 @@ def admit(component: Component, items: Collection[DiscoveryItem], auths: Mapping
                     continue
                 distinct = list(dict.fromkeys(vals))
             else:
-                distinct = list(dict.fromkeys(_values(spec.kind, sentence, [*component.aliases, *others])))
+                distinct = list(dict.fromkeys(_values(spec.kind, stmt.head, [*component.aliases, *others])))
             if not distinct:
                 continue  # related, asserts no value
             if _NEGATED_VALUE.search(sentence):
@@ -399,7 +404,10 @@ def admit(component: Component, items: Collection[DiscoveryItem], auths: Mapping
                 item_amb = item_amb or _Amb("multiple_values", scope)
                 continue
             for v in distinct:
-                fact(item.ref, v, "asserts", scope, evidence, prov, binding)
+                fact(item.ref, v, "asserts", scope, evidence, prov, binding, stmt.status)
+            for raw, st in stmt.others:
+                for v in dict.fromkeys(_values(spec.kind, raw, [*component.aliases, *others])):
+                    fact(item.ref, v, "asserts", scope, evidence, prov, binding, st)
             got_fact = True
         if item_amb:
             ambiguous.append((item.ref, item_amb.reason, item_amb.scope))  # an unreadable part never becomes an assertion; any readable part stays admitted

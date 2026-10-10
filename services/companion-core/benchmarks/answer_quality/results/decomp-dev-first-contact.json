@@ -1,0 +1,1946 @@
+{
+ "counts": {
+  "questions": 164,
+  "exact": 130,
+  "count_ok": 161,
+  "parts_expected": 160,
+  "parts_found_exact": 132,
+  "missed_parts": 28,
+  "invented_structures": 16,
+  "withheld_clauses_expected": 40,
+  "withheld_clauses_produced": 56,
+  "questions_with_invented": 16
+ },
+ "fields": {
+  "parts": 160,
+  "subject_ok": 142,
+  "relation_ok": 141,
+  "ask_ok": 141,
+  "scope_ok": 132,
+  "period_ok": 141,
+  "located": 141
+ },
+ "by_category": {
+  "single": {
+   "questions": 55,
+   "exact": 48,
+   "invented": 0,
+   "missed": 7
+  },
+  "existence": {
+   "questions": 4,
+   "exact": 3,
+   "invented": 0,
+   "missed": 2
+  },
+  "phrasing": {
+   "questions": 12,
+   "exact": 7,
+   "invented": 0,
+   "missed": 5
+  },
+  "temporal": {
+   "questions": 18,
+   "exact": 3,
+   "invented": 13,
+   "missed": 10
+  },
+  "ordering": {
+   "questions": 6,
+   "exact": 5,
+   "invented": 0,
+   "missed": 1
+  },
+  "coordination": {
+   "questions": 23,
+   "exact": 21,
+   "invented": 0,
+   "missed": 3
+  },
+  "partial": {
+   "questions": 7,
+   "exact": 7,
+   "invented": 0,
+   "missed": 0
+  },
+  "uncertain": {
+   "questions": 27,
+   "exact": 24,
+   "invented": 3,
+   "missed": 0
+  },
+  "unseen": {
+   "questions": 12,
+   "exact": 12,
+   "invented": 0,
+   "missed": 0
+  }
+ },
+ "withhold_reasons": {
+  "unexplained_entity": 2,
+  "existence_mismatch": 3,
+  "ambiguous_subject": 6,
+  "no_relation_cue": 12,
+  "not_a_question_clause": 6,
+  "no_subject": 6,
+  "weak_ordering_cue": 1,
+  "pronoun_reference": 8,
+  "unsupported_question_type": 2,
+  "value_in_question": 2,
+  "answer_type_mismatch": 2,
+  "subject_type_mismatch": 5,
+  "ambiguous_relation": 1
+ },
+ "failures": [
+  {
+   "id": "L019",
+   "cat": "single",
+   "hard": false,
+   "q": "On which machine does Raven-13B run?",
+   "want": [
+    [
+     "Raven-13B",
+     "runs_on",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "unexplained_entity"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "raven-13b",
+     "runs_on"
+    ]
+   ]
+  },
+  {
+   "id": "L021",
+   "cat": "single",
+   "hard": false,
+   "q": "How long do I have to roll back a failed Harbor deploy?",
+   "want": [
+    [
+     "Harbor",
+     "rollback_window",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "existence_mismatch"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "harbor",
+     "rollback_window"
+    ]
+   ]
+  },
+  {
+   "id": "L023",
+   "cat": "single",
+   "hard": false,
+   "q": "Within how many minutes must Meadow be rolled back?",
+   "want": [
+    [
+     "Meadow",
+     "rollback_window",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "ambiguous_subject"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "meadow",
+     "rollback_window"
+    ]
+   ]
+  },
+  {
+   "id": "L032",
+   "cat": "single",
+   "hard": false,
+   "q": "Until which month is Harbor funded?",
+   "want": [
+    [
+     "Harbor",
+     "budget_through",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "ambiguous_subject"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "harbor",
+     "budget_through"
+    ]
+   ]
+  },
+  {
+   "id": "L033",
+   "cat": "single",
+   "hard": false,
+   "q": "Through when is Lantern's budget approved?",
+   "want": [
+    [
+     "Lantern",
+     "budget_through",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "ambiguous_subject"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "lantern",
+     "budget_through"
+    ]
+   ]
+  },
+  {
+   "id": "L035",
+   "cat": "single",
+   "hard": false,
+   "q": "By when does Kofi Mensah have to circulate the summary?",
+   "want": [
+    [
+     "Kofi Mensah",
+     "deadline",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "unexplained_entity"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "kofi mensah",
+     "deadline"
+    ]
+   ]
+  },
+  {
+   "id": "L051",
+   "cat": "single",
+   "hard": false,
+   "q": "On which day are Lantern design reviews held?",
+   "want": [
+    [
+     "Lantern",
+     "review_day",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "ambiguous_subject"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "lantern",
+     "review_day"
+    ]
+   ]
+  },
+  {
+   "id": "L058",
+   "cat": "existence",
+   "hard": true,
+   "q": "Do Lantern and Cedar have a staging environment?",
+   "want": [
+    [
+     "Lantern",
+     "staging_env",
+     "existence",
+     "any",
+     null
+    ],
+    [
+     "Cedar",
+     "staging_env",
+     "existence",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 2,
+   "reasons": [
+    "no_relation_cue",
+    "not_a_question_clause"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "lantern",
+     "staging_env"
+    ],
+    [
+     "cedar",
+     "staging_env"
+    ]
+   ]
+  },
+  {
+   "id": "L061",
+   "cat": "phrasing",
+   "hard": false,
+   "q": "Can you tell me Harbor's default model?",
+   "want": [
+    [
+     "Harbor",
+     "default_model",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "not_a_question_clause"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "harbor",
+     "default_model"
+    ]
+   ]
+  },
+  {
+   "id": "L066",
+   "cat": "phrasing",
+   "hard": true,
+   "q": "who owns the relay gateway",
+   "want": [
+    [
+     "Relay gateway",
+     "owner",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_subject"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "relay gateway",
+     "owner"
+    ]
+   ]
+  },
+  {
+   "id": "L067",
+   "cat": "phrasing",
+   "hard": true,
+   "q": "what is harbor's default model?",
+   "want": [
+    [
+     "Harbor",
+     "default_model",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_subject"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "harbor",
+     "default_model"
+    ]
+   ]
+  },
+  {
+   "id": "L068",
+   "cat": "phrasing",
+   "hard": true,
+   "q": "Whose is the Prism dashboard?",
+   "want": [
+    [
+     "Prism dashboard",
+     "owner",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "prism dashboard",
+     "owner"
+    ]
+   ]
+  },
+  {
+   "id": "L069",
+   "cat": "phrasing",
+   "hard": true,
+   "q": "What's the biggest message the Sluice cache accepts?",
+   "want": [
+    [
+     "Sluice cache",
+     "max_message_size",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "sluice cache",
+     "max_message_size"
+    ]
+   ]
+  },
+  {
+   "id": "L072",
+   "cat": "temporal",
+   "hard": false,
+   "q": "Who used to own the Ferry queue?",
+   "want": [
+    [
+     "Ferry queue",
+     "owner",
+     "value",
+     "past",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Ferry queue",
+     "owner",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "ferry queue",
+     "owner"
+    ]
+   ],
+   "missed": [
+    [
+     "ferry queue",
+     "owner"
+    ]
+   ]
+  },
+  {
+   "id": "L073",
+   "cat": "temporal",
+   "hard": false,
+   "q": "What was Harbor's previous default model?",
+   "want": [
+    [
+     "Harbor",
+     "default_model",
+     "value",
+     "past",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Harbor",
+     "default_model",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "harbor",
+     "default_model"
+    ]
+   ],
+   "missed": [
+    [
+     "harbor",
+     "default_model"
+    ]
+   ]
+  },
+  {
+   "id": "L076",
+   "cat": "temporal",
+   "hard": false,
+   "q": "How many retries did the archived Kiln scheduler architecture allow?",
+   "want": [
+    [
+     "Kiln scheduler",
+     "retry_limit",
+     "value",
+     "past",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Kiln scheduler",
+     "retry_limit",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "kiln scheduler",
+     "retry_limit"
+    ]
+   ],
+   "missed": [
+    [
+     "kiln scheduler",
+     "retry_limit"
+    ]
+   ]
+  },
+  {
+   "id": "L077",
+   "cat": "temporal",
+   "hard": false,
+   "q": "What was the old retry limit of the Lattice store?",
+   "want": [
+    [
+     "Lattice store",
+     "retry_limit",
+     "value",
+     "past",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Lattice store",
+     "retry_limit",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "lattice store",
+     "retry_limit"
+    ]
+   ],
+   "missed": [
+    [
+     "lattice store",
+     "retry_limit"
+    ]
+   ]
+  },
+  {
+   "id": "L078",
+   "cat": "temporal",
+   "hard": false,
+   "q": "Which model was Lantern formerly using by default?",
+   "want": [
+    [
+     "Lantern",
+     "default_model",
+     "value",
+     "past",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Lantern",
+     "default_model",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "lantern",
+     "default_model"
+    ]
+   ],
+   "missed": [
+    [
+     "lantern",
+     "default_model"
+    ]
+   ]
+  },
+  {
+   "id": "L079",
+   "cat": "temporal",
+   "hard": false,
+   "q": "What is Harbor's current default model?",
+   "want": [
+    [
+     "Harbor",
+     "default_model",
+     "value",
+     "current",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Harbor",
+     "default_model",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "harbor",
+     "default_model"
+    ]
+   ],
+   "missed": [
+    [
+     "harbor",
+     "default_model"
+    ]
+   ]
+  },
+  {
+   "id": "L080",
+   "cat": "temporal",
+   "hard": false,
+   "q": "Who is on call for Cedar right now?",
+   "want": [
+    [
+     "Cedar",
+     "on_call",
+     "value",
+     "current",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Cedar",
+     "on_call",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "cedar",
+     "on_call"
+    ]
+   ],
+   "missed": [
+    [
+     "cedar",
+     "on_call"
+    ]
+   ]
+  },
+  {
+   "id": "L081",
+   "cat": "temporal",
+   "hard": false,
+   "q": "Who currently leads Meadow?",
+   "want": [
+    [
+     "Meadow",
+     "lead",
+     "value",
+     "current",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Meadow",
+     "lead",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "meadow",
+     "lead"
+    ]
+   ],
+   "missed": [
+    [
+     "meadow",
+     "lead"
+    ]
+   ]
+  },
+  {
+   "id": "L082",
+   "cat": "temporal",
+   "hard": false,
+   "q": "What is the retry limit of the Conduit stream today?",
+   "want": [
+    [
+     "Conduit stream",
+     "retry_limit",
+     "value",
+     "current",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Conduit stream",
+     "retry_limit",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "conduit stream",
+     "retry_limit"
+    ]
+   ],
+   "missed": [
+    [
+     "conduit stream",
+     "retry_limit"
+    ]
+   ]
+  },
+  {
+   "id": "L083",
+   "cat": "temporal",
+   "hard": false,
+   "q": "What was the Harbor default model in 2025?",
+   "want": [],
+   "want_unc": 1,
+   "got": [
+    [
+     "Harbor",
+     "default_model",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "harbor",
+     "default_model"
+    ]
+   ],
+   "missed": []
+  },
+  {
+   "id": "L084",
+   "cat": "temporal",
+   "hard": false,
+   "q": "Who was on call for Cedar last week?",
+   "want": [],
+   "want_unc": 1,
+   "got": [
+    [
+     "Cedar",
+     "on_call",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "cedar",
+     "on_call"
+    ]
+   ],
+   "missed": []
+  },
+  {
+   "id": "L085",
+   "cat": "temporal",
+   "hard": false,
+   "q": "Who is on call for Lantern this month?",
+   "want": [],
+   "want_unc": 1,
+   "got": [
+    [
+     "Lantern",
+     "on_call",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "lantern",
+     "on_call"
+    ]
+   ],
+   "missed": []
+  },
+  {
+   "id": "L086",
+   "cat": "temporal",
+   "hard": false,
+   "q": "What did Aspen use by default after March?",
+   "want": [],
+   "want_unc": 1,
+   "got": [
+    [
+     "Aspen",
+     "default_model",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "aspen",
+     "default_model"
+    ]
+   ],
+   "missed": []
+  },
+  {
+   "id": "L088",
+   "cat": "temporal",
+   "hard": true,
+   "q": "Before November, which model did Sable use by default?",
+   "want": [
+    [
+     "Sable",
+     "default_model",
+     "value",
+     "past",
+     [
+      "before",
+      "november"
+     ]
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "ambiguous_subject"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "sable",
+     "default_model"
+    ]
+   ]
+  },
+  {
+   "id": "L089",
+   "cat": "temporal",
+   "hard": false,
+   "q": "What is the old and current retry limit of the Shale store?",
+   "want": [],
+   "want_unc": 1,
+   "got": [],
+   "got_unc": 2,
+   "reasons": [
+    "no_relation_cue",
+    "not_a_question_clause"
+   ],
+   "invented": [],
+   "missed": []
+  },
+  {
+   "id": "L094",
+   "cat": "ordering",
+   "hard": true,
+   "q": "Which is newer, the Lantern standup time in one memory or in the other?",
+   "want": [
+    [
+     "Lantern",
+     "standup",
+     "ordering",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 3,
+   "reasons": [
+    "no_relation_cue",
+    "not_a_question_clause",
+    "not_a_question_clause"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "lantern",
+     "standup"
+    ]
+   ]
+  },
+  {
+   "id": "L104",
+   "cat": "coordination",
+   "hard": true,
+   "q": "Who leads and who is on call for Cedar?",
+   "want": [
+    [
+     "Cedar",
+     "lead",
+     "value",
+     "any",
+     null
+    ],
+    [
+     "Cedar",
+     "on_call",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Cedar",
+     "on_call",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 1,
+   "reasons": [
+    "no_subject"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "cedar",
+     "lead"
+    ]
+   ]
+  },
+  {
+   "id": "L105",
+   "cat": "coordination",
+   "hard": true,
+   "q": "What is the retry limit and the maximum message size of the Beacon queue?",
+   "want": [
+    [
+     "Beacon queue",
+     "retry_limit",
+     "value",
+     "any",
+     null
+    ],
+    [
+     "Beacon queue",
+     "max_message_size",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 2,
+   "reasons": [
+    "no_subject",
+    "not_a_question_clause"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "beacon queue",
+     "retry_limit"
+    ],
+    [
+     "beacon queue",
+     "max_message_size"
+    ]
+   ]
+  },
+  {
+   "id": "L136",
+   "cat": "uncertain",
+   "hard": false,
+   "q": "Does the Ferry queue retry 5 times?",
+   "want": [],
+   "want_unc": 1,
+   "got": [
+    [
+     "Ferry queue",
+     "retry_limit",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "ferry queue",
+     "retry_limit"
+    ]
+   ],
+   "missed": []
+  },
+  {
+   "id": "L137",
+   "cat": "uncertain",
+   "hard": false,
+   "q": "Is the Harbor standup on Monday?",
+   "want": [],
+   "want_unc": 1,
+   "got": [
+    [
+     "Harbor",
+     "standup",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "harbor",
+     "standup"
+    ]
+   ],
+   "missed": []
+  },
+  {
+   "id": "L152",
+   "cat": "uncertain",
+   "hard": false,
+   "q": "Who is on call for Harbor and Lantern together?",
+   "want": [],
+   "want_unc": 1,
+   "got": [
+    [
+     "Harbor",
+     "on_call",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [
+    [
+     "harbor",
+     "on_call"
+    ]
+   ],
+   "missed": []
+  }
+ ],
+ "failures_not_marked_hard": [
+  {
+   "id": "L019",
+   "cat": "single",
+   "hard": false,
+   "q": "On which machine does Raven-13B run?",
+   "want": [
+    [
+     "Raven-13B",
+     "runs_on",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "unexplained_entity"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "raven-13b",
+     "runs_on"
+    ]
+   ]
+  },
+  {
+   "id": "L021",
+   "cat": "single",
+   "hard": false,
+   "q": "How long do I have to roll back a failed Harbor deploy?",
+   "want": [
+    [
+     "Harbor",
+     "rollback_window",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "existence_mismatch"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "harbor",
+     "rollback_window"
+    ]
+   ]
+  },
+  {
+   "id": "L023",
+   "cat": "single",
+   "hard": false,
+   "q": "Within how many minutes must Meadow be rolled back?",
+   "want": [
+    [
+     "Meadow",
+     "rollback_window",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "ambiguous_subject"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "meadow",
+     "rollback_window"
+    ]
+   ]
+  },
+  {
+   "id": "L032",
+   "cat": "single",
+   "hard": false,
+   "q": "Until which month is Harbor funded?",
+   "want": [
+    [
+     "Harbor",
+     "budget_through",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "ambiguous_subject"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "harbor",
+     "budget_through"
+    ]
+   ]
+  },
+  {
+   "id": "L033",
+   "cat": "single",
+   "hard": false,
+   "q": "Through when is Lantern's budget approved?",
+   "want": [
+    [
+     "Lantern",
+     "budget_through",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "ambiguous_subject"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "lantern",
+     "budget_through"
+    ]
+   ]
+  },
+  {
+   "id": "L035",
+   "cat": "single",
+   "hard": false,
+   "q": "By when does Kofi Mensah have to circulate the summary?",
+   "want": [
+    [
+     "Kofi Mensah",
+     "deadline",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "unexplained_entity"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "kofi mensah",
+     "deadline"
+    ]
+   ]
+  },
+  {
+   "id": "L051",
+   "cat": "single",
+   "hard": false,
+   "q": "On which day are Lantern design reviews held?",
+   "want": [
+    [
+     "Lantern",
+     "review_day",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "ambiguous_subject"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "lantern",
+     "review_day"
+    ]
+   ]
+  },
+  {
+   "id": "L061",
+   "cat": "phrasing",
+   "hard": false,
+   "q": "Can you tell me Harbor's default model?",
+   "want": [
+    [
+     "Harbor",
+     "default_model",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [],
+   "got_unc": 1,
+   "reasons": [
+    "not_a_question_clause"
+   ],
+   "invented": [],
+   "missed": [
+    [
+     "harbor",
+     "default_model"
+    ]
+   ]
+  },
+  {
+   "id": "L072",
+   "cat": "temporal",
+   "hard": false,
+   "q": "Who used to own the Ferry queue?",
+   "want": [
+    [
+     "Ferry queue",
+     "owner",
+     "value",
+     "past",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Ferry queue",
+     "owner",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "ferry queue",
+     "owner"
+    ]
+   ],
+   "missed": [
+    [
+     "ferry queue",
+     "owner"
+    ]
+   ]
+  },
+  {
+   "id": "L073",
+   "cat": "temporal",
+   "hard": false,
+   "q": "What was Harbor's previous default model?",
+   "want": [
+    [
+     "Harbor",
+     "default_model",
+     "value",
+     "past",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Harbor",
+     "default_model",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "harbor",
+     "default_model"
+    ]
+   ],
+   "missed": [
+    [
+     "harbor",
+     "default_model"
+    ]
+   ]
+  },
+  {
+   "id": "L076",
+   "cat": "temporal",
+   "hard": false,
+   "q": "How many retries did the archived Kiln scheduler architecture allow?",
+   "want": [
+    [
+     "Kiln scheduler",
+     "retry_limit",
+     "value",
+     "past",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Kiln scheduler",
+     "retry_limit",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "kiln scheduler",
+     "retry_limit"
+    ]
+   ],
+   "missed": [
+    [
+     "kiln scheduler",
+     "retry_limit"
+    ]
+   ]
+  },
+  {
+   "id": "L077",
+   "cat": "temporal",
+   "hard": false,
+   "q": "What was the old retry limit of the Lattice store?",
+   "want": [
+    [
+     "Lattice store",
+     "retry_limit",
+     "value",
+     "past",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Lattice store",
+     "retry_limit",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "lattice store",
+     "retry_limit"
+    ]
+   ],
+   "missed": [
+    [
+     "lattice store",
+     "retry_limit"
+    ]
+   ]
+  },
+  {
+   "id": "L078",
+   "cat": "temporal",
+   "hard": false,
+   "q": "Which model was Lantern formerly using by default?",
+   "want": [
+    [
+     "Lantern",
+     "default_model",
+     "value",
+     "past",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Lantern",
+     "default_model",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "lantern",
+     "default_model"
+    ]
+   ],
+   "missed": [
+    [
+     "lantern",
+     "default_model"
+    ]
+   ]
+  },
+  {
+   "id": "L079",
+   "cat": "temporal",
+   "hard": false,
+   "q": "What is Harbor's current default model?",
+   "want": [
+    [
+     "Harbor",
+     "default_model",
+     "value",
+     "current",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Harbor",
+     "default_model",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "harbor",
+     "default_model"
+    ]
+   ],
+   "missed": [
+    [
+     "harbor",
+     "default_model"
+    ]
+   ]
+  },
+  {
+   "id": "L080",
+   "cat": "temporal",
+   "hard": false,
+   "q": "Who is on call for Cedar right now?",
+   "want": [
+    [
+     "Cedar",
+     "on_call",
+     "value",
+     "current",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Cedar",
+     "on_call",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "cedar",
+     "on_call"
+    ]
+   ],
+   "missed": [
+    [
+     "cedar",
+     "on_call"
+    ]
+   ]
+  },
+  {
+   "id": "L081",
+   "cat": "temporal",
+   "hard": false,
+   "q": "Who currently leads Meadow?",
+   "want": [
+    [
+     "Meadow",
+     "lead",
+     "value",
+     "current",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Meadow",
+     "lead",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "meadow",
+     "lead"
+    ]
+   ],
+   "missed": [
+    [
+     "meadow",
+     "lead"
+    ]
+   ]
+  },
+  {
+   "id": "L082",
+   "cat": "temporal",
+   "hard": false,
+   "q": "What is the retry limit of the Conduit stream today?",
+   "want": [
+    [
+     "Conduit stream",
+     "retry_limit",
+     "value",
+     "current",
+     null
+    ]
+   ],
+   "want_unc": 0,
+   "got": [
+    [
+     "Conduit stream",
+     "retry_limit",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "conduit stream",
+     "retry_limit"
+    ]
+   ],
+   "missed": [
+    [
+     "conduit stream",
+     "retry_limit"
+    ]
+   ]
+  },
+  {
+   "id": "L083",
+   "cat": "temporal",
+   "hard": false,
+   "q": "What was the Harbor default model in 2025?",
+   "want": [],
+   "want_unc": 1,
+   "got": [
+    [
+     "Harbor",
+     "default_model",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "harbor",
+     "default_model"
+    ]
+   ],
+   "missed": []
+  },
+  {
+   "id": "L084",
+   "cat": "temporal",
+   "hard": false,
+   "q": "Who was on call for Cedar last week?",
+   "want": [],
+   "want_unc": 1,
+   "got": [
+    [
+     "Cedar",
+     "on_call",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "cedar",
+     "on_call"
+    ]
+   ],
+   "missed": []
+  },
+  {
+   "id": "L085",
+   "cat": "temporal",
+   "hard": false,
+   "q": "Who is on call for Lantern this month?",
+   "want": [],
+   "want_unc": 1,
+   "got": [
+    [
+     "Lantern",
+     "on_call",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "lantern",
+     "on_call"
+    ]
+   ],
+   "missed": []
+  },
+  {
+   "id": "L086",
+   "cat": "temporal",
+   "hard": false,
+   "q": "What did Aspen use by default after March?",
+   "want": [],
+   "want_unc": 1,
+   "got": [
+    [
+     "Aspen",
+     "default_model",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "aspen",
+     "default_model"
+    ]
+   ],
+   "missed": []
+  },
+  {
+   "id": "L089",
+   "cat": "temporal",
+   "hard": false,
+   "q": "What is the old and current retry limit of the Shale store?",
+   "want": [],
+   "want_unc": 1,
+   "got": [],
+   "got_unc": 2,
+   "reasons": [
+    "no_relation_cue",
+    "not_a_question_clause"
+   ],
+   "invented": [],
+   "missed": []
+  },
+  {
+   "id": "L136",
+   "cat": "uncertain",
+   "hard": false,
+   "q": "Does the Ferry queue retry 5 times?",
+   "want": [],
+   "want_unc": 1,
+   "got": [
+    [
+     "Ferry queue",
+     "retry_limit",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "ferry queue",
+     "retry_limit"
+    ]
+   ],
+   "missed": []
+  },
+  {
+   "id": "L137",
+   "cat": "uncertain",
+   "hard": false,
+   "q": "Is the Harbor standup on Monday?",
+   "want": [],
+   "want_unc": 1,
+   "got": [
+    [
+     "Harbor",
+     "standup",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 0,
+   "reasons": [],
+   "invented": [
+    [
+     "harbor",
+     "standup"
+    ]
+   ],
+   "missed": []
+  },
+  {
+   "id": "L152",
+   "cat": "uncertain",
+   "hard": false,
+   "q": "Who is on call for Harbor and Lantern together?",
+   "want": [],
+   "want_unc": 1,
+   "got": [
+    [
+     "Harbor",
+     "on_call",
+     "value",
+     "any",
+     null
+    ]
+   ],
+   "got_unc": 1,
+   "reasons": [
+    "no_relation_cue"
+   ],
+   "invented": [
+    [
+     "harbor",
+     "on_call"
+    ]
+   ],
+   "missed": []
+  }
+ ],
+ "marked_hard_total": 14,
+ "marked_hard_failed": 9
+}

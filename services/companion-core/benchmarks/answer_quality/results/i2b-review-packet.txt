@@ -1,0 +1,322 @@
+### R01  D15-005  [unconstrained draw]
+Q: Who was in the Quartz planning meeting?
+GOLD: [('attends', 'Quartz', 'SUPPORTED', ['Pablo Reyes', 'Olga Petrova'])]
+GOLD-SPEC REPLY : 'The attendees of the Quartz planning meeting are Pablo Reyes and Olga Petrova [E299].'
+TEXT-ONLY REPLY : 'The attendees of the Quartz planning meeting are Pablo Reyes and Olga Petrova [E299].'   (identical)
+  E299 = meeting:mt-quartz: 'Pablo Reyes Olga Petrova'
+
+### R02  D15-020  [supported (every part answerable)]
+Q: What is the rollback window for Marlin?
+GOLD: [('rollback_window', 'Marlin', 'SUPPORTED', ['40'])]
+GOLD-SPEC REPLY : 'The rollback window for Marlin is 40 minutes [E141].'
+TEXT-ONLY REPLY : 'The rollback window for Marlin is 40 minutes [E141].'   (identical)
+  E141 = document:doc-marlin-runbook: '# Deploy\nDeploy Marlin with the release script and watch the dashboard for 10 minutes.\n\n# Rollback\nRoll back within 40 minutes of a failed deploy by running the rollback script.\n'
+
+### R03  D15-023  [abstained (every part withheld)]
+Q: Who signs off Quartz security?
+GOLD: [('security_reviewer', 'Quartz', 'UNSUPPORTED', [])]
+GOLD-SPEC REPLY : 'The records do not say the security reviewer for Quartz.'
+TEXT-ONLY REPLY : 'The records do not say the security reviewer for Quartz.'   (identical)
+
+### R04  D15-028  [abstained (every part withheld)]
+Q: Who is the security reviewer for Sable?
+GOLD: [('security_reviewer', 'Sable', 'UNSUPPORTED', [])]
+GOLD-SPEC REPLY : 'The records do not say the security reviewer for Sable.'
+TEXT-ONLY REPLY : 'The records do not say the security reviewer for Sable.'   (identical)
+
+### R05  D15-037  [abstained (every part withheld)]
+Q: When will the Willow lead be away next?
+GOLD: [('vacation', 'Willow', 'UNSUPPORTED', [])]
+GOLD-SPEC REPLY : 'The records do not say the next time away for the Willow lead.'
+TEXT-ONLY REPLY : 'The records do not say the next time away for the Willow lead.'   (identical)
+
+### R06  D15-045  [partial (an answerable part and a withheld part)]
+Q: What is Tamarind's default model, and when will the Vesper lead be away next?
+GOLD: [('default_model', 'Tamarind', 'SUPPORTED', ['Kestrel-3B']), ('vacation', 'Vesper', 'UNSUPPORTED', [])]
+GOLD-SPEC REPLY : 'The records do not say the default model of Tamarind. A record says Kestrel-3B was decided on for the default model of Tamarind, but the records do not say it is in place [E233].\nThe records do not say the next time away for the Vesper lead.'
+TEXT-ONLY REPLY : 'The records do not say the default model of Tamarind. A record says Kestrel-3B was decided on for the default model of Tamarind, but the records do not say it is in place [E233].\nThe records do not say the next time away for the Vesper lead.'   (identical)
+  E233 = meeting:mt-tamarind#2: 'So the decision is to keep Kestrel-3B as the default model. So the decision is to keep Kestrel-3B as the default model. Rania Said'
+
+### R07  D15-048  [unconstrained draw]
+Q: Who is on call for Willow, and who is the security reviewer for Quartz?
+GOLD: [('on_call', 'Willow', 'SUPPORTED', ['Dmitri Volkov']), ('security_reviewer', 'Quartz', 'UNSUPPORTED', [])]
+GOLD-SPEC REPLY : 'The person on call for Willow is Dmitri Volkov [E129] (the record says "this month").\nThe records do not say the security reviewer for Quartz.'
+TEXT-ONLY REPLY : 'The person on call for Willow is Dmitri Volkov [E129] (the record says "this month").\nThe records do not say the security reviewer for Quartz.'   (identical)
+  E129 = note:note-willow-oncall: 'Dmitri Volkov is on call for Willow this month.'
+
+### R08  D15-050  [partial (an answerable part and a withheld part)]
+Q: Who leads Osprey, and who is the security reviewer for Quartz?
+GOLD: [('lead', 'Osprey', 'SUPPORTED', ['Farid Haddad']), ('security_reviewer', 'Quartz', 'UNSUPPORTED', [])]
+GOLD-SPEC REPLY : 'The lead of Osprey is Farid Haddad [E26].\nThe records do not say the security reviewer for Quartz.'
+TEXT-ONLY REPLY : 'The lead of Osprey is Farid Haddad [E26].\nThe records do not say the security reviewer for Quartz.'   (identical)
+  E26 = memory:m026: 'Farid Haddad is the Osprey lead.'
+
+### R09  D15-057  [partial (an answerable part and a withheld part)]
+Q: Which model did Osprey decide to keep, and how large can a Turret API message be?
+GOLD: [('decision', 'Osprey', 'SUPPORTED', ['keep Swift-6B as the default model']), ('max_message_size', 'Turret API', 'UNSUPPORTED', [])]
+GOLD-SPEC REPLY : 'The records say the decision for Osprey was to keep Swift-6B as the default model [E223]. They do not say whether it has been carried out.\nThe records do not say the maximum message size of the Turret API.'
+TEXT-ONLY REPLY : 'The records say the decision for Osprey was to keep Swift-6B as the default model [E223]. They do not say whether it has been carried out.\nThe records do not say the maximum message size of the Turret API.'   (identical)
+  E223 = meeting:mt-osprey#2: 'So the decision is to keep Swift-6B as the default model. So the decision is to keep Swift-6B as the default model. Farid Haddad'
+
+### R10  D15-065  [partial (an answerable part and a withheld part)]
+Q: What is the retry limit of the Cobalt auth service, and how large can a Conduit stream message be?
+GOLD: [('retry_limit', 'Cobalt auth service', 'SUPPORTED', ['6']), ('max_message_size', 'Conduit stream', 'UNSUPPORTED', [])]
+GOLD-SPEC REPLY : 'The retry limit of the Cobalt auth service is 6 retries [E160].\nThe records do not say the maximum message size of the Conduit stream.'
+TEXT-ONLY REPLY : 'The retry limit of the Cobalt auth service is 6 retries [E160].\nThe records do not say the maximum message size of the Conduit stream.'   (identical)
+  E160 = document:doc-willow-arch: '# Overview\nWillow is an internal platform. It runs scheduled jobs and serves interactive requests.\n\n# Jobs\nJobs flow through the Cobalt auth service. A failed job is retried up to 6 times before it is parked.\n\n# Model serving\nWill'
+
+### R11  D15-072  [supported (every part answerable)]
+Q: Which model does Osprey use by default, and by when does Elena Marsh have to circulate the written summary, and how many retries did the archived Hopper ingest service architecture allow?
+GOLD: [('default_model', 'Osprey', 'SUPPORTED', ['Swift-6B']), ('deadline', 'Elena Marsh', 'SUPPORTED', ['Tuesday']), ('retry_limit_history', 'Hopper ingest service', 'HISTORICAL', ['6'])]
+GOLD-SPEC REPLY : "The default model of Osprey is Swift-6B [E106].\nThe deadline for Elena Marsh's written summary is Tuesday [E131].\nPreviously, the retry limit of the Hopper ingest service was 6 retries [E175]."
+TEXT-ONLY REPLY : "The default model of Osprey is Swift-6B [E106].\nThe deadline for Elena Marsh's written summary is Tuesday [E131].\nPreviously, the retry limit of the Hopper ingest service was 6 retries [E175]."   (identical)
+  E106 = memory:m106: 'As of October, the Osprey default model is Swift-6B; the Kestrel-9B model has been retired.'
+  E131 = note:note-marlin-actions: 'Elena Marsh to circulate the written summary by Tuesday. Bruno Keller to review the Anvil settings.'
+  E175 = document:doc-osprey-arch-v1: '# Jobs\nJobs flow through the Hopper ingest service. A failed job is retried up to 6 times before it is parked.\n\n# Model serving\nOsprey serves Kestrel-9B on the CPU host.\n'
+
+### R12  D15-073  [partial (an answerable part and a withheld part)]
+Q: Who was in the Tamarind planning meeting, and who has the on-call duty for Tamarind, and who will fix the Willow rollback test?
+GOLD: [('attends', 'Tamarind', 'SUPPORTED', ['Rania Said', 'Amara Osei']), ('on_call', 'Tamarind', 'SUPPORTED', ['Quinn Abbott']), ('test_fixer', 'Willow', 'UNSUPPORTED', [])]
+GOLD-SPEC REPLY : 'The attendees of the Tamarind planning meeting are Rania Said and Amara Osei [E296].\nThe person on call for Tamarind is Quinn Abbott [E118] (the record says "this month").\nThe records do not say the person fixing the Willow rollback test.'
+TEXT-ONLY REPLY : 'The attendees of the Tamarind planning meeting are Rania Said and Amara Osei [E296].\nThe person on call for Tamarind is Quinn Abbott [E118] (the record says "this month").\nThe records do not say the person fixing the Willow rollback test.'   (identical)
+  E118 = note:note-tamarind-oncall: 'Quinn Abbott is on call for Tamarind this month.'
+  E296 = meeting:mt-tamarind: 'Rania Said Amara Osei'
+
+### R13  D15-076  [ambiguous (old reply was an unclear-records reply)]
+Q: Who is on call for Sable, and where does Heron-12B run, and which model did Marlin use by default in March?
+GOLD: [('on_call', 'Sable', 'SUPPORTED', ['Quinn Abbott']), ('runs_on', 'Heron-12B', 'SUPPORTED', ['CPU host']), ('default_model_history', 'Marlin', 'HISTORICAL', ['Kestrel-3B'])]
+GOLD-SPEC REPLY : 'The person on call for Sable is Quinn Abbott [E126] (the record says "this month").\nThe host running Heron-12B is the CPU host [E140] [E156].\nPreviously, the default model of Marlin was Kestrel-3B [E101].'
+TEXT-ONLY REPLY : 'The person on call for Sable is Quinn Abbott [E126] (the record says "this month").\nThe host running Heron-12B is the CPU host [E140] [E156].\nPreviously, the default model of Marlin was Kestrel-3B [E101].'   (identical)
+  E101 = memory:m101: 'As of March, the Marlin default model was Kestrel-3B.'
+  E126 = note:note-sable-oncall: 'Quinn Abbott is on call for Sable this month.'
+  E140 = document:doc-marlin-arch: '# Overview\nMarlin is an internal platform. It runs scheduled jobs and serves interactive requests.\n\n# Jobs\nJobs flow through the Anvil builder. A failed job is retried up to 6 times before it is parked.\n\n# Model serving\nMarlin ser'
+  E156 = document:doc-thistle-arch: '# Overview\nThistle is an internal platform. It runs scheduled jobs and serves interactive requests.\n\n# Jobs\nJobs flow through the Lattice store. A failed job is retried up to 5 times before it is parked.\n\n# Model serving\nThistle s'
+
+### R14  D15-077  [historical]
+Q: Who is the Cedar lead, and what is Amara Osei's deadline for the written summary, and what was the old retry limit of the Gantry scheduler?
+GOLD: [('lead', 'Cedar', 'SUPPORTED', ['Liam Oconnor']), ('deadline', 'Amara Osei', 'SUPPORTED', ['Wednesday']), ('retry_limit_history', 'Gantry scheduler', 'HISTORICAL', ['2'])]
+GOLD-SPEC REPLY : "The lead of Cedar is Liam Oconnor [E2].\nThe deadline for Amara Osei's written summary is Wednesday [E132].\nPreviously, the retry limit of the Gantry scheduler was 2 retries [E172]."
+TEXT-ONLY REPLY : "The lead of Cedar is Liam Oconnor [E2].\nThe deadline for Amara Osei's written summary is Wednesday [E132].\nPreviously, the retry limit of the Gantry scheduler was 2 retries [E172]."   (identical)
+  E132 = note:note-juniper-actions: 'Amara Osei to circulate the written summary by Wednesday. Wen Zhao to review the Prism settings.'
+  E172 = document:doc-cedar-arch-v1: '# Jobs\nJobs flow through the Gantry scheduler. A failed job is retried up to 2 times before it is parked.\n\n# Model serving\nCedar serves Merlin-2B on the CPU host.\n'
+  E2 = memory:m002: 'Liam Oconnor is the Cedar lead.'
+
+### R15  D15-080  [partial (an answerable part and a withheld part)]
+Q: By when does Olga Petrova have to circulate the written summary, and how many times does the Ferry queue retry a failed job, and when is the Sable lead's next vacation?
+GOLD: [('deadline', 'Olga Petrova', 'SUPPORTED', ['Thursday']), ('retry_limit', 'Ferry queue', 'SUPPORTED', ['7']), ('vacation', 'Sable', 'UNSUPPORTED', [])]
+GOLD-SPEC REPLY : "The deadline for Olga Petrova's written summary is Thursday [E133].\nThe retry limit of the Ferry queue is 7 retries [E154].\nThe records do not say the next time away for the Sable lead."
+TEXT-ONLY REPLY : "The deadline for Olga Petrova's written summary is Thursday [E133].\nThe retry limit of the Ferry queue is 7 retries [E154].\nThe records do not say the next time away for the Sable lead."   (identical)
+  E133 = note:note-osprey-actions: 'Olga Petrova to circulate the written summary by Thursday. Dmitri Volkov to review the Hopper settings.'
+  E154 = document:doc-sable-arch: '# Overview\nSable is an internal platform. It runs scheduled jobs and serves interactive requests.\n\n# Jobs\nJobs flow through the Ferry queue. A failed job is retried up to 7 times before it is parked.\n\n# Model serving\nSable serves '
+
+### R16  D15-083  [historical]
+Q: What is the retry limit of the Conduit stream, and when is Tidewater Pay support open on weekdays, and what was Cedar's default model before October?
+GOLD: [('retry_limit', 'Conduit stream', 'SUPPORTED', ['4']), ('support_hours', 'Tidewater Pay', 'SUPPORTED', ['9 to 5']), ('default_model_history', 'Cedar', 'HISTORICAL', ['Merlin-2B'])]
+GOLD-SPEC REPLY : 'The retry limit of the Conduit stream is 4 retries [E152].\nThe weekday support hours of Tidewater Pay are 9 to 5 [E165].\nPreviously, the default model of Cedar was Merlin-2B [E99].'
+TEXT-ONLY REPLY : 'The retry limit of the Conduit stream is 4 retries [E152].\nThe weekday support hours of Tidewater Pay are 9 to 5 [E165].\nPreviously, the default model of Cedar was Merlin-2B [E99].'   (identical)
+  E152 = document:doc-quartz-arch: '# Overview\nQuartz is an internal platform. It runs scheduled jobs and serves interactive requests.\n\n# Jobs\nJobs flow through the Conduit stream. A failed job is retried up to 4 times before it is parked.\n\n# Model serving\nQuartz se'
+  E165 = document:doc-vendor-tidewater-pay: '# Support\nTidewater Pay support hours are 9 to 5 on weekdays. The support line is 555-0121.\n'
+  E99 = memory:m099: 'As of March, the Cedar default model was Merlin-2B.'
+
+### R17  D15-089  [historical]
+Q: What does Kavya Menon review, and which host serves Heron-4B, and what was the old retry limit of the Anvil builder?
+GOLD: [('reviews', 'Kavya Menon', 'SUPPORTED', ['the Turret settings']), ('runs_on', 'Heron-4B', 'SUPPORTED', ['GPU host']), ('retry_limit_history', 'Anvil builder', 'HISTORICAL', ['5'])]
+GOLD-SPEC REPLY : 'Kavya Menon reviews Turret settings [E135].\nThe host running Heron-4B is the GPU host [E150].\nPreviously, the retry limit of the Anvil builder was 5 retries [E173].'
+TEXT-ONLY REPLY : 'Kavya Menon reviews Turret settings [E135].\nThe host running Heron-4B is the GPU host [E150].\nPreviously, the retry limit of the Anvil builder was 5 retries [E173].'   (identical)
+  E135 = note:note-vesper-actions: 'Pablo Reyes to circulate the written summary by Monday. Kavya Menon to review the Turret settings.'
+  E150 = document:doc-pinnacle-arch: '# Overview\nPinnacle is an internal platform. It runs scheduled jobs and serves interactive requests.\n\n# Jobs\nJobs flow through the Relay gateway. A failed job is retried up to 6 times before it is parked.\n\n# Model serving\nPinnacle'
+  E173 = document:doc-marlin-arch-v1: '# Jobs\nJobs flow through the Anvil builder. A failed job is retried up to 5 times before it is parked.\n\n# Model serving\nMarlin serves Kestrel-3B on the CPU host.\n'
+
+### R18  D15-093  [supported (every part answerable)]
+Q: Who was in the Vesper planning meeting, and when is Ironside Backup support open on weekdays, and what was the old retry limit of the Gantry scheduler?
+GOLD: [('attends', 'Vesper', 'SUPPORTED', ['Kavya Menon', 'Bruno Keller']), ('support_hours', 'Ironside Backup', 'SUPPORTED', ['9 to 7']), ('retry_limit_history', 'Gantry scheduler', 'HISTORICAL', ['2'])]
+GOLD-SPEC REPLY : 'The attendees of the Vesper planning meeting are Kavya Menon and Bruno Keller [E297].\nThe weekday support hours of Ironside Backup are 9 to 7 [E167].\nPreviously, the retry limit of the Gantry scheduler was 2 retries [E172].'
+TEXT-ONLY REPLY : 'The attendees of the Vesper planning meeting are Kavya Menon and Bruno Keller [E297].\nThe weekday support hours of Ironside Backup are 9 to 7 [E167].\nPreviously, the retry limit of the Gantry scheduler was 2 retries [E172].'   (identical)
+  E167 = document:doc-vendor-ironside-backup: '# Support\nIronside Backup support hours are 9 to 7 on weekdays. The support line is 555-0135.\n'
+  E172 = document:doc-cedar-arch-v1: '# Jobs\nJobs flow through the Gantry scheduler. A failed job is retried up to 2 times before it is parked.\n\n# Model serving\nCedar serves Merlin-2B on the CPU host.\n'
+  E297 = meeting:mt-vesper: 'Kavya Menon Bruno Keller'
+
+### R19  D15-098  [conflicted]
+Q: What time is the Vesper standup?
+GOLD: [('standup', 'Vesper', 'CONFLICTED', ['10', '12'])]
+GOLD-SPEC REPLY : 'The records disagree on the standup time for Vesper: one record says 10 [E46]; another says 12 [E47]. They do not say which applies.'
+TEXT-ONLY REPLY : 'The records disagree on the standup time for Vesper: one record says 10 [E46]; another says 12 [E47]. They do not say which applies.'   (identical)
+  E46 = memory:m046: 'The Vesper standup is at 10.'
+  E47 = memory:m047: 'The Vesper standup is at 12.'
+
+### R20  D15-107  [conflicted]
+Q: When does the Willow standup start, and which model did Marlin decide to keep?
+GOLD: [('standup', 'Willow', 'CONFLICTED', ['10', '12']), ('decision', 'Marlin', 'SUPPORTED', ['keep Heron-12B as the default model'])]
+GOLD-SPEC REPLY : 'The records disagree on the standup time for Willow: one record says 10 [E84]; another says 12 [E85]. They do not say which applies.\nThe records say the decision for Marlin was to keep Heron-12B as the default model [E189]. They do not say whether it has been carried out.'
+TEXT-ONLY REPLY : 'The records disagree on the standup time for Willow: one record says 10 [E84]; another says 12 [E85]. They do not say which applies.\nThe records say the decision for Marlin was to keep Heron-12B as the default model [E189]. They do not say whether it has been carried out.'   (identical)
+  E189 = meeting:mt-marlin#2: 'So the decision is to keep Heron-12B as the default model. So the decision is to keep Heron-12B as the default model. Yusuf Demir'
+  E84 = memory:m084: 'The Willow standup is at 10.'
+  E85 = memory:m085: 'The Willow standup is at 12.'
+
+### R21  D15-110  [conflicted]
+Q: What time is the Osprey standup?
+GOLD: [('standup', 'Osprey', 'CONFLICTED', ['10', '12'])]
+GOLD-SPEC REPLY : 'The records disagree on the standup time for Osprey: one record says 10 [E29]; another says 12 [E30]. They do not say which applies.'
+TEXT-ONLY REPLY : 'The records disagree on the standup time for Osprey: one record says 10 [E29]; another says 12 [E30]. They do not say which applies.'   (identical)
+  E29 = memory:m029: 'The Osprey standup is at 10.'
+  E30 = memory:m030: 'The Osprey standup is at 12.'
+
+### R22  D15-113  [conflicted]
+Q: Which day is the Sable design review, and what does Bruno Keller review?
+GOLD: [('review_day', 'Sable', 'CONFLICTED', ['Wednesday', 'Thursday']), ('reviews', 'Bruno Keller', 'SUPPORTED', ['the Anvil settings'])]
+GOLD-SPEC REPLY : 'The records disagree on the design review day for Sable: one record says Wednesday [E68]; another says Thursday [E69]. They do not say which applies.\nBruno Keller reviews Anvil settings [E131].'
+TEXT-ONLY REPLY : 'The records disagree on the design review day for Sable: one record says Wednesday [E68]; another says Thursday [E69]. They do not say which applies.\nBruno Keller reviews Anvil settings [E131].'   (identical)
+  E131 = note:note-marlin-actions: 'Elena Marsh to circulate the written summary by Tuesday. Bruno Keller to review the Anvil settings.'
+  E68 = memory:m068: 'Sable design reviews are on Wednesday.'
+  E69 = memory:m069: 'Sable design reviews are on Thursday.'
+
+### R23  D15-114  [conflicted]
+Q: What time is the Cedar standup, and who is on call for Vesper?
+GOLD: [('standup', 'Cedar', 'CONFLICTED', ['9', '11']), ('on_call', 'Vesper', 'SUPPORTED', ['Ines Duarte'])]
+GOLD-SPEC REPLY : 'The records disagree on the standup time for Cedar: one record says 9 [E5]; another says 11 [E6]. They do not say which applies.\nThe person on call for Vesper is Ines Duarte [E120] (the record says "this month").'
+TEXT-ONLY REPLY : 'The records disagree on the standup time for Cedar: one record says 9 [E5]; another says 11 [E6]. They do not say which applies.\nThe person on call for Vesper is Ines Duarte [E120] (the record says "this month").'   (identical)
+  E120 = note:note-vesper-oncall: 'Ines Duarte is on call for Vesper this month.'
+  E5 = memory:m005: 'The Cedar standup is at 9.'
+  E6 = memory:m006: 'The Cedar standup is at 11.'
+
+### R24  D15-122  [partial (an answerable part and a withheld part)]
+Q: Who owns the Conduit stream, and who is fixing the Cedar rollback test?
+GOLD: [('owner', 'Conduit stream', 'UNSUPPORTED', []), ('test_fixer', 'Cedar', 'SUPPORTED', ['Liam Oconnor'])]
+GOLD-SPEC REPLY : 'The records do not say the owner of the Conduit stream.\nThe person fixing the Cedar rollback test is Liam Oconnor [E186].'
+TEXT-ONLY REPLY : 'The records do not say the owner of the Conduit stream.\nThe person fixing the Cedar rollback test is Liam Oconnor [E186].'   (identical)
+  E186 = meeting:mt-cedar#10: 'I will fix the Cedar rollback test. I will fix the Cedar rollback test. Liam Oconnor'
+
+### R25  D15-123  [partial (an answerable part and a withheld part)]
+Q: Who will fix the Quartz rollback test, and who has the on-call duty for Vesper?
+GOLD: [('test_fixer', 'Quartz', 'UNSUPPORTED', []), ('on_call', 'Vesper', 'SUPPORTED', ['Ines Duarte'])]
+GOLD-SPEC REPLY : 'The records do not say the person fixing the Quartz rollback test.\nThe person on call for Vesper is Ines Duarte [E120] (the record says "this month").'
+TEXT-ONLY REPLY : 'The records do not say the person fixing the Quartz rollback test.\nThe person on call for Vesper is Ines Duarte [E120] (the record says "this month").'   (identical)
+  E120 = note:note-vesper-oncall: 'Ines Duarte is on call for Vesper this month.'
+
+### R26  D15-125  [unconstrained draw]
+Q: Who will fix the Willow rollback test, and what is Osprey's default model?
+GOLD: [('test_fixer', 'Willow', 'UNSUPPORTED', []), ('default_model', 'Osprey', 'SUPPORTED', ['Swift-6B'])]
+GOLD-SPEC REPLY : 'The records do not say the person fixing the Willow rollback test.\nThe default model of Osprey is Swift-6B [E106].'
+TEXT-ONLY REPLY : 'The records do not say the person fixing the Willow rollback test.\nThe default model of Osprey is Swift-6B [E106].'   (identical)
+  E106 = memory:m106: 'As of October, the Osprey default model is Swift-6B; the Kestrel-9B model has been retired.'
+
+### R27  D15-126  [unconstrained draw]
+Q: Who owns the Conduit stream, and who owns the Gantry scheduler?
+GOLD: [('owner', 'Conduit stream', 'UNSUPPORTED', []), ('owner', 'Gantry scheduler', 'SUPPORTED', ['Ines Duarte'])]
+GOLD-SPEC REPLY : 'The records do not say the owner of the Conduit stream.\nThe owner of the Gantry scheduler is Ines Duarte [E1].'
+TEXT-ONLY REPLY : 'The records do not say the owner of the Conduit stream.\nThe owner of the Gantry scheduler is Ines Duarte [E1].'   (identical)
+  E1 = memory:m001: 'Ines Duarte owns the Gantry scheduler.'
+
+### R28  D15-141  [negative (existence)]
+Q: Is there a staging environment for Willow?
+GOLD: [('staging_env', 'Willow', 'NEGATIVE_UNSUPPORTED', [])]
+GOLD-SPEC REPLY : 'The records I searched do not mention a staging environment for Willow.'
+TEXT-ONLY REPLY : 'The records I searched do not mention a staging environment for Willow.'   (identical)
+
+### R29  D15-147  [negative (existence)]
+Q: Is there a staging environment for Vesper, and who has the on-call duty for Cedar?
+GOLD: [('staging_env', 'Vesper', 'NEGATIVE_UNSUPPORTED', []), ('on_call', 'Cedar', 'SUPPORTED', ['Umar Bello'])]
+GOLD-SPEC REPLY : 'The records I searched do not mention a staging environment for Vesper.\nThe person on call for Cedar is Umar Bello [E110] (the record says "this month").'
+TEXT-ONLY REPLY : 'The records I searched do not mention a staging environment for Vesper.\nThe person on call for Cedar is Umar Bello [E110] (the record says "this month").'   (identical)
+  E110 = note:note-cedar-oncall: 'Umar Bello is on call for Cedar this month.'
+
+### R30  D15-150  [negative (existence)]
+Q: Does Quartz have a staging environment, and who is on call for Cedar?
+GOLD: [('staging_env', 'Quartz', 'NEGATIVE_SUPPORTED', []), ('on_call', 'Cedar', 'SUPPORTED', ['Umar Bello'])]
+GOLD-SPEC REPLY : 'The records say there is no staging environment for Quartz [E59].\nThe person on call for Cedar is Umar Bello [E110] (the record says "this month").'
+TEXT-ONLY REPLY : 'The records say there is no staging environment for Quartz [E59].\nThe person on call for Cedar is Umar Bello [E110] (the record says "this month").'   (identical)
+  E110 = note:note-cedar-oncall: 'Umar Bello is on call for Cedar this month.'
+  E59 = memory:m059: 'Quartz has no staging environment.'
+
+### R31  D15-151  [negative (existence)]
+Q: Is there a staging environment for Vesper, and what is the retry limit of the Ferry queue?
+GOLD: [('staging_env', 'Vesper', 'NEGATIVE_UNSUPPORTED', []), ('retry_limit', 'Ferry queue', 'SUPPORTED', ['7'])]
+GOLD-SPEC REPLY : 'The records I searched do not mention a staging environment for Vesper.\nThe retry limit of the Ferry queue is 7 retries [E154].'
+TEXT-ONLY REPLY : 'The records I searched do not mention a staging environment for Vesper.\nThe retry limit of the Ferry queue is 7 retries [E154].'   (identical)
+  E154 = document:doc-sable-arch: '# Overview\nSable is an internal platform. It runs scheduled jobs and serves interactive requests.\n\n# Jobs\nJobs flow through the Ferry queue. A failed job is retried up to 7 times before it is parked.\n\n# Model serving\nSable serves '
+
+### R32  D15-153  [ambiguous (old reply was an unclear-records reply)]
+Q: What was Cedar's default model before October?
+GOLD: [('default_model_history', 'Cedar', 'HISTORICAL', ['Merlin-2B'])]
+GOLD-SPEC REPLY : 'Previously, the default model of Cedar was Merlin-2B [E99].'
+TEXT-ONLY REPLY : 'Previously, the default model of Cedar was Merlin-2B [E99].'   (identical)
+  E99 = memory:m099: 'As of March, the Cedar default model was Merlin-2B.'
+
+### R33  D15-155  [abstained (every part withheld)]
+Q: Was the Osprey design review day updated in one memory after the other memory gave a different answer?
+GOLD: [('order_figure', 'Osprey', 'ORDER_UNSUPPORTED', ['Monday', 'Friday'])]
+GOLD-SPEC REPLY : 'On the design review day for Osprey, the records give Monday [E31] and Friday [E32], but nothing in them dates one before the other.'
+TEXT-ONLY REPLY : 'On the design review day for Osprey, the records give Monday [E31] and Friday [E32], but nothing in them dates one before the other.'   (identical)
+  E31 = memory:m031: 'Osprey design reviews are on Monday.'
+  E32 = memory:m032: 'Osprey design reviews are on Friday.'
+
+### R34  D15-157  [ambiguous (old reply was an unclear-records reply)]
+Q: What was Marlin's default model before October, and what is the retry limit of the Conduit stream?
+GOLD: [('default_model_history', 'Marlin', 'HISTORICAL', ['Kestrel-3B']), ('retry_limit', 'Conduit stream', 'SUPPORTED', ['4'])]
+GOLD-SPEC REPLY : 'Previously, the default model of Marlin was Kestrel-3B [E101].\nThe retry limit of the Conduit stream is 4 retries [E152].'
+TEXT-ONLY REPLY : 'Previously, the default model of Marlin was Kestrel-3B [E101].\nThe retry limit of the Conduit stream is 4 retries [E152].'   (identical)
+  E101 = memory:m101: 'As of March, the Marlin default model was Kestrel-3B.'
+  E152 = document:doc-quartz-arch: '# Overview\nQuartz is an internal platform. It runs scheduled jobs and serves interactive requests.\n\n# Jobs\nJobs flow through the Conduit stream. A failed job is retried up to 4 times before it is parked.\n\n# Model serving\nQuartz se'
+
+### R35  D15-158  [ordering]
+Q: Which of the two memories about the Vesper standup time is more recent?
+GOLD: [('order_figure', 'Vesper', 'ORDER_UNSUPPORTED', ['10', '12'])]
+GOLD-SPEC REPLY : 'On the standup time for Vesper, the records give 10 [E46] and 12 [E47], but nothing in them dates one before the other.'
+TEXT-ONLY REPLY : 'On the standup time for Vesper, the records give 10 [E46] and 12 [E47], but nothing in them dates one before the other.'   (identical)
+  E46 = memory:m046: 'The Vesper standup is at 10.'
+  E47 = memory:m047: 'The Vesper standup is at 12.'
+
+### R36  D15-159  [historical]
+Q: What was the old retry limit of the Gantry scheduler?
+GOLD: [('retry_limit_history', 'Gantry scheduler', 'HISTORICAL', ['2'])]
+GOLD-SPEC REPLY : 'Previously, the retry limit of the Gantry scheduler was 2 retries [E172].'
+TEXT-ONLY REPLY : 'Previously, the retry limit of the Gantry scheduler was 2 retries [E172].'   (identical)
+  E172 = document:doc-cedar-arch-v1: '# Jobs\nJobs flow through the Gantry scheduler. A failed job is retried up to 2 times before it is parked.\n\n# Model serving\nCedar serves Merlin-2B on the CPU host.\n'
+
+### R37  D15-160  [ambiguous (old reply was an unclear-records reply)]
+Q: Which model did Osprey use by default in March, and which model does Quartz use by default?
+GOLD: [('default_model_history', 'Osprey', 'HISTORICAL', ['Kestrel-9B']), ('default_model', 'Quartz', 'SUPPORTED', ['Merlin-2B'])]
+GOLD-SPEC REPLY : 'Previously, the default model of Osprey was Kestrel-9B [E105].\nThe records do not say the default model of Quartz. A record says Merlin-2B was decided on for the default model of Quartz, but the records do not say it is in place [E279].'
+TEXT-ONLY REPLY : 'Previously, the default model of Osprey was Kestrel-9B [E105].\nThe records do not say the default model of Quartz. A record says Merlin-2B was decided on for the default model of Quartz, but the records do not say it is in place [E279].'   (identical)
+  E105 = memory:m105: 'As of March, the Osprey default model was Kestrel-9B.'
+  E279 = meeting:mt-quartz#2: 'So the decision is to keep Merlin-2B as the default model. So the decision is to keep Merlin-2B as the default model. Pablo Reyes'
+
+### R38  D15-162  [supported (every part answerable)]
+Q: How many retries did the archived Hopper ingest service architecture allow, and who attended the Cedar planning meeting?
+GOLD: [('retry_limit_history', 'Hopper ingest service', 'HISTORICAL', ['6']), ('attends', 'Cedar', 'SUPPORTED', ['Liam Oconnor', 'Ines Duarte'])]
+GOLD-SPEC REPLY : 'Previously, the retry limit of the Hopper ingest service was 6 retries [E175].\nThe attendees of the Cedar planning meeting are Liam Oconnor and Ines Duarte [E292].'
+TEXT-ONLY REPLY : 'Previously, the retry limit of the Hopper ingest service was 6 retries [E175].\nThe attendees of the Cedar planning meeting are Liam Oconnor and Ines Duarte [E292].'   (identical)
+  E175 = document:doc-osprey-arch-v1: '# Jobs\nJobs flow through the Hopper ingest service. A failed job is retried up to 6 times before it is parked.\n\n# Model serving\nOsprey serves Kestrel-9B on the CPU host.\n'
+  E292 = meeting:mt-cedar: 'Liam Oconnor Ines Duarte'
+
+### R39  D15-164  [ambiguous (old reply was an unclear-records reply)]
+Q: Which model did Marlin use by default in March, and who attended the Cedar planning meeting?
+GOLD: [('default_model_history', 'Marlin', 'HISTORICAL', ['Kestrel-3B']), ('attends', 'Cedar', 'SUPPORTED', ['Liam Oconnor', 'Ines Duarte'])]
+GOLD-SPEC REPLY : 'Previously, the default model of Marlin was Kestrel-3B [E101].\nThe attendees of the Cedar planning meeting are Liam Oconnor and Ines Duarte [E292].'
+TEXT-ONLY REPLY : 'Previously, the default model of Marlin was Kestrel-3B [E101].\nThe attendees of the Cedar planning meeting are Liam Oconnor and Ines Duarte [E292].'   (identical)
+  E101 = memory:m101: 'As of March, the Marlin default model was Kestrel-3B.'
+  E292 = meeting:mt-cedar: 'Liam Oconnor Ines Duarte'
+
+### R40  D15-165  [ordering]
+Q: Was the Marlin design review day updated in one memory after the other memory gave a different answer?
+GOLD: [('order_figure', 'Marlin', 'ORDER_UNSUPPORTED', ['Tuesday', 'Friday'])]
+GOLD-SPEC REPLY : 'On the design review day for Marlin, the records give Tuesday [E15] and Friday [E16], but nothing in them dates one before the other.'
+TEXT-ONLY REPLY : 'On the design review day for Marlin, the records give Tuesday [E15] and Friday [E16], but nothing in them dates one before the other.'   (identical)
+  E15 = memory:m015: 'Marlin design reviews are on Tuesday.'
+  E16 = memory:m016: 'Marlin design reviews are on Friday.'
+
+### R41  D15-167  [ordering]
+Q: Was the Tamarind design review day updated in one memory after the other memory gave a different answer?
+GOLD: [('order_figure', 'Tamarind', 'ORDER_UNSUPPORTED', ['Tuesday', 'Thursday'])]
+GOLD-SPEC REPLY : 'On the design review day for Tamarind, the records give Tuesday [E40] and Thursday [E41], but nothing in them dates one before the other.'
+TEXT-ONLY REPLY : 'On the design review day for Tamarind, the records give Tuesday [E40] and Thursday [E41], but nothing in them dates one before the other.'   (identical)
+  E40 = memory:m040: 'Tamarind design reviews are on Tuesday.'
+  E41 = memory:m041: 'Tamarind design reviews are on Thursday.'
+
+### R42  D15-170  [historical]
+Q: Which model did Marlin use by default in March, and through when is the Osprey budget approved?
+GOLD: [('default_model_history', 'Marlin', 'HISTORICAL', ['Kestrel-3B']), ('budget_through', 'Osprey', 'SUPPORTED', ['July'])]
+GOLD-SPEC REPLY : 'Previously, the default model of Marlin was Kestrel-3B [E101].\nThe last funded month for Osprey is July [E224].'
+TEXT-ONLY REPLY : 'Previously, the default model of Marlin was Kestrel-3B [E101].\nThe last funded month for Osprey is July [E224].'   (identical)
+  E101 = memory:m101: 'As of March, the Marlin default model was Kestrel-3B.'
+  E224 = meeting:mt-osprey#3: 'The budget for Osprey is approved through July. The budget for Osprey is approved through July. Farid Haddad'

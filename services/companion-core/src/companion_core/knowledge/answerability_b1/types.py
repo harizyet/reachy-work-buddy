@@ -127,6 +127,9 @@ class RelationSpec:
     joiner: str = "of"  # "owner OF the Ferry queue", "staging environment FOR Vesper"
     prefix: str = ""  # put before a non-numeric value in code-written replies ("the " for hosts); display only
     unit: str = ""  # appended to a numeric value in code-written replies ("40 minutes"); display only, never part of the admitted value
+    plural: bool = False  # the relation's noun is plural ("support hours"): "are", "were"; display only
+    sentence: str = ""  # optional reply template for a plain value, {S} = subject, {V} = value ("{S} reviews {V}"); display only
+    sentence_past: str = ""  # the same for a value shown as past ("{S} reviewed {V}")
 
     @property
     def words(self) -> str:
@@ -144,6 +147,7 @@ class Component:
     ask: Ask = Ask.VALUE
     scope: Scope = Scope.ANY
     label: str = ""  # human wording used by the code-written replies, e.g. "owner of the Ferry queue"
+    period: tuple[str, str] | None = None  # a month the question names for a PAST scope: ("in" | "before" | "as of", "march"). Only a record whose own sentence names a matching month can answer it.
 
 
 @dataclass(frozen=True)
@@ -168,6 +172,7 @@ class AdmittedFact:
     sentence: str  # the exact sentence the fact was read from (claim-level evidence; with its one context sentence when bound by context)
     provenance: Provenance
     binding: str = "sentence"  # how the subject was bound: sentence | title | context | structured | speaker
+    status: str = "configured"  # where the record says the value stands: configured | deployed | decided | planned | retired | rolled_back (transitions.py). Only configured and deployed can be the current value.
     _token: object = field(default=None, repr=False, compare=False)
 
     def __post_init__(self):

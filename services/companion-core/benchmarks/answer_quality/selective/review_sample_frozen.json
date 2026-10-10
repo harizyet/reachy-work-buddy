@@ -1,0 +1,283 @@
+{
+ "seed": 20261010,
+ "frozen_before_any_new_reply": true,
+ "dev15": [
+  {
+   "id": "D15-005",
+   "stratum": "unconstrained draw",
+   "family": "control_supported"
+  },
+  {
+   "id": "D15-020",
+   "stratum": "supported (every part answerable)",
+   "family": "control_supported"
+  },
+  {
+   "id": "D15-023",
+   "stratum": "abstained (every part withheld)",
+   "family": "control_unsupported"
+  },
+  {
+   "id": "D15-028",
+   "stratum": "abstained (every part withheld)",
+   "family": "control_unsupported"
+  },
+  {
+   "id": "D15-037",
+   "stratum": "abstained (every part withheld)",
+   "family": "control_unsupported"
+  },
+  {
+   "id": "D15-045",
+   "stratum": "partial (an answerable part and a withheld part)",
+   "family": "mixed"
+  },
+  {
+   "id": "D15-048",
+   "stratum": "unconstrained draw",
+   "family": "mixed"
+  },
+  {
+   "id": "D15-050",
+   "stratum": "partial (an answerable part and a withheld part)",
+   "family": "mixed"
+  },
+  {
+   "id": "D15-057",
+   "stratum": "partial (an answerable part and a withheld part)",
+   "family": "mixed"
+  },
+  {
+   "id": "D15-065",
+   "stratum": "partial (an answerable part and a withheld part)",
+   "family": "mixed"
+  },
+  {
+   "id": "D15-072",
+   "stratum": "supported (every part answerable)",
+   "family": "multipart"
+  },
+  {
+   "id": "D15-073",
+   "stratum": "partial (an answerable part and a withheld part)",
+   "family": "multipart"
+  },
+  {
+   "id": "D15-076",
+   "stratum": "ambiguous (old reply was an unclear-records reply)",
+   "family": "multipart"
+  },
+  {
+   "id": "D15-077",
+   "stratum": "historical",
+   "family": "multipart"
+  },
+  {
+   "id": "D15-080",
+   "stratum": "partial (an answerable part and a withheld part)",
+   "family": "multipart"
+  },
+  {
+   "id": "D15-083",
+   "stratum": "historical",
+   "family": "multipart"
+  },
+  {
+   "id": "D15-089",
+   "stratum": "historical",
+   "family": "multipart"
+  },
+  {
+   "id": "D15-093",
+   "stratum": "supported (every part answerable)",
+   "family": "multipart"
+  },
+  {
+   "id": "D15-098",
+   "stratum": "conflicted",
+   "family": "conflict"
+  },
+  {
+   "id": "D15-107",
+   "stratum": "conflicted",
+   "family": "conflict"
+  },
+  {
+   "id": "D15-110",
+   "stratum": "conflicted",
+   "family": "conflict"
+  },
+  {
+   "id": "D15-113",
+   "stratum": "conflicted",
+   "family": "conflict"
+  },
+  {
+   "id": "D15-114",
+   "stratum": "conflicted",
+   "family": "conflict"
+  },
+  {
+   "id": "D15-122",
+   "stratum": "partial (an answerable part and a withheld part)",
+   "family": "unknown_actor"
+  },
+  {
+   "id": "D15-123",
+   "stratum": "partial (an answerable part and a withheld part)",
+   "family": "unknown_actor"
+  },
+  {
+   "id": "D15-125",
+   "stratum": "unconstrained draw",
+   "family": "unknown_actor"
+  },
+  {
+   "id": "D15-126",
+   "stratum": "unconstrained draw",
+   "family": "unknown_actor"
+  },
+  {
+   "id": "D15-141",
+   "stratum": "negative (existence)",
+   "family": "negative"
+  },
+  {
+   "id": "D15-147",
+   "stratum": "negative (existence)",
+   "family": "negative"
+  },
+  {
+   "id": "D15-150",
+   "stratum": "negative (existence)",
+   "family": "negative"
+  },
+  {
+   "id": "D15-151",
+   "stratum": "negative (existence)",
+   "family": "negative"
+  },
+  {
+   "id": "D15-153",
+   "stratum": "ambiguous (old reply was an unclear-records reply)",
+   "family": "temporal"
+  },
+  {
+   "id": "D15-155",
+   "stratum": "abstained (every part withheld)",
+   "family": "temporal"
+  },
+  {
+   "id": "D15-157",
+   "stratum": "ambiguous (old reply was an unclear-records reply)",
+   "family": "temporal"
+  },
+  {
+   "id": "D15-158",
+   "stratum": "ordering",
+   "family": "temporal"
+  },
+  {
+   "id": "D15-159",
+   "stratum": "historical",
+   "family": "temporal"
+  },
+  {
+   "id": "D15-160",
+   "stratum": "ambiguous (old reply was an unclear-records reply)",
+   "family": "temporal"
+  },
+  {
+   "id": "D15-162",
+   "stratum": "supported (every part answerable)",
+   "family": "temporal"
+  },
+  {
+   "id": "D15-164",
+   "stratum": "ambiguous (old reply was an unclear-records reply)",
+   "family": "temporal"
+  },
+  {
+   "id": "D15-165",
+   "stratum": "ordering",
+   "family": "temporal"
+  },
+  {
+   "id": "D15-167",
+   "stratum": "ordering",
+   "family": "temporal"
+  },
+  {
+   "id": "D15-170",
+   "stratum": "historical",
+   "family": "temporal"
+  }
+ ],
+ "existence_sweep": [
+  {
+   "seed": 101,
+   "subject": "Tamarind",
+   "relation": "oncall_rotation",
+   "condition": "incomplete_scope"
+  },
+  {
+   "seed": 102,
+   "subject": "Vesper",
+   "relation": "runbook",
+   "condition": "incomplete_scope"
+  },
+  {
+   "seed": 101,
+   "subject": "Osprey",
+   "relation": "escalation_channel",
+   "condition": "incomplete_scope"
+  },
+  {
+   "seed": 101,
+   "subject": "Vesper",
+   "relation": "escalation_channel",
+   "condition": "incomplete_scope"
+  },
+  {
+   "seed": 102,
+   "subject": "Sable",
+   "relation": "escalation_channel",
+   "condition": "incomplete_scope"
+  },
+  {
+   "seed": 102,
+   "subject": "Marlin",
+   "relation": "escalation_channel",
+   "condition": "incomplete_scope"
+  },
+  {
+   "seed": 101,
+   "subject": "Vesper",
+   "relation": "runbook",
+   "condition": "explicit_absence"
+  },
+  {
+   "seed": 101,
+   "subject": "Marlin",
+   "relation": "oncall_rotation",
+   "condition": "source_disagreement"
+  },
+  {
+   "seed": 102,
+   "subject": "Quartz",
+   "relation": "runbook",
+   "condition": "unauthorized_only"
+  }
+ ],
+ "strata_counts": {
+  "ambiguous (old reply was an unclear-records reply)": 5,
+  "ordering": 3,
+  "negative (existence)": 4,
+  "historical": 5,
+  "conflicted": 5,
+  "abstained (every part withheld)": 4,
+  "supported (every part answerable)": 4,
+  "partial (an answerable part and a withheld part)": 8,
+  "unconstrained draw": 4
+ }
+}
