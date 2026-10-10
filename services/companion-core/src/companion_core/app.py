@@ -234,7 +234,7 @@ from companion_core.email.workflow import (
 from companion_core.hub_client import HubClient
 from companion_core.knowledge import qualify as knowledge_qualify
 from companion_core.knowledge import runtime as knowledge_runtime
-from companion_core.knowledge import selective_answer
+from companion_core.knowledge import selective_answer, selective_shadow
 from companion_core.knowledge.index import PostgresKnowledgeIndex
 from companion_core.knowledge.retrieval import B1A, Retriever
 from companion_core.knowledge.search import PostgresSearch
@@ -628,6 +628,7 @@ def create_app(
     shadow_router: ShadowPipeline | None = None,
     knowledge_shadow: KnowledgeShadow | None = None,
     selective_answerer: selective_answer.SelectiveAnswerer | None = None,
+    selective_shadow_observer: selective_shadow.SelectiveShadow | None = None,
 ) -> FastAPI:
     hub_base_url = hub_base_url or os.environ.get("REACHY_HUB_URL", "http://reachy-hub:8000")
     coding_agent_base_url = coding_agent_base_url or os.environ.get(
@@ -807,12 +808,31 @@ def create_app(
             )
         elif app.state.selective_answerer is None and selective_answer.selective_enabled():
             logging.getLogger("companion_core.knowledge_selective").warning("selective answering is enabled but there is no database: it stays off")
+        # Phase 44E selective shadow: classifies and assesses internally after the reply is final and never releases anything. Off unless its own flag, retrieval and a log path are set.
+        if app.state.selective_shadow is None and selective_shadow.selective_shadow_enabled() and db is not None and owns_meeting_store:
+            observer_adapters = build_adapters(memory=app.state.memory_store, documents=app.state.rag_store, meetings=app.state.meeting_store,
+                                               planner=app.state.planner_store, tasks=app.state.task_store)
+
+            async def observer_vocabulary() -> frozenset[str]:
+                return await knowledge_qualify.build_vocabulary(observer_adapters)
+
+            app.state.selective_shadow = selective_shadow.from_env(
+                retriever=Retriever(search=PostgresSearch(db.pool), config=B1A, clock=lambda: datetime.now(UTC), adapters=observer_adapters),
+                index_count=PostgresKnowledgeIndex(db.pool).count, vocabulary=observer_vocabulary,
+            )
+        if app.state.selective_shadow is not None:
+            with contextlib.suppress(Exception):  # a shadow that cannot start must not stop the service
+                await app.state.selective_shadow.start()
         if app.state.selective_answerer is not None:
             with contextlib.suppress(Exception):  # a failed vocabulary prime leaves qualification on its record-noun rules; the service still starts
                 await app.state.selective_answerer.start()
         try:
             yield
         finally:
+            if app.state.selective_shadow is not None:
+                with contextlib.suppress(Exception):  # shutdown must complete whatever the shadow does
+                    await app.state.selective_shadow.stop()
+                    logging.getLogger("companion_core.knowledge_selective_shadow").info("selective shadow summary: %s", app.state.selective_shadow.summary())
             if app.state.selective_answerer is not None:
                 with contextlib.suppress(Exception):
                     await app.state.selective_answerer.stop()
@@ -903,6 +923,7 @@ def create_app(
     app.state.conversation_store = conversation_store
     app.state.shadow_router = shadow_router
     app.state.knowledge_shadow = knowledge_shadow  # measure-only; None unless KNOWLEDGE_SHADOW_ENABLED (see knowledge/shadow.py)
+    app.state.selective_shadow = selective_shadow_observer  # measure-only; None unless KNOWLEDGE_SELECTIVE_SHADOW_ENABLED and KNOWLEDGE_RETRIEVAL_ENABLED (see knowledge/selective_shadow.py)
     app.state.selective_answerer = selective_answerer  # None unless BOTH KNOWLEDGE_RETRIEVAL_ENABLED and KNOWLEDGE_SELECTIVE_ANSWERING_ENABLED (see knowledge/selective_answer.py)
     if llm_settings_store is not None:
         app.state.llm_settings_store = llm_settings_store
@@ -1673,6 +1694,13 @@ def create_app(
         if kshadow is not None and not slash_input:
             with contextlib.suppress(Exception):  # measure-only: nothing in it may reach the production turn
                 kshadow.submit(KnowledgeShadowTurn(
+                    session_id=turn.session_id, text=turn.text, modality=str(turn.input_modality.value), privacy=str(privacy.value),
+                    production_handler=production_handler, attached_meeting=bool(turn.context_meeting_id),
+                ))
+        sshadow = app.state.selective_shadow
+        if sshadow is not None and not slash_input:
+            with contextlib.suppress(Exception):  # measure-only: nothing in it may reach the production turn
+                sshadow.submit(selective_shadow.SelectiveShadowTurn(
                     session_id=turn.session_id, text=turn.text, modality=str(turn.input_modality.value), privacy=str(privacy.value),
                     production_handler=production_handler, attached_meeting=bool(turn.context_meeting_id),
                 ))

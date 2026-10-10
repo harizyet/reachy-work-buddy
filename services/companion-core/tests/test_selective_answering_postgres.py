@@ -121,7 +121,7 @@ def test_correct_cited_answers_over_real_postgres_with_restricted_stale_and_conf
 
         # absence of evidence is an answer; a dead dependency is a failure
         none = await answerer.answer("What is the default model for Quill?", modality="text")
-        assert none.handler == sa.HANDLER_ANSWER and none.reply == "The records do not say the default model of Quill."
+        assert none.handler == sa.HANDLER_ANSWER and none.reply == sa.ZERO_EVIDENCE_REPLY
         await pool.close()
         dead = await answerer.answer(OWNER_Q, modality="text")
         assert dead.handler == sa.HANDLER_FAILURE and dead.reply == sa.FAILURE_REPLY

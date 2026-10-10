@@ -197,7 +197,7 @@ def test_unsupported_conflicting_and_partial_answers_use_the_fixed_forms():
     with world.client() as client:
         none = world.ask(client, "What is the default model for Lantern?")
         multi = world.ask(client, "Who owns the Ferry queue and what is the default model for Lantern?")
-    assert none["reply"] == "The records do not say the default model of Lantern." and "[E" not in none["reply"]
+    assert none["reply"] == sa.ZERO_EVIDENCE_REPLY and "[E" not in none["reply"]  # wholly unsupported with nothing admissible: the approved qualification
     assert multi["reply"].startswith("The owner of the Ferry queue is Dana Whitfield [E1].") and "The records do not say the default model of Lantern." in multi["reply"]
     assert world.answer_calls == 0 and world.answerer.stats.counts["failed_error"] == 0
 
@@ -427,3 +427,40 @@ def test_counters_hold_numbers_only_and_rollback_is_removing_the_answerer(caplog
     off = World(FERRY, answerer=False)
     with off.client() as client:
         assert off.ask(client, OWNER_Q)["reply"] == LLM_ANSWER
+
+
+# -- zero-evidence qualification (owner-approved wording; adapter only) ------------------------------------------------------------------------
+
+def test_a_wholly_unsupported_zero_evidence_answer_gets_the_approved_wording_in_text_and_voice():
+    assert sa.ZERO_EVIDENCE_REPLY == "I couldn't establish that from the records I was able to check."
+    world = World([("The owner of the Ferry queue is Dana Whitfield.", P)])
+    with world.client() as client:
+        text = world.ask(client, "What is the default model for Ferry?")
+        voice = world.ask(client, "What is the default model for Ferry?", voice=True, session="v")
+        several = world.ask(client, "What is the default model for Ferry and what is the retry limit of Ferry?", session="m")
+    for reply in (text, voice, several):
+        assert reply["reply"] == sa.ZERO_EVIDENCE_REPLY and reply["privacy"] == "public"
+    assert world.answer_calls == 0 and world.answerer.stats.counts["qualified_zero_evidence"] == 3
+
+
+def test_the_qualification_never_overwrites_absence_conflicts_or_supported_parts():
+    world = World([("Marlin has no staging environment.", W), ("The owner of the Ferry queue is Dana Whitfield.", W), ("The owner of the Ferry queue is Marcus Ode.", W)])
+    with world.client() as client:
+        absence = world.ask(client, "Does Marlin have a staging environment?", session="a")["reply"]
+        mixed = world.ask(client, "Does Marlin have a staging environment and who owns Marlin?", session="b")["reply"]
+        conflict = world.ask(client, OWNER_Q, session="c")["reply"]
+        partial = world.ask(client, "Who owns the Quill message queue and what is the default model for Quill?", session="d")["reply"]
+    assert absence.startswith("The records say there is no staging environment for Marlin [E1].")  # explicit authoritative absence
+    assert mixed.startswith("The records say there is no staging environment for Marlin [E1].") and "The records do not say the owner of Marlin." in mixed  # a supported part keeps B-1's own text
+    assert conflict.startswith("The records disagree on the owner of the Ferry queue:")
+    assert "Tomas Weber [E1]" in partial and sa.ZERO_EVIDENCE_REPLY not in partial
+
+
+def test_the_qualified_reply_is_identical_with_and_without_a_restricted_record():
+    for voice in (False, True):
+        with_it, without = World([("The default model of Ferry is Falcon-7B.", S)]), World([])
+        replies = []
+        for world in (with_it, without):
+            with world.client() as client:
+                replies.append(world.ask(client, "Who owns the Quill message queue and what is the default model for Quill?", voice=voice))
+        assert replies[0] == replies[1] and "Falcon" not in replies[0]["reply"]

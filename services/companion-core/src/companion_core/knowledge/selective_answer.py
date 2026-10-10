@@ -36,11 +36,16 @@ from companion_core.knowledge.answerability_b1 import (
     AuthDecision,
     DiscoveryItem,
 )
+from companion_core.knowledge.answerability_b1.contract import (
+    _PLAIN_UNKNOWN,
+    _PLAIN_UNSUPPORTED,
+)
 from companion_core.knowledge.answerability_b1.questions import (
     decompose_question,
     plan_question,
 )
 from companion_core.knowledge.answerability_b1.registry import Registry
+from companion_core.knowledge.answerability_b1.types import State
 from companion_core.knowledge.qualify import qualify
 from companion_core.knowledge.retrieval import Retriever
 from companion_core.knowledge.routing import choose_path
@@ -67,6 +72,10 @@ HANDLER_FAILURE = "knowledge.selective_failure"
 # One fixed reply for every failure kind, so a reply never says which stage failed or whether anything restricted exists. It claims no action and no absence.
 FAILURE_REPLY = "I couldn't check your records just now, so I haven't answered that. Please try again shortly."
 
+# Owner-approved wording (2026-10-10) for a reply that is wholly "not established" with zero admissible evidence. It never replaces an explicit authoritative absence, a scoped-search negative,
+# a conflict, a historical or supported value, a supported part of a partial answer, or a caveat about an unreadable record: those keep B-1's own text.
+ZERO_EVIDENCE_REPLY = "I couldn't establish that from the records I was able to check."
+
 _CITE = re.compile(r"\[(E\d+)\]")
 _CITE_RUN = re.compile(r"(?: ?\[E\d+\])+")
 _AUTHOR = {"memory": "owner", "note": "owner", "task": "owner", "reminder": "owner", "meeting": "attendee", "document": "third_party"}
@@ -84,6 +93,27 @@ def retrieval_enabled() -> bool:
 
 def selective_enabled() -> bool:
     return _flag(SELECTIVE_FLAG)
+
+
+@dataclass(frozen=True)
+class Classification:
+    """Routing class of one request, decided before any I/O and from the text alone. `klass` is one of: ineligible, typed (every clause typed), ambiguous (some clauses typed, some not), untyped (a
+    personal-knowledge question that qualify() accepts but B-1 cannot type). `reason` and `anchors` are fixed category names, never text."""
+
+    klass: str
+    reason: str | None = None
+    anchors: tuple[str, ...] = ()
+    clauses: int = 0
+    typed: int = 0
+
+
+@dataclass(frozen=True)
+class Assessment:
+    """What the deterministic path would do for a request, as categories only (used by the shadow; carries no text, title, id or reply)."""
+
+    outcome: str  # answered_<state> | answered_mixed | failed_<kind>
+    citations: int = 0
+    max_sensitivity: str = "none"
 
 
 @dataclass(frozen=True)
@@ -162,6 +192,10 @@ class SelectiveAnswerer:
         with contextlib.suppress(Exception):
             self._terms = await asyncio.wait_for(self.vocabulary(), VOCABULARY_TIMEOUT_SECONDS)
 
+    def refresh_if_due(self) -> None:
+        """Starts a background vocabulary refresh when the last one is older than its time-to-live; never waits."""
+        self._maybe_refresh()
+
     def _maybe_refresh(self) -> None:
         if self.vocabulary is None or time.monotonic() - self._terms_at < VOCABULARY_TTL_SECONDS:
             return
@@ -171,24 +205,32 @@ class SelectiveAnswerer:
                 self._refresh = asyncio.get_running_loop().create_task(self._refresh_vocabulary())
 
     # -- eligibility (cheap, deterministic, before any I/O) ---------------------------------------------------------------------------
-    def eligible(self, text: str, *, attached_meeting: bool) -> str | None:
-        """None when the request is an eligible knowledge request; otherwise the reason it is not (a category, never text)."""
+    def classify(self, text: str, *, attached_meeting: bool) -> Classification:
+        """Deterministic routing class. Every request that is not a personal-knowledge question B-1 understands in at least one clause is either ineligible or untyped."""
         if attached_meeting:
-            return "attached_meeting"
+            return Classification("ineligible", "attached_meeting")
         if not text.strip() or text.lstrip().startswith("/"):
-            return "not_knowledge"
+            return Classification("ineligible", "not_knowledge")
         if choose_path(text, attached_meeting=False) != "retrieval":
-            return "status_question"
-        if not qualify(text, known_terms=self._terms).qualifies:
-            return "not_knowledge"
-        typed = decompose_question(text, self._registry).typed
+            return Classification("ineligible", "status_question")
+        qualified = qualify(text, known_terms=self._terms)
+        if not qualified.qualifies:
+            return Classification("ineligible", "not_knowledge")
+        anchors = tuple(r for r in qualified.reasons if r != "question")
+        decomposition = decompose_question(text, self._registry)
+        typed = decomposition.typed
         if not typed:
-            return "not_understood"
+            return Classification("untyped", "not_understood", anchors, len(decomposition.clauses))
         for component in typed:
             definition = self._registry.relation(component.relation) if component.relation else None
             if definition is not None and definition.structured == "attendees":
-                return "needs_structured_data"
-        return None
+                return Classification("untyped", "needs_structured_data", anchors, len(decomposition.clauses), len(typed))
+        return Classification("ambiguous" if decomposition.fallback else "typed", None, anchors, len(decomposition.clauses), len(typed))
+
+    def eligible(self, text: str, *, attached_meeting: bool) -> str | None:
+        """None when the request is an eligible knowledge request; otherwise the reason it is not (a category, never text). The live path's behaviour is the one it had before `classify` existed."""
+        c = self.classify(text, attached_meeting=attached_meeting)
+        return None if c.klass in ("typed", "ambiguous") else c.reason
 
     # -- the answer ---------------------------------------------------------------------------------------------------------------------
     async def answer(self, text: str, *, modality: str, attached_meeting: bool = False) -> SelectiveOutcome | None:
@@ -221,6 +263,26 @@ class SelectiveAnswerer:
         return outcome
 
     async def _answer(self, text: str, modality: str) -> SelectiveOutcome:
+        outcome, _n, state, qualified = await self._pipeline(text, modality)
+        if qualified:
+            self.stats.count("qualified_zero_evidence")
+        self.stats.count(f"state_{state}")
+        return outcome
+
+    async def assess(self, text: str, modality: str, *, timeout: float | None = None) -> Assessment:
+        """The categories of what the deterministic path would do, with the same access, retrieval, revalidation and verification as the live path and no effect on its counters. Never raises."""
+        try:
+            outcome, n, state, _q = await asyncio.wait_for(self._pipeline(text, modality), timeout or self.timeout_seconds)
+        except TimeoutError:
+            return Assessment("failed_timeout")
+        except _Failure as failure:
+            return Assessment(f"failed_{failure.kind}")
+        except Exception:  # noqa: BLE001 - an assessment never raises into its caller
+            return Assessment("failed_error")
+        return Assessment(f"answered_{state}", n, outcome.privacy.value if outcome.cited else "none")
+
+    async def _pipeline(self, text: str, modality: str):
+        """-> (outcome, citation count, dominant state name, zero-evidence-qualified). Raises _Failure for every dependency, authorisation, pipeline or verification failure."""
         access = access_for(modality)
         now = self.clock()
         try:
@@ -245,6 +307,12 @@ class SelectiveAnswerer:
         if not reply.strip():
             raise _Failure("pipeline")
         cited = self._verify(reply, plan, by_eid, access)
+        states = sorted({c.state.value.lower() for c in plan.claims})
+        state = states[0] if len(states) == 1 else "mixed"
+        qualified = not cited and bool(plan.claims) and all(
+            (c.state is State.UNSUPPORTED and c.reasons == _PLAIN_UNSUPPORTED) or (c.state is State.NEGATIVE_UNSUPPORTED and c.reasons == _PLAIN_UNKNOWN) for c in plan.claims)
+        if qualified:
+            reply, state = ZERO_EVIDENCE_REPLY, "unsupported"  # wholly unsupported with nothing admissible: the approved qualification; nothing else is overwritten
         reply, by_eid, cited = _renumber(reply, by_eid, cited)
         privacy = Privacy.PUBLIC
         if cited:
@@ -253,8 +321,7 @@ class SelectiveAnswerer:
             reply = _CITE_RUN.sub("", reply)  # ids are not read aloud
         else:
             reply = reply + _sources_line(cited, by_eid)
-        self.stats.count(f"state_{max(plan.counts(), key=plan.counts().get).lower()}" if plan.counts() else "state_none")
-        return SelectiveOutcome(reply, privacy, HANDLER_ANSWER, tuple(by_eid[e].ref.key for e in cited))
+        return SelectiveOutcome(reply, privacy, HANDLER_ANSWER, tuple(by_eid[e].ref.key for e in cited)), len(cited), state, qualified
 
     def _discovery(self, items: list[KnowledgeItem], access: AccessContext, now: datetime):
         """KnowledgeItem -> DiscoveryItem, authorised only because revalidation just passed it. Anything this adapter cannot state with the provenance B-1 needs is left out (counted)."""
@@ -325,5 +392,20 @@ def from_env(*, retriever: Retriever, index_count: Callable[[], Awaitable[int]],
     return SelectiveAnswerer(retriever=retriever, index_count=index_count, vocabulary=vocabulary, timeout_seconds=timeout)
 
 
-__all__ = ["FAILURE_REPLY", "HANDLER_ANSWER", "HANDLER_FAILURE", "RETRIEVAL_FLAG", "SELECTIVE_FLAG", "SelectiveAnswerer", "SelectiveOutcome", "SelectiveStats", "access_for", "from_env",
-           "retrieval_enabled", "selective_enabled"]
+__all__ = [
+    "FAILURE_REPLY",
+    "HANDLER_ANSWER",
+    "HANDLER_FAILURE",
+    "RETRIEVAL_FLAG",
+    "SELECTIVE_FLAG",
+    "ZERO_EVIDENCE_REPLY",
+    "Assessment",
+    "Classification",
+    "SelectiveAnswerer",
+    "SelectiveOutcome",
+    "SelectiveStats",
+    "access_for",
+    "from_env",
+    "retrieval_enabled",
+    "selective_enabled",
+]
