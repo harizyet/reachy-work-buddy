@@ -53,7 +53,7 @@ async def main(path: str, with_text: bool) -> None:
         record = {"id": case["id"], "category": case["category"], "modality": modality, "truth": case["truth"], "klass": klass.klass, "reason": klass.reason,
                   "anchors": list(klass.anchors), "clauses": klass.clauses, "typed_clauses": klass.typed}
         if klass.klass in ("typed", "ambiguous"):
-            outcome, n, state, qualified = await answerer._pipeline(text, modality)  # noqa: SLF001 - the same call the shadow's assessment and the live path make
+            outcome, n, state, qualified = await answerer._pipeline(text, modality)  # the same call the shadow's assessment and the live path make
             cited = set(outcome.cited)
             allowed = set(case.get("must_cite", []))
             record.update({"state": state, "zero_evidence_qualified": qualified, "citations": n, "privacy": outcome.privacy.value,
