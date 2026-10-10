@@ -55,6 +55,18 @@ Observations (these are the starting evidence, not a conclusion):
 
 Production reply unchanged (a typed knowledge-like probe and an arithmetic probe at 14:57:02 UTC answered by the generic model exactly as before: "Two plus two is four." and "I don't have access to your notes ..."). **These two probes are the only non-owner turns in the telemetry**: one non-knowledge turn and one knowledge-like (classified by the shadow, not answered by it); subtract them from the final counts. **First telemetry observed (15:02 UTC, by a graceful stop of core, a logged boundary):** two turns, both admitted and processed ok: one `ineligible / not_knowledge` (the arithmetic probe), one `untyped / not_understood` with anchors first-person, record noun and known term (the notes probe), both modality text, both `production_path = model`, `record_dependent_untyped_by_path.model = 1`, assessment latency in the `<=5 ms` bucket. Only category counts: no text, id or title. This confirms the shadow classifies live turns, writes only vocabulary counters, and left the replies alone. **Operational note:** the telemetry is flushed by the next counted turn after five minutes, or at shutdown, not by a timer, so counts from a quiet period live in process memory until then. Stop core gracefully (`docker stop -t 30`) and copy the file before reading it at the end of the window; a crash loses whatever has not flushed.
 
+## 4a. Owner direction after the start-of-window result (2026-10-10)
+
+Keep 48F running as is; no change to router rules, retrieval, evidence rules, the selective answerer, shadow telemetry or candidate capture rules. Interpretation at this point: safety and groundedness promising (0 false-supported claims and 0 restricted exposure observed), routing coverage very low, likely usefulness questionable. **The live hypothesis: does normal owner usage show the same low routing coverage as the frozen offline probe?** Collect normal Web/Android usage until 100 to 200 genuine knowledge-like turns or 7 to 14 days, unless a privacy or security issue appears first; do not manufacture queries to improve coverage. **48G stays blocked.** The frozen 42-question probe file is preserved unchanged (sha256 above) and is rerun exactly as is at the end for comparability.
+
+The final report is evaluated in three separate layers:
+
+1. **Routing coverage:** eligible / typed / ambiguous / untyped / ineligible, and the share of genuine personal-knowledge questions the selective path could actually claim.
+2. **Retrieval and groundedness:** false-supported claims, unsupported and absence behaviour, restricted-record leakage, citation and source correctness.
+3. **Practical value:** how many real questions selective answering would improve over the generic path, how many would fall through unchanged, and whether protection against unsupported personal claims justifies the coverage limitation.
+
+"No false-supported claims" alone is not sufficient for promotion if coverage remains extremely low. End states: **PROMOTE** (useful coverage and clean groundedness), **NARROW** (strong safety, only some question classes route reliably), **DO NOT PROMOTE** (live coverage too low to give meaningful value).
+
 ## 5. End-of-window procedure
 
 1. Close when the owner calls it: 100 to 200 genuine knowledge-like turns (the shadow's `admitted` count) or 7 to 14 days, whichever gives enough representative evidence first.
