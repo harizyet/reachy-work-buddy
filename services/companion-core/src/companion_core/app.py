@@ -232,7 +232,10 @@ from companion_core.email.workflow import (
     run_dispatch_loop,
 )
 from companion_core.hub_client import HubClient
+from companion_core.knowledge import qualify as knowledge_qualify
 from companion_core.knowledge import runtime as knowledge_runtime
+from companion_core.knowledge import selective_answer
+from companion_core.knowledge.index import PostgresKnowledgeIndex
 from companion_core.knowledge.retrieval import B1A, Retriever
 from companion_core.knowledge.search import PostgresSearch
 from companion_core.knowledge.shadow import KnowledgeShadow
@@ -281,6 +284,7 @@ from companion_core.privacy_classifier import (
 from companion_core.rag.postgres_store import PostgresDocumentStore
 from companion_core.rag.store import DocumentStore
 from companion_core.reminder_time import split_reminder_when
+from companion_core.semantic import access as access_rules
 from companion_core.shadow_router import ShadowPipeline, shadow_from_env
 from companion_core.shadow_router.shadow import ShadowTurn
 from companion_core.task_intent import (
@@ -623,6 +627,7 @@ def create_app(
     coding_agent_notification_store: CodingAgentNotificationStore | None = None,
     shadow_router: ShadowPipeline | None = None,
     knowledge_shadow: KnowledgeShadow | None = None,
+    selective_answerer: selective_answer.SelectiveAnswerer | None = None,
 ) -> FastAPI:
     hub_base_url = hub_base_url or os.environ.get("REACHY_HUB_URL", "http://reachy-hub:8000")
     coding_agent_base_url = coding_agent_base_url or os.environ.get(
@@ -788,9 +793,30 @@ def create_app(
         if app.state.knowledge_shadow is not None:
             with contextlib.suppress(Exception):  # a shadow that cannot start must not stop the service
                 await app.state.knowledge_shadow.start()
+        # Phase 44E integration: deterministic cited answering over the existing authorised retrieval. Both flags default off; with either off nothing is built.
+        if app.state.selective_answerer is None and selective_answer.selective_enabled() and db is not None and owns_meeting_store:
+            selective_adapters = build_adapters(memory=app.state.memory_store, documents=app.state.rag_store, meetings=app.state.meeting_store,
+                                                planner=app.state.planner_store, tasks=app.state.task_store)
+
+            async def selective_vocabulary() -> frozenset[str]:
+                return await knowledge_qualify.build_vocabulary(selective_adapters)
+
+            app.state.selective_answerer = selective_answer.from_env(
+                retriever=Retriever(search=PostgresSearch(db.pool), config=B1A, clock=lambda: datetime.now(UTC), adapters=selective_adapters),
+                index_count=PostgresKnowledgeIndex(db.pool).count, vocabulary=selective_vocabulary,
+            )
+        elif app.state.selective_answerer is None and selective_answer.selective_enabled():
+            logging.getLogger("companion_core.knowledge_selective").warning("selective answering is enabled but there is no database: it stays off")
+        if app.state.selective_answerer is not None:
+            with contextlib.suppress(Exception):  # a failed vocabulary prime leaves qualification on its record-noun rules; the service still starts
+                await app.state.selective_answerer.start()
         try:
             yield
         finally:
+            if app.state.selective_answerer is not None:
+                with contextlib.suppress(Exception):
+                    await app.state.selective_answerer.stop()
+                    logging.getLogger("companion_core.knowledge_selective").info("selective answering summary: %s", app.state.selective_answerer.stats.summary())
             if app.state.knowledge_shadow is not None:
                 with contextlib.suppress(Exception):  # shutdown must complete whatever the shadow does
                     await app.state.knowledge_shadow.stop()
@@ -877,6 +903,7 @@ def create_app(
     app.state.conversation_store = conversation_store
     app.state.shadow_router = shadow_router
     app.state.knowledge_shadow = knowledge_shadow  # measure-only; None unless KNOWLEDGE_SHADOW_ENABLED (see knowledge/shadow.py)
+    app.state.selective_answerer = selective_answerer  # None unless BOTH KNOWLEDGE_RETRIEVAL_ENABLED and KNOWLEDGE_SELECTIVE_ANSWERING_ENABLED (see knowledge/selective_answer.py)
     if llm_settings_store is not None:
         app.state.llm_settings_store = llm_settings_store
     if llm_usage_store is not None:
@@ -980,6 +1007,7 @@ def create_app(
         web_search = None
         context_title: str | None = None
         meeting_missing = False
+        selective_privacy: Privacy | None = None
         generation = conversation_store.generation
         history = conversation_store.append(turn.session_id, turn.channel, turn.text)
 
@@ -1514,6 +1542,12 @@ def create_app(
                     # having done it would be false; the reply is fixed and the model is not called.
                     reply = unclaimed
                     production_handler = "action_boundary.unclaimed"
+                elif (selective := await selective_turn(turn)) is not None:
+                    # Phase 44E: an eligible knowledge question is answered by the deterministic cited pipeline, or by one fixed failure reply; the model is
+                    # not called for it. Reached only after every handler and the 44H boundary above, and only with both knowledge flags on.
+                    reply = selective.reply
+                    production_handler = selective.handler
+                    selective_privacy = selective.privacy
                 else:
                     try:
                         persona = await app.state.persona_store.get()
@@ -1609,6 +1643,8 @@ def create_app(
             privacy = classify_question_privacy(turn.text)
             if context_title:
                 privacy = Privacy.WORK_PRIVATE  # the answer draws on meeting speech: never spoken on a shared speaker
+            if selective_privacy is not None:
+                privacy = access_rules.effective_sensitivity(privacy, selective_privacy)  # a reply that cites a work-private record is never spoken on a shared speaker
             carried = privacy
             if config.local is not None or config.cloud is not None or turn.force_frontier:
                 # The model's own wording is not classified (owner, 2026-09-26):
@@ -1643,6 +1679,12 @@ def create_app(
         return ConversationTurnResponse(
             reply=reply, turn_count=len(history), privacy=privacy, web_search=web_search, context_meeting=context_title,
         )
+
+    async def selective_turn(turn: ConversationTurnRequest):
+        answerer = app.state.selective_answerer
+        if answerer is None:
+            return None
+        return await answerer.answer(turn.text, modality=str(turn.input_modality.value), attached_meeting=bool(turn.context_meeting_id))
 
     @app.post("/calendar/events")
     async def add_calendar_event(event: CalendarEvent) -> CalendarEvent:

@@ -1,6 +1,6 @@
 # Phase 44: engineering completion plan (44E integration of the frozen B-1 path, 44F minimum build, acceptance checks) — PROPOSAL, 2026-10-10
 
-**Status: APPROVED by the owner with amendments (2026-10-10, "Engineering integration approval"; see section 7). E1–E5 are approved for local/offline development and verification only; 44F implementation, migration 028 and UI need a separate decision after 44E verification. Original status: plan only, for owner review. Nothing is implemented, migrated, deployed or activated. Indexing, retrieval and shadow stay off; `KNOWLEDGE_SELECTIVE_ANSWERING_ENABLED` does not exist yet.** Priority has moved from research validation to engineering integration (owner directive, 2026-10-10).
+**Status: APPROVED by the owner with amendments; E1–E5 IMPLEMENTED and verified locally 2026-10-10 ([record](verification/phase-44e-selective-integration-2026-10-10.md); uncommitted, nothing deployed). (2026-10-10, "Engineering integration approval"; see section 7). E1–E5 are approved for local/offline development and verification only; 44F implementation, migration 028 and UI need a separate decision after 44E verification. Original status: plan only, for owner review. Nothing is implemented, migrated, deployed or activated. Indexing, retrieval and shadow stay off; `KNOWLEDGE_SELECTIVE_ANSWERING_ENABLED` does not exist yet.** Priority has moved from research validation to engineering integration (owner directive, 2026-10-10).
 
 ## 0. Research track: paused
 
