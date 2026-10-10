@@ -751,7 +751,7 @@ explicitly disposable project. Leave unrelated services such as OVMS alone.
 ## Schema upgrades and credential keys
 
 Core and hub require the revision declared in
-[`shared/database.py`](../shared/database.py) (`026_source_sensitivity`; the homelab was upgraded to it on 2026-10-08).
+[`shared/database.py`](../shared/database.py) (now `028_memory_candidates`; the homelab was upgraded to it on 2026-10-10, [Phase 44 deployment](verification/phase-44-deployment-2026-10-10.md); older revisions are listed in the phase records).
 The ordered Alembic history ships
 in core's image; SQL stores perform compatibility checks, not startup DDL.
 Compose runs `migrate` before hub/core, including through
