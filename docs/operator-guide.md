@@ -106,6 +106,8 @@ folder). Selecting a folder shows its notes and those of the folders below it; a
 note starts in the folder you are viewing. A note with no folder sits directly in All
 Notes. Renaming or moving a whole folder is not built: change the folder of each note.
 
+*Processing (when the hub has it on, [Phase 49](phase-49.md)).* Below a note's text, **Send to Reachy** (web: the checkbox) saves the note and asks Reachy for suggested tasks and reminders; the app shows the same panel as the web, from version 0.16.0: the state (Queued, Processing, Review required, Completed, Failed, with Retry and Process again), each suggestion with the quoted evidence from your note or a meeting transcript, **Accept**, **Edit and accept** (text, task or reminder, and a date and time for a reminder) and **Dismiss**, and **Link to a meeting…** with the option to use a linked meeting's transcript. Nothing becomes a task or reminder until you accept it. With the feature off (the current production setting) the panel is not shown. The app has no per-row "Processed" badge in the list (the web has one); the state shows when the note is open.
+
 ### Asking about your tasks, reminders and notes in chat
 
 Ask in your own words. What happens depends on what you ask:

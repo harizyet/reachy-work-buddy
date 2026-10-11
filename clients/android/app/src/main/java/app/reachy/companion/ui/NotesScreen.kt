@@ -75,7 +75,7 @@ import app.reachy.companion.data.noteDate
 import app.reachy.companion.data.notePreview
 import app.reachy.companion.data.splitNote
 
-private val Accent = androidx.compose.ui.graphics.Color(0xFFE0A800)
+internal val Accent = androidx.compose.ui.graphics.Color(0xFFE0A800)
 
 /** Notes in the Apple Notes style: a search box, month-grouped rounded lists, and an editor whose first line is the title. */
 @Composable
@@ -87,7 +87,7 @@ fun NotesScreen(model: AppViewModel, modifier: Modifier = Modifier) {
     var chosenFolder by remember { mutableStateOf<String?>(null) }
     val folder = chosenFolder?.takeIf { wanted -> noteFolders(model.notes).any { it.path.equals(wanted, ignoreCase = true) } }
     var newTag by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(Unit) { model.loadNotes() }
+    LaunchedEffect(Unit) { model.loadNotes(); model.loadProcessingConfig() }
     val open = model.notes.firstOrNull { it.id == openId }
     val editing = composing || open != null
     // Picking a note or starting a new one gives the editor a fresh start; a note being created keeps the same editor
@@ -230,6 +230,7 @@ private fun NoteEditor(model: AppViewModel, note: Note?, newTag: String?, onClos
     val startTag = if (note != null) note.tag else newTag
     var tag by remember { mutableStateOf(startTag) }
     var pickingFolder by remember { mutableStateOf(false) }
+    var savedId by remember { mutableStateOf(note?.id) } // the id once the note exists, so the processing section can appear for a note just created here
     var menu by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
@@ -246,7 +247,7 @@ private fun NoteEditor(model: AppViewModel, note: Note?, newTag: String?, onClos
         saved.text = current
         saved.tag = tag
         saved.inFlight = true
-        model.saveNote(saved.id, parts.first, parts.second, tag) { id -> val first = saved.id == null; saved.id = id; saved.inFlight = false; if (first) onCreated(id) }
+        model.saveNote(saved.id, parts.first, parts.second, tag) { id -> val first = saved.id == null; saved.id = id; savedId = id; saved.inFlight = false; if (first) onCreated(id) }
     }
     // The note being edited: the one opened, or the one this editor created and has since saved.
     fun target(): Note? = note ?: model.notes.firstOrNull { it.id == saved.id }
@@ -279,11 +280,20 @@ private fun NoteEditor(model: AppViewModel, note: Note?, newTag: String?, onClos
             Text("$NOTE_ROOT" + if (tag == null) "" else " \u203a " + folderTrail(tag), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         BasicTextField(
-            text, { text = it }, Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 8.dp).focusRequester(focus),
+            text, { text = it }, Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp).focusRequester(focus),
             textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 17.sp, lineHeight = 24.sp),
             cursorBrush = SolidColor(Accent), visualTransformation = FirstLineTitle,
             decorationBox = { inner -> Box { if (text.isEmpty()) Text("Title", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.outline); inner() } },
         )
+        if (model.processingEnabled) ProcessingSection(model, savedId) { force, withMeetings ->
+            val parts = splitNote(current) ?: return@ProcessingSection
+            if (saved.inFlight && saved.id == null) return@ProcessingSection // the first save is still on its way
+            val dirty = current != saved.text || tag != saved.tag
+            saved.text = current; saved.tag = tag
+            model.processNote(saved.id, parts.first, parts.second, tag, dirty, force, withMeetings) { id ->
+                val first = saved.id == null; saved.id = id; savedId = id; if (first) onCreated(id)
+            }
+        }
     }
     if (pickingFolder) FolderDialog(tag, noteFolders(model.notes), onDone = { tag = it; pickingFolder = false }, onDismiss = { pickingFolder = false })
     val doomed = if (confirmDelete) target() else null

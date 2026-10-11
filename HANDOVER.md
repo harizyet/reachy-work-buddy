@@ -4,6 +4,10 @@ Current session snapshot: 2026-10-10 (Phase 44 selective answering: see "Phase 4
 The [documentation index](docs/README.md) defines ownership;
 [project state](docs/project-state.md) owns deployment limits and open acceptance.
 
+## Android 0.16.0 (2026-10-11; local, built, NOT installed, NOT committed at the time of writing)
+
+Debug APK `clients/android/app/build/outputs/apk/debug/app-debug.apk` (gitignored; deliver by hand). Adds note folders (picker above the list, Folder… in the note menu, folder on each row) and the Phase 49 processing panel under a note (`ui/ProcessingSection.kt`, `data/NotepadProcessing.kt`, `ReachyApi` and `AppViewModel` calls): shown only when `GET /notepad-processing/config` says enabled, which **production does not yet** (`NOTEPAD_PROCESSING_ENABLED=false` in the Phase 49 deploy; since 2026-10-11 the core env shows it true, check before relying on this). 63 JVM tests pass (mock hub for every route and body, parsing, hash). **Not exercised:** the UI on an emulator or phone (no AVD on this machine), the processing panel against a real hub. The web folder bug found by the owner (stacked folder fields, duplicate sibling keys) is fixed in `aa3887e` but **not yet deployed** to the hub image.
+
 ## Note folders / tags (2026-10-11; committed `db40560`, DEPLOYED 2026-10-11 13:53 UTC, migration 030 applied)
 
 [Deployment record](docs/verification/note-tags-deployment-2026-10-11.md): schema `030_note_tags`, core `60c024410173`, hub `a3da63b4f497`, coding-agent `197350dbcb4d`; rollback assets: dump `~/reachy-backups/reachy-before-notetags-20261011-214716.dump`, images `reachy-rollback/*:pre-030`, `rollback-030.sql` (keep until the owner accepts). New Phase 48 segment from 13:53:26 UTC. **Open:** owner browser smoke test; the Android APK with folders is NOT built or installed; no tagged write was exercised on production. The paragraph below was written before the deploy.

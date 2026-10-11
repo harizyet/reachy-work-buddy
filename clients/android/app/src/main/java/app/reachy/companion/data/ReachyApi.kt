@@ -8,6 +8,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
@@ -155,6 +156,45 @@ class ReachyApi(baseUrl: String, private val cookieJar: PersistentCookieJar, cli
     }
 
     suspend fun deleteNote(id: String) { call(req("/planner/notes/$id").delete().build()) }
+
+    // Notepad processing (Phase 49). A 404 on the config route (an older hub, or the feature off) means off, never an error.
+    suspend fun processingEnabled(): Boolean = try {
+        json.parseToJsonElement(call(req("/notepad-processing/config").build())).jsonObject["enabled"]?.jsonPrimitive?.booleanOrNull == true
+    } catch (e: ApiException) {
+        if (e.code == 404) false else throw e
+    }
+
+    suspend fun processing(noteId: String): Processing = json.decodeFromString(call(req("/notes/$noteId/processing").build()))
+
+    suspend fun sendForProcessing(noteId: String, expectedHash: String?, force: Boolean, includeMeetings: Boolean): Processing =
+        json.decodeFromString(call(req("/notes/$noteId/processing").post(jsonBody(buildJsonObject {
+            if (expectedHash != null) put("expected_hash", expectedHash)
+            put("force", force); put("include_meetings", includeMeetings)
+        })).build()))
+
+    suspend fun retryProcessing(jobId: String): Processing =
+        json.decodeFromString(call(req("/notepad-processing/jobs/$jobId/retry").post("{}".toRequestBody("application/json".toMediaType())).build()))
+
+    /** Only the fields the owner changed are sent; the server falls back to its own proposal for the rest. */
+    suspend fun acceptProposal(id: String, text: String? = null, kind: String? = null, dueAt: String? = null) {
+        call(req("/notepad-proposals/$id/accept").post(jsonBody(buildJsonObject {
+            if (text != null) put("text", text)
+            if (kind != null) put("kind", kind)
+            if (dueAt != null) put("due_at", dueAt)
+        })).build())
+    }
+
+    suspend fun dismissProposal(id: String) {
+        call(req("/notepad-proposals/$id/dismiss").post("{}".toRequestBody("application/json".toMediaType())).build())
+    }
+
+    suspend fun meetingLinks(noteId: String): List<MeetingLink> =
+        json.decodeFromString<MeetingLinks>(call(req("/notes/$noteId/meeting-links").build())).links
+
+    suspend fun setMeetingLink(noteId: String, meetingId: String, confirmed: Boolean): List<MeetingLink> =
+        json.decodeFromString<MeetingLinks>(call(req("/notes/$noteId/meeting-links/$meetingId").put(jsonBody(buildJsonObject {
+            put("state", if (confirmed) "confirmed" else "rejected")
+        })).build())).links
 
     suspend fun meetings(): List<Meeting> =
         json.decodeFromString(ListSerializer(Meeting.serializer()), call(req("/meetings").build()))

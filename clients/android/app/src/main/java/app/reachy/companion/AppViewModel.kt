@@ -3,6 +3,7 @@ package app.reachy.companion
 import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -10,10 +11,13 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.reachy.companion.data.ApiException
 import app.reachy.companion.data.Meeting
+import app.reachy.companion.data.MeetingLink
 import app.reachy.companion.data.Note
 import app.reachy.companion.data.PersistentCookieJar
+import app.reachy.companion.data.Processing
 import app.reachy.companion.data.Prefs
 import app.reachy.companion.data.ReachyApi
+import app.reachy.companion.data.noteHash
 import app.reachy.companion.data.Task
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -110,7 +114,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun signOut() {
-        viewModelScope.launch { api.logout(); chat.clear(); chatHistory.clear(); tasks.clear(); notes.clear(); meetings.clear(); chatId = null; if (recording) stopRecording(); DeepReviewController.job = null; session = Session.SignedOut }
+        viewModelScope.launch { api.logout(); chat.clear(); chatHistory.clear(); tasks.clear(); notes.clear(); meetings.clear(); processing.clear(); meetingLinks.clear(); processingPoll?.cancel(); chatId = null; if (recording) stopRecording(); DeepReviewController.job = null; session = Session.SignedOut }
     }
 
     private fun failed(e: Exception): String {
@@ -218,6 +222,87 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         onSaved(saved.id)
     }
     fun deleteNote(note: Note) = load { api.deleteNote(note.id); notes.replace(api.notes()) }
+
+    // ---- Notepad processing (Phase 49). Off unless the hub says it is on; the server decides every state and every proposal.
+    var processingEnabled by mutableStateOf(false); private set
+    val processing = mutableStateMapOf<String, Processing>()
+    val meetingLinks = mutableStateMapOf<String, List<MeetingLink>>()
+    /** True from the moment a note is sent until the server has finished with it. */
+    var processingBusy by mutableStateOf(false); private set
+    var processingMessage by mutableStateOf<String?>(null); private set
+    private var processingPoll: Job? = null
+
+    fun loadProcessingConfig() {
+        viewModelScope.launch { processingEnabled = try { api.processingEnabled() } catch (e: Exception) { false } }
+    }
+
+    /** Opening a note: its processing state and meeting links, and keep asking while the server is working on it. */
+    fun openProcessing(noteId: String) {
+        if (processingBusy) return // a send that just created this note is already following it; restarting would cut it short
+        processingPoll?.cancel(); processingMessage = null
+        processingPoll = viewModelScope.launch {
+            try { meetingLinks[noteId] = api.meetingLinks(noteId) } catch (e: Exception) { processingMessage = failed(e) }
+            followProcessing(noteId, null)
+        }
+    }
+
+    fun closeProcessing() { processingPoll?.cancel(); processingMessage = null }
+
+    private suspend fun followProcessing(noteId: String, first: Processing?) {
+        var next = first
+        var polls = 0
+        while (true) {
+            val state = try { next ?: api.processing(noteId) } catch (e: Exception) { processingMessage = failed(e); return }
+            processing[noteId] = state
+            if (!state.inProgress || ++polls > 400) return
+            delay(1500); next = null
+        }
+    }
+
+    /** Saves the note first when it has unsaved changes (processing reads what is stored, never the model's view of the editor), then sends it. */
+    fun processNote(id: String?, title: String, body: String, tag: String?, save: Boolean, force: Boolean, includeMeetings: Boolean, onSaved: (String) -> Unit) {
+        if (processingBusy) return
+        processingBusy = true; processingMessage = null
+        processingPoll?.cancel()
+        processingPoll = viewModelScope.launch {
+            try {
+                var noteId = id
+                if (save || noteId == null) { noteId = api.saveNote(noteId, title.trim(), body, tag).id; notes.replace(api.notes()); onSaved(noteId) }
+                followProcessing(noteId, api.sendForProcessing(noteId, noteHash(body), force, includeMeetings))
+            } catch (e: Exception) { processingMessage = failed(e) } finally { processingBusy = false }
+        }
+    }
+
+    private fun processingAction(noteId: String, block: suspend () -> Unit) {
+        viewModelScope.launch {
+            processingMessage = null
+            try { block() } catch (e: Exception) { processingMessage = failed(e) }
+        }
+    }
+
+    fun retryProcessing(noteId: String, jobId: String) {
+        processingPoll?.cancel()
+        processingPoll = viewModelScope.launch {
+            processingMessage = null
+            try { followProcessing(noteId, api.retryProcessing(jobId)) } catch (e: Exception) { processingMessage = failed(e) }
+        }
+    }
+
+    /** Accepting adds a task or reminder (once, with its receipt); the lists are reloaded so it shows at once. */
+    fun acceptProposal(noteId: String, proposalId: String, text: String? = null, kind: String? = null, dueAt: String? = null) = processingAction(noteId) {
+        api.acceptProposal(proposalId, text, kind, dueAt)
+        processing[noteId] = api.processing(noteId)
+        loadTasksNow(); loadRemindersNow()
+    }
+
+    fun dismissProposal(noteId: String, proposalId: String) = processingAction(noteId) {
+        api.dismissProposal(proposalId)
+        processing[noteId] = api.processing(noteId)
+    }
+
+    fun setMeetingLink(noteId: String, meetingId: String, confirmed: Boolean) = processingAction(noteId) {
+        meetingLinks[noteId] = api.setMeetingLink(noteId, meetingId, confirmed)
+    }
 
     fun loadMeetings() = load { meetings.replace(api.meetings().sortedByDescending { it.createdAt }) }
 

@@ -1,6 +1,6 @@
 # Reachy Android companion app
 
-A user-centred phone client for reachy-hub (version 0.15.1): **Talk** (voice and chat, with previous
+A user-centred phone client for reachy-hub (version 0.16.0): **Talk** (voice and chat, with previous
 chats), **Reminders** (To Do and timed reminders), **Notes**, **Meetings** (record, review, play back, edit) and
 **Alarms**. Settings and configuration stay in the [web control panel](../operator-ui/README.md).
 Decision: [ADR 0029](../../docs/adr/0029-android-companion-app.md); stages:
@@ -41,7 +41,7 @@ Needs JDK 17 and the Android SDK (platform 35, build-tools 35.0.0). Set
 `sdk.dir` in the gitignored `local.properties`.
 
 ```bash
-./gradlew :app:testDebugUnitTest   # 57 JVM tests (mock hub, pure logic)
+./gradlew :app:testDebugUnitTest   # 63 JVM tests (mock hub, pure logic)
 ./gradlew :app:assembleDebug       # app/build/outputs/apk/debug/app-debug.apk
 ```
 
