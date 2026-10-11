@@ -32,6 +32,7 @@ from shared.models.response import Privacy
 pytestmark = pytest.mark.skipif(not os.environ.get("DATABASE_MIGRATION_TEST_URL"), reason="requires explicitly disposable Postgres with pgvector")
 KEYS = Keyring("one", {"one": b"\x01" * 32})
 ROLLBACK = Path(__file__).resolve().parents[3] / "deploy" / "homelab" / "rollback-029.sql"
+ROLLBACK_030 = ROLLBACK.with_name("rollback-030.sql")  # the head is 030 now (note tags): the runbook undoes it first
 NOW = datetime(2026, 10, 11, 9, 0, tzinfo=UTC)
 LINE_A = "Renew the lab safety certificate before it lapses."
 LINE_B = "Order two replacement servo cables."
@@ -69,7 +70,7 @@ def job(note_id="n1", body=BODY, **over):
 # ---- migration 029 ----------------------------------------------------------------------------------------------------------------------------
 
 def test_the_migration_creates_only_processing_bookkeeping_with_structural_guarantees(dsn):
-    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("029_notepad_processing",)]
+    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("030_note_tags",)]
     assert {r[0] for r in sql(dsn, "SELECT tablename FROM pg_tables WHERE tablename LIKE 'notepad_%' OR tablename = 'note_meeting_links'")} == {
         "notepad_jobs", "notepad_proposals", "notepad_proposal_notes", "notepad_provenance", "note_meeting_links"}
     for table in ("notepad_jobs", "notepad_proposals", "notepad_proposal_notes", "notepad_provenance", "note_meeting_links"):
@@ -106,12 +107,13 @@ def test_the_rollback_script_removes_only_bookkeeping_and_the_migration_applies_
     sql(dsn, "INSERT INTO tasks (id, text, status, created_at) VALUES ('t1','accepted from a proposal','open',now())")
     sql(dsn, "INSERT INTO notepad_provenance VALUES ('task','t1','n1','p1','h',now())")
     with psycopg.connect(dsn) as conn:
+        conn.execute(ROLLBACK_030.read_text())
         conn.execute(ROLLBACK.read_text())  # one transaction, as the script's own instructions require
     assert sql(dsn, "SELECT version_num FROM alembic_version") == [("028_memory_candidates",)]
     assert sql(dsn, "SELECT count(*) FROM pg_tables WHERE tablename LIKE 'notepad_%' OR tablename = 'note_meeting_links'") == [(0,)]
     assert sql(dsn, "SELECT count(*) FROM notes") == [(1,)] and sql(dsn, "SELECT text FROM tasks") == [("accepted from a proposal",)]  # authoritative data stays
     upgrade(dsn, KEYS)
-    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("029_notepad_processing",)]
+    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("030_note_tags",)]
     assert sql(dsn, "SELECT count(*) FROM notepad_provenance") == [(0,)]
 
 

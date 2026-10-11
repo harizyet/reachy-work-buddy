@@ -13,9 +13,10 @@ interface Editor {
   draftOpen: boolean; // a new note is open and not saved yet
   title: string;
   body: string;
+  tag: string | null; // folder path, already normalised
 }
 
-const CLOSED: Editor = { selectedId: null, draftOpen: false, title: '', body: '' };
+const CLOSED: Editor = { selectedId: null, draftOpen: false, title: '', body: '', tag: null };
 
 // The editor state machine of the legacy Notes tab: debounced autosave, saves serialised so a
 // quick second edit never makes a second POST, a blank new note is never created, and a note
@@ -30,7 +31,7 @@ export function useNotesEditor() {
 
   // Latest values for the async save, which must read what is in the editor when it runs, not when it was queued.
   const editorRef = useRef(editor);
-  const savedRef = useRef<{ title: string; body: string } | null>(null);
+  const savedRef = useRef<{ title: string; body: string; tag: string | null } | null>(null);
   const chain = useRef<Promise<void>>(Promise.resolve());
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   // The session this editor belongs to. Once it changes (logout, expiry, a new sign-in) nothing typed
@@ -80,11 +81,11 @@ export function useNotesEditor() {
     clearTimeout(timer.current);
     chain.current = chain.current.then(async () => {
       if (!sameSession()) return;
-      const { selectedId, draftOpen, title: rawTitle, body } = editorRef.current;
+      const { selectedId, draftOpen, title: rawTitle, body, tag } = editorRef.current;
       if (!selectedId && !draftOpen) return;
       const snapshot = savedRef.current;
       const typedTitle = rawTitle.trim();
-      if (snapshot && typedTitle === snapshot.title && body === snapshot.body) {
+      if (snapshot && typedTitle === snapshot.title && body === snapshot.body && tag === snapshot.tag) {
         setStatus('Saved');
         return;
       }
@@ -93,8 +94,8 @@ export function useNotesEditor() {
       const title = (typedTitle || firstLine || 'New Note').slice(0, 200);
       try {
         setStatus('Saving…');
-        const note = selectedId ? await saveNote(selectedId, title, body) : await createNote(title, body);
-        savedRef.current = { title: note.title, body: note.body };
+        const note = selectedId ? await saveNote(selectedId, title, body, tag) : await createNote(title, body, tag);
+        savedRef.current = { title: note.title, body: note.body, tag: note.tag };
         setSavedState(note);
         const now = editorRef.current;
         if (!selectedId) {
@@ -130,24 +131,25 @@ export function useNotesEditor() {
     [flush],
   );
 
-  const edit = (patch: Partial<Pick<Editor, 'title' | 'body'>>) => {
+  const edit = (patch: Partial<Pick<Editor, 'title' | 'body' | 'tag'>>) => {
     setEditor({ ...editorRef.current, ...patch });
     queueSave();
   };
 
   const open = async (note: Note) => {
     await flush();
-    savedRef.current = { title: note.title, body: note.body };
+    savedRef.current = { title: note.title, body: note.body, tag: note.tag };
     setSavedState(note);
-    setEditor({ selectedId: note.id, draftOpen: false, title: note.title, body: note.body });
+    setEditor({ selectedId: note.id, draftOpen: false, title: note.title, body: note.body, tag: note.tag });
     setStatus('');
   };
 
-  const create = async () => {
+  // A new note starts in the folder being viewed.
+  const create = async (tag: string | null = null) => {
     await flush();
     savedRef.current = null;
     setSavedState(null);
-    setEditor({ selectedId: null, draftOpen: true, title: '', body: '' });
+    setEditor({ selectedId: null, draftOpen: true, title: '', body: '', tag });
     setStatus('');
   };
 

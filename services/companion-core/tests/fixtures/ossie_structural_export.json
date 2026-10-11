@@ -526,6 +526,18 @@
             ]
           },
           "datatype": "String"
+        },
+        {
+          "name": "tag",
+          "expression": {
+            "dialects": [
+              {
+                "dialect": "ANSI_SQL",
+                "expression": "tag"
+              }
+            ]
+          },
+          "datatype": "String"
         }
       ],
       "custom_extensions": [

@@ -41,10 +41,10 @@ export const deleteReminder = async (reminderId: string): Promise<void> => {
 // Notes
 export const listNotes = async (query: string, signal?: AbortSignal): Promise<Note[]> =>
   parseNotes(await request(`/planner/notes${query ? `?q=${encodeURIComponent(query)}` : ''}`, { signal }));
-export const createNote = async (title: string, body: string): Promise<Note> =>
-  parseNote(await request('/planner/notes', { method: 'POST', body: { title, body } }));
-export const saveNote = async (noteId: string, title: string, body: string): Promise<Note> =>
-  parseNote(await request(`/planner/notes/${id(noteId)}`, { method: 'PUT', body: { title, body } }));
+export const createNote = async (title: string, body: string, tag: string | null): Promise<Note> =>
+  parseNote(await request('/planner/notes', { method: 'POST', body: { title, body, tag } }));
+export const saveNote = async (noteId: string, title: string, body: string, tag: string | null): Promise<Note> =>
+  parseNote(await request(`/planner/notes/${id(noteId)}`, { method: 'PUT', body: { title, body, tag } }));
 export const deleteNote = async (noteId: string): Promise<void> => {
   await request(`/planner/notes/${id(noteId)}`, { method: 'DELETE' });
 };

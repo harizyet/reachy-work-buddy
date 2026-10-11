@@ -178,6 +178,7 @@ export interface Note {
   title: string;
   body: string;
   updated_at: string;
+  tag: string | null; // folder path under All Notes, e.g. "Projects/Project StarWars/Finance"
 }
 
 export interface Receipt {
@@ -219,6 +220,7 @@ export function parseNote(value: unknown, what = 'note'): Note {
     title: str(o.title, `${what}.title`),
     body: o.body == null ? '' : str(o.body, `${what}.body`),
     updated_at,
+    tag: o.tag == null || o.tag === '' ? null : str(o.tag, `${what}.tag`),
   };
 }
 export const parseNotes = (value: unknown): Note[] => list(value, 'notes').map((v, i) => parseNote(v, `notes[${i}]`));

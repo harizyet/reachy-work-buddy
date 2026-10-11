@@ -3,6 +3,8 @@ import type { Note } from '../../api/types';
 import { EmptyState, ErrorState } from '../../components/shared/states';
 import { Button } from '../../components/ui/Button';
 import { Dialog } from '../../components/ui/Dialog';
+import { FolderField } from './FolderField';
+import { buildTree, flatten, inFolder, ROOT } from './folders';
 import { groupNotes, preview, shortDate } from './grouping';
 import { ProcessedTag } from './ProcessedTag';
 import { ProcessingPanel } from './ProcessingPanel';
@@ -14,7 +16,13 @@ export function NotesPage() {
   const [confirming, setConfirming] = useState(false);
   const { editor } = ctl;
   const editing = editor.selectedId !== null || editor.draftOpen;
-  const list = ctl.notes.data ?? [];
+  const all = ctl.notes.data ?? [];
+  const tree = buildTree(all);
+  const known = flatten(tree);
+  // A folder with no notes left is gone, so the view falls back to All Notes rather than showing an empty folder nobody can reach.
+  const [chosen, setChosen] = useState<string | null>(null);
+  const folder = chosen && known.some((f) => f.path.toLowerCase() === chosen.toLowerCase()) ? chosen : null;
+  const list = all.filter((n) => inFolder(n, folder));
   const selected = list.find((n) => n.id === editor.selectedId) ?? (ctl.saved?.id === editor.selectedId ? ctl.saved : undefined);
 
   return (
@@ -25,7 +33,7 @@ export function NotesPage() {
             ‹ Notes
             </Button>
           )}
-          <Button variant="secondary" aria-label="New note" onClick={() => void ctl.create()}>
+          <Button variant="secondary" aria-label="New note" onClick={() => void ctl.create(folder)}>
             ✎ New note
           </Button>
           <Button variant="secondary" onClick={() => void ctl.refresh()}>
@@ -40,13 +48,25 @@ export function NotesPage() {
         </div>
       <nav aria-label="Folders" className="hidden border-r border-[var(--border)] p-3 md:block">
         <h1 className="mb-2 text-lg font-semibold">Notes</h1>
-        <button type="button" aria-current="true" className="flex w-full justify-between rounded bg-[var(--hover)] px-2 py-1 text-left text-sm">
-          All Notes <span className="text-[var(--muted)]">{list.length}</span>
-        </button>
+        <FolderButton label={ROOT} count={all.length} depth={0} current={folder === null} onSelect={() => setChosen(null)} />
+        {known.map((f) => (
+          <FolderButton key={f.path} label={f.name} count={f.count} depth={f.depth + 1} current={folder?.toLowerCase() === f.path.toLowerCase()} onSelect={() => setChosen(f.path)} />
+        ))}
       </nav>
 
       <section aria-label="Notes list" className={`border-r border-[var(--border)] p-3 ${editing ? 'hidden md:block' : ''}`}>
         <h1 className="mb-2 text-lg font-semibold md:hidden">Notes</h1>
+        <select
+          aria-label="Folder filter"
+          className="mb-2 w-full rounded border border-[var(--border)] bg-[var(--bg)] p-2 text-sm md:hidden"
+          value={folder ?? ''}
+          onChange={(e) => setChosen(e.target.value || null)}
+        >
+          <option value="">{`${ROOT} (${all.length})`}</option>
+          {known.map((f) => (
+            <option key={f.path} value={f.path}>{`${'\u00a0\u00a0'.repeat(f.depth + 1)}${f.name} (${f.count})`}</option>
+          ))}
+        </select>
         <input
           type="search"
           aria-label="Search all notes"
@@ -58,7 +78,7 @@ export function NotesPage() {
         />
         {ctl.notes.isPending && <p role="status" className="text-sm text-[var(--muted)]">Loading…</p>}
         {ctl.notes.error && !ctl.notes.data && <ErrorState message={ctl.notes.error.message} onRetry={() => void ctl.notes.refetch()} />}
-        {ctl.notes.data && list.length === 0 && <EmptyState>No notes.</EmptyState>}
+        {ctl.notes.data && list.length === 0 && <EmptyState>{folder ? 'No notes in this folder.' : 'No notes.'}</EmptyState>}
         {groupNotes(list).map(([section, items]) => (
           <div key={section}>
             <h2 className="mt-3 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">{section}</h2>
@@ -80,6 +100,7 @@ export function NotesPage() {
               {selected ? new Date(selected.updated_at).toLocaleString([], { dateStyle: 'long', timeStyle: 'short' }) : ''}
               {editor.selectedId && <ProcessedTag noteId={editor.selectedId} />}
             </p>
+            <FolderField key={editor.selectedId ?? 'new'} tag={editor.tag} folders={tree} onCommit={(tag) => ctl.edit({ tag })} />
             <input
               autoFocus={editor.draftOpen}
               aria-label="Title"
@@ -143,7 +164,21 @@ function NoteRow({ note, current, onOpen }: { note: Note; current: boolean; onOp
       <span className="block break-words text-sm">
         <span>{shortDate(note.updated_at)}</span> <span className="text-[var(--muted)]">{preview(note)}</span>
       </span>
-      <span className="text-xs text-[var(--muted)]">🗀 Notes</span>
+      <span className="text-xs text-[var(--muted)]">🗀 {note.tag ? note.tag.split('/').join(' › ') : 'Notes'}</span>
+    </button>
+  );
+}
+
+function FolderButton({ label, count, depth, current, onSelect }: { label: string; count: number; depth: number; current: boolean; onSelect: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-current={current || undefined}
+      style={{ paddingLeft: `${0.5 + depth * 0.9}rem` }}
+      className={`flex w-full justify-between gap-2 rounded py-1 pr-2 text-left text-sm ${current ? 'bg-[var(--hover)]' : ''}`}
+      onClick={onSelect}
+    >
+      <span className="break-words">{label}</span> <span className="text-[var(--muted)]">{count}</span>
     </button>
   );
 }

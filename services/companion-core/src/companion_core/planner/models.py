@@ -12,6 +12,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field, field_validator
 
+from shared.models.note_tag import NoteTag
 from shared.models.response import Privacy
 
 
@@ -29,6 +30,8 @@ class Note(BaseModel):
     # changes either.
     sensitivity: Privacy = Privacy.WORK_PRIVATE
     project_scope: str | None = None
+    # The note's folder, e.g. "Projects/Project StarWars/Finance" (shared/models/note_tag.py); None means directly in All Notes.
+    tag: NoteTag = None
 
 
 class ReminderStatus(StrEnum):

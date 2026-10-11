@@ -35,6 +35,20 @@ def test_notes_search_update_delete() -> None:
     asyncio.run(run())
 
 
+def test_a_note_tag_is_its_folder_path_and_an_edit_keeps_it_unless_told() -> None:
+    async def run() -> None:
+        store = InMemoryPlannerStore()
+        note = await store.add_note("Budget", "q4", tag="Projects/Project StarWars/Finance")
+        assert note.tag == "Projects/Project StarWars/Finance"
+        assert (await store.update_note(note.id, "Budget 2", "q4")).tag == "Projects/Project StarWars/Finance"  # not named: unchanged
+        assert (await store.update_note(note.id, "Budget 2", "q4", tag="Meeting Notes")).tag == "Meeting Notes"
+        assert (await store.update_note(note.id, "Budget 2", "q4", tag=None)).tag is None  # null moves it back to All Notes
+        await store.update_note(note.id, "Budget 2", "q4", tag="Projects/Finance")
+        assert [n.id for n in await store.list_notes("projects")] == [note.id]  # search finds a folder name
+
+    asyncio.run(run())
+
+
 def test_claim_due_returns_each_pending_reminder_once() -> None:
     async def run() -> None:
         store = InMemoryPlannerStore()
@@ -99,6 +113,14 @@ def test_routes_round_trip() -> None:
         client.put(f"/notes/{note['id']}", json={"title": "T2"}).json()["title"] == "T2"
     )
     assert client.post("/notes", json={"title": ""}).status_code == 422
+    tagged = client.post("/notes", json={"title": "T", "tag": " all notes / Projects//Project  StarWars / Finance "}).json()
+    assert tagged["tag"] == "Projects/Project StarWars/Finance"
+    assert note["tag"] is None
+    assert client.put(f"/notes/{tagged['id']}", json={"title": "T2"}).json()["tag"] == "Projects/Project StarWars/Finance"  # an omitted tag is not a clear
+    assert client.put(f"/notes/{tagged['id']}", json={"title": "T2", "tag": "Meeting Notes"}).json()["tag"] == "Meeting Notes"
+    assert client.put(f"/notes/{tagged['id']}", json={"title": "T2", "tag": "All Notes"}).json()["tag"] is None
+    assert client.post("/notes", json={"title": "x", "tag": "a/b/c/d/e/f"}).status_code == 422
+    assert client.post("/notes", json={"title": "x", "tag": "y" * 61}).status_code == 422
     assert client.delete("/notes/missing").status_code == 404
 
     past = (datetime.now(UTC) - timedelta(minutes=1)).isoformat()

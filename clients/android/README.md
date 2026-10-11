@@ -41,7 +41,7 @@ Needs JDK 17 and the Android SDK (platform 35, build-tools 35.0.0). Set
 `sdk.dir` in the gitignored `local.properties`.
 
 ```bash
-./gradlew :app:testDebugUnitTest   # 55 JVM tests (mock hub, pure logic)
+./gradlew :app:testDebugUnitTest   # 57 JVM tests (mock hub, pure logic)
 ./gradlew :app:assembleDebug       # app/build/outputs/apk/debug/app-debug.apk
 ```
 

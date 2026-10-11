@@ -5,7 +5,7 @@ import { vi } from 'vitest';
 // notes search, reminders that cannot be reopened).
 export interface FakeTask { id: string; text: string; status: 'open' | 'done'; created_at?: string }
 export interface FakeReminder { id: string; text: string; due_at: string; status: 'pending' | 'done' }
-export interface FakeNote { id: string; title: string; body: string; updated_at: string }
+export interface FakeNote { id: string; title: string; body: string; updated_at: string; tag?: string | null }
 export interface FakeReceipt { id: string; action_type: string; status: 'success' | 'failed'; at: string; source_channel: string; fields: Record<string, string>; failure_reason: string | null }
 
 export interface FakeAlarm { id: string; label: string; due_at: string; station_id: string | null; status: string; volume: number; repeat: number[]; enabled: boolean; delivery: string | null }
@@ -199,10 +199,10 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
     }
     if (path === '/planner/notes' && method === 'GET') {
       const q = (query.get('q') ?? '').toLowerCase();
-      return jsonResponse(data.notes.filter((n) => !q || n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q)));
+      return jsonResponse(data.notes.filter((n) => !q || n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q) || (n.tag ?? '').toLowerCase().includes(q)));
     }
     if (path === '/planner/notes' && method === 'POST') {
-      const note: FakeNote = { id: nextId('n'), title: body.title, body: body.body ?? '', updated_at: new Date().toISOString() };
+      const note: FakeNote = { id: nextId('n'), title: body.title, body: body.body ?? '', updated_at: new Date().toISOString(), tag: body.tag ?? null };
       data.notes.push(note);
       return jsonResponse(note);
     }
@@ -214,7 +214,7 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
         data.notes = data.notes.filter((n) => n !== note);
         return jsonResponse({ deleted: true });
       }
-      Object.assign(note, { title: body.title, body: body.body ?? '', updated_at: new Date().toISOString() });
+      Object.assign(note, { title: body.title, body: body.body ?? '', updated_at: new Date().toISOString(), ...('tag' in body ? { tag: body.tag } : {}) });
       return jsonResponse(note);
     }
     if (path === '/chats' && method === 'GET') {

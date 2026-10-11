@@ -337,6 +337,7 @@ from shared.database import DatabaseManager
 from shared.models.deep_review import DeepReviewInfo, DeepReviewJob
 from shared.models.llm import LLMConfigPatch, LLMRoutingMode
 from shared.models.memory import MemoryRecord, MemoryType
+from shared.models.note_tag import NoteTag
 from shared.models.persona import TONE_INSTRUCTIONS, PersonaConfig, PersonaPatch
 from shared.models.rag import DocumentChunk, RetrievedChunk
 from shared.models.receipt import ActionReceipt
@@ -409,6 +410,7 @@ class TaskTextRequest(_NoReclassification):
 class NoteRequest(_NoReclassification):
     title: str = Field(min_length=1, max_length=200)
     body: str = Field(default="", max_length=20000)
+    tag: NoteTag = None  # only applied when the request names it (model_fields_set); null moves the note back to All Notes
 
 
 class CreateNoteRequest(BaseModel):
@@ -416,6 +418,7 @@ class CreateNoteRequest(BaseModel):
     body: str = Field(default="", max_length=20000)
     sensitivity: Privacy = Privacy.WORK_PRIVATE
     project_scope: str | None = Field(default=None, max_length=200)
+    tag: NoteTag = None
 
 
 class CreateReminderRequest(BaseModel):
@@ -2281,12 +2284,14 @@ def create_app(
     @app.post("/notes")
     async def create_note(request: CreateNoteRequest) -> Note:
         return await app.state.planner_store.add_note(
-            request.title.strip(), request.body, sensitivity=request.sensitivity, project_scope=request.project_scope
+            request.title.strip(), request.body, sensitivity=request.sensitivity, project_scope=request.project_scope, tag=request.tag
         )
 
     @app.put("/notes/{note_id}")
     async def update_note(note_id: str, request: NoteRequest) -> Note:
-        note = await app.state.planner_store.update_note(note_id, request.title.strip(), request.body)
+        note = await app.state.planner_store.update_note(
+            note_id, request.title.strip(), request.body, **({"tag": request.tag} if "tag" in request.model_fields_set else {})
+        )
         if note is None:
             raise HTTPException(status_code=404, detail=f"no note '{note_id}'")
         return note

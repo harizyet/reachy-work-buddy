@@ -212,8 +212,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun loadNotes() = load { notes.replace(api.notes()) }
-    fun saveNote(id: String?, title: String, body: String, onSaved: (String) -> Unit = {}) = load {
-        val saved = api.saveNote(id, title.trim(), body)
+    fun saveNote(id: String?, title: String, body: String, tag: String?, onSaved: (String) -> Unit = {}) = load {
+        val saved = api.saveNote(id, title.trim(), body, tag)
         notes.replace(api.notes())
         onSaved(saved.id)
     }

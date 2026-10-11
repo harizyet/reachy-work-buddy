@@ -148,8 +148,8 @@ class ReachyApi(baseUrl: String, private val cookieJar: PersistentCookieJar, cli
     suspend fun notes(): List<Note> =
         json.decodeFromString(ListSerializer(Note.serializer()), call(req("/planner/notes").build()))
 
-    suspend fun saveNote(id: String?, title: String, body: String): Note {
-        val payload = jsonBody(buildJsonObject { put("title", title); put("body", body) })
+    suspend fun saveNote(id: String?, title: String, body: String, tag: String?): Note {
+        val payload = jsonBody(buildJsonObject { put("title", title); put("body", body); put("tag", tag) })
         val request = if (id == null) req("/planner/notes").post(payload) else req("/planner/notes/$id").put(payload)
         return json.decodeFromString(call(request.build()))
     }

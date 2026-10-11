@@ -12,6 +12,8 @@ data class Task(val id: String, val text: String, val status: String = "open") {
 data class Note(
     val id: String, val title: String, val body: String = "",
     @SerialName("updated_at") val updatedAt: String = "",
+    /** The note's folder under All Notes, e.g. "Projects/Project StarWars/Finance"; null when it sits directly in All Notes. */
+    val tag: String? = null,
 )
 
 @Serializable

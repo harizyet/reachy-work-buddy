@@ -67,4 +67,50 @@ fun groupedNotes(notes: List<Note>, now: OffsetDateTime = OffsetDateTime.now(), 
         notes.filter { it.updatedAt.isEmpty() }.let { if (it.isEmpty()) emptyList() else listOf("Notes" to it) }
 
 fun matchesNote(note: Note, query: String): Boolean =
-    query.isBlank() || note.title.contains(query.trim(), ignoreCase = true) || note.body.contains(query.trim(), ignoreCase = true)
+    query.isBlank() || note.title.contains(query.trim(), ignoreCase = true) || note.body.contains(query.trim(), ignoreCase = true) ||
+        (note.tag ?: "").contains(query.trim(), ignoreCase = true)
+
+// ---- Folders. A note's tag is its folder under All Notes: slash-separated names, e.g. "Projects/Project StarWars/Finance".
+// The rules repeat shared/models/note_tag.py (cases in services/companion-core/tests/test_note_tag.py); change both together.
+
+const val NOTE_ROOT = "All Notes"
+private const val TAG_MAX_DEPTH = 5
+private const val TAG_MAX_NAME = 60
+
+/** The canonical tag for what was typed, or null for none (blank, or just "All Notes"). Throws IllegalArgumentException (with a message to show) when too deep or a name is too long. */
+fun normaliseNoteTag(raw: String): String? {
+    var parts = raw.split('/').map { it.trim().split(Regex("\\s+")).filter(String::isNotEmpty).joinToString(" ") }.filter(String::isNotEmpty)
+    if (parts.firstOrNull().equals(NOTE_ROOT, ignoreCase = true)) parts = parts.drop(1)
+    if (parts.isEmpty()) return null
+    require(parts.size <= TAG_MAX_DEPTH) { "A folder can have at most $TAG_MAX_DEPTH levels." }
+    require(parts.all { it.length <= TAG_MAX_NAME }) { "Each folder name can have at most $TAG_MAX_NAME characters." }
+    return parts.joinToString("/")
+}
+
+/** A folder in the tree implied by the notes' tags: [count] counts the notes in it and below it. */
+data class NoteFolder(val path: String, val name: String, val depth: Int, val count: Int)
+
+/** Every folder that holds a note, directly or below, in tree order (a folder, then what is in it). Names that differ only in case are one folder. */
+fun noteFolders(notes: List<Note>): List<NoteFolder> {
+    val found = linkedMapOf<String, Pair<List<String>, Int>>() // lower-cased path -> (display names, count)
+    for (note in notes) {
+        val names = note.tag?.split('/')?.filter(String::isNotEmpty) ?: continue
+        for (depth in 1..names.size) {
+            val key = names.take(depth).joinToString("/").lowercase()
+            val (display, count) = found[key] ?: (names.take(depth) to 0)
+            found[key] = display to count + 1
+        }
+    }
+    return found.values.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.first.joinToString("\u0000") })
+        .map { (names, count) -> NoteFolder(names.joinToString("/"), names.last(), names.size - 1, count) }
+}
+
+/** A null [folder] is All Notes (everything); a folder holds its own notes and those of the folders below it. */
+fun inNoteFolder(note: Note, folder: String?): Boolean {
+    if (folder == null) return true
+    val tag = note.tag.orEmpty().lowercase()
+    val want = folder.lowercase()
+    return tag == want || tag.startsWith("$want/")
+}
+
+fun folderTrail(tag: String?): String = if (tag.isNullOrEmpty()) "Notes" else tag.split('/').joinToString(" \u203a ")

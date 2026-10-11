@@ -84,16 +84,27 @@ app swaps the bottom bar for a navigation rail on the left and shows Notes, Meet
 or unfolding re-lays the app out in place without restarting it.
 
 **Notes** follow the Apple Notes layout. On the web it is three columns: a
-folder column (All Notes), a list grouped under Today, Yesterday, Previous 7 Days,
+folder column (All Notes and the folders below it, each with a count), a list grouped under Today, Yesterday, Previous 7 Days,
 Previous 30 Days and then months (each row shows the title, date, the first line
-of the text and "Notes"), and an editor with a large title field above the text.
+of the text and its folder), and an editor with a large title field above the text.
 The Android app shows the grouped list with a Search box and a pencil button, and
 opens a note full screen where the first line is the title; the share button sends
 the text and **Delete** is in the menu. A note saves itself shortly after you stop
 typing (web) or when you leave it (app); a blank new note is never created, and a
 note left without a title is titled from its first line or "New Note". The list
-search is by title and text. There are no folders, tags, pinning or attachments:
-a note is a title and plain text.
+search is by title, text and folder. There is no pinning or attachments: a note is a
+title and plain text, filed in at most one folder.
+
+*Folders.* A note's **tag** is its folder: a path under All Notes, such as
+`Meeting Notes` or `Projects/Project StarWars/Finance` (up to 5 levels, 60 characters
+a level; a leading "All Notes/" is optional). Type it in the **Folder** field above
+the title (web; applied when you leave the field or press Enter) or choose **Folder…**
+in the note's menu (app). A folder exists while a note is filed in it or below it, so
+there is nothing to create or tidy up separately; picking an existing folder from the
+suggestions keeps spellings consistent (names that differ only in capitals are one
+folder). Selecting a folder shows its notes and those of the folders below it; a new
+note starts in the folder you are viewing. A note with no folder sits directly in All
+Notes. Renaming or moving a whole folder is not built: change the folder of each note.
 
 ### Asking about your tasks, reminders and notes in chat
 

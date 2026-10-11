@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 
 from psycopg.types.json import Jsonb
 from psycopg_pool import AsyncConnectionPool
@@ -15,18 +16,19 @@ from companion_core.planner.models import (
     ReminderStatus,
     Station,
 )
+from companion_core.planner.store import KEEP
 from shared.database import check_schema, close_pool, open_pool
 from shared.models.receipt import ActionReceipt
 from shared.models.response import Privacy
 
-_NOTE_COLUMNS = "id, title, body, created_at, updated_at, sensitivity, project_scope"
+_NOTE_COLUMNS = "id, title, body, created_at, updated_at, sensitivity, project_scope, tag"
 _REMINDER_COLUMNS = "id, text, due_at, status, created_at, completed_at, notified_at, sensitivity"
 
 
 def _note(row: tuple) -> Note:
     return Note(
         id=row[0], title=row[1], body=row[2], created_at=row[3], updated_at=row[4],
-        sensitivity=Privacy(row[5]), project_scope=row[6],
+        sensitivity=Privacy(row[5]), project_scope=row[6], tag=row[7],
     )
 
 
@@ -104,9 +106,9 @@ class PostgresPlannerStore:
         async with self._pool.connection() as conn:
             if query:
                 cur = await conn.execute(
-                    f"SELECT {_NOTE_COLUMNS} FROM notes WHERE title ILIKE %s OR body ILIKE %s "
+                    f"SELECT {_NOTE_COLUMNS} FROM notes WHERE title ILIKE %s OR body ILIKE %s OR tag ILIKE %s "
                     "ORDER BY updated_at DESC",
-                    (_like(query), _like(query)),
+                    (_like(query), _like(query), _like(query)),
                 )
             else:
                 cur = await conn.execute(
@@ -127,24 +129,27 @@ class PostgresPlannerStore:
             return _reminder(row) if row else None
 
     async def add_note(
-        self, title: str, body: str, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, project_scope: str | None = None
+        self, title: str, body: str, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, project_scope: str | None = None, tag: str | None = None
     ) -> Note:
-        note = Note(title=title, body=body, sensitivity=sensitivity, project_scope=project_scope)
+        note = Note(title=title, body=body, sensitivity=sensitivity, project_scope=project_scope, tag=tag)
         async with self._pool.connection() as conn:
             await conn.execute(
-                f"INSERT INTO notes ({_NOTE_COLUMNS}) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                f"INSERT INTO notes ({_NOTE_COLUMNS}) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     note.id, note.title, note.body, note.created_at, note.updated_at,
-                    note.sensitivity.value, note.project_scope,
+                    note.sensitivity.value, note.project_scope, note.tag,
                 ),
             )
         return note
 
-    async def update_note(self, note_id: str, title: str, body: str) -> Note | None:
+    async def update_note(self, note_id: str, title: str, body: str, tag: Any = KEEP) -> Note | None:
+        sets, args = ["title = %s", "body = %s", "updated_at = %s"], [title, body, datetime.now(UTC)]
+        if tag is not KEEP:
+            sets.append("tag = %s")
+            args.append(tag)
         async with self._pool.connection() as conn:
             cur = await conn.execute(
-                f"UPDATE notes SET title = %s, body = %s, updated_at = %s WHERE id = %s RETURNING {_NOTE_COLUMNS}",
-                (title, body, datetime.now(UTC), note_id),
+                f"UPDATE notes SET {', '.join(sets)} WHERE id = %s RETURNING {_NOTE_COLUMNS}", (*args, note_id)
             )
             row = await cur.fetchone()
             return _note(row) if row else None

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -61,7 +62,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.reachy.companion.AppViewModel
+import app.reachy.companion.data.NOTE_ROOT
 import app.reachy.companion.data.Note
+import app.reachy.companion.data.folderTrail
+import app.reachy.companion.data.inNoteFolder
+import app.reachy.companion.data.noteFolders
+import app.reachy.companion.data.normaliseNoteTag
 import app.reachy.companion.data.groupedNotes
 import app.reachy.companion.data.joinNote
 import app.reachy.companion.data.matchesNote
@@ -77,6 +83,10 @@ fun NotesScreen(model: AppViewModel, modifier: Modifier = Modifier) {
     var openId by remember { mutableStateOf<String?>(null) }
     var composing by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
+    // The folder being viewed (null is All Notes). A folder with no notes left is gone, so the view falls back to All Notes.
+    var chosenFolder by remember { mutableStateOf<String?>(null) }
+    val folder = chosenFolder?.takeIf { wanted -> noteFolders(model.notes).any { it.path.equals(wanted, ignoreCase = true) } }
+    var newTag by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) { model.loadNotes() }
     val open = model.notes.firstOrNull { it.id == openId }
     val editing = composing || open != null
@@ -86,30 +96,33 @@ fun NotesScreen(model: AppViewModel, modifier: Modifier = Modifier) {
     val created: (String) -> Unit = { id -> if (composing) { openId = id; composing = false } }
     val list: @Composable (Modifier) -> Unit = { m ->
         NoteList(
-            model, query, { query = it }, selectedId = if (isWide()) openId else null,
-            onOpen = { openId = it; composing = false; editorKey++ }, onCompose = { openId = null; composing = true; editorKey++ }, modifier = m,
+            model, query, { query = it }, folder, { chosenFolder = it }, selectedId = if (isWide()) openId else null,
+            onOpen = { openId = it; composing = false; editorKey++ },
+            onCompose = { openId = null; composing = true; newTag = folder; editorKey++ }, modifier = m,
         )
     }
     if (isWide()) {
         // Unfolded or landscape: the list stays on the left and the open note is edited on the right.
         TwoPane(modifier, listWidth = 380, list = { list(Modifier) }, detail = {
-            if (editing) key(editorKey) { NoteEditor(model, open, onClose = { openId = null; composing = false }, Modifier, created) }
+            if (editing) key(editorKey) { NoteEditor(model, open, newTag, onClose = { openId = null; composing = false }, Modifier, created) }
             else Text("Select a note, or tap the pencil to write one.", Modifier.padding(24.dp), color = MaterialTheme.colorScheme.outline)
         })
-    } else if (editing) NoteEditor(model, open, onClose = { openId = null; composing = false }, modifier, created) else list(modifier)
+    } else if (editing) NoteEditor(model, open, newTag, onClose = { openId = null; composing = false }, modifier, created) else list(modifier)
 }
 
 @Composable
 private fun NoteList(
-    model: AppViewModel, query: String, onQuery: (String) -> Unit, selectedId: String?, onOpen: (String) -> Unit, onCompose: () -> Unit, modifier: Modifier,
+    model: AppViewModel, query: String, onQuery: (String) -> Unit, folder: String?, onFolder: (String?) -> Unit,
+    selectedId: String?, onOpen: (String) -> Unit, onCompose: () -> Unit, modifier: Modifier,
 ) {
-    val shown = model.notes.filter { matchesNote(it, query) }
+    val shown = model.notes.filter { inNoteFolder(it, folder) && matchesNote(it, query) }
     Box(modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             OutlinedTextField(
                 query, onQuery, Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), singleLine = true,
                 placeholder = { Text("Search") }, leadingIcon = { Icon(Icons.Default.Search, null) }, shape = RoundedCornerShape(12.dp),
             )
+            FolderPicker(model.notes, folder, onFolder)
             ErrorLine(model.listError)
             if (model.notes.isEmpty()) Text("No notes yet. Tap the pencil to write one.", Modifier.padding(16.dp))
             LazyColumn(Modifier.weight(1f).padding(horizontal = 16.dp)) {
@@ -141,9 +154,60 @@ private fun NoteRow(note: Note, selected: Boolean = false, onOpen: () -> Unit) {
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Folder, null, Modifier.padding(end = 4.dp), tint = MaterialTheme.colorScheme.outline)
-            Text("Notes", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            Text(folderTrail(note.tag), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
+}
+
+/** The folder being viewed, with a menu of every folder (indented under its parent) and how many notes each holds. */
+@Composable
+private fun FolderPicker(notes: List<Note>, folder: String?, onFolder: (String?) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val folders = noteFolders(notes)
+    Box(Modifier.padding(horizontal = 8.dp)) {
+        TextButton({ open = true }) {
+            Icon(Icons.Default.Folder, null, Modifier.padding(end = 6.dp), tint = Accent)
+            Text(if (folder == null) NOTE_ROOT else folderTrail(folder), color = Accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        DropdownMenu(open, { open = false }) {
+            DropdownMenuItem({ Text("$NOTE_ROOT  ${notes.size}", fontWeight = if (folder == null) FontWeight.Bold else FontWeight.Normal) }, { open = false; onFolder(null) })
+            folders.forEach { f ->
+                val current = folder.equals(f.path, ignoreCase = true)
+                DropdownMenuItem(
+                    { Text("${f.name}  ${f.count}", Modifier.padding(start = ((f.depth + 1) * 14).dp), fontWeight = if (current) FontWeight.Bold else FontWeight.Normal) },
+                    { open = false; onFolder(f.path) },
+                )
+            }
+        }
+    }
+}
+
+/** Where to file a note: a path under All Notes, typed or picked from the folders that exist. Applied with Done; an over-long path says why it was refused. */
+@Composable
+private fun FolderDialog(current: String?, folders: List<app.reachy.companion.data.NoteFolder>, onDone: (String?) -> Unit, onDismiss: () -> Unit) {
+    var text by remember { mutableStateOf(current.orEmpty()) }
+    val result = runCatching { normaliseNoteTag(text) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Folder") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    text, { text = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("$NOTE_ROOT /") },
+                    placeholder = { Text("Projects/Project StarWars/Finance") }, isError = result.isFailure,
+                    supportingText = { result.exceptionOrNull()?.message?.let { Text(it) } },
+                )
+                LazyColumn(Modifier.padding(top = 8.dp).heightIn(max = 220.dp)) {
+                    item { Text("$NOTE_ROOT (no folder)", Modifier.fillMaxWidth().clickable { text = "" }.padding(vertical = 8.dp)) }
+                    items(folders, key = { it.path }) { f ->
+                        Text(f.name, Modifier.fillMaxWidth().clickable { text = f.path }.padding(start = (f.depth * 14).dp, top = 8.dp, bottom = 8.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton({ onDone(result.getOrNull()) }, enabled = result.isSuccess) { Text("Done") } },
+        dismissButton = { TextButton(onDismiss) { Text("Cancel") } },
+    )
 }
 
 /** Makes the first line of the text large and bold, as the note's title. The text itself is unchanged. */
@@ -159,10 +223,13 @@ private object FirstLineTitle : VisualTransformation {
 }
 
 @Composable
-private fun NoteEditor(model: AppViewModel, note: Note?, onClose: () -> Unit, modifier: Modifier, onCreated: (String) -> Unit = {}) {
+private fun NoteEditor(model: AppViewModel, note: Note?, newTag: String?, onClose: () -> Unit, modifier: Modifier, onCreated: (String) -> Unit = {}) {
     val context = LocalContext.current
     val original = remember { note?.let { joinNote(it.title, it.body) }.orEmpty() }
     var text by remember { mutableStateOf(original) }
+    val startTag = if (note != null) note.tag else newTag
+    var tag by remember { mutableStateOf(startTag) }
+    var pickingFolder by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
@@ -171,21 +238,22 @@ private fun NoteEditor(model: AppViewModel, note: Note?, onClose: () -> Unit, mo
     // Leaving runs this from the back handler and again when the editor is disposed, so it remembers what it already saved.
     // A note created here gets its id back, so later saves update it rather than creating another (the editor stays open
     // beside the list on a wide window).
-    val saved = remember { object { var text = original; var id = note?.id; var inFlight = false } }
+    val saved = remember { object { var text = original; var tag = startTag; var id = note?.id; var inFlight = false } }
     fun commit(leaving: Boolean = false) {
         val parts = splitNote(current) ?: return
-        if (current == saved.text) return
+        if (current == saved.text && tag == saved.tag) return
         if (saved.inFlight && saved.id == null) return   // the first save is still on its way; the next trigger sends the rest
         saved.text = current
+        saved.tag = tag
         saved.inFlight = true
-        model.saveNote(saved.id, parts.first, parts.second) { id -> val first = saved.id == null; saved.id = id; saved.inFlight = false; if (first) onCreated(id) }
+        model.saveNote(saved.id, parts.first, parts.second, tag) { id -> val first = saved.id == null; saved.id = id; saved.inFlight = false; if (first) onCreated(id) }
     }
     // The note being edited: the one opened, or the one this editor created and has since saved.
     fun target(): Note? = note ?: model.notes.firstOrNull { it.id == saved.id }
     BackHandler { commit(); onClose() }
     DisposableEffect(Unit) { onDispose { if (!confirmDelete) commit(leaving = true) } }
     // Notes save themselves a moment after typing stops, as in Apple Notes.
-    LaunchedEffect(text) { delay(900); commit() }
+    LaunchedEffect(text, tag) { delay(900); commit() }
     LaunchedEffect(Unit) { if (note == null) focus.requestFocus() }
     Column(modifier.fillMaxSize().imePadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -201,9 +269,14 @@ private fun NoteEditor(model: AppViewModel, note: Note?, onClose: () -> Unit, mo
             Box {
                 IconButton({ menu = true }) { Icon(Icons.Default.MoreVert, "Note options", tint = Accent) }
                 DropdownMenu(menu, { menu = false }) {
+                    DropdownMenuItem({ Text("Folder…") }, { menu = false; pickingFolder = true })
                     DropdownMenuItem({ Text("Delete") }, { menu = false; if (target() != null) confirmDelete = true else onClose() })
                 }
             }
+        }
+        Row(Modifier.fillMaxWidth().clickable { pickingFolder = true }.padding(horizontal = 20.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Folder, null, Modifier.padding(end = 6.dp), tint = MaterialTheme.colorScheme.outline)
+            Text("$NOTE_ROOT" + if (tag == null) "" else " \u203a " + folderTrail(tag), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         BasicTextField(
             text, { text = it }, Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 8.dp).focusRequester(focus),
@@ -212,6 +285,7 @@ private fun NoteEditor(model: AppViewModel, note: Note?, onClose: () -> Unit, mo
             decorationBox = { inner -> Box { if (text.isEmpty()) Text("Title", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.outline); inner() } },
         )
     }
+    if (pickingFolder) FolderDialog(tag, noteFolders(model.notes), onDone = { tag = it; pickingFolder = false }, onDismiss = { pickingFolder = false })
     val doomed = if (confirmDelete) target() else null
     if (doomed != null) AlertDialog(
         onDismissRequest = { confirmDelete = false },

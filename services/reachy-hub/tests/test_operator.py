@@ -703,6 +703,12 @@ def test_classification_is_forwarded_on_create_and_refused_on_edit():
     edited = client.put(f"/planner/notes/{note['id']}", json={"title": "N2"}, headers=CSRF).json()
     assert (edited["sensitivity"], edited["project_scope"]) == ("public", "beta")
 
+    tagged = client.post("/planner/notes", json={"title": "B", "tag": "All Notes/Projects/Finance"}, headers=CSRF).json()
+    assert tagged["tag"] == "Projects/Finance"
+    assert client.put(f"/planner/notes/{tagged['id']}", json={"title": "B2"}, headers=CSRF).json()["tag"] == "Projects/Finance"  # an older client's autosave keeps the folder
+    assert client.put(f"/planner/notes/{tagged['id']}", json={"title": "B2", "tag": None}, headers=CSRF).json()["tag"] is None
+    client.delete(f"/planner/notes/{tagged['id']}", headers=CSRF)
+
     reminder = client.post(
         "/planner/reminders", json={"text": "r", "due_at": "2030-01-01T00:00:00Z", "sensitivity": "sensitive"}, headers=CSRF
     ).json()

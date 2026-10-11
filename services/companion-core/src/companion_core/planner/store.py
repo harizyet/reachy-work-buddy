@@ -4,7 +4,7 @@ precedent as tasks)."""
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Protocol
+from typing import Any, Protocol
 
 from companion_core.planner.models import (
     Alarm,
@@ -17,15 +17,18 @@ from companion_core.planner.models import (
 from shared.models.receipt import ActionReceipt
 from shared.models.response import Privacy
 
+# update_note leaves the tag alone unless one is passed: None clears it, so "not given" needs its own value.
+KEEP: Any = object()
+
 
 class PlannerStore(Protocol):
     async def list_notes(self, query: str | None = None) -> list[Note]: ...
     async def get_note(self, note_id: str) -> Note | None: ...
     async def get_reminder(self, reminder_id: str) -> Reminder | None: ...
     async def add_note(
-        self, title: str, body: str, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, project_scope: str | None = None
+        self, title: str, body: str, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, project_scope: str | None = None, tag: str | None = None
     ) -> Note: ...
-    async def update_note(self, note_id: str, title: str, body: str) -> Note | None: ...
+    async def update_note(self, note_id: str, title: str, body: str, tag: Any = KEEP) -> Note | None: ...
     async def delete_note(self, note_id: str) -> bool: ...
     async def list_reminders(self) -> list[Reminder]: ...
     async def add_reminder(
@@ -73,7 +76,7 @@ class InMemoryPlannerStore:
             notes = [
                 n
                 for n in notes
-                if lowered in n.title.lower() or lowered in n.body.lower()
+                if lowered in n.title.lower() or lowered in n.body.lower() or lowered in (n.tag or "").lower()
             ]
         return sorted(notes, key=lambda n: n.updated_at, reverse=True)
 
@@ -84,17 +87,19 @@ class InMemoryPlannerStore:
         return self._reminders.get(reminder_id)
 
     async def add_note(
-        self, title: str, body: str, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, project_scope: str | None = None
+        self, title: str, body: str, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, project_scope: str | None = None, tag: str | None = None
     ) -> Note:
-        note = Note(title=title, body=body, sensitivity=sensitivity, project_scope=project_scope)
+        note = Note(title=title, body=body, sensitivity=sensitivity, project_scope=project_scope, tag=tag)
         self._notes[note.id] = note
         return note
 
-    async def update_note(self, note_id: str, title: str, body: str) -> Note | None:
+    async def update_note(self, note_id: str, title: str, body: str, tag: Any = KEEP) -> Note | None:
         note = self._notes.get(note_id)
         if note is None:
             return None
         note.title, note.body, note.updated_at = title, body, datetime.now(UTC)
+        if tag is not KEEP:
+            note.tag = tag
         return note
 
     async def delete_note(self, note_id: str) -> bool:

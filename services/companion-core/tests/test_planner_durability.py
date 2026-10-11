@@ -164,3 +164,21 @@ def test_receipts_persist_and_claim_once(database):
             await store.close()
 
     asyncio.run(run())
+
+
+def test_note_tags_persist_update_only_when_named(database):
+    async def go():
+        store = await PostgresPlannerStore.connect(database)
+        try:
+            note = await store.add_note("Budget", "q4", tag="Projects/Project StarWars/Finance")
+            plain = await store.add_note("Loose", "x")
+            assert (await store.get_note(note.id)).tag == "Projects/Project StarWars/Finance" and (await store.get_note(plain.id)).tag is None
+            assert (await store.update_note(note.id, "Budget 2", "q4")).tag == "Projects/Project StarWars/Finance"  # not named: kept
+            assert [n.id for n in await store.list_notes("starwars")] == [note.id]  # a folder name is searchable
+            await store.update_note(note.id, "Budget 2", "q4", tag="Meeting Notes")
+            assert (await store.get_note(note.id)).tag == "Meeting Notes"
+            assert (await store.update_note(note.id, "Budget 2", "q4", tag=None)).tag is None
+        finally:
+            await store.close()
+
+    asyncio.run(go())

@@ -65,6 +65,7 @@ describe('Notes', () => {
     expect(hub.bodies.find((b) => b.call === 'PUT /planner/notes/n1')?.body).toEqual({
       title: '<img src=x onerror=boom()> Groceries',
       body: 'milk <b>eggs</b>\nbread\nbutter',
+      tag: null,
     });
     expect(await screen.findByText('Saved')).toBeInTheDocument();
   });
@@ -80,7 +81,7 @@ describe('Notes', () => {
     await user.type(screen.getByRole('textbox', { name: 'Note' }), 'book flights');
     await wait(SAVE_DELAY_MS + 50);
     await waitFor(() => expect(hub.calls).toContain('POST /planner/notes'));
-    expect(hub.bodies.find((b) => b.call === 'POST /planner/notes')?.body).toEqual({ title: 'Trip plan', body: 'book flights' });
+    expect(hub.bodies.find((b) => b.call === 'POST /planner/notes')?.body).toEqual({ title: 'Trip plan', body: 'book flights', tag: null });
     await user.type(screen.getByRole('textbox', { name: 'Note' }), ' and hotel');
     await wait(SAVE_DELAY_MS + 50);
     await waitFor(() => expect(hub.calls.some((c) => c.startsWith('PUT /planner/notes/n'))).toBe(true));
@@ -168,5 +169,87 @@ describe('Notes', () => {
     renderApp('#/notes');
     expect(await screen.findByText('No notes.')).toBeInTheDocument();
     await settle();
+  });
+});
+
+describe('Notes folders', () => {
+  const filed = () =>
+    createFakeHub({
+      status: SAMPLE_STATUS,
+      notes: [
+        { id: 'a', title: 'Kickoff', body: 'agenda', updated_at: ago(0), tag: 'Meeting Notes' },
+        { id: 'b', title: 'Budget', body: 'q4', updated_at: ago(1), tag: 'Projects/Project StarWars/Finance' },
+        { id: 'c', title: 'Casting', body: 'leads', updated_at: ago(2), tag: 'Projects/Project StarWars' },
+        { id: 'd', title: 'Loose', body: 'x', updated_at: ago(3), tag: null },
+      ],
+    });
+  const nav = () => within(screen.getByRole('navigation', { name: 'Folders' }));
+
+  it('shows the folder tree under All Notes with counts, and a folder holds the notes below it', async () => {
+    filed();
+    renderApp('#/notes');
+    const user = setup();
+    await screen.findByText('Kickoff');
+    expect(nav().getByRole('button', { name: /^All Notes\s*4$/ })).toHaveAttribute('aria-current', 'true');
+    expect(nav().getByRole('button', { name: /^Projects\s*2$/ })).toBeInTheDocument();
+    expect(nav().getByRole('button', { name: /^Project StarWars\s*2$/ })).toBeInTheDocument();
+    expect(nav().getByRole('button', { name: /^Finance\s*1$/ })).toBeInTheDocument();
+
+    await user.click(nav().getByRole('button', { name: /^Projects/ }));
+    expect(screen.getByRole('button', { name: /Budget/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Casting/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Kickoff/ })).toBeNull();
+    expect(screen.getByRole('button', { name: /Budget/ })).toHaveTextContent('Projects › Project StarWars › Finance');
+
+    await user.click(nav().getByRole('button', { name: /^Finance/ }));
+    expect(screen.queryByRole('button', { name: /Casting/ })).toBeNull();
+    await user.click(nav().getByRole('button', { name: /^All Notes/ }));
+    expect(screen.getByRole('button', { name: /Loose/ })).toHaveTextContent('Notes');
+  });
+
+  it('files a note by its folder field once the field is left, normalised, and an unfiled note goes back with an empty one', async () => {
+    const hub = filed();
+    renderApp('#/notes');
+    const user = setup();
+    await user.click(await screen.findByRole('button', { name: /Loose/ }));
+    const field = screen.getByLabelText('Folder');
+    expect(field).toHaveValue('');
+    await user.type(field, 'All Notes/ Projects /Project StarWars/Legal');
+    await wait(SAVE_DELAY_MS + 50);
+    expect(hub.calls.some((c) => c.startsWith('PUT'))).toBe(false); // not while it is being typed
+    await user.tab();
+    await wait(SAVE_DELAY_MS + 50);
+    await waitFor(() => expect(hub.bodies.find((b) => b.call === 'PUT /planner/notes/d')?.body).toMatchObject({ tag: 'Projects/Project StarWars/Legal' }));
+    expect(await within(screen.getByRole('navigation', { name: 'Folders' })).findByRole('button', { name: /^Legal\s*1$/ })).toBeInTheDocument();
+
+    await user.clear(field);
+    await user.tab();
+    await wait(SAVE_DELAY_MS + 50);
+    await waitFor(() => expect(hub.bodies.filter((b) => b.call === 'PUT /planner/notes/d').at(-1)?.body).toMatchObject({ tag: null }));
+  });
+
+  it('refuses a folder that is too deep and does not save it', async () => {
+    const hub = filed();
+    renderApp('#/notes');
+    const user = setup();
+    await user.click(await screen.findByRole('button', { name: /Loose/ }));
+    await user.type(screen.getByLabelText('Folder'), 'a/b/c/d/e/f');
+    await user.tab();
+    await wait(SAVE_DELAY_MS + 50);
+    expect(await screen.findByRole('alert')).toHaveTextContent('at most 5 levels');
+    expect(hub.calls.some((c) => c.startsWith('PUT'))).toBe(false);
+  });
+
+  it('starts a new note in the folder being viewed', async () => {
+    const hub = filed();
+    renderApp('#/notes');
+    const user = setup();
+    await screen.findByText('Kickoff');
+    await user.click(nav().getByRole('button', { name: /^Meeting Notes/ }));
+    await user.click(screen.getByRole('button', { name: 'New note' }));
+    expect(screen.getByLabelText('Folder')).toHaveValue('Meeting Notes');
+    await user.type(screen.getByLabelText('Title'), 'Standup{Enter}');
+    await wait(SAVE_DELAY_MS + 50);
+    await waitFor(() => expect(hub.bodies.find((b) => b.call === 'POST /planner/notes')?.body).toMatchObject({ title: 'Standup', tag: 'Meeting Notes' }));
   });
 });

@@ -16,6 +16,7 @@ from starlette.background import BackgroundTask
 from reachy_hub import alarm_audio
 from reachy_hub.tts import speech_chunks, spoken_text, wav_to_pcm
 from shared.models.llm import LLMConfigPatch
+from shared.models.note_tag import NoteTag
 from shared.models.persona import PersonaPatch
 from shared.models.response import Privacy
 from shared.models.websearch import SearchConfigPatch
@@ -135,6 +136,7 @@ class MeetingReplaceBody(BaseModel):
 class PlannerNoteBody(_NoReclassification):
     title: str = Field(min_length=1, max_length=200)
     body: str = Field(default="", max_length=20000)
+    tag: NoteTag = None  # forwarded only when the client sent it, so an older client's autosave keeps the note's folder
 
 
 class PlannerNoteCreateBody(BaseModel):
@@ -142,6 +144,7 @@ class PlannerNoteCreateBody(BaseModel):
     body: str = Field(default="", max_length=20000)
     sensitivity: Privacy = Privacy.WORK_PRIVATE
     project_scope: str | None = Field(default=None, max_length=200)
+    tag: NoteTag = None
 
 
 class PlannerReminderBody(BaseModel):
@@ -543,7 +546,7 @@ def install_operator_routes(
 
     @app.put(PLANNER_NOTE, dependencies=dependencies)
     async def planner_edit_note(item_id: str, body: PlannerNoteBody) -> dict:
-        return await planner("PUT", f"/notes/{quote(item_id, safe='')}", json=body.model_dump())
+        return await planner("PUT", f"/notes/{quote(item_id, safe='')}", json=body.model_dump(exclude_unset=True))
 
     @app.delete(PLANNER_NOTE, dependencies=dependencies)
     async def planner_delete_note(item_id: str) -> dict:
