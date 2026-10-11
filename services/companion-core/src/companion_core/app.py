@@ -178,6 +178,7 @@ from companion_core import (
     email_intent,
     intent_router,
     memory_intent,
+    mixed_intent,
     rag_intent,
     record_reference,
 )
@@ -1161,6 +1162,8 @@ def create_app(
         # An explicit reference to a named note or meeting outranks every generic intent: its title may contain "tasks", "reminders", "alarms" and
         # so on. The matchers below then see no text, and the record branch answers (record_reference.py).
         record_ref = None if slash_input else record_reference.parse(turn.text)
+        # Quoted spans and "called X" titles are removed first: a note's title may contain any verb.
+        mixed = None if slash_input or parsed_command is not None else mixed_intent.detect(record_reference.without_titles(turn.text))
         # Phase 49E: a source named without a title ("pending action items from my notes") is the task inquiry's question, which reads the stores itself. A TITLED reference
         # still wins outright, so a note's title can never reach the inquiry or the generic handlers.
         if record_ref is not None and record_ref.title is None and app.state.notepad_service is not None and notepad_inquiry.match(turn.text) is not None:
@@ -1241,6 +1244,11 @@ def create_app(
         elif reachy_command == "help":
             production_handler = "slash_command"
             reply = format_help()
+            privacy = Privacy.PUBLIC
+        elif mixed is not None:
+            # Phase-free stabilisation: a message that reads and also asks to change or send something is not run at all, and says which operation was not performed.
+            production_handler = "action_boundary.mixed"
+            reply = mixed_intent.reply(mixed)
             privacy = Privacy.PUBLIC
         elif record_ref is not None:
             production_handler = "records.reference"

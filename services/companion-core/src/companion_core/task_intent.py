@@ -141,21 +141,39 @@ def _changes_something(text: str) -> bool:
     return is_action_request(text) and not _QUESTION.match(text.strip())
 
 
+# Ownership: the question is about the owner's own records. The broad query patterns below also needed it so that "What is a task manager?" is not a lookup.
+_OWNED = re.compile(r"\b(?:my|mine|our|i|i've|i'm|i'd|we)\b", re.IGNORECASE)
+# Wording that makes a question about the topic itself (advice, definitions, products) rather than a lookup of the owner's records. Such a message is never claimed by the
+# regex handlers; it reaches the intent router or ordinary chat.
+_ABOUT_THE_TOPIC = re.compile(
+    r"\b(?:how(?!\s+many)|why|explain|define|definition|meaning|best|better|strateg\w+|tips?|advice|suggest\w*|recommend\w*|apps?|software|tools?|templates?|examples?|difference|versus|vs|"
+    r"organi[sz]e|prioriti[sz]e|manage|improve|learn|methods?|techniques?|project manager|manager)\b",
+    re.IGNORECASE,
+)
+
+
+def about_the_topic(text: str) -> bool:
+    return bool(_ABOUT_THE_TOPIC.search(text))
+
+
 def is_list_query(text: str) -> bool:
     # A request that changes something ("delete my tasks") is never a list query, whatever words it shares with one (44H handles it).
     if _changes_something(text):
         return False
     lowered = normalise_question(text.strip()).lower()
-    return any(phrase in lowered for phrase in _LIST_PHRASES) or bool(_TASK_QUERY.search(lowered)) or bool(BARE_TASK_LIST.match(lowered))
+    if about_the_topic(lowered):
+        return False
+    return any(phrase in lowered for phrase in _LIST_PHRASES) or (bool(_TASK_QUERY.search(lowered)) and bool(_OWNED.search(lowered))) or bool(BARE_TASK_LIST.match(lowered))
 
 
 _NOTE_QUERY = re.compile(rf"^(?!\s*(?:take|make|write|add|create|save)\b).*\b{_ASKING}\b.*\bnotes\b")
 
 
 def is_note_list_query(text: str) -> bool:
-    if _changes_something(text):
+    lowered = text.strip().lower()
+    if _changes_something(text) or about_the_topic(lowered) or not _OWNED.search(lowered):
         return False
-    return bool(_NOTE_QUERY.search(text.strip().lower()))
+    return bool(_NOTE_QUERY.search(lowered))
 
 
 def format_notes_reply(notes: list[Note]) -> str:
@@ -165,9 +183,10 @@ def format_notes_reply(notes: list[Note]) -> str:
 
 
 def is_reminder_list_query(text: str) -> bool:
-    if _changes_something(text):
+    lowered = text.strip().lower()
+    if _changes_something(text) or about_the_topic(lowered) or not _OWNED.search(lowered):
         return False
-    return bool(_REMINDER_QUERY.search(text.strip().lower()))
+    return bool(_REMINDER_QUERY.search(lowered))
 
 
 def format_reminders_reply(reminders: list[Reminder], timezone: str) -> str:

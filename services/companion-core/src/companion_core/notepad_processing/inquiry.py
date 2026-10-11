@@ -22,6 +22,7 @@ from companion_core.task_intent import (
     BARE_TASK_LIST,
     SCOPE_LIMITS,
     SCOPE_WORDS,
+    about_the_topic,
     normalise_question,
     time_scope,
 )
@@ -55,7 +56,7 @@ class Inquiry:
 def match(text: str) -> Inquiry | None:
     """The inquiry in `text`, or None. Fixed patterns; no model. Questions only: an imperative never starts with these words."""
     stripped = normalise_question(text.strip())
-    if not stripped or stripped.startswith("/") or is_action_request(stripped):
+    if not stripped or stripped.startswith("/") or is_action_request(stripped) or about_the_topic(stripped):
         return None
     if not (_OPENER.match(stripped) and _NEED_TO_DO.search(stripped)) and not BARE_TASK_LIST.match(stripped.lower()):
         return None

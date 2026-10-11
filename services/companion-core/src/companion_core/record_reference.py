@@ -76,6 +76,11 @@ def _clean(title: str) -> str:
     return re.sub(r"\s+", " ", title).strip()
 
 
+def without_titles(text: str) -> str:
+    """`text` with any quoted span and any "called X" title removed, so words inside a note's title are never read as part of the request."""
+    return re.sub(r"\s+", " ", _TITLED.sub(" ", re.sub(_QUOTED, " ", text))).strip()
+
+
 def parse(text: str) -> RecordReference | None:
     """The explicit record reference in `text`, or None. Fixed patterns; no model."""
     stripped = text.strip()
