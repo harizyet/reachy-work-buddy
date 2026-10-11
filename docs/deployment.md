@@ -365,6 +365,8 @@ for c in reachy-homelab-companion-core-1 reachy-homelab-reachy-hub-1 reachy-home
 shred -u .env.searxng-secret.prev /tmp/started-before.txt
 ```
 
+**Executed on the homelab 2026-10-11 13:00 UTC** (owner-approved; script form of the steps above, run with tracing off; success, no other service restarted): [record](verification/privacy-remediation-and-searxng-rotation-2026-10-11.md).
+
 **Rollback** (before step 5): `mv -f .env.searxng-secret.prev .env.searxng-secret`, then repeat step 3. **After a rotation** treat any record that contains the old value as exposed history (terminal logs, a coding-assistant session transcript under `~/.claude/projects/`, shell history); the rotation, not deleting those, is what makes the old value useless. Phase 49 and the router rollout records mention this procedure; the 2026-10-11 router deployment record notes the one exposure.
 
 ## Telegram and SMTP

@@ -1,6 +1,6 @@
 # Task reply privacy and title-only named-note routing (2026-10-11)
 
-Two production findings from the router deployment ([record](intent-router-deployment-2026-10-11.md#findings)), corrected locally. **Committed, not deployed.** No router change, no new flag, no schema change, no heuristic added to the router.
+Two production findings from the router deployment ([record](intent-router-deployment-2026-10-11.md#findings)), corrected locally. **Deployed 2026-10-11 12:59 UTC** ([deployment record](privacy-remediation-and-searxng-rotation-2026-10-11.md)). No router change, no new flag, no schema change, no heuristic added to the router.
 
 ## 1. Task reply privacy: root cause and fix
 
@@ -32,4 +32,4 @@ A bare "what did I write in X" for something that is not a record now says it fo
 
 ## 3. SearXNG secret (procedure prepared, nothing rotated)
 
-Root cause of the exposure: the file holds a bare value, which the documentation already said (`export SEARXNG_SECRET_KEY=$(cat ...)`), but I treated it as a `KEY=value` file, printed its first field while diagnosing a failed `source`, and so wrote the value into the session output. Consumers, the file format rules and a rotation procedure that prints no value are in [deployment.md](../deployment.md#the-bundled-searxng-secret-format-consumers-and-rotation). Rotation and the `searxng` container recreate need separate owner approval and have not been done; no service was restarted and no runtime flag was changed by this work.
+Root cause of the exposure: the file holds a bare value, which the documentation already said (`export SEARXNG_SECRET_KEY=$(cat ...)`), but I treated it as a `KEY=value` file, printed its first field while diagnosing a failed `source`, and so wrote the value into the session output. Consumers, the file format rules and a rotation procedure that prints no value are in [deployment.md](../deployment.md#the-bundled-searxng-secret-format-consumers-and-rotation). Rotation was later approved and executed: see the deployment record.
