@@ -1,6 +1,6 @@
 # Phase 50 — Multimodal Document Intelligence
 
-**Status: PROPOSED (2026-10-11). Plan only: no code, migration, dependency, model or flag exists for it. Nothing in this page describes implemented behaviour.** Each stage ends with a dated verification record and an owner decision before the next begins.
+**Status: PROPOSED (2026-10-11); owner decisions on the eight open questions recorded the same day (section 8). Plan only: no code, migration, dependency, model or flag exists for it. Nothing in this page describes implemented behaviour.** Each stage ends with a dated verification record and an owner decision before the next begins.
 
 Type: new capability. Dependencies: the document store ([Phase 13](plan.md#6-implementation-roadmap)), the Phase 44 knowledge index and retrieval ([phase-44](phase-44.md)), model tiers ([Phase 42](phase-42.md), [ADR 0031](adr/0031-three-tier-local-model-escalation.md)), owner authentication and the sensitivity labels from migration 026.
 
@@ -16,20 +16,23 @@ Reachy should become a multimodal knowledge-ingestion system in which PDF and DO
 
 > **Never replace original evidence with model-derived interpretation.**
 
-Two classes of data stay permanently distinct, in storage, in retrieval metadata and in citations:
+Three classes of data stay permanently distinct, in storage, in retrieval metadata and in citations:
 
 | Class | Contents | Rule |
 |---|---|---|
-| **Authoritative source** | the original file; native text; OCR output; the original page image | Written once per processing version, never rewritten by a model. OCR is stored beside native text, never over it. |
-| **Derived evidence** | visual descriptions; extracted entities and relationships; chunk embeddings; summaries; any LLM analysis | Rebuildable from the authoritative class. Labelled with model, prompt version and processing version. Deleted and regenerated on reprocess, deletion or model upgrade. |
+| **Authoritative source** | the original file; native embedded text; the original page image | Immutable and content-hashed. Never rewritten by a program or model. |
+| **Derived extraction** | OCR text and confidence; layout extraction; parsed structure | Machine output that can be wrong (OCR is a guess at the text in an image). Stored beside native text, never over it; rebuilt from the original. |
+| **Derived interpretation** | visual descriptions, entities and relationships; chunks and embeddings; summaries; any LLM analysis | Labelled with model, prompt and processing version. Deleted and regenerated on reprocess, deletion or model upgrade. |
 
-Everything else follows from this: provenance, deletion, reprocessing, audit, model upgrades and hallucination investigation each operate on the derived class without touching the source.
+The binding wording is [ADR 0034](adr/0034-source-evidence-and-derived-artifacts.md) (proposed), a prerequisite for implementation.
+
+Everything else follows from this: provenance, deletion, reprocessing, audit, model upgrades and hallucination investigation each operate on the derived classes without touching the source.
 
 Binding limits inherited from the project (see [AGENTS.md](../AGENTS.md)):
 
 - Document text, OCR output and VLM output are **untrusted data**. They cannot authorize an action, set a date, change a gate or write memory ([ADR 0001](adr/0001-service-boundaries.md), [ADR 0011](adr/0011-destructive-action-consent.md), [ADR 0018](adr/0018-hybrid-llm-routing.md)). A document containing instructions is tested as an injection case.
-- Cloud inference only under the existing owner/privacy policy; no document page, page image or derived text goes to a cloud provider without it. Documents above the private ceiling stay local.
-- Services talk over HTTP; shared models go in `shared/models`, route constants in `shared/protocols`. Heavy tools (OCR engine, PDF renderer, VLM client) run in a sidecar or the processing worker, not in the request path, and never as sibling-service imports.
+- Retrieval behaviour for documents is not changed in production while the Phase 48F window is open (section 8, item 8). Cloud inference only under the existing owner/privacy policy; no document page, page image or derived text goes to a cloud provider without it. Documents above the private ceiling stay local.
+- Services talk over HTTP; shared models go in `shared/models`, route constants in `shared/protocols`. Heavy tools (PDF and DOCX parsers, OCRmyPDF/Tesseract, page renderer, later the VLM) run in an isolated document-worker container or job, not in companion-core and not in the request path, and never as sibling-service imports.
 - Browser paths are relative; conversation and document text render literally (no HTML, no Markdown execution); no document text or keys in localStorage.
 
 ## 3. Facts about the current checkout (confirm at 50A start)
@@ -55,7 +58,7 @@ Goal: documents become records, deterministically manageable, before any clevern
 - `Document`: `document_id`, `filename`, `title`, `mime_type`, `file_hash`, `sensitivity`, `project_scope`, `page_count`, `processing_status`, `processing_version`, `created_at`, `updated_at`.
 - Explicit states: `uploaded → inspecting → extracting → enriching → indexing → ready`, or `partial` / `failed`. The UI shows these, not just "uploaded".
 - Routes: upload, list, detail, delete, reprocess. Delete cascades to pages, chunks, embeddings, index entries, derived outputs and the stored original, and is verified (see G8). Delete is a destructive action and goes through the ADR 0011 consent path.
-- A decision record (ADR 0034, proposed) fixing the authoritative/derived split in section 2, written at 50A start.
+- [ADR 0034](adr/0034-source-evidence-and-derived-artifacts.md) fixes the source/derived split; it is accepted before 50A code starts.
 
 Acceptance: upload/list/detail/delete/reprocess behave deterministically on a real database; deletion leaves no row, vector or file referring to the document (checked by table-by-table count before and after); a killed worker resumes or fails the document cleanly.
 
@@ -167,16 +170,20 @@ Promotion depends on measured gates, not on feature completion. Each modality is
 - Changes to the frozen Phase 44/48 capture, routing and answering code, or to its flags.
 - Cloud processing of documents by default.
 
-## 8. Open questions for the owner
+## 8. Owner decisions (2026-10-11)
 
-1. **Where does the vision model run, and which?** Nothing in the stack serves a VLM. It competes with the 7B and 14B for the same GPU; ADR 0031 does not cover a third resident model. This decides whether 50E and the "standard" visual mode are feasible on the homelab at all, and may need an ADR amendment.
-2. **New dependencies:** approve evaluating a PDF library, OCRmyPDF/Tesseract and a DOCX parser, each with image-size, licence and supply-chain review ([Phase 33](plan.md#forward-roadmap-phases-30) applies to ingestion).
-3. **Storage:** where the original files and page images live (database large objects, a volume, or the existing data volume), their backup coverage, and retention. Page images are derived but large; keep or regenerate?
-4. **Limits:** maximum file size, page count and per-document processing time.
-5. **Sensitivity at upload:** a required owner choice, or a default? (The Phase 44 rule is that sensitivity is never inferred by a model.)
-6. **Evaluation corpus:** synthetic only, or may some owner documents be used and kept out of the repository?
-7. **Scope of 50K on Android:** web only for now?
-8. **Phase number and ordering:** Phase 50 is the next free number (no `phase-50*` document or ADR existed on 2026-10-11). Does it run ahead of the open Phase 48 acceptance and Phase 49 owner checks, or after them?
+The eight questions raised with this plan were answered as follows.
+
+1. **Vision model placement.** No third resident GPU model. Vision is an on-demand job using the model-lifecycle pattern of [ADR 0031](adr/0031-three-tier-local-model-escalation.md): pause or unload the serving model if needed, load the VLM, process the selected pages, persist the derived analysis, unload, restore the normal model. A small local VLM is feasible (the SmolVLM2 2.2B family is one example of the class). **The model is not chosen here; selection is part of the 50E evaluation.** The swap procedure, its timing and its failure cases (the 7B must come back) need the same measured rehearsal 0031 required, and may need an amendment to 0031.
+2. **Dependencies.** Parser and OCR dependencies are approved for evaluation, isolated in a document-worker container or job so they never enter companion-core. OCRmyPDF over Tesseract is the first candidate; Tesseract can also emit hOCR and TSV, which gives positional provenance later. Image size, licences and supply-chain review still apply ([Phase 33](plan.md#forward-roadmap-phases-30)).
+3. **Storage and retention.** The original is retained as source evidence with an immutable SHA-256. Native extraction, OCR, visual analysis, chunks, embeddings and summaries are stored separately as derived. Delete cascades through every derived record; reprocessing recreates derivatives from the retained original and never edits them in place.
+4. **Limits.** Configurable limits on upload bytes, pages and processing time, set conservatively at first. Final defaults come from the 50J measurements; none is hard-coded in the ADR. OCR needs explicit controls for very large raster pages (downsampling, time limits).
+5. **Sensitivity at upload.** An explicit classification is required, defaulting to Reachy's conservative private class if the owner does nothing. Content is never used to infer it. A later classifier may only suggest a change; document content can never authorize or lower its own classification.
+6. **Evaluation corpus.** Created and frozen during 50B, not 50J, and extended each stage: digital PDF, scanned PDF, mixed PDF, DOCX, screenshot-heavy PDF, diagram-heavy PDF, table/chart PDF and a long report, with known-answer questions and known evidence locations added progressively. Synthetic or owner-approved documents only; nothing private is committed.
+7. **Android.** Document management is deferred. The web owns upload, list, delete and reprocess in the first release; Android only consumes already-ingested documents through chat.
+8. **Ordering.** 50A/50B planning and isolated engineering may proceed. **Deployment or promotion of any new retrieval behaviour waits for the current Phase 48/49 acceptance work**: Phase 50 touches the knowledge and retrieval surface that 48F is measuring, and changing production retrieval during that window would contaminate it. Phase 50 adds no flag to production and touches no frozen 44/48 code.
+
+Still unanswered: where originals and page images physically live (volume or database) and their backup coverage, and whether page images are kept or regenerated. Decide at 50A start.
 
 ## 9. Definition of done
 

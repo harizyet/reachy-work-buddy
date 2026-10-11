@@ -6,7 +6,7 @@ The [documentation index](docs/README.md) defines ownership;
 
 ## Phase 50 (proposed 2026-10-11; plan only)
 
-[docs/phase-50.md](docs/phase-50.md) records the owner-supplied Multimodal Document Intelligence design (stages 50A to 50K, gates G1 to G10) and is listed in the roadmap. **No code, migration, dependency or flag exists.** Nothing is approved to start: the open owner questions are in section 8 of the page (above all where a vision model would run, given the GPU already holds the 7B and 14B tiers). Link and anchor check only; no robot, model or service activity.
+[docs/phase-50.md](docs/phase-50.md) records the owner-supplied Multimodal Document Intelligence design (stages 50A to 50K, gates G1 to G10) and is listed in the roadmap. **No code, migration, dependency or flag exists.** Owner answered the eight open questions the same day (section 8 of the page): on-demand VLM job, no third resident model, model chosen in 50E; isolated document worker; original retained; conservative-private default sensitivity; corpus frozen in 50B; web-only lifecycle; **no production retrieval change until Phase 48/49 acceptance**. [ADR 0034](docs/adr/0034-source-evidence-and-derived-artifacts.md) (proposed) must be accepted before 50A code. Still open: physical storage location of originals and page images. Link and anchor check only; no robot, model or service activity.
 
 ## Android 0.16.0 (2026-10-11; committed `918af10`, APK built and sent to the owner; installation not confirmed)
 
