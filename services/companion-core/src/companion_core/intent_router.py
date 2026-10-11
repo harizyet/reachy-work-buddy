@@ -51,8 +51,8 @@ TIMEOUT_SECONDS = 12.0
 MAX_QUERY_CHARS = 80
 MAX_LISTED = 8
 
-CANNOT_PLACE = ("I couldn't tell which of your records you mean, so I haven't looked anything up. "
-                "Try naming it, for example “show my tasks”, “what are my reminders” or “read the note called …”.")
+CANNOT_PLACE = ("I couldn't tell which of your records you mean, so I haven't looked anything up and I won't guess an answer. "
+                "Try naming it, for example “show my tasks”, “what are my reminders” or “read the note called …”, or ask it as a general question without “my” or “we”.")
 
 # Whether the model is asked at all. Over-inclusive on purpose: it never decides what the model concludes, only whether an ordinary chat message costs one extra local call.
 # STRICT: the message names the owner's records, so a routing failure must not fall through to a model that would answer from nothing.
@@ -87,7 +87,7 @@ class Decision(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     operation: Operation
-    kind: Literal["note", "meeting", "any"] = "any"
+    kind: str = "any"  # advisory only: anything but "note" or "meeting" means "any", and the owner's own words decide in `_kind_from_words`
     query: str | None = Field(default=None, max_length=MAX_QUERY_CHARS)
     confidence: float = Field(ge=0, le=1)
 
@@ -143,6 +143,51 @@ def strict(text: str) -> bool:
     return bool(_STRICT.search(text))
 
 
+# -- does the question REQUIRE the owner's own records? ---------------------------------------------------------------------------------
+# Decided from the owner's words alone, never from the model. The model only chooses WHICH supported read answers such a question; it cannot decide that the question needs no
+# evidence. When evidence is required and no supported read answers it (the model said `none`, timed out, failed or returned something invalid), the turn gets a limitation and the
+# ordinary model is not called, because it would answer about records it has not been given.
+_RECORD_NOUN = r"(?:tasks?|to-?dos?|reminders?|notes?|meetings?|memos?|minutes|action\s+items?|agenda|plate|schedule)"
+_OWNER_WORD = r"(?:my|our|mine|i|we|i've|we've)"
+_RECORD_CUES = (
+    # the owner's own records by name: "my tasks", "do I have any notes", "what notes did I take"
+    re.compile(rf"\b{_OWNER_WORD}\b[^.?!]{{0,60}}\b{_RECORD_NOUN}\b|\b{_RECORD_NOUN}\b[^.?!]{{0,40}}\b{_OWNER_WORD}\b", re.IGNORECASE),
+    # a role, contact or owner that belongs to the owner or their team: "my Google on-prem contact", "our vendor rep"
+    re.compile(r"\b(?:my|our)\s+(?:[\w-]+\s+){0,4}(?:contacts?|managers?|owners?|leads?|vendors?|colleagues?|teammates?|reps?|representatives?|accounts?)\b", re.IGNORECASE),
+    re.compile(r"\bwho\s+(?:is|was|are)\s+(?:the|our|my)\s+(?:[\w-]+\s+){0,4}contacts?\b|\bwho\s+(?:owns|runs|leads|manages|is\s+responsible\s+for|is\s+in\s+charge\s+of)\b", re.IGNORECASE),
+    # what the owner or their team wrote, said, decided, agreed or recommended
+    re.compile(r"\b(?:what|who|which|when|where|did|do|does|have|has)\b[^.?!]{0,30}\b(?:i|we)\s+(?:wrote|written|write|decid\w*|agree\w*|said|say|told|tell|noted|note|saved|discuss\w*|"
+               r"plan\w*|chose|choose|picked|pick|settle[d]?|recommend\w*|promis\w*|commit\w*)\b", re.IGNORECASE),
+    re.compile(r"\b(?:i|we)\s+(?:wrote|decided|agreed|said|told|noted|saved|discussed|planned|chose|picked|settled|promised)\b", re.IGNORECASE),
+    # who was at, presented or ran a meeting or review
+    re.compile(r"\bwho\s+(?:attended|joined|presented|chaired|hosted|organi[sz]ed|was\s+(?:at|in|on))\b", re.IGNORECASE),
+    # what a note, memo, minutes or meeting says, mentions or covers, or notes/meetings about a subject: "what does the vendor note say", "which meetings mention Lantern"
+    re.compile(r"\b(?:notes?|meetings?|memos?|minutes)\s+(?:say|says|said|mention\w*|cover\w*|discuss\w*|contain\w*|record\w*|state\w*|about|on|regarding|from|with|where)\b", re.IGNORECASE),
+    # a record noun with a status word: "what tasks remain unfinished", "anything overdue on my plate"
+    re.compile(rf"\b{_RECORD_NOUN}\b[^.?!]{{0,40}}\b(?:pending|outstanding|open|remain\w*|unfinished|overdue|upcoming|scheduled|left|due)\b|"
+               rf"\b(?:pending|outstanding|open|overdue|upcoming|scheduled|unfinished)\s+{_RECORD_NOUN}\b", re.IGNORECASE),
+)
+# What a named person, the team or anyone said, recommended, decided or promised: private facts a general model cannot know. Names are capitalised, so this is case-sensitive.
+_ACTOR_VERBS = r"(?:recommend|suggest|decide|agree|choose|pick|settle|say|mention|promise|commit|assign|propose|approve|prefer|ask|tell|want|expect)\w*"
+_ACTOR = re.compile(
+    rf"\b(?:[Ww]ho|[Ww]hat|[Ww]hich|[Ww]hen|[Ww]here|[Ww]hy|[Dd]id|[Dd]oes|[Dd]o|[Hh]as|[Hh]ave)\s+(?:[a-z]+\s+)?(?:the\s+team|the\s+group|[A-Z][a-z]{{2,}}|anyone|anybody|someone|somebody|everyone)\s+"
+    rf"(?:[a-z]+\s+)?{_ACTOR_VERBS}\b"
+)
+
+
+def requires_records(text: str) -> bool:
+    """True when answering needs the owner's own records. A question about the topic itself (how, why, explain, best, apps, tools, ...) with no word of ownership is general
+    knowledge and never requires them."""
+    stripped = text.strip()
+    if not _READ_SHAPED.search(stripped):
+        return False  # a statement ("I always take notes by hand.") asks for nothing
+    if _ACTOR.search(stripped):
+        return True  # "who did <Name> recommend" is specific enough that advice words (recommend, why) do not make it a general question
+    if about_the_topic(stripped):
+        return False
+    return any(cue.search(stripped) for cue in _RECORD_CUES)
+
+
 # Clearly conversational or general: how-to, definitions, advice. With no mention of the owner's own things, these never cost a classification call.
 _GENERAL = re.compile(r"^\W*(?:how (?:do|can|should|to|does)|explain|why|define|describe|compare|what(?:'s| is| are) (?:a|an|the (?:difference|best|meaning))\b)", re.IGNORECASE)
 _OWN = re.compile(r"\b(?:my|our|mine|we)\b", re.IGNORECASE)  # "how do I" is not ownership: it is the how-to form
@@ -178,22 +223,37 @@ def clean_query(query: str) -> str:
     return " ".join(words)
 
 
-def _query_is_the_owners(query: str | None, text: str) -> bool:
-    """A search phrase is accepted only when every word of it is a word the owner used."""
+def _align_query(query: str | None, text: str) -> str | None:
+    """The search phrase re-expressed in the owner's own words, or None. A word of the model's phrase is accepted if the owner used it, or used a word that differs only in its ending
+    ("recommended" for "recommend"); the owner's spelling replaces it. Any other word means the model added something, and the phrase is refused."""
     if query is None:
-        return True
-    words = _WORD.findall(query.casefold())
-    spoken = set(_WORD.findall(normalise_question(text).casefold()))
-    return bool(words) and all(w in spoken for w in words)
+        return None
+    spoken = _WORD.findall(normalise_question(text))
+    aligned: list[str] = []
+    for word in _WORD.findall(query.casefold()):
+        match = next((w for w in spoken if w.casefold() == word), None) or next(
+            (w for w in spoken if min(len(w), len(word)) >= 4 and (w.casefold().startswith(word) or word.startswith(w.casefold()))), None)
+        if match is None:
+            return None
+        aligned.append(match)
+    return " ".join(aligned) or None
 
 
 async def infer(text: str, config: LLMConfig, *, transport=None, meeting_attached: bool = False) -> Inference:
-    """Ask the local model which read the owner meant. Never raises; every failure is `fail_closed` for a records question and ordinary chat otherwise. A turn with a meeting
-    attached is about that meeting (Phase 43) and is never routed."""
-    if (meeting_attached or not worth_asking(text) or config.local is None or is_action_request(text) or mixed_intent.detect(record_reference.without_titles(text))
-            or (strict(text) and about_the_topic(text) and not _OWN.search(text))):
+    """Ask the local model which supported read the owner meant. Never raises.
+
+    `fail_closed` is decided by `requires_records(text)`, not by the model: if the question needs the owner's records and no supported read is chosen (the model said `none`, the
+    call failed or timed out, the output was invalid or unsure, or no local model is configured), the answer is a limitation and ordinary chat is not reached. A question that
+    does not need them proceeds as ordinary chat in every one of those cases. A turn with a meeting attached is about that meeting (Phase 43) and is never routed; an action request
+    or a mixed read-and-write message was claimed by 44H or `mixed_intent` before this point."""
+    if meeting_attached or is_action_request(text) or mixed_intent.detect(record_reference.without_titles(text)):
         return Inference()
-    failure = Inference(fail_closed=strict(text))
+    needs = requires_records(text)
+    failure = Inference(fail_closed=needs)
+    if config.local is None:
+        return failure
+    if not needs and (not worth_asking(text) or (strict(text) and about_the_topic(text) and not _OWN.search(text))):
+        return Inference()
     local_only = config.model_copy(update={"routing": config.routing.model_copy(update={"mode": LLMRoutingMode.LOCAL_ONLY})})
     messages = [{"role": "system", "content": _SYSTEM_PROMPT}, {"role": "user", "content": text}]
     try:
@@ -201,13 +261,11 @@ async def infer(text: str, config: LLMConfig, *, transport=None, meeting_attache
     except Exception:  # noqa: BLE001 - a timeout, an unreachable or erroring model, or a malformed provider reply are all the same: no route
         return failure
     decision = _parse(raw)
-    if decision is None or (decision.confidence < CONFIDENCE_THRESHOLD and decision.operation != "none"):
+    if decision is None or decision.operation == "none" or decision.confidence < CONFIDENCE_THRESHOLD:
         return failure
-    if decision.operation == "none":
-        return Inference()
     if decision.operation in ("records.find", "memory.recall"):
-        query = clean_query(decision.query or "")
-        if not query or not _query_is_the_owners(query, text):
+        query = _align_query(clean_query(decision.query or ""), text)
+        if not query:
             return failure
         decision = decision.model_copy(update={"query": query})
     else:

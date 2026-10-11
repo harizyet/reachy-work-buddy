@@ -16,6 +16,7 @@ from pathlib import Path
 
 import httpx
 import pytest
+from companion_core import intent_router
 from companion_core.app import create_app
 from companion_core.calendar.store import InMemoryCalendarStore
 from companion_core.consent.store import InMemoryConfirmationStore
@@ -246,7 +247,7 @@ def test_a_shadow_error_is_swallowed_and_counted(tmp_path):
     with world.client() as client:
         reply = client.post("/conversation", json={**TURN, "text": "Who owns the Quill message queue?"})
         run_drain(client, world)
-    assert reply.status_code == 200 and reply.json()["reply"] == "A normal answer."
+    assert reply.status_code == 200 and reply.json()["reply"] == intent_router.CANNOT_PLACE
     c = world.totals()["counts"]
     assert c["failed_error"] == 1 and c.get("processed_ok", 0) == 0 and world.totals()["evaluated_qualifying"] == 0
 

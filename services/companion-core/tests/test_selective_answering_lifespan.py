@@ -13,6 +13,7 @@ from pathlib import Path
 import httpx
 import psycopg
 import pytest
+from companion_core import intent_router
 from companion_core.app import ACTION_BOUNDARY_INSTRUCTION, create_app
 from companion_core.knowledge import selective_answer as sa
 from fastapi.testclient import TestClient
@@ -99,7 +100,7 @@ def test_the_flag_matrix_and_the_answer_under_the_production_lifespan(world, mon
         with boot(world, monkeypatch, retrieval=retrieval, selective=selective) as client:
             configure(client)
             assert client.app.state.selective_answerer is None
-            assert ask(client, Q)["reply"] == LLM_ANSWER and world.answer_calls == 1  # the ordinary path, no retrieved material anywhere in the prompt
+            assert ask(client, Q)["reply"] == intent_router.CANNOT_PLACE and world.answer_calls == 0  # flag off: a records question gets the router limitation, never an ordinary-model answer, and no retrieved material is in any prompt
             assert not any("<evidence" in m["content"] for call in world.calls for m in call["messages"])
     with boot(world, monkeypatch, retrieval=True, selective=True) as client:
         configure(client)
@@ -125,7 +126,7 @@ def test_rollback_off_then_on_again_and_an_index_fault_gives_the_fixed_reply_wit
         assert "Tomas Weber" in ask(client, Q)["reply"]
     with boot(world, monkeypatch, retrieval=True, selective=False) as client:  # flag off: restart is the whole rollback
         configure(client)
-        assert ask(client, Q)["reply"] == LLM_ANSWER and world.answer_calls == 1
+        assert ask(client, Q)["reply"] == intent_router.CANNOT_PLACE and world.answer_calls == 0
     with boot(world, monkeypatch, retrieval=True, selective=True) as client:
         configure(client)
         assert "Tomas Weber" in ask(client, Q)["reply"]
