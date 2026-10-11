@@ -4,7 +4,7 @@ import { EmptyState, ErrorState } from '../../components/shared/states';
 import { Button } from '../../components/ui/Button';
 import { Dialog } from '../../components/ui/Dialog';
 import { groupNotes, preview, shortDate } from './grouping';
-import { ProcessedIcon } from './ProcessedIcon';
+import { ProcessedTag } from './ProcessedTag';
 import { ProcessingPanel } from './ProcessingPanel';
 import { useNotesEditor } from './useNotesEditor';
 
@@ -78,7 +78,7 @@ export function NotesPage() {
           <>
             <p className="mb-2 text-center text-xs text-[var(--muted)]">
               {selected ? new Date(selected.updated_at).toLocaleString([], { dateStyle: 'long', timeStyle: 'short' }) : ''}
-              {editor.selectedId && <ProcessedIcon noteId={editor.selectedId} />}
+              {editor.selectedId && <ProcessedTag noteId={editor.selectedId} />}
             </p>
             <input
               autoFocus={editor.draftOpen}
@@ -138,7 +138,7 @@ function NoteRow({ note, current, onOpen }: { note: Note; current: boolean; onOp
     <button type="button" aria-current={current} className="block w-full px-2 py-2 text-left" onClick={onOpen}>
       <strong className="block break-words">
         {note.title}
-        <ProcessedIcon noteId={note.id} />
+        <ProcessedTag noteId={note.id} />
       </strong>
       <span className="block break-words text-sm">
         <span>{shortDate(note.updated_at)}</span> <span className="text-[var(--muted)]">{preview(note)}</span>
