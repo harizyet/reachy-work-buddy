@@ -178,6 +178,7 @@ from companion_core import (
     email_intent,
     memory_intent,
     rag_intent,
+    record_reference,
 )
 from companion_core import receipts as action_receipts
 from companion_core.action_boundary import unclaimed_action_reply
@@ -1093,7 +1094,10 @@ def create_app(
         # Slash arguments are data, never natural-language instructions. This
         # prevents /docs "my tasks" from dispatching the task-list handler.
         slash_input = turn.text.lstrip().startswith("/")
-        intent_text = "" if slash_input else turn.text
+        # An explicit reference to a named note or meeting outranks every generic intent: its title may contain "tasks", "reminders", "alarms" and
+        # so on. The matchers below then see no text, and the record branch answers (record_reference.py).
+        record_ref = None if slash_input else record_reference.parse(turn.text)
+        intent_text = "" if slash_input or record_ref is not None else turn.text
         capture_text = match_capture(intent_text)
         complete_query = match_complete(intent_text)
         search_query = match_search(intent_text)
@@ -1168,6 +1172,10 @@ def create_app(
             production_handler = "slash_command"
             reply = format_help()
             privacy = Privacy.PUBLIC
+        elif record_ref is not None:
+            production_handler = "records.reference"
+            reply = await answer_record_reference(record_ref, turn)
+            privacy = Privacy.WORK_PRIVATE  # it quotes or names the owner's own records: never spoken on a shared speaker
         elif reachy_command == "standby":
             production_handler = "slash_command"
             try:
@@ -1701,6 +1709,10 @@ def create_app(
                             force_frontier=turn.force_frontier, transport=llm_transport,
                             local_max_tokens=SPOKEN_REPLY_MAX_TOKENS if spoken else None,
                         )
+                        if attached is None and record_reference.claims_unsupplied_provenance(reply):
+                            # The turn supplied no record, so crediting the owner's notes or meetings is invented provenance; the content is withheld too.
+                            reply = record_reference.COULD_NOT_ESTABLISH
+                            production_handler = "records.provenance_blocked"
                         if spoken:
                             reply = spoken_reply(reply)
                         if meeting_missing:
@@ -1771,6 +1783,20 @@ def create_app(
             capture = app.state.candidate_capture
             counters = {k: v for k, v in (capture.summary() if capture is not None else {}).items() if isinstance(k, str) and k.isidentifier() and type(v) is int}
             return {"capture_enabled": capture is not None, "process_started_at": app.state.process_started_at, "counters": counters}
+
+    async def answer_record_reference(ref: record_reference.RecordReference, turn: ConversationTurnRequest) -> str:
+        """No model. A title that resolves to one readable record and asks only for its text gets that text; a missing or unreadable record gets the
+        same not-found reply; anything that needs interpretation fails closed (record_reference.py)."""
+        if ref.title is None:
+            return record_reference.COULD_NOT_ESTABLISH
+        found = await record_reference.resolve(
+            ref.title, planner=app.state.planner_store, meetings=app.state.meeting_store, access=selective_answer.access_for(str(turn.input_modality.value)),
+        )
+        if not found:
+            return record_reference.not_found_reply(ref.title)
+        if len(found) > 1:
+            return record_reference.ambiguous_reply(ref.title)
+        return record_reference.record_reply(found[0]) if ref.operation == "retrieve" else record_reference.COULD_NOT_ESTABLISH
 
     async def selective_turn(turn: ConversationTurnRequest):
         answerer = app.state.selective_answerer
