@@ -100,7 +100,7 @@ export function NotesPage() {
               {selected ? new Date(selected.updated_at).toLocaleString([], { dateStyle: 'long', timeStyle: 'short' }) : ''}
               {editor.selectedId && <ProcessedTag noteId={editor.selectedId} />}
             </p>
-            <FolderField key={editor.selectedId ?? 'new'} tag={editor.tag} folders={tree} onCommit={(tag) => ctl.edit({ tag })} />
+            <FolderField key={`folder-${editor.selectedId ?? 'new'}`} tag={editor.tag} folders={tree} onCommit={(tag) => ctl.edit({ tag })} />
             <input
               autoFocus={editor.draftOpen}
               aria-label="Title"

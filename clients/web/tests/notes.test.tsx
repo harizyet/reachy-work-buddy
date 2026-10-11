@@ -252,4 +252,16 @@ describe('Notes folders', () => {
     await wait(SAVE_DELAY_MS + 50);
     await waitFor(() => expect(hub.bodies.find((b) => b.call === 'POST /planner/notes')?.body).toMatchObject({ title: 'Standup', tag: 'Meeting Notes' }));
   });
+
+  it('shows one folder field however many notes are opened in turn', async () => {
+    filed();
+    renderApp('#/notes');
+    const user = setup();
+    await user.click(await screen.findByRole('button', { name: /Kickoff/ }));
+    await user.click(screen.getByRole('button', { name: /Budget/ }));
+    await user.click(screen.getByRole('button', { name: /Kickoff/ }));
+    await user.click(screen.getByRole('button', { name: /Loose/ }));
+    expect(screen.getAllByLabelText('Folder')).toHaveLength(1);
+    expect(screen.getAllByLabelText('Title')).toHaveLength(1);
+  });
 });
