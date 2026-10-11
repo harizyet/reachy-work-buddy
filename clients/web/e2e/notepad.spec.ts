@@ -64,6 +64,9 @@ test('Tasks for next week: save, link the meeting, process, review, approve once
   await expect(page.getByRole('status', { name: 'Processing status' })).toHaveText('Review required', { timeout: 15000 });
   await expect(box).not.toBeChecked();
 
+  // The processed mark appears on the note in the list, with an accessible label.
+  await expect(page.getByRole('img', { name: /Processed by Reachy/ }).first()).toBeVisible();
+
   // 4. Only what the sources support is offered, apart from the owner's real records.
   const review = page.getByLabel('Suggestions from Reachy');
   await expect(review).toContainText('Not yet confirmed');

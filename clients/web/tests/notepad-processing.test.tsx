@@ -60,6 +60,37 @@ async function openNote() {
   return user;
 }
 
+describe('Processed icon', () => {
+  it.each([
+    ['review_required', 'Processed by Reachy: suggestions waiting for your review'],
+    ['completed', 'Processed by Reachy'],
+    ['queued', 'Waiting to be processed by Reachy'],
+    ['processing', 'Being processed by Reachy'],
+    ['failed', 'Reachy could not process this note'],
+  ])('marks a %s note in the list and in the open note', async (state, label) => {
+    setup({ state, job: { id: 'j1', status: 'succeeded', error: null, model: 'm', proposal_count: 0, meetings: [] } });
+    const user = await openNote();
+    void user;
+    await waitFor(() => expect(screen.getAllByRole('img', { name: label }).length).toBeGreaterThanOrEqual(2)); // the list row and the editor header
+    expect(screen.getByRole('button', { name: /Tasks for next week/ })).toContainElement(screen.getAllByTestId('processed-icon')[0]!);
+  });
+
+  it('shows no mark for a note that was never sent', async () => {
+    setup({ state: 'not_processed' });
+    await openNote();
+    await screen.findByRole('status', { name: 'Processing status' });
+    await waitFor(() => expect(screen.getByRole('status', { name: 'Processing status' })).toHaveTextContent('Not processed'));
+    expect(screen.queryByTestId('processed-icon')).not.toBeInTheDocument();
+  });
+
+  it('shows no mark when the feature is off', async () => {
+    setup({ enabled: false, state: 'completed' });
+    renderApp('#/notes');
+    await screen.findByRole('button', { name: /Tasks for next week/ });
+    expect(screen.queryByTestId('processed-icon')).not.toBeInTheDocument();
+  });
+});
+
 describe('Notepad processing', () => {
   it('shows no error text when nothing has failed (regression: found in the first production run)', async () => {
     setup({ state: 'review_required', proposals: [proposal()], links: [{ id: 'l1', meeting_id: 'm1', source: 'explicit', state: 'confirmed', title_match: false, meeting_missing: false, meeting: { id: 'm1', title: 'Weekly sync', started_at: ISO, transcript_ready: true } }] });
