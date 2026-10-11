@@ -589,6 +589,42 @@ services:
       - default
       - restricted-network
 
+  # Phase 50A (docs/phase-50.md, ADR 0034): the document worker, the Reachy-safe adapter in front of a self-hosted MinerU
+  # library. Off by default (profile "documents"); nothing in the stack calls it yet. It sits on an internal-only network
+  # (no internet, no host port), runs read-only as a non-root user with no capabilities, and has no GPU: it must never
+  # share the vLLM card, and its llama.cpp VLM is a Vulkan build that would take GPU memory if it could see one. Models
+  # are mounted read-only from DOCUMENT_WORKER_MODELS_DIR (hash-pinned in docs/verification/phase-50a-*.md); /data holds
+  # its derived, rebuildable state (working copies, MinerU library). Unset DOCUMENT_WORKER_TOKEN means every route but
+  # /health answers 503.
+  document-worker:
+    build:
+      context: ../..
+      dockerfile: services/document-worker/Dockerfile
+    image: reachy-document-worker:latest
+    restart: unless-stopped
+    profiles: ["documents"]
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: ${DOCUMENT_WORKER_MEMORY:-6g}
+    cpus: ${DOCUMENT_WORKER_CPUS:-4}
+    environment:
+      DOCUMENT_WORKER_TOKEN: ${DOCUMENT_WORKER_TOKEN:-}
+      DOCUMENT_WORKER_MAX_UPLOAD_BYTES: ${DOCUMENT_WORKER_MAX_UPLOAD_BYTES:-52428800}
+      DOCUMENT_WORKER_MAX_PAGES: ${DOCUMENT_WORKER_MAX_PAGES:-200}
+      DOCUMENT_WORKER_TIERS: ${DOCUMENT_WORKER_TIERS:-flash,basic,standard}
+    volumes:
+      - document-worker-data:/data
+      - ${DOCUMENT_WORKER_MODELS_DIR:-./document-models}:/models:ro
+    networks:
+      - documents
+    expose:
+      - "8000"
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
@@ -631,6 +667,9 @@ volumes:
   # (e.g. a Claude Code API key/subscription token). Losing this volume
   # loses the stored credential, not anything recoverable from Postgres.
   coding-agent-credentials:
+  # Phase 50A: the document worker's derived state (per-document working copies and the MinerU library/cache). Rebuildable
+  # from Reachy's source store; Reachy's originals are NOT kept here.
+  document-worker-data:
 
 secrets:
   credential_keys:
@@ -640,6 +679,9 @@ secrets:
 
 networks:
   default: {}
+  # Phase 50A: no route to the internet or the host; whatever calls the document worker joins this network.
+  documents:
+    internal: true
   # Phase 29.18's default CodingProject.allowed_network_profile. Today
   # this is only a plain, separate bridge network — real isolation from
   # the hub/core/postgres network a session container has no business

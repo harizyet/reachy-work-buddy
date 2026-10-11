@@ -74,3 +74,25 @@ Figures are one small document on this machine (not Proxmox-class, not a benchma
 ## Still open in 50A
 
 Docker image and compose service for the adapter (pinned versions, no GPU, network-restricted, resource limits, telemetry disabled and checked at start); the adapter API and its tests; DOCX and image inputs; realistic large and complex documents on the real Proxmox worker; persistence across restart and the adapter readiness behaviour; Advanced tier (skipped by decision); upload/page/time limit defaults after those runs; backup of the source-store dataset and a restore test.
+
+## Owner decisions, 2026-10-12
+
+Continue 50A with the existing verified GGUF; licences do not matter for the homelab because the product will not be sold. Both licence follow-ups above are therefore closed for this project (the GGUF is used as is; the licence notes are kept only as a record).
+
+## Adapter, image and compose service (built 2026-10-12; local, not deployed, no consumer yet)
+
+Code: `services/document-worker/` (workspace member, adapter only), `shared/models/document_worker.py`, `shared/protocols/document_worker_api.py`; image `services/document-worker/Dockerfile` (Python 3.13, MinerU 4.0.12 from the hash-pinned lock `deploy/homelab/document-worker/requirements-mineru.txt`, 1.17 GB, no torch, no CUDA); compose service `document-worker` (profile `documents`, internal network `documents`). Reference: [services](../reference/services.md#document-worker-phase-50a), [deployment](../deployment.md#document-worker). All invariants the owner listed are implemented: Reachy document id is the unit of policy and liveness; scoped search; no paths; liveness only from the Reachy side; deletion order with a shared-bytes check; telemetry disabled and checked.
+
+**Verified, mock level (labelled as such):** 19 worker tests with a fake engine that reproduces the spike's behaviours (identity by hash, shared documents, global search, forgotten file leaves the row until orphan cleanup): token and fail-closed, upload rejections (hash, content type, size, extension, tier, id), idempotence and conflict, state mapping, page limit, scoped search that never shows another document's text, no invented page, incomplete scan, no message leakage, locator and cursor scoping, forced reparse, delete with and without a shared hash, retry after a backend failure, page range only for PDF. Ruff clean on `services shared`.
+
+**Verified, real engine in the real image (not a mock):** container started with `--network none --read-only --cap-drop ALL --no-new-privileges --memory 6g --cpus 4`, models mounted read-only, then through the HTTP API: born-digital PDF (Flash, 2 s), scanned PDF OCR at Basic (13 s) and Standard (25 s), DOCX (Flash, 1 s); reads, scoped searches with the correct page and locator per hit (including OCR text and DOCX); a locator of another document refused; identical bytes uploaded as a second Reachy document at another tier shared one backend object, and deleting one left the other readable and searchable (`shared_hash_remaining: true`) while deleting the last emptied the library (every SQLite table 0 rows, no files left in `/data/work` or the library); forced reparse returned to `ready`; state survived a container restart. Via Compose in a throwaway project `reachy-docs50a`: healthy, `ReadonlyRootfs`, caps `ALL` dropped, 6 GiB and 4 CPUs applied, only the internal network, outbound connection to 1.1.1.1 blocked; project removed with its volume and network. Production containers and the GPU (13,785 MiB, vLLM only) were untouched throughout.
+
+### Findings 10 to 12
+
+10. **MinerU takes a file lock inside its model directory even when everything is present**, so a read-only models mount fails (`PermissionError ... /models/.locks`). The entrypoint links the model repos into a tmpfs directory and sets `MINERU_MODEL_BASE_DIR` there: weights stay read-only, only locks are writable.
+11. **The managed parse server resolves its default upload directory against the working directory** and fails with "Directory '' is not writable" if that is read-only; the image uses `WORKDIR /data`.
+12. **A page range is accepted for PDFs only** (`page_range_invalid` for DOCX); the worker omits it for other formats. A client built before the server exists keeps a missing endpoint, so the engine rebuilds it while waiting for the server.
+
+### Provisional limits and still open
+
+Defaults 50 MiB upload and 200 pages are conservative placeholders; real limits, page-image handling and time limits still need runs on the Proxmox worker with realistic documents (this host is not that hardware). Not done: image/PNG/JPG input end to end (the code path and magic check exist, only PDF and DOCX ran), the Proxmox deployment and its `reachy-source`/`reachy-mineru` storage, backup and restore test of the source store (50B owns that store), the INTERACTIVE/GPU path (50I), Advanced tier (skipped by decision). 50B (Reachy document model, source store, migration) has not started and needs the worker contract above as its client.

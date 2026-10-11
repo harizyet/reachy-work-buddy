@@ -1,0 +1,23 @@
+[project]
+name = "document-worker"
+version = "0.0.1"
+description = "Reachy-safe adapter in front of a self-hosted MinerU document library (Phase 50A, ADR 0034). See docs/phase-50.md."
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "python-multipart>=0.0.9",
+    "reachy-work-companion",
+]
+# MinerU itself is deliberately not a dependency here: it is installed only in this service's image from a pinned
+# requirements file (deploy/homelab/document-worker/), so its stack never enters the workspace lock or any other service.
+
+[tool.uv.sources]
+reachy-work-companion = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/document_worker"]

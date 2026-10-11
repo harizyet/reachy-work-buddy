@@ -780,6 +780,19 @@ the hub agree (older APKs keep working for what they already did). It reaches th
 backup needs no extra service: it polls the hub's existing `/planner/alarms`. Rebuild the APK from `clients/android` with
 `./gradlew :app:assembleDebug`; the version is `versionName` in `app/build.gradle.kts`.
 
+## Document worker
+
+Phase 50A ([phase-50](phase-50.md), [record](verification/phase-50a-mineru-spike-2026-10-11.md)). Not started by a bare
+`docker compose up`; `--profile documents`. It needs the verified model files on the host (never in the repo): set
+`DOCUMENT_WORKER_MODELS_DIR` to a directory containing `MinerU-4_models_onnx` and `MinerU2.5-Pro-2605-1.2B-GGUF` (hashes in the
+record), and `DOCUMENT_WORKER_TOKEN`. The container is read-only, non-root, capability-free, on the internal `documents` network,
+and must never be given a GPU device (MinerU's Standard-tier VLM is a Vulkan build that otherwise takes memory from the LLM
+card; the image also masks Vulkan and CUDA). `/data` (volume `document-worker-data`) is derived, rebuildable state only; the
+originals belong to Reachy's source store. Disposable check: use a separate project name, for example
+`docker compose -p reachy-docs50a --profile documents up -d --no-deps --build document-worker`, then
+`down -v` for that project only. Compose interpolates the whole file, so the required variables of the other services must
+be set (dummy values are fine for `--no-deps` on one service).
+
 ## Upgrades and verification cleanup
 
 Schema upgrades now use the dedicated migration job; follow

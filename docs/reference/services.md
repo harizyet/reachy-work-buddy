@@ -574,6 +574,33 @@ before decoding; each model still runs one request at a time. Core uses
 file-backed multipart requests with a configurable response timeout; see
 [long-recording operations](../deployment.md#long-meeting-recordings).
 
+## Document worker (Phase 50A)
+
+[Source](../../services/document-worker/) is a workspace member holding only the adapter (FastAPI, no MinerU import in
+tests); MinerU 4.0.12 is installed in its image from a hash-pinned lock
+([requirements-mineru.txt](../../deploy/homelab/document-worker/requirements-mineru.txt)) so its dependency stack never enters
+the workspace lock or another service. Compose profile `documents`, internal-only network `documents`, read-only
+non-root container with no capabilities and no GPU (see [deployment](../deployment.md#document-worker)). Nothing calls it
+yet. It is the only interface to the document backend ([ADR 0034](../adr/0034-source-evidence-and-derived-artifacts.md),
+[phase-50](../phase-50.md)); the MinerU Unix socket, library paths and cache never leave the container. Routes are in
+`shared/protocols/document_worker_api.py`, shapes in `shared/models/document_worker.py`; all but `GET /health` need
+`Authorization: Bearer $DOCUMENT_WORKER_TOKEN` (unset token: 503).
+
+Resources are addressed by **Reachy's document id**, not the backend reference, because identical bytes share one backend object:
+
+| Route | Behaviour |
+|---|---|
+| `POST /documents` (multipart: `document_id`, `source_hash`, `tier`, `extension`, `file`) | Streams the file, enforces the byte limit, checks SHA-256 against `source_hash` and the magic bytes against the extension (pdf, png, jpg, docx), keeps a per-document working copy and queues the parse. Same id and hash is idempotent; same id with other bytes is 409. A page range (`1-DOCUMENT_WORKER_MAX_PAGES`) is sent for PDFs only. |
+| `GET /documents/{id}/status` | `queued`, `processing`, `ready`, `partial` (some pages, or more pages than the limit) or `failed`, with `backend_ref`, page count and an error code. |
+| `POST /documents/{id}/parse` `{tier, force}` | Parse at another tier (reuses cached work); `force` invalidates the bytes' cached parses first (reprocess). |
+| `GET /documents/{id}/read` | Bounded page read with start/end locators and a continuation cursor; cursors and returned locators must belong to this document. |
+| `GET /documents/{id}/locator` | Read around a locator; a locator of another document is `404`. |
+| `POST /documents/{id}/search` `{query, limit}` | Search scoped to this document: the backend's global search is scanned for this document only; each hit carries a page and locator only when the snippet text was found on that page, otherwise neither. `complete: false` when the scan limit was hit. |
+| `DELETE /documents/{id}` | Forgets the working copy, cleans orphans, verifies, and reports `shared_hash_remaining` when another Reachy document still uses the same bytes. Idempotent; a backend failure keeps the record so it can be retried. |
+
+Backend messages (which can contain paths) never reach a response: errors are `{"error": code}` and only the code is logged.
+Health requires the engine ready **and** MinerU telemetry disabled (the worker disables it at start and re-checks).
+
 ## Shared contracts and clients
 
 Runtime service packages never import one another. Contracts live in
