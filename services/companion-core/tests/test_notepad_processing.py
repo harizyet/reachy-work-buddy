@@ -907,3 +907,119 @@ def test_a_quote_copied_with_the_transcript_label_is_the_same_passage_as_one_wit
         assert p.evidence == PO and p.sources[0].segment == "0:05" and set(p.associations) == {a["id"], _b["id"]}
     finally:
         env.__exit__(None, None, None)
+
+
+# -- task-query routing correction (2026-10-11): wording variants, windows, limitations ---------------------------------------------------
+
+EXACT = "whats my task for next week?"
+VARIANTS = [EXACT, "what's my task for next week?", "What’s my task for next week?", "what is my task for next week?", "Whats my tasks for next week", "what are my tasks next week",
+            "show my tasks for next week", "list my task for next week please", "tasks for next week", "do I have any tasks next week?", "what tasks do I have next week"]
+
+
+def test_every_wording_variant_of_the_next_week_task_question_is_an_inquiry_for_next_week():
+    for text in VARIANTS:
+        found = inquiry.match(text)
+        assert found is not None and found.window == "next_week" and found.problem is None, text
+
+
+def test_other_windows_and_unscoped_task_questions():
+    for text, window in [("whats my task today", "today"), ("what's my task tomorrow?", "tomorrow"), ("whats my task this week", "this_week"), ("whats my tasks", None), ("my tasks", None)]:
+        found = inquiry.match(text)
+        assert found is not None and found.window == window and found.problem is None, text
+
+
+def test_unsupported_and_ambiguous_time_wording_is_flagged_not_guessed():
+    for text in ["whats my task on friday", "what are my tasks next month", "whats my task last week", "what tasks do I have in 3 days", "whats my task on the 15th", "whats my task for the week after next"]:
+        found = inquiry.match(text)
+        assert found is not None and found.problem == "unsupported" and found.window is None, text
+    for text in ["whats my task today and next week", "what tasks do I have tomorrow or this week"]:
+        found = inquiry.match(text)
+        assert found is not None and found.problem == "ambiguous" and found.window is None, text
+
+
+def test_task_questions_do_not_swallow_statements_or_actions():
+    for text in ["add a task to buy milk next week", "remind me to call Bob next week", "whats the weather next week", "my task is to fix the build", "delete my tasks", "mark my task done"]:
+        assert inquiry.match(text) is None, text
+
+
+def test_a_note_named_my_task_for_next_week_is_read_as_a_note_not_as_a_task_list(env):
+    env.note(title="My Task for next week", body="Draft the quarterly summary.")
+    env.client.post("/tasks", json={"text": "Water the plants"})
+    for text in ["What did I write in the note called My Task for next week?", "what's in the note titled 'My Task for next week'", "show me the note called My Task for next week"]:
+        assert inquiry.match(text) is None, text
+        reply = env.say(text)
+        assert "Draft the quarterly summary." in reply and "Water the plants" not in reply and "confirmed task" not in reply, text
+    assert env.llm_calls == 0
+
+
+def test_the_exact_question_answers_from_the_task_store_with_no_model_and_names_tasks_as_undated(env):
+    env.client.post("/tasks", json={"text": "Water the plants"})
+    env.client.post("/tasks", json={"text": "Book the flights"})
+    for text in VARIANTS:
+        reply = env.say(text, session=text)
+        assert "Water the plants" in reply and "Book the flights" in reply and "2 confirmed tasks" in reply, text
+        assert "don't carry due dates" in reply and "none can be placed in next week" in reply and "undated" in reply, text
+    assert env.llm_calls == 0
+
+
+def test_scheduled_reminders_are_split_from_undated_tasks_by_the_configured_timezone(env):
+    zone = env.run(env.app.state.persona_store.get()).timezone
+    now = datetime.now(UTC)
+    start, end = inquiry.window_bounds("next_week", now, zone)
+    t_start, t_end = inquiry.window_bounds("tomorrow", now, zone)
+    env.client.post("/tasks", json={"text": "Water the plants"})
+    env.client.post("/reminders", json={"text": "Inside next week", "due_at": (start + timedelta(hours=10)).isoformat()})
+    env.client.post("/reminders", json={"text": "Just before next week", "due_at": (start - timedelta(minutes=1)).isoformat()})
+    env.client.post("/reminders", json={"text": "Just after next week", "due_at": end.isoformat()})
+    env.client.post("/reminders", json={"text": "Tomorrow morning", "due_at": (t_start + timedelta(hours=1)).isoformat()})
+    env.client.post("/reminders", json={"text": "Day after tomorrow", "due_at": (t_end + timedelta(hours=1)).isoformat()})
+    reply = env.say(EXACT)
+    assert "Inside next week" in reply and "Just before next week" not in reply and "Just after next week" not in reply
+    assert "Water the plants" in reply and "undated" in reply
+    tomorrow = env.say("whats my task tomorrow", session="t2")
+    assert "Tomorrow morning" in tomorrow and "Day after tomorrow" not in tomorrow and "Just before next week" not in tomorrow and "Water the plants" in tomorrow
+
+
+def test_no_date_is_inferred_from_a_note_title_or_creation_time(env):
+    env.client.post("/tasks", json={"text": "Tasks for next week: tidy the lab"})  # the words "next week" in the text do not make it a next-week task
+    reply = env.say("whats my task for tomorrow")
+    assert "Tasks for next week: tidy the lab" in reply and "all undated" in reply and "none can be placed in tomorrow" in reply
+    env.note(title="My Task for next week", body="Draft the summary.")
+    assert "undated" in env.say(EXACT, session="b") and "1 note has not been processed" in env.say(EXACT, session="c")
+
+
+@pytest.mark.parametrize("text", ["whats my task on friday", "what are my tasks next month", "whats my task today and next week", "whats my task for the week after next"])
+def test_unsupported_or_ambiguous_windows_get_a_limitation_and_no_list(env, text):
+    env.client.post("/tasks", json={"text": "Water the plants"})
+    reply = env.say(text)
+    assert reply in (inquiry.SCOPE_LIMITS["unsupported"], inquiry.SCOPE_LIMITS["ambiguous"]) and "Water the plants" not in reply
+    assert env.llm_calls == 0
+
+
+def test_an_empty_store_says_so_for_the_exact_question_and_still_flags_unprocessed_notes(env):
+    assert "no confirmed tasks" in env.say(EXACT).lower()
+    env.note(title="My Task for next week", body="Draft the summary.")
+    reply = env.say(EXACT, session="b")
+    assert "no confirmed tasks" in reply.lower() and "has not been processed" in reply and "no commitments" not in reply.lower()
+
+
+def test_with_the_flag_off_the_exact_question_still_reaches_the_task_store_and_is_honest_about_dates(monkeypatch):
+    with Env(monkeypatch, enabled=False) as env:
+        env.client.post("/tasks", json={"text": "Water the plants"})
+        for text in VARIANTS:
+            reply = env.say(text, session=text)
+            assert "Water the plants" in reply and "Tasks don't carry due dates" in reply and "all undated" in reply, text
+        assert env.say("whats my tasks", session="x") == "Your open tasks: Water the plants."
+        assert env.say("whats my task on friday", session="y") == inquiry.SCOPE_LIMITS["unsupported"]
+        assert env.say("whats my task today and next week", session="z") == inquiry.SCOPE_LIMITS["ambiguous"]
+        env.note(title="My Task for next week", body="Draft the quarterly summary.")
+        named = env.say("What did I write in the note called My Task for next week?", session="n")
+        assert "Draft the quarterly summary." in named and "Water the plants" not in named
+        assert env.llm_calls == 0
+
+
+def test_a_shared_speaker_is_not_read_tasks_for_the_exact_question(monkeypatch):
+    with Env(monkeypatch) as env:
+        env.client.post("/tasks", json={"text": "Private errand", "sensitivity": "work-private"})
+        spoken = env.say(EXACT, modality="voice", session="v")
+        assert spoken == inquiry.RESTRICTED and "Private errand" not in spoken

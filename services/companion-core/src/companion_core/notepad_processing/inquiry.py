@@ -18,6 +18,13 @@ from companion_core.action_boundary import is_action_request
 from companion_core.notepad_processing.models import Kind, ProposalStatus
 from companion_core.semantic import access as rules
 from companion_core.semantic.model import AccessContext
+from companion_core.task_intent import (
+    BARE_TASK_LIST,
+    SCOPE_LIMITS,
+    SCOPE_WORDS,
+    normalise_question,
+    time_scope,
+)
 from companion_core.tasks.models import TaskStatus
 from shared.models.response import Privacy
 
@@ -27,18 +34,13 @@ MAX_LISTED = 8
 _OPENER = re.compile(r"^(?:(?:please|kindly|ok(?:ay)?|hey|so|and|also)[\s,]+|reachy[\s,:]+)*(?:what|which|do|does|did|have|has|any|are|is|show|list|tell|give|check|anything)\b", re.IGNORECASE)
 _NEED_TO_DO = re.compile(
     r"\bwhat\s+(?:do|should|must|am)\s+i\s+(?:need|have|got|want|ought|supposed)?\s*(?:to\s+)?do\b|"
-    r"\bwhat(?:'s|\s+is)\s+(?:on\s+)?my\s+(?:plate|agenda|to-?do\s+list)\b|"
+    r"\bwhat\s+is\s+(?:on\s+)?my\s+(?:plate|agenda|to-?do\s+list)\b|"
     r"\bwhat\s+(?:tasks?|to-?dos?|action\s+items?|commitments?)\s+(?:do\s+i\s+have|are\s+(?:there|pending|open|outstanding)|have\s+i\s+got)\b|"
-    r"\bwhat\s+(?:are\s+)?my\s+(?:tasks?|to-?dos?|action\s+items?|commitments?)\b|"
+    r"\bwhat\s+(?:is\s+|are\s+)?(?:on\s+)?my\s+(?:open\s+|pending\s+)?(?:tasks?|to-?dos?|action\s+items?|commitments?)\b|"
+    r"\b(?:show|list|tell|give)(?:\s+me)?\s+(?:all\s+)?(?:of\s+)?my\s+(?:open\s+|pending\s+)?(?:tasks?|to-?dos?|action\s+items?)\b|"
     r"\b(?:do\s+i\s+have|have\s+i\s+got|any|are\s+there)\b.{0,40}\b(?:pending|open|outstanding|unfinished)?\s*(?:action\s+items?|tasks?|to-?dos?|commitments?)\b|"
     r"\bwhat\s+did\s+i\s+(?:agree|commit|promise|volunteer)\b.{0,30}\bdo\b",
     re.IGNORECASE,
-)
-_WINDOW = (
-    ("next_week", re.compile(r"\bnext\s+week\b", re.IGNORECASE)),
-    ("this_week", re.compile(r"\b(?:this\s+week|the\s+rest\s+of\s+(?:the|this)\s+week)\b", re.IGNORECASE)),
-    ("tomorrow", re.compile(r"\btomorrow\b", re.IGNORECASE)),
-    ("today", re.compile(r"\b(?:today|tonight)\b", re.IGNORECASE)),
 )
 _FROM_MEETING = re.compile(r"\b(?:meeting|call|standup|stand-up|catch-?up)\b", re.IGNORECASE)
 
@@ -47,15 +49,18 @@ _FROM_MEETING = re.compile(r"\b(?:meeting|call|standup|stand-up|catch-?up)\b", r
 class Inquiry:
     window: Window
     about_meeting: bool
+    problem: Literal["unsupported", "ambiguous"] | None = None  # time wording that cannot be answered as asked; the reply says so and lists nothing
 
 
 def match(text: str) -> Inquiry | None:
     """The inquiry in `text`, or None. Fixed patterns; no model. Questions only: an imperative never starts with these words."""
-    stripped = text.strip()
-    if not stripped or stripped.startswith("/") or is_action_request(stripped) or not _OPENER.match(stripped) or not _NEED_TO_DO.search(stripped):
+    stripped = normalise_question(text.strip())
+    if not stripped or stripped.startswith("/") or is_action_request(stripped):
         return None
-    window = next((name for name, pattern in _WINDOW if pattern.search(stripped)), None)
-    return Inquiry(window, bool(_FROM_MEETING.search(stripped)))
+    if not (_OPENER.match(stripped) and _NEED_TO_DO.search(stripped)) and not BARE_TASK_LIST.match(stripped.lower()):
+        return None
+    scope = time_scope(stripped)
+    return Inquiry(scope.window, bool(_FROM_MEETING.search(stripped)), scope.problem)
 
 
 def window_bounds(window: Window, now: datetime, timezone: str) -> tuple[datetime, datetime] | None:
@@ -77,7 +82,6 @@ def _readable(access: AccessContext, sensitivity: Privacy, project_scope: str | 
     return rules.within_ceiling(sensitivity, access.sensitivity_ceiling) and rules.scope_permits(access, project_scope)
 
 
-_WINDOW_WORDS = {"next_week": "next week", "this_week": "this week", "today": "today", "tomorrow": "tomorrow"}
 RESTRICTED = "I keep your tasks and notes for the app and Telegram, not for a shared speaker. Ask me there."
 
 
@@ -99,9 +103,11 @@ async def answer(inquiry: Inquiry, *, tasks, planner, notepad, access: AccessCon
     """The reply. Built only from the stores, filtered by `access`."""
     if access.sensitivity_ceiling is Privacy.PUBLIC:
         return RESTRICTED  # a shared speaker: no task, reminder, note or proposal is read out, and nothing is said about whether any exist
+    if inquiry.problem:
+        return SCOPE_LIMITS[inquiry.problem]  # a fixed limitation: no list for a window that was not understood
     zone = ZoneInfo(timezone)
     bounds = window_bounds(inquiry.window, now, timezone)
-    label = _WINDOW_WORDS.get(inquiry.window or "", "")
+    label = SCOPE_WORDS.get(inquiry.window or "", "")
 
     open_tasks = [t for t in await tasks.list_tasks(TaskStatus.OPEN) if _readable(access, t.sensitivity, t.project_scope)]
     reminders = [r for r in await planner.list_reminders() if r.status.value == "pending" and _readable(access, r.sensitivity, None)
@@ -115,7 +121,7 @@ async def answer(inquiry: Inquiry, *, tasks, planner, notepad, access: AccessCon
 
     parts: list[str] = []
     if open_tasks:
-        parts.append(f"You have {_count(len(open_tasks), 'confirmed task', 'confirmed tasks')}" + (" (tasks don't carry due dates, so this is every open one)" if label else "")
+        parts.append(f"You have {_count(len(open_tasks), 'confirmed task', 'confirmed tasks')}" + (f" (tasks don't carry due dates, so none can be placed in {label}; these are all undated)" if label else "")
                      + ": " + _list([t.text for t in open_tasks]) + ".")
     else:
         parts.append("You have no confirmed tasks.")

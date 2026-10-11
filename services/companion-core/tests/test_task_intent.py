@@ -80,3 +80,39 @@ def test_note_list_questions() -> None:
     assert is_note_list_query("show my notes")
     assert not is_note_list_query("take a note about the meeting")
     assert not is_note_list_query("what's the weather")
+
+
+def test_contractions_punctuation_and_singular_task_are_list_queries() -> None:
+    from companion_core.task_intent import BARE_TASK_LIST, normalise_question
+
+    for text in ["whats my task for next week?", "what's my task for next week?", "What’s my task", "what is my task", "WHATS MY TASKS", "tasks for next week", "my to-dos today"]:
+        assert is_list_query(text), text
+    assert normalise_question("Whats my task") == "what is my task"
+    assert normalise_question("what’re my tasks").lower() == "what are my tasks"
+    assert normalise_question("whatsapp me") == "whatsapp me"
+    assert BARE_TASK_LIST.match("tasks for next week") and not BARE_TASK_LIST.match("tasks: buy milk")
+    assert not is_list_query("whats the weather") and not is_list_query("whats up")
+
+
+def test_time_scope_accepts_one_supported_window_and_flags_everything_else() -> None:
+    from companion_core.task_intent import time_scope
+
+    assert time_scope("next week").window == "next_week"
+    assert time_scope("what's on this weekend").problem == "unsupported"  # "this week" is not a prefix match for "weekend"
+    assert time_scope("the rest of this week").window == "this_week"
+    assert time_scope("tonight").window == "today"
+    assert time_scope("tomorrow and today").problem == "ambiguous"
+    assert time_scope("next week on friday").problem == "unsupported"
+    assert time_scope("hello").window is None and time_scope("hello").problem is None
+
+
+def test_scoped_list_reply_is_honest_that_tasks_have_no_dates() -> None:
+    from companion_core.task_intent import TimeScope
+
+    task = Task(text="buy milk")
+    reply = format_list_reply([task], TimeScope("next_week"))
+    assert "buy milk" in reply and "don't carry due dates" in reply and "all undated" in reply
+    assert format_list_reply([task], TimeScope(None, "unsupported")).startswith("I can only filter by")
+    assert "buy milk" not in format_list_reply([task], TimeScope(None, "ambiguous"))
+    assert format_list_reply([task]) == "Your open tasks: buy milk."
+    assert format_list_reply([], TimeScope("today")) == "You have no open tasks."

@@ -308,6 +308,8 @@ from companion_core.task_intent import (
     match_capture,
     match_complete,
     match_search,
+    normalise_question,
+    time_scope,
 )
 from companion_core.tasks.models import Task, TaskStatus
 from companion_core.tasks.postgres_store import PostgresTaskStore
@@ -1420,7 +1422,7 @@ def create_app(
         elif reachy_command == "tasks" or is_list_query(intent_text):
             production_handler = "tasks.read"
             open_tasks = await app.state.task_store.list_tasks(TaskStatus.OPEN)
-            reply = format_list_reply(open_tasks)
+            reply = format_list_reply(open_tasks, time_scope(normalise_question(intent_text)))
             privacy = Privacy.WORK_PRIVATE if parsed_command else classify_privacy(turn.text)
         elif is_reminder_list_query(intent_text):
             production_handler = "reminders.read"

@@ -15,7 +15,9 @@ are more specific and should win over an accidental substring collision.
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from datetime import datetime
+from typing import Literal
 from zoneinfo import ZoneInfo
 
 from companion_core.planner.models import Note, Reminder, ReminderStatus
@@ -73,9 +75,66 @@ _TASK_QUERY = re.compile(rf"\b{_ASKING}\b.*\b(?:tasks?|to-?dos?)\b")
 _REMINDER_QUERY = re.compile(rf"^(?!\s*(?:set|add|create|remind)\b).*\b{_ASKING}\b.*\breminders?\b")
 
 
+_CONTRACTION = re.compile(r"\bwhat(?:'s|s)\b|\bwhat(?:'re|re)\b", re.IGNORECASE)
+
+
+def normalise_question(text: str) -> str:
+    """Curly apostrophes straightened and "what's"/"whats"/"what're" spelled out, so one pattern serves every common way of typing or dictating the question."""
+    straight = text.replace("\u2019", "'").replace("\u2018", "'")
+    return _CONTRACTION.sub(lambda m: "what is" if m.group(0).lower().endswith("s") else "what are", straight)
+
+
+# A bare list request with no opener: "my tasks", "tasks for next week", "to-dos today".
+BARE_TASK_LIST = re.compile(
+    r"^(?:please\s+)?(?:my\s+)?(?:open\s+|pending\s+)?(?:tasks?|to-?dos?)"
+    r"(?:\s+(?:for|due|on|in|this|next|today|tomorrow)\b[^:;]*)?\s*[?.!]*$"
+)
+
+Window = Literal["next_week", "this_week", "today", "tomorrow"]
+_WINDOW = (
+    ("next_week", re.compile(r"\bnext\s+week\b", re.IGNORECASE)),
+    ("this_week", re.compile(r"\b(?:this\s+week|the\s+rest\s+of\s+(?:the|this)\s+week)\b", re.IGNORECASE)),
+    ("tomorrow", re.compile(r"\btomorrow\b", re.IGNORECASE)),
+    ("today", re.compile(r"\b(?:today|tonight)\b", re.IGNORECASE)),
+)
+# Time wording this module does not interpret. Seeing any of it means the request is NOT answered with a list for some other window.
+_OTHER_TIME = re.compile(
+    r"\b(?:yesterday|last\s+(?:night|week|month|year)|(?:this|next)\s+(?:month|year|weekend)|weekends?|overdue|"
+    r"(?:after\s+next\s+week|week\s+after(?:\s+next)?)|(?:in\s+)?(?:\d+|two|three|four)\s+(?:days?|weeks?|months?)|"
+    r"monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tues?|wed|thu(?:rs?)?|fri|"
+    r"january|february|march|april|june|july|august|september|october|november|december|"
+    r"\d{1,2}(?:st|nd|rd|th)|\d{1,2}[/-]\d{1,2})\b",
+    re.IGNORECASE,
+)
+
+
+@dataclass(frozen=True)
+class TimeScope:
+    window: Window | None
+    problem: Literal["unsupported", "ambiguous"] | None = None
+
+
+def time_scope(text: str) -> TimeScope:
+    """The one supported window named in `text` (today, tomorrow, this week, next week), if any. A second window, or any other time wording, is a problem: the
+    caller must say so rather than pick one."""
+    found = [name for name, pattern in _WINDOW if pattern.search(text)]
+    if _OTHER_TIME.search(text):
+        return TimeScope(None, "unsupported")
+    if len(found) > 1:
+        return TimeScope(None, "ambiguous")
+    return TimeScope(found[0] if found else None)
+
+
+SCOPE_WORDS = {"next_week": "next week", "this_week": "this week", "today": "today", "tomorrow": "tomorrow"}
+SCOPE_LIMITS = {
+    "unsupported": "I can only filter by today, tomorrow, this week or next week, so I haven't listed anything for that. Ask for one of those, or for all your tasks.",
+    "ambiguous": "That names more than one time range, so I haven't picked one. Ask about just one of today, tomorrow, this week or next week.",
+}
+
+
 def is_list_query(text: str) -> bool:
-    lowered = text.strip().lower()
-    return any(phrase in lowered for phrase in _LIST_PHRASES) or bool(_TASK_QUERY.search(lowered))
+    lowered = normalise_question(text.strip()).lower()
+    return any(phrase in lowered for phrase in _LIST_PHRASES) or bool(_TASK_QUERY.search(lowered)) or bool(BARE_TASK_LIST.match(lowered))
 
 
 _NOTE_QUERY = re.compile(rf"^(?!\s*(?:take|make|write|add|create|save)\b).*\b{_ASKING}\b.*\bnotes\b")
@@ -111,10 +170,15 @@ def format_capture_reply(task: Task) -> str:
     return f"Got it, I'll remember: '{task.text}'."
 
 
-def format_list_reply(tasks: list[Task]) -> str:
+def format_list_reply(tasks: list[Task], scope: TimeScope | None = None) -> str:
+    if scope is not None and scope.problem:
+        return SCOPE_LIMITS[scope.problem]
     if not tasks:
         return "You have no open tasks."
     lines = "; ".join(t.text for t in tasks)
+    if scope is not None and scope.window:
+        # Tasks store no due date, so none can be placed in a window; nothing is inferred from the text or the creation time.
+        return f"Tasks don't carry due dates, so none can be placed in {SCOPE_WORDS[scope.window]}. Your open tasks, all undated: {lines}."
     return f"Your open tasks: {lines}."
 
 
