@@ -207,7 +207,9 @@ def test_routing_classes_outcomes_and_the_untyped_record_dependent_concern_are_c
     assert t["ineligible_reason"]["status_question"] >= 1 and t["ineligible_reason"]["not_knowledge"] >= 1
     assert t["untyped_reason"]["not_understood"] >= 1
     assert sum(t["untyped_anchor_strength"].values()) == t["class"]["untyped"]
-    assert t["record_dependent_untyped_by_path"]["model"] >= 2  # untyped personal-knowledge questions answered by the ordinary model: the activation-safety measure
+    by_path = t["record_dependent_untyped_by_path"]
+    assert by_path["model"] + by_path["handler"] >= 2  # untyped personal-knowledge questions: the activation-safety measure
+    assert by_path["model"] >= 1 and by_path["handler"] >= 1  # one is now fail-closed by the intent router (the scripted model returns no JSON), the rest reach the ordinary model
     assert t["production_path"]["model"] >= 4 and t["production_path"]["handler"] >= 1 and t["production_path"]["action_boundary"] == 1
     assert t["outcome"]["answered_supported"] >= 2 and sum(t["citations"].values()) == sum(t["outcome"].values())
     assert set(t["max_sensitivity"]) <= {"none", "public", "work-private"} and t["modality"]["text"] == len(MIX) + 2

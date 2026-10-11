@@ -20,6 +20,7 @@ from datetime import datetime
 from typing import Literal
 from zoneinfo import ZoneInfo
 
+from companion_core.action_boundary import is_action_request
 from companion_core.planner.models import Note, Reminder, ReminderStatus
 from companion_core.tasks.models import Task
 
@@ -132,7 +133,18 @@ SCOPE_LIMITS = {
 }
 
 
+# 44H's wish pattern also fires on "Do I have any tasks I need done?"; a question opener with a question mark is a read.
+_QUESTION = re.compile(r"^\W*(?:do|does|did|have|has|is|are|what|which|how)\b[^.!;]*\?\s*$", re.IGNORECASE)
+
+
+def _changes_something(text: str) -> bool:
+    return is_action_request(text) and not _QUESTION.match(text.strip())
+
+
 def is_list_query(text: str) -> bool:
+    # A request that changes something ("delete my tasks") is never a list query, whatever words it shares with one (44H handles it).
+    if _changes_something(text):
+        return False
     lowered = normalise_question(text.strip()).lower()
     return any(phrase in lowered for phrase in _LIST_PHRASES) or bool(_TASK_QUERY.search(lowered)) or bool(BARE_TASK_LIST.match(lowered))
 
@@ -141,6 +153,8 @@ _NOTE_QUERY = re.compile(rf"^(?!\s*(?:take|make|write|add|create|save)\b).*\b{_A
 
 
 def is_note_list_query(text: str) -> bool:
+    if _changes_something(text):
+        return False
     return bool(_NOTE_QUERY.search(text.strip().lower()))
 
 
@@ -151,6 +165,8 @@ def format_notes_reply(notes: list[Note]) -> str:
 
 
 def is_reminder_list_query(text: str) -> bool:
+    if _changes_something(text):
+        return False
     return bool(_REMINDER_QUERY.search(text.strip().lower()))
 
 

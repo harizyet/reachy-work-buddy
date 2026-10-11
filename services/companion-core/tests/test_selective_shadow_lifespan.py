@@ -80,6 +80,8 @@ def boot(world, monkeypatch, *, shadow=True, retrieval=True, path=True, selectiv
         world.calls.append(body)
         if any(m.get("content") == ACTION_BOUNDARY_INSTRUCTION for m in body["messages"]):
             world.answer_calls += 1
+        if body["messages"][0]["content"].startswith("You route a home assistant"):  # the intent router's call: the model judges these questions not to be record reads
+            return httpx.Response(200, json={"choices": [{"message": {"content": '{"operation": "none", "confidence": 0.9}'}}]})
         return httpx.Response(200, json={"choices": [{"message": {"content": LLM}}]})
 
     for name, value in ((ss.SHADOW_FLAG, shadow), (sa.RETRIEVAL_FLAG, retrieval), (sa.SELECTIVE_FLAG, selective)):

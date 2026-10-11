@@ -176,6 +176,7 @@ from companion_core import (
     command_suggestion,
     commands,
     email_intent,
+    intent_router,
     memory_intent,
     rag_intent,
     record_reference,
@@ -1699,6 +1700,14 @@ def create_app(
                     reply = selective.reply
                     production_handler = selective.handler
                     selective_privacy = selective.privacy
+                elif (inferred := await intent_router.infer(turn.text, config, transport=llm_transport, meeting_attached=bool(turn.context_meeting_id))).decision is not None or inferred.fail_closed:
+                    # Hybrid routing: unresolved natural language about the owner's own records. The local model only picks one of the existing READ handlers from a closed schema;
+                    # the handler reads the stores under the turn's trusted access and writes every word of the reply. A routing failure for a records question lists nothing.
+                    if inferred.decision is None:
+                        reply, production_handler = intent_router.CANNOT_PLACE, "router.fail_closed"
+                    else:
+                        routed = await run_routed(inferred.decision, turn)
+                        reply, production_handler, selective_privacy = routed.reply, routed.handler, routed.privacy
                 else:
                     try:
                         persona = await app.state.persona_store.get()
@@ -1863,11 +1872,22 @@ def create_app(
             counters = {k: v for k, v in (capture.summary() if capture is not None else {}).items() if isinstance(k, str) and k.isidentifier() and type(v) is int}
             return {"capture_enabled": capture is not None, "process_started_at": app.state.process_started_at, "counters": counters}
 
+    async def run_routed(decision: intent_router.Decision, turn: ConversationTurnRequest) -> intent_router.Routed:
+        """The one read handler the router chose, run under the turn's trusted access (modality only; nothing in the text or the model's output widens it)."""
+        return await intent_router.execute(
+            decision, turn.text, access=selective_answer.access_for(str(turn.input_modality.value)), tasks=app.state.task_store, planner=app.state.planner_store,
+            memory=app.state.memory_store, meetings=app.state.meeting_store, notepad_service=app.state.notepad_service, timezone=(await app.state.persona_store.get()).timezone,
+        )
+
     async def answer_record_reference(ref: record_reference.RecordReference, turn: ConversationTurnRequest) -> str:
         """No model. A title that resolves to one readable record and asks only for its text gets that text; a missing or unreadable record gets the
         same not-found reply; anything that needs interpretation fails closed (record_reference.py)."""
         if ref.title is None:
-            return record_reference.COULD_NOT_ESTABLISH
+            # A source named without a title ("what did I write in my note about GitLab?"). The router may place it on one of the read handlers; anything it cannot place fails
+            # closed exactly as before.
+            config = await app.state.llm_settings_store.get()
+            inferred = await intent_router.infer(turn.text, config, transport=llm_transport, meeting_attached=bool(turn.context_meeting_id))
+            return (await run_routed(inferred.decision, turn)).reply if inferred.decision is not None else record_reference.COULD_NOT_ESTABLISH
         found = await record_reference.resolve(
             ref.title, planner=app.state.planner_store, meetings=app.state.meeting_store, access=selective_answer.access_for(str(turn.input_modality.value)),
         )

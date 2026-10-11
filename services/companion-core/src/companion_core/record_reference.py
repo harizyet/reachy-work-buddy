@@ -137,6 +137,26 @@ async def resolve(title: str, *, planner, meetings, access: AccessContext) -> li
     return []
 
 
+async def find(query: str, kind: Literal["note", "meeting", "any"], *, planner, meetings, access: AccessContext) -> list[Resolved]:
+    """Every readable note or meeting whose title or text contains `query` (case aside), under the same access rules as `resolve`. A plain substring test, no model; a record this
+    access may not read is absent from the result."""
+    wanted = query.casefold().strip()
+    if not wanted:
+        return []
+    found: list[Resolved] = []
+    if kind in ("note", "any"):
+        for n in await planner.list_notes(query):
+            if _readable(access, n.sensitivity, n.project_scope, False):
+                found.append(Resolved("note", n.title, n.body.strip(), n.sensitivity, f"{n.updated_at:%d %b %Y}"))
+    if kind in ("meeting", "any"):
+        for m in await meetings.list_meetings():
+            if m.status in READY_FOR_OUTPUTS and m.transcript_segments and _readable(access, m.sensitivity, m.project_scope, True):
+                text = "\n".join(transcript_lines(m))
+                if wanted in m.title.casefold() or wanted in text.casefold():
+                    found.append(Resolved("meeting", m.title, text, m.sensitivity, f"{(m.started_at or m.created_at):%d %b %Y}"))
+    return found
+
+
 # -- replies (fixed text; the stored text is quoted, never paraphrased) -------------------------------------------------------------
 
 COULD_NOT_ESTABLISH = "I couldn't establish that from the records I was able to check."  # the existing 44E wording (selective_answer.ZERO_EVIDENCE_REPLY)
