@@ -27,7 +27,7 @@ Binding for this phase:
 7. The original source remains authoritative; OCR and model outputs are derived evidence.
 8. The evaluation corpus contains only synthetic or explicitly owner-approved material.
 
-Earlier the same day the owner also decided: explicit sensitivity at upload with a conservative private default; configurable limits whose defaults come from the 50J measurements; the evaluation corpus is frozen from 50B; Android document management is deferred; and no production retrieval change before the Phase 48/49 acceptance work ([section 23](#23-interaction-with-phase-48--49)). Approval to start any implementation stage is still a separate decision, and [ADR 0034](adr/0034-source-evidence-and-derived-artifacts.md) is accepted first.
+Earlier the same day the owner also decided: explicit sensitivity at upload with a conservative private default; configurable limits whose defaults come from the 50J measurements; the evaluation corpus is frozen from 50B; Android document management is deferred; and no production retrieval change before the Phase 48/49 acceptance work ([section 23](#23-interaction-with-phase-48--49)). Approval to start any implementation stage is still a separate decision, and [ADR 0034](adr/0034-source-evidence-and-derived-artifacts.md) is accepted (2026-10-11).
 
 ## 1. Motivation
 
@@ -221,9 +221,9 @@ Every derived artifact MUST:
 * be distinguishable from source evidence during audit;
 * remain subject to prompt-injection protections.
 
-A proposed ADR should record this rule before implementation begins.
+The ADR below records this rule and is accepted.
 
-Proposed ADR: [ADR-0034 — Authoritative Source vs Derived Document Evidence](adr/0034-source-evidence-and-derived-artifacts.md)
+ADR (accepted 2026-10-11): [ADR-0034 — Authoritative Source vs Derived Document Evidence](adr/0034-source-evidence-and-derived-artifacts.md)
 
 ## 6. High-level architecture
 

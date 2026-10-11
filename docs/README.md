@@ -144,7 +144,7 @@ over the original decision where they explicitly change it.
 | [0031](adr/0031-three-tier-local-model-escalation.md) | Three-tier model escalation (proposed) |
 | [0032](adr/0032-meeting-outputs-and-context.md) | Meeting deletion, generated outputs and meeting context |
 | [0033](adr/0033-llm-assisted-read-routing.md) | LLM-assisted read routing with deterministic grounding |
-| [0034](adr/0034-source-evidence-and-derived-artifacts.md) | Source evidence and derived artifacts (proposed) |
+| [0034](adr/0034-source-evidence-and-derived-artifacts.md) | Source evidence and derived artifacts |
 
 ## Verification records
 

@@ -1,6 +1,6 @@
 # ADR 0034: Source evidence and derived artifacts
 
-- Status: **Proposed 2026-10-11** (owner-reviewed wording; not yet accepted). A prerequisite for any [Phase 50](../phase-50.md) implementation.
+- Status: **Accepted 2026-10-11** (owner-approved wording). A prerequisite for any [Phase 50](../phase-50.md) implementation; it does not itself approve starting a stage.
 - Date: 2026-10-11
 - Relates to: [ADR 0001](0001-service-boundaries.md), [ADR 0011](0011-destructive-action-consent.md), [ADR 0018](0018-hybrid-llm-routing.md), [ADR 0031](0031-three-tier-local-model-escalation.md), [Phase 44](../phase-44.md), [Phase 50](../phase-50.md)
 
