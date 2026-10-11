@@ -30,8 +30,12 @@ New segment ("cohort E") from the core start 13:53:26 UTC. The previous process 
 | Images | `reachy-rollback/*:pre-030` |
 | Schema rollback | `deploy/homelab/rollback-030.sql` (drops `notes.tag`; tags are lost, nothing else). Stop core, hub and coding-agent, run it, then start the `pre-030` images. |
 
+## Addendum: web fix redeployed (2026-10-11 14:05 UTC)
+
+The owner found a web bug after the deploy: opening notes in turn stacked extra Folder rows (the folder field and the processing panel used the same React `key` as siblings). Fixed in `aa3887e` with a regression test. **Hub-only redeploy** (no schema change, no dump): image built from a clean worktree of `c24cd9b`, rollback tag `reachy-rollback/reachy-hub:pre-webfix` (the `a3da63b4f497` image), `up -d --no-build --no-deps reachy-hub`, hub `ab988bf52803` healthy after about 6 s, no tracebacks, fixed bundle present in the image. Core, coding-agent, the database and the Phase 48 segment were not touched. Not checked in a browser by me.
+
 ## Verification and limits
 
 Verified live: revision `030_note_tags`, column present, counts identical, all three services healthy and on the new image ids, no errors or tracebacks in five minutes of core and hub logs, `GET /notes` returns `tag: null` for the three existing notes, the new web bundle (contains the folder UI) is in the hub image.
 
-**Not verified live:** a write with a tag on the production database (the probe was blocked by the permission classifier and not retried; the write path is covered by the Postgres test on a disposable pgvector database and the route tests); the web UI in a browser; the Android app (needs a new build and install, **not built or delivered**: the phone keeps the old app, which still works because an edit without a tag leaves a note's folder alone). Deployment is not yet accepted.
+**Not verified live:** a write with a tag on the production database (the probe was blocked by the permission classifier and not retried; the write path is covered by the Postgres test on a disposable pgvector database and the route tests); the web UI in a browser; the Android app (built afterwards as 0.16.0 and sent to the owner; installation and use on the phone not confirmed; until it is installed the old app keeps working, because an edit without a tag leaves a note's folder alone). Deployment is not yet accepted.

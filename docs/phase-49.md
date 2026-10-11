@@ -1,6 +1,6 @@
 # Phase 49 — Intelligent Notepad Processing
 
-**Status: DEPLOYED WITH THE FEATURE OFF (2026-10-11 06:38 UTC, commit `3e17ad3`; [deployment record](verification/phase-49-deployment-2026-10-11.md)). Slices 49A to 49G are built, tested and running in production behind `NOTEPAD_PROCESSING_ENABLED=false`; migration 029 is applied. Enabling the feature and processing any production note each need a separate owner approval. Engineering evidence: [verification record](verification/phase-49-notepad-processing-2026-10-11.md).**
+**Status: DEPLOYED (2026-10-11 06:38 UTC, commit `3e17ad3`, with the feature OFF; [deployment record](verification/phase-49-deployment-2026-10-11.md)). Slices 49A to 49G are built and tested; migration 029 is applied. `NOTEPAD_PROCESSING_ENABLED=true` in production since the owner enabled it later on 2026-10-11 (core started 10:08 UTC; [HANDOVER](../HANDOVER.md)). The Android app has the same panel from 0.16.0 ([Phase 40, 40.12](phase-40.md)). Engineering evidence: [verification record](verification/phase-49-notepad-processing-2026-10-11.md).**
 
 Priority: after the current database benchmarking work. Type: enhancement of an existing feature. Dependencies: the existing Notepad, task and reminder APIs, owner authentication, and the local LLM infrastructure.
 

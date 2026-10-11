@@ -87,7 +87,8 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
   and the [next diagnostic run](phase-27.md#before-alignment-representative-speech-acceptance).
 
 - **Android app and phone-facing screens (40, 38.8/38.9):** built through app
-  0.14.0 and verified on an emulator (including the Fold's inner-screen size and a phone
+  0.16.0 (0.14.0 and earlier verified on an emulator; 0.15.0 to 0.16.0 only by unit tests, see [Phase 40](phase-40.md)),
+  and verified on an emulator (including the Fold's inner-screen size and a phone
   alarm firing with the app killed and the hub down), with the hub features deployed. Not
   accepted on a physical phone or Pixel Fold. Open: spoken replies on the owner's
   phone (reported silent after 0.12.1, not reproduced; 0.12.2 hardened playback),
