@@ -67,6 +67,16 @@ The final report is evaluated in three separate layers:
 
 "No false-supported claims" alone is not sufficient for promotion if coverage remains extremely low. End states: **PROMOTE** (useful coverage and clean groundedness), **NARROW** (strong safety, only some question classes route reliably), **DO NOT PROMOTE** (live coverage too low to give meaningful value).
 
+## 4b. Boundary: Phase 49 deployment (2026-10-11)
+
+Owner-approved boundary option. Core was stopped gracefully at 06:34:54 UTC (`docker stop -t 30`, exit 0) so the telemetry flushed, and the new core (image `cbf13868a429`, commit `3e17ad3`) started at 06:38:44 UTC with the same flags (`KNOWLEDGE_INDEXING/RETRIEVAL/SELECTIVE_SHADOW=true`, selective answering absent) and no change to the router, registry, retrieval, evidence rules or answerer (unchanged since `9c8214a`; the dev8/10/12/14 freeze tests pass).
+
+* **Cohort A (to 06:34:54 UTC):** the suppressed report (`--min-cell 5`) of the telemetry file read after the stop: funnel `attempted 6, admitted 6, processed_ok 6`, modality text 6, latency `<=5 ms` 6, 12 cells suppressed (the file is cumulative since the window opened, so it includes the two 48F verification probes of 2026-10-10 14:57; the in-memory capture counters of the last process are `attempted 4`). File copy preserved: `~/reachy-backups/phase48-boundary-049/selective-shadow.pre-049.jsonl` (sha256 prefix `db5f9bf741c2d6cf`, 0600).
+* **Cohort B (from 06:38:44 UTC):** the same file keeps being appended. Subtract the cohort-A copy; additionally subtract my 20 deployment probes (06:39:23 to 06:39:45 UTC, channel `probe-049`: 6 API probes and the 14-request 44H matrix, text and voice), which may appear in the first cohort-B hourly flush.
+* **What changed for cohort B:** the answer path for a turn that names a note or meeting (the grounding fix `14403a1`) and, with its flag off, nothing from Phase 49. The shadow's classification of the same text is unchanged. Do not merge A and B as one uninterrupted window; report them separately and say so.
+
+[Deployment record](phase-49-deployment-2026-10-11.md).
+
 ## 5. End-of-window procedure
 
 1. Close when the owner calls it: 100 to 200 genuine knowledge-like turns (the shadow's `admitted` count) or 7 to 14 days, whichever gives enough representative evidence first.

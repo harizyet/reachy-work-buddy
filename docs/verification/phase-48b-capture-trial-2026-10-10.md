@@ -48,8 +48,11 @@ Restart log (any restart of core during the window must be recorded):
 
 | 2026-10-10 14:56:34 | planned: Phase 48F selective shadow (`KNOWLEDGE_SELECTIVE_SHADOW_ENABLED=true`; same image, capture unchanged) | read before the restart: `{"attempted":2,"no_match":2}` (the two 48E probes) |
 | 2026-10-10 15:02:30 | planned: graceful stop to flush and verify the selective-shadow telemetry (same image, flags) | read before the restart: `{"attempted":2,"no_match":2}` (the two 48F probes at 14:57; not owner usage) |
+| 2026-10-11 06:34:54 to 06:38:44 | **BOUNDARY: Phase 49 deployment (owner-approved, boundary option).** Core image `027ed2d6437e` (commit `9c8214a`) replaced by `cbf13868a429` (commit `3e17ad3`); capture flags and the four frozen capture files unchanged (hashes verified in the new image); graceful stop (`docker stop -t 30`, exit 0) | read before the stop: `{"attempted":4,"no_match":2,"excluded_handled":2}` for the process started 2026-10-10 15:02:32. Durable counters: 0 proposed, 0 candidate rows. **Cohort A ends here.** Cohort B starts at 0 with the new image; its first 20 attempts (`excluded_channel`, channel `probe-049`) are deployment probes and are subtracted. Do not merge A and B as one uninterrupted trial. [Deployment record](phase-49-deployment-2026-10-11.md) |
 
 Counter segments from `process_started_at` 14:46:23 UTC: my two verification probes (`attempted 2, no_match 2` at 14:50) are not owner usage and are to be subtracted from the final tally. The trial boundary list above is the whole record; the window continues, not restarted.
+
+**Cohorts (from 2026-10-11):** the window is now two cohorts. Cohort A: 2026-10-10 14:06 to 2026-10-11 06:34:54 UTC, image `15ce11cf8ad9`/`027ed2d6437e`. Cohort B: from 06:38:44 UTC, image `cbf13868a429` (Phase 49 and the named-note grounding fix included). Report and tally them separately; the capture rules are unchanged across the boundary.
 
 Frozen items re-verified after that restart: image `15ce11cf8ad9` unchanged, `candidate_service.py` hash unchanged.
 

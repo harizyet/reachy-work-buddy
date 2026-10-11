@@ -1,6 +1,6 @@
 # Phase 49 — Intelligent Notepad Processing
 
-**Status: ENGINEERING CLOSED LOCALLY (2026-10-11), NOT DEPLOYED. Slices 49A to 49G are built, tested and committed on `main`; the feature flag defaults OFF (Compose passes it as `false`); migration 029 has run only on disposable databases. No production migration, deployment or flag activation is authorised: those need a separate owner approval. Final acceptance (disposable PostgreSQL and the real 7B) passed three times. Evidence: [verification record](verification/phase-49-notepad-processing-2026-10-11.md). The owner approved implementation on 2026-10-11 (commit 73558a6 satisfied the documentation-only stop) and amended the plan the same day to add meeting-context correlation (49G, below).**
+**Status: DEPLOYED WITH THE FEATURE OFF (2026-10-11 06:38 UTC, commit `3e17ad3`; [deployment record](verification/phase-49-deployment-2026-10-11.md)). Slices 49A to 49G are built, tested and running in production behind `NOTEPAD_PROCESSING_ENABLED=false`; migration 029 is applied. Enabling the feature and processing any production note each need a separate owner approval. Engineering evidence: [verification record](verification/phase-49-notepad-processing-2026-10-11.md).**
 
 Priority: after the current database benchmarking work. Type: enhancement of an existing feature. Dependencies: the existing Notepad, task and reminder APIs, owner authentication, and the local LLM infrastructure.
 
