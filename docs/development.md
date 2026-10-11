@@ -235,6 +235,10 @@ The retrieval benchmark has its own harness tests (`test_knowledge_benchmark.py`
 the Phase 43 baselines, the holdout protocol); how to run the benchmark itself is in its
 [README](../services/companion-core/benchmarks/knowledge_retrieval/README.md).
 
+## Intent router tests
+
+`tests/test_intent_router.py` runs the real FastAPI app with in-memory stores and a scripted local model that answers router calls (recognised by the router's system prompt) from a table and everything else as chat. Set the flag explicitly: the `World` helper takes `router=True/False` and sets `INTENT_ROUTER_ENABLED`. A test model that returns plain text to every call makes a question that needs the owner's records fail closed when the flag is on, which is the intended behaviour; with the flag off it reaches chat as before. `test_intent_router_postgres.py` is opt-in (`DATABASE_MIGRATION_TEST_URL`, below) and runs each routed read against real tables. Use a disposable `pgvector/pgvector:pg16` container on a private port and stop it afterwards. Rules: [ADR 0033](adr/0033-llm-assisted-read-routing.md).
+
 ## Migration and SecretStore tests
 
 `test_database_migrations.py` is opt-in and creates/drops uniquely named

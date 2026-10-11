@@ -37,6 +37,8 @@ literally, and preserve owner-cookie/CSRF plus bearer access. Do not add keys or
 transcripts to localStorage. A browser login does not authenticate every legacy
 API endpoint; preserve and describe the actual trusted-network boundary.
 
+LLM intent routing may only choose among the allowlisted read handlers and never writes, authorizes or sets a date; whether a question needs the owner's records is decided deterministically, and such a question that no read answers gets the fixed clarification, not ordinary chat ([ADR 0033](docs/adr/0033-llm-assisted-read-routing.md)). The bundled SearXNG secret is a bare-value file: never `source`, print or trace it (see the [rotation procedure](docs/deployment.md#the-bundled-searxng-secret-format-consumers-and-rotation)).
+
 Do not add speculative endpoints or later-phase functionality while working on
 a current phase. Prefer established patterns and small concrete changes over
 premature abstractions. Comments should explain constraints or non-obvious

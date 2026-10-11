@@ -95,6 +95,18 @@ note left without a title is titled from its first line or "New Note". The list
 search is by title and text. There are no folders, tags, pinning or attachments:
 a note is a title and plain text.
 
+### Asking about your tasks, reminders and notes in chat
+
+Ask in your own words. What happens depends on what you ask:
+
+- **Tasks and time.** "What are my tasks next week?", "what do I need to do next week?" and "whats my task for tomorrow" answer from your stored tasks. Tasks carry no due date, so Reachy says they are **undated** and lists them all, and lists the reminders that fall in that day or week. It understands *today*, *tomorrow*, *this week* and *next week*; a weekday, a month, "last week" or two ranges at once gets a short explanation instead of a guess.
+- **Reading a note.** "What did I write in the note called X?" and just "What did I write in X?" read the note back word for word. If two notes share a title Reachy asks you to tell them apart; if there is none it says so.
+- **Questions about your records.** With the hybrid router on, a question such as "what did we decide about the cache layer?" or "who is my Google on-prem contact?" is matched to a search of your notes, meetings and remembered facts and answered **only from what is stored**, quoted as written. If nothing matches it says it found nothing. If Reachy cannot tell which of your records you mean it says so and asks you to name it ("show my tasks", "read the note called …") instead of guessing. General questions ("what is a task manager?") are answered as ordinary chat.
+- **Changes are not made in chat.** Asking to delete, clear, complete or send something answers "I can't perform that action here". A message that asks to read **and** change something is refused whole ("That asks me to read something and also to delete something…"), and nothing is read or changed; ask for the read on its own. Use the To-do, Reminders and Notes tabs to change things.
+- **Shared speaker.** On Reachy's speaker or microphone, tasks, reminders, notes and meetings are not read out: Reachy says it keeps them for the app and Telegram. Ask there. Replies that name your records are never marked public.
+
+Operators: the router is switched by `INTENT_ROUTER_ENABLED` ([deployment](deployment.md)); the rules are in [ADR 0033](adr/0033-llm-assisted-read-routing.md).
+
 ## Alarms
 
 The **Alarms** tab (web) and the **Alarms** tab in the Android app work like a

@@ -151,6 +151,18 @@ LLM merge/default/failure semantics are defined once in
 HTTP client, with masked settings and sanitized attempt logging. Usage window
 and entry limits are independent; missing token counts remain null.
 
+### Conversation routing and the hybrid intent router
+
+`POST /conversation` tries handlers in a fixed order in `app.py`: slash commands, the mixed read-and-write refusal (`mixed_intent.py`), a named-record reference (`record_reference.py`: a note or meeting named with "note"/"meeting", quotes or a bare title that resolves, `parse_tentative`), calendar and alarm handlers, the task handlers (`task_intent.py`; the Phase 49 inquiry in `notepad_processing/inquiry.py`), reminders, notes, memory, documents, email and coding-agent handlers, then the final branch: command suggestion, the 44H unclaimed-action boundary (`action_boundary.py`), the 44E selective answerer, **`intent_router.py`**, and ordinary chat. Details and rules: [ADR 0033](../adr/0033-llm-assisted-read-routing.md).
+
+| Piece | Role |
+|---|---|
+| `intent_router.py` | `INTENT_ROUTER_ENABLED` (default false, read at startup into `app.state.intent_router_enabled`; Compose passes it to core only). `requires_records` (deterministic need-for-evidence), `infer` (local-only classifier call, strict `Decision` schema, never raises), `execute` (runs one read handler under the turn's access). `CANNOT_PLACE` is the fixed clarification |
+| `mixed_intent.py` | `detect` / `reply`: a message that starts as a read and asks for a write is refused whole, naming the verb |
+| `task_intent.py` | `normalise_question`, `time_scope` (today, tomorrow, this week, next week; anything else is a limitation), ownership and topic guards on the list matchers, `format_list_reply(tasks, scope)` |
+| `record_reference.py` | `parse`, `parse_tentative` (title-only), `resolve`, `find` (substring search of notes and ready meetings under the caller's access), `without_titles` |
+| Reply privacy | task, reminder and note handlers label a reply by the records it names and apply the channel ceiling; a shared speaker receives `notepad_inquiry.RESTRICTED` |
+
 ## reachy-hub
 
 [Source](../../services/reachy-hub/src/reachy_hub/) owns sessions, channels,

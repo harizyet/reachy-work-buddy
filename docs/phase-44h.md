@@ -54,3 +54,7 @@ Owner decision, 2026-10-12: *"an action request that reaches the end of the supp
 - Core suite after the change: 1,176 passed, 77 skipped, 0 expected failures; ruff clean. (The known unrelated `test_knowledge_index` reconcile test is excluded as before.)
 
 **Open for the owner.** (1) Whether a recognised-but-unsupported request should name what the assistant can do. (3) Whether the boundary should also cover the cloud/frontier path identically (it does: it sits before the model call whatever the provider). (2) Deployment was a core image rebuild, done 2026-10-12.
+
+## Mixed read-and-write requests (2026-10-11)
+
+44H matches an action at the start of a clause with a known object, so "What are my tasks? Also mark them all done." used to be answered as the list alone. `mixed_intent.py` now refuses a message that starts as a read and has a later clause starting with a write verb the assistant cannot perform from a chat; the fixed reply names the operation not performed and neither half runs. The 44H patterns, wording and boundary are unchanged, and the legacy list matchers no longer accept a request that changes something ("delete my tasks" is the 44H reply, not a task list). See [ADR 0033](adr/0033-llm-assisted-read-routing.md).
