@@ -303,7 +303,7 @@ Branch `phase-47d`. Evidence: [47D verification](verification/phase-47d-2026-10-
 - Authorization: the principal is the configured owner, never taken from the request; the access ceiling is private channel, no sensitive records, destination local. Request parameters cannot widen it.
 - A record is shown only if its source state is visible (not forgotten, expired, deleted or cancelled) and every part passes `access.decide`; otherwise it is withheld whole. Absent, forgotten and hidden records give the same 404, and counts, pages, edges and by-id reads agree with visibility. Each read re-reads the source, so a change shows on the next request.
 - Bounded: limit 1 to 200, opaque keyset cursor (newest first, stable across deletions), titles 90 and excerpts 280 characters, search 200, at most 5,000 records scanned per request.
-- Edges: no structured links exist between these kinds of record yet, so `/brain/edges` returns an empty list with that reason. Nothing is inferred.
+- Edges: originally none existed, so `/brain/edges` returned an empty list with that reason. **Since Phase 49 (2026-10-11)** it returns `derived_from` edges from an accepted task or reminder to the Notepad note it was created from, read from the stored provenance row only ([record](verification/phase-49-brain-provenance-2026-10-11.md)). Nothing is inferred.
 
 **Client.** `#/brain` defaults to "Your records (read-only)"; "Synthetic demonstration" remains a labelled option. Each selection is re-read; a record that has gone says so and the list refreshes. "Open in ..." links to the owning screen. Live mode works without WebGL (list only).
 

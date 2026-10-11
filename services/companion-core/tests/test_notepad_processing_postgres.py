@@ -339,3 +339,59 @@ def test_one_transcript_passage_is_one_proposal_in_the_database_whichever_note_f
 
     asyncio.run(go())
     assert sql(dsn, "SELECT count(*) FROM notepad_proposals") == [(1,)] and sql(dsn, "SELECT count(*) FROM notepad_proposal_notes") == [(0,)]
+
+
+# ---- Phase 47 Brain: derived_from edges from provenance, on the production lifespan -------------------------------------------------------------------
+
+def _boot_brain(dsn, monkeypatch, tmp_path, *, flag):
+    import base64
+
+    import httpx
+    from companion_core.app import create_app
+    from fastapi.testclient import TestClient
+
+    keyfile = tmp_path / "keys.json"
+    keyfile.write_text(json.dumps({"active": "one", "keys": {"one": base64.b64encode(b"\x01" * 32).decode()}}))
+    keyfile.chmod(0o600)
+    monkeypatch.setenv("SECRET_KEY_FILE", str(keyfile))
+    monkeypatch.setenv("ACCOUNTS_SERVICE_TOKEN", "t" * 32)
+    monkeypatch.setenv("DB_POOL_MAX_SIZE", "5")
+    (monkeypatch.setenv("NOTEPAD_PROCESSING_ENABLED", "true") if flag else monkeypatch.delenv("NOTEPAD_PROCESSING_ENABLED", raising=False))
+    app = create_app(database_url=dsn, run_meeting_worker_task=False, run_email_dispatch_task=False, run_notepad_runner=False, transport=httpx.MockTransport(lambda r: httpx.Response(200, json={})))
+    return TestClient(app, headers={"X-Reachy-Service-Token": "t" * 32})
+
+
+@pytest.mark.parametrize("flag", [False, True], ids=["flag-off", "flag-on"])
+def test_the_brain_draws_derived_from_edges_from_real_provenance_with_the_flag_off_or_on(dsn, monkeypatch, tmp_path, flag):
+    note_next, note_git, note_other, note_secret = "n-next-week", "n-git", "n-project", "n-secret"
+    for nid, title, level in ((note_next, "My Task for next week", "work-private"), (note_git, "GIT", "work-private"), (note_other, "Reachy Project", "work-private"), (note_secret, "Therapy", "sensitive")):
+        sql(dsn, "INSERT INTO notes (id, title, body, created_at, updated_at, sensitivity) VALUES (%s,%s,%s,now(),now(),%s)", (nid, title, "body of " + title, level))
+    for tid, text in (("t-clickhouse", "refactor clickhouse migration"), ("t-gitlab", "spin up gitlab repo"), ("t-from-secret", "task from a restricted note"), ("t-plain", "task with no provenance")):
+        sql(dsn, "INSERT INTO tasks (id, text, status, created_at) VALUES (%s,%s,'open',now())", (tid, text))
+    for tid, nid, pid in (("t-clickhouse", note_next, "prop-clickhouse"), ("t-gitlab", note_git, "prop-gitlab"), ("t-from-secret", note_secret, "prop-secret")):
+        sql(dsn, "INSERT INTO notepad_provenance VALUES ('task',%s,%s,%s,'0123456789abcdef',now())", (tid, nid, pid))
+    sql(dsn, "INSERT INTO notepad_proposals (id, job_id, note_id, snapshot_hash, kind, text, evidence, span_start, span_end, evidence_from, status, fingerprint, prompt_version, sensitivity, created_at) "
+             "VALUES ('pending-1','j',%s,'h','task','a pending suggestion','x',0,1,'note','pending','fp','v','work-private',now())", (note_other,))
+    ids = ",".join(f"note:{n}" for n in (note_next, note_git, note_other, note_secret)) + "," + ",".join(f"task:{t}" for t in ("t-clickhouse", "t-gitlab", "t-from-secret", "t-plain"))
+    expected = {("task:t-clickhouse", f"note:{note_next}", "derived_from:prop-clickhouse"), ("task:t-gitlab", f"note:{note_git}", "derived_from:prop-gitlab")}
+    seen = []
+    for _boot in range(2):  # the second boot is a restart: the edges come from the database, not from memory
+        with _boot_brain(dsn, monkeypatch, tmp_path, flag=flag) as client:
+            assert (client.app.state.notepad_service is not None) is flag  # the flag governs processing only
+            body = client.get("/brain/edges", params={"ids": ids}).json()
+            assert {(e["from"], e["to"], e["id"]) for e in body["edges"]} == expected
+            assert client.get("/brain/summary").json()["edges"] == 2
+            blob = json.dumps(body) + json.dumps(client.get("/brain/summary").json())
+            assert "prop-secret" not in blob and "t-from-secret" not in blob and note_secret not in blob and "pending" not in blob.lower()
+            assert client.get("/brain/edges", params={"ids": ids}).json() == body  # repeated: identical, no duplicates
+            seen.append(body)
+            types = {n["id"].split(":")[0] for n in client.get("/brain/nodes", params={"limit": 200}).json()["nodes"]}
+            assert "proposal" not in types
+    assert seen[0] == seen[1]
+    assert sql(dsn, "SELECT count(*) FROM notepad_provenance") == [(3,)] and sql(dsn, "SELECT count(*) FROM tasks") == [(4,)]  # reading wrote nothing
+    # deleting the note hides its edge without touching the provenance row
+    sql(dsn, "DELETE FROM notes WHERE id = %s", (note_git,))
+    with _boot_brain(dsn, monkeypatch, tmp_path, flag=flag) as client:
+        assert {(e["from"], e["to"]) for e in client.get("/brain/edges", params={"ids": ids}).json()["edges"]} == {("task:t-clickhouse", f"note:{note_next}")}
+        assert client.get("/brain/summary").json()["edges"] == 1
+    assert sql(dsn, "SELECT count(*) FROM notepad_provenance") == [(3,)]

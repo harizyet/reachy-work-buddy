@@ -848,7 +848,7 @@ def create_app(
         elif app.state.selective_answerer is None and selective_answer.selective_enabled():
             logging.getLogger("companion_core.knowledge_selective").warning("selective answering is enabled but there is no database: it stays off")
         # Phase 44F memory candidates. Both flags default off; with the first off nothing is built, no table is read and the routes do not exist.
-        notepad_task = None
+        notepad_task = provenance_only = None
         if notepad_on:
             store = notepad_store
             if store is None and db is not None and owns_planner_store and owns_task_store:
@@ -856,10 +856,14 @@ def create_app(
             elif store is None:
                 store = InMemoryNotepadStore()
                 logging.getLogger("companion_core.notepad_processing").warning("notepad processing is enabled without a database: jobs and proposals are not durable")
+            app.state.notepad_provenance = store
             if app.state.notepad_service is None:
                 app.state.notepad_service = notepad_service.NotepadService(store, app.state.planner_store, app.state.task_store, notepad_timezone, provider=notepad_provider or notepad_local_provider, meetings=app.state.meeting_store)
             if run_notepad_runner:
                 notepad_task = asyncio.create_task(notepad_service.run_loop(app.state.notepad_service, concurrency=notepad_concurrency()))
+        elif notepad_store is None and db is not None and owns_planner_store and owns_task_store:
+            # Processing is off, but provenance written while it was on stays readable (the Brain's derived_from edges): a read-only store, no service, no runner, no routes.
+            provenance_only = app.state.notepad_provenance = await PostgresNotepadStore.connect(db)
         candidate_store = candidate_task = None
         if candidates_on:
             candidate_store = memory_candidate_store
@@ -902,6 +906,9 @@ def create_app(
         try:
             yield
         finally:
+            if provenance_only is not None:
+                with contextlib.suppress(Exception):
+                    await provenance_only.close()
             if notepad_task is not None:
                 notepad_task.cancel()
                 with contextlib.suppress(asyncio.CancelledError, Exception):
@@ -1018,6 +1025,7 @@ def create_app(
     app.state.candidate_service = None  # Phase 44F: built in the lifespan only when MEMORY_CANDIDATES_ENABLED is true
     app.state.process_started_at = datetime.now(UTC).isoformat()
     app.state.candidate_capture = None  # ... and capture only when MEMORY_CANDIDATES_CAPTURE_ENABLED is also true
+    app.state.notepad_provenance = notepad_store  # read by the Brain whatever the flag says; the lifespan sets it from the database when none is injected
     app.state.notepad_service = None  # Phase 49: built in the lifespan only when NOTEPAD_PROCESSING_ENABLED is true (or at once when a store is injected)
     if notepad_on and notepad_store is not None and planner_store is not None and task_store is not None:
         app.state.notepad_service = notepad_service.NotepadService(notepad_store, planner_store, task_store, notepad_timezone, provider=notepad_provider or notepad_local_provider, meetings=meeting_store)
@@ -2048,7 +2056,7 @@ def create_app(
     async def brain_summary():
         from companion_core import brain
 
-        return await brain.summarise(brain_adapters(), brain_access())
+        return await brain.summarise(brain_adapters(), brain_access(), app.state.notepad_provenance)
 
     @app.get("/brain/nodes")
     async def brain_nodes(
@@ -2082,7 +2090,7 @@ def create_app(
     async def brain_edges(ids: str = Query(default="", max_length=20000)):
         from companion_core import brain
 
-        return await brain.edges_among([i for i in ids.split(",") if i][:1000])
+        return await brain.edges_among([i for i in ids.split(",") if i][:1000], brain_adapters(), brain_access(), app.state.notepad_provenance)
 
     @app.post("/documents")
     async def ingest_document(request: CreateDocumentRequest) -> list[DocumentChunk]:

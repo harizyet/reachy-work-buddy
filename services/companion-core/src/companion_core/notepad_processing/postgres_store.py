@@ -289,6 +289,17 @@ class PostgresNotepadStore:
                                         (note_id, note_id, meeting_id, meeting_id))
             return cursor.rowcount
 
+    async def list_provenance(self, record_ids: list[str]) -> list[Provenance]:
+        """Read-only: the provenance rows of these task or reminder ids (the Brain's `derived_from` edges)."""
+        if not record_ids:
+            return []
+        async with self._pool.connection() as conn:
+            rows = await (await conn.execute(
+                "SELECT record_kind, record_id, note_id, proposal_id, snapshot_hash, created_at FROM notepad_provenance WHERE record_id = ANY(%s) ORDER BY created_at, proposal_id",
+                (list(record_ids),))).fetchall()
+        keys = ("record_kind", "record_id", "note_id", "proposal_id", "snapshot_hash", "created_at")
+        return [Provenance(**dict(zip(keys, r, strict=True))) for r in rows]
+
     async def get_provenance(self, record_kind: str, record_id: str) -> Provenance | None:
         async with self._pool.connection() as conn:
             row = await (await conn.execute(

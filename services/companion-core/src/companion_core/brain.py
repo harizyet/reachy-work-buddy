@@ -184,20 +184,58 @@ async def get_node(adapters: dict[str, SourceAdapter], context: AccessContext, s
     return None if adapter is None else await _visible_node(adapter, source_id, context)
 
 
-async def summarise(adapters: dict[str, SourceAdapter], context: AccessContext) -> BrainSummary:
-    """Counts are taken from what the caller may see, never from the stores' raw totals."""
+async def summarise(adapters: dict[str, SourceAdapter], context: AccessContext, provenance=None) -> BrainSummary:
+    """Counts are taken from what the caller may see, never from the stores' raw totals. The edge count is the number of edges `edges_among` would return for exactly these
+    visible records, so the summary and the edge endpoint cannot disagree."""
     result = await scan(adapters, context)
     by_type = {t: 0 for t in SOURCE_TYPES}
     for n in result.nodes:
         by_type[n.type] += 1
-    return BrainSummary(total=len(result.nodes), by_type=by_type, edges=0, truncated=result.truncated)
+    edges = await edges_among([n.id for n in result.nodes], adapters, context, provenance)
+    return BrainSummary(total=len(result.nodes), by_type=by_type, edges=len(edges.edges), truncated=result.truncated)
 
 
-async def edges_among(ids: list[str]) -> BrainEdges:
-    """Explicit links need structured data that joins record types. No such data exists today (a task does not record the
-    meeting it came from, a reminder does not record a task), so there is nothing honest to draw. When a store gains such a
-    field, its edges are added here and nowhere else."""
-    return BrainEdges(
-        edges=[],
-        note="No structured links between these kinds of record exist yet, so none are drawn. Nothing is inferred.",
-    )
+# Only an accepted task or reminder has a note to be derived from; a pending proposal is not a record and is not drawn.
+DERIVED_FROM = "derived_from"
+_DERIVED_TYPES = ("task", "reminder")
+_NO_LINKS = "No structured links between these records exist, so none are drawn. Nothing is inferred."
+
+
+async def edges_among(ids: list[str], adapters: dict[str, SourceAdapter] | None = None, context: AccessContext | None = None, provenance=None) -> BrainEdges:
+    """Explicit `derived_from` edges: an accepted task or reminder to the Notepad note it was created from (Phase 49 provenance, written when the owner accepted
+    the suggestion). The edge comes from the stored provenance row and nothing else: no text, similarity, time or model is consulted.
+
+    An edge is returned only when BOTH ends are in the requested `ids`, exist now, and pass the same visibility check as a node read (`_visible_node`), so a restricted,
+    deleted or unknown end yields no edge and no trace of it: not in the list, not in a count, not in an id. The edge id is the proposal id (unique per provenance row),
+    so it is the same on every request. The provenance row outlives edits to the note (it names the version the task came from) and has no foreign key; it stops being drawn
+    only when an end stops being visible."""
+    if provenance is None or adapters is None or context is None:
+        return BrainEdges(edges=[], note=_NO_LINKS)
+    requested = set(ids)
+    sources = [i.split(":", 1)[1] for i in requested if i.split(":", 1)[0] in _DERIVED_TYPES and ":" in i]
+    if not sources:
+        return BrainEdges(edges=[], note=_NO_LINKS)
+    seen: dict[str, bool] = {}
+
+    async def visible(node_id: str) -> bool:
+        if node_id not in requested:
+            return False
+        if node_id not in seen:
+            kind, _, source_id = node_id.partition(":")
+            adapter = adapters.get(kind)
+            seen[node_id] = adapter is not None and await _visible_node(adapter, source_id, context) is not None
+        return seen[node_id]
+
+    out: dict[str, dict] = {}
+    for row in await provenance.list_provenance(sources):
+        if row.record_kind not in _DERIVED_TYPES:
+            continue
+        child, parent = f"{row.record_kind}:{row.record_id}", f"note:{row.note_id}"
+        edge_id = f"{DERIVED_FROM}:{row.proposal_id}"
+        if edge_id in out or not (await visible(child) and await visible(parent)):
+            continue
+        out[edge_id] = {
+            "id": edge_id, "from": child, "to": parent, "kind": DERIVED_FROM,
+            "basis": f"This {row.record_kind} was created when you accepted a Notepad suggestion taken from this note (the note as it was when processed, version {row.snapshot_hash[:8]}).",
+        }
+    return BrainEdges(edges=sorted(out.values(), key=lambda e: e["id"]), note="" if out else _NO_LINKS)
