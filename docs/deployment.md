@@ -326,6 +326,47 @@ used elsewhere, or if the provider's billing month doesn't start on the
 Migration `007_search_providers` turns an existing Brave selection into an
 enabled Brave entry, keeping its key.
 
+### The bundled SearXNG secret: format, consumers and rotation
+
+**Format.** `deploy/homelab/.env.searxng-secret` (`0600`, ignored by git) holds **one bare line: the 64-hex-character value itself, with no `KEY=` prefix**. It is not a shell fragment, so never `source` it. Load it only as `export SEARXNG_SECRET_KEY="$(cat .env.searxng-secret)"`, and never `cut`, `head`, `cat` or `echo` it on a terminal whose output is recorded. Do not run `docker compose config` (it expands interpolated secrets), do not use `set -x` or `bash -x` around any step that loads it, and do not paste it into a ticket or chat.
+
+**Consumers (checked read-only on the homelab, 2026-10-11, by variable name only).** The only process that reads the value is the `searxng` container, as `SEARXNG_SECRET` (SearXNG's `server.secret_key`). `scripts/start-homelab.sh` generates and loads the file, `scripts/start-vllm.sh` loads it only for `compose config --quiet` style checks, and Compose requires `SEARXNG_SECRET_KEY` to be set for *any* `docker compose` command in this project (`${SEARXNG_SECRET_KEY:?...}`), but no other service receives it: no other container has a `SEARXNG_SECRET*` variable, companion-core and the hub never see it, and nothing is signed with it that is stored in PostgreSQL or the SecretStore. The instance is internal to the Compose network, the limiter is off and there are no accounts, so the value protects little; rotate it after any exposure anyway.
+
+**Rotation (needs the owner's approval; restarts only `searxng`, which interrupts web search for a few seconds).** Run from `deploy/homelab` as the operator who owns the file. Every step prints names, modes or yes/no only.
+
+```bash
+set +x                                          # never trace this procedure
+stat -c 'mode=%a owner=%U' .env.searxng-secret  # expect mode=600
+for c in reachy-homelab-companion-core-1 reachy-homelab-reachy-hub-1 reachy-homelab-postgres-1; do
+  docker inspect "$c" --format '{{.Name}} {{.State.StartedAt}}'; done > /tmp/started-before.txt   # to prove they are not restarted
+
+# 1. a new value in a new 0600 file; compare without printing either
+( umask 177; openssl rand -hex 32 > .env.searxng-secret.new )
+grep -Eq '^[0-9a-f]{64}$' .env.searxng-secret.new && echo "new value well-formed"
+cmp -s .env.searxng-secret .env.searxng-secret.new && echo "IDENTICAL - stop here and delete the .new file" || echo "differs from the old value"
+
+# 2. keep the old value until the new one is verified, then install the new one atomically
+cp -p .env.searxng-secret .env.searxng-secret.prev
+mv -f .env.searxng-secret.new .env.searxng-secret
+
+# 3. recreate only the searxng container; the export lives in a subshell
+( export SEARXNG_SECRET_KEY="$(cat .env.searxng-secret)"
+  docker compose -p reachy-homelab --env-file .env up -d --no-build --no-deps --force-recreate searxng )
+
+# 4. verify by hashes and status codes, never by values
+a=$(docker exec reachy-homelab-searxng-1 printenv SEARXNG_SECRET | tr -d '\n' | sha256sum | cut -c1-12)
+b=$(tr -d '\n' < .env.searxng-secret | sha256sum | cut -c1-12)
+[ "$a" = "$b" ] && echo "container runs the new value" || echo "MISMATCH - roll back"
+docker exec reachy-homelab-companion-core-1 python3 -c "import urllib.request;print(urllib.request.urlopen('http://searxng:8080/healthz',timeout=5).status)"   # expect 200
+for c in reachy-homelab-companion-core-1 reachy-homelab-reachy-hub-1 reachy-homelab-postgres-1; do
+  docker inspect "$c" --format '{{.Name}} {{.State.StartedAt}}'; done | diff - /tmp/started-before.txt && echo "no other service restarted"
+
+# 5. retire the old value only after step 4 passes
+shred -u .env.searxng-secret.prev /tmp/started-before.txt
+```
+
+**Rollback** (before step 5): `mv -f .env.searxng-secret.prev .env.searxng-secret`, then repeat step 3. **After a rotation** treat any record that contains the old value as exposed history (terminal logs, a coding-assistant session transcript under `~/.claude/projects/`, shell history); the rotation, not deleting those, is what makes the old value useless. Phase 49 and the router rollout records mention this procedure; the 2026-10-11 router deployment record notes the one exposure.
+
 ## Telegram and SMTP
 
 `TELEGRAM_BOT_TOKEN` enables text polling; unset means no bot. Set

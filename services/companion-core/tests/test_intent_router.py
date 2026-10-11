@@ -692,3 +692,132 @@ def test_turning_the_flag_on_changes_only_the_router_paths(monkeypatch):
             world.note("My Task for next week", "Draft the quarterly summary.")
             replies[router] = [world.say(t, session=t) for t in phrases]
     assert replies[False] == replies[True]
+
+
+# -- task reply privacy: a reply built from stored records is never public, and a shared speaker is read nothing --------------------------
+
+NOTE_TITLE = "My Task for next week"
+NOTE_BODY = "Draft the quarterly summary."
+QUIET = "What are my tasks?"  # no keyword in the question itself: the old label came only from the question's words
+
+
+@pytest.mark.parametrize("router", [False, True])
+@pytest.mark.parametrize("processing", [False, True])
+def test_every_legacy_task_reply_names_stored_records_and_is_never_public(monkeypatch, processing, router):
+    with World(monkeypatch, processing=processing, router=router) as world:
+        world.task("Water the plants")
+        for text in ["show my tasks", "list my tasks", "search tasks for plants", "find task plants", "add a task to buy milk", "complete task buy milk", "complete task nothing here"]:
+            turn = world.turn(text, session=text)
+            assert turn["privacy"] == "work-private", (text, turn["privacy"], turn["reply"])
+        assert world.say("tell me a joke", session="j") == CHAT and world.turn("tell me a joke", session="j2")["privacy"] == "public"  # ordinary chat is not made private
+
+
+def test_the_old_label_came_from_the_question_and_is_now_floored_at_work_private(monkeypatch):
+    with World(monkeypatch, processing=False) as world:
+        world.task("Water the plants")
+        turn = world.turn(QUIET)
+        assert "Water the plants" in turn["reply"] and turn["privacy"] == "work-private"
+
+
+def test_a_task_above_the_channel_ceiling_is_not_listed_or_searched_and_never_downgraded(monkeypatch):
+    with World(monkeypatch, processing=False) as world:
+        world.client.post("/tasks", json={"text": "Visit the clinic", "sensitivity": "sensitive"})
+        world.client.post("/tasks", json={"text": "Water the plants", "sensitivity": "work-private"})
+        for text in ["show my tasks", "search tasks for clinic"]:
+            reply = world.say(text, session=text)
+            assert "clinic" not in reply.lower().replace("no tasks found matching 'clinic'", ""), (text, reply)
+        listed = world.turn("show my tasks", session="x")
+        assert "Water the plants" in listed["reply"] and listed["privacy"] == "work-private"
+
+
+@pytest.mark.parametrize("processing", [False, True])
+def test_a_shared_speaker_is_read_no_task_reminder_or_note_by_any_handler(monkeypatch, processing):
+    with World(monkeypatch, processing=processing) as world:
+        world.task("Water the plants")
+        world.note("Harbor", "secret plans")
+        world.client.post("/reminders", json={"text": "Pay the invoice", "due_at": "2099-01-01T09:00:00+00:00"})
+        for text in ["show my tasks", "search tasks for plants", "Do I have any reminders?", "show my notes", "whats my task for next week?"]:
+            turn = world.turn(text, modality="voice", session=text)
+            assert turn["reply"].startswith("I keep your tasks and notes"), (text, turn["reply"])
+            assert turn["privacy"] in ("work-private", "sensitive"), (text, turn["privacy"])
+            assert not any(w in turn["reply"] for w in ("Water", "Harbor", "Pay the invoice"))
+
+
+def test_phase_49_inquiry_and_router_dispatch_are_labelled_work_private(monkeypatch):
+    text = "tasks outstanding for me tomorrow?"
+    with World(monkeypatch, script={text: decision("tasks.list")}) as world:
+        world.task("Water the plants")
+        assert world.turn("whats my task for next week?", session="a")["privacy"] == "work-private"
+        routed = world.turn(text, session="b")
+        assert "Water the plants" in routed["reply"] and routed["privacy"] == "work-private"
+
+
+def test_reminder_and_note_lists_follow_the_channel_ceiling_and_show_no_sensitive_record(monkeypatch):
+    with World(monkeypatch, processing=False) as world:
+        world.note("Harbor", "plans")
+        world.note("Medical", "private", Privacy.SENSITIVE)
+        notes = world.turn("show my notes")
+        assert "Harbor" in notes["reply"] and "Medical" not in notes["reply"] and notes["privacy"] == "work-private"
+
+
+# -- named-note routing: a title alone ("What did I write in My Task for next week?") reads the note, never the task list ----------------
+
+@pytest.mark.parametrize("router", [False, True])
+@pytest.mark.parametrize("processing", [False, True])
+def test_a_title_alone_reads_the_named_note_and_not_the_structured_task_list(monkeypatch, processing, router):
+    with World(monkeypatch, processing=processing, router=router) as world:
+        world.task("Water the plants")
+        world.note(NOTE_TITLE, NOTE_BODY)
+        for text in ["What did I write in My Task for next week?", "what did i put in my task for next week", "What have I written in My Task for next week?"]:
+            turn = world.turn(text, session=text)
+            assert NOTE_BODY in turn["reply"] and NOTE_TITLE in turn["reply"] and "Water the plants" not in turn["reply"] and turn["privacy"] == "work-private", (text, turn)
+        assert world.router_calls == [] and world.chat_calls == 0
+
+
+def test_the_possessive_may_be_left_out_and_the_same_note_is_found(monkeypatch):
+    with World(monkeypatch) as world:
+        world.note("Tasks for next week", NOTE_BODY)
+        assert NOTE_BODY in world.say("What did I write in my Tasks for next week?")
+
+
+def test_normal_task_questions_are_unchanged_even_when_a_note_shares_their_words(monkeypatch):
+    with World(monkeypatch) as world:
+        world.task("Water the plants")
+        world.note("Tasks", "A note that happens to be called Tasks.")
+        world.note(NOTE_TITLE, NOTE_BODY)
+        assert "Water the plants" in world.say("What are my tasks?", session="a") and NOTE_BODY not in world.say("What are my tasks?", session="a2")
+        assert "Water the plants" in world.say("show my tasks", session="b") and "A note that happens" not in world.say("show my tasks", session="b2")
+        assert "Water the plants" in world.say("whats my task for next week?", session="c")
+
+
+def test_two_notes_with_the_same_title_get_a_clarification_not_a_choice(monkeypatch):
+    with World(monkeypatch) as world:
+        world.note(NOTE_TITLE, "First version.")
+        world.note(NOTE_TITLE, "Second version.")
+        reply = world.say("What did I write in My Task for next week?")
+        assert reply == record_reference.ambiguous_reply(NOTE_TITLE) and "First version" not in reply and "Second version" not in reply
+
+
+def test_with_no_such_record_the_written_form_says_so_instead_of_listing_tasks(monkeypatch):
+    with World(monkeypatch) as world:
+        world.task("Water the plants")
+        reply = world.say("What did I write in My Task for next week?")
+        assert reply == record_reference.not_found_reply("My Task for next week") and "Water the plants" not in reply
+        # other title-only shapes that are not necessarily records go on to ordinary handling
+        assert world.say("what's in the fridge?", session="f") == CHAT
+
+
+def test_a_sensitive_note_or_a_shared_speaker_never_discloses_the_named_note(monkeypatch):
+    with World(monkeypatch) as world:
+        world.note(NOTE_TITLE, NOTE_BODY, Privacy.SENSITIVE)
+        assert NOTE_BODY not in world.say("What did I write in My Task for next week?")
+        world.note("Open plans", "visible text")
+        spoken = world.turn("What did I write in Open plans?", modality="voice", session="v")
+        assert "visible text" not in spoken["reply"] and spoken["privacy"] == "work-private"
+
+
+def test_a_title_alone_is_not_taken_for_a_record_when_the_request_changes_something(monkeypatch):
+    with World(monkeypatch) as world:
+        world.note(NOTE_TITLE, NOTE_BODY)
+        assert world.say("delete my task for next week", session="d") == action_boundary.UNCLAIMED_ACTION_REPLY
+        assert world.say("What did I write in My Task for next week? Also delete it.", session="m").startswith("That asks me to read")

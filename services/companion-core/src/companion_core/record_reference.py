@@ -57,6 +57,10 @@ _RETRIEVE = tuple(re.compile(p, re.IGNORECASE) for p in (
     rf"^(?:please\s+)?what(?:'s|\s+is|\s+was)\s+(?:in|on)\s+{_ARTICLE}<ref>\s*[?.!]*$",
     rf"^(?:please\s+)?what\s+does\s+{_ARTICLE}<ref>\s+say\s*[?.!]*$",
 ))
+# A request that names a record by its title alone, with no "note" or "meeting" and no quotes ("What did I write in My Task for next week?"). Whether such a title exists is a
+# question for the stores, so `parse_tentative` only proposes it and the route resolves it; with no such record the turn goes on as before. Only the "did I write" form answers
+# "not found" when nothing matches, because it can only mean something written down; "what's in X" and "show X" also name things that are not records.
+_TENTATIVE = tuple((re.compile(p.pattern.replace(f"{_ARTICLE}<ref>", r"(?P<t>[^?.!;,]+?)"), re.IGNORECASE), index == 0) for index, p in enumerate(_RETRIEVE))
 # Only a question or a request to read can be about a record. An imperative that changes something never starts with these, and
 # `is_action_request` is checked as well, so "delete the note called X" stays with the action boundary.
 _OPENER = re.compile(
@@ -74,6 +78,24 @@ class RecordReference:
 
 def _clean(title: str) -> str:
     return re.sub(r"\s+", " ", title).strip()
+
+
+@dataclass(frozen=True)
+class TentativeReference:
+    title: str
+    miss_is_not_found: bool  # True for "what did I write in X": no such record means say so, not fall through
+
+
+def parse_tentative(text: str) -> TentativeReference | None:
+    """A title-only reference to a record, to be resolved against the stores. Fixed patterns; no model. Slash input and action requests are never references."""
+    stripped = text.strip()
+    if not stripped or stripped.startswith("/") or not _OPENER.match(stripped) or is_action_request(stripped):
+        return None
+    for pattern, written_form in _TENTATIVE:
+        found = pattern.match(re.sub(r"\s+", " ", stripped))
+        if found and _clean(found.group("t")):
+            return TentativeReference(_clean(found.group("t")), written_form)
+    return None
 
 
 def without_titles(text: str) -> str:

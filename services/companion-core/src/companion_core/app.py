@@ -1163,6 +1163,16 @@ def create_app(
         # An explicit reference to a named note or meeting outranks every generic intent: its title may contain "tasks", "reminders", "alarms" and
         # so on. The matchers below then see no text, and the record branch answers (record_reference.py).
         record_ref = None if slash_input else record_reference.parse(turn.text)
+        if record_ref is None and not slash_input:
+            # A title alone, with no "note" or quotes ("What did I write in My Task for next week?"): a stored record with exactly that title is read through the ordinary record path
+            # (several of them: the ambiguity reply). With none, only the "what did I write" form says so; the others go on as before. A list phrase ("show my tasks") never
+            # becomes a record read because a note happens to share its words.
+            tentative = record_reference.parse_tentative(turn.text)
+            if tentative is not None and getattr(app.state, "meeting_store", None) is not None and (tentative.miss_is_not_found or not is_list_query(turn.text)):
+                titled = await record_reference.resolve(tentative.title, planner=app.state.planner_store, meetings=app.state.meeting_store,
+                                                        access=selective_answer.access_for(str(turn.input_modality.value)))
+                if titled or tentative.miss_is_not_found:
+                    record_ref = record_reference.RecordReference(tentative.title, "retrieve")
         # Quoted spans and "called X" titles are removed first: a note's title may contain any verb.
         mixed = None if slash_input or parsed_command is not None else mixed_intent.detect(record_reference.without_titles(turn.text))
         # Phase 49E: a source named without a title ("pending action items from my notes") is the task inquiry's question, which reads the stores itself. A TITLED reference
@@ -1403,7 +1413,7 @@ def create_app(
                         if time_given
                         else f" Would you like an alarm set for {due_local:%A} to remind you? Tell me a time."
                     )
-            privacy = classify_privacy(turn.text)
+            privacy = access_rules.effective_sensitivity(classify_privacy(turn.text), Privacy.WORK_PRIVATE, task.sensitivity)  # the reply names a stored task
         elif complete_query:
             production_handler = "tasks.complete"
             open_tasks = await app.state.task_store.list_tasks(TaskStatus.OPEN)
@@ -1416,7 +1426,7 @@ def create_app(
             )
             if completed:
                 await receipt("task.completed", "task", completed.id, Task=completed.text)
-            privacy = classify_privacy(turn.text)
+            privacy = access_rules.effective_sensitivity(classify_privacy(turn.text), Privacy.WORK_PRIVATE, *([completed.sensitivity] if completed else []))  # names a stored task
         elif notepad_inquiry_match is not None:
             production_handler = "tasks.inquiry"
             persona = await app.state.persona_store.get()
@@ -1426,23 +1436,30 @@ def create_app(
             privacy = Privacy.WORK_PRIVATE  # it names the owner's own tasks and notes: never spoken on a shared speaker
         elif search_query:
             production_handler = "tasks.search"
-            found = await app.state.task_store.search_tasks(search_query)
-            reply = format_search_reply(found, search_query)
-            privacy = Privacy.WORK_PRIVATE if parsed_command else classify_privacy(turn.text)
+            task_access = selective_answer.access_for(str(turn.input_modality.value))
+            found = readable_tasks(await app.state.task_store.search_tasks(search_query), task_access)
+            reply = notepad_inquiry.RESTRICTED if shared_speaker(task_access) else format_search_reply(found, search_query)
+            privacy = access_rules.effective_sensitivity(classify_privacy(turn.text), Privacy.WORK_PRIVATE, *(t.sensitivity for t in found))  # a reply built from stored tasks is never public
         elif reachy_command == "tasks" or is_list_query(intent_text):
             production_handler = "tasks.read"
-            open_tasks = await app.state.task_store.list_tasks(TaskStatus.OPEN)
-            reply = format_list_reply(open_tasks, time_scope(normalise_question(intent_text)))
-            privacy = Privacy.WORK_PRIVATE if parsed_command else classify_privacy(turn.text)
+            task_access = selective_answer.access_for(str(turn.input_modality.value))
+            open_tasks = readable_tasks(await app.state.task_store.list_tasks(TaskStatus.OPEN), task_access)
+            reply = notepad_inquiry.RESTRICTED if shared_speaker(task_access) else format_list_reply(open_tasks, time_scope(normalise_question(intent_text)))
+            privacy = access_rules.effective_sensitivity(classify_privacy(turn.text), Privacy.WORK_PRIVATE, *(t.sensitivity for t in open_tasks))
         elif is_reminder_list_query(intent_text):
             production_handler = "reminders.read"
             persona = await app.state.persona_store.get()
-            reply = format_reminders_reply(await app.state.planner_store.list_reminders(), persona.timezone)
-            privacy = Privacy.WORK_PRIVATE
+            list_access = selective_answer.access_for(str(turn.input_modality.value))
+            readable_reminders = [r for r in await app.state.planner_store.list_reminders() if access_rules.within_ceiling(r.sensitivity, list_access.sensitivity_ceiling)]
+            reply = notepad_inquiry.RESTRICTED if shared_speaker(list_access) else format_reminders_reply(readable_reminders, persona.timezone)
+            privacy = access_rules.effective_sensitivity(Privacy.WORK_PRIVATE, *(r.sensitivity for r in readable_reminders))
         elif is_note_list_query(intent_text):
             production_handler = "notes.read"
-            reply = format_notes_reply(await app.state.planner_store.list_notes())
-            privacy = Privacy.WORK_PRIVATE
+            list_access = selective_answer.access_for(str(turn.input_modality.value))
+            readable_notes = [n for n in await app.state.planner_store.list_notes()
+                              if access_rules.within_ceiling(n.sensitivity, list_access.sensitivity_ceiling) and access_rules.scope_permits(list_access, n.project_scope)]
+            reply = notepad_inquiry.RESTRICTED if shared_speaker(list_access) else format_notes_reply(readable_notes)
+            privacy = access_rules.effective_sensitivity(Privacy.WORK_PRIVATE, *(n.sensitivity for n in readable_notes))
         elif memory_capture_text:
             production_handler = "memory.capture"
             record = await app.state.memory_store.add_memory(
@@ -1880,6 +1897,13 @@ def create_app(
             capture = app.state.candidate_capture
             counters = {k: v for k, v in (capture.summary() if capture is not None else {}).items() if isinstance(k, str) and k.isidentifier() and type(v) is int}
             return {"capture_enabled": capture is not None, "process_started_at": app.state.process_started_at, "counters": counters}
+
+    def shared_speaker(access) -> bool:
+        return access.sensitivity_ceiling is Privacy.PUBLIC
+
+    def readable_tasks(tasks: list[Task], access) -> list[Task]:
+        """Only the tasks this turn's channel may read; the same ceiling and scope rules the task inquiry and the router apply."""
+        return [t for t in tasks if access_rules.within_ceiling(t.sensitivity, access.sensitivity_ceiling) and access_rules.scope_permits(access, t.project_scope)]
 
     async def run_routed(decision: intent_router.Decision, turn: ConversationTurnRequest) -> intent_router.Routed:
         """The one read handler the router chose, run under the turn's trusted access (modality only; nothing in the text or the model's output widens it)."""

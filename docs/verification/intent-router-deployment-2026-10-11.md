@@ -47,6 +47,8 @@ Image built from the clean worktree before anything stopped; rollback tag create
 1. **A question about a note that does not say "note" is answered by the older task-list handler, labelled public.** "what did I write in My Task for next week?" contains no word marking it as a note reference, so `record_reference` does not claim it, the 49E inquiry does not match it, and the older `tasks.read` handler lists the open tasks with `classify_privacy(turn.text)`, which labels this reply **public**, so a voice turn could read the task titles aloud. This is existing behaviour (the same path answers "show my tasks" and was live before the router), not the router. The router was not involved and no rollout heuristic was added. Suggested follow-up for a decision: label `tasks.read` replies work-private as the 49E inquiry and the router paths already do, and decide whether a bare "in <existing note title>" should resolve to the note.
 2. The compose mistake and the secret echo above.
 
+**Follow-up (2026-10-11, local, not deployed):** finding 1 is corrected and finding 2's secret now has a documented rotation procedure: [task-privacy-named-note-2026-10-11.md](task-privacy-named-note-2026-10-11.md).
+
 ## Rollback (not needed)
 
 Fast: set `INTENT_ROUTER_ENABLED=false` in `deploy/homelab/.env` (previous file: `~/reachy-backups/router-rollout-20261011/env.before`) and `up -d --no-build --no-deps companion-core` (another core recreate and cohort boundary). Full: `docker tag reachy-rollback/companion-core:pre-router reachy-homelab-companion-core:latest`, then the same compose command with `SEARXNG_SECRET_KEY="$(cat .env.searxng-secret)"` exported. Nothing in the database changed, so no schema step. Keep the tags until the owner accepts.
