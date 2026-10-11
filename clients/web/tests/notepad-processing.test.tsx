@@ -61,6 +61,14 @@ async function openNote() {
 }
 
 describe('Notepad processing', () => {
+  it('shows no error text when nothing has failed (regression: found in the first production run)', async () => {
+    setup({ state: 'review_required', proposals: [proposal()], links: [{ id: 'l1', meeting_id: 'm1', source: 'explicit', state: 'confirmed', title_match: false, meeting_missing: false, meeting: { id: 'm1', title: 'Weekly sync', started_at: ISO, transcript_ready: true } }] });
+    await openNote();
+    await screen.findByLabelText('Suggestions from Reachy');
+    expect(screen.queryByText(/something went wrong/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('shows nothing when the feature is off, so the Notepad is exactly as before', async () => {
     setup({ enabled: false });
     await openNote();

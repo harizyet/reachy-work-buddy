@@ -35,8 +35,9 @@ async function sha256(text: string): Promise<string | undefined> {
   }
 }
 
+// null/undefined is "no error" (a mutation that has not failed has error === null), not an unknown failure.
 const failure = (error: unknown): string | null =>
-  error instanceof StaleSessionError ? null : error instanceof ApiError || error instanceof Error ? error.message : 'Something went wrong';
+  error == null || error instanceof StaleSessionError ? null : error instanceof ApiError || error instanceof Error ? error.message : 'Something went wrong';
 
 export function ProcessingPanel({ noteId, saveNow, currentId, currentText }: { noteId: string | null; saveNow: () => Promise<void>; currentId: () => string | null; currentText: () => string }) {
   const enabled = useProcessingEnabled();
