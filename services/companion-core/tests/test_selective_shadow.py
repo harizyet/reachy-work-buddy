@@ -16,7 +16,6 @@ from pathlib import Path
 
 import httpx
 import pytest
-from companion_core import intent_router
 from companion_core.app import ACTION_BOUNDARY_INSTRUCTION, create_app
 from companion_core.calendar.store import InMemoryCalendarStore
 from companion_core.consent.store import InMemoryConfirmationStore
@@ -169,9 +168,9 @@ def test_prompts_replies_and_model_calls_are_identical_with_the_shadow_on_and_of
         assert run(fingerprint(world.built)) == before  # no record changed
         outcomes.append((replies, [c["messages"] for c in world.model_calls], world.answer_calls))
     assert outcomes[0] == outcomes[1]
-    assert all(r["reply"] in (LLM_ANSWER, intent_router.CANNOT_PLACE) or "I can't perform" in r["reply"] or "tasks" in r["reply"].lower() for r in outcomes[1][0])
+    assert all(r["reply"] == LLM_ANSWER or "I can't perform" in r["reply"] or "tasks" in r["reply"].lower() for r in outcomes[1][0])
     assert not any("<evidence" in m["content"] for call in outcomes[1][1] for m in call)  # the shadow's retrieval never enters a prompt
-    assert outcomes[1][0][0]["reply"] == intent_router.CANNOT_PLACE  # the typed Quill question gets the records limitation, not an ordinary-model answer; the deterministic answer is never released
+    assert outcomes[1][0][0]["reply"] == LLM_ANSWER  # the typed Quill question is answered by the ordinary path; the deterministic answer is never released
 
 
 def test_a_slow_hanging_or_failing_shadow_never_delays_or_changes_a_reply(tmp_path):
@@ -208,10 +207,8 @@ def test_routing_classes_outcomes_and_the_untyped_record_dependent_concern_are_c
     assert t["ineligible_reason"]["status_question"] >= 1 and t["ineligible_reason"]["not_knowledge"] >= 1
     assert t["untyped_reason"]["not_understood"] >= 1
     assert sum(t["untyped_anchor_strength"].values()) == t["class"]["untyped"]
-    by_path = t["record_dependent_untyped_by_path"]
-    assert by_path.get("model", 0) + by_path.get("handler", 0) >= 2  # untyped personal-knowledge questions: the activation-safety measure
-    assert by_path.get("handler", 0) >= 2  # records questions are now fail-closed by the intent router (the scripted model returns no JSON) and count as handled, not model-answered
-    assert t["production_path"]["model"] >= 2 and t["production_path"]["handler"] >= 5 and t["production_path"]["action_boundary"] == 1  # records questions are answered by the router limitation, which counts as handled
+    assert t["record_dependent_untyped_by_path"]["model"] >= 2  # untyped personal-knowledge questions answered by the ordinary model: the activation-safety measure
+    assert t["production_path"]["model"] >= 4 and t["production_path"]["handler"] >= 1 and t["production_path"]["action_boundary"] == 1
     assert t["outcome"]["answered_supported"] >= 2 and sum(t["citations"].values()) == sum(t["outcome"].values())
     assert set(t["max_sensitivity"]) <= {"none", "public", "work-private"} and t["modality"]["text"] == len(MIX) + 2
 
@@ -285,7 +282,7 @@ def test_dependency_failures_are_bounded_categories_and_leak_nothing(tmp_path, c
         (tmp_path / kind).mkdir()
         world = World(tmp_path / kind, **kw)
         with caplog.at_level(logging.DEBUG), world.client() as client:
-            assert world.ask(client, QUILL_Q)["reply"] == intent_router.CANNOT_PLACE
+            assert world.ask(client, QUILL_Q)["reply"] == LLM_ANSWER
             world.drain(client)
         assert world.totals()["outcome"] == {f"failed_{kind}": 1}
         assert "SECRET-HOST" not in caplog.text and "Quill" not in caplog.text
@@ -299,7 +296,7 @@ def test_an_error_inside_the_job_is_counted_and_never_reaches_the_reply(tmp_path
     world = World(tmp_path)
     monkeypatch.setattr(world.shadow.answerer, "classify", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
     with world.client() as client:
-        assert world.ask(client, QUILL_Q)["reply"] == intent_router.CANNOT_PLACE
+        assert world.ask(client, QUILL_Q)["reply"] == LLM_ANSWER
         world.drain(client)
     t = world.totals()["funnel"]
     assert t["failed_error"] == 1 and ss.reconcile(t) == 0
@@ -354,7 +351,7 @@ def test_a_failing_or_crashing_submit_cannot_alter_or_truncate_the_reply(tmp_pat
     monkeypatch.setattr(world.shadow, "submit", lambda turn: (_ for _ in ()).throw(RuntimeError("shadow exploded mid-submit")))
     with world.client() as client:
         got = world.ask(client, QUILL_Q)
-        assert got == expected and got["reply"] == intent_router.CANNOT_PLACE and got["turn_count"] == expected["turn_count"]  # whole response, same status and body
+        assert got == expected and got["reply"] == LLM_ANSWER and got["turn_count"] == expected["turn_count"]  # whole response, same status and body
         assert client.post("/conversation", json={**TURN, "session_id": "z", "text": QUILL_Q}).status_code == 200
 
 
@@ -371,7 +368,7 @@ def test_the_reply_is_decided_before_the_shadow_sees_the_turn_and_the_offer_is_c
     with world.client() as client:
         got = world.ask(client, QUILL_Q)
         world.drain(client)
-    assert got["reply"] == intent_router.CANNOT_PLACE and seen == [got["privacy"]]
+    assert got["reply"] == LLM_ANSWER and seen == [got["privacy"]]
     started = time.perf_counter()
     for i in range(500):
         world.shadow.submit(ss.SelectiveShadowTurn(f"s{i}", QUILL_Q, "text", "work-private", "generic_chat", False))

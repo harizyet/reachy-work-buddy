@@ -1030,6 +1030,7 @@ def create_app(
     app.state.process_started_at = datetime.now(UTC).isoformat()
     app.state.candidate_capture = None  # ... and capture only when MEMORY_CANDIDATES_CAPTURE_ENABLED is also true
     app.state.notepad_provenance = notepad_store  # read by the Brain whatever the flag says; the lifespan sets it from the database when none is injected
+    app.state.intent_router_enabled = intent_router.enabled()  # INTENT_ROUTER_ENABLED, default off; read once at startup like the other rollout flags
     app.state.notepad_service = None  # Phase 49: built in the lifespan only when NOTEPAD_PROCESSING_ENABLED is true (or at once when a store is injected)
     if notepad_on and notepad_store is not None and planner_store is not None and task_store is not None:
         app.state.notepad_service = notepad_service.NotepadService(notepad_store, planner_store, task_store, notepad_timezone, provider=notepad_provider or notepad_local_provider, meetings=meeting_store)
@@ -1708,7 +1709,7 @@ def create_app(
                     reply = selective.reply
                     production_handler = selective.handler
                     selective_privacy = selective.privacy
-                elif (inferred := await intent_router.infer(turn.text, config, transport=llm_transport, meeting_attached=bool(turn.context_meeting_id))).decision is not None or inferred.fail_closed:
+                elif app.state.intent_router_enabled and ((inferred := await intent_router.infer(turn.text, config, transport=llm_transport, meeting_attached=bool(turn.context_meeting_id))).decision is not None or inferred.fail_closed):
                     # Hybrid routing: unresolved natural language about the owner's own records. The local model only picks one of the existing READ handlers from a closed schema;
                     # the handler reads the stores under the turn's trusted access and writes every word of the reply. A routing failure for a records question lists nothing.
                     if inferred.decision is None:
@@ -1893,6 +1894,8 @@ def create_app(
         if ref.title is None:
             # A source named without a title ("what did I write in my note about GitLab?"). The router may place it on one of the read handlers; anything it cannot place fails
             # closed exactly as before.
+            if not app.state.intent_router_enabled:
+                return record_reference.COULD_NOT_ESTABLISH
             config = await app.state.llm_settings_store.get()
             inferred = await intent_router.infer(turn.text, config, transport=llm_transport, meeting_attached=bool(turn.context_meeting_id))
             return (await run_routed(inferred.decision, turn)).reply if inferred.decision is not None else record_reference.COULD_NOT_ESTABLISH

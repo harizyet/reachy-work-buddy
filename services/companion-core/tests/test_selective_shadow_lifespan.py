@@ -14,7 +14,6 @@ from pathlib import Path
 import httpx
 import psycopg
 import pytest
-from companion_core import intent_router
 from companion_core.app import ACTION_BOUNDARY_INSTRUCTION, create_app
 from companion_core.knowledge import selective_answer as sa
 from companion_core.knowledge import selective_shadow as ss
@@ -81,8 +80,6 @@ def boot(world, monkeypatch, *, shadow=True, retrieval=True, path=True, selectiv
         world.calls.append(body)
         if any(m.get("content") == ACTION_BOUNDARY_INSTRUCTION for m in body["messages"]):
             world.answer_calls += 1
-        if body["messages"][0]["content"].startswith("You route a home assistant"):  # the intent router's call: the model judges these questions not to be record reads
-            return httpx.Response(200, json={"choices": [{"message": {"content": '{"operation": "none", "confidence": 0.9}'}}]})
         return httpx.Response(200, json={"choices": [{"message": {"content": LLM}}]})
 
     for name, value in ((ss.SHADOW_FLAG, shadow), (sa.RETRIEVAL_FLAG, retrieval), (sa.SELECTIVE_FLAG, selective)):
@@ -134,7 +131,7 @@ def test_prerequisites_shared_pool_and_an_identical_foreground(world, monkeypatc
     t = totals(world)
     assert t["funnel"]["attempted"] == len(QUESTIONS) + 1 and ss.reconcile(t["funnel"]) == 0
     assert t["class"]["typed"] >= 2 and t["class"]["untyped"] >= 1 and t["class"]["ineligible"] >= 2
-    assert sum(t["record_dependent_untyped_by_path"].values()) >= 1 and sum(v for k, v in t["outcome"].items() if k.startswith("answered")) >= 2 and not [k for k in t["outcome"] if k.startswith("failed")]
+    assert t["record_dependent_untyped_by_path"].get("model", 0) >= 1 and sum(v for k, v in t["outcome"].items() if k.startswith("answered")) >= 2 and not [k for k in t["outcome"] if k.startswith("failed")]
 
 
 @needs_db
@@ -174,7 +171,7 @@ def test_an_index_fault_is_isolated_from_the_conversation_and_recovers_without_a
                 conn.execute("ALTER TABLE knowledge_items_offline RENAME TO knowledge_items")
         recovered = ask(client, QUESTIONS[0], "c")
         client.portal.call(observer.drain)
-        assert baseline["reply"] == faulted["reply"] == recovered["reply"] == intent_router.CANNOT_PLACE and backends(world) <= POOL_MAX
+        assert baseline["reply"] == faulted["reply"] == recovered["reply"] == LLM and backends(world) <= POOL_MAX
     t = totals(world)
     assert sum(v for k, v in t["outcome"].items() if k.startswith("failed")) >= 1 and t["outcome"]["answered_supported"] >= 2
     assert ss.reconcile(t["funnel"]) == 0
@@ -196,7 +193,7 @@ def test_queue_saturation_under_the_real_database_keeps_the_foreground_fast_and_
         observer.answerer.retriever = Delayed()
         started = time.perf_counter()
         for n in range(40):
-            assert ask(client, QUESTIONS[n % 3], f"q{n}")["reply"] == (intent_router.CANNOT_PLACE if intent_router.requires_records(QUESTIONS[n % 3]) else LLM)
+            assert ask(client, QUESTIONS[n % 3], f"q{n}")["reply"] == LLM
         elapsed = time.perf_counter() - started
         client.portal.call(observer.drain)
     f = totals(world)["funnel"]

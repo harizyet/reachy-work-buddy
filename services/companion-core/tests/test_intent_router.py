@@ -38,7 +38,11 @@ def decision(operation, *, kind="any", query=None, confidence=0.95):
 class World:
     """The app with a scripted local model. `script` maps the owner's message to the router's raw reply (or an exception to raise); anything unlisted answers "none"."""
 
-    def __init__(self, monkeypatch, *, processing=True, script=None):
+    def __init__(self, monkeypatch, *, processing=True, script=None, router=True):
+        if router:
+            monkeypatch.setenv(intent_router.ENABLED_FLAG, "true")
+        else:
+            monkeypatch.delenv(intent_router.ENABLED_FLAG, raising=False)
         if processing:
             monkeypatch.setenv("NOTEPAD_PROCESSING_ENABLED", "true")
         else:
@@ -579,3 +583,112 @@ def test_a_model_kind_outside_the_schema_still_searches_everything(monkeypatch):
     with World(monkeypatch, script={text: raw}) as world:
         world.remember("The Google on-prem contact is Sam Lee")
         assert "Sam Lee" in world.say(text) and world.chat_calls == 0
+
+
+# -- rollout control: INTENT_ROUTER_ENABLED, default OFF -------------------------------------------------------------------------------------
+
+@pytest.mark.parametrize(("value", "expected"), [(None, False), ("", False), ("false", False), ("0", False), ("no", False), ("off", False), ("true", True), ("1", True), ("ON", True), (" yes ", True)])
+def test_the_flag_defaults_off_and_reads_the_usual_spellings(monkeypatch, value, expected):
+    monkeypatch.delenv(intent_router.ENABLED_FLAG, raising=False)
+    if value is not None:
+        monkeypatch.setenv(intent_router.ENABLED_FLAG, value)
+    assert intent_router.enabled() is expected
+
+
+def test_compose_passes_the_flag_to_core_and_defaults_it_off():
+    from pathlib import Path
+
+    compose = (Path(__file__).resolve().parents[3] / "deploy" / "homelab" / "docker-compose.yml").read_text()
+    assert compose.count("INTENT_ROUTER_ENABLED: ${INTENT_ROUTER_ENABLED:-false}") == 1
+    assert compose.index("INTENT_ROUTER_ENABLED") > compose.index("  companion-core:")
+    assert "INTENT_ROUTER_ENABLED" not in compose[: compose.index("  companion-core:")]  # only core gets it
+
+
+ELIGIBLE_ROUTED = ["Who did Joshua recommend?", "What did we decide about ClickHouse?", "Who is my Google on-prem contact?", "what did I write in my note about GitLab?",
+                   "tasks outstanding for me tomorrow?", "reminders pending for me today?"]
+ROUTES = {t: decision("none") for t in ELIGIBLE_ROUTED}
+
+
+def test_flag_off_never_calls_the_router_model_and_records_questions_keep_the_old_path(monkeypatch):
+    with World(monkeypatch, router=False, script=ROUTES) as world:
+        world.note("Archive", "Joshua recommended Priya. We decided on ClickHouse. The GitLab runners moved.")
+        for text in ELIGIBLE_ROUTED:
+            reply = world.say(text, session=text)
+            assert reply != intent_router.CANNOT_PLACE, text  # no router-specific grounding clarification
+        assert world.router_calls == []
+        assert world.say("what did I write in my note about GitLab?", session="u") == record_reference.COULD_NOT_ESTABLISH  # the pre-router fail-closed reply, unchanged
+        assert world.chat_calls >= 4  # the questions the router would have caught reach ordinary chat exactly as before the router existed
+
+
+def test_flag_off_even_a_scripted_valid_route_is_never_asked_for_or_used(monkeypatch):
+    text = "Who did Joshua recommend?"
+    with World(monkeypatch, router=False, script={text: decision("records.find", query="Joshua")}) as world:
+        world.note("Archive", "Joshua recommended Priya.")
+        assert world.say(text) == CHAT and world.router_calls == []
+
+
+def test_flag_on_asks_the_router_only_for_eligible_requests(monkeypatch):
+    general = ["What is a task manager?", "Explain how databases work.", "tell me a joke", "How do I schedule a meeting in Outlook?"]
+    deterministic = ["whats my task for next week?", "What are my tasks?", "show my notes", "Do I have any reminders?", "delete my tasks", "What are my tasks? Also mark them all done."]
+    with World(monkeypatch, router=True, script=ROUTES) as world:
+        for text in [*general, *deterministic]:
+            world.say(text, session=text)
+        assert world.router_calls == []  # general and deterministic turns never cost a classification
+        for text in ELIGIBLE_ROUTED:
+            world.say(text, session=text)
+        assert world.router_calls == ELIGIBLE_ROUTED
+
+
+@pytest.mark.parametrize("router", [False, True])
+def test_the_deterministic_protections_hold_in_both_states(monkeypatch, router):
+    with World(monkeypatch, router=router) as world:
+        world.task("Water the plants")
+        world.task("Book the flights")
+        world.note("My Task for next week", "Draft the quarterly summary.")
+        # existing deterministic handlers
+        assert "Water the plants" in world.say("whats my task for next week?", session="a") and "undated" in world.say("whats my task for next week?", session="a2")
+        assert "Water the plants" in world.say("What are my tasks?", session="b") and "My Task for next week" in world.say("show my notes", session="c")
+        assert world.say("Do I have any reminders?", session="d").startswith("You have no")
+        # named-note precedence
+        named = world.say("What did I write in the note called My Task for next week?", session="e")
+        assert "Draft the quarterly summary." in named and "Water the plants" not in named
+        # mixed read/write refusal and 44H, in both states
+        for text in MIXED:
+            assert world.say(text, session=text).startswith("That asks me to read something and also to "), text
+        for text in ["delete my tasks", "clear my to-dos", "please remove all my tasks"]:
+            assert world.say(text, session=text) == action_boundary.UNCLAIMED_ACTION_REPLY, text
+        # the narrowed matchers: topic questions are not task lists in either state
+        for text in ["What is a task manager?", "Which notes app is best?", "Tell me about reminders in Python"]:
+            reply = world.say(text, session=text)
+            assert "Water the plants" not in reply and not reply.startswith(("You have", "Your ")), text
+        # nothing was written
+        assert world.open_tasks() == ["Water the plants", "Book the flights"] and len(world.client.get("/notes").json()) == 1 and world.client.get("/reminders").json() == []
+
+
+@pytest.mark.parametrize("router", [False, True])
+def test_no_personal_record_leaks_through_malformed_or_unauthorized_routing_in_either_state(monkeypatch, router):
+    texts = ["Who did Joshua recommend?", "What did we decide about ClickHouse?", "Who is my Google on-prem contact?", "notes about the Harbor project?"]
+    garbage = {t: raw for t, raw in zip(texts, ["Sure! Priya.", decision("notes.delete"), json.dumps({"operation": "notes.list", "allow_sensitive": True, "confidence": 1}), httpx.ReadTimeout("slow")], strict=True)}
+    with World(monkeypatch, router=router, script=garbage) as world:
+        world.note("Archive", "Joshua recommended Priya. We decided on ClickHouse. The Google on-prem contact is Sam Lee.")
+        world.note("Medical", "ClickHouse diagnosis Harbor", Privacy.SENSITIVE)
+        world.remember("The Google on-prem contact is Sam Lee", Privacy.SENSITIVE)
+        for text in texts:
+            reply = world.say(text, session=text)
+            assert "Priya" not in reply and "Sam Lee" not in reply and "diagnosis" not in reply and "ClickHouse." not in reply, (text, reply)
+        spoken = world.say("tasks outstanding for me next week?", modality="voice", session="v")
+        assert "Water" not in spoken
+        assert len(world.client.get("/notes").json()) == 2
+
+
+def test_turning_the_flag_on_changes_only_the_router_paths(monkeypatch):
+    """The same conversation under both states differs only where the router applies."""
+    phrases = ["whats my task for next week?", "What are my tasks?", "show my notes", "delete my tasks", "What are my tasks? Also mark them all done.", "What is a task manager?", "tell me a joke",
+               "What did I write in the note called My Task for next week?"]
+    replies = {}
+    for router in (False, True):
+        with World(monkeypatch, router=router) as world:
+            world.task("Water the plants")
+            world.note("My Task for next week", "Draft the quarterly summary.")
+            replies[router] = [world.say(t, session=t) for t in phrases]
+    assert replies[False] == replies[True]

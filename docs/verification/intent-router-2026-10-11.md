@@ -46,6 +46,20 @@
 * **Existing tests changed on purpose:** six tests in `test_selective_answering*.py`, `test_selective_shadow*.py` and `test_knowledge_shadow_route.py` used "Who owns the Quill message queue?" (and similar) as their example of the ordinary-model path; they now expect the limitation for those questions, and the counts of model-answered turns follow. Their purpose (parity, isolation, no leak) is unchanged.
 * **Verification:** 131 router tests, including every case you listed (Joshua, ClickHouse, Google on-prem contact, tasks next week, task manager, databases, router `none`, timeout and malformed JSON for each of twelve records questions across six failure kinds, an ambiguous owner question, injection text, poisoned note content, a titled-note reference, a shared speaker, 44H and mixed precedence). companion-core and reachy-hub on a disposable `pgvector` database: 2,738 passed, 21 skipped, the same 3 baseline failures; coding-agent-service 82 passed; ruff clean; the four capture-file hashes match, the five freeze test files pass, and nothing under `benchmarks/`, `knowledge/`, `memory/` or `action_boundary.py` changed. Real local 7B, 16 questions (functional only): every question that needs records either routed to a supported read or would have received the limitation, none to ordinary chat; general questions (telephone, CEO, weather, learning Rust, task manager, databases) reached chat, and the four that were obviously conversational cost no classifier call.
 
+## Rollout control: `INTENT_ROUTER_ENABLED` (added before any deployment)
+
+The router had no switch of its own, so deploying it would have activated it at once. `INTENT_ROUTER_ENABLED` (default `false` in code, read once at startup, and passed by `deploy/homelab/docker-compose.yml` to companion-core only) now gates exactly the model-driven part:
+
+| | Flag OFF (default) | Flag ON |
+|---|---|---|
+| Classifier model call | never | only for eligible requests (read-shaped, records cues or personal-lookup cues, not general how-to, not action, not mixed, no meeting attached) |
+| Records-grounding clarification (`CANNOT_PLACE`) | never produced; a records question the deterministic chain does not claim reaches ordinary chat as it did before the router | produced when a question needs the owner's records and no supported read answers it |
+| Untitled-source note question ("in my note about GitLab") | the pre-router "couldn't establish" reply, no model call | routed, or the same reply |
+| Matcher narrowing, mixed read/write refusal, 44H, named-note precedence, deterministic handlers | active | active |
+| Writes | none introduced | none introduced |
+
+Tests (`tests/test_intent_router.py`, 150, run in both states): flag parsing and the Compose default; flag OFF never calls the router model, even with a valid route scripted; flag ON calls it exactly for the eligible questions and for none of the general or deterministic ones; the deterministic handlers, named-note precedence, mixed refusals, 44H and the narrowed matchers behave identically in both states (one test replays the same eight messages under both and requires identical replies); malformed or unauthorised routing leaks nothing in either state; no record is created, changed or completed. The five shadow and selective test files edited during the grounding correction were restored to their pre-router form, because under the default-OFF flag they run the pre-router behaviour and pass unchanged. Suites on a disposable `pgvector` PostgreSQL: companion-core and reachy-hub 2,757 passed, 21 skipped, the same 3 baseline failures; coding-agent-service 82 passed; ruff clean; the four capture-file hashes match, the five freeze test files pass, and nothing under `benchmarks/`, `knowledge/`, `memory/` or `action_boundary.py` changed.
+
 ## Follow-up work (not deployment blockers: none produces an unsupported factual answer)
 
 * **Substring search.** `records.find` and `memory.recall` match a plain substring, so a model phrase that is not contiguous in the stored text finds nothing and says so. A better matcher (word-level, stemmed) would be a new retrieval capability and was not added.

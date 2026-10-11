@@ -482,6 +482,9 @@ services:
       MEMORY_CANDIDATES_CAPTURE_ENABLED: ${MEMORY_CANDIDATES_CAPTURE_ENABLED:-false}
       # Phase 49: optional Notepad processing (jobs, owner-reviewed proposals, task inquiry). Off by default; needs migration 029 first and the owner's approval (docs/phase-49.md).
       NOTEPAD_PROCESSING_ENABLED: ${NOTEPAD_PROCESSING_ENABLED:-false}
+      # Hybrid intent router (docs/verification/intent-router-2026-10-11.md): the local model picks one existing READ handler for natural-language record questions. Default OFF: no classifier call
+      # and no records-grounding clarification. Matcher narrowing, the mixed read/write refusal and 44H are not behind it.
+      INTENT_ROUTER_ENABLED: ${INTENT_ROUTER_ENABLED:-false}
       NOTEPAD_PROCESSING_CONCURRENCY: ${NOTEPAD_PROCESSING_CONCURRENCY:-1}
       SHADOW_ROUTER_ENABLED: ${SHADOW_ROUTER_ENABLED:-false}
       SHADOW_ROUTER_URL: ${SHADOW_ROUTER_URL:-http://semantic-router:8012}

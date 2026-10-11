@@ -18,6 +18,7 @@ Memory recall keeps its existing contract: the same store query, the same reply 
 from __future__ import annotations
 
 import json
+import os
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -45,6 +46,15 @@ from companion_core.task_intent import (
 from companion_core.tasks.models import TaskStatus
 from shared.models.llm import LLMConfig, LLMRoutingMode
 from shared.models.response import Privacy
+
+ENABLED_FLAG = "INTENT_ROUTER_ENABLED"
+
+
+def enabled() -> bool:
+    """The rollout switch, default OFF. Off means this module is never consulted: no classifier call, no records-grounding clarification. The deterministic matcher narrowing,
+    the mixed read-and-write refusal and 44H do not depend on it."""
+    return (os.environ.get(ENABLED_FLAG) or "").strip().lower() in ("1", "true", "yes", "on")
+
 
 CONFIDENCE_THRESHOLD = 0.75
 TIMEOUT_SECONDS = 12.0

@@ -17,7 +17,6 @@ from pathlib import Path
 import httpx
 import pytest
 from companion_core import app as app_module
-from companion_core import intent_router
 from companion_core.app import ACTION_BOUNDARY_INSTRUCTION, create_app
 from companion_core.calendar.store import InMemoryCalendarStore
 from companion_core.consent.store import InMemoryConfirmationStore
@@ -144,7 +143,7 @@ def test_the_app_builds_no_answerer_and_does_not_search_with_the_flags_off(monke
     assert world.app.state.selective_answerer is None
     with world.client() as client:
         world.ask(client, OWNER_Q)
-    assert world.search.calls == 0 and world.answer_calls == 0  # a records question is no longer answered by the ordinary model (see intent_router.requires_records)
+    assert world.search.calls == 0 and world.answer_calls == 1
 
 
 QUESTIONS = [
@@ -166,10 +165,7 @@ def test_with_the_flags_off_or_retrieval_only_prompts_and_replies_are_identical_
     for i, q in enumerate(QUESTIONS):
         if q not in ELIGIBLE:
             assert outcomes[2][0][i] == outcomes[0][0][i], q
-    # The two eligible questions that name an owner get the router's limitation with it off (no model call); the retry-count question carries no personal cue, so with it off it still reaches
-    # the ordinary model (documented residual), and with it on it is answered by the cited path instead.
-    assert on.answer_calls == off.answer_calls - 1
-    assert all(outcomes[0][0][i]['reply'] == intent_router.CANNOT_PLACE for i, q in enumerate(QUESTIONS) if q in ELIGIBLE and q != 'How many retries before a failed Harbor job is parked?')
+    assert on.answer_calls == off.answer_calls - len(ELIGIBLE)  # the eligible questions never reached the answering model call
     assert off.search.calls == 0
 
 
@@ -430,7 +426,7 @@ def test_counters_hold_numbers_only_and_rollback_is_removing_the_answerer(caplog
     # rollback: the same app without the answerer is the feature-off app, and the same session continues to work
     off = World(FERRY, answerer=False)
     with off.client() as client:
-        assert off.ask(client, OWNER_Q)["reply"] == intent_router.CANNOT_PLACE  # the feature-off app no longer answers a records question from the ordinary model
+        assert off.ask(client, OWNER_Q)["reply"] == LLM_ANSWER
 
 
 # -- zero-evidence qualification (owner-approved wording; adapter only) ------------------------------------------------------------------------
