@@ -36,9 +36,9 @@ class PostgresTaskStore:
         await close_pool(self._pool)
 
     async def add_task(
-        self, text: str, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, project_scope: str | None = None
+        self, text: str, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, project_scope: str | None = None, record_id: str | None = None
     ) -> Task:
-        task = Task(text=text, sensitivity=sensitivity, project_scope=project_scope)
+        task = Task(text=text, sensitivity=sensitivity, project_scope=project_scope, **({"id": record_id} if record_id else {}))
         async with self._pool.connection() as conn:
             await conn.execute(
                 f"INSERT INTO tasks ({_COLUMNS}) VALUES (%s, %s, %s, %s, %s, %s, %s)",

@@ -29,7 +29,7 @@ class PlannerStore(Protocol):
     async def delete_note(self, note_id: str) -> bool: ...
     async def list_reminders(self) -> list[Reminder]: ...
     async def add_reminder(
-        self, text: str, due_at: datetime, *, sensitivity: Privacy = Privacy.WORK_PRIVATE
+        self, text: str, due_at: datetime, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, record_id: str | None = None
     ) -> Reminder: ...
     async def complete_reminder(self, reminder_id: str) -> Reminder | None: ...
     async def delete_reminder(self, reminder_id: str) -> bool: ...
@@ -104,9 +104,11 @@ class InMemoryPlannerStore:
         return sorted(self._reminders.values(), key=lambda r: r.due_at)
 
     async def add_reminder(
-        self, text: str, due_at: datetime, *, sensitivity: Privacy = Privacy.WORK_PRIVATE
+        self, text: str, due_at: datetime, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, record_id: str | None = None
     ) -> Reminder:
-        reminder = Reminder(text=text, due_at=due_at, sensitivity=sensitivity)
+        reminder = Reminder(text=text, due_at=due_at, sensitivity=sensitivity, **({"id": record_id} if record_id else {}))
+        if reminder.id in self._reminders:
+            raise ValueError("duplicate reminder id")
         self._reminders[reminder.id] = reminder
         return reminder
 

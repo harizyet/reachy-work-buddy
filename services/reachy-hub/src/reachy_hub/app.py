@@ -170,6 +170,7 @@ from reachy_hub.interruption_policy import (
 )
 from reachy_hub.keyring import Keyring
 from reachy_hub.memory_candidates import install_memory_candidate_routes
+from reachy_hub.notepad_processing import install_notepad_processing_routes
 from reachy_hub.notification_queue import NotificationQueue, QueuedNotification
 from reachy_hub.occupancy import MediaPipeFaceDetector, PersonDetector, check_occupancy
 from reachy_hub.operator import install_operator_routes, require_csrf
@@ -975,6 +976,7 @@ def create_app(
     )
     install_owner_recognition_routes(app, require_owner_session, app.state.enrollment_store)
     install_brain_routes(app, require_owner_session, companion_core_client)  # Phase 47D: read-only, owner session only
+    install_notepad_processing_routes(app, require_owner_session, companion_core_client)  # Phase 49: owner session plus CSRF; core decides (and 404s) when the feature is off
     install_memory_candidate_routes(app, require_owner_session, companion_core_client)  # Phase 44F: owner session plus CSRF; core decides (and 404s) when the feature is off
 
     @app.get(PRIVACY_STATE, dependencies=[Depends(require_remote_auth)])

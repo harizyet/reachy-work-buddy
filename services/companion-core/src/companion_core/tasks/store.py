@@ -21,7 +21,7 @@ from shared.models.response import Privacy
 
 class TaskStore(Protocol):
     async def add_task(
-        self, text: str, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, project_scope: str | None = None
+        self, text: str, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, project_scope: str | None = None, record_id: str | None = None
     ) -> Task: ...
     async def list_tasks(self, status: TaskStatus | None = None) -> list[Task]: ...
     async def get_task(self, task_id: str) -> Task | None: ...
@@ -37,9 +37,12 @@ class InMemoryTaskStore:
         self._tasks: dict[str, Task] = {}
 
     async def add_task(
-        self, text: str, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, project_scope: str | None = None
+        self, text: str, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, project_scope: str | None = None, record_id: str | None = None
     ) -> Task:
-        task = Task(text=text, sensitivity=sensitivity, project_scope=project_scope)
+        # `record_id` (Phase 49) lets a caller that must create a record exactly once name it in advance; the id is then the idempotency key.
+        task = Task(text=text, sensitivity=sensitivity, project_scope=project_scope, **({"id": record_id} if record_id else {}))
+        if task.id in self._tasks:
+            raise ValueError("duplicate task id")
         self._tasks[task.id] = task
         return task
 

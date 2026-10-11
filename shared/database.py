@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-SCHEMA_REVISION = "028_memory_candidates"
+SCHEMA_REVISION = "029_notepad_processing"
 
 
 async def check_schema(conn) -> None:

@@ -273,6 +273,11 @@ from companion_core.memory.candidate_routes import install_candidate_routes
 from companion_core.memory.candidates import CandidateStore, PostgresCandidateStore
 from companion_core.memory.postgres_store import PostgresMemoryStore
 from companion_core.memory.store import MemoryStore
+from companion_core.notepad_processing import inquiry as notepad_inquiry
+from companion_core.notepad_processing import service as notepad_service
+from companion_core.notepad_processing.postgres_store import PostgresNotepadStore
+from companion_core.notepad_processing.routes import install_notepad_routes
+from companion_core.notepad_processing.store import InMemoryNotepadStore, NotepadStore
 from companion_core.persona.context import context_message
 from companion_core.persona.postgres_store import PostgresPersonaStore
 from companion_core.persona.render import render
@@ -637,9 +642,34 @@ def create_app(
     memory_candidate_store: CandidateStore | None = None,
     candidate_digester: candidate_service.KeyedDigester | None = None,
     candidate_privacy_state: Callable[[], Awaitable[dict | None]] | None = None,
+    notepad_store: NotepadStore | None = None,
+    notepad_provider: notepad_service.Provider | None = None,
+    run_notepad_runner: bool = True,
 ) -> FastAPI:
+    notepad_on = notepad_service.enabled()  # Phase 49: read once; with it off nothing is built, no table is read and the routes do not exist
     candidates_on, capture_on = candidate_service.candidates_enabled(), candidate_service.capture_enabled()  # read once: routes and lifespan always agree
     hub_base_url = hub_base_url or os.environ.get("REACHY_HUB_URL", "http://reachy-hub:8000")
+
+    async def notepad_timezone() -> str:
+        return (await app.state.persona_store.get()).timezone
+
+    def notepad_concurrency() -> int:
+        try:
+            return max(1, min(4, int(os.environ.get(notepad_service.CONCURRENCY_ENV, "1"))))
+        except ValueError:
+            return 1
+
+    async def notepad_local_provider():
+        """The local model only: private notes are never sent to a cloud model for extraction (Phase 49). None when no local provider is configured."""
+        config = await app.state.llm_settings_store.get()
+        if config.local is None:
+            return None
+        local_only = config.model_copy(update={"routing": config.routing.model_copy(update={"mode": LLMRoutingMode.LOCAL_ONLY})})
+
+        async def ask(messages: list[dict[str, str]], max_tokens: int) -> str:
+            return await route_completion(local_only, messages, app.state.llm_usage_store, transport=llm_transport, local_max_tokens=max_tokens, timeout=120.0)
+
+        return ask, config.local.model
     coding_agent_base_url = coding_agent_base_url or os.environ.get(
         "CODING_AGENT_SERVICE_URL", "http://coding-agent-service:8000"
     )
@@ -818,6 +848,18 @@ def create_app(
         elif app.state.selective_answerer is None and selective_answer.selective_enabled():
             logging.getLogger("companion_core.knowledge_selective").warning("selective answering is enabled but there is no database: it stays off")
         # Phase 44F memory candidates. Both flags default off; with the first off nothing is built, no table is read and the routes do not exist.
+        notepad_task = None
+        if notepad_on:
+            store = notepad_store
+            if store is None and db is not None and owns_planner_store and owns_task_store:
+                store = await PostgresNotepadStore.connect(db)
+            elif store is None:
+                store = InMemoryNotepadStore()
+                logging.getLogger("companion_core.notepad_processing").warning("notepad processing is enabled without a database: jobs and proposals are not durable")
+            if app.state.notepad_service is None:
+                app.state.notepad_service = notepad_service.NotepadService(store, app.state.planner_store, app.state.task_store, notepad_timezone, provider=notepad_provider or notepad_local_provider, meetings=app.state.meeting_store)
+            if run_notepad_runner:
+                notepad_task = asyncio.create_task(notepad_service.run_loop(app.state.notepad_service, concurrency=notepad_concurrency()))
         candidate_store = candidate_task = None
         if candidates_on:
             candidate_store = memory_candidate_store
@@ -860,6 +902,14 @@ def create_app(
         try:
             yield
         finally:
+            if notepad_task is not None:
+                notepad_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await notepad_task
+                logging.getLogger("companion_core.notepad_processing").info("notepad processing summary: %s", app.state.notepad_service.summary())
+                if notepad_store is None:
+                    with contextlib.suppress(Exception):
+                        await app.state.notepad_service.store.close()
             if candidate_task is not None:
                 candidate_task.cancel()
                 with contextlib.suppress(asyncio.CancelledError, Exception):
@@ -968,6 +1018,9 @@ def create_app(
     app.state.candidate_service = None  # Phase 44F: built in the lifespan only when MEMORY_CANDIDATES_ENABLED is true
     app.state.process_started_at = datetime.now(UTC).isoformat()
     app.state.candidate_capture = None  # ... and capture only when MEMORY_CANDIDATES_CAPTURE_ENABLED is also true
+    app.state.notepad_service = None  # Phase 49: built in the lifespan only when NOTEPAD_PROCESSING_ENABLED is true (or at once when a store is injected)
+    if notepad_on and notepad_store is not None and planner_store is not None and task_store is not None:
+        app.state.notepad_service = notepad_service.NotepadService(notepad_store, planner_store, task_store, notepad_timezone, provider=notepad_provider or notepad_local_provider, meetings=meeting_store)
     if candidates_on and memory_candidate_store is not None and memory_store is not None and planner_store is not None:
         app.state.candidate_service = candidate_service.CandidateService(memory_candidate_store, memory_store, planner_store)  # all stores injected: no lifespan needed
     app.state.selective_shadow = selective_shadow_observer  # measure-only; None unless KNOWLEDGE_SELECTIVE_SHADOW_ENABLED and KNOWLEDGE_RETRIEVAL_ENABLED (see knowledge/selective_shadow.py)
@@ -1097,7 +1150,13 @@ def create_app(
         # An explicit reference to a named note or meeting outranks every generic intent: its title may contain "tasks", "reminders", "alarms" and
         # so on. The matchers below then see no text, and the record branch answers (record_reference.py).
         record_ref = None if slash_input else record_reference.parse(turn.text)
+        # Phase 49E: a source named without a title ("pending action items from my notes") is the task inquiry's question, which reads the stores itself. A TITLED reference
+        # still wins outright, so a note's title can never reach the inquiry or the generic handlers.
+        if record_ref is not None and record_ref.title is None and app.state.notepad_service is not None and notepad_inquiry.match(turn.text) is not None:
+            record_ref = None
         intent_text = "" if slash_input or record_ref is not None else turn.text
+        # Phase 49E: only with processing on. A named-record reference was claimed above (intent_text is empty then), so a note's title can never reach this matcher.
+        notepad_inquiry_match = notepad_inquiry.match(intent_text) if app.state.notepad_service is not None and not slash_input else None
         capture_text = match_capture(intent_text)
         complete_query = match_complete(intent_text)
         search_query = match_search(intent_text)
@@ -1338,6 +1397,13 @@ def create_app(
             if completed:
                 await receipt("task.completed", "task", completed.id, Task=completed.text)
             privacy = classify_privacy(turn.text)
+        elif notepad_inquiry_match is not None:
+            production_handler = "tasks.inquiry"
+            persona = await app.state.persona_store.get()
+            reply = await notepad_inquiry.answer(
+                notepad_inquiry_match, tasks=app.state.task_store, planner=app.state.planner_store, notepad=app.state.notepad_service.store,
+                access=selective_answer.access_for(str(turn.input_modality.value)), now=datetime.now(UTC), timezone=persona.timezone)
+            privacy = Privacy.WORK_PRIVATE  # it names the owner's own tasks and notes: never spoken on a shared speaker
         elif search_query:
             production_handler = "tasks.search"
             found = await app.state.task_store.search_tasks(search_query)
@@ -1773,6 +1839,9 @@ def create_app(
             reply=reply, turn_count=len(history), privacy=privacy, web_search=web_search, context_meeting=context_title,
         )
 
+    if notepad_on:
+        install_notepad_routes(app)
+
     if candidates_on:
         install_candidate_routes(app, capture_on=capture_on)
 
@@ -2157,6 +2226,8 @@ def create_app(
     async def delete_note(note_id: str) -> dict[str, bool]:
         if not await app.state.planner_store.delete_note(note_id):
             raise HTTPException(status_code=404, detail=f"no note '{note_id}'")
+        if app.state.notepad_service is not None:
+            await app.state.notepad_service.note_deleted(note_id)  # proposals from a deleted note are closed, not left pending
         return {"deleted": True}
 
     @app.get("/reminders")
@@ -2727,6 +2798,8 @@ def create_app(
         if active and not active.finished and active.meeting_id == meeting_id:
             raise HTTPException(status_code=409, detail="a deep job is running on this meeting")
         await app.state.meeting_store.delete_meeting(meeting_id)
+        if app.state.notepad_service is not None:
+            await app.state.notepad_service.meeting_deleted(meeting_id)  # only the association rows go; notes and proposals keep their own text
         return {"deleted": True}
 
     @app.get("/deep-review/info")

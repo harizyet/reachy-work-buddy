@@ -162,9 +162,9 @@ class PostgresPlannerStore:
             return [_reminder(row) for row in await cur.fetchall()]
 
     async def add_reminder(
-        self, text: str, due_at: datetime, *, sensitivity: Privacy = Privacy.WORK_PRIVATE
+        self, text: str, due_at: datetime, *, sensitivity: Privacy = Privacy.WORK_PRIVATE, record_id: str | None = None
     ) -> Reminder:
-        reminder = Reminder(text=text, due_at=due_at, sensitivity=sensitivity)
+        reminder = Reminder(text=text, due_at=due_at, sensitivity=sensitivity, **({"id": record_id} if record_id else {}))
         async with self._pool.connection() as conn:
             await conn.execute(
                 f"INSERT INTO reminders ({_REMINDER_COLUMNS}) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
