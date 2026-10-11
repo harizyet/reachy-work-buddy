@@ -1,307 +1,351 @@
-# Phase 50 — Multimodal Document Intelligence
+# Phase 50 — MinerU-backed Document Intelligence
 
 ## Status
 
 **Proposed / plan-only.**
 
-No Phase 50 implementation is approved merely by the existence of this document.
+Phase 50 introduces first-class document intelligence into Reachy using MinerU as the selected document-processing and document-content backend.
 
-Phase 50 adds first-class document ingestion, retrieval, summarization and multimodal document understanding to Reachy while preserving the existing privacy, provenance, trust and local-first architecture.
+This phase is primarily an engineering and integration phase, not a document-AI research or comparative benchmarking phase.
 
-The core architectural invariant is:
+The implementation will not build a new OCR stack, document parser, layout engine, document database, or document search subsystem unless MinerU is proven incapable of satisfying a required contract during implementation.
 
-> **Derived interpretation never replaces source evidence.**
+MinerU 4.0 already provides:
 
-Phase 50 must preserve the original document and distinguish authoritative source material from OCR output, model-generated visual interpretations, summaries and analyses.
+* local document parsing;
+* a local document library;
+* stable document/page/block locators;
+* parsing caches;
+* background parsing;
+* OCR;
+* multiple document-processing tiers;
+* structured Markdown/content output;
+* document search and read operations;
+* Python SDK access;
+* self-hosted HTTP API;
+* local model operation;
+* CPU and GPU-capable execution paths.
 
-## Owner decisions — 2026-10-11
+MinerU explicitly positions its document library and locators for agent reading workflows, while remaining separate from higher-level chat/RAG orchestration.
 
-Binding for this phase:
+## 1. Architectural decision
 
-1. Document processing is local-first.
-2. Background and normal processing preferentially use a CPU document worker on Proxmox.
-3. Interactive/priority processing may reclaim the MS-01 GPU after a measured, rehearsed vLLM handoff (see [15.1](#151-gpu-priority-processing)).
-4. OCR and parsing run in an isolated document-worker container, never in companion-core.
-5. The OCR backend stays pluggable. PaddleOCR, MinerU and Surya are candidates, not selections.
-6. A VLM is on-demand, not permanently resident; no model is selected before the 50E evaluation.
-7. The original source remains authoritative; OCR and model outputs are derived evidence.
-8. The evaluation corpus contains only synthetic or explicitly owner-approved material.
-
-Earlier the same day the owner also decided: explicit sensitivity at upload with a conservative private default; configurable limits whose defaults come from the 50J measurements; the evaluation corpus is frozen from 50B; Android document management is deferred; and no production retrieval change before the Phase 48/49 acceptance work ([section 23](#23-interaction-with-phase-48--49)). Approval to start any implementation stage is still a separate decision, and [ADR 0034](adr/0034-source-evidence-and-derived-artifacts.md) is accepted (2026-10-11).
-
-## 1. Motivation
-
-Reachy already has much of the knowledge backend required for document retrieval:
-
-* Postgres persistence
-* pgvector
-* local embeddings
-* document chunks
-* semantic retrieval
-* Phase 44 knowledge indexing
-* project scope
-* sensitivity
-* source revalidation
-* evidence/context construction
-* local 7B inference
-* deeper 14B inference
-* hosted fallback infrastructure
-* prompt-injection boundaries for retrieved data
-
-The current document abstraction, however, is primarily text-oriented.
-
-The missing user-facing capability is:
-
-> Upload a real document and allow Reachy to read, retrieve, summarize and analyse it.
-
-Real documents cannot be assumed to contain clean embedded text.
-
-A PDF may consist of:
-
-* embedded digital text,
-* scanned pages,
-* screenshots,
-* diagrams,
-* charts,
-* image-based tables,
-* mixed text and image pages,
-* or combinations of all of these.
-
-Therefore Phase 50 must not be implemented as:
+Phase 50 adopts the following ownership boundary:
 
 ```text
-PDF
- ↓
-extract text
- ↓
-RAG
+Reachy
+=
+document identity
+authoritative original file (content-addressed, SHA-256)
+policy
+authorization
+sensitivity
+project scope
+processing orchestration
+user interaction
+reasoning
+cross-source memory
+derived Reachy outputs
+
+MinerU
+=
+derived document library and cache
+(a working copy of the source, never the system of record)
+document parsing
+OCR
+layout/document structure
+document library
+parsed representation
+page/block locators
+document reading
+document-local search
+processing cache
 ```
 
-The target is instead:
+The key relationship is pointer-like:
 
 ```text
-Document
-   ↓
-source inspection
-   ↓
-native extraction
-   ├─────────────┐
-   ↓             │
-OCR when needed  │
-   ↓             │
-visual analysis when needed
-   ↓             │
-normalized evidence
-   ↓
-existing Reachy knowledge stack
-   ↓
-retrieval / summarization / analysis
+ReachyDocument
+        │
+        │ stable backend reference
+        ▼
+MinerU document object
 ```
 
-Modern document-processing systems are converging on this hybrid approach: native extraction where possible, OCR for image-based text, layout reconstruction, and selective multimodal processing for visually meaningful content. MinerU, PaddleOCR and Surya all provide self-hosted components covering parts or most of this pipeline.
+The original file is stored once in Reachy's own source store, content-addressed by SHA-256 and re-verified on read, as [ADR 0034](adr/0034-source-evidence-and-derived-artifacts.md) requires. MinerU ingests and reads that source and maintains its own derived representation; if its cache format or library changes, nothing authoritative is lost.
+
+Reachy does not duplicate the complete MinerU representation into its own database.
+
+Instead, Reachy stores a stable logical reference to the corresponding MinerU document.
+
+This is conceptually similar to a typed pointer/reference in systems programming, but the reference is persistent and logical rather than an in-memory address.
 
 ## 2. Goals
 
-Phase 50 should allow Reachy to:
+Phase 50 should allow the owner to:
 
-1. ingest PDF, DOCX, TXT and Markdown documents;
-2. retain the original uploaded file;
-3. extract native document text and structure;
-4. detect pages where native extraction is inadequate;
-5. perform OCR locally where required;
-6. identify meaningful visual content;
-7. invoke multimodal understanding selectively;
-8. retain page/section provenance;
-9. index resulting evidence into the existing Reachy knowledge system;
-10. support document-scoped Q&A;
-11. summarize documents;
-12. perform deeper document analysis;
-13. cite relevant pages, sections or visual evidence;
-14. expose document-processing coverage to the owner;
-15. support deterministic reprocessing and deletion;
-16. process documents without requiring cloud services;
-17. support both background and latency-sensitive processing;
-18. use heterogeneous homelab compute efficiently.
+1. upload documents to Reachy;
+2. ingest them into a self-hosted MinerU document library;
+3. preserve Reachy sensitivity and project-scope controls;
+4. ask Reachy questions scoped to one document;
+5. retrieve source evidence by MinerU page/block locator;
+6. summarize documents;
+7. perform deeper document analysis;
+8. work with born-digital and scanned PDFs;
+9. work with images and supported Office/document formats;
+10. process documents locally;
+11. choose normal/background or priority processing;
+12. escalate a background job when immediate results are required;
+13. use CPU resources for slow-burn work;
+14. reclaim GPU resources for urgent/high-complexity processing;
+15. delete a document and all associated Reachy references/derived outputs;
+16. expose processing status and provenance to the owner.
 
 ## 3. Non-goals
 
-Phase 50 does not initially aim to:
+Phase 50 does not aim to:
 
-* train a new OCR model;
-* train a new embedding model;
-* invent a new RAG architecture;
-* implement arbitrary image-generation or image-editing capabilities;
-* guarantee perfect understanding of every diagram or chart;
-* turn OCR output into authoritative evidence;
-* automatically execute actions extracted from documents;
-* allow document contents to alter authorization or sensitivity policy;
-* require Android document management in the first release;
-* replace the existing knowledge/retrieval architecture.
+* build a custom OCR engine;
+* benchmark competing OCR stacks;
+* benchmark MinerU against Surya/PaddleOCR/Tesseract;
+* build a custom PDF parser;
+* build a second document vector database;
+* recreate MinerU's document library;
+* train a document model;
+* select between multiple document-processing frameworks;
+* perform academic document-AI benchmarking;
+* add another permanently resident GPU model;
+* allow document contents to issue trusted commands;
+* let MinerU own Reachy's privacy or authorization policy.
 
-## 4. Current state
+Testing still exists, but it is acceptance and regression testing, not comparative research.
 
-Current Reachy documents are effectively stored as text/chunk records.
+## 4. Why MinerU
 
-The current implementation lacks:
+MinerU 4.0 already covers most of the engineering previously proposed for Phase 50.
+
+Its supported local input types currently include PDF, images, DOC/DOCX, PPT/PPTX, XLS/XLSX, RTF, OpenDocument formats, EPUB, OFD, HTML/MHTML and CSV/TSV. Plain text can be read directly.
+
+MinerU provides four parsing tiers:
 
 ```text
-document record
-original file lifecycle
-page-level provenance
-document revisions
-delete lifecycle
-PDF parsing
-DOCX structure parsing
-OCR
-visual document understanding
-document-scoped chat context
-document-processing jobs
-document-processing status
-document UI
+Flash
+Basic
+Standard
+Advanced
 ```
 
-Phase 44 knowledge indexing and the existing sensitivity/project-scope model remain the foundation downstream.
+with different trade-offs between native extraction, OCR/model processing and more demanding document layouts.
 
-Phase 50 should reuse the asynchronous/job-processing patterns already established elsewhere rather than introduce a second unrelated task framework.
+It also provides a local document library capable of:
+
+```text
+file identity
+parsing cache
+background parsing
+search
+page/block reading
+stable locators
+cleanup
+result invalidation
+```
+
+through its CLI and Python `DoclibClient`.
+
+Therefore the implementation preference is:
+
+> Integrate MinerU well rather than rebuild MinerU inside Reachy.
 
 ## 5. Binding evidence rule
 
-### 5.1 Evidence hierarchy
+The architectural invariant remains:
 
-Evidence must be divided into three classes.
+> **Derived interpretation never replaces source evidence.**
 
-**Authoritative source evidence**
+[ADR 0034](adr/0034-source-evidence-and-derived-artifacts.md) (accepted 2026-10-11) remains the governing architectural decision for this evidence hierarchy.
+
+### 5.1 Evidence classes
+
+**Authoritative source**
 
 ```text
-original uploaded file
-native embedded text
-original PDF page rendering
-original embedded image
-original DOCX/XML content
+original uploaded document
+original page/image content
+native source content
+source hash
 ```
 
 **Derived extraction**
 
 ```text
-OCR text
+MinerU parsed text
+OCR output
 layout reconstruction
-reading order
 table extraction
-normalized structural representation
+reading order
+normalized blocks
 ```
 
 **Derived interpretation**
 
 ```text
-VLM descriptions
-diagram relationships
-chart interpretations
-summaries
-executive summaries
-technical analyses
-model-generated classifications
+Reachy summary
+Reachy analysis
+VLM-derived interpretation
+cross-document synthesis
+task suggestions
+risk extraction
+decision extraction
 ```
 
-OCR is derived extraction, not authoritative source evidence.
-
-An OCR engine estimates the textual contents of an image and may make recognition errors. The original page remains authoritative.
+OCR remains derived extraction because OCR can make recognition errors.
 
 ### 5.2 Required properties
 
-Every derived artifact MUST:
+Every derived artifact must:
 
-* preserve a link to its source;
-* preserve document revision/hash;
-* state its derivation type;
-* never overwrite authoritative evidence;
+* retain source provenance;
+* identify its derivation type;
+* remain tied to a document revision/hash;
+* never overwrite authoritative source evidence;
+* remain subject to prompt-injection protections;
 * never grant authority;
 * never lower sensitivity;
-* be independently deletable;
-* be reproducibly regenerable;
-* be distinguishable from source evidence during audit;
-* remain subject to prompt-injection protections.
+* be removable when the document is deleted;
+* be re-creatable from source evidence where practical.
 
-The ADR below records this rule and is accepted.
+## 6. Reachy document object
 
-ADR (accepted 2026-10-11): [ADR-0034 — Authoritative Source vs Derived Document Evidence](adr/0034-source-evidence-and-derived-artifacts.md)
+Reachy's database stores the policy-aware object.
 
-## 6. High-level architecture
+Conceptually:
 
 ```text
-                         ┌────────────────────┐
-                         │ Original Document  │
-                         └─────────┬──────────┘
-                                   │
-                                   ▼
-                         Document inspection
-                                   │
-                ┌──────────────────┼───────────────────┐
-                │                  │                   │
-                ▼                  ▼                   ▼
-          Native extraction   OCR required       Visual content
-                │                  │                   │
-                │                  ▼                   ▼
-                │             OCR backend        VLM analysis
-                │                  │                   │
-                └──────────────────┴───────────────────┘
-                                   │
-                                   ▼
-                          NormalizedDocument
-                                   │
-                                   ▼
-                        Reachy DocumentStore
-                                   │
-                                   ▼
-                       embeddings / pgvector
-                                   │
-                                   ▼
-                      Phase 44 knowledge index
-                                   │
-                         ┌─────────┴─────────┐
-                         ▼                   ▼
-                    scoped Q&A        document analysis
-```
-
-## 7. Stage 50A — Document lifecycle foundation
-
-**Objective**
-
-Create a proper first-class document object and lifecycle.
-
-**Document model**
-
-Proposed conceptual representation:
-
-```text
-Document
+ReachyDocument
 ├── document_id
-├── filename
 ├── title
+├── filename
+├── source_hash
+├── source_store_ref   (Reachy's authoritative original)
 ├── mime_type
-├── file_hash
-├── source_revision
 ├── sensitivity
 ├── project_scope
-├── page_count
-├── size_bytes
-├── processing_status
-├── processing_version
+├── status
+├── backend
+├── backend_ref
+├── backend_revision
+├── processing_priority
 ├── created_at
 └── updated_at
 ```
 
-The original file must be stored separately from derived text/index data.
-
-**Supported initial formats**
+Example:
 
 ```text
-PDF
-DOCX
-TXT
-Markdown
+backend = "mineru"
+
+backend_ref =
+"doc:ab12cd3"
+
+backend_revision =
+source SHA-256 / MinerU parse generation
 ```
 
-**Lifecycle**
+The exact MinerU identifier/locator format must use MinerU's supported API contract rather than Reachy constructing undocumented identifiers.
+
+MinerU's current library returns document identifiers and stable locators for page/block continuation and later reads.
+
+## 7. Pointer/reference model
+
+Reachy should treat `backend_ref` as an opaque typed reference.
+
+Conceptually:
+
+```text
+DocumentBackendRef(
+    backend="mineru",
+    external_id="...",
+    revision="..."
+)
+```
+
+Higher-level Reachy code must not depend directly on MinerU internals.
+
+Instead expose an interface such as:
+
+```text
+DocumentBackend
+├── ingest()
+├── status()
+├── get_metadata()
+├── search()
+├── read()
+├── read_page()
+├── read_block()
+├── parse()
+├── invalidate()
+└── delete()
+```
+
+The initial implementation is:
+
+```text
+MinerUDocumentBackend
+```
+
+This abstraction preserves future optionality without making alternative backends part of Phase 50.
+
+## 8. Stage 50A — MinerU service foundation
+
+**Objective**
+
+Deploy MinerU as a self-hosted Reachy infrastructure service.
+
+MinerU supports a self-hosted V1 API:
+
+```text
+mineru-kit api-server \
+  --host 0.0.0.0 \
+  --port 8000 \
+  --tier standard
+```
+
+and exposes `/v1/*` endpoints for service health, capabilities, uploads, files, parse jobs and usage.
+
+MinerU also supports a local document-library service controlled through:
+
+```text
+mineru server start
+mineru server status
+mineru server stop
+```
+
+and programmatic access through `DoclibClient`.
+
+**Deployment rule**
+
+MinerU runs in an isolated document-processing service/container.
+
+It must not run inside `companion-core`.
+
+The document service has its own:
+
+```text
+dependencies
+model assets
+persistent storage
+logs
+resource limits
+health check
+network policy
+upgrade lifecycle
+```
+
+## 9. Stage 50B — Reachy document lifecycle
+
+**Objective**
+
+Introduce first-class documents into Reachy's policy model.
 
 Required operations:
 
@@ -309,352 +353,103 @@ Required operations:
 upload
 list
 detail
-processing status
-download/view original
+status
+open/use
 delete
 reprocess
-rename/update metadata
-change permitted classification metadata
+change permitted metadata
 ```
 
-**Processing states**
+Processing states:
 
 ```text
 UPLOADED
-INSPECTING
-EXTRACTING
-OCR
-VISUAL_ANALYSIS
-INDEXING
+QUEUED
+PROCESSING
 READY
 PARTIAL
 FAILED
 DELETING
 ```
 
-Failure of one page should not necessarily fail an entire 200-page document.
+The Reachy record and MinerU object must remain linked through `backend_ref`.
 
-A document may reach:
+## 10. Stage 50C — Document ingestion
+
+**Upload flow**
 
 ```text
-PARTIAL
+user upload
+    ↓
+Reachy validates request
+(type by content, configurable limits)
+    ↓
+Reachy assigns:
+    sensitivity
+    project scope
+    document ID
+    source hash
+    ↓
+original stored once in Reachy's source store
+(content-addressed, hash verified)
+    ↓
+copy sent to local MinerU service
+    ↓
+MinerU creates/identifies document
+    ↓
+MinerU returns document reference
+    ↓
+Reachy stores backend_ref
+    ↓
+processing begins
 ```
 
-if useful content was indexed but some pages or modalities failed.
+MinerU can parse local documents through both its library workflow and its stateless/service APIs. The Phase 50 integration should prefer the library-backed route where stable document identity and locators are required.
 
-## 8. Stage 50B — Native extraction and provenance
+**Sensitivity at upload.** Upload requires an explicit classification wherever the UI supports it; otherwise Reachy's conservative default applies. Sensitivity is never inferred by a model. Extracted document content may suggest a stricter classification but may never lower one automatically.
+
+**Limits.** Upload bytes, pages, page-image resolution and processing time are configurable. Defaults are chosen conservatively at 50A from operational testing on the real hosts; this is not a benchmark exercise.
+
+## 11. Stage 50D — MinerU processing tiers
+
+Phase 50 adopts MinerU's own parsing tiers instead of creating a parallel Reachy OCR/VLM taxonomy.
+
+Current MinerU tiers are:
+
+```text
+Flash
+Basic
+Standard
+Advanced
+```
+
+MinerU documents these broadly as increasing levels of processing capability, with PDF/images supporting all four tiers and native Office/document formats generally using local Flash parsing.
+
+Reachy maps user intent onto MinerU tiers.
+
+Suggested initial policy:
+
+```text
+BACKGROUND document ingest
+→ Flash or Basic as appropriate
+
+ordinary scanned document
+→ Basic
+
+interactive document analysis
+→ Standard
+
+explicit deep/complex visual analysis
+→ Standard/Advanced where supported
+```
+
+Exact tier-selection rules are implementation policy, not research questions.
+
+## 12. Stage 50E — Document-scoped conversation
 
 **Objective**
 
-Build the authoritative native-text path before OCR or VLM processing.
-
-For PDFs, maintain page-level information:
-
-```text
-DocumentPage
-├── document_id
-├── page_number
-├── native_text
-├── has_native_text
-├── native_text_quality
-├── image_count
-├── image_coverage
-├── likely_scan
-├── likely_visual_content
-├── page_hash
-└── extraction_metadata
-```
-
-For DOCX, preserve structure where available:
-
-```text
-heading
-paragraph
-list
-table
-section
-```
-
-Generated chunks should include:
-
-```text
-document_id
-source_revision
-page_start
-page_end
-section
-chunk_index
-evidence_type = native_text
-sensitivity
-project_scope
-```
-
-Phase 50B must also identify pages that require additional processing.
-
-Example:
-
-```text
-Page 1 → native text sufficient
-Page 2 → native text sufficient
-Page 3 → likely scan
-Page 4 → large diagram + text
-Page 5 → native text sufficient
-```
-
-## 9. Stage 50C — Pluggable OCR
-
-**Objective**
-
-Recover text from scanned/image-based content without requiring a VLM.
-
-OCR must be an abstraction rather than a hard-coded dependency.
-
-```text
-OCRBackend
-   │
-   ├── PaddleOCR
-   ├── MinerU
-   ├── optional alternative
-   └── benchmark baseline
-```
-
-Current candidates:
-
-* PaddleOCR
-* MinerU
-* Surya
-* Tesseract or equivalent baseline
-
-PaddleOCR supports local inference and CPU deployment, which makes it appropriate for the Proxmox background worker. MinerU can also run in a pure-CPU pipeline mode, while its higher-quality local tiers can use GPU inference.
-
-Surya provides OCR plus layout analysis, reading order and table recognition, but its model-weight licensing must be reviewed before any usage outside the permitted license conditions.
-
-**OCR trigger**
-
-Do not OCR every PDF page.
-
-Candidate triggers:
-
-```text
-native character count below threshold
-native text absent
-page dominated by raster image
-native text extraction malformed
-user explicitly requests OCR
-reprocessing policy requests stronger extraction
-```
-
-Store:
-
-```text
-PageOCR
-├── document_id
-├── page_number
-├── backend
-├── backend_version
-├── OCR_text
-├── confidence
-├── positional metadata
-└── created_at
-```
-
-Never overwrite native text with OCR output.
-
-## 10. Stage 50D — Visual-content detection
-
-**Objective**
-
-Determine when OCR is insufficient and genuine visual understanding may be useful.
-
-Proposed page classifications:
-
-```text
-TEXT_ONLY
-SCAN_TEXT
-TEXT_PLUS_VISUAL
-VISUAL_DOMINANT
-EMPTY
-UNKNOWN
-```
-
-Signals may include:
-
-```text
-native-text quantity
-OCR quantity
-raster/image coverage
-embedded image count
-vector-object coverage
-caption patterns
-page layout
-OCR/native extraction disagreement
-```
-
-Examples requiring potential VLM processing:
-
-```text
-architecture diagrams
-flowcharts
-charts
-screenshots
-dashboard captures
-infographics
-complex visual tables
-annotated figures
-```
-
-The classifier does not need to be ML-based initially.
-
-A deterministic heuristic implementation is acceptable for the first release.
-
-## 11. Stage 50E — Multimodal visual understanding
-
-**Objective**
-
-Understand information encoded through visual relationships rather than merely characters.
-
-OCR can recover:
-
-```text
-RAN
-UPF-A
-UPF-B
-Firewall
-```
-
-but may not reliably recover:
-
-```text
-RAN → UPF-A
-RAN → UPF-B
-UPF-A → Firewall
-```
-
-The VLM path therefore receives:
-
-```text
-original page image
-+
-native text
-+
-OCR text
-+
-page metadata
-```
-
-and produces structured derived interpretation.
-
-Example:
-
-```text
-VisualPageAnalysis
-├── document_id
-├── page_number
-├── model
-├── model_version
-├── visual_elements
-│   ├── type
-│   ├── caption
-│   ├── summary
-│   ├── entities
-│   ├── relationships
-│   └── visible_labels
-├── confidence metadata
-└── source_revision
-```
-
-Do not use unrestricted prose alone if structured extraction can be produced.
-
-Example:
-
-```text
-type: architecture_diagram
-
-entities:
-- RAN
-- UPF-A
-- UPF-B
-- Firewall
-
-relationships:
-- RAN -> UPF-A
-- RAN -> UPF-B
-- UPF-A -> Firewall
-- UPF-B -> Firewall
-```
-
-**VLM deployment**
-
-Do not introduce a third permanently resident GPU model.
-
-The VLM should operate as an on-demand workload.
-
-A model is not selected in the planning stage.
-
-Candidate models are evaluated later on:
-
-```text
-diagram understanding
-chart understanding
-OCR augmentation
-VRAM
-latency
-loading time
-accuracy
-licence
-structured output quality
-```
-
-## 12. Stage 50F — Normalized multimodal representation
-
-**Objective**
-
-Present one stable representation to downstream Reachy components.
-
-```text
-NormalizedDocument
-├── metadata
-├── source_revision
-└── pages
-    ├── Page 1
-    │   ├── authoritative source refs
-    │   ├── native text
-    │   ├── OCR
-    │   ├── layout
-    │   └── visual interpretation
-    │
-    └── Page N
-```
-
-Knowledge chunks may then use:
-
-```text
-KnowledgeChunk
-├── document_id
-├── source_revision
-├── page_start
-├── page_end
-├── section
-├── content
-├── evidence_type
-│   ├── native_text
-│   ├── OCR
-│   ├── layout
-│   ├── table
-│   ├── visual_description
-│   └── visual_relationship
-├── sensitivity
-├── project_scope
-└── embedding
-```
-
-Phase 44 should continue to consume knowledge units rather than becoming PDF-aware.
-
-## 13. Stage 50G — Document-scoped conversation
-
-**Objective**
-
-Allow the owner to ask questions about a particular document rather than relying on global retrieval.
+Allow Reachy to reason over one specific document.
 
 Introduce:
 
@@ -662,301 +457,304 @@ Introduce:
 context_document_id
 ```
 
-with a future migration toward:
+with the longer-term ability to generalize toward:
 
 ```text
 context_sources[]
 ```
 
+Flow:
+
+```text
+User:
+"What are the mandatory security requirements?"
+
+        ↓
+
+Reachy resolves context_document_id
+
+        ↓
+
+Reachy policy check
+
+        ↓
+
+resolve backend_ref
+
+        ↓
+
+MinerU search/read
+
+        ↓
+
+page/block evidence
+
+        ↓
+
+Reachy LLM
+
+        ↓
+
+answer + citations
+```
+
+MinerU's document library supports search and later `read` calls using returned document/page/block locators, making it suitable for bounded agent reading rather than injecting an entire document into one context window.
+
+## 13. Stage 50F — Retrieval integration
+
+Documents become a federated knowledge source behind the existing Phase 44 retrieval semantics. MinerU is another physical retrieval backend, not a way around them.
+
+```text
+Phase 44 retriever
+       │
+       ├── Reachy pgvector sources
+       │
+       └── MinerUDocumentRetriever
+                 │
+                 ├── Reachy authorization check
+                 ├── sensitivity / project-scope check
+                 ├── source-hash / revision validation
+                 ├── MinerU search / read
+                 └── normalize to Reachy Evidence
+```
+
+The adapter must perform, before any MinerU text can enter a prompt, the same responsibilities the Phase 44 index performs for its own sources: the trusted access context, retrieval-time revalidation against the Reachy record (the document exists, is not deleting, and its hash and revision match the backend reference), the channel's sensitivity ceiling, and fail-closed behaviour when MinerU is unavailable or returns an unknown locator. Its output is the same `Evidence` shape the context builder already consumes, with `evidence_type` and the MinerU locator as provenance. It is built and tested against the Phase 44 leakage and revalidation cases before it is enabled.
+
+Reachy's existing knowledge sources remain:
+
+```text
+memory
+notes
+tasks
+meetings
+```
+
+Documents use:
+
+```text
+MinerU
+```
+
+Conceptually:
+
+```text
+Reachy retrieval
+      │
+      ├── memory   → Reachy DB/pgvector
+      ├── notes    → Reachy DB/pgvector
+      ├── meetings → Reachy DB/pgvector
+      ├── tasks    → Reachy stores
+      │
+      └── documents → MinerU
+```
+
+This avoids unnecessarily copying MinerU's entire parsed document representation into Reachy's pgvector database.
+
+**Retrieval policy**
+
+Document-scoped queries should prefer MinerU directly.
+
+Cross-source questions may federate results.
+
 Example:
 
 ```text
-Upload Architecture.pdf
-        ↓
-Open document
-        ↓
-Ask Reachy
-        ↓
-"What connects the RAN layer to analytics?"
+"Compare this tender with yesterday's meeting."
 ```
 
-Retrieval should constrain:
+becomes:
 
 ```text
-document_id = requested document
+MinerU document evidence
+        +
+Reachy meeting evidence
+        ↓
+Reachy synthesis
 ```
 
-while searching across its available modalities.
+## 14. Stage 50G — Provenance and citations
 
-A later query can deliberately broaden context:
+Reachy responses must retain MinerU evidence locators.
+
+Internal evidence may look like:
 
 ```text
-document + meeting
-document + second document
-document + notes
+document_id
+backend_ref
+MinerU locator
+page
+block
+source hash
+derivation type
 ```
 
-but global knowledge should not automatically contaminate document-scoped Q&A.
-
-## 14. Stage 50H — Summarization and analysis
-
-Document summarization must be separate from ordinary RAG Q&A.
-
-**Small documents**
+User-facing citation:
 
 ```text
-NormalizedDocument
-       ↓
-local model
-       ↓
+Architecture Report.pdf
+Page 17
+Figure / section where available
+```
+
+MinerU 4.0 explicitly provides stable locators intended for continued reading and citations across page/block boundaries.
+
+Reachy should never fabricate page numbers from chunk position.
+
+## 15. Stage 50H — Summarization and analysis
+
+Summarization is distinct from document search.
+
+**Short/small document**
+
+```text
+MinerU document
+      ↓
+bounded reads
+      ↓
+Reachy local LLM
+      ↓
 summary
 ```
 
-**Large documents**
+**Long document**
 
 ```text
-sections / page groups
-       ↓
+MinerU page/block traversal
+      ↓
+section/page-group synthesis
+      ↓
 intermediate summaries
-       ↓
-document-level synthesis
-       ↓
-final summary
+      ↓
+final synthesis
 ```
 
-Meaningful visual evidence should be included in synthesis.
+MinerU's locators and continuation mechanism allow long documents to be read progressively rather than loading the full file into one model context.
 
-Otherwise a report may be summarized successfully while omitting important information shown only in diagrams or charts.
-
-**Output object**
+Reachy outputs may include:
 
 ```text
-DocumentOutput
-├── document_id
-├── source_revision
-├── type
-│   ├── summary
-│   ├── executive_summary
-│   ├── technical_review
-│   ├── deep_analysis
-│   └── custom_analysis
-├── content
-├── citations
-├── model
-├── model_tier
-└── generated_at
+summary
+executive summary
+technical review
+deep analysis
+risk extraction
+decision extraction
+deadline extraction
+comparison
+simplification
 ```
 
-Supported user workflows should eventually include:
+These remain Reachy-derived interpretation, not MinerU source evidence.
 
-```text
-Summarize this document.
-Give me an executive summary.
-What are the main risks?
-What decisions are required?
-What deadlines are present?
-What does it say about security?
-Compare section A with section B.
-Find contradictions.
-Explain this section.
-Give me a technical review.
-Compare this document with another document.
-Compare this with my meeting notes.
-```
-
-## 15. Stage 50I — Heterogeneous processing scheduler
+## 16. Stage 50I — Heterogeneous processing scheduler
 
 **Objective**
 
-Exploit both:
+Use the existing homelab efficiently.
 
-* the MS-01 RTX 2000E Ada GPU,
-* and the Proxmox CPU/RAM resources.
+Two execution paths are supported.
 
-Document workloads should be represented as portable jobs rather than being tied to one machine.
+### 16.1 Background / normal path
 
-**Priority classes**
-
-*BACKGROUND*
-
-Use when:
-
-* document uploaded for later use;
-* user does not require immediate response;
-* batch processing is acceptable.
-
-Default worker:
+Runs on the Proxmox document worker.
 
 ```text
-Proxmox CPU
+upload
+   ↓
+Reachy job queue
+   ↓
+Proxmox MinerU worker
+   ↓
+CPU/RAM processing
+   ↓
+MinerU library updated
+   ↓
+Reachy status = READY
 ```
 
-Expected tasks:
+This path is intended for:
 
 ```text
-native parsing
-OCR
-layout processing
-embedding preparation
-full-document background processing
+documents uploaded for later
+normal indexing
+background parsing
+slow OCR
+large batch jobs
+non-urgent document preparation
 ```
 
-*NORMAL*
+The job may take longer.
 
-Use for ordinary document requests where some delay is acceptable.
+That is acceptable because it avoids disrupting interactive Reachy inference.
 
-Default:
+MinerU supports local CPU-oriented operation; its current default installation includes ONNX small-model inference and local VLM/runtime options, while native/Flash parsing can operate without requiring the main NVIDIA inference path.
 
-```text
-Proxmox CPU
-higher queue priority
-```
+### 16.2 Interactive / priority path
 
-*INTERACTIVE / URGENT*
-
-Use when the owner requires an answer immediately.
-
-Execution:
+Used when the user explicitly requires immediate processing.
 
 ```text
-MS-01 GPU
-```
-
-The GPU becomes a latency-acceleration resource.
-
-**Scheduler model**
-
-```text
-                    DocumentJob
-                         │
-                         ▼
-                 priority / needs
-                  ┌──────┴───────┐
-                  │              │
-             BACKGROUND        URGENT
-                  │              │
-                  ▼              ▼
-          Proxmox CPU        MS-01 GPU
-```
-
-Proposed job fields:
-
-```text
-DocumentJob
-├── job_id
-├── document_id
-├── priority
-├── job_type
-├── requires_ocr
-├── requires_vision
-├── page_scope
-├── estimated_pages
-├── sensitivity
-├── project_scope
-├── created_at
-├── started_at
-├── status
-└── worker_id
-```
-
-Workers advertise capabilities rather than jobs specifying hosts.
-
-Example:
-
-```text
-Worker: proxmox-doc-01
-CPU = yes
-OCR = yes
-Vision = no
-Background = yes
-
-Worker: ms01-doc-gpu
-GPU = yes
-OCR = yes
-Vision = yes
-Interactive = yes
-```
-
-### 15.1 GPU priority processing
-
-The MS-01 currently uses its GPU for Reachy's local LLM service.
-
-Urgent document processing may temporarily reclaim this GPU.
-
-Where compatible with the deployed vLLM version/configuration, vLLM Sleep Mode can release most GPU memory without destroying the serving container. The feature supports CUDA and provides sleep/wake control, allowing another GPU workload to use the released memory.
-
-Potential flow:
-
-```text
-urgent document request
+user prioritizes document
         ↓
-allow active LLM request to finish
+Reachy marks job INTERACTIVE
         ↓
-place vLLM into GPU-sleep / release state
+active LLM request finishes
         ↓
-start GPU OCR/VLM processing
+MS-01 GPU made available
         ↓
-process priority pages
+priority MinerU processing
         ↓
-persist results
+required evidence produced
         ↓
-release document model
+Reachy answers user
         ↓
-wake / restore vLLM
-        ↓
-normal Reachy service resumes
+normal LLM service restored
 ```
 
-If sleep mode proves unsuitable operationally, the fallback remains explicit unload/reload orchestration.
+GPU resource handoff must follow the measured/rehearsed model-switching requirements already established in [ADR 0031](adr/0031-three-tier-local-model-escalation.md).
 
-This should be benchmarked rather than assumed. The swap procedure, its timing and its failure cases (the 7B must come back) need the same measured rehearsal [ADR 0031](adr/0031-three-tier-local-model-escalation.md) required, and may need an amendment to it.
+Phase 50 does not create a competing GPU-lifecycle policy.
 
-### 15.2 Partial urgent processing
+## 17. Processing priorities
 
-An urgent request should not automatically require processing an entire large document.
-
-Example:
+Support three logical priorities:
 
 ```text
-200-page PDF uploaded
-
-User:
-"What does this say about data retention?"
+BACKGROUND
+NORMAL
+INTERACTIVE
 ```
 
-Possible fast path:
+**BACKGROUND**
+
+Default for passive upload.
 
 ```text
-quick native extraction
-       ↓
-initial lexical/semantic narrowing
-       ↓
-identify candidate pages
-       ↓
-priority OCR/vision on those pages
-       ↓
-answer user
-       ↓
-remainder continues on Proxmox
+worker = Proxmox
+latency = unimportant
 ```
 
-The document therefore supports incremental processing.
+**NORMAL**
 
-Page state might include:
+User intends to use the document but is not waiting interactively.
 
 ```text
-UNPROCESSED
-NATIVE_DONE
-OCR_DONE
-VISUAL_DONE
-INDEXED
+worker = Proxmox
+queue priority = elevated
 ```
 
-A background task can continue after an interactive answer has already been produced.
+**INTERACTIVE**
 
-### 15.3 Job escalation
+User requires results now.
 
-The owner must be able to escalate a running job:
+```text
+worker = MS-01 / accelerated path
+latency = priority
+```
+
+## 18. User escalation
+
+A job may be promoted:
 
 ```text
 BACKGROUND
@@ -964,381 +762,270 @@ BACKGROUND
 INTERACTIVE
 ```
 
-Already completed work must be reused.
-
-Escalation must not restart the document from page 1 unless necessary.
+without throwing away completed work.
 
 Example:
 
 ```text
-Pages 1–35 already OCR'd on Proxmox
-                    ↓
-user escalates
-                    ↓
-MS-01 continues from remaining/relevant pages
+Proxmox has already processed pages 1–40
+                ↓
+owner selects Prioritize
+                ↓
+priority worker continues from available state
 ```
 
-The inverse should also be possible:
+After the urgent portion completes:
 
 ```text
-INTERACTIVE portion completed
-        ↓
-remaining pages
-        ↓
-BACKGROUND Proxmox worker
+remaining work
+    ↓
+returns to BACKGROUND
 ```
 
-## 16. Storage and retention
+The scheduler must avoid unnecessary duplicate parsing where MinerU already has cached results.
 
-Keep:
+MinerU's library manages parsing caches and existing parse state, which should be reused rather than bypassed.
 
-```text
-original/
-derived/
-```
+## 19. Fast evidence-first answering
 
-logically separate.
-
-Suggested hierarchy:
-
-```text
-Document
-├── original
-│   ├── file
-│   ├── SHA-256
-│   └── metadata
-│
-└── derived
-    ├── native extraction
-    ├── OCR
-    ├── layout
-    ├── visual analysis
-    ├── chunks
-    ├── embeddings
-    └── document outputs
-```
-
-Reprocessing creates new derived artifacts against a source revision.
-
-The original should not be rewritten.
-
-The physical location of originals and page images (volume or database), their backup coverage, and whether page images are kept or regenerated are decided at 50A start.
-
-**Delete**
-
-Delete must cascade across:
-
-```text
-original file
-page records
-OCR output
-visual interpretations
-chunks
-embeddings
-knowledge-index rows
-summaries
-analysis outputs
-processing jobs
-cached derivatives
-```
-
-After deletion, the deleted document must no longer be retrievable through semantic search.
-
-Deletion behaviour must have regression tests.
-
-## 17. Sensitivity and trust
-
-Documents, OCR results and visual-model outputs are untrusted data.
-
-They cannot:
-
-* authorize an action;
-* change owner identity;
-* lower privacy classification;
-* override Reachy policy;
-* issue tool commands;
-* alter routing policy;
-* directly create authoritative tasks/reminders without review.
-
-At upload, sensitivity must either:
-
-1. be explicitly selected by the owner; or
-2. inherit a conservative default.
-
-Automatic document classification may later recommend:
-
-```text
-"This appears to contain sensitive material."
-```
-
-but must never automatically lower a classification.
-
-Cloud processing follows the existing Reachy privacy policy.
-
-No document should silently leave the local environment.
-
-## 18. File and resource limits
-
-Do not permanently select arbitrary production limits during planning.
-
-Limits should initially be configurable:
-
-```text
-maximum upload bytes
-maximum pages
-maximum page image resolution
-maximum OCR runtime
-maximum VLM pages
-maximum concurrent jobs
-maximum derived-storage size
-```
-
-Phase 50J will establish reasonable defaults from real measurements.
-
-## 19. Candidate document-processing stack
-
-**Primary candidate: MinerU**
-
-MinerU should be benchmarked as a potential complete document-processing layer rather than automatically rebuilding every parser ourselves.
-
-Current MinerU supports local document parsing through CLI, WebUI and API-style services. Its local stack supports basic CPU-oriented processing and higher-quality GPU tiers; current documentation lists 8 GB+ VRAM for its standard NVIDIA GPU setup.
-
-It can therefore potentially cover parts of:
-
-```text
-50B native extraction
-50C OCR
-50D layout analysis
-50E visual/document interpretation
-50F normalized output
-```
-
-**PaddleOCR**
-
-PaddleOCR remains a strong candidate for the dedicated CPU OCR path on Proxmox.
-
-The key appeal is:
-
-```text
-self-hosted
-CPU capable
-lightweight
-no GPU residency requirement
-```
-
-**Surya**
-
-Surya should be evaluated as an alternative OCR/layout pipeline.
-
-Its current capabilities include OCR, layout analysis, reading order and table recognition.
-
-However, model licensing must be explicitly reviewed before adoption.
-
-**Decision rule**
-
-Do not choose based on GitHub popularity alone.
-
-Choose from empirical results on Reachy's evaluation corpus.
-
-Whatever is chosen runs in an isolated document-worker container or job, never inside companion-core; image size, licence and supply-chain review apply.
-
-## 20. Stage 50J — Evaluation and benchmarking
-
-Evaluation starts during 50B and grows through subsequent stages.
-
-Do not wait until implementation is complete.
-
-**Evaluation corpus**
-
-Create a frozen corpus containing:
-
-```text
-born-digital PDF
-clean scan
-poor scan
-mixed native/scanned PDF
-DOCX
-multi-column report
-screenshot-heavy document
-architecture diagram
-flowchart
-chart
-table
-long document
-```
-
-Some documents should intentionally contain answers only in specific modalities.
-
-Examples:
-
-```text
-Q1 → native text only
-Q2 → scanned text only
-Q3 → screenshot text only
-Q4 → diagram relationship only
-Q5 → chart interpretation
-Q6 → text + visual evidence
-Q7 → deliberately unanswerable
-```
-
-The corpus uses synthetic or owner-approved documents only; nothing private is committed.
-
-### 20.1 Evaluation layers
-
-**Extraction coverage**
-
-Measure:
-
-```text
-page extraction coverage
-OCR recovery
-OCR error rate where ground truth exists
-layout preservation
-reading-order correctness
-visual-page detection recall
-```
-
-**Retrieval**
-
-Measure:
-
-```text
-Recall@K
-correct-page retrieval
-correct-section retrieval
-correct-modality retrieval
-evidence coverage
-```
-
-**Groundedness**
-
-Measure:
-
-```text
-citation correctness
-answer entailment
-unsupported claims
-hallucination rate
-abstention correctness
-```
-
-**Summarization**
-
-Measure:
-
-```text
-important-detail coverage
-faithfulness
-citation support
-visual-content inclusion
-long-document degradation
-```
-
-**Compute**
-
-Measure separately for:
-
-```text
-Proxmox CPU
-MS-01 GPU
-```
-
-Metrics:
-
-```text
-pages/minute
-time-to-first-usable-page
-full-document processing time
-CPU utilisation
-RAM utilisation
-GPU VRAM
-GPU utilisation
-model switching time
-vLLM disruption
-job escalation latency
-energy where practical
-```
-
-**Practical value**
-
-Evaluation must answer:
-
-> Does this pipeline make Reachy materially better at answering realistic questions from documents?
-
-A system that passes technical extraction tests but rarely retrieves useful evidence should not be promoted.
-
-### 20.2 OCR benchmark
-
-At minimum benchmark:
-
-```text
-PaddleOCR
-MinerU pipeline
-Surya if licensing permits
-baseline OCR engine
-```
-
-Against:
-
-```text
-clean print
-poor scan
-small text
-screenshots
-multi-column layouts
-tables
-mixed language if relevant
-```
-
-Do not benchmark OCR solely using speed.
-
-The relevant trade-off is:
-
-```text
-accuracy
-layout preservation
-resource cost
-integration complexity
-reliability
-licensing
-```
-
-### 20.3 VLM benchmark
-
-VLM selection occurs only after the extraction pipeline exists.
-
-Evaluate candidate local VLMs against a frozen set of:
-
-```text
-architecture diagrams
-charts
-flowcharts
-dashboard screenshots
-complex tables
-text + diagram combinations
-```
-
-Measure:
-
-```text
-relationship accuracy
-factual grounding
-structured-output validity
-VRAM
-model load time
-page latency
-failure rate
-```
-
-The selected VLM must fit the MS-01 on-demand workload model.
-
-There is no requirement for it to remain permanently resident.
-
-## 21. Stage 50K — Web Documents experience
-
-Add a top-level Documents surface.
+Interactive use does not always require full-document processing.
 
 Example:
+
+```text
+200-page document
+
+User:
+"What is the retention requirement?"
+```
+
+Target flow:
+
+```text
+available native/Flash parse
+        ↓
+search/narrow likely evidence
+        ↓
+process/read relevant section
+        ↓
+answer user
+        ↓
+remaining document continues in background
+```
+
+MinerU's bounded page/block reads and continuation model make this preferable to waiting for the entire document where sufficient evidence is already available.
+
+## 20. MinerU model execution
+
+MinerU model execution should remain local unless Reachy's owner explicitly allows another path.
+
+MinerU supports:
+
+```text
+small models:
+ONNX
+Torch
+
+VLM engines:
+llama.cpp
+vLLM
+LMDeploy
+```
+
+and supports local model paths through:
+
+```text
+MINERU_MODEL_SOURCE=local
+```
+
+when required model assets have already been downloaded.
+
+The chosen runtime on each worker is an engineering deployment decision.
+
+No comparative model study is required by Phase 50.
+
+## 21. Storage architecture
+
+The exact physical storage location must be decided at 50A start.
+
+Reachy's source store is authoritative for the original; MinerU's storage is derived and rebuildable from it.
+
+Logical ownership:
+
+```text
+Reachy authoritative store
+├── original file
+├── SHA-256
+└── (hash re-verified on read)
+
+Reachy DB
+├── ReachyDocument
+├── sensitivity
+├── project_scope
+├── backend_ref
+├── source hash
+├── processing state
+├── Reachy summaries
+└── Reachy analyses
+
+
+MinerU persistent storage
+├── working copy of the source (derived)
+├── document identity
+├── parse cache
+├── parsed representation
+├── OCR/layout/model results
+├── page/block locators
+└── document search/index state
+```
+
+Questions to settle at implementation start:
+
+```text
+physical location of Reachy's source store and its backup
+physical MinerU data path
+backup coverage
+filesystem/storage pool
+retention policy
+page-image persistence
+whether page renderings are retained or regenerated
+```
+
+These are operational decisions, not research tasks.
+
+## 22. Deletion
+
+Deletion must remove both layers.
+
+Flow:
+
+```text
+Delete document
+      ↓
+Reachy authorization check
+      ↓
+delete/invalidate MinerU document
+      ↓
+delete the original from Reachy's source store
+      ↓
+remove Reachy backend_ref
+      ↓
+remove Reachy-derived summaries/analysis
+      ↓
+remove document knowledge references
+      ↓
+verify retrieval no longer returns document
+```
+
+Delete should cover:
+
+```text
+Reachy original file (source store)
+MinerU source copy / library object
+MinerU parse/cache data
+Reachy document record
+Reachy summaries
+Reachy analyses
+cross-source references where appropriate
+queued jobs
+cached responses where appropriate
+```
+
+Deletion correctness is a mandatory acceptance gate.
+
+## 23. Reprocessing
+
+Reprocessing should not create a second unrelated Reachy document.
+
+Conceptually:
+
+```text
+same Reachy document_id
+same authoritative source (Reachy's stored original, hash re-verified)
+        ↓
+MinerU parse invalidation/reparse
+        ↓
+new backend processing revision
+        ↓
+old derived Reachy outputs marked stale
+```
+
+MinerU exposes result invalidation through its document-library tooling/SDK, which should be used rather than manually mutating MinerU's internal storage.
+
+## 24. Sensitivity and authorization
+
+MinerU must never become Reachy's authorization authority.
+
+Before any MinerU search/read:
+
+```text
+Reachy authenticates user
+        ↓
+Reachy checks channel/privacy ceiling
+        ↓
+Reachy checks document sensitivity
+        ↓
+Reachy checks project scope
+        ↓
+only then resolve MinerU backend_ref
+```
+
+MinerU content is treated as untrusted data.
+
+Document text, OCR output and model-derived content cannot:
+
+```text
+authorize tools
+alter owner identity
+lower sensitivity
+change policy
+trigger privileged commands
+override system instructions
+```
+
+Existing Reachy prompt-injection protections continue to apply.
+
+## 25. Cloud policy
+
+Phase 50 is local-first.
+
+MinerU documents are not automatically uploaded to its official service; remote parsing requires explicit remote configuration.
+
+Reachy's deployment should therefore use:
+
+```text
+local MinerU service
+local model assets
+local document storage
+```
+
+unless the owner deliberately chooses otherwise.
+
+No Phase 50 component should silently change from local to cloud execution.
+
+## 26. Worker isolation and supply-chain requirements
+
+MinerU runs in a dedicated worker/container boundary.
+
+Before deployment:
+
+```text
+pin version
+review licence
+record image/source
+record dependencies
+review container size
+review model licences
+record model hashes where practical
+restrict network exposure
+define upgrade procedure
+```
+
+`companion-core` must not absorb MinerU's dependency stack.
+
+## 27. Stage 50J — Web Documents experience
+
+Add a top-level Documents tab.
 
 ```text
 Brain
@@ -1348,7 +1035,7 @@ Tasks
 Documents
 ```
 
-**Library**
+**Main library**
 
 ```text
 Documents
@@ -1356,27 +1043,27 @@ Documents
 [ Upload ]
 
 Architecture Review.pdf
-46 pages
 Ready
 Work Private
 
 Tender Response.docx
-72 pages
-Processing
+Background processing
 Confidential
 ```
 
-**Detail view**
+**Detail page**
 
 ```text
 Architecture Review.pdf
 
 46 pages
-38 native pages
-5 OCR pages
-3 visual-analysis pages
+Ready
 
-Processing coverage: Complete
+Processing:
+MinerU Standard
+
+Priority:
+Normal
 
 [ Ask Reachy ]
 [ Summarize ]
@@ -1386,45 +1073,40 @@ Processing coverage: Complete
 [ Delete ]
 ```
 
-**Processing transparency**
+## 28. Processing transparency
 
-Never merely display:
+Do not merely show:
 
 ```text
 Processed
 ```
 
-when processing was partial.
-
-Prefer:
+Expose meaningful state such as:
 
 ```text
-46 / 46 pages processed
-
-Native text: 38
-OCR: 5
-Visual analysis: 3
-
-Coverage: Complete
+Queued
+Parsing
+OCR/processing
+Ready
+Partially ready
+Failed
 ```
 
-or:
+Where MinerU exposes meaningful tier/parse state, Reachy may surface it in simplified form.
+
+The owner should be able to distinguish:
 
 ```text
-42 / 46 pages processed
-
-4 pages require additional processing
-
-Coverage: Partial
+document uploaded
+document usable
+document fully processed
+document partially processed
+processing failed
 ```
 
-This is a trust requirement rather than cosmetic UI.
+## 29. User-facing priority control
 
-### 21.1 User-facing priority controls
-
-Default uploaded documents to background processing unless the interaction clearly requires immediate results.
-
-Potential UI:
+Suggested control:
 
 ```text
 Processing priority
@@ -1434,183 +1116,264 @@ Processing priority
 ○ Priority
 ```
 
-Reachy may suggest escalation:
-
-> This document is still being processed in the background. Prioritize it now?
-
-Explicit owner escalation overrides normal routing.
-
-Priority may also be inferred from intent:
+Conversational equivalents:
 
 ```text
 "Process this later."
 → BACKGROUND
 
-"Summarize this when ready."
-→ NORMAL/BACKGROUND
+"Summarize this when it's ready."
+→ NORMAL
 
-"Tell me what this says right now."
+"I need this now."
 → INTERACTIVE
 ```
 
-Automatic GPU displacement should remain subject to policy so a low-value task cannot continually interrupt normal Reachy inference.
+Reachy may offer:
 
-## 22. Android scope
+> This document is still being processed in the background. Prioritize it now?
 
-Android document management is not required for the initial Phase 50 promotion.
+Explicit owner choice overrides automatic routing.
 
-Initial mobile scope may be limited to:
+## 30. Cross-source reasoning
+
+Once a document is available through MinerU, Reachy may deliberately combine it with its own memories.
+
+Example:
 
 ```text
-ask questions about already-ingested documents
-view existing summaries
-view citations
+"Compare this architecture document
+with yesterday's design meeting."
 ```
 
-Full Android functionality can follow after Web lifecycle behaviour is stable:
+Flow:
+
+```text
+MinerU document evidence
+        +
+Reachy meeting evidence
+        ↓
+Reachy synthesis
+```
+
+Source boundaries must remain explicit.
+
+The final answer should preserve which claim came from:
+
+```text
+document
+meeting
+note
+memory
+task
+```
+
+## 31. Reachy document memory
+
+Documents become reference-backed memories.
+
+Conceptually:
+
+```text
+Reachy memory graph/index
+
+Document node
+├── title
+├── sensitivity
+├── project
+├── metadata
+└── backend_ref ──────────────► MinerU document
+```
+
+Reachy does not need to persist a second full copy of:
+
+```text
+pages
+OCR
+layout
+blocks
+MinerU parse representation
+MinerU search index
+```
+
+unless a specific Reachy feature requires derived caching.
+
+This is the central simplification introduced by the MinerU decision.
+
+## 32. Android scope
+
+Android is not required to own document lifecycle in the first release.
+
+Initial Android capability may include:
+
+```text
+ask questions about existing documents
+view summaries
+view citations
+view processing status
+```
+
+Later:
 
 ```text
 upload
+delete
+reprocess
+prioritize
 document viewer
+```
+
+Web remains the initial full management surface.
+
+## 33. Interaction with Phase 48 / Phase 49
+
+Phase 50 must not invalidate existing acceptance work.
+
+Planning and isolated implementation may proceed.
+
+Document retrieval should remain gated until enabling it does not contaminate any frozen Phase 48/49 evaluation still in progress.
+
+The existing knowledge system remains unchanged for:
+
+```text
+memories
+notes
+meetings
+tasks
+```
+
+until document federation is explicitly enabled.
+
+## 34. Engineering verification
+
+Phase 50 removes comparative benchmarking, but not verification.
+
+Required tests are implementation acceptance tests.
+
+### 34.1 Ingestion
+
+Verify:
+
+```text
+PDF upload
+DOCX upload
+TXT/Markdown upload where applicable
+scanned PDF
+image-heavy PDF
+large document
+```
+
+### 34.2 Reference integrity
+
+Verify:
+
+```text
+Reachy document
+→ correct MinerU document
+
+MinerU locator
+→ correct page/block
+
+source hash
+→ correct original document in Reachy's source store
+```
+
+### 34.3 Retrieval
+
+Verify representative known-answer questions return the correct source evidence.
+
+This is a functional acceptance test, not a benchmark campaign.
+
+### 34.4 Grounding
+
+Verify citations reference real MinerU page/block evidence.
+
+### 34.5 Abstention
+
+Verify Reachy does not invent an answer when evidence cannot be found.
+
+### 34.6 Lifecycle
+
+Verify:
+
+```text
+upload
+process
+read
 reprocess
 delete
-priority management
 ```
 
-## 23. Interaction with Phase 48 / 49
+and confirm deleted documents disappear from retrieval.
 
-Phase 50 touches knowledge retrieval and therefore must not invalidate ongoing acceptance measurements.
+### 34.7 Security
 
-Planning and isolated Phase 50 engineering may proceed.
-
-Production retrieval changes must not contaminate frozen Phase 48/49 evaluations.
-
-If necessary:
+Verify document content cannot bypass:
 
 ```text
-Phase 50 indexing enabled = false
+sensitivity
+channel ceiling
+owner authorization
+tool authorization
+prompt-injection protections
 ```
 
-until relevant existing acceptance work completes.
+### 34.8 Scheduler
 
-This allows implementation progress without making prior benchmark results incomparable.
-
-## 24. First useful release candidate
-
-The first useful release does not require full multimodal support.
-
-A sensible first release consists of:
+Verify:
 
 ```text
-50A — lifecycle
-50B — native extraction/provenance
-50F — normalized document representation
-50G — document-scoped Q&A
-basic 50K UI
+background → Proxmox
+priority → MS-01
+escalation preserves work
+LLM service restores correctly
 ```
 
-This yields:
+## 35. Promotion gates
 
-```text
-native-text PDF/DOCX/TXT/MD
-        ↓
-document scoped retrieval
-        ↓
-page/section citations
-        ↓
-Reachy Q&A
-```
+**G1 — MinerU service**
 
-OCR and visual processing can then extend coverage without redesigning the downstream system.
+Self-hosted MinerU operates reliably as an isolated service.
 
-## 25. Proposed implementation order
+**G2 — Document identity**
 
-```text
-ADR-0034
-   ↓
-50A — document lifecycle
-   ↓
-50B — native extraction/provenance
-   ↓
-start frozen evaluation corpus
-   ↓
-50C — pluggable OCR
-   ↓
-50D — visual-content detection
-   ↓
-50E — multimodal analysis
-   ↓
-50F — normalized representation
-   ↓
-50G — scoped retrieval
-   ↓
-50H — summarization/analysis
-   ↓
-50I — heterogeneous scheduler
-   ↓
-50J — final benchmark/promotion evaluation
-   ↓
-50K — complete Documents UX
-```
+Reachy maintains a correct stable reference to each MinerU document.
 
-The order may overlap where dependencies permit.
+**G3 — Ingestion**
 
-## 26. Promotion gates
+Supported documents can be ingested and processed.
 
-**G1 — Source integrity**
+**G4 — Evidence access**
 
-Pass if:
+Reachy can search/read the correct MinerU source evidence.
 
-* original file is retained;
-* source hash is verified;
-* derived artifacts cannot overwrite source evidence.
+**G5 — Scoped Q&A**
 
-**G2 — Native extraction**
+Document-scoped questions remain scoped to the requested document.
 
-Pass if supported digital documents can reliably produce page/section-grounded text.
+**G6 — Provenance**
 
-**G3 — OCR**
+Answers can trace evidence to the original document/page/block.
 
-Pass if scanned-text evidence can be recovered to an acceptable quality.
+**G7 — Lifecycle**
 
-**G4 — Visual understanding**
+Delete and reprocess behave deterministically.
 
-Pass if evidence present only through meaningful visual relationships can be recovered above the defined benchmark threshold.
+**G8 — Privacy/security**
 
-**G5 — Retrieval**
+MinerU cannot bypass Reachy authorization, sensitivity or trust boundaries.
 
-Pass if frozen retrieval tests meet their predefined evidence-recall threshold.
+**G9 — Scheduling**
 
-**G6 — Grounding**
+Background and priority paths work without corrupting document state.
 
-Pass if answers cite correct document/page/section evidence at the defined threshold.
+**G10 — UX**
 
-**G7 — Abstention**
+Owner can upload, inspect, query, summarize, prioritize, reprocess and delete documents through Reachy.
 
-Pass if Reachy reliably refuses or qualifies answers when the document lacks sufficient evidence.
+## 36. Promotion outcomes
 
-**G8 — Lifecycle**
-
-Pass if deletion/reprocessing deterministically removes or replaces stale chunks, embeddings and outputs.
-
-**G9 — Privacy and authorization**
-
-Pass if document content cannot alter authority, reduce sensitivity or bypass channel/tool policy.
-
-**G10 — UX transparency**
-
-Pass if the owner can determine:
-
-```text
-what was processed
-which modality was used
-whether processing is complete
-whether derived interpretation was involved
-```
-
-## 27. Promotion outcomes
-
-Phase 50 uses:
+Use:
 
 ```text
 PROMOTE
@@ -1618,128 +1381,175 @@ NARROW
 DO NOT PROMOTE
 ```
 
-Examples:
-
 **PROMOTE**
 
-All core modalities meet acceptable quality and trust thresholds.
+Core engineering contracts are satisfied.
 
 **NARROW**
 
 Example:
 
 ```text
-native text + OCR reliable
-visual reasoning unreliable
+normal PDFs reliable
+complex visual document processing incomplete
 ```
 
-Then Reachy may advertise:
-
-> PDF/DOCX text and scanned-document support
-
-without claiming full diagram understanding.
+Advertise only the proven subset.
 
 **DO NOT PROMOTE**
 
-Use if retrieval, grounding, deletion, authorization or provenance fail materially.
-
-Passing safety tests alone is insufficient if practical document coverage remains poor.
-
-## 28. Expected deployment architecture
+Use if any critical issue remains in:
 
 ```text
-                        ┌─────────────────┐
-                        │ Reachy Web/App  │
-                        └────────┬────────┘
-                                 │
-                                 ▼
-                         Reachy Core / API
-                                 │
-                         document job queue
-                                 │
-              ┌──────────────────┴──────────────────┐
-              │                                     │
-              ▼                                     ▼
-       Proxmox document worker                MS-01 GPU worker
-       CPU / RAM                              RTX 2000E Ada
-              │                                     │
-       native parsing                              OCR optional
-       PaddleOCR / MinerU CPU                     VLM analysis
-       layout work                                 priority work
-       background queue                            interactive queue
-              │                                     │
-              └──────────────────┬──────────────────┘
-                                 ▼
-                       NormalizedDocument
-                                 │
-                                 ▼
-                       DocumentStore / DB
-                                 │
-                                 ▼
-                      embeddings / pgvector
-                                 │
-                                 ▼
-                    Phase 44 knowledge index
-                                 │
-                 ┌───────────────┴────────────────┐
-                 ▼                                ▼
-              Ask Reachy                   Summarize / Analyse
+authorization
+source identity
+provenance
+deletion
+retrieval integrity
+processing isolation
 ```
 
-## 29. Architectural conclusions
-
-Phase 50 should not be viewed as another RAG build.
-
-The existing Reachy knowledge system remains the retrieval foundation.
-
-The new engineering concerns are:
+## 37. Implementation sequence
 
 ```text
-file lifecycle
-document structure
-page provenance
-OCR
-visual understanding
-processing scheduling
-heterogeneous compute
-document outputs
-user-facing document workflows
+ADR-0034 alignment
+      ↓
+50A — MinerU service
+      ↓
+50B — Reachy document model
+      ↓
+50C — ingestion/reference creation
+      ↓
+50D — MinerU processing tiers
+      ↓
+50E — document-scoped conversation
+      ↓
+50F — federated retrieval
+      ↓
+50G — provenance/citations
+      ↓
+50H — summaries/analysis
+      ↓
+50I — heterogeneous scheduler
+      ↓
+50J — Documents Web UI
+      ↓
+engineering acceptance
+      ↓
+promotion decision
 ```
 
-The primary design principle is:
+## 38. Expected deployment
 
-> Convert heterogeneous documents into well-provenanced evidence without losing the distinction between what the document actually contains and what a model inferred from it.
+```text
+                         Reachy Web
+                             │
+                             ▼
+                         Reachy Core
+                             │
+                    policy / authorization
+                             │
+                             ▼
+                    Reachy DocumentStore
+                             │
+                       backend_ref
+                             │
+                             ▼
+                      MinerU Service
+                 ┌───────────┴───────────┐
+                 │                       │
+                 ▼                       ▼
+        MinerU document library      parse workers
+        original documents           OCR/layout/VLM
+        locators/search/cache             │
+                 │                       │
+                 └───────────┬───────────┘
+                             │
+                   structured evidence
+                             │
+                             ▼
+                         Reachy LLM
+                             │
+              ┌──────────────┴──────────────┐
+              ▼                             ▼
+          Ask Reachy                  Summarize/Analyse
+```
 
-The compute principle is:
-
-> Use cheap CPU capacity for throughput and reserve GPU disruption for latency-sensitive workloads.
-
-The scheduling model therefore becomes:
+Compute routing:
 
 ```text
 BACKGROUND / NORMAL
         ↓
-Proxmox CPU slow-burn processing
+Proxmox MinerU worker
+CPU / RAM
+slow-burn processing
+
 
 INTERACTIVE / PRIORITY
         ↓
-MS-01 GPU acceleration
+MS-01 accelerated worker
+GPU reclaimed as required
         ↓
-restore normal LLM service afterward
+restore Reachy LLM service
 ```
 
-This architecture also leaves Reachy extensible beyond PDFs.
+## 39. Owner decisions — 2026-10-11
 
-The same evidence pipeline could later ingest:
+The following decisions are considered settled for Phase 50:
+
+* MinerU is the selected document-processing backend.
+* Phase 50 is an engineering integration phase, not a comparative OCR/document-model research phase.
+* Reachy's document records hold stable references to MinerU-managed document objects rather than duplicating MinerU's entire document representation.
+* Reachy remains the authority for sensitivity, project scope, authorization and privacy.
+* MinerU remains responsible for document parsing, OCR, document structure, local document-library operations and page/block reading.
+* Reachy's content-addressed source store is the system of record for the original file; MinerU holds a derived working copy and cache, never the authority.
+* Original evidence remains authoritative.
+* OCR and parsed/model output remain derived evidence.
+* MinerU runs self-hosted and isolated from `companion-core`.
+* Background and normal work should preferentially use the Proxmox CPU worker.
+* Interactive/priority work may reclaim the MS-01 GPU under the existing measured GPU-switching requirements.
+* A document job may be escalated from background to priority without discarding already completed processing.
+* MinerU's own parsing cache/state should be reused rather than recreating work unnecessarily.
+* Document retrieval becomes a federated Reachy knowledge source rather than requiring all document content to be copied into Reachy's pgvector store.
+* The MinerU retrieval adapter enforces Phase 44 access, sensitivity and revalidation semantics before any MinerU evidence reaches a prompt.
+* Upload takes an explicit sensitivity (conservative default otherwise); content may suggest a stricter class but never lowers one.
+* Cloud document processing is not used unless explicitly permitted by the owner.
+* Testing focuses on engineering acceptance, regression, security and correctness rather than comparing competing document-processing products.
+
+## 40. Final architectural principle
+
+Phase 50 should remain deliberately simple:
+
+> Reachy owns the relationship with the user. MinerU owns the relationship with the document.
+
+Reachy knows:
 
 ```text
-presentation slides
-scanned notes
-whiteboards
-screenshots
-camera captures
-technical diagrams
-image attachments
+who may access it
+why it matters
+what project it belongs to
+how sensitive it is
+how it relates to meetings/notes/tasks
+what the user is asking
 ```
 
-without redesigning the knowledge subsystem.
+MinerU knows:
+
+```text
+how to parse it
+how to OCR it
+where its pages and blocks are
+how to read it
+how to search it
+how to cache its processed representation
+```
+
+The connection between them is a persistent typed reference:
+
+```text
+ReachyDocument
+      │
+      └──── backend_ref ────► MinerU Document
+```
+
+That separation should minimize Phase 50 custom engineering while preserving Reachy's existing privacy, trust, provenance and memory architecture.
