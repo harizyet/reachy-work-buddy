@@ -601,6 +601,21 @@ Resources are addressed by **Reachy's document id**, not the backend reference, 
 Backend messages (which can contain paths) never reach a response: errors are `{"error": code}` and only the code is logged.
 Health requires the engine ready **and** MinerU telemetry disabled (the worker disables it at start and re-checks).
 
+## Document library (Phase 50B)
+
+Part of companion-core (`companion_core/document_library/`), behind `DOCUMENT_LIBRARY_ENABLED` (default off; routes 404 and nothing is built or read when off). Needs migration `031_documents`.
+Routes (`shared/protocols/document_library_api.py`, under `/document-library` because `/documents` is the older text-RAG ingest, untouched), service-token protected like every core route; the hub does not proxy them yet:
+
+| Route | Behaviour |
+|---|---|
+| `GET /document-library/config` | `{enabled}` |
+| `POST /document-library/documents` (multipart `file`, optional `title`, `sensitivity`, `project_scope`, `processing_priority`) | Stores the original once in the source store, creates a record in state `uploaded`. Type is decided by content (pdf, png, jpg, docx; a docx must be a Word package) and must agree with the extension; the size limit is `DOCUMENT_LIBRARY_MAX_UPLOAD_BYTES` (default 50 MiB, an operational default). No class given means `work-private`; content never sets or lowers it. |
+| `GET /document-library/documents`, `GET .../{id}` | Catalogue and detail: policy and state, never a path or a backend internal. |
+| `PATCH .../{id}` | Title, project scope (explicit null clears), sensitivity, priority; sensitivity and priority cannot be cleared; state and hash are not editable. |
+| `DELETE .../{id}` | Marks `deleting` (unusable at once), asks the worker to forget it, then removes the record and, only if no other document has the same hash, the original. If the worker cannot confirm, the answer is 502, the document stays `deleting` (cannot be revived) and is retried at startup. |
+
+Originals live in the content-addressed source store (`DOCUMENT_SOURCE_DIR`, `sha256/ab/cd/<hash>`, write-once, re-verified before use: a mismatch is 409, never served). Identical bytes uploaded twice are two documents with their own policy and one blob. `backend_ref` is an opaque pointer to the worker's object and is shared by identical bytes; authorization always starts from the document id. `DocumentWorkerClient` is Reachy's only client for the [document worker](#document-worker-phase-50a). Processing, reading, search and reprocess belong to 50C onward.
+
 ## Shared contracts and clients
 
 Runtime service packages never import one another. Contracts live in

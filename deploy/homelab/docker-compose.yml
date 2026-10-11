@@ -486,6 +486,12 @@ services:
       # and no records-grounding clarification. Matcher narrowing, the mixed read/write refusal and 44H are not behind it.
       INTENT_ROUTER_ENABLED: ${INTENT_ROUTER_ENABLED:-false}
       NOTEPAD_PROCESSING_CONCURRENCY: ${NOTEPAD_PROCESSING_CONCURRENCY:-1}
+      # Phase 50B: the document library (uploads, catalogue, deletion; docs/phase-50.md). Off by default; needs migration 031 first. DOCUMENT_SOURCE_DIR is Reachy's authoritative store of originals (volume
+      # document-source: back it up with the database); the document worker (profile "documents") is optional and only reached when DOCUMENT_WORKER_URL is set.
+      DOCUMENT_LIBRARY_ENABLED: ${DOCUMENT_LIBRARY_ENABLED:-false}
+      DOCUMENT_SOURCE_DIR: /data/document-source
+      DOCUMENT_WORKER_URL: ${DOCUMENT_WORKER_URL:-}
+      DOCUMENT_WORKER_TOKEN: ${DOCUMENT_WORKER_TOKEN:-}
       SHADOW_ROUTER_ENABLED: ${SHADOW_ROUTER_ENABLED:-false}
       SHADOW_ROUTER_URL: ${SHADOW_ROUTER_URL:-http://semantic-router:8012}
       SHADOW_ROUTER_LOG_PATH: ${SHADOW_ROUTER_LOG_PATH:-/data/shadow-router/shadow.jsonl}
@@ -502,6 +508,7 @@ services:
       SHADOW_ROUTER_QUEUE_SIZE: ${SHADOW_ROUTER_QUEUE_SIZE:-0}
     volumes:
       - meeting-audio:/data/meeting-audio
+      - document-source:/data/document-source
       # Phase 45E: the sentence-transformers embedding model downloads once and survives container recreation.
       - model-cache:/data/model-cache
       - shadow-router:/data/shadow-router
@@ -670,6 +677,8 @@ volumes:
   # Phase 50A: the document worker's derived state (per-document working copies and the MinerU library/cache). Rebuildable
   # from Reachy's source store; Reachy's originals are NOT kept here.
   document-worker-data:
+  # Phase 50B: Reachy's authoritative originals, content-addressed by SHA-256. The system of record for document files (the worker's copy is derived): include it in backups.
+  document-source:
 
 secrets:
   credential_keys:

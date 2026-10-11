@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted for implementation, 2026-10-11 (owner: "start implementation of phase 50"). 50A in progress:** the first local spike is recorded in [phase-50a-mineru-spike-2026-10-11.md](verification/phase-50a-mineru-spike-2026-10-11.md); its findings (shared-by-hash documents, global search, custom licence) refine sections 6, 13, 21, 22 and 26.
+**Accepted for implementation, 2026-10-11 (owner: "start implementation of phase 50"). 50A complete (2026-10-12); 50B built locally (document record, source store, migration 031, library routes, worker client; [record](verification/phase-50b-document-library-2026-10-12.md)), not deployed. 50A notes:** the first local spike is recorded in [phase-50a-mineru-spike-2026-10-11.md](verification/phase-50a-mineru-spike-2026-10-11.md); its findings (shared-by-hash documents, global search, custom licence) refine sections 6, 13, 21, 22 and 26.
 
 Phase 50 introduces first-class document intelligence into Reachy using MinerU as the selected document-processing and document-content backend.
 

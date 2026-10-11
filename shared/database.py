@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-SCHEMA_REVISION = "030_note_tags"
+SCHEMA_REVISION = "031_documents"
 
 
 async def check_schema(conn) -> None:

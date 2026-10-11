@@ -780,6 +780,12 @@ the hub agree (older APKs keep working for what they already did). It reaches th
 backup needs no extra service: it polls the hub's existing `/planner/alarms`. Rebuild the APK from `clients/android` with
 `./gradlew :app:assembleDebug`; the version is `versionName` in `app/build.gradle.kts`.
 
+## Document library (Phase 50B)
+
+Migration `031_documents` (one table; `SCHEMA_REVISION` is now `031_documents`, so a deploy means backup, then core, hub and coding-agent together, on owner approval). Rollback: `deploy/homelab/rollback-031.sql`
+(drops only the catalogue; the originals on disk are untouched). Core gets the volume `document-source` (Reachy's authoritative originals; **back it up with the database**: it is the system of record, the worker's
+data is rebuildable) and the flags `DOCUMENT_LIBRARY_ENABLED` (default false), `DOCUMENT_WORKER_URL` and `DOCUMENT_WORKER_TOKEN` (both optional until 50C). Nothing here is deployed yet.
+
 ## Document worker
 
 Phase 50A ([phase-50](phase-50.md), [record](verification/phase-50a-mineru-spike-2026-10-11.md)). Not started by a bare

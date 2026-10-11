@@ -221,6 +221,17 @@ from companion_core.deep_review import (
     DeepReviewUnavailable,
     ModelManagerClient,
 )
+from companion_core.document_library import service as document_library_service
+from companion_core.document_library.postgres_store import (
+    PostgresDocumentStore as PostgresLibraryStore,  # the older text-RAG store keeps the plain names
+)
+from companion_core.document_library.routes import install_document_library_routes
+from companion_core.document_library.source_store import SourceStore
+from companion_core.document_library.store import DocumentStore as LibraryStore
+from companion_core.document_library.store import (
+    InMemoryDocumentStore as InMemoryLibraryStore,
+)
+from companion_core.document_library.worker_client import DocumentWorkerClient
 from companion_core.email.models import DraftStatus, EmailDraft, EmailMessage
 from companion_core.email.postgres_store import PostgresEmailStore
 from companion_core.email.sender import smtp_send
@@ -652,7 +663,11 @@ def create_app(
     notepad_store: NotepadStore | None = None,
     notepad_provider: notepad_service.Provider | None = None,
     run_notepad_runner: bool = True,
+    document_store: LibraryStore | None = None,
+    document_sources: SourceStore | None = None,
+    document_worker: DocumentWorkerClient | None = None,
 ) -> FastAPI:
+    documents_on = document_library_service.enabled()  # Phase 50B: read once; with it off nothing is built, no table is read, no directory is created and the routes do not exist
     notepad_on = notepad_service.enabled()  # Phase 49: read once; with it off nothing is built, no table is read and the routes do not exist
     candidates_on, capture_on = candidate_service.candidates_enabled(), candidate_service.capture_enabled()  # read once: routes and lifespan always agree
     hub_base_url = hub_base_url or os.environ.get("REACHY_HUB_URL", "http://reachy-hub:8000")
@@ -871,6 +886,22 @@ def create_app(
         elif notepad_store is None and db is not None and owns_planner_store and owns_task_store:
             # Processing is off, but provenance written while it was on stays readable (the Brain's derived_from edges): a read-only store, no service, no runner, no routes.
             provenance_only = app.state.notepad_provenance = await PostgresNotepadStore.connect(db)
+        document_owned_store = document_owned_worker = None
+        if documents_on:
+            doc_store = document_store
+            if doc_store is None and db is not None:
+                doc_store = document_owned_store = await PostgresLibraryStore.connect(db)
+            elif doc_store is None:
+                doc_store = InMemoryLibraryStore()
+                logging.getLogger("companion_core.document_library").warning("the document library is enabled without a database: documents are not durable")
+            worker = document_worker
+            if worker is None and os.environ.get("DOCUMENT_WORKER_URL"):
+                worker = document_owned_worker = DocumentWorkerClient(os.environ["DOCUMENT_WORKER_URL"], os.environ.get("DOCUMENT_WORKER_TOKEN", ""))
+            sources = document_sources or SourceStore(Path(os.environ.get("DOCUMENT_SOURCE_DIR", "/data/document-source")))
+            if app.state.document_library is None:
+                app.state.document_library = document_library_service.DocumentService(doc_store, sources, worker)
+            with contextlib.suppress(Exception):
+                await app.state.document_library.finish_deletions()  # a deletion the worker could not confirm last time is retried at start
         candidate_store = candidate_task = None
         if candidates_on:
             candidate_store = memory_candidate_store
@@ -913,6 +944,12 @@ def create_app(
         try:
             yield
         finally:
+            if document_owned_worker is not None:
+                with contextlib.suppress(Exception):
+                    await document_owned_worker.close()
+            if document_owned_store is not None:
+                with contextlib.suppress(Exception):
+                    await document_owned_store.close()
             if provenance_only is not None:
                 with contextlib.suppress(Exception):
                     await provenance_only.close()
@@ -1034,6 +1071,9 @@ def create_app(
     app.state.candidate_capture = None  # ... and capture only when MEMORY_CANDIDATES_CAPTURE_ENABLED is also true
     app.state.notepad_provenance = notepad_store  # read by the Brain whatever the flag says; the lifespan sets it from the database when none is injected
     app.state.intent_router_enabled = intent_router.enabled()  # INTENT_ROUTER_ENABLED, default off; read once at startup like the other rollout flags
+    app.state.document_library = None  # Phase 50B: built in the lifespan only when DOCUMENT_LIBRARY_ENABLED is true (or at once when a store and a source store are injected)
+    if documents_on and document_store is not None and document_sources is not None:
+        app.state.document_library = document_library_service.DocumentService(document_store, document_sources, document_worker)
     app.state.notepad_service = None  # Phase 49: built in the lifespan only when NOTEPAD_PROCESSING_ENABLED is true (or at once when a store is injected)
     if notepad_on and notepad_store is not None and planner_store is not None and task_store is not None:
         app.state.notepad_service = notepad_service.NotepadService(notepad_store, planner_store, task_store, notepad_timezone, provider=notepad_provider or notepad_local_provider, meetings=meeting_store)
@@ -1889,6 +1929,9 @@ def create_app(
 
     if notepad_on:
         install_notepad_routes(app)
+
+    if documents_on:
+        install_document_library_routes(app)
 
     if candidates_on:
         install_candidate_routes(app, capture_on=capture_on)
