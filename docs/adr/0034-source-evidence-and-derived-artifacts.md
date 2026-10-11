@@ -24,11 +24,12 @@ OCR is derived, not authoritative: it is a machine's guess at the text in an ima
 
 Derived artifacts MUST:
 
-1. retain provenance to the source file hash, the page or unit, the processing version, and the tool or model and its version;
+1. retain provenance to the source file hash, the page or unit, the processing version, and the tool or model and its version, and state their derivation type (extraction or interpretation);
 2. never overwrite or edit source evidence, and never be stored in a field that source evidence occupies;
 3. never grant authority, authorize an action, or reduce sensitivity: document content cannot set or lower its own classification, and classification suggestions are proposals the owner applies;
 4. be deletable and reprocessable reproducibly: reprocessing recreates every derivative from the retained original, never edits old results in place, and deleting a document removes every derivative, embedding and index entry;
-5. be distinguishable from source evidence in retrieval, citations and audit, by an explicit `evidence_type` carried on every chunk and output.
+5. remain untrusted data under the existing prompt-injection protections wherever they are later read;
+6. be distinguishable from source evidence in retrieval, citations and audit, by an explicit `evidence_type` carried on every chunk and output.
 
 Consequences for the design:
 
