@@ -13,7 +13,13 @@ import pytest
 from companion_core.meetings.models import Meeting, MeetingJobStatus
 from companion_core.migrations.__main__ import upgrade
 from companion_core.notepad_processing import inquiry
-from companion_core.notepad_processing.models import Job, Kind, MeetingLink, content_hash, record_id_for
+from companion_core.notepad_processing.models import (
+    Job,
+    Kind,
+    MeetingLink,
+    content_hash,
+    record_id_for,
+)
 from companion_core.notepad_processing.postgres_store import PostgresNotepadStore
 from companion_core.notepad_processing.service import NotepadError, NotepadService
 from companion_core.planner.postgres_store import PostgresPlannerStore
@@ -54,8 +60,8 @@ def sql(dsn, query, params=None):
 
 
 def job(note_id="n1", body=BODY, **over):
-    base = dict(note_id=note_id, note_title="Tasks for next week", snapshot_text=body, snapshot_hash=content_hash(body), inputs_hash=content_hash(body), note_updated_at=NOW,
-                timezone="UTC", sensitivity=Privacy.WORK_PRIVATE, created_at=NOW)
+    base = {"note_id": note_id, "note_title": "Tasks for next week", "snapshot_text": body, "snapshot_hash": content_hash(body), "inputs_hash": content_hash(body),
+            "note_updated_at": NOW, "timezone": "UTC", "sensitivity": Privacy.WORK_PRIVATE, "created_at": NOW}
     base.update(over)
     return Job(**base)
 
@@ -119,7 +125,11 @@ def test_the_migration_is_safe_over_leftovers_of_an_earlier_copy(dsn):
 # ---- the real store ----------------------------------------------------------------------------------------------------------------------------
 
 def test_dedupe_lease_takeover_and_atomic_completion_on_the_real_store(dsn):
-    from companion_core.notepad_processing.models import Proposal, ProposalStatus, fingerprint
+    from companion_core.notepad_processing.models import (
+        Proposal,
+        ProposalStatus,
+        fingerprint,
+    )
 
     def proposal(j, evidence, kind=Kind.TASK):
         return Proposal(job_id=j.id, note_id=j.note_id, snapshot_hash=j.snapshot_hash, kind=kind, text=evidence[:20], evidence=evidence, span_start=0, span_end=len(evidence),

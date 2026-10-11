@@ -115,7 +115,7 @@ def test_every_change_needs_the_csrf_header_even_for_the_owner(monkeypatch, meth
 
 
 def test_the_owner_runs_the_whole_flow_through_the_hub_and_errors_leak_nothing(monkeypatch):
-    hub, core, store, tasks, planner = build(monkeypatch)
+    hub, core, _store, tasks, planner = build(monkeypatch)
     note = make_note(planner)
     with hub:
         login(hub)
@@ -142,7 +142,7 @@ def test_the_owner_runs_the_whole_flow_through_the_hub_and_errors_leak_nothing(m
 
 
 def test_links_go_through_the_hub_and_unlinking_keeps_the_note(monkeypatch):
-    hub, core, _store, _tasks, planner = build(monkeypatch)
+    hub, _core, _store, _tasks, planner = build(monkeypatch)
     note = make_note(planner)
     with hub:
         login(hub)
