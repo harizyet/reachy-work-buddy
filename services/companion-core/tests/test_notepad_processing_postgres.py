@@ -71,8 +71,8 @@ def job(note_id="n1", body=BODY, **over):
 def test_the_migration_creates_only_processing_bookkeeping_with_structural_guarantees(dsn):
     assert sql(dsn, "SELECT version_num FROM alembic_version") == [("029_notepad_processing",)]
     assert {r[0] for r in sql(dsn, "SELECT tablename FROM pg_tables WHERE tablename LIKE 'notepad_%' OR tablename = 'note_meeting_links'")} == {
-        "notepad_jobs", "notepad_proposals", "notepad_provenance", "note_meeting_links"}
-    for table in ("notepad_jobs", "notepad_proposals", "notepad_provenance", "note_meeting_links"):
+        "notepad_jobs", "notepad_proposals", "notepad_proposal_notes", "notepad_provenance", "note_meeting_links"}
+    for table in ("notepad_jobs", "notepad_proposals", "notepad_proposal_notes", "notepad_provenance", "note_meeting_links"):
         assert sql(dsn, f"SELECT count(*) FROM pg_trigger WHERE tgrelid = '{table}'::regclass AND NOT tgisinternal") == [(0,)]  # nothing reaches the knowledge outbox
         assert sql(dsn, f"SELECT count(*) FROM pg_constraint WHERE conrelid = '{table}'::regclass AND contype = 'f'") == [(0,)]  # no key into notes, tasks, reminders or meetings
     upgrade(dsn, KEYS)  # a repeat changes nothing
@@ -295,3 +295,47 @@ def test_links_and_transcript_snapshots_over_real_stores(dsn, tmp_path):
 
     asyncio.run(go())
     assert Meeting and MeetingJobStatus
+
+
+# ---- one transcript passage, many notes ----------------------------------------------------------------------------------------------------------
+
+def test_one_transcript_passage_is_one_proposal_in_the_database_whichever_note_finds_it_even_at_the_same_moment(dsn):
+    from companion_core.notepad_processing.models import (
+        Proposal,
+        ProposalStatus,
+        fingerprint,
+        transcript_source_key,
+    )
+
+    quote = "I will send the vendor the signed purchase order by Friday."
+
+    def proposal(j, sensitivity=Privacy.WORK_PRIVATE):
+        return Proposal(job_id=j.id, note_id=j.note_id, snapshot_hash=j.snapshot_hash, kind=Kind.TASK, text="Send the purchase order", evidence=quote, span_start=0, span_end=len(quote),
+                        fingerprint=fingerprint(quote), source_key=transcript_source_key("m1", "0:05", quote), sensitivity=sensitivity, status=ProposalStatus.PENDING)
+
+    async def go():
+        store = await PostgresNotepadStore.connect(dsn)
+        try:
+            jobs = []
+            for i in range(6):
+                j, _ = await store.enqueue(job(note_id=f"n{i}", body=f"note {i}"), force=False)
+                jobs.append(j)
+            claimed = [await store.claim_next(NOW) for _ in jobs]
+            assert all(claimed)
+            added = await asyncio.gather(*[
+                store.complete_job(j.id, [proposal(j, Privacy.SENSITIVE if i == 3 else Privacy.WORK_PRIVATE)], model="m", now=NOW) for i, j in enumerate(jobs)])
+            assert sum(added) == 1  # six notes finished together: one proposal
+            (only,) = await store.list_proposals()
+            assert set(only.associations) == {f"n{i}" for i in range(6)} and only.sensitivity is Privacy.SENSITIVE  # all six retained; the most private level wins
+            assert [p.id for p in await store.list_proposals(note_id="n4")] == [only.id]
+            # closing notes one by one keeps it pending until the last one goes
+            for i in range(5):
+                await store.close_for_note(f"n{i}", now=NOW)
+            assert (await store.get_proposal(only.id)).status is ProposalStatus.PENDING
+            await store.close_for_note("n5", now=NOW)
+            assert (await store.get_proposal(only.id)).status is ProposalStatus.DISMISSED
+        finally:
+            await store.close()
+
+    asyncio.run(go())
+    assert sql(dsn, "SELECT count(*) FROM notepad_proposals") == [(1,)] and sql(dsn, "SELECT count(*) FROM notepad_proposal_notes") == [(0,)]

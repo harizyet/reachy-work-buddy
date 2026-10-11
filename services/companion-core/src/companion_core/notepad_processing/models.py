@@ -70,6 +70,10 @@ def fingerprint(evidence: str) -> str:
     return hashlib.sha256(normalise(evidence).encode("utf-8")).hexdigest()
 
 
+def transcript_source_key(meeting_id: str, segment: str | None, quote: str) -> str:
+    return f"meeting:{meeting_id}:{segment or '-'}:{fingerprint(quote)}"
+
+
 def record_id_for(proposal_id: str) -> str:
     return str(uuid.uuid5(RECORD_NAMESPACE, proposal_id))
 
@@ -101,6 +105,7 @@ class EvidenceRef(BaseModel):
     meeting_id: str | None = None
     title: str | None = None
     speaker: str | None = None
+    segment: str | None = None  # the [m:ss] stamp of the transcript line: with the meeting id, the stable identity of the passage
 
 
 def evidence_from(sources: list[EvidenceRef]) -> str:
@@ -149,6 +154,10 @@ class Proposal(BaseModel):
     span_end: int
     sources: list[EvidenceRef] = Field(default_factory=list)  # every supporting quote, each with its own origin; `evidence` is the first
     evidence_from: Literal["note", "transcript", "both"] = "note"
+    # Stable identity of a transcript passage: the meeting id plus the normalised line text. One proposal exists per passage, whichever note's job found it; `associations`
+    # (filled by the store on reads) maps every note that found it to the snapshot hash of that note's job. None for a proposal whose evidence is only in a note.
+    source_key: str | None = None
+    associations: dict[str, str] = Field(default_factory=dict)
     stated_time: str | None = None
     due_at: datetime | None = None
     ambiguity: list[str] = Field(default_factory=list)
@@ -168,9 +177,11 @@ class Proposal(BaseModel):
     accepting_at: datetime | None = None
     decided_at: datetime | None = None
 
-    def view(self, *, current_hash: str | None = None) -> dict:
-        data = self.model_dump(mode="json", exclude={"fingerprint", "final_kind", "final_text", "final_due_at"})
-        data["source_changed"] = current_hash is not None and current_hash != self.snapshot_hash
+    def view(self, *, current_hash: str | None = None, viewed_note: str | None = None) -> dict:
+        data = self.model_dump(mode="json", exclude={"fingerprint", "final_kind", "final_text", "final_due_at", "source_key", "associations"})
+        found_with = self.associations.get(viewed_note, self.snapshot_hash) if viewed_note else self.snapshot_hash  # the hash of the viewing note's own job
+        data["source_changed"] = current_hash is not None and current_hash != found_with
+        data["note_ids"] = list(self.associations) or [self.note_id]
         return data
 
 

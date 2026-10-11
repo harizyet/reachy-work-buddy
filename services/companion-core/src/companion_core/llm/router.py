@@ -24,6 +24,7 @@ async def route_completion(
     transport=None,
     local_max_tokens: int | None = None,
     timeout: float | None = None,
+    temperature: float | None = None,
 ) -> str:
     """`local_max_tokens` caps only the local model: a reasoning cloud model
     (GLM-5.3) spends its completion budget on reasoning and returns empty
@@ -43,7 +44,7 @@ async def route_completion(
         )
         try:
             return await provider.complete(
-                history, max_tokens=local_max_tokens if role == LLMRole.LOCAL else None, timeout=timeout
+                history, max_tokens=local_max_tokens if role == LLMRole.LOCAL else None, timeout=timeout, temperature=temperature
             )
         except ProviderUnavailable:
             # Cancellation and persistence errors must not dispatch another call.

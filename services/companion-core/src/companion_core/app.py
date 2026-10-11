@@ -667,7 +667,7 @@ def create_app(
         local_only = config.model_copy(update={"routing": config.routing.model_copy(update={"mode": LLMRoutingMode.LOCAL_ONLY})})
 
         async def ask(messages: list[dict[str, str]], max_tokens: int) -> str:
-            return await route_completion(local_only, messages, app.state.llm_usage_store, transport=llm_transport, local_max_tokens=max_tokens, timeout=120.0)
+            return await route_completion(local_only, messages, app.state.llm_usage_store, transport=llm_transport, local_max_tokens=max_tokens, timeout=120.0, temperature=0.0)  # extraction is repeatable: no sampling
 
         return ask, config.local.model
     coding_agent_base_url = coding_agent_base_url or os.environ.get(
@@ -1870,6 +1870,10 @@ def create_app(
     async def selective_turn(turn: ConversationTurnRequest):
         answerer = app.state.selective_answerer
         if answerer is None:
+            return None
+        if record_reference.parse(turn.text) is not None:
+            # A turn that names a note or meeting belongs to the record handler above (its title may say "tasks", which the frozen 44E status classifier would take for a task-list
+            # question). It is claimed long before this point; the guard keeps it that way if the dispatch order ever changes, without touching the frozen knowledge/routing.py.
             return None
         return await answerer.answer(turn.text, modality=str(turn.input_modality.value), attached_meeting=bool(turn.context_meeting_id))
 

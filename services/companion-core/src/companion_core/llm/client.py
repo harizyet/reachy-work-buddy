@@ -13,7 +13,7 @@ PROVIDER_TIMEOUT_SECONDS = 60
 
 class ChatProvider(Protocol):
     async def complete(
-        self, history: list[dict[str, str]], *, max_tokens: int | None = None, timeout: float | None = None
+        self, history: list[dict[str, str]], *, max_tokens: int | None = None, timeout: float | None = None, temperature: float | None = None
     ) -> str: ...
 
 
@@ -56,7 +56,7 @@ class OpenAICompatibleChatProvider:
         self.transport = transport
 
     async def complete(
-        self, history: list[dict[str, str]], *, max_tokens: int | None = None, timeout: float | None = None
+        self, history: list[dict[str, str]], *, max_tokens: int | None = None, timeout: float | None = None, temperature: float | None = None
     ) -> str:
         entry = LLMUsageEntry(
             model=self.config.model,
@@ -87,6 +87,7 @@ class OpenAICompatibleChatProvider:
                         "messages": history,
                         "stream": False,
                         **({"max_tokens": max_tokens} if max_tokens is not None else {}),
+                        **({"temperature": temperature} if temperature is not None else {}),
                     },
                 )
                 response.raise_for_status()

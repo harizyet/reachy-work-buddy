@@ -6,6 +6,7 @@
   (note_id, fingerprint) pair means reprocessing a note can never bring back a sentence already proposed, accepted or dismissed.
 * `note_meeting_links` - associates a note with a recorded meeting (explicit, or suggested from time overlap and confirmed or rejected by the owner). One row per
   note and meeting pair; nothing is copied and neither record is changed, so removing a link deletes nothing else.
+* `notepad_proposal_notes` - every note that found a proposal, with that note's snapshot hash. A transcript passage (meeting, segment stamp, quote) yields one proposal however many linked notes find it (unique `source_key`); each of those notes stays tied to it here.
 * `notepad_provenance` - links a task or reminder created from an accepted proposal back to its note, snapshot hash and proposal. One row per record and one per proposal.
 
 No foreign key into `notes`, `tasks` or `reminders` (they stay untouched; a deleted note leaves its history), no trigger, nothing in the knowledge index. Authoritative
@@ -17,6 +18,7 @@ revision = "029_notepad_processing"
 down_revision = "028_memory_candidates"
 
 _DROP_SQL = [
+    "DROP TABLE IF EXISTS notepad_proposal_notes",
     "DROP TABLE IF EXISTS note_meeting_links",
     "DROP TABLE IF EXISTS notepad_provenance",
     "DROP TABLE IF EXISTS notepad_proposals",
@@ -62,6 +64,7 @@ _TABLE_SQL = [
         span_end INTEGER NOT NULL,
         sources JSONB NOT NULL DEFAULT '[]',
         evidence_from TEXT NOT NULL CHECK (evidence_from IN ('note', 'transcript', 'both')),
+        source_key TEXT,
         stated_time TEXT,
         due_at TIMESTAMPTZ,
         ambiguity JSONB NOT NULL DEFAULT '[]',
@@ -83,8 +86,18 @@ _TABLE_SQL = [
         CONSTRAINT notepad_proposals_accepted_has_record CHECK (status <> 'accepted' OR kind = 'event' OR final_kind = 'event' OR record_id IS NOT NULL)
     )""",
     "CREATE UNIQUE INDEX notepad_proposals_fingerprint ON notepad_proposals (note_id, fingerprint)",
+    # One proposal per transcript passage (meeting id, segment stamp, quote), whichever note's job found it.
+    "CREATE UNIQUE INDEX notepad_proposals_source_key ON notepad_proposals (source_key) WHERE source_key IS NOT NULL",
     "CREATE INDEX notepad_proposals_status ON notepad_proposals (status, created_at)",
     "CREATE INDEX notepad_proposals_note ON notepad_proposals (note_id, created_at)",
+    """CREATE TABLE notepad_proposal_notes (
+        proposal_id TEXT NOT NULL,
+        note_id TEXT NOT NULL,
+        snapshot_hash TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        PRIMARY KEY (proposal_id, note_id)
+    )""",
+    "CREATE INDEX notepad_proposal_notes_note ON notepad_proposal_notes (note_id)",
     """CREATE TABLE notepad_provenance (
         record_kind TEXT NOT NULL CHECK (record_kind IN ('task', 'reminder')),
         record_id TEXT NOT NULL,

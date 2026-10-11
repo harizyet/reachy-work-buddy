@@ -29,6 +29,7 @@ from companion_core.notepad_processing.models import (
     ProposalStatus,
     evidence_from,
     fingerprint,
+    transcript_source_key,
 )
 from shared.models.response import Privacy
 
@@ -145,7 +146,10 @@ def locate(snapshot: str, evidence: str) -> tuple[int, int] | None:
     return (m.start(), m.end()) if m else None
 
 
-_LINE_PREFIX = re.compile(r"^\[\d+:\d{2}\]\s*(?:(?P<who>[^:\n]{1,60}):\s)?")
+_LINE_PREFIX = re.compile(r"^\[(?P<stamp>\d+:\d{2})\]\s*(?:(?P<who>[^:\n]{1,60}):\s)?")
+
+
+_SPOKEN_PREFIX = re.compile(r"^\s*\[\d+:\d{2}\]\s*(?:[^:\n]{1,60}:\s+)?")
 
 
 def locate_anywhere(job: Job, quote: str) -> EvidenceRef | None:
@@ -154,15 +158,16 @@ def locate_anywhere(job: Job, quote: str) -> EvidenceRef | None:
     found = locate(job.snapshot_text, quote)
     if found:
         return EvidenceRef(kind="note", quote=job.snapshot_text[found[0]:found[1]], start=found[0], end=found[1])
+    spoken = _SPOKEN_PREFIX.sub("", quote, count=1)  # a model sometimes copies the "[0:05] Speaker 2:" label with the words; the evidence is the words, attributed from the line itself
     for source in job.sources:
         if not source.included:
             continue
-        found = locate(source.text, quote)
+        found = locate(source.text, spoken)
         if found:
             line_start = source.text.rfind("\n", 0, found[0]) + 1
-            prefix = _LINE_PREFIX.match(source.text[line_start:found[0] + 1])
+            prefix = _LINE_PREFIX.match(source.text[line_start:])
             return EvidenceRef(kind="meeting", quote=source.text[found[0]:found[1]], start=found[0], end=found[1], meeting_id=source.meeting_id, title=source.title,
-                               speaker=(prefix["who"].strip() if prefix and prefix["who"] else None))
+                               speaker=(prefix["who"].strip() if prefix and prefix["who"] else None), segment=(prefix["stamp"] if prefix else None))
     return None
 
 
@@ -211,6 +216,11 @@ def resolve_time(stated: str, anchor: datetime, timezone: str) -> tuple[datetime
 
 def _clean_note(value: str) -> str:
     return re.sub(r"[\x00-\x1f\x7f]+", " ", value).strip()[:120]
+
+
+def _source_key(refs: list[EvidenceRef]) -> str | None:
+    first = next((r for r in refs if r.kind == "meeting" and r.meeting_id), None)
+    return transcript_source_key(first.meeting_id, first.segment, first.quote) if first else None
 
 
 def validate(output: _Output, job: Job, *, model: str) -> tuple[list[Proposal], Rejections]:
@@ -276,7 +286,7 @@ def validate(output: _Output, job: Job, *, model: str) -> tuple[list[Proposal], 
                 level = source.sensitivity  # a derived item is as private as the most private source behind it
         proposals.append(Proposal(
             job_id=job.id, note_id=job.note_id, snapshot_hash=job.snapshot_hash, kind=kind, text=text, evidence=primary.quote, span_start=primary.start, span_end=primary.end,
-            sources=refs, evidence_from=evidence_from(refs), stated_time=stated, due_at=due, ambiguity=list(dict.fromkeys(ambiguity)),
+            sources=refs, evidence_from=evidence_from(refs), source_key=_source_key(refs), stated_time=stated, due_at=due, ambiguity=list(dict.fromkeys(ambiguity)),
             status=ProposalStatus.NOTED if kind is Kind.REFERENCE else ProposalStatus.PENDING, fingerprint=key, model=model, prompt_version=PROMPT_VERSION,
             sensitivity=level, project_scope=job.project_scope))
         if len(proposals) >= MAX_PROPOSALS:

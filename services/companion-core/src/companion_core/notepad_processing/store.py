@@ -21,6 +21,7 @@ from companion_core.notepad_processing.models import (
 from shared.models.response import Privacy
 
 OPEN_PROPOSALS = (ProposalStatus.PENDING, ProposalStatus.ACCEPTING)
+RANK = {Privacy.PUBLIC: 0, Privacy.WORK_PRIVATE: 1, Privacy.SENSITIVE: 2}
 
 
 @dataclass(frozen=True)
@@ -66,6 +67,7 @@ class InMemoryNotepadStore:
         self._proposals: dict[str, Proposal] = {}
         self._provenance: dict[tuple[str, str], Provenance] = {}
         self._links: dict[tuple[str, str], MeetingLink] = {}
+        self._assoc: dict[tuple[str, str], str] = {}  # (proposal id, note id) -> snapshot hash of that note's job
 
     async def enqueue(self, job: Job, *, force: bool) -> tuple[Job, bool]:
         for existing in self._jobs.values():
@@ -102,10 +104,19 @@ class InMemoryNotepadStore:
         known = {p.fingerprint for p in self._proposals.values() if p.note_id == job.note_id}
         added = 0
         for proposal in proposals:
+            if proposal.source_key:
+                same = next((x for x in self._proposals.values() if x.source_key == proposal.source_key), None)
+                if same is not None:
+                    # The same transcript passage was already proposed (by this note's earlier job or by another note linked to the meeting): keep one proposal and tie this note to it.
+                    self._assoc.setdefault((same.id, job.note_id), proposal.snapshot_hash)
+                    if same.status is ProposalStatus.PENDING and RANK[proposal.sensitivity] > RANK[same.sensitivity]:
+                        self._proposals[same.id] = same.model_copy(update={"sensitivity": proposal.sensitivity})
+                    continue
             if proposal.fingerprint in known:
                 continue  # already proposed, accepted or dismissed for this note: reprocessing never brings it back
             known.add(proposal.fingerprint)
             self._proposals[proposal.id] = proposal
+            self._assoc[(proposal.id, job.note_id)] = proposal.snapshot_hash
             added += 1
         self._jobs[job_id] = job.model_copy(update={"status": JobStatus.SUCCEEDED, "model": model, "proposal_count": added, "finished_at": now, "lease_until": None, "error": None})
         return added
@@ -129,12 +140,17 @@ class InMemoryNotepadStore:
     async def processed_note_ids(self) -> set[str]:
         return {j.note_id for j in self._jobs.values() if j.status is JobStatus.SUCCEEDED}
 
+    def _hydrated(self, p: Proposal) -> Proposal:
+        return p.model_copy(update={"associations": {n: h for (pid, n), h in self._assoc.items() if pid == p.id}})
+
     async def list_proposals(self, *, note_id: str | None = None, statuses: tuple[ProposalStatus, ...] | None = None) -> list[Proposal]:
-        rows = [p for p in self._proposals.values() if (note_id is None or p.note_id == note_id) and (statuses is None or p.status in statuses)]
+        rows = [self._hydrated(p) for p in self._proposals.values()
+                if (note_id is None or (p.id, note_id) in self._assoc) and (statuses is None or p.status in statuses)]
         return sorted(rows, key=lambda p: (p.created_at, p.span_start))
 
     async def get_proposal(self, proposal_id: str) -> Proposal | None:
-        return self._proposals.get(proposal_id)
+        p = self._proposals.get(proposal_id)
+        return self._hydrated(p) if p is not None else None
 
     async def claim_accept(self, proposal_id: str, *, kind: Kind, text: str, due_at: datetime | None, sensitivity: Privacy, edited: bool, now: datetime) -> Claim:
         p = self._proposals.get(proposal_id)
@@ -176,10 +192,13 @@ class InMemoryNotepadStore:
         return Decision("done", done)
 
     async def close_for_note(self, note_id: str, *, now: datetime) -> int:
+        """The note is gone: untie it from its proposals, and dismiss each pending one that no remaining note still backs."""
         n = 0
-        for pid, p in list(self._proposals.items()):
-            if p.note_id == note_id and p.status is ProposalStatus.PENDING:
-                self._proposals[pid] = p.model_copy(update={"status": ProposalStatus.DISMISSED, "decided_at": now})
+        for key in [k for k in self._assoc if k[1] == note_id]:
+            del self._assoc[key]
+            p = self._proposals.get(key[0])
+            if p is not None and p.status is ProposalStatus.PENDING and not any(pid == p.id for (pid, _) in self._assoc):
+                self._proposals[p.id] = p.model_copy(update={"status": ProposalStatus.DISMISSED, "decided_at": now})
                 n += 1
         return n
 

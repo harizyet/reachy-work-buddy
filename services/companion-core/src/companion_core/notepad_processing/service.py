@@ -191,7 +191,7 @@ class NotepadService:
             "state": state_of(job, proposals),
             "job": job.view() if job else None,
             "note_changed_since_job": bool(job and current is not None and current != job.snapshot_hash),
-            "proposals": [p.view(current_hash=current) for p in proposals],
+            "proposals": [p.view(current_hash=current, viewed_note=note_id) for p in proposals],
         }
 
     async def retry(self, job_id: str) -> dict:
@@ -210,10 +210,13 @@ class NotepadService:
         titles: dict[str, str | None] = {}
         out = []
         for p in rows:
-            if p.note_id not in titles:
-                note = await self.planner.get_note(p.note_id)
-                titles[p.note_id] = note.title if note else None
-            out.append({**p.view(), "note_title": titles[p.note_id]})
+            ids = list(p.associations) or [p.note_id]
+            for nid in ids:
+                if nid not in titles:
+                    note = await self.planner.get_note(nid)
+                    titles[nid] = note.title if note else None
+            shown = [titles[nid] for nid in ids if titles[nid]]
+            out.append({**p.view(), "note_title": shown[0] if shown else None, "note_titles": shown})
         return {"proposals": out}
 
     # -- 49B: the runner -----------------------------------------------------------------------------------------------------

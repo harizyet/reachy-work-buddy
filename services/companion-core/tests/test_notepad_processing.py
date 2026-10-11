@@ -741,19 +741,99 @@ def test_a_transcript_that_is_not_ready_never_blocks_saving_or_processing_and_re
         assert env.tasks() == []
 
 
-def test_two_notes_and_one_meeting_stay_independent_sources(monkeypatch):
-    items = [item("task", "Send the purchase order", "I will send the vendor the signed purchase order by Friday.")]
-    with Env(monkeypatch, model=Model(items)) as env:
-        m = meeting(env)
-        a, b = note_at(env, M_START + timedelta(minutes=5), title="A"), note_at(env, M_START + timedelta(minutes=6), title="B")
-        for n in (a, b):
-            env.client.put(f"/notes/{n['id']}/meeting-links/{m.id}", json={"state": "confirmed"})
-            env.process(n["id"], include_meetings=True)
-            env.work()
-        pa, pb = env.proposals(a["id"])[0], env.proposals(b["id"])[0]
-        assert pa["note_id"] != pb["note_id"] and pa["sources"][0]["meeting_id"] == pb["sources"][0]["meeting_id"] == m.id
+PO = "I will send the vendor the signed purchase order by Friday."
+
+
+def two_notes_one_meeting(monkeypatch, items=None):
+    env = Env(monkeypatch, model=Model(items or [item("task", "Send the purchase order", PO)]))
+    env.__enter__()
+    m = meeting(env)
+    a, b = note_at(env, M_START + timedelta(minutes=5), title="A"), note_at(env, M_START + timedelta(minutes=6), title="B", body="Different words entirely.")
+    for n in (a, b):
+        env.client.put(f"/notes/{n['id']}/meeting-links/{m.id}", json={"state": "confirmed"})
+        env.process(n["id"], include_meetings=True)
+        env.work()
+    return env, m, a, b
+
+
+def test_one_transcript_passage_yields_one_proposal_tied_to_every_note_that_found_it(monkeypatch):
+    env, m, a, b = two_notes_one_meeting(monkeypatch)
+    try:
+        (pa,), (pb,) = env.proposals(a["id"]), env.proposals(b["id"])
+        assert pa["id"] == pb["id"] and set(pa["note_ids"]) == {a["id"], b["id"]}  # one proposal, both notes retained
+        assert len(env.run(env.store.list_proposals())) == 1
+        assert pa["sources"][0]["meeting_id"] == m.id and pa["sources"][0]["segment"] == "0:05"
+        assert env.status(b["id"])["job"]["proposal_count"] == 0 and env.status(a["id"])["job"]["proposal_count"] == 1  # the second job added nothing new
         env.client.post(f"/notepad-proposals/{pa['id']}/accept", json={})
-        assert len(env.tasks()) == 1 and env.run(env.store.get_provenance("task", env.tasks()[0]["id"])).note_id == a["id"]
+        assert len(env.tasks()) == 1  # one authoritative record, however many notes
+        assert env.proposals(a["id"])[0]["status"] == env.proposals(b["id"])[0]["status"] == "accepted"
+        prov = env.run(env.store.get_provenance("task", env.tasks()[0]["id"]))
+        assert prov.proposal_id == pa["id"] and prov.note_id in (a["id"], b["id"])
+    finally:
+        env.__exit__(None, None, None)
+
+
+def test_the_stable_identity_is_the_passage_not_the_wording_of_the_proposal(monkeypatch):
+    items = [item("task", "Send the purchase order", PO), item("task", "Chase the vendor quote", "who can chase the vendor quote")]
+    env, _m, _a, b = two_notes_one_meeting(monkeypatch, items)
+    try:
+        assert len(env.run(env.store.list_proposals())) == 2  # two different passages stay two proposals
+        env.model.items = [item("task", "Pay the vendor PO", PO)]  # the model words the same passage differently on the next run
+        env.process(b["id"], include_meetings=True, force=True)
+        env.work()
+        assert len(env.run(env.store.list_proposals())) == 2 and len(env.proposals(b["id"])) == 2
+    finally:
+        env.__exit__(None, None, None)
+
+
+def test_a_dismissed_shared_proposal_is_not_resurfaced_by_the_other_note(monkeypatch):
+    env, _m, a, b = two_notes_one_meeting(monkeypatch)
+    try:
+        pid = env.proposals(a["id"])[0]["id"]
+        env.client.post(f"/notepad-proposals/{pid}/dismiss")
+        env.process(b["id"], include_meetings=True, force=True)
+        env.work()
+        assert [p["status"] for p in env.proposals(b["id"])] == ["dismissed"] and env.client.get("/notepad-proposals").json()["proposals"] == []
+        assert env.tasks() == []
+    finally:
+        env.__exit__(None, None, None)
+
+
+def test_deleting_one_of_the_notes_keeps_the_proposal_for_the_other_and_deleting_both_closes_it(monkeypatch):
+    env, _m, a, b = two_notes_one_meeting(monkeypatch)
+    try:
+        env.client.delete(f"/notes/{a['id']}")
+        (p,) = env.client.get("/notepad-proposals").json()["proposals"]
+        assert p["status"] == "pending" and p["note_titles"] == ["B"]
+        env.client.delete(f"/notes/{b['id']}")
+        assert env.client.get("/notepad-proposals").json()["proposals"] == []
+    finally:
+        env.__exit__(None, None, None)
+
+
+def test_the_inquiry_counts_a_shared_proposal_once_and_names_both_notes(monkeypatch):
+    env, _m, _a, _b = two_notes_one_meeting(monkeypatch)
+    try:
+        reply = env.say("Do I have any pending action items from my notes?")
+        assert "1 more action item" in reply and "your note “A”" in reply and "your note “B”" in reply and reply.count("Send the purchase order") == 1
+    finally:
+        env.__exit__(None, None, None)
+
+
+def test_a_shared_proposal_takes_the_most_private_level_of_the_notes_behind_it(monkeypatch):
+    with Env(monkeypatch, model=Model([item("task", "Send the purchase order", PO)])) as env:
+        m = meeting(env)
+        a = note_at(env, M_START + timedelta(minutes=5), title="A")
+        env.client.put(f"/notes/{a['id']}/meeting-links/{m.id}", json={"state": "confirmed"})
+        env.process(a["id"], include_meetings=True)
+        env.work()
+        b = env.note(title="Private", body="x", sensitivity=Privacy.SENSITIVE)
+        store = env.app.state.planner_store
+        store._notes[b["id"]] = store._notes[b["id"]].model_copy(update={"created_at": M_START + timedelta(minutes=6), "updated_at": M_START + timedelta(minutes=6)})
+        env.client.put(f"/notes/{b['id']}/meeting-links/{m.id}", json={"state": "confirmed"})
+        env.process(b["id"], include_meetings=True)
+        env.work()
+        assert env.proposals(a["id"])[0]["sensitivity"] == "sensitive" and "purchase order" not in env.say(Q_WEEK)
 
 
 def test_proposals_from_a_sensitive_meeting_inherit_its_sensitivity_and_are_hidden_from_a_text_channel(monkeypatch):
@@ -814,3 +894,16 @@ def test_a_transcript_speakers_own_commitment_is_shown_for_review_even_if_the_mo
         env.work()
         (p,) = env.proposals(n["id"])
         assert p["text"] == "Send the purchase order" and p["evidence_from"] == "transcript" and any("not confirmed" in a for a in p["ambiguity"])
+
+
+def test_a_quote_copied_with_the_transcript_label_is_the_same_passage_as_one_without_it(monkeypatch):
+    prefixed = "[0:05] Speaker 1: " + PO  # a 7B sometimes copies the label; the evidence is the words and the label only attributes them
+    env, _m, a, _b = two_notes_one_meeting(monkeypatch, [item("task", "Send the purchase order", prefixed)])
+    try:
+        env.model.items = [item("task", "Send the purchase order", PO)]
+        env.process(_b["id"], include_meetings=True, force=True)
+        env.work()
+        (p,) = env.run(env.store.list_proposals())
+        assert p.evidence == PO and p.sources[0].segment == "0:05" and set(p.associations) == {a["id"], _b["id"]}
+    finally:
+        env.__exit__(None, None, None)

@@ -108,7 +108,7 @@ async def answer(inquiry: Inquiry, *, tasks, planner, notepad, access: AccessCon
                  and (bounds is None or bounds[0] <= r.due_at < bounds[1])]
     notes = {n.id: n for n in await planner.list_notes() if _readable(access, n.sensitivity, n.project_scope)}
     proposals = [p for p in await notepad.list_proposals(statuses=(ProposalStatus.PENDING, ProposalStatus.ACCEPTING))
-                 if p.kind is not Kind.REFERENCE and p.note_id in notes and _readable(access, p.sensitivity, p.project_scope)
+                 if p.kind is not Kind.REFERENCE and any(n in notes for n in (p.associations or {p.note_id: ''})) and _readable(access, p.sensitivity, p.project_scope)
                  and (bounds is None or p.due_at is None or bounds[0] <= p.due_at < bounds[1])]
     processed = await notepad.processed_note_ids()
     unprocessed = [n for n in notes.values() if n.id not in processed and n.body.strip()]
@@ -127,7 +127,8 @@ async def answer(inquiry: Inquiry, *, tasks, planner, notepad, access: AccessCon
     if proposals:
         labels: list[str] = []
         for p in proposals:
-            for label in [f"your note “{notes[p.note_id].title}”", *(f"the transcript of the meeting “{r.title}”" for r in p.sources if r.kind == "meeting")]:
+            backing = [notes[n].title for n in (p.associations or {p.note_id: ""}) if n in notes]
+            for label in [*(f"your note “{t}”" for t in backing), *(f"the transcript of the meeting “{r.title}”" for r in p.sources if r.kind == "meeting")]:
                 if label not in labels:
                     labels.append(label)
         parts.append(f"{_count(len(proposals), 'more action item', 'more action items')} extracted from {_join(labels)} "

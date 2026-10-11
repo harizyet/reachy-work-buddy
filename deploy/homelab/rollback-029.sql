@@ -4,6 +4,7 @@
 --   docker exec -i reachy-homelab-postgres-1 psql -U reachy -d reachy_hub -v ON_ERROR_STOP=1 --single-transaction < rollback-029.sql
 -- Afterwards the database is at 028_memory_candidates and the previous images run against it. The migration job refuses to run while the revision is wrong, so check
 -- the final line prints 028_memory_candidates.
+DROP TABLE IF EXISTS notepad_proposal_notes;
 DROP TABLE IF EXISTS note_meeting_links;
 DROP TABLE IF EXISTS notepad_provenance;
 DROP TABLE IF EXISTS notepad_proposals;

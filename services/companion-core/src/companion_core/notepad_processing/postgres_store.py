@@ -25,7 +25,7 @@ from shared.models.response import Privacy
 
 _JOB = ("id, note_id, note_title, snapshot_text, snapshot_hash, note_updated_at, timezone, sensitivity, project_scope, status, attempts, error, model, reprocess, "
         "proposal_count, inputs_hash, sources, created_at, started_at, finished_at, lease_until")
-_PROP = ("id, job_id, note_id, snapshot_hash, kind, text, evidence, span_start, span_end, sources, evidence_from, stated_time, due_at, ambiguity, status, fingerprint, model, prompt_version, "
+_PROP = ("id, job_id, note_id, snapshot_hash, kind, text, evidence, span_start, span_end, sources, evidence_from, source_key, stated_time, due_at, ambiguity, status, fingerprint, model, prompt_version, "
          "sensitivity, project_scope, final_kind, final_text, final_due_at, edited, record_kind, record_id, created_at, accepting_at, decided_at")
 
 
@@ -109,15 +109,33 @@ class PostgresNotepadStore:
                 return 0
             added = 0
             for p in proposals:
+                if p.source_key and await self._tie_to_existing(conn, p, row[0]):
+                    continue  # the same transcript passage was already proposed: one proposal, now also tied to this note
                 cursor = await conn.execute(
-                    f"INSERT INTO notepad_proposals ({_PROP}) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
-                    "ON CONFLICT (note_id, fingerprint) DO NOTHING RETURNING id",
-                    (p.id, p.job_id, p.note_id, p.snapshot_hash, p.kind.value, p.text, p.evidence, p.span_start, p.span_end, Jsonb([x.model_dump(mode="json") for x in p.sources]), p.evidence_from, p.stated_time, p.due_at, Jsonb(p.ambiguity),
-                     p.status.value, p.fingerprint, p.model, p.prompt_version, p.sensitivity.value, p.project_scope, None, None, None, p.edited, None, None, p.created_at, None, None))
-                added += 1 if await cursor.fetchone() else 0
+                    f"INSERT INTO notepad_proposals ({_PROP}) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
+                    "ON CONFLICT DO NOTHING RETURNING id",
+                    (p.id, p.job_id, p.note_id, p.snapshot_hash, p.kind.value, p.text, p.evidence, p.span_start, p.span_end, Jsonb([x.model_dump(mode="json") for x in p.sources]), p.evidence_from,
+                     p.source_key, p.stated_time, p.due_at, Jsonb(p.ambiguity), p.status.value, p.fingerprint, p.model, p.prompt_version, p.sensitivity.value, p.project_scope, None, None, None,
+                     p.edited, None, None, p.created_at, None, None))
+                if await cursor.fetchone():
+                    await conn.execute("INSERT INTO notepad_proposal_notes (proposal_id, note_id, snapshot_hash) VALUES (%s,%s,%s) ON CONFLICT DO NOTHING", (p.id, row[0], p.snapshot_hash))
+                    added += 1
+                elif p.source_key:
+                    await self._tie_to_existing(conn, p, row[0])  # lost a race to a concurrent job that proposed the same passage
             await conn.execute("UPDATE notepad_jobs SET status = 'succeeded', model = %s, proposal_count = %s, finished_at = %s, lease_until = NULL, error = NULL WHERE id = %s",
                                (model, added, now, job_id))
             return added
+
+    @staticmethod
+    async def _tie_to_existing(conn, p: Proposal, note_id: str) -> bool:
+        found = await (await conn.execute("SELECT id, status, sensitivity FROM notepad_proposals WHERE source_key = %s FOR UPDATE", (p.source_key,))).fetchone()
+        if found is None:
+            return False
+        await conn.execute("INSERT INTO notepad_proposal_notes (proposal_id, note_id, snapshot_hash) VALUES (%s,%s,%s) ON CONFLICT DO NOTHING", (found[0], note_id, p.snapshot_hash))
+        rank = {"public": 0, "work-private": 1, "sensitive": 2}
+        if found[1] == "pending" and rank[p.sensitivity.value] > rank[found[2]]:
+            await conn.execute("UPDATE notepad_proposals SET sensitivity = %s WHERE id = %s", (p.sensitivity.value, found[0]))
+        return True
 
     async def fail_job(self, job_id: str, error: str, *, now: datetime) -> None:
         async with self._pool.connection() as conn:
@@ -142,10 +160,20 @@ class PostgresNotepadStore:
             rows = await (await conn.execute("SELECT DISTINCT note_id FROM notepad_jobs WHERE status = 'succeeded'")).fetchall()
         return {r[0] for r in rows}
 
+    @staticmethod
+    async def _hydrate(conn, proposals: list[Proposal]) -> list[Proposal]:
+        if not proposals:
+            return proposals
+        rows = await (await conn.execute("SELECT proposal_id, note_id, snapshot_hash FROM notepad_proposal_notes WHERE proposal_id = ANY(%s)", ([p.id for p in proposals],))).fetchall()
+        by: dict[str, dict[str, str]] = {}
+        for pid, nid, h in rows:
+            by.setdefault(pid, {})[nid] = h
+        return [p.model_copy(update={"associations": by.get(p.id, {})}) for p in proposals]
+
     async def list_proposals(self, *, note_id: str | None = None, statuses: tuple[ProposalStatus, ...] | None = None) -> list[Proposal]:
         clauses, args = [], []
         if note_id is not None:
-            clauses.append("note_id = %s")
+            clauses.append("id IN (SELECT proposal_id FROM notepad_proposal_notes WHERE note_id = %s)")
             args.append(note_id)
         if statuses is not None:
             clauses.append("status = ANY(%s)")
@@ -153,12 +181,12 @@ class PostgresNotepadStore:
         where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
         async with self._pool.connection() as conn:
             rows = await (await conn.execute(f"SELECT {_PROP} FROM notepad_proposals {where} ORDER BY created_at, span_start", args)).fetchall()
-        return [_proposal(r) for r in rows]
+            return await self._hydrate(conn, [_proposal(r) for r in rows])
 
     async def get_proposal(self, proposal_id: str) -> Proposal | None:
         async with self._pool.connection() as conn:
             row = await (await conn.execute(f"SELECT {_PROP} FROM notepad_proposals WHERE id = %s", (proposal_id,))).fetchone()
-        return _proposal(row) if row else None
+            return (await self._hydrate(conn, [_proposal(row)]))[0] if row else None
 
     async def claim_accept(self, proposal_id: str, *, kind: Kind, text: str, due_at: datetime | None, sensitivity: Privacy, edited: bool, now: datetime) -> Claim:
         async with self._pool.connection() as conn, conn.transaction():
@@ -203,8 +231,14 @@ class PostgresNotepadStore:
         return Decision("already" if p.status is ProposalStatus.DISMISSED else "closed", p)
 
     async def close_for_note(self, note_id: str, *, now: datetime) -> int:
-        async with self._pool.connection() as conn:
-            cursor = await conn.execute("UPDATE notepad_proposals SET status = 'dismissed', decided_at = %s WHERE note_id = %s AND status = 'pending'", (now, note_id))
+        """The note is gone: untie it from its proposals, and dismiss each pending one that no remaining note still backs."""
+        async with self._pool.connection() as conn, conn.transaction():
+            gone = [r[0] for r in await (await conn.execute("DELETE FROM notepad_proposal_notes WHERE note_id = %s RETURNING proposal_id", (note_id,))).fetchall()]
+            if not gone:
+                return 0
+            cursor = await conn.execute(
+                "UPDATE notepad_proposals SET status = 'dismissed', decided_at = %s WHERE id = ANY(%s) AND status = 'pending' "
+                "AND NOT EXISTS (SELECT 1 FROM notepad_proposal_notes n WHERE n.proposal_id = notepad_proposals.id)", (now, gone))
             return cursor.rowcount
 
     async def stale_accepting(self, now: datetime) -> list[str]:

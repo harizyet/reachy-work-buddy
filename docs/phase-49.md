@@ -1,6 +1,6 @@
 # Phase 49 — Intelligent Notepad Processing
 
-**Status: ENGINEERING-COMPLETE LOCALLY (2026-10-11), NOT DEPLOYED. Slices 49A to 49G are built, tested and committed on `main`; the feature flag defaults OFF (Compose passes it as `false`); migration 029 has run only on disposable databases. No production migration, deployment or flag activation is authorised: those need a separate owner approval. Evidence: [verification record](verification/phase-49-notepad-processing-2026-10-11.md). The owner approved implementation on 2026-10-11 (commit 73558a6 satisfied the documentation-only stop) and amended the plan the same day to add meeting-context correlation (49G, below).**
+**Status: ENGINEERING CLOSED LOCALLY (2026-10-11), NOT DEPLOYED. Slices 49A to 49G are built, tested and committed on `main`; the feature flag defaults OFF (Compose passes it as `false`); migration 029 has run only on disposable databases. No production migration, deployment or flag activation is authorised: those need a separate owner approval. Final acceptance (disposable PostgreSQL and the real 7B) passed three times. Evidence: [verification record](verification/phase-49-notepad-processing-2026-10-11.md). The owner approved implementation on 2026-10-11 (commit 73558a6 satisfied the documentation-only stop) and amended the plan the same day to add meeting-context correlation (49G, below).**
 
 Priority: after the current database benchmarking work. Type: enhancement of an existing feature. Dependencies: the existing Notepad, task and reminder APIs, owner authentication, and the local LLM infrastructure.
 
@@ -33,7 +33,7 @@ The motivating scenario is a note titled "Tasks for next week": a question about
 4. The existing local 7B classifies, with structured output and deterministic evidence-span validation.
 5. Every structured task or reminder needs the owner's approval.
 6. The original Notepad is the only capture interface. No Scratchpad tab.
-7. The note-routing and false-provenance defect is a prerequisite for 49E and its correction is reused (`record_reference.py`, commit `14403a1`), not paralleled. Its one-line guard in the frozen `knowledge/routing.py` is **not** committed (the Phase 48 freeze tests pin that file; owner decision pending), so the one test that needs it is marked `xfail`.
+7. The note-routing and false-provenance defect is a prerequisite for 49E and its correction is reused (`record_reference.py`, commit `14403a1`), not paralleled. The frozen `knowledge/routing.py` is **unchanged** (its freeze hash and the dev8/10/12/14 freeze tests pass). The precedence is enforced at the non-frozen dispatch boundary instead: the record handler claims a named-record turn before any generic handler, and `selective_turn` in `app.py` refuses such a turn even if reached. The regression test `test_a_named_record_never_reaches_the_44e_selective_path_and_routing_py_stays_frozen` replaces the former `xfail`.
 8. Local migrations and disposable integration tests are authorised. Production migration, deployment and activation are not.
 9. (Amendment) A note taken during a recorded meeting can be associated with that meeting and its transcript: slice 49G.
 
@@ -100,7 +100,8 @@ The smallest reusable mechanism: one association table, `note_meeting_links`, th
 - **Evidence provenance shown on every proposal:** `evidence_from` is `note`, `transcript` or `both`, with each source listed in the review card and named in the task inquiry ("the transcript of the meeting “Weekly sync”").
 - **No dependence on transcription:** a note is saved and processed without any transcript. A linked meeting whose transcript is not ready is listed on the job as "not used: the transcript is not ready yet" and the note is processed alone; once the transcript exists, an explicit reprocess (the changed inputs make it a new request) includes it. Reprocessing recreates no proposal already proposed, accepted or dismissed (the fingerprint is the source sentence), so a delayed transcript can only add new items.
 - **Deleting a meeting or note** removes only its link rows.
-- **Limits, stated:** existing pending proposals are not upgraded to "both" by a later reprocess (they are left as they were); two notes linked to one meeting can each propose the same transcript sentence (each has its own provenance); a live recording has no meeting id until it is uploaded, so the in-meeting flow is create then link, and the time-overlap suggestion covers the rest.
+- **One proposal per transcript passage:** the stable identity of a passage is the meeting id, the `[m:ss]` stamp of its transcript line and the normalised quote (`source_key`, unique in the database), not text similarity: a model that words the task differently, or copies the `[0:05] Speaker 1:` label with the quote, still hits the same passage. When a second note linked to the same meeting finds a passage already proposed, no second proposal is made; the note is tied to the existing one in `notepad_proposal_notes` (with that note's snapshot hash), the proposal takes the most private level of the notes behind it, a decision (accept or dismiss) applies to every note, and deleting one note leaves it pending for the others (deleting the last dismisses it). The review panel and the inquiry show it once and name every backing note and the meeting.
+- **Limits, stated:** existing pending proposals are not upgraded to "both" by a later reprocess (they are left as they were); a live recording has no meeting id until it is uploaded, so the in-meeting flow is create then link, and the time-overlap suggestion covers the rest.
 
 ### 49F — Testing and acceptance
 
@@ -156,7 +157,7 @@ Small edits to existing code: `app.py` (flag, wiring, record-reference precedenc
 
 ### 7.3 Migration
 
-`029_notepad_processing` adds `notepad_jobs`, `notepad_proposals`, `notepad_provenance` and `note_meeting_links` (no foreign keys, no triggers, nothing reaches the knowledge index). `deploy/homelab/rollback-029.sql` removes only those tables and sets the revision back to `028_memory_candidates`; tasks, reminders and notes (including records created from accepted proposals) stay. Rehearsed on a disposable pgvector database: upgrade, repeat, rollback script, re-upgrade, and application over leftovers of an earlier copy. Because every service checks the schema head, an image built from this code refuses to start against a 028 database: migrate first, with a backup, on owner approval. **Not run in production.** Flag: `NOTEPAD_PROCESSING_ENABLED` (default off; Compose passes it through as `false`, so a deployed stack stays off until the owner sets it), `NOTEPAD_PROCESSING_CONCURRENCY` (1 to 4, default 1).
+`029_notepad_processing` adds `notepad_jobs`, `notepad_proposals`, `notepad_proposal_notes`, `notepad_provenance` and `note_meeting_links` (no foreign keys, no triggers, nothing reaches the knowledge index). `deploy/homelab/rollback-029.sql` removes only those tables and sets the revision back to `028_memory_candidates`; tasks, reminders and notes (including records created from accepted proposals) stay. Rehearsed on a disposable pgvector database: upgrade, repeat, rollback script, re-upgrade, and application over leftovers of an earlier copy. Because every service checks the schema head, an image built from this code refuses to start against a 028 database: migrate first, with a backup, on owner approval. **Not run in production.** Flag: `NOTEPAD_PROCESSING_ENABLED` (default off; Compose passes it through as `false`, so a deployed stack stays off until the owner sets it), `NOTEPAD_PROCESSING_CONCURRENCY` (1 to 4, default 1).
 
 ### 7.4 Tests
 
@@ -168,7 +169,7 @@ Engineering-complete when the optional workflow works end to end; the owner can 
 
 ## 9. Open questions for the owner (still open)
 
-1. The `knowledge/routing.py` guard from the grounding fix is held back because the dev8/10/12/14 freeze tests pin that file: accept the new hash, or keep it held back?
+1. (Closed 2026-10-11) The routing guard now lives in `app.py`; `knowledge/routing.py` is untouched. The shadow measurement still labels a named-record turn by the frozen classifier (it is measure-only and the record handler answers the turn regardless).
 2. Timezone source for resolving "next week" (a profile setting or the host zone).
 3. Whether an event candidate may later be offered as a reminder.
 4. Proposal retention (how long dismissed and completed proposals and snapshot text are kept; the 44F precedent is 14/30 days).

@@ -13,10 +13,8 @@ from companion_core.app import create_app
 from companion_core.calendar.store import InMemoryCalendarStore
 from companion_core.consent.store import InMemoryConfirmationStore
 from companion_core.email.store import InMemoryEmailStore
-from companion_core.knowledge import routing
 from companion_core.knowledge.selective_answer import (
     ZERO_EVIDENCE_REPLY,
-    SelectiveAnswerer,
     access_for,
 )
 from companion_core.llm.store import InMemoryLLMSettingsStore, InMemoryLLMUsageStore
@@ -203,15 +201,28 @@ def test_actions_commands_and_unrelated_text_are_not_references(text):
     assert record_reference.parse(text) is None
 
 
-@pytest.mark.xfail(reason="needs the routing.py one-line guard, held back because routing.py is Phase 48 frozen (test_dev10_freeze); owner decision pending", strict=False)
-def test_the_44e_classifier_no_longer_calls_a_named_record_a_status_question():
-    assert routing.classify(Q1) == ("open_tasks", ())
-    assert routing.classify(Q2) is None and routing.classify(Q3) is None
-    assert routing.choose_path(Q2, attached_meeting=False) == "retrieval"
-    assert routing.classify("what are my reminders?") is not None
-    eligibility = SelectiveAnswerer(retriever=None, index_count=None)
-    assert eligibility.classify(Q1, attached_meeting=False).reason == "status_question"
-    assert eligibility.classify(Q3, attached_meeting=False).reason != "status_question"
+class SpyAnswerer:
+    """Stands in for the 44E selective answerer: counts how often the dispatch hands it a turn."""
+
+    def __init__(self):
+        self.calls = []
+
+    async def answer(self, text, *, modality, attached_meeting):
+        self.calls.append(text)
+
+
+def test_a_named_record_never_reaches_the_44e_selective_path_and_routing_py_stays_frozen():
+    """The dispatch-level guard that replaces the held-back routing.py edit: the frozen classifier is unchanged (test_dev*_freeze pin its hash), and the precedence is enforced in
+    app.py, where the record handler claims the turn first and `selective_turn` refuses a named-record turn even if it were ever reached."""
+    spy = SpyAnswerer()
+    with Session(HALLUCINATION) as s:
+        s.app.state.selective_answerer = spy
+        assert s.say(Q2).startswith(f'Your note "{TITLE}"') and "no open tasks" not in s.say(Q2, session="a").lower()
+        assert s.say(Q3, session="b") == ZERO_EVIDENCE_REPLY
+        assert s.say(Q1, session="c") == "You have no open tasks."
+        assert spy.calls == [] and s.model_calls == 0  # none of the three was offered to the selective path, and the model was not called
+        s.say("what is the capital of France?", session="d")
+        assert spy.calls == ["what is the capital of France?"]  # the spy is wired: an ordinary knowledge question does reach it
     assert access_for("voice").sensitivity_ceiling == Privacy.PUBLIC
 
 
