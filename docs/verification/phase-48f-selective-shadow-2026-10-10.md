@@ -77,6 +77,8 @@ Owner-approved boundary option. Core was stopped gracefully at 06:34:54 UTC (`do
 
 [Deployment record](phase-49-deployment-2026-10-11.md).
 
+**Boundary 2 (2026-10-11 07:27 UTC, Phase 49 activation, same image, flags otherwise unchanged).** Graceful stop at 07:27:04 flushed the telemetry: cumulative `admitted 26, processed_ok 26`, i.e. cohort A's 6 plus exactly my 20 deployment probes, so **cohort B (06:38:44 to 07:27:04) contains no owner usage** (copy `~/reachy-backups/phase48-boundary-049/selective-shadow.cohortB-end.jsonl`, sha256 prefix `d8676998c7b1f5cd`). Cohort C starts at 07:27:07; subtract its 3 probes. With `NOTEPAD_PROCESSING_ENABLED` on, a "what are my tasks" style question is answered by the Phase 49 inquiry (confirmed / pending / unprocessed), which changes the production answer path for those turns; the shadow classifier is unchanged. [Activation record](phase-49-activation-2026-10-11.md).
+
 ## 5. End-of-window procedure
 
 1. Close when the owner calls it: 100 to 200 genuine knowledge-like turns (the shadow's `admitted` count) or 7 to 14 days, whichever gives enough representative evidence first.
