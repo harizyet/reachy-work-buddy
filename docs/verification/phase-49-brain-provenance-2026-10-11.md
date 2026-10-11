@@ -1,6 +1,6 @@
 # Phase 47 Brain x Phase 49 provenance: `derived_from` edges (2026-10-11)
 
-**Local change only: committed, not deployed, no service restarted, no production data touched.**
+**Committed `d34ad51`; deployed to production 2026-10-11 10:08 UTC, see the [deployment record](phase-49-brain-provenance-deployment-2026-10-11.md).**
 
 ## Root cause (investigation, read-only)
 
