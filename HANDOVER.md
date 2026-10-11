@@ -4,6 +4,10 @@ Current session snapshot: 2026-10-10 (Phase 44 selective answering: see "Phase 4
 The [documentation index](docs/README.md) defines ownership;
 [project state](docs/project-state.md) owns deployment limits and open acceptance.
 
+## Phase 50 (proposed 2026-10-11; plan only)
+
+[docs/phase-50.md](docs/phase-50.md) records the owner-supplied Multimodal Document Intelligence design (stages 50A to 50K, gates G1 to G10) and is listed in the roadmap. **No code, migration, dependency or flag exists.** Nothing is approved to start: the open owner questions are in section 8 of the page (above all where a vision model would run, given the GPU already holds the 7B and 14B tiers). Link and anchor check only; no robot, model or service activity.
+
 ## Android 0.16.0 (2026-10-11; committed `918af10`, APK built and sent to the owner; installation not confirmed)
 
 Debug APK `clients/android/app/build/outputs/apk/debug/app-debug.apk` (gitignored; deliver by hand). Adds note folders (picker above the list, Folder… in the note menu, folder on each row) and the Phase 49 processing panel under a note (`ui/ProcessingSection.kt`, `data/NotepadProcessing.kt`, `ReachyApi` and `AppViewModel` calls): shown only when `GET /notepad-processing/config` says enabled, which production does (`NOTEPAD_PROCESSING_ENABLED=true` since the owner enabled it on 2026-10-11), so the panel will show on the phone. 63 JVM tests pass (mock hub for every route and body, parsing, hash). **Not exercised:** the UI on an emulator or phone (no AVD on this machine), the processing panel against a real hub. The web folder bug found by the owner (stacked folder fields, duplicate sibling keys) is fixed in `aa3887e` and **deployed** (hub-only, 2026-10-11 14:05 UTC, hub image `ab988bf52803`, rollback tag `reachy-rollback/reachy-hub:pre-webfix`; see the addendum in the [note-tags deployment record](docs/verification/note-tags-deployment-2026-10-11.md)). Owner browser check of that fix and a phone check of 0.16.0 are still open.
