@@ -103,6 +103,15 @@ _INSTRUCTION = re.compile(
 )
 
 
+# A sentence whose subject is someone else ("Priya will book the room", "He should call"). A model that calls it the owner's is overruled: the owner is I/we/you or an imperative.
+_THIRD_PARTY = re.compile(
+    r"^\W*(?!(?:I|We|You|Reachy)\b)[A-Z][A-Za-z'-]+(?:\s+(?:and|&)\s+[A-Z][A-Za-z'-]+)?\s+(?:will|shall|should|must|needs?\s+to|has\s+to|have\s+to|is\s+going\s+to|are\s+going\s+to|is\s+to|can)\b"
+)
+# What a transcript speaker says about themselves. The owner is not identified in a transcript, so the model's guess about ownership is not used for these: the item is shown with the
+# speaker's label and a note that it is not confirmed to be the owner's, and the owner decides.
+_FIRST_PERSON = re.compile(r"\b(?:I|we)(?:'ll|\s+will|\s+can|\s+should|\s+shall|\s+need\s+to|\s+have\s+to|\s+am\s+going\s+to|'m\s+going\s+to)\b", re.IGNORECASE)
+
+
 @dataclass
 class Rejections:
     counts: dict[str, int] = field(default_factory=dict)
@@ -228,9 +237,12 @@ def validate(output: _Output, job: Job, *, model: str) -> tuple[list[Proposal], 
             continue
         kind = Kind(item.type)
         ambiguity = [_clean_note(a) for a in item.ambiguities if _clean_note(a)]
-        if kind in (Kind.TASK, Kind.REMINDER) and not item.about_owner:
-            rejected.add("about_a_third_party")
-            continue
+        if kind in (Kind.TASK, Kind.REMINDER):
+            from_transcript = primary.kind == "meeting"
+            says_so = from_transcript and _FIRST_PERSON.search(primary.quote) is not None
+            if any(_THIRD_PARTY.match(r.quote) for r in refs) or (not item.about_owner and not says_so):
+                rejected.add("about_a_third_party")
+                continue
         if any(r.kind == "meeting" for r in refs):
             # A transcript names speakers by label only. Nothing says which one is the owner, so no transcript-backed item is ever treated as confirmed to be theirs.
             ambiguity.append("from a meeting transcript: who this was assigned to is not confirmed; check it is yours before accepting")

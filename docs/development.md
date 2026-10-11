@@ -111,7 +111,7 @@ HUB_PYTHON=<repo>/.venv/bin/python PYTHONPATH=<repo>/services/reachy-hub/src:<re
 ```
 
 The Playwright suite starts a real in-process hub (`e2e/hub_server.py`) serving the
-build and needs Chromium. After changing a hub response the client reads, run
+build and needs Chromium. Phase 49's `e2e/notepad.spec.ts` uses a second hub on port 18049 (`e2e/notepad_hub_server.py`) in front of a *real* companion-core with Notepad processing on and a scripted model. After changing a hub response the client reads, run
 `python services/reachy-hub/tests/test_web_client.py` to refresh the API snapshot in
 `clients/web/src/api/`. The hub image builds the client in a pinned Node stage; the
 runtime image has no Node. Details: [Phase 47](phase-47.md#13-47a-record-2026-10-08).

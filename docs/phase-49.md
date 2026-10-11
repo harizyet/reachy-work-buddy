@@ -1,6 +1,6 @@
 # Phase 49 — Intelligent Notepad Processing
 
-**Status: PROPOSED — documentation only (2026-10-11). Nothing is implemented, scheduled, migrated or deployed. Implementation starts only when the owner explicitly schedules it.**
+**Status: ENGINEERING-COMPLETE LOCALLY (2026-10-11), NOT DEPLOYED. Slices 49A to 49G are built, tested and committed on `main`; the feature flag defaults OFF (Compose passes it as `false`); migration 029 has run only on disposable databases. No production migration, deployment or flag activation is authorised: those need a separate owner approval. Evidence: [verification record](verification/phase-49-notepad-processing-2026-10-11.md). The owner approved implementation on 2026-10-11 (commit 73558a6 satisfied the documentation-only stop) and amended the plan the same day to add meeting-context correlation (49G, below).**
 
 Priority: after the current database benchmarking work. Type: enhancement of an existing feature. Dependencies: the existing Notepad, task and reminder APIs, owner authentication, and the local LLM infrastructure.
 
@@ -24,6 +24,18 @@ The motivating scenario is a note titled "Tasks for next week": a question about
 | [Phase 48](phase-48.md) | Independent. 48F's frozen shadow window and 48G block are not affected; 49 touches none of their flags. |
 | [Phase 47](phase-47.md) | The Notepad UI is the React `features/notes/` page. Owner-UAT-at-the-end and the no-deploy-without-approval rule apply. |
 | [ADR 0011](adr/0011-destructive-action-consent.md) consent, [0028](adr/0028-persona-responses-and-action-receipts.md) receipts, [0006](adr/0006-response-routing.md) and [0018](adr/0018-hybrid-llm-routing.md) | Binding: the LLM has no authority to bypass an action gate; receipts are built from the persisted object. |
+
+### Owner decisions of 2026-10-11 (binding for this phase)
+
+1. Each note's processing input is an immutable text snapshot with a content hash.
+2. Task and reminder provenance lives in a separate table; the `Task` and `Reminder` schemas gain nothing.
+3. Proposals live in a dedicated sibling table; the Phase 44F candidate structures (frozen during Phase 48) are not modified.
+4. The existing local 7B classifies, with structured output and deterministic evidence-span validation.
+5. Every structured task or reminder needs the owner's approval.
+6. The original Notepad is the only capture interface. No Scratchpad tab.
+7. The note-routing and false-provenance defect is a prerequisite for 49E and its correction is reused (`record_reference.py`, commit `14403a1`), not paralleled. Its one-line guard in the frozen `knowledge/routing.py` is **not** committed (the Phase 48 freeze tests pin that file; owner decision pending), so the one test that needs it is marked `xfail`.
+8. Local migrations and disposable integration tests are authorised. Production migration, deployment and activation are not.
+9. (Amendment) A note taken during a recorded meeting can be associated with that meeting and its transcript: slice 49G.
 
 ## 3. Facts about the current checkout (2026-10-11; verify at slice start)
 
@@ -76,11 +88,27 @@ Each slice ends with a dated verification record and an owner decision before th
 - A named-note question retrieves that note first and cannot be diverted to the generic task-list handler (the precedence from the grounding fix is preserved). If evidence is missing or insufficient, Reachy says so. Asking never promotes a proposal to a task.
 - Authorization, privacy mode and channel rules apply to proposals exactly as to the notes they came from.
 
+### 49G — Meeting-context correlation (added 2026-10-11, inside this phase)
+
+The smallest reusable mechanism: one association table, `note_meeting_links`, that copies nothing and changes neither the note nor the meeting. It reuses the existing identifiers (`notes.id`, `meetings.id`) and the meeting's own occurrence time.
+
+- **Persisted fields:** note id, meeting id, source of association (`explicit` or `temporal`), verification state (`suggested`, `confirmed`, `rejected`), overlap seconds and title-match flag (why it was suggested), created, updated and decided timestamps. One row per note and meeting pair (unique), so duplicate associations and concurrent confirmations collapse to one row. A rejected pair is kept (not re-suggested); the owner can always link it again. Source identities stay independent: the note, the meeting and the link are three records, and a proposal records each supporting quote with its own origin.
+- **Deterministic link:** `PUT /notes/{id}/meeting-links/{meeting_id}` with `confirmed` is an explicit link, confirmed at once. This is the call a note created inside a meeting's context makes (the Notepad panel's "Link to a meeting…" does it from the note). No request field was added to the existing note-creation route, to leave that contract untouched.
+- **Suggestions, never authoritative:** `GET /notes/{id}/meeting-links` refreshes time-overlap suggestions. A suggestion is made only from the meeting's **actual occurrence time** (`Meeting.started_at`, the time the owner or recorder gave; its end is that plus the probed duration or the last transcript segment). The upload time (`created_at`) is never used, so a recording uploaded days later still matches the notes written while it happened, and a note written at upload time does not. A meeting with no occurrence time or end can only be linked explicitly. The note's **creation** time must fall within 10 minutes before the meeting start to 15 minutes after its end; a note merely edited during a meeting is not suggested. Overlapping meetings are all offered (best three, title mention first); none is chosen. Title mention and overlap seconds are recorded as the reason.
+- **Owner confirmation in Notepad:** the existing Notes page shows "Taken during this meeting?" with Link / Not this meeting, "Linked to" with Unlink, and whether the transcript is ready. Unlinking sets `rejected` and deletes nothing.
+- **Transcript evidence, only when asked:** a processing request may set `include_meetings`; only **confirmed** links contribute, never suggestions. Each included transcript is snapshotted (text and hash) on the job beside the note, and a quote counts only if it is found verbatim in the note or in one included transcript; the origin is where the quote is actually found. Transcript-backed proposals carry the meeting id and title, the exact quote and the speaker **label printed on that line** (copied, never inferred), and the fixed review note that who the item was assigned to is not confirmed. Relative time words in a transcript resolve against the meeting's day. A proposal's sensitivity is that of its most private source. Instruction-like transcript text is rejected exactly like instruction-like note text.
+- **Evidence provenance shown on every proposal:** `evidence_from` is `note`, `transcript` or `both`, with each source listed in the review card and named in the task inquiry ("the transcript of the meeting “Weekly sync”").
+- **No dependence on transcription:** a note is saved and processed without any transcript. A linked meeting whose transcript is not ready is listed on the job as "not used: the transcript is not ready yet" and the note is processed alone; once the transcript exists, an explicit reprocess (the changed inputs make it a new request) includes it. Reprocessing recreates no proposal already proposed, accepted or dismissed (the fingerprint is the source sentence), so a delayed transcript can only add new items.
+- **Deleting a meeting or note** removes only its link rows.
+- **Limits, stated:** existing pending proposals are not upgraded to "both" by a later reprocess (they are left as they were); two notes linked to one meeting can each propose the same transcript sentence (each has its own provenance); a live recording has no meeting id until it is uploaded, so the in-meeting flow is create then link, and the time-overlap suggestion covers the rest.
+
 ### 49F — Testing and acceptance
 
 Disposable data and the existing test infrastructure only. Required acceptance note, "Tasks for next week": two explicit owner tasks, one reminder, one informational statement, one ambiguous scheduling statement, and one unrelated sentence containing command-like instructions. The 18 checks, all required:
 
 1. Checkbox OFF creates no job. 2. Checkbox ON creates exactly one durable job. 3. The note is unchanged. 4. Only source-supported proposals. 5. Tasks, reminders and reference are distinguished correctly. 6. Ambiguous scheduling requires clarification or review. 7. No task/reminder exists before approval. 8. Approval creates the correct records and receipts. 9. Concurrent acceptance and retry produce no duplicates. 10. Rejection produces no authoritative record. 11. Reprocessing does not duplicate accepted work. 12. Source edits and revisions are handled correctly. 13. "What do I need to do next week?" returns confirmed tasks and flags relevant pending proposals. 14. Named-note questions cannot reach the generic task-list handler. 15. No invented contents or provenance. 16. Unauthorized users and privacy-restricted channels cannot retrieve private notes or proposals. 17. LLM failure never corrupts the note, blocks saving, or creates partial actions. 18. Existing Notepad, meeting, task, reminder and alarm behaviour is intact.
+
+Meeting-context checks (49G): concurrent note-taking and recording; delayed transcript availability (note processed first, reprocessed later); historical uploads (upload time ignored); overlapping meetings (all offered, none chosen); false-positive temporal matches (window edges, far neighbours, a note only edited during the meeting, no occurrence time); authorisation boundaries (owner session and CSRF only, no bearer, flag-off 404s, restricted channels and sensitivity ceilings); duplicate associations (repeated suggestion and concurrent confirmation); and unlinking that deletes and changes neither record.
 
 Evidence is labelled separately as mock/unit, in-process integration, real PostgreSQL, real local-model, and a **real authenticated browser test** (Playwright against a real hub) of the full Notepad processing and review flow, not only jsdom.
 
@@ -109,25 +137,38 @@ A separate Scratchpad tab or database; automatic conversion of meeting transcrip
 | Notepad UI | `clients/web/src/features/notes/` (`NotesPage.tsx`, `useNotesEditor.ts`) |
 | Shared contracts | `shared/models`, `shared/protocols` (route constants) |
 
-### 7.2 New modules (expected)
+### 7.2 New modules (as built)
 
-A `notepad_processing/` package in companion-core (job store, runner, extraction schema, deterministic validator, proposal store, provenance); core routes and hub proxy routes for job status, proposals, accept/dismiss/retry/reprocess; a React review section in `features/notes/`; a task-inquiry composer used by 49E. Whether proposals reuse `memory_candidates` or get their own table is **decided at 49C start** on the 44F reuse test: a safe reuse needs no change to the frozen `memory/candidate_*.py` files (frozen during the Phase 48 trial), so the default expectation is a sibling table that copies the pattern.
+| Module | Role |
+|---|---|
+| `companion_core/notepad_processing/models.py`, `store.py`, `postgres_store.py` | Job (snapshot, inputs hash, meeting sources), Proposal, Provenance, MeetingLink; in-memory twin and PostgreSQL store with guarded transitions |
+| `.../extraction.py` | Prompt, strict JSON parsing, the deterministic validator (evidence location in note or transcript, instruction filter, third-party and time rules, time resolution) |
+| `.../service.py` | Enqueue, bounded runner, accept/dismiss/retry, idempotent commit, reconcile, links |
+| `.../links.py` | Occurrence-time window and suggestion rules |
+| `.../inquiry.py` | 49E matcher and reply builder (confirmed / pending / unprocessed) |
+| `.../routes.py` | Core routes (absent unless `NOTEPAD_PROCESSING_ENABLED`) |
+| `shared/protocols/notepad_processing_api.py` | Route constants |
+| `reachy_hub/notepad_processing.py` | Owner-session-and-CSRF proxy |
+| `clients/web/src/api/notepadProcessing.ts`, `features/notes/ProcessingPanel.tsx`, `useProcessing.ts` | Notepad panel: checkbox, status, review, meeting links |
+| `migrations/versions/029_notepad_processing.py`, `deploy/homelab/rollback-029.sql` | Schema and its tested rollback |
+
+Small edits to existing code: `app.py` (flag, wiring, record-reference precedence for untitled "from my notes" questions, the inquiry branch, note and meeting delete hooks), `tasks/` and `planner/` stores (an optional `record_id` argument on `add_task`/`add_reminder`, the idempotency key; no schema change), `shared/database.py` (schema head). The Phase 44F candidate files and every Phase 48 frozen file are untouched.
 
 ### 7.3 Migration
 
-`029_*`: processing jobs, proposals, and provenance links. Needs a rollback script alongside (as `rollback-028.sql`), a rehearsal on a restored copy, preserved data on upgrade, and owner approval before any production run. Documented in [deployment](deployment.md) when it exists.
+`029_notepad_processing` adds `notepad_jobs`, `notepad_proposals`, `notepad_provenance` and `note_meeting_links` (no foreign keys, no triggers, nothing reaches the knowledge index). `deploy/homelab/rollback-029.sql` removes only those tables and sets the revision back to `028_memory_candidates`; tasks, reminders and notes (including records created from accepted proposals) stay. Rehearsed on a disposable pgvector database: upgrade, repeat, rollback script, re-upgrade, and application over leftovers of an earlier copy. Because every service checks the schema head, an image built from this code refuses to start against a 028 database: migrate first, with a backup, on owner approval. **Not run in production.** Flag: `NOTEPAD_PROCESSING_ENABLED` (default off; Compose passes it through as `false`, so a deployed stack stays off until the owner sets it), `NOTEPAD_PROCESSING_CONCURRENCY` (1 to 4, default 1).
 
 ### 7.4 Tests
 
-Core: `services/companion-core/tests/` (unit, in-process integration, a PostgreSQL variant like `test_memory_candidates_postgres.py`, concurrency and crash tests with injected stores and controlled time). Hub: proxy, CSRF and session tests. Web: component tests plus `clients/web/e2e/` Playwright against a real hub for the acceptance flow. Follow the [test conventions](development.md#testing-conventions).
+`services/companion-core/tests/test_notepad_processing.py` (in-process, scripted model), `test_notepad_processing_postgres.py` (opt-in `DATABASE_MIGRATION_TEST_URL`), `services/reachy-hub/tests/test_notepad_processing_hub.py`, `clients/web/tests/notepad-processing.test.tsx` and the real-browser `clients/web/e2e/notepad.spec.ts` with its `notepad_hub_server.py`. Two older Postgres tests were updated for the new schema head. Follow the [test conventions](development.md#testing-conventions). Results: the [verification record](verification/phase-49-notepad-processing-2026-10-11.md).
 
 ## 8. Completion criteria
 
 Engineering-complete when the optional workflow works end to end; the owner can review and approve proposals; accepted records are authoritative, idempotent and traceable to the note; natural-language inquiries find them and separate pending proposals; the "Tasks for next week" problem is a permanent regression test; no critical privacy, security, provenance or data-integrity failure remains; and the implementation and verification evidence are documented. Engineering completion does not imply production deployment.
 
-## 9. Open questions for the owner at scheduling
+## 9. Open questions for the owner (still open)
 
-1. The grounding fix (uncommitted) is a 49E prerequisite: commit and review it first?
+1. The `knowledge/routing.py` guard from the grounding fix is held back because the dev8/10/12/14 freeze tests pin that file: accept the new hash, or keep it held back?
 2. Timezone source for resolving "next week" (a profile setting or the host zone).
 3. Whether an event candidate may later be offered as a reminder.
 4. Proposal retention (how long dismissed and completed proposals and snapshot text are kept; the 44F precedent is 14/30 days).

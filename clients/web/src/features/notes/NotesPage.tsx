@@ -4,6 +4,7 @@ import { EmptyState, ErrorState } from '../../components/shared/states';
 import { Button } from '../../components/ui/Button';
 import { Dialog } from '../../components/ui/Dialog';
 import { groupNotes, preview, shortDate } from './grouping';
+import { ProcessingPanel } from './ProcessingPanel';
 import { useNotesEditor } from './useNotesEditor';
 
 export function NotesPage() {
@@ -102,6 +103,7 @@ export function NotesPage() {
               value={editor.body}
               onChange={(e) => ctl.edit({ body: e.target.value })}
             />
+            <ProcessingPanel key={editor.selectedId ?? 'new'} noteId={editor.selectedId} saveNow={ctl.flush} currentId={ctl.currentId} currentText={ctl.currentText} />
           </>
         ) : (
           <p className="py-10 text-center text-sm text-[var(--muted)]">Select a note, or choose New note to start one.</p>

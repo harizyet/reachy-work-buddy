@@ -792,3 +792,25 @@ def test_meeting_link_routes_do_not_exist_with_the_flag_off(monkeypatch):
 def test_job_dataclass_defaults_are_safe():
     job = Job(note_id="n", note_title="t", snapshot_text="x", snapshot_hash="h", note_updated_at=NOW, timezone="UTC", sensitivity=Privacy.WORK_PRIVATE)
     assert job.status.value == "queued" and job.sources == [] and "snapshot_text" not in job.view() and TaskStatus.OPEN
+
+
+def test_a_sentence_about_someone_else_is_overruled_even_when_the_model_calls_it_the_owners(monkeypatch):
+    items = [item("task", "Book the meeting room", LINES[5]), item("task", "Renew the certificate", LINES[0])]  # the first is mislabelled owner=True by the model
+    with Env(monkeypatch, model=Model(items)) as env:
+        rows = env.proposals(env.processed()["id"])
+        assert [p["text"] for p in rows] == ["Renew the certificate"] and env.service.summary()["rejected_about_a_third_party"] == 1
+
+
+def test_a_transcript_speakers_own_commitment_is_shown_for_review_even_if_the_model_doubts_it_is_the_owners(monkeypatch):
+    items = [
+        {**item("task", "Send the purchase order", "I will send the vendor the signed purchase order by Friday."), "about_owner": False},  # first person, said by Speaker 2: owner unknown
+        {**item("task", "Chase Bob", "who can chase the vendor quote"), "about_owner": False},  # a question, not a commitment: the model's doubt stands
+    ]
+    with Env(monkeypatch, model=Model(items)) as env:
+        m = meeting(env)
+        n = note_at(env, M_START + timedelta(minutes=5))
+        env.client.put(f"/notes/{n['id']}/meeting-links/{m.id}", json={"state": "confirmed"})
+        env.process(n["id"], include_meetings=True)
+        env.work()
+        (p,) = env.proposals(n["id"])
+        assert p["text"] == "Send the purchase order" and p["evidence_from"] == "transcript" and any("not confirmed" in a for a in p["ambiguity"])

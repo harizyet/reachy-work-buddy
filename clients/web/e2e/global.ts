@@ -3,8 +3,10 @@ import { startPrefixProxy } from './prefix_proxy.mjs';
 
 export const HUB_PORT = 18047;
 export const PROXY_PORT = 18048;
+export const NOTEPAD_PORT = 18049; // Phase 49: a hub in front of a real core with Notepad processing on
 
 let hub: ChildProcess | undefined;
+let notepadHub: ChildProcess | undefined;
 let proxy: { close(): void } | undefined;
 
 async function waitFor(url: string) {
@@ -24,8 +26,11 @@ export default async function setup() {
   hub = spawn(python, ['e2e/hub_server.py', String(HUB_PORT)], { stdio: 'inherit' });
   await waitFor(`http://127.0.0.1:${HUB_PORT}/web/`);
   proxy = await startPrefixProxy(PROXY_PORT, HUB_PORT);
+  notepadHub = spawn(python, ['e2e/notepad_hub_server.py', String(NOTEPAD_PORT)], { stdio: 'inherit' });
+  await waitFor(`http://127.0.0.1:${NOTEPAD_PORT}/web/`);
   return async () => {
     proxy?.close();
     hub?.kill();
+    notepadHub?.kill();
   };
 }

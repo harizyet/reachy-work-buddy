@@ -4,9 +4,9 @@ Current session snapshot: 2026-10-10 (Phase 44 selective answering: see "Phase 4
 The [documentation index](docs/README.md) defines ownership;
 [project state](docs/project-state.md) owns deployment limits and open acceptance.
 
-## Phase 49 (proposed 2026-10-11; documentation only, NOT scheduled)
+## Phase 49 (engineering-complete locally 2026-10-11; NOT migrated, deployed or enabled)
 
-[docs/phase-49.md](docs/phase-49.md): optional Notepad processing (durable local-LLM extraction, owner review, idempotent commit with provenance, unified task inquiry), slices 49A to 49F, default-OFF flag. **No code, migration or flag exists; do not start until the owner schedules it.** Phase 44 closure is unchanged. 49E depends on the (still uncommitted) grounding fix above. Open owner questions are in section 9 of the phase page.
+[docs/phase-49.md](docs/phase-49.md) and the [verification record](docs/verification/phase-49-notepad-processing-2026-10-11.md): optional Notepad processing (slices 49A to 49G): immutable snapshot jobs, local-7B extraction with a deterministic evidence validator, owner review and idempotent commit with provenance, task inquiry that separates confirmed / pending / unprocessed, and note-to-meeting links (suggestions from actual meeting time, owner-confirmed) that can add labelled transcript evidence. Code is on `main`; migration `029_notepad_processing` (rollback `deploy/homelab/rollback-029.sql`) has run **only on disposable databases**; `NOTEPAD_PROCESSING_ENABLED` defaults false and Compose passes it as false. The homelab database is still at 028, so an image built from this code will not start against it until the owner approves migrating (backup first). Open owner decision: the `knowledge/routing.py` guard from the grounding fix is held back because the dev8/10/12/14 freeze tests pin that file (those four tests fail while the working-tree edit is present; one record-reference test is `xfail` without it).
 
 ## Phase 48 (proposed 2026-10-10; read with the Phase 44 section below)
 

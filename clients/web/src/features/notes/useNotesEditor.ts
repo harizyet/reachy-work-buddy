@@ -175,5 +175,9 @@ export function useNotesEditor() {
     }
   };
 
-  return { notes, search, setSearch, editor, saved, status, edit, open, create, close, refresh, remove, flush };
+  // For the processing panel (Phase 49): it saves first, then reads which note and which text were saved.
+  const currentId = () => editorRef.current.selectedId;
+  const currentText = () => editorRef.current.body;
+
+  return { notes, search, setSearch, editor, saved, status, edit, open, create, close, refresh, remove, flush, currentId, currentText };
 }
