@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFakeHub, jsonResponse } from './fakeHub';
 import { renderApp, SAMPLE_STATUS } from './helpers';
 
@@ -16,7 +16,7 @@ const summary = (id: string, style: string, extra: Record<string, unknown> = {})
 
 interface Seen { method: string; path: string; body: unknown; csrf: string | null; form: Record<string, string | File> | null }
 
-function hubWith(opts: { enabled?: boolean; docs?: ReturnType<typeof doc>[]; summaries?: ReturnType<typeof summary>[] } = {}) {
+function hubWith(opts: { enabled?: boolean; docs?: ReturnType<typeof doc>[]; summaries?: ReturnType<typeof summary>[]; noImage?: boolean; exportFails?: boolean } = {}) {
   createFakeHub({ status: SAMPLE_STATUS });
   const inner = globalThis.fetch;
   const seen: Seen[] = [];
@@ -46,6 +46,23 @@ function hubWith(opts: { enabled?: boolean; docs?: ReturnType<typeof doc>[]; sum
       if (!rest && method === 'DELETE') { docs = docs.filter((d) => d.id !== id); return new Response(null, { status: 204 }); }
       if (!rest && method === 'PATCH') { docs = docs.map((d) => (d.id === id ? { ...d, ...body } : d)); return jsonResponse(docs.find((d) => d.id === id)); }
       if (rest === '/reprocess') { docs = docs.map((d) => (d.id === id ? { ...d, state: 'queued', tier: body.tier ?? d.tier } : d)); return jsonResponse(docs.find((d) => d.id === id)); }
+      const inspect = rest?.match(/^\/inspect\/pages\/(\d+)(\/blocks\/(\d+))?(\/image)?$/);
+      if (inspect) {
+        const pageNo = Number(inspect[1]);
+        if (inspect[4]) return opts.noImage ? jsonResponse({ detail: 'There is no picture of that' }, 404) : new Response(`png-${pageNo}-${inspect[3] ?? 'page'}`, { status: 200, headers: { 'Content-Type': 'image/png' } });
+        return jsonResponse({
+          document_id: id, title: 'Policy', source_hash: 'ab'.repeat(32), evidence_type: 'derived_extraction', state: 'ready', tier: 'basic', next_tier: 'standard', source_type: opts.noImage ? 'docx' : 'pdf', page: pageNo, page_count: 2,
+          page_image: !opts.noImage, width_pt: 595, height_pt: 842,
+          blocks: [{ block: 1, type: 'paragraph_title', bbox: opts.noImage ? null : [0.1, 0.05, 0.6, 0.1] }, { block: 2, type: 'table', bbox: opts.noImage ? null : [0.1, 0.2, 0.7, 0.4] }],
+          markdown: `<!-- page ${pageNo} of 2 -->\n\n## <img src=x onerror=boom()> Heading ${pageNo}\n\n| a | b |`,
+          html: `<style>.docvortex-text{color:#123}</style><article><p class="docvortex-text">Extracted text ${pageNo}</p><script>boom()</script></article>`,
+        });
+      }
+      if (rest?.startsWith('/export')) {
+        if (opts.exportFails) return jsonResponse({ detail: 'The document is not processed yet' }, 409);
+        return new Response(`export:${url.searchParams.get('format')}`, { status: 200, headers: { 'Content-Type': 'text/plain' } });
+      }
+      if (rest === '/original') return new Response('%PDF-original', { status: 200, headers: { 'Content-Type': 'application/pdf' } });
       if (rest === '/search') return jsonResponse({ document_id: id, title: 'Policy', hits: [{ snippet: '<b>The retention requirement</b> is 7 days.', page: 1, locator: 'doc:x/tier:basic/page:1' }], complete: true });
       if (rest === '/summaries' && method === 'GET') return jsonResponse(summaries);
       if (rest === '/summaries' && method === 'POST') {
@@ -59,6 +76,16 @@ function hubWith(opts: { enabled?: boolean; docs?: ReturnType<typeof doc>[]; sum
   return { seen };
 }
 
+const saved: { name: string; text: string }[] = [];
+vi.mock('../src/utils/download', () => ({
+  saveBlob: (blob: Blob, name: string) => { void blob.text().then((text) => saved.push({ name, text })); },
+}));
+
+beforeEach(() => {
+  saved.length = 0;
+  URL.createObjectURL = vi.fn(() => 'blob:test-image');
+  URL.revokeObjectURL = vi.fn();
+});
 afterEach(() => vi.unstubAllGlobals());
 
 describe('Documents', () => {
@@ -173,4 +200,100 @@ describe('Documents', () => {
     await screen.findByText('No documents yet.');
     expect(hub.seen.filter((s) => s.method === 'DELETE')).toHaveLength(1);
   });
+
+  describe('extraction inspector', () => {
+    async function openInspector(opts: Parameters<typeof hubWith>[0] = { docs: [doc('d1', 'Policy')] }) {
+      const hub = hubWith(opts);
+      const view = renderApp('#/documents/d1');
+      const user = userEvent.setup();
+      await user.click(await screen.findByRole('button', { name: 'Inspect extraction' }));
+      await screen.findByRole('region', { name: 'Extraction inspector' });
+      return { hub, user, ...view };
+    }
+
+    it('puts the original page beside what MinerU extracted, with tier, page count and block overlay', async () => {
+      const { hub } = await openInspector();
+      await screen.findByRole('img', { name: /Page 1 of Policy, as in the original/ });
+      expect(screen.getByText('Read at Basic')).toBeInTheDocument();
+      expect(screen.getByRole('group', { name: 'Page navigation' })).toHaveTextContent('of 2');
+      expect(screen.getByRole('button', { name: 'Block 1, paragraph_title' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Block 2, table' })).toBeInTheDocument();
+      const imageRequest = hub.seen.find((s) => s.path.endsWith('/inspect/pages/1/image'))!;
+      expect(imageRequest.method).toBe('GET');
+      expect(imageRequest.csrf).toBe('1');
+    });
+
+    it('shows the extraction only in a locked frame, and markdown as literal text', async () => {
+      const { user, container } = await openInspector();
+      const frame = await screen.findByTitle(/Extracted page 1, rendered by MinerU/);
+      expect(frame).toHaveAttribute('sandbox', '');
+      expect(frame.getAttribute('srcdoc')).toContain("default-src 'none'");
+      expect(frame.getAttribute('srcdoc')).toContain('Extracted text 1');
+      expect(document.querySelector('.docvortex-text, script')).toBeNull(); // nothing from the extraction was put into the page itself
+      await user.click(screen.getByRole('tab', { name: 'Markdown' }));
+      await screen.findByText(/Heading 1/);
+      expect(container.querySelector('img[src="x"]')).toBeNull();
+      await user.click(screen.getByRole('tab', { name: /Blocks \(2\)/ }));
+      expect(screen.getByRole('row', { name: /1 paragraph_title/ })).toBeInTheDocument();
+    });
+
+    it('moves page by page and keeps the original and the extraction on the same page', async () => {
+      const { hub, user } = await openInspector();
+      await screen.findByRole('img', { name: /Page 1 of Policy/ });
+      expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled();
+      await user.click(screen.getByRole('button', { name: 'Next page' }));
+      await screen.findByRole('img', { name: /Page 2 of Policy/ });
+      await screen.findByTitle(/Extracted page 2, rendered by MinerU/);
+      expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
+      expect(hub.seen.some((s) => s.path.endsWith('/inspect/pages/2/image'))).toBe(true);
+      const box = screen.getByLabelText('Page number');
+      await user.clear(box); // an empty box means page 1
+      await screen.findByRole('img', { name: /Page 1 of Policy/ });
+      expect(box).toHaveValue(1);
+    });
+
+    it('cuts out a selected block with MinerU and lets it be dismissed', async () => {
+      const { hub, user } = await openInspector();
+      await user.click(await screen.findByRole('button', { name: 'Block 2, table' }));
+      await screen.findByRole('img', { name: /Block 2 \(table\) cut from the page/ });
+      expect(hub.seen.some((s) => s.path.endsWith('/inspect/pages/1/blocks/2/image'))).toBe(true);
+      await user.click(screen.getByRole('button', { name: 'Block 2, table' }));
+      await waitFor(() => expect(screen.queryByLabelText('Selected block')).toBeNull());
+      await user.click(screen.getByLabelText('Show blocks on the page'));
+      expect(screen.queryByRole('button', { name: 'Block 1, paragraph_title' })).toBeNull();
+    });
+
+    it('offers the existing Improve reading from inside the inspector', async () => {
+      const { hub, user } = await openInspector();
+      const inside = within(screen.getByRole('region', { name: 'Extraction inspector' }));
+      await user.click(inside.getByRole('button', { name: /Improve reading \(Standard\)/ }));
+      await waitFor(() => expect(hub.seen.some((s) => s.path.endsWith('/reprocess') && (s.body as any).tier === 'standard')).toBe(true));
+    });
+
+    it('downloads Markdown, HTML, both structured results and the original, named from the title', async () => {
+      const { user } = await openInspector();
+      const group = within(screen.getByRole('group', { name: 'Downloads' }));
+      for (const label of ['Markdown', 'HTML', 'Content list (JSON)', 'Structured result (JSON)', 'Original file']) await user.click(group.getByRole('button', { name: label }));
+      await waitFor(() => expect(saved).toHaveLength(5));
+      expect(saved.map((s) => s.name).sort()).toEqual(['Policy-basic-content_list.json', 'Policy-basic-html.html', 'Policy-basic-markdown.md', 'Policy-basic-middle_json.json', 'Policy-basic-original.pdf']);
+      expect(saved.find((s) => s.name.endsWith('markdown.md'))!.text).toBe('export:markdown');
+      expect(saved.find((s) => s.name.endsWith('original.pdf'))!.text).toBe('%PDF-original');
+    });
+
+    it('says plainly when there is no page picture, and when a download fails', async () => {
+      const { user } = await openInspector({ docs: [doc('d1', 'Memo', { mime_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })], noImage: true, exportFails: true });
+      await screen.findByText(/no page picture for this kind of file/);
+      expect(screen.queryByLabelText('Show blocks on the page')).toBeNull();
+      await user.click(within(screen.getByRole('group', { name: 'Downloads' })).getByRole('button', { name: 'Markdown' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent('not processed yet');
+    });
+
+    it('is not offered until the document is ready', async () => {
+      hubWith({ docs: [doc('d1', 'Policy', { state: 'processing' })] });
+      renderApp('#/documents/d1');
+      await screen.findByText(/still reading this document/);
+      expect(screen.queryByRole('button', { name: 'Inspect extraction' })).toBeNull();
+    });
+  });
 });
+

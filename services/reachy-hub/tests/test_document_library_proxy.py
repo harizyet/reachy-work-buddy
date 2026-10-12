@@ -133,3 +133,27 @@ def test_a_core_that_is_down_is_a_fixed_502_without_details(monkeypatch, tmp_pat
     client = login(make(monkeypatch, tmp_path, transport=httpx.MockTransport(down)))
     for response in (client.get("/document-library/documents"), client.get("/document-library/config")):
         assert response.status_code == 502 and "10.0.0.9" not in response.text and response.json()["detail"] == "The document library is unavailable"
+
+
+def test_inspector_routes_need_the_owner_session_and_pass_files_with_safe_headers(monkeypatch, tmp_path):
+    client = make(monkeypatch, tmp_path)
+    paths = ("/document-library/documents/x/inspect/pages/1", "/document-library/documents/x/inspect/pages/1/image", "/document-library/documents/x/inspect/pages/1/blocks/2/image",
+             "/document-library/documents/x/export", "/document-library/documents/x/original")
+    for path in paths:
+        assert client.get(path).status_code == 401 and client.get(path, headers={"Authorization": "Bearer test-token"}).status_code == 401, path
+    login(client)
+    doc = upload(client, sensitivity="sensitive", title="Tender").json()
+    original = client.get(f"/document-library/documents/{doc['id']}/original")
+    assert original.status_code == 200 and original.content == PDF and original.headers["content-type"] == "application/pdf"  # a sensitive original, readable by the owner session
+    assert original.headers["content-disposition"] == 'attachment; filename="Spec.pdf"' and original.headers["content-security-policy"] == "sandbox"
+    assert original.headers["x-content-type-options"] == "nosniff" and original.headers["cache-control"] == "no-store"
+    # no worker in this chain: the page and export routes answer with core's fixed refusal, not an error
+    for path in (f"/document-library/documents/{doc['id']}/inspect/pages/1", f"/document-library/documents/{doc['id']}/export", f"/document-library/documents/{doc['id']}/inspect/pages/1/image"):
+        r = client.get(path)
+        assert r.status_code == 503 and "not configured" in r.json()["detail"], path
+    assert client.get(f"/document-library/documents/{doc['id']}/export", params={"format": "pdf"}).status_code == 422
+    assert client.get(f"/document-library/documents/{doc['id']}/inspect/pages/0").status_code == 422
+    assert client.get(f"/document-library/documents/{doc['id']}/inspect/pages/1/image", params={"format": "gif"}).status_code == 422
+    sent = [h for m, p, h in client.transport_log if p.endswith("/original")]
+    assert sent and all(h.get("x-reachy-access-ceiling") == "sensitive" for h in sent)
+    assert client.get("/document-library/documents/nope/original").status_code == 404

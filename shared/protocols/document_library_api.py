@@ -16,3 +16,8 @@ DOCUMENT_LIBRARY_SEARCH = "/document-library/documents/{document_id}/search"  # 
 # reachable only with the service token, so the header cannot come from a browser or from document text. Absent means "work-private" (the conservative default); an unknown value is refused.
 ACCESS_CEILING_HEADER = "X-Reachy-Access-Ceiling"
 DOCUMENT_LIBRARY_SUMMARIES = "/document-library/documents/{document_id}/summaries"  # GET: summaries of this document (newest first). POST {style, force?}: start one (ordinary, executive, technical)
+DOCUMENT_LIBRARY_INSPECT = "/document-library/documents/{document_id}/inspect/pages/{page}"  # GET: one page as MinerU extracted it (blocks, markdown, html)
+DOCUMENT_LIBRARY_INSPECT_IMAGE = "/document-library/documents/{document_id}/inspect/pages/{page}/image"  # GET: MinerU's rendering of the original page (PDF and images)
+DOCUMENT_LIBRARY_INSPECT_BLOCK_IMAGE = "/document-library/documents/{document_id}/inspect/pages/{page}/blocks/{block}/image"  # GET: the crop of one block (a figure, a table)
+DOCUMENT_LIBRARY_EXPORT = "/document-library/documents/{document_id}/export"  # GET ?format=markdown|html|content_list|middle_json: a download of what MinerU extracted
+DOCUMENT_LIBRARY_ORIGINAL = "/document-library/documents/{document_id}/original"  # GET: the stored original, integrity-checked, as an attachment

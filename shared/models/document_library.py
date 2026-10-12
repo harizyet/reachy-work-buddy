@@ -105,3 +105,30 @@ class SummaryOut(BaseModel):
     evidence_type: str = "derived_interpretation"
     created_at: datetime
     updated_at: datetime
+
+
+class InspectBlockOut(BaseModel):
+    block: int
+    type: str
+    bbox: tuple[float, float, float, float] | None = None  # fractions of the page: left, top, right, bottom
+
+
+class InspectPageOut(BaseModel):
+    """One page as MinerU extracted it, with what the inspector needs to put it beside the original. Derived extraction, never the source."""
+
+    document_id: str
+    title: str
+    source_hash: str
+    evidence_type: str = "derived_extraction"
+    state: str
+    tier: str
+    next_tier: str | None = None
+    source_type: str
+    page: int
+    page_count: int
+    page_image: bool  # MinerU can render a picture of the original page (PDF and image files)
+    width_pt: float | None = None
+    height_pt: float | None = None
+    blocks: list[InspectBlockOut]
+    markdown: str
+    html: str  # MinerU's HTML for the page; untrusted text: show it only inside a sandbox without scripts

@@ -12,6 +12,7 @@ import asyncio
 import contextlib
 import logging
 import os
+import re
 import zipfile
 from collections.abc import AsyncIterator, Callable
 from datetime import datetime
@@ -34,6 +35,7 @@ from companion_core.document_library.models import (
     Priority,
     SummaryStyle,
     extension_of,
+    next_tier,
     tier_for,
     utcnow,
 )
@@ -62,8 +64,15 @@ from shared.models.document_library import (
     DocumentContentOut,
     DocumentHitOut,
     DocumentSearchOut,
+    InspectBlockOut,
+    InspectPageOut,
 )
-from shared.models.document_worker import DocumentStatus, WorkerState, WorkerTier
+from shared.models.document_worker import (
+    DocumentStatus,
+    ExportKind,
+    WorkerState,
+    WorkerTier,
+)
 from shared.models.response import Privacy
 
 ENABLED_FLAG = "DOCUMENT_LIBRARY_ENABLED"
@@ -230,6 +239,57 @@ class DocumentService:
         if updated is None:
             raise DocumentError(404, "No such document")
         return updated
+
+    # --- extraction inspector (MinerU's page images, structured result and renderers, through the worker) ---------------
+
+    @staticmethod
+    def _safe_filename(stem: str, suffix: str) -> str:
+        cleaned = re.sub(r"[^A-Za-z0-9._-]+", "_", stem).strip("._") or "document"
+        return f"{cleaned[:80]}{suffix}"
+
+    async def inspect_page(self, document_id: str, access: AccessContext, page: int) -> InspectPageOut:
+        document = await self._readable(document_id, access)  # exists, not deleting, original intact, class and project allowed, processed
+        try:
+            view = await self.worker.inspect_page(document.id, page)
+        except WorkerError as exc:
+            if exc.code == "page_not_found":
+                raise DocumentError(404, "There is no such page") from None
+            raise await self._worker_failed(document, exc) from None
+        return InspectPageOut(
+            document_id=document.id, title=document.title, source_hash=document.source_hash, state=document.state.value, tier=view.tier.value, next_tier=next_tier(view.tier.value),
+            source_type=view.source_type, page=view.page, page_count=view.page_count, page_image=view.source_type in ("pdf", "png", "jpg"), width_pt=view.width_pt, height_pt=view.height_pt,
+            blocks=[InspectBlockOut(block=b.block, type=b.type, bbox=b.bbox) for b in view.blocks], markdown=view.markdown, html=view.html,
+        )
+
+    async def inspect_image(self, document_id: str, access: AccessContext, page: int, block: int | None = None, *, image_format: str = "png") -> tuple[bytes, str]:
+        document = await self._readable(document_id, access)
+        try:
+            return await self.worker.inspect_image(document.id, page, block, image_format=image_format)
+        except WorkerError as exc:
+            if exc.code in ("page_not_found", "asset_not_found", "no_page_image"):
+                raise DocumentError(404, "There is no picture of that") from None
+            raise await self._worker_failed(document, exc) from None
+
+    async def export(self, document_id: str, access: AccessContext, kind: ExportKind) -> tuple[bytes, str, str]:
+        """What MinerU extracted, as a download: (bytes, content type, file name). The file name is built from the title and the kind, never from a path."""
+        document = await self._readable(document_id, access)
+        try:
+            data, mime, extension = await self.worker.export(document.id, kind)
+        except WorkerError as exc:
+            raise await self._worker_failed(document, exc) from None
+        label = "" if kind is ExportKind.MARKDOWN or kind is ExportKind.HTML else f"-{kind.value.replace('_', '-')}"
+        return data, mime, self._safe_filename(f"{document.title}-{document.tier}{label}", f".{re.sub(r'[^a-z0-9]', '', extension)[:8] or 'bin'}")
+
+    async def original(self, document_id: str, access: AccessContext) -> tuple[bytes, str, str]:
+        """The stored original, hash-verified, for download. Needs no worker: it works for an unprocessed or failed document too."""
+        document = await self.require_usable(document_id)
+        self.authorize(document, access)
+        suffix = Path(document.filename).suffix.lower()
+        try:
+            data = await self.sources.read_verified(document.source_hash)
+        except SourceCorrupt:
+            raise DocumentError(409, "The stored original failed its integrity check") from None
+        return data, document.mime_type, self._safe_filename(Path(document.filename).stem, suffix)
 
     # --- deletion -------------------------------------------------------------------------------------------
 

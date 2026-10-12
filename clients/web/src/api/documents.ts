@@ -154,3 +154,42 @@ export async function askDocument(user: string, documentId: string, text: string
 export function describeError(error: unknown): string {
   return error instanceof ApiError ? error.message : error instanceof Error ? error.message : 'Something went wrong';
 }
+
+// --- Extraction inspector -----------------------------------------------------------------------------
+// What MinerU extracted for one page, MinerU's own picture of the original page and its blocks, and downloads of its outputs. Derived extraction: the original is what counts.
+
+export interface BlockDto {
+  block: number;
+  type: string;
+  bbox: [number, number, number, number] | null; // fractions of the page: left, top, right, bottom
+}
+export interface InspectPageDto {
+  document_id: string;
+  title: string;
+  source_hash: string;
+  evidence_type: string;
+  state: DocumentState;
+  tier: Tier;
+  next_tier: Tier | null;
+  source_type: string;
+  page: number;
+  page_count: number;
+  page_image: boolean;
+  width_pt: number | null;
+  height_pt: number | null;
+  blocks: BlockDto[];
+  markdown: string;
+  html: string;
+}
+export type ExportKind = 'markdown' | 'html' | 'content_list' | 'middle_json';
+
+export async function getInspectPage(id: string, page: number, signal?: AbortSignal): Promise<InspectPageDto> {
+  const o = record(await request(`${base}/${q(id)}/inspect/pages/${page}`, { signal }), 'inspect');
+  if (typeof o.page !== 'number' || typeof o.markdown !== 'string' || typeof o.html !== 'string' || !Array.isArray(o.blocks)) throw new ApiShapeError('inspect');
+  return o as unknown as InspectPageDto;
+}
+/** MinerU's rendering of the original page (a block's crop when `block` is given), as an image to show. */
+export const getPageImage = (id: string, page: number, block?: number, signal?: AbortSignal): Promise<Blob> =>
+  request<Blob>(`${base}/${q(id)}/inspect/pages/${page}${block ? `/blocks/${block}` : ''}/image`, { asBlob: true, signal });
+export const getExport = (id: string, kind: ExportKind): Promise<Blob> => request<Blob>(`${base}/${q(id)}/export?format=${kind}`, { asBlob: true });
+export const getOriginal = (id: string): Promise<Blob> => request<Blob>(`${base}/${q(id)}/original`, { asBlob: true });

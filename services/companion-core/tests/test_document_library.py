@@ -36,8 +36,11 @@ from document_worker.config import Settings as WorkerSettings
 from document_worker.engine import (
     EngineError,
     EngineHealth,
+    LayoutBlock,
+    PageLayout,
     ParseSummary,
     RawContent,
+    RenderedImage,
     Ticket,
 )
 from fastapi.testclient import TestClient
@@ -102,6 +105,24 @@ class FakeEngine:
 
     def read_locator(self, locator, context, limit):
         return RawContent(f"around {locator}", ((locator, locator),))
+
+    def page_layout(self, ref, tier, page):
+        _, doc = self._doc(ref)
+        if page > len(doc["pages"]):
+            raise EngineError("page_not_cached")
+        return PageLayout(595.0, 842.0, (LayoutBlock(1, "text", (0.1, 0.1, 0.9, 0.2)), LayoutBlock(2, "chart", None)))
+
+    def page_html(self, ref, tier, page):
+        _, doc = self._doc(ref)
+        return "<style>.x{}</style><article><p>" + doc["pages"][page - 1].replace("<", "&lt;") + "</p></article>"
+
+    def image(self, ref, tier, page, block, image_format):
+        if block == 99:
+            raise EngineError("block_not_found")
+        return RenderedImage(b"\x89PNG-fake-" + f"{page}-{block}".encode(), "image/png" if image_format == "png" else "image/jpeg")
+
+    def structured_export(self, ref, tier, kind, last_page):
+        return b'{"kind": "' + kind.encode() + b'", "pages": ' + str(last_page).encode() + b"}"
 
     def invalidate(self, ref, tier):
         self.invalidated.append((ref, tier))
@@ -961,3 +982,90 @@ def test_summaries_need_a_local_model(monkeypatch, tmp_path):
         assert env.client.post(f"/document-library/documents/{doc['id']}/summaries", json={}).status_code == 202
         env.run(env.service.wait_for_summaries())
         assert env.client.get(f"/document-library/documents/{doc['id']}/summaries").json()[0]["error_code"] == "no_local_model"
+
+
+# --- the extraction inspector ---------------------------------------------------------------------------------------
+
+
+def _inspect(env, doc_id, page=1, ceiling=None):
+    return env.client.get(f"/document-library/documents/{doc_id}/inspect/pages/{page}", headers={"X-Reachy-Access-Ceiling": ceiling} if ceiling else {})
+
+
+def test_inspect_a_page_shows_minerus_view_with_the_documents_provenance(backend):
+    fig = "![Chart block](doc:" + sha(b"z")[:7] + "/tier:basic/page:1/block:2)"
+    data = b"%PDF-1.4\nFirst page " + fig.encode() + b"\x0cSecond page"
+    doc = backend.upload(data, "Report.pdf").json()
+    body = _inspect(backend, doc["id"]).json()
+    assert (body["title"], body["page"], body["page_count"], body["tier"], body["next_tier"], body["state"]) == ("Report", 1, 2, "basic", "standard", "ready")
+    assert (body["source_hash"], body["evidence_type"], body["source_type"], body["page_image"]) == (doc["source_hash"], "derived_extraction", "pdf", True)
+    assert [(b["block"], b["type"]) for b in body["blocks"]] == [(1, "text"), (2, "chart")] and body["blocks"][0]["bbox"] == [0.1, 0.1, 0.9, 0.2]
+    assert "#page-1-block-2" in body["markdown"] and "doc:" not in body["markdown"] and "<script" not in body["html"].lower()
+    assert "/data" not in str(body) and "backend" not in str(body).lower()
+    assert _inspect(backend, doc["id"], 2).json()["page"] == 2
+    assert _inspect(backend, doc["id"], 3).status_code == 404 and _inspect(backend, doc["id"], 0).status_code == 422 and _inspect(backend, "nope").status_code == 404
+
+
+def test_inspector_checks_policy_state_and_integrity_before_the_worker_is_asked(backend):
+    restricted = backend.upload(PAGES, "Secret.pdf", sensitivity="sensitive").json()
+    backend.switch.calls = []
+    for call in (lambda: _inspect(backend, restricted["id"]), lambda: backend.client.get(f"/document-library/documents/{restricted['id']}/inspect/pages/1/image"),
+                 lambda: backend.client.get(f"/document-library/documents/{restricted['id']}/export")):
+        r = call()
+        assert r.status_code == 403 and "retention" not in r.text
+    assert backend.switch.calls == []  # not even a status call
+    assert _inspect(backend, restricted["id"], ceiling="sensitive").status_code == 200
+    assert _inspect(backend, restricted["id"], ceiling="public").status_code == 403
+    # not processed yet
+    backend.engine.parse_status = "pending"
+    waiting = backend.upload(PAGES + b" x", "Later.pdf").json()
+    assert _inspect(backend, waiting["id"]).status_code == 409
+    # a tampered original is never inspected
+    ok = backend.upload(PAGES + b" y", "Tamper.pdf").json()
+    path = backend.sources.path_for(ok["source_hash"])
+    path.chmod(0o640)
+    path.write_bytes(b"tampered")
+    assert _inspect(backend, ok["id"]).status_code == 409 and backend.client.get(f"/document-library/documents/{ok['id']}/export").status_code == 409
+
+
+def test_page_and_block_images_are_minerus_renderings_with_safe_headers(backend):
+    doc = backend.upload(PAGES, "Report.pdf").json()
+    page = backend.client.get(f"/document-library/documents/{doc['id']}/inspect/pages/2/image")
+    assert page.status_code == 200 and page.headers["content-type"] == "image/png" and page.content == b"\x89PNG-fake-2-None"
+    assert page.headers["cache-control"] == "no-store" and page.headers["x-content-type-options"] == "nosniff"
+    block = backend.client.get(f"/document-library/documents/{doc['id']}/inspect/pages/1/blocks/2/image", params={"format": "jpeg"})
+    assert block.headers["content-type"] == "image/jpeg" and block.content.endswith(b"1-2")
+    assert backend.client.get(f"/document-library/documents/{doc['id']}/inspect/pages/1/blocks/99/image").status_code == 404
+    assert backend.client.get(f"/document-library/documents/{doc['id']}/inspect/pages/1/image", params={"format": "gif"}).status_code == 422
+    docx = backend.upload(docx_bytes(), "Memo.docx").json()
+    r = backend.client.get(f"/document-library/documents/{docx['id']}/inspect/pages/1/image")
+    assert r.status_code == 404 and r.json()["detail"] == "There is no picture of that"  # no page picture for Word files
+    assert _inspect(backend, docx["id"]).json()["page_image"] is False and backend.client.get(f"/document-library/documents/{docx['id']}").json()["state"] == "ready"  # and the document is unharmed
+    assert _inspect(backend, doc["id"]).json()["page_image"] is True
+
+
+def test_exports_are_attachments_named_from_the_title_and_never_a_path(backend):
+    doc = backend.upload(PAGES, "Policy.pdf", title="../../etc/pass wd\r\nX-Evil: 1").json()
+    for kind, suffix, mime in (("markdown", ".md", "text/markdown"), ("html", ".html", "text/html"), ("content_list", ".json", "application/json"), ("middle_json", ".json", "application/json")):
+        r = backend.client.get(f"/document-library/documents/{doc['id']}/export", params={"format": kind})
+        disposition = r.headers["content-disposition"]
+        assert r.status_code == 200 and disposition.startswith('attachment; filename="') and disposition.endswith(suffix + '"'), (kind, disposition)
+        assert "/" not in disposition and ".." not in disposition and "\r" not in disposition and "x-evil" not in r.headers
+        assert r.headers["x-content-type-options"] == "nosniff" and r.headers["cache-control"] == "no-store" and r.headers["content-type"].startswith(mime)
+    assert backend.client.get(f"/document-library/documents/{doc['id']}/export", params={"format": "html"}).headers["content-security-policy"] == "sandbox"
+    assert b"retention requirement is 7 days" in backend.client.get(f"/document-library/documents/{doc['id']}/export").content
+    assert backend.client.get(f"/document-library/documents/{doc['id']}/export", params={"format": "pdf"}).status_code == 422
+
+
+def test_the_original_downloads_verified_even_when_the_worker_is_down(backend):
+    backend.switch.down = True
+    doc = backend.upload(PAGES, "Policy.pdf").json()
+    r = backend.client.get(f"/document-library/documents/{doc['id']}/original")
+    assert r.status_code == 200 and r.content == PAGES and r.headers["content-type"] == "application/pdf"
+    assert r.headers["content-disposition"] == 'attachment; filename="Policy.pdf"' and r.headers["content-security-policy"] == "sandbox" and r.headers["x-content-type-options"] == "nosniff"
+    restricted = backend.upload(PAGES + b"z", "Secret.pdf", sensitivity="sensitive").json()
+    assert backend.client.get(f"/document-library/documents/{restricted['id']}/original").status_code == 403
+    assert backend.client.get(f"/document-library/documents/{restricted['id']}/original", headers={"X-Reachy-Access-Ceiling": "sensitive"}).status_code == 200
+    path = backend.sources.path_for(doc["source_hash"])
+    path.chmod(0o640)
+    path.write_bytes(b"tampered")
+    assert backend.client.get(f"/document-library/documents/{doc['id']}/original").status_code == 409

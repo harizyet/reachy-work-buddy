@@ -10,8 +10,11 @@ from document_worker.config import Settings
 from document_worker.engine import (
     EngineError,
     EngineHealth,
+    LayoutBlock,
+    PageLayout,
     ParseSummary,
     RawContent,
+    RenderedImage,
     Ticket,
 )
 
@@ -80,6 +83,28 @@ class FakeEngine:
 
     def read_locator(self, locator, context, limit):
         return RawContent(f"locator content for {locator}", ((locator, locator),))
+
+    def page_layout(self, ref, tier, page):
+        self._maybe_fail()
+        _, doc = self._doc(ref)
+        if page > len(doc["pages"]):
+            raise EngineError("page_not_cached")
+        return PageLayout(595.0, 842.0, (LayoutBlock(1, "text", (0.1, 0.1, 0.9, 0.2)), LayoutBlock(2, "chart", None)))
+
+    def page_html(self, ref, tier, page):
+        self._maybe_fail()
+        _, doc = self._doc(ref)
+        return "<style>.x{}</style><article><p>" + doc["pages"][page - 1].replace("<", "&lt;") + "</p></article>"
+
+    def image(self, ref, tier, page, block, image_format):
+        self._maybe_fail()
+        if block == 99:
+            raise EngineError("block_not_found")
+        return RenderedImage(b"\x89PNG-fake-" + f"{page}-{block}".encode(), "image/png" if image_format == "png" else "image/jpeg")
+
+    def structured_export(self, ref, tier, kind, last_page):
+        self._maybe_fail()
+        return b'{"kind": "' + kind.encode() + b'", "pages": ' + str(last_page).encode() + b"}"
 
     def invalidate(self, ref, tier):
         self._maybe_fail()

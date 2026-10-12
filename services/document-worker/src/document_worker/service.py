@@ -24,6 +24,9 @@ from shared.models.document_worker import (
     ContentRead,
     DeleteResult,
     DocumentStatus,
+    ExportKind,
+    LayoutBlockOut,
+    PageInspection,
     SearchHit,
     SearchResponse,
     WorkerHealth,
@@ -39,6 +42,8 @@ _MAGIC = {
 }
 _PAGE_RANGE_RE = re.compile(r"^\d+(-\d+)?(,\d+(-\d+)?)*$")
 _PAGE_MARKER_RE = re.compile(r"<!--\s*page \d+ of \d+\s*-->")
+_BACKEND_LOCATOR = re.compile(r"doc:[0-9a-f]+/tier:[a-z]+/page:(\d+)(?:/block:(\d+))?")
+_PAGE_IMAGE_TYPES = {"pdf", "png", "jpg"}  # MinerU renders page and block images from PDF and image sources only
 _NOT_READY = {"tier_not_cached", "page_not_cached", "not_cached", "parse_not_required"}
 _ALREADY_GONE = {"file_not_found", "doc_not_found"}
 _PAGE_CACHE = 2000  # parsed pages kept in memory across all documents (a few MB)
@@ -271,6 +276,64 @@ class DocumentService:
             for r in ranking.rank([(n, t) for n, t in pages if t], query, limit)
         ]
         return SearchResponse(document_id=document_id, hits=hits, complete=count <= self.settings.max_pages)
+
+    # --- extraction inspector (MinerU's own renderers and page images) --------------------------------------------------
+
+    @staticmethod
+    def _public_refs(text: str) -> str:
+        """MinerU's markdown refers to figures by backend locator; the inspector refers to `#page-N-block-M` instead, so no backend identity or locator ever leaves the worker."""
+        return _BACKEND_LOCATOR.sub(lambda m: f"#page-{m.group(1)}" + (f"-block-{m.group(2)}" if m.group(2) else ""), text)
+
+    def _inspectable(self, document_id: str, page: int | None = None) -> tuple[Meta, int]:
+        meta = self._meta(document_id)
+        try:
+            count = self.engine.page_count(meta.backend_ref) or 0
+        except EngineError as exc:
+            raise _engine_failure(exc) from None
+        last = min(count, self.settings.max_pages)
+        if page is not None and not 1 <= page <= last:
+            raise WorkerError(404, "page_not_found")  # not "not_found": that code means the worker does not know the document at all, which callers treat as lost state
+        return meta, count
+
+    def inspect_page(self, document_id: str, page: int) -> PageInspection:
+        meta, count = self._inspectable(document_id, page)
+        try:
+            raw = self.engine.read(meta.backend_ref, meta.tier, str(page), None, 30000)
+            layout = self.engine.page_layout(meta.backend_ref, meta.tier, page)
+            html = self.engine.page_html(meta.backend_ref, meta.tier, page)
+        except EngineError as exc:
+            raise _engine_failure(exc) from None
+        return PageInspection(
+            document_id=document_id, page=page, page_count=count, tier=WorkerTier(meta.tier), source_type=meta.extension, width_pt=layout.width_pt, height_pt=layout.height_pt,
+            blocks=[LayoutBlockOut(block=b.block, type=b.type, bbox=b.bbox) for b in layout.blocks], markdown=self._public_refs(raw.content), html=html,
+        )
+
+    def inspect_image(self, document_id: str, page: int, block: int | None, image_format: str) -> tuple[bytes, str]:
+        meta, _count = self._inspectable(document_id, page)
+        if meta.extension not in _PAGE_IMAGE_TYPES:
+            raise WorkerError(415, "no_page_image")
+        try:
+            image = self.engine.image(meta.backend_ref, meta.tier, page, block, image_format)
+        except EngineError as exc:
+            if exc.code in {"block_not_found", "asset_not_available", "bbox_not_available", "format_not_supported"}:
+                raise WorkerError(404, "asset_not_found") from None
+            raise _engine_failure(exc) from None
+        return image.data, image.mime
+
+    def export(self, document_id: str, kind: ExportKind) -> tuple[bytes, str, str]:
+        """A download of what MinerU extracted: (bytes, content type, file extension)."""
+        meta, count = self._inspectable(document_id)
+        last = min(count, self.settings.max_pages)
+        try:
+            if kind is ExportKind.MARKDOWN:
+                parts = [self._public_refs(self.engine.read(meta.backend_ref, meta.tier, str(n), None, 30000).content) for n in range(1, last + 1)]
+                return "\n\n".join(parts).encode(), "text/markdown; charset=utf-8", "md"
+            payload = self.engine.structured_export(meta.backend_ref, meta.tier, kind.value, last)
+        except EngineError as exc:
+            raise _engine_failure(exc) from None
+        if kind is ExportKind.HTML:
+            return payload, "text/html; charset=utf-8", "html"
+        return payload, "application/json", "json"
 
     # --- deletion ------------------------------------------------------------------------------------------------
 

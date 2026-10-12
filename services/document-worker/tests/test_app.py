@@ -208,3 +208,57 @@ def test_a_worker_can_be_configured_without_the_advanced_tier(client, engine, se
     limited = type(client)(create_app(replace(settings, tiers=(WorkerTier.FLASH, WorkerTier.BASIC, WorkerTier.STANDARD)), engine))
     assert limited.upload("doc1", DOC_A, tier="advanced").json() == {"error": "tier_not_enabled"}
     assert limited.get("/health").json()["tiers"] == ["flash", "basic", "standard"]
+
+
+def test_inspect_page_returns_minerus_view_without_backend_identity(client):
+    page1 = "Page one ![Chart block](doc:" + sha(b"x")[:7] + "/tier:basic/page:1/block:2) and a <b>tag</b>"
+    data = pdf_bytes(page1, "Page two")
+    client.upload("doc1", data)
+    ref = sha(data)[:7]
+    body = client.get("/documents/doc1/inspect/pages/1", headers=AUTH).json()
+    assert (body["page"], body["page_count"], body["tier"], body["source_type"]) == (1, 2, "basic", "pdf")
+    assert [(b["block"], b["type"], b["bbox"]) for b in body["blocks"]] == [(1, "text", [0.1, 0.1, 0.9, 0.2]), (2, "chart", None)]
+    assert "#page-1-block-2" in body["markdown"] and "doc:" not in body["markdown"] and ref not in body["markdown"]
+    assert "&lt;b>tag" in body["html"] and "<script" not in body["html"].lower()
+    assert (body["width_pt"], body["height_pt"]) == (595.0, 842.0)
+    assert client.get("/documents/doc1/inspect/pages/3", headers=AUTH).json() == {"error": "page_not_found"}
+    assert client.get("/documents/doc1/inspect/pages/0", headers=AUTH).status_code == 422
+    assert client.get("/documents/nope/inspect/pages/1", headers=AUTH).status_code == 404
+    assert client.get("/documents/doc1/inspect/pages/1").status_code == 401
+
+
+def test_inspect_images_come_from_the_backend_renderer_and_carry_safe_headers(client):
+    client.upload("doc1", DOC_A)
+    page = client.get("/documents/doc1/inspect/pages/2/image", headers=AUTH)
+    assert page.status_code == 200 and page.headers["content-type"] == "image/png" and page.content == b"\x89PNG-fake-2-None"
+    assert page.headers["cache-control"] == "no-store" and page.headers["x-content-type-options"] == "nosniff"
+    block = client.get("/documents/doc1/inspect/pages/1/blocks/2/image", headers=AUTH, params={"format": "jpeg"})
+    assert block.headers["content-type"] == "image/jpeg" and block.content.endswith(b"1-2")
+    assert client.get("/documents/doc1/inspect/pages/1/blocks/99/image", headers=AUTH).json() == {"error": "asset_not_found"}
+    assert client.get("/documents/doc1/inspect/pages/1/image", headers=AUTH, params={"format": "gif"}).status_code == 422
+    assert client.get("/documents/doc1/inspect/pages/9/image", headers=AUTH).json() == {"error": "page_not_found"}
+    docx = b"PK\x03\x04 fake docx"
+    client.upload("doc2", docx, extension="docx", tier="flash")
+    assert client.get("/documents/doc2/inspect/pages/1/image", headers=AUTH).json() == {"error": "no_page_image"}  # MinerU renders page images for PDFs and images only
+
+
+def test_exports_are_minerus_outputs_and_rewrite_locators(client):
+    data = pdf_bytes("Intro ![Fig](doc:" + sha(b"y")[:7] + "/tier:basic/page:1/block:3)", "Second page")
+    client.upload("doc1", data)
+    md = client.get("/documents/doc1/export", headers=AUTH, params={"format": "markdown"})
+    assert md.status_code == 200 and md.headers["x-export-extension"] == "md" and md.headers["content-type"].startswith("text/markdown")
+    assert "#page-1-block-3" in md.text and "Second page" in md.text and "doc:" not in md.text
+    for kind, ext in (("content_list", "json"), ("middle_json", "json"), ("html", "html")):
+        r = client.get("/documents/doc1/export", headers=AUTH, params={"format": kind})
+        assert r.status_code == 200 and r.headers["x-export-extension"] == ext, kind
+    assert client.get("/documents/doc1/export", headers=AUTH).headers["x-export-extension"] == "md"  # markdown by default
+    assert client.get("/documents/doc1/export", headers=AUTH, params={"format": "pdf"}).status_code == 422
+    assert client.get("/documents/doc1/export", params={"format": "markdown"}).status_code == 401
+
+
+def test_inspector_fails_closed_on_engine_errors_without_leaking_messages(client, engine):
+    client.upload("doc1", DOC_A)
+    engine.fail_with = "parse_failed /data/work/doc1/source.pdf"
+    for path in ("/documents/doc1/inspect/pages/1", "/documents/doc1/export"):
+        r = client.get(path, headers=AUTH)
+        assert r.status_code == 502 and r.json() == {"error": "engine_error"} and "/data" not in r.text

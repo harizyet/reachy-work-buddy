@@ -41,6 +41,26 @@ class RawContent:
 
 
 @dataclass(frozen=True)
+class LayoutBlock:
+    block: int  # 1-based, as in MinerU's block locators
+    type: str
+    bbox: tuple[float, float, float, float] | None
+
+
+@dataclass(frozen=True)
+class PageLayout:
+    width_pt: float | None
+    height_pt: float | None
+    blocks: tuple[LayoutBlock, ...]
+
+
+@dataclass(frozen=True)
+class RenderedImage:
+    data: bytes
+    mime: str
+
+
+@dataclass(frozen=True)
 class EngineHealth:
     ready: bool
     telemetry_disabled: bool
@@ -54,6 +74,10 @@ class DocumentEngine(Protocol):
     def page_count(self, backend_ref: str) -> int | None: ...
     def read(self, backend_ref: str, tier: str, page_range: str | None, after: str | None, limit: int) -> RawContent: ...
     def read_locator(self, locator: str, context: int, limit: int) -> RawContent: ...
+    def page_layout(self, backend_ref: str, tier: str, page: int) -> PageLayout: ...
+    def page_html(self, backend_ref: str, tier: str, page: int) -> str: ...
+    def image(self, backend_ref: str, tier: str, page: int, block: int | None, image_format: str) -> RenderedImage: ...
+    def structured_export(self, backend_ref: str, tier: str, kind: str, last_page: int) -> bytes: ...
     def invalidate(self, backend_ref: str, tier: str) -> None: ...
     def forget(self, path: Path) -> None: ...
     def cleanup_orphans(self) -> None: ...
@@ -154,6 +178,25 @@ class DoclibEngine:
 
     def read_locator(self, locator, context, limit):
         return self._raw(self._call(self._api().read_content, locator, context=context, limit=limit))
+
+    # --- extraction inspector: MinerU's own structured result, renderers and page images ---------------------------
+
+    def _inspector(self):
+        from document_worker import mineru_result
+
+        return mineru_result.Inspector(self._api())
+
+    def page_layout(self, backend_ref, tier, page):
+        return self._call(self._inspector().page_layout, backend_ref, tier, page)
+
+    def page_html(self, backend_ref, tier, page):
+        return self._call(self._inspector().page_html, backend_ref, tier, page)
+
+    def image(self, backend_ref, tier, page, block, image_format):
+        return self._call(self._inspector().image, backend_ref, tier, page, block, image_format)
+
+    def structured_export(self, backend_ref, tier, kind, last_page):
+        return self._call(self._inspector().structured_export, backend_ref, tier, kind, last_page)
 
     def invalidate(self, backend_ref: str, tier: str) -> None:
         """Drop the cached parse of ONE tier. Identical bytes share a backend document, so invalidating every tier would also remove what another Reachy document of the same bytes is using."""

@@ -8,6 +8,8 @@ from collections.abc import AsyncIterator
 from typing import Annotated
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import Path as PathParam
+from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from companion_core.document_library.access import access_from_ceiling
@@ -26,17 +28,23 @@ from shared.models.document_library import (
     DocumentContentOut,
     DocumentOut,
     DocumentSearchOut,
+    InspectPageOut,
     SummaryOut,
     SummarySectionOut,
 )
-from shared.models.document_worker import WorkerTier
+from shared.models.document_worker import ExportKind, WorkerTier
 from shared.models.response import Privacy
 from shared.protocols.document_library_api import (
     ACCESS_CEILING_HEADER,
     DOCUMENT_LIBRARY_CONFIG,
     DOCUMENT_LIBRARY_DOCUMENT,
     DOCUMENT_LIBRARY_DOCUMENTS,
+    DOCUMENT_LIBRARY_EXPORT,
+    DOCUMENT_LIBRARY_INSPECT,
+    DOCUMENT_LIBRARY_INSPECT_BLOCK_IMAGE,
+    DOCUMENT_LIBRARY_INSPECT_IMAGE,
     DOCUMENT_LIBRARY_LOCATOR,
+    DOCUMENT_LIBRARY_ORIGINAL,
     DOCUMENT_LIBRARY_READ,
     DOCUMENT_LIBRARY_REPROCESS,
     DOCUMENT_LIBRARY_SEARCH,
@@ -189,3 +197,37 @@ def install_document_library_routes(app: FastAPI) -> None:
         body = body or SummaryBody()
         output = await run(service().summarize(document_id, access(request), body.style, force=body.force))
         return summary_out(await run(service().get(document_id)), output)
+
+    # --- extraction inspector --------------------------------------------------------------------------------------
+
+    def download(data: bytes, mime: str, filename: str, *, sandbox: bool = False) -> Response:
+        headers = {"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"}
+        if sandbox:
+            headers["Content-Security-Policy"] = "sandbox"  # a downloaded or opened file can run nothing
+        return Response(content=data, media_type=mime, headers=headers)
+
+    @app.get(DOCUMENT_LIBRARY_INSPECT)
+    async def inspect_page(request: Request, document_id: str, page: Annotated[int, PathParam(ge=1, le=100000)]) -> InspectPageOut:
+        return await run(service().inspect_page(document_id, access(request), page))
+
+    @app.get(DOCUMENT_LIBRARY_INSPECT_IMAGE)
+    async def inspect_image(request: Request, document_id: str, page: Annotated[int, PathParam(ge=1, le=100000)], fmt: str = Query(default="png", alias="format", pattern="^(png|jpeg)$")) -> Response:
+        data, mime = await run(service().inspect_image(document_id, access(request), page, None, image_format=fmt))
+        return Response(content=data, media_type=mime, headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
+
+    @app.get(DOCUMENT_LIBRARY_INSPECT_BLOCK_IMAGE)
+    async def inspect_block_image(
+        request: Request, document_id: str, page: Annotated[int, PathParam(ge=1, le=100000)], block: Annotated[int, PathParam(ge=1, le=100000)], fmt: str = Query(default="png", alias="format", pattern="^(png|jpeg)$")
+    ) -> Response:
+        data, mime = await run(service().inspect_image(document_id, access(request), page, block, image_format=fmt))
+        return Response(content=data, media_type=mime, headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
+
+    @app.get(DOCUMENT_LIBRARY_EXPORT)
+    async def export(request: Request, document_id: str, kind: Annotated[ExportKind, Query(alias="format")] = ExportKind.MARKDOWN) -> Response:
+        data, mime, filename = await run(service().export(document_id, access(request), kind))
+        return download(data, mime, filename, sandbox=kind is ExportKind.HTML)
+
+    @app.get(DOCUMENT_LIBRARY_ORIGINAL)
+    async def original(request: Request, document_id: str) -> Response:
+        data, mime, filename = await run(service().original(document_id, access(request)))
+        return download(data, mime, filename, sandbox=True)

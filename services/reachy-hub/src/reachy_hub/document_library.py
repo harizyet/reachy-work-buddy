@@ -21,7 +21,12 @@ from shared.protocols.document_library_api import (
     DOCUMENT_LIBRARY_CONFIG,
     DOCUMENT_LIBRARY_DOCUMENT,
     DOCUMENT_LIBRARY_DOCUMENTS,
+    DOCUMENT_LIBRARY_EXPORT,
+    DOCUMENT_LIBRARY_INSPECT,
+    DOCUMENT_LIBRARY_INSPECT_BLOCK_IMAGE,
+    DOCUMENT_LIBRARY_INSPECT_IMAGE,
     DOCUMENT_LIBRARY_LOCATOR,
+    DOCUMENT_LIBRARY_ORIGINAL,
     DOCUMENT_LIBRARY_READ,
     DOCUMENT_LIBRARY_REPROCESS,
     DOCUMENT_LIBRARY_SEARCH,
@@ -31,6 +36,7 @@ from shared.protocols.document_library_api import (
 _NO_STORE = {"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"}
 _ID = r"^[A-Za-z0-9_-]{1,64}$"
 _OWNER_CEILING = {ACCESS_CEILING_HEADER: "sensitive"}
+_FILE_HEADERS = {"content-disposition", "content-security-policy"}
 _PASS = (400, 403, 404, 409, 413, 415, 422, 502, 503)
 
 
@@ -83,6 +89,23 @@ def install_document_library_routes(app, require_owner_session, core) -> None:
                 raise HTTPException(response.status_code, detail)
             raise HTTPException(502, "The document library is unavailable")
         return JSONResponse(response.json(), status_code=response.status_code, headers=_NO_STORE)
+
+    async def forward_file(path: str, *, params=None, timeout: float = 60.0):
+        """A binary or text file from core (a page picture, an export, the original), passed through with only the headers that make it safe to receive."""
+        try:
+            response = await core.document_request("GET", path, params=params, headers=_OWNER_CEILING, timeout=timeout)
+        except (httpx.HTTPError, ValueError):
+            raise HTTPException(502, "The document library is unavailable") from None
+        if response.status_code >= 400:
+            if response.status_code in _PASS:
+                try:
+                    detail = str(response.json().get("detail", "Request refused"))[:200]
+                except (ValueError, AttributeError):
+                    detail = "Request refused"
+                raise HTTPException(response.status_code, detail)
+            raise HTTPException(502, "The document library is unavailable")
+        kept = {k: v for k, v in response.headers.items() if k.lower() in _FILE_HEADERS}
+        return Response(content=response.content, media_type=response.headers.get("content-type"), headers={**_NO_STORE, "X-Content-Type-Options": "nosniff", **kept})
 
     def doc(document_id: str) -> str:
         return quote(document_id, safe="")
@@ -155,3 +178,27 @@ def install_document_library_routes(app, require_owner_session, core) -> None:
     @app.post(DOCUMENT_LIBRARY_SUMMARIES, dependencies=owner_change)
     async def summarize(body: SummaryBody | None = None, document_id: str = Path(pattern=_ID)):
         return await forward("POST", f"{DOCUMENT_LIBRARY_DOCUMENTS}/{doc(document_id)}/summaries", json=(body or SummaryBody()).model_dump(), timeout=30.0)
+
+    # --- extraction inspector (MinerU's view of a page, its pictures, its exports) ---------------------------------
+
+    @app.get(DOCUMENT_LIBRARY_INSPECT, dependencies=owner)
+    async def inspect_page(document_id: str = Path(pattern=_ID), page: int = Path(ge=1, le=100000)):
+        return await forward("GET", f"{DOCUMENT_LIBRARY_DOCUMENTS}/{doc(document_id)}/inspect/pages/{page}", timeout=60.0)
+
+    @app.get(DOCUMENT_LIBRARY_INSPECT_IMAGE, dependencies=owner)
+    async def inspect_image(document_id: str = Path(pattern=_ID), page: int = Path(ge=1, le=100000), format: str = Query(default="png", pattern="^(png|jpeg)$")):
+        return await forward_file(f"{DOCUMENT_LIBRARY_DOCUMENTS}/{doc(document_id)}/inspect/pages/{page}/image", params={"format": format})
+
+    @app.get(DOCUMENT_LIBRARY_INSPECT_BLOCK_IMAGE, dependencies=owner)
+    async def inspect_block_image(
+        document_id: str = Path(pattern=_ID), page: int = Path(ge=1, le=100000), block: int = Path(ge=1, le=100000), format: str = Query(default="png", pattern="^(png|jpeg)$")
+    ):
+        return await forward_file(f"{DOCUMENT_LIBRARY_DOCUMENTS}/{doc(document_id)}/inspect/pages/{page}/blocks/{block}/image", params={"format": format})
+
+    @app.get(DOCUMENT_LIBRARY_EXPORT, dependencies=owner)
+    async def export(document_id: str = Path(pattern=_ID), format: str = Query(default="markdown", pattern="^(markdown|html|content_list|middle_json)$")):
+        return await forward_file(f"{DOCUMENT_LIBRARY_DOCUMENTS}/{doc(document_id)}/export", params={"format": format}, timeout=120.0)
+
+    @app.get(DOCUMENT_LIBRARY_ORIGINAL, dependencies=owner)
+    async def original(document_id: str = Path(pattern=_ID)):
+        return await forward_file(f"{DOCUMENT_LIBRARY_DOCUMENTS}/{doc(document_id)}/original", timeout=120.0)

@@ -12,3 +12,9 @@ WORKER_PARSE = "/documents/{document_id}/parse"
 WORKER_READ = "/documents/{document_id}/read"
 WORKER_LOCATOR = "/documents/{document_id}/locator"
 WORKER_SEARCH = "/documents/{document_id}/search"
+
+# Extraction inspector (reuses MinerU's own page images, structured result and renderers; nothing here carries a path or a backend locator)
+WORKER_INSPECT_PAGE = "/documents/{document_id}/inspect/pages/{page}"
+WORKER_INSPECT_IMAGE = "/documents/{document_id}/inspect/pages/{page}/image"
+WORKER_INSPECT_BLOCK_IMAGE = "/documents/{document_id}/inspect/pages/{page}/blocks/{block}/image"
+WORKER_EXPORT = "/documents/{document_id}/export"

@@ -13,10 +13,11 @@ from fastapi import (
     Form,
     Header,
     HTTPException,
+    Path,
     Query,
     UploadFile,
 )
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from document_worker.config import Settings
 from document_worker.engine import DoclibEngine, DocumentEngine
@@ -26,6 +27,8 @@ from shared.models.document_worker import (
     ContentRead,
     DeleteResult,
     DocumentStatus,
+    ExportKind,
+    PageInspection,
     ParseRequest,
     SearchRequest,
     SearchResponse,
@@ -35,7 +38,11 @@ from shared.models.document_worker import (
 from shared.protocols.document_worker_api import (
     WORKER_DOCUMENT,
     WORKER_DOCUMENTS,
+    WORKER_EXPORT,
     WORKER_HEALTH,
+    WORKER_INSPECT_BLOCK_IMAGE,
+    WORKER_INSPECT_IMAGE,
+    WORKER_INSPECT_PAGE,
     WORKER_LOCATOR,
     WORKER_PARSE,
     WORKER_READ,
@@ -122,5 +129,27 @@ def create_app(settings: Settings | None = None, engine: DocumentEngine | None =
     @app.delete(WORKER_DOCUMENT, response_model=DeleteResult, dependencies=guard)
     def delete(document_id: str) -> DeleteResult:
         return service.delete(document_id)
+
+    @app.get(WORKER_INSPECT_PAGE, response_model=PageInspection, dependencies=guard)
+    def inspect_page(document_id: str, page: int = Path(ge=1, le=100000)) -> PageInspection:
+        return service.inspect_page(document_id, page)
+
+    def image_response(data: bytes, mime: str) -> Response:
+        return Response(content=data, media_type=mime, headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
+
+    @app.get(WORKER_INSPECT_IMAGE, dependencies=guard)
+    def inspect_image(document_id: str, page: int = Path(ge=1, le=100000), format: str = Query(default="png", pattern="^(png|jpeg)$")) -> Response:
+        return image_response(*service.inspect_image(document_id, page, None, format))
+
+    @app.get(WORKER_INSPECT_BLOCK_IMAGE, dependencies=guard)
+    def inspect_block_image(
+        document_id: str, page: int = Path(ge=1, le=100000), block: int = Path(ge=1, le=100000), format: str = Query(default="png", pattern="^(png|jpeg)$")
+    ) -> Response:
+        return image_response(*service.inspect_image(document_id, page, block, format))
+
+    @app.get(WORKER_EXPORT, dependencies=guard)
+    def export(document_id: str, format: Annotated[ExportKind, Query()] = ExportKind.MARKDOWN) -> Response:
+        data, mime, extension = service.export(document_id, format)
+        return Response(content=data, media_type=mime, headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "X-Export-Extension": extension})
 
     return app

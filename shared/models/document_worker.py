@@ -90,3 +90,31 @@ class WorkerHealth(BaseModel):
     telemetry_disabled: bool
     tiers: list[WorkerTier]
     detail: str | None = None
+
+
+class LayoutBlockOut(BaseModel):
+    """One block of MinerU's structured result for a page. `block` is the 1-based number used in block images; `bbox` is (left, top, right, bottom) as fractions of the page, when MinerU has one."""
+
+    block: int
+    type: str
+    bbox: tuple[float, float, float, float] | None = None
+
+
+class PageInspection(BaseModel):
+    document_id: str
+    page: int
+    page_count: int
+    tier: WorkerTier
+    source_type: str  # pdf, png, jpg or docx: page images exist for the first three
+    width_pt: float | None = None
+    height_pt: float | None = None
+    blocks: list[LayoutBlockOut]
+    markdown: str  # MinerU's markdown for this page; image references are `#page-N-block-M`
+    html: str  # MinerU's HTML rendering of this page as a self-contained fragment with its stylesheet and no scripts (still untrusted: show it sandboxed)
+
+
+class ExportKind(StrEnum):
+    MARKDOWN = "markdown"
+    HTML = "html"
+    CONTENT_LIST = "content_list"
+    MIDDLE_JSON = "middle_json"

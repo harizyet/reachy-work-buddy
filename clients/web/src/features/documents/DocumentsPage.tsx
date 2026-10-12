@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Spinner } from '../../components/ui/Spinner';
 import { StatusPill, type Tone } from '../../components/ui/StatusPill';
 import { DocumentTools } from './DocumentTools';
+import { InspectView } from './InspectView';
 import { useDocumentActions, useDocuments, useLibraryEnabled } from './useDocuments';
 
 const STATE_LABEL: Record<DocumentDto['state'], string> = {
@@ -136,6 +137,7 @@ function DocumentDetail({ doc }: { doc: DocumentDto }) {
   const { patch, reprocess, remove } = useDocumentActions();
   const navigate = useNavigate();
   const [confirm, setConfirm] = useState(false);
+  const [inspecting, setInspecting] = useState(false);
   const [title, setTitle] = useState(doc.title);
   const ready = doc.state === 'ready' || doc.state === 'partial';
   const failure = [patch, reprocess, remove].map((m) => m.error).find((e) => e && !(e instanceof StaleSessionError));
@@ -180,6 +182,7 @@ function DocumentDetail({ doc }: { doc: DocumentDto }) {
             Improve reading ({TIER_LABEL[doc.next_tier]}{doc.next_tier === 'advanced' ? ', very slow' : ''})
           </Button>
         )}
+        {ready && <Button variant="secondary" aria-pressed={inspecting} onClick={() => setInspecting((v) => !v)}>{inspecting ? 'Hide inspector' : 'Inspect extraction'}</Button>}
         {!confirm && <Button variant="secondary" onClick={() => setConfirm(true)}>Delete…</Button>}
       </div>
       {confirm && (
@@ -193,6 +196,7 @@ function DocumentDetail({ doc }: { doc: DocumentDto }) {
       )}
       {failure && <p role="alert" className="mt-2 text-sm text-[var(--bad)]">{failure.message}</p>}
 
+      {ready && inspecting && <InspectView doc={doc} improving={reprocess.isPending} onImprove={() => doc.next_tier && reprocess.mutate({ id: doc.id, tier: doc.next_tier })} />}
       {ready ? <DocumentTools doc={doc} /> : doc.state !== 'failed' && <p className="mt-4 text-sm text-[var(--muted)]">Reachy is still reading this document. You can ask, search and summarise once it is ready.</p>}
     </article>
   );

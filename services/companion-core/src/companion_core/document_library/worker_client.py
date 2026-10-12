@@ -9,6 +9,8 @@ from shared.models.document_worker import (
     ContentRead,
     DeleteResult,
     DocumentStatus,
+    ExportKind,
+    PageInspection,
     SearchResponse,
     WorkerHealth,
     WorkerTier,
@@ -16,7 +18,11 @@ from shared.models.document_worker import (
 from shared.protocols.document_worker_api import (
     WORKER_DOCUMENT,
     WORKER_DOCUMENTS,
+    WORKER_EXPORT,
     WORKER_HEALTH,
+    WORKER_INSPECT_BLOCK_IMAGE,
+    WORKER_INSPECT_IMAGE,
+    WORKER_INSPECT_PAGE,
     WORKER_LOCATOR,
     WORKER_PARSE,
     WORKER_READ,
@@ -87,3 +93,17 @@ class DocumentWorkerClient:
 
     async def delete(self, document_id: str) -> DeleteResult:
         return DeleteResult.model_validate((await self._send("DELETE", WORKER_DOCUMENT.format(document_id=document_id))).json())
+
+    # --- extraction inspector -----------------------------------------------------------------------------------
+
+    async def inspect_page(self, document_id: str, page: int) -> PageInspection:
+        return PageInspection.model_validate((await self._send("GET", WORKER_INSPECT_PAGE.format(document_id=document_id, page=page))).json())
+
+    async def inspect_image(self, document_id: str, page: int, block: int | None = None, *, image_format: str = "png") -> tuple[bytes, str]:
+        path = (WORKER_INSPECT_BLOCK_IMAGE if block else WORKER_INSPECT_IMAGE).format(document_id=document_id, page=page, block=block)
+        response = await self._send("GET", path, params={"format": image_format})
+        return response.content, response.headers.get("content-type", "application/octet-stream")
+
+    async def export(self, document_id: str, kind: ExportKind) -> tuple[bytes, str, str]:
+        response = await self._send("GET", WORKER_EXPORT.format(document_id=document_id), params={"format": kind.value})
+        return response.content, response.headers.get("content-type", "application/octet-stream"), response.headers.get("x-export-extension", "bin")
