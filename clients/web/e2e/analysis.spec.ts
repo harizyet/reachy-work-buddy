@@ -41,12 +41,18 @@ test('analyse, read the evidence, confirm an action once, dismiss a finding, pla
   await expect(review.getByText('“Alice will contact the vendor about compatibility by next Friday”')).toBeVisible();
   await expect(review.getByText('Speaker 1,', { exact: false })).toBeVisible();
   await expect(review.getByRole('button', { name: 'Play from 0:20' })).toBeVisible();
-  // Decisions: the agreed one is plain; the suggestion is marked, and a decision the transcript does not contain never appears.
+  // Everything is marked unverified. The agreed decision is in the open; the suggestion ("we could maybe") is kept but collapsed; a decision the transcript does not contain never appears.
+  await expect(page.getByText('written by a model from a speech-to-text transcript, so treat it as unverified', { exact: false })).toBeVisible();
   const decisions = page.getByLabel('Decisions');
   await expect(decisions.getByText('Migrate the cluster in the first week of November', { exact: true })).toBeVisible();
   await expect(decisions.getByText('Buy new servers')).toHaveCount(0);
-  await expect(decisions.getByText('Check the quote')).toHaveCount(1);
-  await expect(decisions.getByText('Add a second region').locator('xpath=ancestor::li')).toContainText('Check the quote');
+  const weakDecisions = decisions.locator('details');
+  await expect(weakDecisions).toHaveCount(1);
+  await expect(weakDecisions).not.toHaveAttribute('open', '');
+  await expect(decisions.getByText('Add a second region')).toBeHidden();
+  await weakDecisions.locator('summary').click();
+  await expect(weakDecisions.getByText('Add a second region')).toBeVisible();
+  await expect(weakDecisions.locator('li', { hasText: 'Add a second region' }).first()).toContainText('Check the quote');
   await expect(page.getByLabel('Open questions').getByText('Who owns the backup budget', { exact: true })).toBeVisible();
   await expect(page.getByText('1 suggestion was left out because the transcript did not support it.')).toBeVisible();
 
@@ -58,7 +64,7 @@ test('analyse, read the evidence, confirm an action once, dismiss a finding, pla
   expect(tasks.filter((t) => t.text.startsWith('Alice: Contact the vendor'))).toHaveLength(1);
 
   // Dismiss a finding.
-  await decisions.getByText('Add a second region').locator('xpath=ancestor::li').getByRole('button', { name: 'Dismiss' }).click();
+  await weakDecisions.locator('li', { hasText: 'Add a second region' }).first().getByRole('button', { name: 'Dismiss' }).click();
   await expect(decisions.getByText('Add a second region')).toHaveCount(0);
 
   // The analysis survives a reload (it is stored by the server, not the page).

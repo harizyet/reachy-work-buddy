@@ -38,6 +38,8 @@ export function AnalysisPanel({ meetingId, onShow }: { meetingId: string; onShow
   const added = items.filter((i) => i.kind === 'action' && i.status === 'accepted');
   const decisions = items.filter((i) => i.kind === 'decision' && i.status === 'noted');
   const questions = items.filter((i) => i.kind === 'open_question' && i.status === 'noted');
+  const strong = (xs: ItemDto[]) => xs.filter((i) => i.support === 'stated');
+  const weak = (xs: ItemDto[]) => xs.filter((i) => i.support !== 'stated');
   const busy = act.confirm.isPending || act.dismiss.isPending;
   const skipped = Object.entries(data?.run?.rejected ?? {}).reduce((n, [, v]) => n + v, 0);
 
@@ -66,15 +68,32 @@ export function AnalysisPanel({ meetingId, onShow }: { meetingId: string; onShow
         <p className="mt-2 text-xs text-[var(--muted)]">{`${skipped} suggestion${skipped === 1 ? ' was' : 's were'} left out because the transcript did not support ${skipped === 1 ? 'it' : 'them'}.`}</p>
       )}
 
+      {items.length > 0 && (
+        <p className="mt-2 text-xs text-[var(--muted)]">
+          Everything here was written by a model from a speech-to-text transcript, so treat it as unverified. Each quote is checked to be in the transcript; whether it supports the finding is for you to judge.
+          Findings whose quote does not show the usual wording are kept, but collapsed under “Weaker suggestions”.
+        </p>
+      )}
       {open.length > 0 && (
         <div className="mt-3 rounded-md border border-dashed border-[var(--border)] p-2" aria-label="Actions from this meeting">
           <h3 className="font-semibold">Actions to review</h3>
-          <p className="text-xs text-[var(--muted)]">Not yet confirmed. Nothing is added to your tasks until you confirm it.</p>
+          <p className="text-xs text-[var(--muted)]">Unverified and not yet confirmed. Nothing is added to your tasks until you confirm it.</p>
+          {strong(open).length === 0 && <p className="mt-2 text-[var(--muted)]">No clear promise or request was found.</p>}
           <ul className="mt-2 space-y-2">
-            {open.map((i) => (
+            {strong(open).map((i) => (
               <Action key={i.id} item={i} busy={busy} onShow={onShow} onConfirm={(text) => act.confirm.mutate({ id: i.id, text })} onDismiss={() => act.dismiss.mutate(i.id)} />
             ))}
           </ul>
+          {weak(open).length > 0 && (
+            <details className="mt-2" aria-label="Weaker action suggestions">
+              <summary className="cursor-pointer">{`Weaker suggestions (${weak(open).length})`}</summary>
+              <ul className="mt-2 space-y-2">
+                {weak(open).map((i) => (
+                  <Action key={i.id} item={i} busy={busy} onShow={onShow} onConfirm={(text) => act.confirm.mutate({ id: i.id, text })} onDismiss={() => act.dismiss.mutate(i.id)} />
+                ))}
+              </ul>
+            </details>
+          )}
           {failure(act.confirm.error) && <p role="alert" className="mt-2 text-[var(--bad)]">{failure(act.confirm.error)}</p>}
         </div>
       )}
@@ -145,19 +164,27 @@ function Action({ item: i, busy, onShow, onConfirm, onDismiss }: { item: ItemDto
 
 function Findings({ title, items, busy, onShow, onDismiss }: { title: string; items: ItemDto[]; busy: boolean; onShow: (seconds: number) => void; onDismiss: (id: string) => void }) {
   if (items.length === 0) return null;
+  const strong = items.filter((i) => i.support === 'stated');
+  const weak = items.filter((i) => i.support !== 'stated');
+  const row = (i: ItemDto) => (
+    <li key={i.id} className="rounded-md bg-[var(--hover)] p-2">
+      <p className="break-words"><Check item={i} />{i.text}</p>
+      <Evidence evidence={i.evidence} onShow={onShow} />
+      {i.ambiguity.length > 0 && i.support === 'uncertain' && <ul className="mt-1 list-disc pl-5 text-xs">{i.ambiguity.map((a) => <li key={a}>{a}</li>)}</ul>}
+      {i.source_changed && <p className="text-xs text-[var(--muted)]">The transcript has changed since this was found.</p>}
+      <Button variant="secondary" className="mt-1" disabled={busy} onClick={() => onDismiss(i.id)}>Dismiss</Button>
+    </li>
+  );
   return (
     <div className="mt-3" aria-label={title}>
-      <h3 className="font-semibold">{title}</h3>
-      <ul className="mt-1 space-y-2">
-        {items.map((i) => (
-          <li key={i.id} className="rounded-md bg-[var(--hover)] p-2">
-            <p className="break-words"><Check item={i} />{i.text}</p>
-            <Evidence evidence={i.evidence} onShow={onShow} />
-            {i.source_changed && <p className="text-xs text-[var(--muted)]">The transcript has changed since this was found.</p>}
-            <Button variant="secondary" className="mt-1" disabled={busy} onClick={() => onDismiss(i.id)}>Dismiss</Button>
-          </li>
-        ))}
-      </ul>
+      <h3 className="font-semibold">{title} <span className="text-xs font-normal text-[var(--muted)]">(unverified)</span></h3>
+      <ul className="mt-1 space-y-2">{strong.map(row)}</ul>
+      {weak.length > 0 && (
+        <details className="mt-2">
+          <summary className="cursor-pointer">{`Weaker suggestions (${weak.length})`}</summary>
+          <ul className="mt-2 space-y-2">{weak.map(row)}</ul>
+        </details>
+      )}
     </div>
   );
 }

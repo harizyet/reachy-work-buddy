@@ -80,7 +80,7 @@ describe('Meeting analysis tab', () => {
     expect(container.querySelector('b')).toBeNull();
     expect(within(review).getByText('“Alice will contact the vendor by Friday”')).toBeInTheDocument();
     expect(within(review).getByRole('button', { name: 'Play from 3:05' })).toBeInTheDocument();
-    expect(within(review).getByText(/Not yet confirmed. Nothing is added to your tasks/)).toBeInTheDocument();
+    expect(within(review).getByText(/not yet confirmed. Nothing is added to your tasks/i)).toBeInTheDocument();
     expect(within(review).getByText('a time was suggested that the quote does not state; it was dropped')).toBeInTheDocument();
     expect(screen.getByText('2 suggestions were left out because the transcript did not support them.')).toBeInTheDocument();
   });
@@ -119,15 +119,43 @@ describe('Meeting analysis tab', () => {
     await waitFor(() => expect(server.calls.find((c) => c.call === 'POST /meeting-analysis/items/i1/accept')?.body).toEqual({}));
   });
 
-  it('marks items whose quote may not support them, and only those', async () => {
-    setup({ state: 'review_required', items: [
-      item({ id: 'i3', text: 'Weak action', support: 'uncertain' }),
-      item({ id: 'd2', kind: 'decision', status: 'noted', text: 'Weak decision', support: 'uncertain', task_text: null, assignee: null, stated_time: null, ambiguity: [] }),
+  it('lists stated findings first and keeps the weaker ones collapsed, all marked as unverified, all still dismissable and confirmable', async () => {
+    const { server } = setup({ state: 'review_required', items: [
+      item({ id: 'w1', text: 'Weak action', support: 'uncertain' }),
+      item({ id: 's1', text: 'Solid action', support: 'stated' }),
+      item({ id: 'd2', kind: 'decision', status: 'noted', text: 'Weak decision', support: 'uncertain', task_text: null, assignee: null, stated_time: null, ambiguity: ['the quote shows no clear agreement'] }),
       item({ id: 'd3', kind: 'decision', status: 'noted', text: 'Solid decision', support: 'stated', task_text: null, assignee: null, stated_time: null, ambiguity: [] }),
     ] });
+    const user = await openAnalysis();
+    expect(await screen.findByText(/written by a model from a speech-to-text transcript, so treat it as unverified/)).toBeInTheDocument();
+    expect(screen.getByText('(unverified)')).toBeInTheDocument();
+    // The solid ones are in the open; the weak ones are inside closed <details> and say how many there are.
+    const actions = screen.getByLabelText('Actions from this meeting');
+    const weakActions = within(actions).getByLabelText('Weaker action suggestions') as HTMLDetailsElement;
+    expect(weakActions.open).toBe(false);
+    expect(within(actions).getByText('Weaker suggestions (1)')).toBeInTheDocument();
+    expect(weakActions.contains(within(actions).getByText('Solid action'))).toBe(false);
+    expect(weakActions.contains(within(actions).getByText('Weak action'))).toBe(true);
+    const decisions = screen.getByLabelText('Decisions');
+    const weakDecisions = within(decisions).getByText('Weaker suggestions (1)').closest('details') as HTMLDetailsElement;
+    expect(weakDecisions.open).toBe(false);
+    expect(weakDecisions.contains(within(decisions).getByText('Weak decision'))).toBe(true);
+    expect(within(decisions).getAllByText('Check the quote')).toHaveLength(1);
+    // Nothing is hidden for good: open the weak list, confirm one weak action and dismiss the weak decision.
+    await user.click(within(actions).getByText('Weaker suggestions (1)'));
+    await user.click(within(weakActions).getByRole('button', { name: 'Confirm as task' }));
+    await waitFor(() => expect(server.calls.find((c) => c.call === 'POST /meeting-analysis/items/w1/accept')?.body).toEqual({}));
+    await user.click(within(decisions).getByText('Weaker suggestions (1)'));
+    await user.click(within(weakDecisions).getByRole('button', { name: 'Dismiss' }));
+    await waitFor(() => expect(server.calls.map((c) => c.call)).toContain('POST /meeting-analysis/items/d2/dismiss'));
+    expect(server.calls.some((c) => c.call.endsWith('/s1/accept'))).toBe(false); // nothing is promoted by itself
+  });
+
+  it('says so when no action is clearly promised but weaker suggestions exist', async () => {
+    setup({ state: 'review_required', items: [item({ id: 'w1', text: 'Maybe an action', support: 'uncertain' })] });
     await openAnalysis();
-    expect(await screen.findAllByText('Check the quote')).toHaveLength(2);
-    expect(within(screen.getByText('Solid decision').closest('li')!).queryByText('Check the quote')).not.toBeInTheDocument();
+    expect(await screen.findByText('No clear promise or request was found.')).toBeInTheDocument();
+    expect(screen.getByText('Weaker suggestions (1)')).toBeInTheDocument();
   });
 
   it('shows a failure with a retry and the fixed wording for the code', async () => {
