@@ -41,4 +41,4 @@ The owner's decision is needed before declaring cross-conversation document isol
 * **Not covered:** a physical device; sensitive-document display ceilings by channel beyond the hub tests; meeting-context exclusivity on a device (no meetings in the fixture; unit and hub tests cover it); TalkBack and large-font accessibility; very large or many-page documents (50 MB limit and the worker's page cap are the server's).
 
 ### Rollout when approved
-Hub and core images (history isolation needs both; no schema change) and the new APK (`app/build/outputs/apk/debug/app-debug.apk`). Keep rollback images and the existing verified backups. Then the owner's own acceptance on the phone.
+Hub and core images (history isolation needs both; no schema change) and the new APK (`app/build/outputs/apk/debug/app-debug.apk`). Keep rollback images and the existing verified backups. Then the owner's own acceptance on the phone: **given 2026-10-12**; Android 0.17.0 is accepted.
