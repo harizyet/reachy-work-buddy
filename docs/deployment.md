@@ -807,6 +807,14 @@ Schema upgrades now use the dedicated migration job; follow
 [the cutover and key procedure below](#schema-upgrades-and-credential-keys).
 Never delete production volumes to resolve schema errors.
 
+**Preserve the running image before any rebuild (owner rule, 2026-10-12).** Before building an image that will replace a running service, record the running
+container's immutable image ID (`docker inspect <container> --format '{{.Image}}'`) and tag it under a name that no build can move
+(`reachy-rollback/<service>:pre-<change>`); check that the tag resolves (`docker image inspect`) before building. Never treat a mutable `latest` tag as the
+rollback: local builds move it, and the containerd image store then collects the old content (this happened to the document worker on 2026-10-12: tag
+and `docker commit` both failed, and the exact filesystem had to be saved with `docker export | docker import`, with the token left out of the image).
+Rollback means tagging the preserved digest back as the service's image and recreating only that service. Release a rollback image only after the owner
+accepts the change; keep the latest verified database and document-source backups.
+
 Use a separate Compose project and temporary credentials/volumes for live
 checks. Keep the same project name, env file, and override files through
 startup, restart, and cleanup. `down -v` is appropriate only for that

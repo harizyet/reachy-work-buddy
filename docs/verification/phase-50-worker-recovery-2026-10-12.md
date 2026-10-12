@@ -1,6 +1,6 @@
 # Phase 50: document-worker backend recovery (2026-10-12)
 
-Owner request: investigate the MinerU parse-server OOM recovery behaviour, implement the smallest reliable health/supervision improvement, test it with a disposable worker, do not refactor. **Deployed to the MS-01 on 2026-10-12 08:31 UTC with the owner's approval** (see "Deployment" below); built from clean commit `8dd36a5`.
+Owner request: investigate the MinerU parse-server OOM recovery behaviour, implement the smallest reliable health/supervision improvement, test it with a disposable worker, do not refactor. **Deployed to the MS-01 on 2026-10-12 08:31 UTC with the owner's approval and ACCEPTED by the owner the same day** (see "Deployment" and "Acceptance" below); built from clean commit `8dd36a5`.
 
 ## What was found (disposable worker, real MinerU 4.0.12, 6 GB like production)
 1. **Doclib server killed (what the OOM at a 4 GB limit did on 2026-10-12):** the worker answered `server_not_running` and 502 to everything **indefinitely**; Docker marked it unhealthy but, with `restart: unless-stopped`, nothing restarts a container whose PID 1 is still alive. `DoclibEngine.start()` only ran at boot.
@@ -38,3 +38,11 @@ Owner request: investigate the MinerU parse-server OOM recovery behaviour, imple
 
 ## Rollback
 `docker tag reachy-rollback/document-worker:pre-recovery reachy-document-worker:latest`, then `docker compose -p reachy-homelab --env-file .env --profile documents up -d --no-build --no-deps document-worker` (with `SEARXNG_SECRET_KEY` exported from its file; the token comes from `.env` at runtime). The worker's data volume and all documents are untouched by either direction; rollback restores the earlier behaviour (a dead MinerU server stays dead until the container is restarted). Keep the image and the backups until the owner accepts.
+
+## Acceptance (owner, 2026-10-12)
+The owner accepted the deployment on the 16 live checks, the unchanged document data, the correct readiness transitions and the automatic recovery of uploads during worker downtime. No further MinerU recovery development unless real use exposes another failure.
+* **Rollback asset released** under the normal retention policy: the `reachy-rollback/document-worker:pre-recovery` tag (`sha256:b9fd1014e08a…`) was removed after acceptance (no container used it). The latest verified database dump and document-source archive (`reachy-before-history-isolation-20261012-073656.*`) are kept.
+* **Procedure adopted:** the running image is preserved by immutable ID before any rebuild, and a mutable `latest` tag is never the rollback ([deployment](../deployment.md#upgrades-and-verification-cleanup)).
+
+## Maintenance item (recorded, not to be implemented now)
+Core's routine reconcile of READY documents (`DOCUMENT_LIBRARY_RECONCILE_SECONDS`, default 300) rewrites a document's `updated_at` every cycle even when the worker reports nothing new (seen as 08:27:57 then 08:32:58 on the owner's unchanged document). State, tier, page count, hash and error code are untouched, so nothing is corrupted, but `updated_at` is therefore not a reliable "last changed" time and moves the document up any list ordered by it. A future tidy-up could write only when something differs; no change is planned.
