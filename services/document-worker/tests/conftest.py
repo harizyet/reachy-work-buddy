@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import re
 from pathlib import Path
 
 import httpx
@@ -13,7 +12,6 @@ from document_worker.engine import (
     EngineHealth,
     ParseSummary,
     RawContent,
-    RawHit,
     Ticket,
 )
 
@@ -82,23 +80,6 @@ class FakeEngine:
 
     def read_locator(self, locator, context, limit):
         return RawContent(f"locator content for {locator}", ((locator, locator),))
-
-    def search(self, query, limit, offset):
-        self._maybe_fail()
-        terms = query.lower().split()
-        hits = []
-        for sha, doc in self.docs.items():
-            if not doc["files"]:
-                continue
-            segs = []
-            for page in doc["pages"]:
-                for line in page.splitlines():
-                    if any(t in line.lower() for t in terms):
-                        marked = re.sub("(?i)(" + "|".join(map(re.escape, terms)) + ")", r"<mark>\1</mark>", line)
-                        segs.append(marked)
-            if segs:
-                hits.append(RawHit(sha[:7], "\n\n".join(segs)))
-        return hits[offset : offset + limit], len(hits)
 
     def invalidate(self, ref, tier):
         self._maybe_fail()

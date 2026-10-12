@@ -728,7 +728,9 @@ def test_classification_is_forwarded_on_create_and_refused_on_edit():
 
 
 def test_documents_are_core_only_by_design():
-    """Documents are ingested through core's operator/setup API only; the hub exposes no route, so there is nothing to forward."""
+    """The legacy text-RAG documents (`/documents`, Phase 5) are ingested through core's operator/setup API only; the hub exposes no route for them. The file-backed document library (Phase 50) is
+    a separate subsystem under `/document-library`, which the hub proxies for the owner session only (test_document_library_proxy.py)."""
     client = make_client()
     paths = client.app.openapi()["paths"]
-    assert not [p for p in paths if "document" in p]
+    assert not [p for p in paths if p.startswith("/documents")]
+    assert all(p.startswith("/document-library") for p in paths if "document" in p)

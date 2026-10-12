@@ -41,12 +41,6 @@ class RawContent:
 
 
 @dataclass(frozen=True)
-class RawHit:
-    backend_ref: str
-    snippet: str
-
-
-@dataclass(frozen=True)
 class EngineHealth:
     ready: bool
     telemetry_disabled: bool
@@ -60,7 +54,6 @@ class DocumentEngine(Protocol):
     def page_count(self, backend_ref: str) -> int | None: ...
     def read(self, backend_ref: str, tier: str, page_range: str | None, after: str | None, limit: int) -> RawContent: ...
     def read_locator(self, locator: str, context: int, limit: int) -> RawContent: ...
-    def search(self, query: str, limit: int, offset: int) -> tuple[list[RawHit], int]: ...
     def invalidate(self, backend_ref: str, tier: str) -> None: ...
     def forget(self, path: Path) -> None: ...
     def cleanup_orphans(self) -> None: ...
@@ -161,10 +154,6 @@ class DoclibEngine:
 
     def read_locator(self, locator, context, limit):
         return self._raw(self._call(self._api().read_content, locator, context=context, limit=limit))
-
-    def search(self, query, limit, offset):
-        response = self._call(self._api().search, query, limit=limit, offset=offset)
-        return [RawHit(r.short_id, r.snippet) for r in response.results], response.total
 
     def invalidate(self, backend_ref: str, tier: str) -> None:
         """Drop the cached parse of ONE tier. Identical bytes share a backend document, so invalidating every tier would also remove what another Reachy document of the same bytes is using."""

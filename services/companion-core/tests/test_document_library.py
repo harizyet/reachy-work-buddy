@@ -38,7 +38,6 @@ from document_worker.engine import (
     EngineHealth,
     ParseSummary,
     RawContent,
-    RawHit,
     Ticket,
 )
 from fastapi.testclient import TestClient
@@ -103,14 +102,6 @@ class FakeEngine:
 
     def read_locator(self, locator, context, limit):
         return RawContent(f"around {locator}", ((locator, locator),))
-
-    def search(self, query, limit, offset):
-        hits = []
-        for digest, doc in self.docs.items():
-            lines = [ln for page in doc["pages"] for ln in page.splitlines() if query.lower() in ln.lower()]
-            if doc["files"] and lines:
-                hits.append(RawHit(digest[:7], "\n\n".join(ln.replace(query, f"<mark>{query}</mark>") for ln in lines)))
-        return hits[offset : offset + limit], len(hits)
 
     def invalidate(self, ref, tier):
         self.invalidated.append((ref, tier))
@@ -556,7 +547,7 @@ def test_read_and_search_go_through_the_reachy_id_and_say_what_kind_of_evidence_
     assert read["start"].endswith("/page:2") and "backend_ref" not in read
     found = backend.client.post(f"/document-library/documents/{created['id']}/search", json={"query": "retention"}).json()
     assert found["evidence_type"] == "derived_extraction" and found["complete"] is True
-    assert [(h["page"], h["snippet"]) for h in found["hits"]] == [(1, "The retention requirement is 7 days.")]
+    assert [h["page"] for h in found["hits"]] == [1] and "retention requirement is 7 days" in found["hits"][0]["snippet"]
     around = backend.client.get(f"/document-library/documents/{created['id']}/locator", params={"locator": found["hits"][0]["locator"]})
     assert around.status_code == 200 and "backend_ref" not in around.text and str(backend.sources.root) not in around.text
     bad = backend.client.get(f"/document-library/documents/{created['id']}/locator", params={"locator": "doc:ffffff0/tier:basic/page:1"})

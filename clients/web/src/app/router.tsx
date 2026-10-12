@@ -6,6 +6,7 @@ import { LoginPage } from '../features/auth/LoginPage';
 import { AlarmsPage } from '../features/alarms/AlarmsPage';
 import { ChatPage } from '../features/chat/ChatPage';
 import { CodingPage } from '../features/coding/CodingPage';
+import { DocumentsPage } from '../features/documents/DocumentsPage';
 import { MeetingsPage } from '../features/meetings/MeetingsPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { MemorySuggestionsPage } from '../features/memory/MemorySuggestionsPage';
@@ -55,6 +56,8 @@ export function AppRoutes() {
         <Route path="settings" element={<SettingsPage />} />
         <Route path="settings/:tab" element={<SettingsPage />} />
         <Route path="notes" element={<NotesPage />} />
+        <Route path="documents" element={<DocumentsPage />} />
+        <Route path="documents/:id" element={<DocumentsPage />} />
         <Route path="memory" element={<MemorySuggestionsPage />} />
         <Route path="activity" element={<ActivityPage />} />
         <Route path="*" element={<NotFound />} />

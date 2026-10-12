@@ -120,6 +120,17 @@ Ask in your own words. What happens depends on what you ask:
 
 Operators: the router is switched by `INTENT_ROUTER_ENABLED` ([deployment](deployment.md)); the rules are in [ADR 0033](adr/0033-llm-assisted-read-routing.md).
 
+## Documents (Phase 50)
+
+The **Documents** page (web) keeps your files and lets Reachy answer from them. It appears once the document library is turned on; until then it says so.
+
+* **Upload** a PDF, Word file (.docx) or image (PNG, JPG), up to 50 MB. Choose its **class** (public, work private or sensitive; work private if you do not choose) and optionally a project and a reading priority. What a document says never changes its class; only you do.
+* The **state** shows Uploaded, Queued, Reading, Ready, Partly ready or Failed. Reading happens on this machine and can take a while for scans.
+* Once ready, open the document to **Ask** a question (the answer uses only that document and names the pages it used; if the document does not cover the question, Reachy says it could not find it instead of guessing), **Search** it (the best pages with a short excerpt), or make a **Summary**, an **Executive summary** or a **Technical summary**. Long documents are summarised in page groups; the page groups are shown under the summary, and a summary is marked *Out of date* if the document is read again.
+* **Read again** repeats the reading from the original. **Improve reading** asks for the next level (Basic, Standard, then Advanced, which is very slow) when the text came out poorly, for example on a scan.
+* **Delete** removes the original, what was read from it and its summaries. If the reading service cannot confirm right away the document is marked for deletion and unusable, and the removal is retried.
+* What is read from a document is a machine's reading and a summary is a language model's wording of it: both can be wrong. The original is what counts.
+
 ## Alarms
 
 The **Alarms** tab (web) and the **Alarms** tab in the Android app work like a

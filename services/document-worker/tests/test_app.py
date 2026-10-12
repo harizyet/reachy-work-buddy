@@ -81,40 +81,40 @@ def test_page_limit_makes_a_ready_document_partial(client):
     assert body["state"] == "partial" and body["page_limit_applied"] is True and body["page_count"] == 8
 
 
-def test_search_is_scoped_to_the_named_document(client):
+def test_search_ranks_the_named_documents_own_pages(client):
     other = pdf_bytes("Other\nThe retention requirement is 99 days.")
     client.upload("doc1", DOC_A)
     client.upload("doc2", other)
     body = client.post("/documents/doc1/search", headers=AUTH, json={"query": "retention requirement"}).json()
     assert body["complete"] is True
-    assert {(h["page"], h["snippet"]) for h in body["hits"]} == {
-        (1, "The retention requirement is 7 days."),
-        (2, "The retention requirement is 14 days."),
-    }
-    assert all(h["locator"].startswith("doc:" + sha(DOC_A)[:7]) for h in body["hits"])
-    assert "99" not in client.post("/documents/doc1/search", headers=AUTH, json={"query": "retention"}).text
+    assert {h["page"] for h in body["hits"]} == {1, 2}
+    by_page = {h["page"]: h["snippet"] for h in body["hits"]}
+    assert "retention requirement is 7 days" in by_page[1] and "retention requirement is 14 days" in by_page[2]
+    assert all(h["locator"] == f"doc:{sha(DOC_A)[:7]}/tier:basic/page:{h['page']}" for h in body["hits"])
+    assert "99" not in client.post("/documents/doc1/search", headers=AUTH, json={"query": "retention"}).text  # another document's text never appears
 
 
-def test_search_does_not_invent_a_page(client, engine, monkeypatch):
-    from document_worker.service import DocumentService
+def test_search_scores_pages_so_the_page_that_answers_comes_first(client):
+    pages = [f"Section {i}. Filler about topic {i}." for i in range(1, 7)]
+    pages[3] = "Section 4. Vendors must retain security audit logs for ninety days. Logs are protected."
+    pages[5] = "Section 6. The word logs appears once here."
+    client.upload("doc1", pdf_bytes(*pages))
+    hits = client.post("/documents/doc1/search", headers=AUTH, json={"query": "How long must audit logs be kept?", "limit": 3}).json()["hits"]
+    assert hits[0]["page"] == 4 and "audit logs" in hits[0]["snippet"]  # the page with both terms outranks the page with one
+    assert [h["page"] for h in hits if h["page"] == 6] in ([], [6])  # a weaker partial match may follow, never ahead
 
+
+def test_search_finds_nothing_when_no_page_has_the_terms_and_never_guesses_a_page(client):
     client.upload("doc1", DOC_A)
-    engine.docs[sha(DOC_A)]["pages"] = ["alpha beta"]
-    hit = client.post("/documents/doc1/search", headers=AUTH, json={"query": "alpha"}).json()["hits"]
-    assert hit == [{"snippet": "alpha beta", "page": 1, "locator": f"doc:{sha(DOC_A)[:7]}/tier:basic/page:1"}]
-    # when the page text no longer contains the snippet the hit is kept but carries no page or locator
-    monkeypatch.setattr(DocumentService, "_page_text", lambda self, meta, page: "something else")
-    hit = client.post("/documents/doc1/search", headers=AUTH, json={"query": "alpha"}).json()["hits"]
-    assert hit == [{"snippet": "alpha beta", "page": None, "locator": None}]
+    assert client.post("/documents/doc1/search", headers=AUTH, json={"query": "airspeed velocity swallow"}).json()["hits"] == []
+    assert client.post("/documents/doc1/search", headers=AUTH, json={"query": "what is the of"}).json()["hits"] == []  # only filler words
 
 
-def test_search_reports_incomplete_when_the_scan_limit_is_reached(client, engine, settings):
-    client.upload("doc1", DOC_A)
-    real = engine.search
-    engine.search = lambda q, limit, offset: ([], 10_000)  # the document never appears within the scan limit
-    body = client.post("/documents/doc1/search", headers=AUTH, json={"query": "retention"}).json()
-    assert body == {"document_id": "doc1", "hits": [], "complete": False}
-    engine.search = real
+def test_search_reports_incomplete_when_the_document_is_longer_than_the_worker_reads(client):
+    many = pdf_bytes(*[f"Part {i} text" for i in range(8)])  # max_pages is 5 in the fixture
+    client.upload("big", many)
+    body = client.post("/documents/big/search", headers=AUTH, json={"query": "part"}).json()
+    assert body["complete"] is False and max(h["page"] for h in body["hits"]) <= 5
 
 
 def test_search_fails_closed_on_engine_error_without_leaking_the_message(client, engine):

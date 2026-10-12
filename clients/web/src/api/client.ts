@@ -108,7 +108,7 @@ export async function request<T = unknown>(path: string, options: RequestOptions
         response.status,
       );
     }
-    const data = (options.asBlob ? await response.blob() : await response.json()) as T;
+    const data = (options.asBlob ? await response.blob() : response.status === 204 ? undefined : await response.json()) as T;
     if (started !== generation) throw new StaleSessionError();
     return data;
   } catch (error) {

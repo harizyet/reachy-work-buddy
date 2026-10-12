@@ -277,6 +277,11 @@ class CompanionCoreClient:
         resp.raise_for_status()
         return resp.json()
 
+    async def document_request(self, method: str, path: str, *, json: Any = None, params: dict[str, Any] | None = None, data: dict[str, str] | None = None,
+                               files: Any = None, headers: dict[str, str] | None = None, timeout: float = 30.0) -> httpx.Response:
+        """Document library passthrough (Phase 50J). Returns the response whatever its status so the proxy can pass the refusals that matter; transport errors raise."""
+        return await self._client.request(method, path, json=json, params=params, data=data, files=files, headers=headers, timeout=timeout)
+
     async def reminders_due(self) -> list[dict[str, Any]]:
         """Claim-once poll, like coding_agent_completions_due."""
         return await self.planner_request("GET", "/reminders/due")

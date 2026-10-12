@@ -157,6 +157,7 @@ from reachy_hub.brain import install_brain_routes
 from reachy_hub.chat_store import ChatStore, InMemoryChatStore, PostgresChatStore
 from reachy_hub.coding_agent_client import CodingAgentServiceClient
 from reachy_hub.companion_core_client import CompanionCoreClient
+from reachy_hub.document_library import install_document_library_routes
 from reachy_hub.embodiment_client import EmbodimentClient
 from reachy_hub.enrollment_store import (
     EnrollmentStore,
@@ -980,6 +981,7 @@ def create_app(
     )
     install_owner_recognition_routes(app, require_owner_session, app.state.enrollment_store)
     install_brain_routes(app, require_owner_session, companion_core_client)  # Phase 47D: read-only, owner session only
+    install_document_library_routes(app, require_owner_session, companion_core_client)  # Phase 50J: owner session plus CSRF; sets the trusted ceiling; core decides (and 404s) when the feature is off
     install_notepad_processing_routes(app, require_owner_session, companion_core_client)  # Phase 49: owner session plus CSRF; core decides (and 404s) when the feature is off
     install_memory_candidate_routes(app, require_owner_session, companion_core_client)  # Phase 44F: owner session plus CSRF; core decides (and 404s) when the feature is off
 

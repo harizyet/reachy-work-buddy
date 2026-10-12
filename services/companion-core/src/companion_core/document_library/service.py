@@ -439,14 +439,10 @@ class DocumentService:
         """The excerpts of this one document that bear on a question: pages found by searching inside it (the whole text if it is only a few pages and nothing specific was found),
         each read from the worker. Raises DocumentError exactly as read/search do; an empty passage list means the document does not appear to cover the question."""
         document = await self._readable(document_id, access)
-        terms = keywords(question)
         pages: list[tuple[int, str | None]] = []
         try:
-            for query in ([" ".join(terms)] if len(terms) > 1 else []) + terms[:4]:
-                result = await self.worker.search(document.id, query, limit=10)
-                pages = list(dict.fromkeys((h.page, h.locator) for h in result.hits if h.page is not None))
-                if pages:
-                    break
+            result = await self.worker.search(document.id, " ".join(keywords(question)) or question, limit=MAX_PAGES)  # the worker ranks this document's own pages
+            pages = [(h.page, h.locator) for h in result.hits if h.page is not None]
             if not pages and document.page_count and document.page_count <= WHOLE_DOCUMENT_PAGES:
                 pages = [(n, None) for n in range(1, document.page_count + 1)]
             passages = []

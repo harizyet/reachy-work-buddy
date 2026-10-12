@@ -1,7 +1,7 @@
 """Document worker behaviour. Every rule from the 50A spike lives here, not in the route layer:
 
 * policy and liveness belong to Reachy's document id; the backend object is shared by identical bytes;
-* search is scoped to one document and fails closed; hits carry a page only when the text was found on that page;
+* search is scoped to one document: its own parsed pages are ranked (ranking.py), so a hit's page is the page that was scored;
 * nothing returned carries a filesystem path or a backend message;
 * deletion forgets the working copy, cleans orphans, then verifies, and says whether identical bytes remain in use.
 """
@@ -11,9 +11,10 @@ from __future__ import annotations
 import hashlib
 import logging
 import re
+from collections import OrderedDict
 from collections.abc import Iterable
 
-from document_worker import locators
+from document_worker import locators, ranking
 from document_worker.config import Settings
 from document_worker.engine import DocumentEngine, EngineError
 from document_worker.store import EXTENSIONS, DocumentStore, Meta
@@ -37,11 +38,10 @@ _MAGIC = {
     "docx": (b"PK\x03\x04",),
 }
 _PAGE_RANGE_RE = re.compile(r"^\d+(-\d+)?(,\d+(-\d+)?)*$")
-_MARK_RE = re.compile(r"</?mark>")
 _PAGE_MARKER_RE = re.compile(r"<!--\s*page \d+ of \d+\s*-->")
 _NOT_READY = {"tier_not_cached", "page_not_cached", "not_cached", "parse_not_required"}
 _ALREADY_GONE = {"file_not_found", "doc_not_found"}
-_SCAN_STEP = 50
+_PAGE_CACHE = 2000  # parsed pages kept in memory across all documents (a few MB)
 logger = logging.getLogger(__name__)
 
 
@@ -70,7 +70,7 @@ class DocumentService:
         self.engine = engine
         self.store = store
         self.settings = settings
-        self._pages: dict[tuple[str, str, int], str] = {}
+        self._pages: OrderedDict[tuple[str, str, int], str] = OrderedDict()
 
     # --- helpers -------------------------------------------------------------------------------------------------
 
@@ -246,40 +246,31 @@ class DocumentService:
 
     def _page_text(self, meta: Meta, page: int) -> str:
         key = (meta.backend_ref, meta.tier, page)
-        if key not in self._pages:
-            raw = self.engine.read(meta.backend_ref, meta.tier, str(page), None, 30000)
-            self._pages[key] = _norm(_PAGE_MARKER_RE.sub("", raw.content))
-        return self._pages[key]
+        if key in self._pages:
+            self._pages.move_to_end(key)
+            return self._pages[key]
+        raw = self.engine.read(meta.backend_ref, meta.tier, str(page), None, 30000)
+        text = " ".join(_PAGE_MARKER_RE.sub("", raw.content).split())
+        self._pages[key] = text
+        while len(self._pages) > _PAGE_CACHE:
+            self._pages.popitem(last=False)
+        return text
 
     def search(self, document_id: str, query: str, limit: int) -> SearchResponse:
+        """Rank THIS document's pages for the query (ranking.py). The backend's library-wide search is never used, so nothing of another document can appear, and the page of every hit is the page
+        that was scored. `complete` is false when the document has more pages than the worker reads."""
         meta = self._meta(document_id)
-        own, offset, exhausted = None, 0, False
         try:
-            while own is None and not exhausted and offset < self.settings.search_scan_limit:
-                results, total = self.engine.search(query, _SCAN_STEP, offset)
-                own = next((r for r in results if r.backend_ref == meta.backend_ref), None)
-                offset += _SCAN_STEP
-                exhausted = offset >= total
-            hits = self._locate(meta, own.snippet, limit) if own is not None else []
+            count = self.engine.page_count(meta.backend_ref) or 0
+            last = min(count, self.settings.max_pages)
+            pages = [(n, self._page_text(meta, n)) for n in range(1, last + 1)]
         except EngineError as exc:
             raise _engine_failure(exc) from None
-        return SearchResponse(document_id=document_id, hits=hits, complete=own is not None or exhausted)
-
-    def _locate(self, meta: Meta, snippet: str, limit: int) -> list[SearchHit]:
-        pages = self.engine.page_count(meta.backend_ref) or 0
-        scan = range(1, min(pages, self.settings.search_locate_max_pages) + 1)
-        hits: list[SearchHit] = []
-        for segment in (s for s in snippet.split("\n\n") if "<mark>" in s):
-            text = _MARK_RE.sub("", segment).strip()
-            wanted = _norm(text)
-            if not wanted:
-                continue
-            found = [p for p in scan if wanted in self._page_text(meta, p)]
-            if not found:
-                hits.append(SearchHit(snippet=text))
-            for page in found:
-                hits.append(SearchHit(snippet=text, page=page, locator=locators.page_locator(meta.backend_ref, meta.tier, page)))
-        return hits[:limit]
+        hits = [
+            SearchHit(snippet=r.snippet, page=r.page, locator=locators.page_locator(meta.backend_ref, meta.tier, r.page))
+            for r in ranking.rank([(n, t) for n, t in pages if t], query, limit)
+        ]
+        return SearchResponse(document_id=document_id, hits=hits, complete=count <= self.settings.max_pages)
 
     # --- deletion ------------------------------------------------------------------------------------------------
 
