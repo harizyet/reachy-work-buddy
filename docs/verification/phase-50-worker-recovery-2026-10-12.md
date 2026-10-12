@@ -1,0 +1,25 @@
+# Phase 50: document-worker backend recovery (2026-10-12)
+
+Owner request: investigate the MinerU parse-server OOM recovery behaviour, implement the smallest reliable health/supervision improvement, test it with a disposable worker, do not refactor. **Local and committed; not deployed** (the worker was not part of the history-isolation rollout; deploying it recreates `document-worker` only, which needs the owner's approval).
+
+## What was found (disposable worker, real MinerU 4.0.12, 6 GB like production)
+1. **Doclib server killed (what the OOM at a 4 GB limit did on 2026-10-12):** the worker answered `server_not_running` and 502 to everything **indefinitely**; Docker marked it unhealthy but, with `restart: unless-stopped`, nothing restarts a container whose PID 1 is still alive. `DoclibEngine.start()` only ran at boot.
+2. **Managed parse server killed alone:** MinerU respawns it itself (health false for about 35 s, then true). Nothing to do.
+3. **Parse server killed repeatedly (a container squeezed by its limit):** MinerU restarts it three times, then logs `Managed parse-server failed 3 restarts, disabling` every 30 s and **never tries again**, even when memory is available later; `parse_server.local` shows `healthy=false, managed_running=false, restart_count=3, max_restart_attempts=3`. Only restarting the doclib server clears it.
+4. **A request during warm-up (a fresh worker is ready after about 25 s, with no request needed) was recorded by MinerU as a failed parse of those bytes** (`engine_unavailable`), and the document then stayed failed after the backend was ready (identical bytes keep reporting the cached failure until a forced reprocess).
+
+## The change (`services/document-worker/src/document_worker/engine.py`, tests `tests/test_engine_recovery.py`)
+* Dead doclib server: restart it in a background thread through `start()` (the boot routine, so telemetry-disable and the managed-parse-server settings are re-applied), triggered by `health()` (Docker polls it every 15 s) or by any call failing with `server_not_running`/`engine_unavailable`; single-flight, at most one attempt per 30 s; the failing request or health check still answers at once.
+* Given-up parse server (finding 3): `mineru server restart`, then `start()`; at most once per 5 minutes so an under-sized container cannot loop. A parse server that is only warming up or still being restarted by MinerU is left alone.
+* `ensure_parse` and `invalidate` refuse (502 `engine_error`, transient in core: the document stays `uploaded` and is retried) while the backend is not ready, so nothing is cached as failed. `_api()` no longer imports MinerU when it already holds a client.
+* No new endpoints, settings, dependencies or architecture; no change to core.
+
+## Verification
+* 54 worker tests (7 new: restart once per interval and not re-entrant, never blocking the caller, failed restart retried, a failing call triggers it, parse refused while down or warming, restart of a given-up parse server rate limited, warm-up and in-progress MinerU restarts left alone); stable over repeated runs; ruff clean.
+* **Disposable worker built from the change under a separate image tag (the deployed `reachy-document-worker:latest` was not touched):** (A) a fresh worker refused ingests with 502 while warming up, accepted one after 9 retries and parsed it to `ready` (before: the first ingest was cached as failed); (B) SIGKILL of the doclib server: `server_not_running`, then back and healthy in about 20 s with no one acting, the existing document still readable and a new ingest accepted; (C) SIGKILL of the parse server alone: left to MinerU, healthy again as before; (D) a real kernel OOM (memory limit lowered to 1.8 GB during a Standard re-read; the container's PID 1 was also OOM-killed once and Docker's restart policy brought it back): the supervision restarted the backend ("not serving; restarting it"), and after the limit was restored to 6 GB the worker became healthy again **by itself in 244 s** with the document still `ready` (before: dead until the container was restarted).
+* The disposable worker, its volume and image were removed; the production worker (`62f26b7880bf`, started 04:29 UTC, 0 restarts, healthy) was never touched; GPU memory unchanged.
+
+## Notes
+* MinerU's config lists a `remote` parse server (`https://mineru.net/api`) with an empty API key. In D and the baseline, a Standard parse with the local server down failed with `parse_server_unavailable` and was not sent there, and the production worker's network is internal; still worth never setting a key.
+* Not changed: the memory limit (6 GB held in testing for Basic and Standard on small documents; larger documents, or Advanced, may need more) and MinerU's own restart cap.
+* In one run with swap disabled (`--memory-swap` equal to the limit) the worker connection dropped on the first Basic parse at 6 GB, which looked like an OOM kill (not confirmed); production's compose sets only `mem_limit`, so Docker's default swap allowance applies. If swap is ever disabled on the host, revisit the limit.

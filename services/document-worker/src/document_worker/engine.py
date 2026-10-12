@@ -6,11 +6,18 @@ Backend errors are reduced to a short code here so a message (which can carry a 
 
 from __future__ import annotations
 
+import logging
 import subprocess
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
+
+logger = logging.getLogger(__name__)
+
+# Backend codes that mean MinerU's own server is gone (for example OOM-killed under the container's memory limit while this process stayed up).
+_BACKEND_DOWN = {"server_not_running", "engine_unavailable"}
 
 
 class EngineError(Exception):
@@ -89,12 +96,17 @@ class DoclibEngine:
     """MinerU 4.x `DoclibClient` over its Unix socket, which stays inside this container."""
 
     managed_tier: str = "standard"
+    recovery_interval: float = 30.0  # the least time between attempts to bring a dead backend back
+    restart_interval: float = 300.0  # ... and between restarts of a running backend whose parse server MinerU has given up on
     _client: object | None = field(default=None, init=False, repr=False)
+    _recovery_guard: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
+    _recovering: bool = field(default=False, init=False, repr=False)
+    _last_recovery: float = field(default=float("-inf"), init=False, repr=False)
 
     def _api(self):
-        from mineru.doclib.client import DoclibClient
-
         if self._client is None:
+            from mineru.doclib.client import DoclibClient
+
             self._client = DoclibClient()
         return self._client
 
@@ -108,7 +120,10 @@ class DoclibEngine:
         except EngineError:
             raise
         except Exception as exc:  # noqa: BLE001 - every backend failure becomes a coded EngineError
-            raise self._wrap(exc) from None
+            error = self._wrap(exc)
+            if error.code in _BACKEND_DOWN:
+                self._recover_in_background()
+            raise error from None
 
     def start(self) -> None:
         """Start the doclib server if it is not running, disable telemetry and enable the local managed parse server."""
@@ -124,6 +139,45 @@ class DoclibEngine:
         self._call(api.telemetry_action, "disable")
         for key, value in (("parse_server.local.mode", "managed"), ("parse_server.local.managed_tier", self.managed_tier)):
             self._call(api.set_config, key, ConfigSetRequest(value=value))
+
+    def _recover_in_background(self, restart: bool = False) -> None:
+        """Start MinerU's server again after it died (`restart`: restart one that is running but whose parse server MinerU has given up on). One attempt at a time and at most one per
+        `recovery_interval` (`restart_interval`), in a thread so the failing request (or the health check) still answers at once; callers get the usual transient error and the
+        next one finds the backend back. `start()` is the same routine that runs at boot."""
+        with self._recovery_guard:
+            now = time.monotonic()
+            if self._recovering or now - self._last_recovery < (self.restart_interval if restart else self.recovery_interval):
+                return
+            self._recovering, self._last_recovery = True, now
+        threading.Thread(target=self._recover, args=(restart,), name="doclib-recovery", daemon=True).start()
+
+    @staticmethod
+    def _gave_up(local) -> bool:
+        """MinerU restarts a dead managed parse server `max_restart_attempts` times and then disables it until the server itself restarts (a container squeezed by its memory limit
+        reaches this after a few OOM kills, and it stays there after the memory is available again)."""
+        return bool(
+            local is not None and not local.healthy and not getattr(local, "managed_running", False)
+            and getattr(local, "restart_count", 0) >= getattr(local, "max_restart_attempts", 1 << 30)
+        )
+
+    def _recover(self, restart: bool = False) -> None:
+        try:
+            logger.warning("document backend is %s; %s", "not serving" if restart else "not running", "restarting it" if restart else "starting it again")
+            if restart:
+                subprocess.run(["mineru", "server", "restart"], check=False, capture_output=True, timeout=180)
+                self._client = None
+            self.start()
+            logger.warning("document backend started again")
+        except Exception as exc:  # noqa: BLE001 - the next health check or request tries again after the interval
+            logger.warning("document backend did not come back: %s", getattr(exc, "code", type(exc).__name__))
+        finally:
+            self._recovering = False
+
+    def _require_ready(self) -> None:
+        """A parse started (or a cached one reset) while the backend is down or still warming up would be recorded by MinerU as a failed parse of these bytes, and the document would
+        stay failed after the backend came back. Refusing first leaves nothing behind: the caller's transient-error path retries."""
+        if not self.health().ready:
+            raise EngineError("engine_unavailable")
 
     def _wait_for_server(self, seconds: float = 90.0) -> None:
         deadline = time.monotonic() + seconds
@@ -143,12 +197,16 @@ class DoclibEngine:
             telemetry = api.get_telemetry_status().state
             local = status.parse_server.local if hasattr(status, "parse_server") else None
             ready = bool(status.running and (local is None or local.healthy))
+            if not ready and self._gave_up(local):
+                self._recover_in_background(restart=True)
             return EngineHealth(ready, telemetry == "disabled", None if ready else "parse server not ready")
         except Exception as exc:  # noqa: BLE001
             self._client = None  # re-discover the endpoint if the server was restarted
+            self._recover_in_background()  # Docker's health check calls this every 15 s, so a dead server is restarted without anyone noticing
             return EngineHealth(False, False, str(getattr(exc, "code", "engine_unavailable")))
 
     def ensure_parse(self, path: Path, tier: str, page_range: str | None, force: bool) -> Ticket:
+        self._require_ready()
         from mineru.doclib.types import ParseRequest
 
         response = self._call(self._api().ensure_parse, ParseRequest(path=str(path), tier=tier, page_range=page_range, force=force))
@@ -200,6 +258,7 @@ class DoclibEngine:
 
     def invalidate(self, backend_ref: str, tier: str) -> None:
         """Drop the cached parse of ONE tier. Identical bytes share a backend document, so invalidating every tier would also remove what another Reachy document of the same bytes is using."""
+        self._require_ready()
         from mineru.doclib.types import InvalidateRequest
 
         self._call(self._api().invalidate, InvalidateRequest(target="parses", doc_ref=backend_ref, tier=tier))
