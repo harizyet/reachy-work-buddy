@@ -254,25 +254,25 @@ def test_analyse_review_task_and_authorised_retrieval_over_the_real_stores(dsn, 
                 return {i.ref.locator: i for i in result.bundle.items if i.ref.source_type == "meeting"}
 
             first = await found()
-            decisions = [i for k, i in first.items() if k.startswith("analysis:") and i.text.startswith("Decision")]
-            assert decisions and "[1:00]" in decisions[0].text and decisions[0].provenance.authority == "model_generated"  # cited with its evidence stamp and marked as generated
-            assert not any(k.startswith("analysis:") and i.text.startswith("Action") for k, i in first.items())  # a pending action is not knowledge
-            assert "1" in first and "2" in first  # the source segments stay retrievable beside the finding
+            assert not any(k.startswith("analysis:") for k in first)  # a decision and a pending action are unreviewed: nothing from the analysis is offered to retrieval
+            assert "1" in first and "2" in first  # the source segments stay retrievable
             # authorisation is Phase 44's: a public-only caller and a robot-room (non-private) caller see no finding or segment of a work-private meeting
             for narrow in (access.access_for_owner("o", channel_private=False), access.narrowed(owner, sensitivity_ceiling=Privacy.PUBLIC)):
                 assert not [i for i in (await retriever.retrieve(query, narrow)).bundle.items if i.ref.source_type == "meeting"]
-            # confirm the action: it becomes a task and, after the outbox runs, retrievable
+            # confirm the action: it becomes a task and, after the outbox runs, retrievable with its evidence stamp, marked as generated
             pending = (await service.pending())["items"]
             assert len(pending) == 1
             confirmed = await service.accept(pending[0]["id"])
             assert confirmed["record"]["id"] == action_record_id(pending[0]["id"]) and [t.id for t in await tasks.list_tasks()] == [confirmed["record"]["id"]]
             await worker.drain()
-            assert any(k.startswith("analysis:") and i.text.startswith("Action") for k, i in (await found()).items())
-            # dismissing a finding removes it from retrieval after the outbox runs
+            offered = {k: i for k, i in (await found()).items() if k.startswith("analysis:")}
+            assert [i.text for i in offered.values()] == ["Action: Contact the vendor about compatibility. Assigned to: Alice. Evidence at [2:00]."]
+            assert all(i.provenance.authority == "model_generated" for i in offered.values())
+            # dismissing the decision changes nothing in the index (it was never in it)
             decision = next(i for i in await analysis.list_items(meeting_id=m.id) if i.kind is ItemKind.DECISION)
             await service.dismiss(decision.id)
             await worker.drain()
-            assert not any(k == f"analysis:{decision.id}" for k in await found())
+            assert {k for k in await found() if k.startswith("analysis:")} == set(offered)
             # the meeting and its analysis are one source: deleting the meeting leaves nothing indexed
             await service.meeting_deleted(m.id)
             await meetings.delete_meeting(m.id)

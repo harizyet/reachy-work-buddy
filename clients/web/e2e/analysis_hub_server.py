@@ -2,7 +2,9 @@
 with what a 7B might say about the seeded meeting, including a fabricated quote and a decision that is only a suggestion, which the deterministic validator must drop or label. A background
 task plays the runner (core's lifespan is not run in process). Test fixture only; never a deployment.
 
-    python e2e/analysis_hub_server.py PORT
+    python e2e/analysis_hub_server.py PORT [off]
+
+With `off` the same hub and core run with MEETING_ANALYSIS_ENABLED false (as deployed on 2026-10-12): the Meetings interface must work exactly as before and show no Analysis tab.
 """
 
 import asyncio
@@ -16,7 +18,8 @@ from pathlib import Path
 import httpx
 import uvicorn
 
-os.environ["MEETING_ANALYSIS_ENABLED"] = "true"
+ANALYSIS_ON = not (len(sys.argv) > 2 and sys.argv[2] == "off")
+os.environ["MEETING_ANALYSIS_ENABLED"] = "true" if ANALYSIS_ON else "false"
 tests = Path(__file__).resolve().parents[3] / "services" / "reachy-hub" / "tests" / "test_web_client.py"
 spec = importlib.util.spec_from_file_location("test_web_client", tests)
 module = importlib.util.module_from_spec(spec)
@@ -59,7 +62,7 @@ def build():
         run_meeting_worker_task=False, memory_store=module.InMemoryMemoryStore(), rag_store=module.InMemoryDocumentStore(), email_store=module.InMemoryEmailStore(),
         confirmation_store=module.InMemoryConfirmationStore(), llm_settings_store=module.InMemoryLLMSettingsStore(), llm_usage_store=module.InMemoryLLMUsageStore(),
         persona_store=module.InMemoryPersonaStore(), search_settings_store=module.InMemorySearchSettingsStore(), run_email_dispatch_task=False,
-        meeting_analysis_store=InMemoryMeetingAnalysisStore(), meeting_analysis_provider=provider, run_meeting_analysis_runner=False)
+        meeting_analysis_store=InMemoryMeetingAnalysisStore() if ANALYSIS_ON else None, meeting_analysis_provider=provider, run_meeting_analysis_runner=False)
     segments = [{"start": 10.0 * i, "end": 10.0 * i + 8, "text": t} for i, t in enumerate(TEXTS)]
     meeting = Meeting(
         title="Cluster sync", source_filename="a.wav", content_type="audio/wav", audio_path="/none", started_at=datetime.now(UTC) - timedelta(days=1), duration_seconds=60.0,
@@ -78,7 +81,7 @@ async def serve(client, core, port: int):
     async def runner():
         while True:
             try:
-                if not await core.state.meeting_analysis_service.process_next():
+                if core.state.meeting_analysis_service is None or not await core.state.meeting_analysis_service.process_next():
                     await asyncio.sleep(0.2)
             except Exception:  # noqa: BLE001 - a fixture runner must keep going
                 await asyncio.sleep(0.2)

@@ -403,14 +403,14 @@ def test_a_fresh_accepting_claim_is_not_taken_over(env):
 
 # -- visibility to the knowledge index -------------------------------------------------------------------------------------------------
 
-def test_only_owner_visible_findings_are_retrievable(env):
+def test_only_an_action_the_owner_confirmed_is_retrievable(env):
     run(env.analysed())
     items = run(env.store.list_items(meeting_id=env.meeting.id))
     run(env.service.accept(next(i.id for i in items if i.text.startswith("Update"))))
     run(env.service.dismiss(next(i.id for i in items if i.kind is ItemKind.DECISION)))
     after = run(env.store.list_items(meeting_id=env.meeting.id))
     visible = sorted(i.text for i in after if retrievable(i))
-    assert visible == ["Update the migration schedule document", "Who owns the backup budget"]  # accepted action and the open question; not the pending, not the dismissed decision
+    assert visible == ["Update the migration schedule document"]  # only the action the owner confirmed: no decision, no question, no pending or dismissed item, however they were labelled
 
 
 def test_deleting_the_meeting_removes_its_analysis_but_not_the_task(env):
@@ -430,31 +430,35 @@ def test_chunking_keeps_every_segment_once_and_bounds_each_part():
 
 # -- the knowledge index: authorization and citation are Phase 44's; this checks what the meeting adapter offers it -----------------------------------
 
-def test_the_meeting_adapter_offers_findings_with_evidence_stamps_and_leaves_pending_actions_out(env):
+def test_the_meeting_adapter_offers_only_a_confirmed_action_and_nothing_unreviewed(env):
     from companion_core.knowledge.sources import MeetingAdapter
 
     run(env.analysed())
+    adapter = MeetingAdapter(env.meetings, lambda: env.store)
+
+    def analysis_entries():
+        state = run(adapter.state(env.meeting.id))
+        return state, {i.ref.locator: i for i in state.items if i.ref.locator and i.ref.locator.startswith("analysis:")}
+
+    state, found = analysis_entries()
+    assert found == {}  # decisions, a question and two pending actions exist, and none of them is indexed
     items = run(env.store.list_items(meeting_id=env.meeting.id))
     run(env.service.accept(next(i.id for i in items if i.text.startswith("Update"))))
-    adapter = MeetingAdapter(env.meetings, lambda: env.store)
-    state = run(adapter.state(env.meeting.id))
-    found = {i.ref.locator: i for i in state.items if i.ref.locator and i.ref.locator.startswith("analysis:")}
-    assert sorted(i.text for i in found.values()) == [
-        "Action: Update the migration schedule document. Assigned to: Hariz. Evidence at [4:00].",
-        "Decision: Migrate the cluster in the first week of November. Evidence at [2:00].",
-        "Open question: Who owns the backup budget. Evidence at [5:00].",
-    ]  # the accepted action, the decision and the question; the pending actions are not offered
-    assert len(found) == 3 and all(i.authority == "model_generated" and i.local_only and i.sensitivity is Privacy.WORK_PRIVATE and i.kind == "meeting_minutes" for i in found.values())
-    segments = [i for i in state.items if i.kind == "meeting_segment"]
-    assert len(segments) == 8  # the source words stay indexed beside the findings, each with its own locator
+    state, found = analysis_entries()
+    assert [i.text for i in found.values()] == ["Action: Update the migration schedule document. Assigned to: Hariz. Evidence at [4:00]."]
+    assert all(i.authority == "model_generated" and i.local_only and i.sensitivity is Privacy.WORK_PRIVATE and i.kind == "meeting_minutes" for i in found.values())
+    assert len([i for i in state.items if i.kind == "meeting_segment"]) == 8  # the source words stay indexed, each with its own locator
+    run(env.service.dismiss(next(i.id for i in items if i.kind is ItemKind.DECISION)))
+    assert len(analysis_entries()[1]) == 1  # dismissing or keeping an unreviewed finding changes nothing in the index
     off = run(MeetingAdapter(env.meetings).state(env.meeting.id))
     assert not [i for i in off.items if i.ref.locator and i.ref.locator.startswith("analysis:")]  # feature off: nothing extra
 
 
-def test_a_finding_carries_the_meetings_sensitivity_and_scope():
+def test_a_confirmed_action_carries_the_meetings_sensitivity_and_scope():
     e = Env(meeting=make_meeting(sensitivity=Privacy.SENSITIVE, project_scope="atlas"))
     run(e.setup())
-    run(e.analysed())
+    items = run(e.analysed())["items"]
+    run(e.service.accept(next(i["id"] for i in items if i["text"].startswith("Update"))))
     from companion_core.knowledge.sources import MeetingAdapter
 
     state = run(MeetingAdapter(e.meetings, lambda: e.store).state(e.meeting.id))

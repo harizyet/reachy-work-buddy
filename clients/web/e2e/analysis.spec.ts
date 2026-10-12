@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ANALYSIS_PORT } from './global';
+import { ANALYSIS_OFF_PORT, ANALYSIS_PORT } from './global';
 
 // Phase 31 in a real browser: a signed-in owner, the production build, the real hub in front of a REAL companion-core with meeting analysis on. The one stand-in is the local model
 // (a scripted provider that makes the mistakes a 7B can make; see analysis_hub_server.py). Data is disposable and lives in memory.
@@ -87,4 +87,34 @@ test('mobile: the Analysis tab fits the screen', async ({ page }, info) => {
   await expect(page.getByLabel('Decisions')).toBeVisible({ timeout: 15000 });
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
+});
+
+// With the feature off (the deployed state) the authenticated owner has the Meetings interface exactly as before, and nothing about analysis is offered or reachable.
+test.describe('analysis disabled', () => {
+  const OFF = `http://127.0.0.1:${ANALYSIS_OFF_PORT}/web/`;
+
+  test('the owner opens Meetings and a meeting, sees Summary, Minutes and Transcript, and no Analysis tab', async ({ page }) => {
+    await page.goto(OFF + '#/meetings');
+    await page.getByLabel('Username').fill('owner');
+    await page.getByLabel('Password').fill('correct-password');
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
+    await page.goto(OFF + '#/meetings');
+    await expect(page.getByText('Cluster sync').first()).toBeVisible();
+    const id = await page.evaluate(async () => ((await (await fetch('/meetings')).json()) as { id: string; title: string }[]).find((m) => m.title === 'Cluster sync')!.id);
+    await page.goto(`${OFF}#/meetings/${id}`);
+    for (const name of ['Summary', 'Minutes', 'Transcript']) await expect(page.getByRole('button', { name })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Analysis' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Transcript' }).click();
+    await expect(page.getByText('Alice will contact the vendor').first()).toBeVisible();
+    await expect(page.getByText('Speaker 1').first()).toBeVisible(); // the display name of the stored label speaker_0
+    // The hub says it is off, the analysis routes do not exist in core, and nothing was created.
+    const seen = await page.evaluate(async (meeting) => {
+      const config = await (await fetch('/meeting-analysis/config')).json();
+      const status = (await fetch(`/meetings/${meeting}/analysis`)).status;
+      const post = (await fetch(`/meetings/${meeting}/analysis`, { method: 'POST', headers: { 'X-Reachy-CSRF': '1', 'content-type': 'application/json' }, body: '{}' })).status;
+      return { config, status, post };
+    }, id);
+    expect(seen).toEqual({ config: { enabled: false }, status: 404, post: 404 });
+  });
 });

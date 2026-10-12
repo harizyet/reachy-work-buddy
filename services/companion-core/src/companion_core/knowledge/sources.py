@@ -181,27 +181,24 @@ class MeetingAdapter:
         return SourceState("visible", items)
 
     async def _analysis_items(self, meeting) -> list[Indexable]:
-        """Phase 31: decisions and open questions the owner has not dismissed, and ACCEPTED actions, each worded from the item and carrying its evidence timestamps. They are model-generated
-        (the segments they cite are indexed too, so the source words stay retrievable). A pending action is an unreviewed candidate and is never offered."""
+        """Phase 31: only an action the owner explicitly confirmed, worded from the item and carrying its evidence timestamps, model-generated in its wording (the segments it cites are indexed
+        too, so the source words stay retrievable). Decisions, open questions and pending actions are unreviewed and are never offered (see meeting_analysis.store.retrievable)."""
         store = self._analysis() if self._analysis is not None else None
         if store is None:
             return []
-        from companion_core.meeting_analysis.models import ItemKind
         from companion_core.meeting_analysis.store import retrievable
 
-        label = {ItemKind.DECISION: "Decision", ItemKind.OPEN_QUESTION: "Open question", ItemKind.ACTION: "Action"}
         out: list[Indexable] = []
         for item in await store.list_items(meeting_id=meeting.id):
             if not retrievable(item):
                 continue
             body = item.final_text if item.edited and item.final_text else item.text  # the owner's own words once they edited an action
-            who = f" Assigned to: {item.assignee}." if item.assignee and item.kind is ItemKind.ACTION else ""
-            hedge = "Possible " if item.support.value == "uncertain" else ""  # the quote did not show the usual wording of this kind of finding: say so wherever it is read
-            text = f"{hedge}{label[item.kind].lower() if hedge else label[item.kind]}: {body}.{who} Evidence at {item.stamps()}."
+            who = f" Assigned to: {item.assignee}." if item.assignee else ""
+            text = f"Action: {body}.{who} Evidence at {item.stamps()}."
             out.append(Indexable(
                 ref=_ref("meeting", meeting.id, f"analysis:{item.id}"), kind="meeting_minutes", text=text, match_text=text, sensitivity=max(meeting.sensitivity, item.sensitivity, key=_PRIVACY_RANK.__getitem__),
                 local_only=True, project_scope=meeting.project_scope, confidence=GENERATED_CONFIDENCE, observed_at=meeting.started_at or meeting.created_at, title=meeting.title,
-                section=label[item.kind], start_seconds=item.evidence[0].start, authority="model_generated",
+                section="Action", start_seconds=item.evidence[0].start, authority="model_generated",
             ))
         return out
 

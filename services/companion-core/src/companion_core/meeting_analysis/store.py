@@ -54,9 +54,8 @@ class MeetingAnalysisStore(Protocol):
 
 
 def retrievable(item: Item) -> bool:
-    """What the knowledge index may show: decisions and open questions the owner has not dismissed, and ACCEPTED actions. A pending action is an unreviewed candidate and is never offered as a fact."""
-    if item.status is ItemStatus.NOTED:
-        return True
+    """What the knowledge index may show during the trial: ONLY an action the owner has explicitly confirmed. Decisions, open questions and pending actions are model-written and unreviewed
+    (the owner can dismiss them but there is no confirmation step for decisions and questions), so none of them is offered to retrieval, the Brain or any reply."""
     return item.kind is ItemKind.ACTION and item.status is ItemStatus.ACCEPTED
 
 

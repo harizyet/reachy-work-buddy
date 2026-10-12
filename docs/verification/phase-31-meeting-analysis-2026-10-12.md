@@ -74,3 +74,5 @@ Conclusion: the pipeline is safe as a candidate list (nothing is a task without 
 - Meeting-analysis tests on the final code: 37 core in-process, 7 PostgreSQL, 15 hub, 8 web unit (287 in the web suite), 2 Playwright. `ruff check services shared` clean, `tsc --noEmit` clean.
 - Whole Playwright suite: 130 passed, 4 skipped, 2 failed. `e2e/notepad.spec.ts` (desktop) fails identically with this work stashed (its expected reply wording predates the task-query routing change of 2026-10-11; the spec is stale, not touched here). One `web.spec.ts` mobile layout check failed once in the full run and passed in two reruns of that file (the known intermittent mobile overflow).
 - Frozen Phase 48 files, `memory/`, `benchmarks/` and `notepad_processing/`: no diff against `HEAD`.
+
+> Update 2026-10-12 (trial preparation): the retrieval rule described above ("Possible ..." entries for uncertain items, decisions and questions indexed) was narrowed before activation: only an owner-confirmed action is indexed. See [trial preparation](phase-31-trial-preparation-2026-10-12.md).
