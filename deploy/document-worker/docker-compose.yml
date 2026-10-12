@@ -1,0 +1,43 @@
+# Phase 50 integrated deployment gate: the document worker on its own host (the Proxmox box), CPU only, away from companion-core and the LLM card.
+# Reachy's authoritative originals and database stay with companion-core on the MS-01; this host holds only derived, rebuildable state (volume reachy-mineru) and a
+# copy of the models. A failure here means document processing is unavailable, not that documents are lost.
+#
+#   cp .env.example .env     # set the token, the private bind address and the model directory
+#   ./verify-models.sh       # the model files match the recorded hashes
+#   docker compose up -d --build
+#   ./verify-worker.sh       # hardening, telemetry, no GPU, no unauthenticated access
+#
+# Run it from a checkout of the repository (the build context is the repository root). Never give this service a GPU device.
+name: reachy-document-worker
+
+services:
+  document-worker:
+    build:
+      context: ../..
+      dockerfile: services/document-worker/Dockerfile
+    image: reachy-document-worker:latest
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: ${DOCUMENT_WORKER_MEMORY:-6g}
+    cpus: ${DOCUMENT_WORKER_CPUS:-4}
+    environment:
+      DOCUMENT_WORKER_TOKEN: ${DOCUMENT_WORKER_TOKEN:?set DOCUMENT_WORKER_TOKEN in .env}
+      DOCUMENT_WORKER_MAX_UPLOAD_BYTES: ${DOCUMENT_WORKER_MAX_UPLOAD_BYTES:-52428800}
+      DOCUMENT_WORKER_MAX_PAGES: ${DOCUMENT_WORKER_MAX_PAGES:-200}
+      DOCUMENT_WORKER_TIERS: ${DOCUMENT_WORKER_TIERS:-flash,basic,standard}
+    volumes:
+      - reachy-mineru:/data
+      - ${DOCUMENT_WORKER_MODELS_DIR:?set DOCUMENT_WORKER_MODELS_DIR in .env}:/models:ro
+    ports:
+      # One private address and a dedicated port, never 0.0.0.0: the host firewall allows only the MS-01 to reach it (see README.md); the token is a second, separate control.
+      - "${DOCUMENT_WORKER_BIND:?set DOCUMENT_WORKER_BIND to this host's private address}:${DOCUMENT_WORKER_PORT:-18700}:8000"
+
+volumes:
+  reachy-mineru:
+    name: ${DOCUMENT_WORKER_VOLUME:-reachy-mineru}

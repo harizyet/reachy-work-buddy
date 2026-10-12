@@ -788,6 +788,8 @@ data is rebuildable) and the flags `DOCUMENT_LIBRARY_ENABLED` (default false), `
 
 ## Document worker
 
+The production topology (decided 2026-10-12) puts the worker on the Proxmox host and keeps companion-core, PostgreSQL and `document-source` on the MS-01: bundle, runbook, firewall and verification scripts are in [deploy/document-worker/](../deploy/document-worker/README.md). The profile described below is for single-host and disposable checks.
+
 Phase 50A ([phase-50](phase-50.md), [record](verification/phase-50a-mineru-spike-2026-10-11.md)). Not started by a bare
 `docker compose up`; `--profile documents`. It needs the verified model files on the host (never in the repo): set
 `DOCUMENT_WORKER_MODELS_DIR` to a directory containing `MinerU-4_models_onnx` and `MinerU2.5-Pro-2605-1.2B-GGUF` (hashes in the

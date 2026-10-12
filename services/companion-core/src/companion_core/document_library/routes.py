@@ -8,7 +8,7 @@ import os
 from collections.abc import AsyncIterator
 from typing import Annotated
 
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from pydantic import BaseModel, ConfigDict, Field
 
 from companion_core.document_library.models import (
@@ -27,6 +27,7 @@ from shared.models.document_library import (
 from shared.models.document_worker import WorkerTier
 from shared.models.response import Privacy
 from shared.protocols.document_library_api import (
+    ACCESS_CEILING_HEADER,
     DOCUMENT_LIBRARY_CONFIG,
     DOCUMENT_LIBRARY_DOCUMENT,
     DOCUMENT_LIBRARY_DOCUMENTS,
@@ -124,11 +125,17 @@ def install_document_library_routes(app: FastAPI) -> None:
     async def delete(document_id: str) -> None:
         await run(service().delete(document_id))
 
-    def access():
-        """The owner reading on screen, as for the Brain: private channel, work-private ceiling, local only. A sensitive document is refused here until a trusted caller can say more."""
-        from companion_core import brain
+    def access(request: Request):
+        """The caller's access context, from the ceiling the hub established for the authenticated channel (never from the request body or the document). Absent: work-private."""
+        from companion_core.semantic.access import access_for_owner
 
-        return brain.owner_access(os.environ.get("OWNER_USER_ID", "default-user"))
+        raw = request.headers.get(ACCESS_CEILING_HEADER)
+        try:
+            ceiling = Privacy(raw) if raw else Privacy.WORK_PRIVATE
+        except ValueError:
+            raise HTTPException(400, "Unknown access ceiling") from None
+        return access_for_owner(os.environ.get("OWNER_USER_ID", "default-user"), channel_private=ceiling is not Privacy.PUBLIC, allow_sensitive=ceiling is Privacy.SENSITIVE,
+                                destinations=frozenset({"local"}))
 
     @app.post(DOCUMENT_LIBRARY_REPROCESS)
     async def reprocess(document_id: str, body: ReprocessBody | None = None) -> DocumentOut:
@@ -136,17 +143,18 @@ def install_document_library_routes(app: FastAPI) -> None:
 
     @app.get(DOCUMENT_LIBRARY_READ)
     async def read(
+        request: Request,
         document_id: str,
         page_range: str | None = Query(default=None, max_length=64, pattern=r"^\d+(-\d+)?(,\d+(-\d+)?)*$"),
         after: str | None = Query(default=None, max_length=256),
         limit: int = Query(default=8000, ge=500, le=30000),
     ) -> DocumentContentOut:
-        return await run(service().read(document_id, access(), page_range=page_range, after=after, limit=limit))
+        return await run(service().read(document_id, access(request), page_range=page_range, after=after, limit=limit))
 
     @app.get(DOCUMENT_LIBRARY_LOCATOR)
-    async def locator(document_id: str, locator: str = Query(max_length=256), context: int = Query(default=0, ge=0, le=3), limit: int = Query(default=8000, ge=500, le=30000)) -> DocumentContentOut:
-        return await run(service().read_locator(document_id, access(), locator, context=context, limit=limit))
+    async def locator(request: Request, document_id: str, locator: str = Query(max_length=256), context: int = Query(default=0, ge=0, le=3), limit: int = Query(default=8000, ge=500, le=30000)) -> DocumentContentOut:
+        return await run(service().read_locator(document_id, access(request), locator, context=context, limit=limit))
 
     @app.post(DOCUMENT_LIBRARY_SEARCH)
-    async def search(document_id: str, body: SearchBody) -> DocumentSearchOut:
-        return await run(service().search(document_id, access(), body.query, limit=body.limit))
+    async def search(request: Request, document_id: str, body: SearchBody) -> DocumentSearchOut:
+        return await run(service().search(document_id, access(request), body.query, limit=body.limit))

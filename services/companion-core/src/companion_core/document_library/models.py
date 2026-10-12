@@ -33,6 +33,7 @@ class DocumentState(StrEnum):
     DELETING = "deleting"  # nothing may read it from here on; deletion is retried until the backend confirms
 
 
+UPDATABLE_FIELDS = frozenset({"title", "project_scope", "sensitivity", "state", "backend", "backend_ref", "backend_revision", "tier", "processing_priority", "page_count", "error_code"})  # id, hash and the filename facts never change
 SYNCABLE = (DocumentState.UPLOADED, DocumentState.QUEUED, DocumentState.PROCESSING, DocumentState.PARTIAL)  # states the sync loop still has work for
 
 

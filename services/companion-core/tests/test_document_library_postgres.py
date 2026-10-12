@@ -100,3 +100,42 @@ def test_the_real_store_keeps_a_deleting_document_deleting(dsn):
             await store.close()
 
     asyncio.run(go())
+
+
+def test_the_service_lifecycle_runs_on_the_real_store(dsn, tmp_path):
+    """Found at the gate drill: the service updates `backend`, which the PostgreSQL store refused while the in-memory twin accepted it."""
+    import httpx
+    from companion_core.document_library.models import Priority
+    from companion_core.document_library.service import DocumentService
+    from companion_core.document_library.source_store import SourceStore
+    from companion_core.document_library.worker_client import DocumentWorkerClient
+
+    state = {"worker": "queued"}
+
+    def worker(request: httpx.Request) -> httpx.Response:
+        if request.method == "DELETE":
+            return httpx.Response(200, json={"document_id": "x", "deleted": True, "verified": True, "shared_hash_remaining": False})
+        doc_id = request.url.path.split("/")[2] if request.url.path.count("/") > 1 else "x"
+        return httpx.Response(200, json={"document_id": doc_id, "backend": "mineru", "backend_ref": "abc1234", "source_hash": HASH, "tier": "basic", "state": state["worker"], "page_count": 2})
+
+    async def chunks():
+        yield b"%PDF-1.4\nbody"
+
+    async def go():
+        store = await PostgresDocumentStore.connect(dsn)
+        client = DocumentWorkerClient("http://w", "t", client=httpx.AsyncClient(transport=httpx.MockTransport(worker), base_url="http://w"))
+        service = DocumentService(store, SourceStore(tmp_path / "src"), client)
+        try:
+            doc = await service.upload("a.pdf", chunks(), priority=Priority.NORMAL)
+            assert (doc.state, doc.backend_ref, doc.backend, doc.tier) == (DocumentState.QUEUED, "abc1234", "mineru", "basic")
+            state["worker"] = "ready"
+            assert await service.sync_once() == 1
+            ready = await store.get(doc.id)
+            assert (ready.state, ready.page_count) == (DocumentState.READY, 2)
+            await service.delete(doc.id)
+            assert await store.list() == []
+        finally:
+            await client.close()
+            await store.close()
+
+    asyncio.run(go())

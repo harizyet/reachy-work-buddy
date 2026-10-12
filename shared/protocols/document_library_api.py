@@ -10,3 +10,8 @@ DOCUMENT_LIBRARY_REPROCESS = "/document-library/documents/{document_id}/reproces
 DOCUMENT_LIBRARY_READ = "/document-library/documents/{document_id}/read"  # GET: bounded read of the parsed text (page_range, after, limit)
 DOCUMENT_LIBRARY_LOCATOR = "/document-library/documents/{document_id}/locator"  # GET: read around a locator of this document
 DOCUMENT_LIBRARY_SEARCH = "/document-library/documents/{document_id}/search"  # POST {query, limit}: search inside this one document
+
+# The trusted access ceiling for a request that reads document CONTENT (read, locator, search). Only the hub may set it, from the authenticated channel and its trust policy:
+# owner web or Android session -> "sensitive"; owner Telegram -> its existing trusted-owner ceiling; robot voice, a shared speaker or uncertain identity -> a lower one. Core is
+# reachable only with the service token, so the header cannot come from a browser or from document text. Absent means "work-private" (the conservative default); an unknown value is refused.
+ACCESS_CEILING_HEADER = "X-Reachy-Access-Ceiling"

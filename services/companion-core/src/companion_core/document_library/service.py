@@ -279,17 +279,22 @@ class DocumentService:
                 return document
             return await self._fail(document.id, exc.code) or document
 
-    async def sync_once(self) -> int:
-        """One pass of the sync loop: submit documents the worker has not been given, and move the state of the others to what the worker reports. A worker that lost a document
+    async def sync_once(self, *, include_ready: bool = False) -> int:
+        """One pass of the sync loop (`include_ready` also checks documents already READY against the worker, which is how a worker restored from nothing is noticed): submit documents the worker has not been given, and move the state of the others to what the worker reports. A worker that lost a document
         (for example rebuilt from nothing) is given it again from the authoritative original. Returns how many documents changed."""
         if self.worker is None:
             return 0
         changed = 0
-        for listed in await self.store.pending_sync():
+        watched = (*SYNCABLE, DocumentState.READY) if include_ready else SYNCABLE
+        candidates = await self.store.pending_sync()
+        if include_ready:
+            candidates += [d for d in await self.store.list() if d.state is DocumentState.READY]
+        for listed in candidates:
             async with self._lock(listed.id):
                 current = await self.store.get(listed.id)
-                if current is None or current.state not in SYNCABLE:
+                if current is None or current.state not in watched:
                     continue
+                resubmitted = False
                 try:
                     if current.state is DocumentState.UPLOADED:
                         new = await self._submit(current)
@@ -301,11 +306,12 @@ class DocumentService:
                                 raise
                             await self.store.update(current.id, self.clock(), state=DocumentState.UPLOADED, backend_ref=None, backend_revision=None, page_count=None, error_code=None)
                             new = await self._submit(current)
+                            resubmitted = True  # given to the worker again, whatever state it comes back in
                 except WorkerError as exc:
                     if self._transient(exc):
                         continue
                     new = await self._fail(current.id, exc.code)
-                if new is not None and (new.state, new.page_count, new.error_code) != (current.state, current.page_count, current.error_code):
+                if new is not None and (resubmitted or (new.state, new.page_count, new.error_code) != (current.state, current.page_count, current.error_code)):
                     changed += 1
         return changed
 
@@ -344,6 +350,10 @@ class DocumentService:
                 await self._apply(document.id, await self.worker.status(document.id))
             except WorkerError:
                 pass
+        elif exc.status == 404:
+            # The worker does not know this document at all (it was restored from nothing): give it back to the sync loop, which submits the authoritative original again.
+            await self.store.update(document.id, self.clock(), state=DocumentState.UPLOADED, backend_ref=None, backend_revision=None, page_count=None, error_code=None)
+            return DocumentError(409, "The document is not processed yet")
         return self._refusal(exc)
 
     # --- reading, always from the Reachy document id -------------------------------------------------------------
@@ -398,14 +408,26 @@ class DocumentService:
         )
 
 
-async def run_sync_loop(service: DocumentService, interval: float) -> None:
-    """Keep document states current and submit what is waiting. Errors are logged, never fatal; the interval is DOCUMENT_LIBRARY_SYNC_SECONDS."""
+def reconcile_seconds() -> float:
+    try:
+        return max(1.0, float(os.environ.get("DOCUMENT_LIBRARY_RECONCILE_SECONDS", "300")))
+    except ValueError:
+        return 300.0
+
+
+async def run_sync_loop(service: DocumentService, interval: float, reconcile_every: float | None = None) -> None:
+    """Keep document states current and submit what is waiting. Errors are logged, never fatal; the interval is DOCUMENT_LIBRARY_SYNC_SECONDS. Every `reconcile_every` seconds
+    (DOCUMENT_LIBRARY_RECONCILE_SECONDS, default 300) READY documents are also checked against the worker."""
+    reconcile_every = reconcile_seconds() if reconcile_every is None else reconcile_every
+    elapsed = 0.0
     while True:
         try:
-            await service.sync_once()
+            await service.sync_once(include_ready=elapsed >= reconcile_every)
+            elapsed = 0.0 if elapsed >= reconcile_every else elapsed
             await service.finish_deletions()
         except asyncio.CancelledError:
             raise
         except Exception:
             logger.exception("document sync pass failed")
+        elapsed += interval
         await asyncio.sleep(interval)

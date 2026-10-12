@@ -642,3 +642,53 @@ def test_reprocessing_one_document_does_not_break_another_with_the_same_bytes(ba
     backend.engine.docs[sha(PAGES)]["status"] = "done"
     assert _sync(backend) >= 1 and _doc(backend, second["id"])["state"] == "ready"
     assert backend.client.get(f"/document-library/documents/{second['id']}/read").status_code == 200
+
+
+def test_the_hub_sets_the_ceiling_per_channel_and_core_enforces_it(backend):
+    from shared.protocols.document_library_api import ACCESS_CEILING_HEADER as H
+
+    docs = {level: backend.upload(PAGES, sensitivity=level).json()["id"] for level in ("public", "work-private", "sensitive")}
+
+    def read(level, ceiling):
+        headers = {H: ceiling} if ceiling else {}
+        return backend.client.get(f"/document-library/documents/{docs[level]}/read", headers=headers).status_code
+
+    # no header: today's conservative default, work-private
+    assert [read(lvl, None) for lvl in docs] == [200, 200, 403]
+    # owner web / Android session: the hub says sensitive
+    assert [read(lvl, "sensitive") for lvl in docs] == [200, 200, 200]
+    # a shared speaker or uncertain identity: public only
+    assert [read(lvl, "public") for lvl in docs] == [200, 403, 403]
+    assert backend.client.get(f"/document-library/documents/{docs['public']}/read", headers={H: "everything"}).status_code == 400
+    # search and locator obey the same header
+    for path, method, kw in ((f"/document-library/documents/{docs['sensitive']}/search", "post", {"json": {"query": "retention"}}),
+                             (f"/document-library/documents/{docs['sensitive']}/locator", "get", {"params": {"locator": "doc:abc1234/tier:basic/page:1"}})):
+        call = getattr(backend.client, method)
+        assert call(path, headers={H: "work-private"}, **kw).status_code == 403
+        assert call(path, headers={H: "sensitive"}, **kw).status_code != 403
+
+
+def _wipe_worker(env, tmp_path):
+    import shutil
+
+    env.engine.docs.clear()  # the worker's library and working copies are gone: a fresh MinerU
+    shutil.rmtree(tmp_path / "worker", ignore_errors=True)
+
+
+def test_a_worker_restored_from_nothing_is_noticed_for_ready_documents_and_rebuilt_from_the_originals(backend, tmp_path):
+    created = backend.upload(PAGES).json()
+    assert created["state"] == "ready"
+    _wipe_worker(backend, tmp_path)
+    assert _sync(backend) == 0 and _doc(backend, created["id"])["state"] == "ready"  # the ordinary pass does not look at ready documents
+    assert backend.run(backend.service.sync_once(include_ready=True)) == 1  # the reconcile pass does: the worker 404s, the original is sent again
+    assert _doc(backend, created["id"])["state"] == "ready" and backend.engine.docs
+    assert backend.client.post(f"/document-library/documents/{created['id']}/search", json={"query": "retention"}).json()["hits"]
+
+
+def test_a_read_that_finds_the_worker_empty_returns_the_document_to_the_loop(backend, tmp_path):
+    created = backend.upload(PAGES).json()
+    _wipe_worker(backend, tmp_path)
+    r = backend.client.get(f"/document-library/documents/{created['id']}/read")
+    assert r.status_code == 409 and _doc(backend, created["id"])["state"] == "uploaded"  # never a server error, and the loop will resubmit
+    assert _sync(backend) == 1 and _doc(backend, created["id"])["state"] == "ready"
+    assert backend.client.get(f"/document-library/documents/{created['id']}/read").status_code == 200

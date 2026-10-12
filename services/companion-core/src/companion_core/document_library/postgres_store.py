@@ -6,7 +6,12 @@ from datetime import datetime
 
 from psycopg_pool import AsyncConnectionPool
 
-from companion_core.document_library.models import Document, DocumentState, Priority
+from companion_core.document_library.models import (
+    UPDATABLE_FIELDS,
+    Document,
+    DocumentState,
+    Priority,
+)
 from shared.database import check_schema, close_pool, open_pool
 from shared.models.response import Privacy
 
@@ -15,7 +20,6 @@ _COLUMNS = (
     "page_count, error_code, created_at, updated_at"
 )
 _KEYS = [k.strip() for k in _COLUMNS.split(",")]
-_UPDATABLE = {"title", "project_scope", "sensitivity", "state", "backend_ref", "backend_revision", "tier", "processing_priority", "page_count", "error_code"}
 
 
 def _document(row) -> Document:
@@ -61,7 +65,7 @@ class PostgresDocumentStore:
         return [_document(r) for r in rows]
 
     async def update(self, document_id: str, now: datetime, **fields) -> Document | None:
-        unknown = set(fields) - _UPDATABLE
+        unknown = set(fields) - UPDATABLE_FIELDS
         if unknown:
             raise ValueError(f"not an updatable field: {sorted(unknown)}")
         assignments = ", ".join(f"{name} = %s" for name in fields)

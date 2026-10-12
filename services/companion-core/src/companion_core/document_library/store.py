@@ -6,7 +6,12 @@ from dataclasses import replace
 from datetime import datetime
 from typing import Protocol
 
-from companion_core.document_library.models import SYNCABLE, Document, DocumentState
+from companion_core.document_library.models import (
+    SYNCABLE,
+    UPDATABLE_FIELDS,
+    Document,
+    DocumentState,
+)
 
 
 class DocumentStore(Protocol):
@@ -37,6 +42,9 @@ class InMemoryDocumentStore:
 
     async def update(self, document_id: str, now: datetime, **fields) -> Document | None:
         """Change fields of a document that is not being deleted (a document in DELETING never comes back)."""
+        unknown = set(fields) - UPDATABLE_FIELDS
+        if unknown:
+            raise ValueError(f"not an updatable field: {sorted(unknown)}")  # the same refusal as the PostgreSQL store, so a test cannot pass on a field production rejects
         current = self._docs.get(document_id)
         if current is None or current.state is DocumentState.DELETING:
             return None
