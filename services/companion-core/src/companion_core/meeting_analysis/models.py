@@ -24,7 +24,7 @@ MAX_CHUNKS = 12
 CHUNK_CHARS = 6000  # leaves room for the instructions and the JSON answer in the 8k-token local window (ADR 0031)
 LEASE_SECONDS = 900  # a long meeting is several sequential local-model calls
 ACCEPTING_STALE_SECONDS = 120
-PROMPT_VERSION = "meeting-analysis-1"
+PROMPT_VERSION = "meeting-analysis-2"
 RECORD_NAMESPACE = uuid.UUID("31a0c0de-3131-4131-8131-31a0c0de3131")
 RECEIPT_NAMESPACE = uuid.UUID("31a0c0de-3131-4131-8131-31a0c0de3132")
 

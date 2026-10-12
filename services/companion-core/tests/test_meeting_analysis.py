@@ -582,7 +582,7 @@ def test_an_exact_quote_is_not_proof_the_conclusion_is_supported_so_weak_items_a
         "Who owns the backup budget": "stated", "Is the weather nice": "uncertain"}
     assert any("no clear agreement" in a for a in items["Move the migration to November"]["ambiguity"])
     assert any("goes beyond what the quote says" in a for a in items["Resolve the vendor licensing and sign the new contract"]["ambiguity"])
-    assert any("does not look like a question" in a for a in items["Is the weather nice"]["ambiguity"])
+    assert any("does not read as a real question" in a for a in items["Is the weather nice"]["ambiguity"])
 
 
 def test_two_different_actions_in_one_segment_stay_two_items_and_one_sentence_quoted_twice_is_one():
@@ -611,3 +611,94 @@ def test_reanalysis_after_a_correction_refreshes_undecided_items_and_leaves_deci
     refreshed = after[first["Contact the vendor about compatibility"]["id"]]
     assert refreshed["text"] == "Contact the vendor about licensing" and not refreshed["source_changed"] and refreshed["status"] == "pending" and len(after) == len(first)
     assert after[first["Update the migration schedule document"]["id"]]["status"] == "accepted"  # decided items are never rewritten
+
+
+# -- extraction-quality round (2026-10-12): decisions vs proposals, answered questions, real commitments, several findings in a segment, speaker labels ------------
+
+def labelled(lines, items):
+    """Analyse a small meeting made of (speaker, text) lines with a scripted model; returns the items by their text."""
+    meeting = make_meeting(transcript_segments=[{"start": 10.0 * i, "end": 10.0 * i + 8, "text": t} for i, (_, t) in enumerate(lines)],
+                           aligned_segments=[{"start": 10.0 * i, "end": 10.0 * i + 8, "text": t, "speaker": w} for i, (w, t) in enumerate(lines)], audio_gaps=None, speaker_names={})
+    e = Env(Model(items), meeting)
+    run(e.setup())
+    return {i["text"]: i for i in run(e.analysed())["items"]}
+
+
+def test_proposals_and_opinions_listed_as_decisions_are_kept_but_never_stated():
+    lines = [("SPEAKER_00", "We could maybe go with a second region at some point."), ("SPEAKER_01", "I think we should move the migration to November."),
+             ("SPEAKER_00", "What if we migrate the cluster in November?"), ("SPEAKER_01", "The storage volume is rotational drives with a lot of them."),
+             ("SPEAKER_00", "Okay, agreed, we will migrate the cluster in the first week of November.")]
+    found = labelled(lines, [
+        item("decision", "Go with a second region", ev(0, "We could maybe go with a second region at some point")),
+        item("decision", "Move the migration to November", ev(1, "I think we should move the migration to November")),
+        item("decision", "Migrate the cluster in November", ev(2, "What if we migrate the cluster in November")),
+        item("decision", "The storage is rotational drives", ev(3, "The storage volume is rotational drives with a lot of them")),
+        item("decision", "Migrate in the first week of November", ev(4, "agreed, we will migrate the cluster in the first week of November"))])
+    assert {t: i["support"] for t, i in found.items()} == {
+        "Go with a second region": "uncertain", "Move the migration to November": "uncertain", "Migrate the cluster in November": "uncertain",
+        "The storage is rotational drives": "uncertain", "Migrate in the first week of November": "stated"}  # all five are kept for the owner
+    assert any("hedged or reads as a proposal" in a for a in found["Go with a second region"]["ambiguity"])
+    assert any("no clear agreement" in a for a in found["The storage is rotational drives"]["ambiguity"])
+    assert all(i["status"] == "noted" for i in found.values())  # nothing is promoted or turned into a task
+
+
+def test_an_answered_question_is_not_stated_as_open_and_natural_questions_need_no_question_mark():
+    lines = [("SPEAKER_00", "Are we going to open up these services for other users? No, we don't."),  # answered inside the quote
+             ("SPEAKER_01", "How sensitive are we to using open source from a security point of view"),  # asked
+             ("SPEAKER_00", "Yeah, we do keep a security review for everything we install."),  # answers the line before
+             ("SPEAKER_01", "Who owns the backup budget"),  # no question mark, still a question
+             ("SPEAKER_00", "We will see about the schedule on Monday."),
+             ("SPEAKER_01", "Nobody knows who owns the vendor contract yet."),  # unresolved wording, not a question
+             ("SPEAKER_00", "Let's move on to the next topic then."),
+             ("SPEAKER_01", "What about you?"), ("SPEAKER_00", "Fine.")]
+    found = labelled(lines, [
+        item("open_question", "Will the services be opened to other users", ev(0, "Are we going to open up these services for other users? No, we don't")),
+        item("open_question", "How sensitive are we to open source security", ev(1, "How sensitive are we to using open source from a security point of view")),
+        item("open_question", "Who owns the backup budget", ev(3, "Who owns the backup budget")),
+        item("open_question", "Who owns the vendor contract", ev(5, "Nobody knows who owns the vendor contract yet")),
+        item("open_question", "What about you", ev(7, "What about you"))])
+    got = {t: i["support"] for t, i in found.items()}
+    assert got["Will the services be opened to other users"] == "uncertain" and any("appear to answer" in a for a in found["Will the services be opened to other users"]["ambiguity"])
+    assert got["How sensitive are we to open source security"] == "uncertain"  # the next line answers it
+    assert got["Who owns the backup budget"] == "stated" and got["Who owns the vendor contract"] == "stated"
+    assert got["What about you"] == "uncertain"  # small talk is kept for the owner but never stated
+
+
+def test_genuine_commitments_and_requests_are_not_excluded():
+    lines = [("SPEAKER_00", "I'll send you the report on Monday."), ("SPEAKER_01", "Can you send me the design by Friday."), ("SPEAKER_00", "Let me know your architecture next week."),
+             ("SPEAKER_01", "I'll try and build it and then I'll give you guys access."), ("SPEAKER_00", "I've asked Priya to go get their recommendation."),
+             ("SPEAKER_01", "If you need help with the VM I can do that."), ("SPEAKER_00", "We need to expand it to using a framework."),
+             ("SPEAKER_01", "Alice will contact the vendor about compatibility."), ("SPEAKER_00", "Then I'll work with Dana to set up the ingest. You see what we can do.")]
+    found = labelled(lines, [
+        item("action", "Send the report", ev(0, "I'll send you the report on Monday")), item("action", "Send the design", ev(1, "Can you send me the design by Friday")),
+        item("action", "Let me know your architecture next week", ev(2, "Let me know your architecture next week")), item("action", "Build it and give access", ev(3, "I'll try and build it and then I'll give you guys access")),
+        item("action", "Get the recommendation", ev(4, "I've asked Priya to go get their recommendation"), assignee="Priya"),
+        item("action", "Help with the VM", ev(5, "If you need help with the VM I can do that")), item("action", "Expand to a framework", ev(6, "We need to expand it to using a framework")),
+        item("action", "Contact the vendor", ev(7, "Alice will contact the vendor about compatibility"), assignee="Alice"),
+        item("action", "Work with Dana on the ingest", ev(8, "Then I'll work with Dana to set up the ingest. You see what we can do"))])  # "what we can do" is not a hedge
+    assert {t: i["support"] for t, i in found.items()} == {
+        "Send the report": "stated", "Send the design": "stated", "Let me know your architecture next week": "stated", "Build it and give access": "stated", "Get the recommendation": "stated",
+        "Help with the VM": "uncertain",  # an offer that depends on a condition
+        "Expand to a framework": "uncertain",  # a need, nobody promised it
+        "Contact the vendor": "stated", "Work with Dana on the ingest": "stated"}
+
+
+def test_one_segment_holding_a_decision_an_action_and_a_question_gives_three_findings():
+    one = "Agreed, we will migrate the cluster in November, Alice will contact the vendor tomorrow, and who owns the backup budget?"
+    found = labelled([("SPEAKER_00", one)], [
+        item("decision", "Migrate the cluster in November", ev(0, "Agreed, we will migrate the cluster in November")),
+        item("action", "Contact the vendor", ev(0, "Alice will contact the vendor tomorrow"), assignee="Alice"),
+        item("open_question", "Who owns the backup budget", ev(0, "and who owns the backup budget?")),
+        item("action", "Contact the vendor tomorrow", ev(0, "Alice will contact the vendor"), assignee="Alice")])  # the same promise quoted shorter: one finding, not two
+    assert sorted((i["kind"], i["support"]) for i in found.values()) == [("action", "stated"), ("decision", "stated"), ("open_question", "stated")]
+
+
+def test_speaker_labels_are_taken_out_of_the_finding_text_and_never_invented_back():
+    lines = [("SPEAKER_00", "I'll set up the VM and the software this week."), ("SPEAKER_01", "How soon do you expect the system to be done?"), ("SPEAKER_02", "Agreed, we will use the open version.")]
+    found = labelled(lines, [
+        item("action", "Speaker 1 will set up the VM and the software", ev(0, "I'll set up the VM and the software this week")),
+        item("open_question", "Speaker 2 asks whether the system will be done soon", ev(1, "How soon do you expect the system to be done")),
+        item("decision", "Speaker 3 and Speaker 1 agreed to use the open version", ev(2, "Agreed, we will use the open version"))])
+    assert sorted(found) == ["A participant and a participant agreed to use the open version", "Set up the VM and the software", "The system will be done soon"]
+    assert all(any("speaker label" in a for a in i["ambiguity"]) for i in found.values())
+    assert not any("Speaker" in i["text"] for i in found.values())
