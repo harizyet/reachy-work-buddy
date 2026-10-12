@@ -22,7 +22,7 @@ Nano deployment and calibration, then the occupied-room wake check, the
 visible-false-activations metric and the fresh 24g held-out run (deferred by the
 owner on 2026-09-28); see [phase-30](phase-30.md).
 
-**Phase 31 (DEPLOYED 2026-10-12 with the feature OFF):** structured meeting analysis, owner-reviewed actions
+**Phase 31 (ENABLED 2026-10-12 for the owner-supervised trial, no analysis run yet; [Step B record](verification/phase-31-trial-step-b-activation-2026-10-12.md)):** (earlier: deployed with the feature OFF) structured meeting analysis, owner-reviewed actions
 and retrieval are built behind `MEETING_ANALYSIS_ENABLED=false`; migration `032` is applied ([deployment record](verification/phase-31-deployment-2026-10-12.md));
 see [phase-31](phase-31.md). Still open: the owner's decision to enable it, then a real 30–60 minute
 meeting reviewed by the owner and browser acceptance.
