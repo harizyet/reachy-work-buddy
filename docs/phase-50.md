@@ -1236,6 +1236,8 @@ document viewer
 
 Web remains the initial full management surface.
 
+**Update (2026-10-12, owner decision):** Android now has the full Documents surface and the chat picker (built locally, not deployed): upload through the system picker, list and status, rename, classification, project, delete, one-document questions, search, summaries, tier escalation and a page inspector, all on the existing hub routes; and a chat attachment held by the hub. See the [Android record](verification/phase-50-android-documents-and-history-isolation-2026-10-12.md) and the [Android README](../clients/android/README.md).
+
 ## 33. Interaction with Phase 48 / Phase 49
 
 Phase 50 must not invalidate existing acceptance work.

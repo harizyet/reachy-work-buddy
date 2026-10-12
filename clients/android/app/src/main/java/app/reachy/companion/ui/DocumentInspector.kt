@@ -86,8 +86,10 @@ fun DocumentInspector(docs: DocumentsModel, doc: DocumentItem, startPage: Int) {
             Text("Page $page of $total", style = MaterialTheme.typography.labelLarge)
             IconButton({ page += 1 }, enabled = page < total) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next page") }
             Box(Modifier.weight(1f))
-            FilterChip(showOriginal, { showOriginal = true }, { Text("Original") })
-            FilterChip(!showOriginal, { showOriginal = false }, { Text("Extracted") }, modifier = Modifier.padding(start = 6.dp))
+            // A file with no picture of its pages (a Word document) has only the extracted view.
+            val original = showOriginal && data?.pageImage != false
+            FilterChip(original, { showOriginal = true }, { Text("Original") }, enabled = data?.pageImage != false)
+            FilterChip(!original, { showOriginal = false }, { Text("Extracted") }, modifier = Modifier.padding(start = 6.dp))
         }
         if (docs.inspecting) LinearProgressIndicator(Modifier.fillMaxWidth())
         docs.inspectError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 16.dp)) }
@@ -96,7 +98,7 @@ fun DocumentInspector(docs: DocumentsModel, doc: DocumentItem, startPage: Int) {
                 "Read at ${TIER_LABEL[data.tier] ?: data.tier}. This is the extraction; the original is what counts.",
                 style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
             )
-            if (showOriginal) OriginalView(data, picture, hasPicture, zoom, { zoom = it }, selected) { selected = it }
+            if (showOriginal && data.pageImage) OriginalView(data, picture, hasPicture, zoom, { zoom = it }, selected) { selected = it }
             else ExtractedView(data) { selected = it }
         }
     }
@@ -120,28 +122,31 @@ private fun OriginalView(data: InspectPage, picture: ImageBitmap?, hasPicture: B
             for (z in listOf(1f, 2f, 3f)) FilterChip(zoom == z, { onZoom(z) }, { Text("${z.toInt()}×") })
             Text("Tap a box for details", style = MaterialTheme.typography.labelSmall)
         }
-        BoxWithConstraints(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+        // The width is measured outside the scroller (inside it, it is unbounded): 1x fits the screen, more is scrolled sideways.
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
             val width = maxWidth * zoom
-            Box(
-                Modifier.width(width).padding(8.dp).border(1.dp, MaterialTheme.colorScheme.outline)
-                    .pointerInput(data.blocks) {
-                        detectTapGestures { tap ->
-                            blockAt(data.blocks, (tap.x / size.width).toDouble(), (tap.y / size.height).toDouble())?.let(onSelect)
+            Box(Modifier.horizontalScroll(rememberScrollState())) {
+                Box(
+                    Modifier.width(width).padding(8.dp).border(1.dp, MaterialTheme.colorScheme.outline)
+                        .pointerInput(data.blocks) {
+                            detectTapGestures { tap ->
+                                blockAt(data.blocks, (tap.x / size.width).toDouble(), (tap.y / size.height).toDouble())?.let(onSelect)
+                            }
+                        },
+                ) {
+                    Image(picture, "Page ${data.page} of the original", Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
+                    Canvas(Modifier.matchParentSize()) {
+                        for (b in data.blocks) {
+                            val box = b.bbox?.takeIf { it.size == 4 } ?: continue
+                            val hot = selected?.block == b.block
+                            val color = if (hot) Color(0xFFD81B60) else if (b.type.contains("table")) Color(0xFF2E7D32) else Color(0xFF1565C0)
+                            drawRect(
+                                color.copy(alpha = if (hot) 1f else 0.7f),
+                                Offset((box[0] * size.width).toFloat(), (box[1] * size.height).toFloat()),
+                                Size(((box[2] - box[0]) * size.width).toFloat(), ((box[3] - box[1]) * size.height).toFloat()),
+                                style = Stroke(width = if (hot) 4f else 2f),
+                            )
                         }
-                    },
-            ) {
-                Image(picture, "Page ${data.page} of the original", Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
-                Canvas(Modifier.matchParentSize()) {
-                    for (b in data.blocks) {
-                        val box = b.bbox?.takeIf { it.size == 4 } ?: continue
-                        val hot = selected?.block == b.block
-                        val color = if (hot) Color(0xFFD81B60) else if (b.type.contains("table")) Color(0xFF2E7D32) else Color(0xFF1565C0)
-                        drawRect(
-                            color.copy(alpha = if (hot) 1f else 0.7f),
-                            Offset((box[0] * size.width).toFloat(), (box[1] * size.height).toFloat()),
-                            Size(((box[2] - box[0]) * size.width).toFloat(), ((box[3] - box[1]) * size.height).toFloat()),
-                            style = Stroke(width = if (hot) 4f else 2f),
-                        )
                     }
                 }
             }

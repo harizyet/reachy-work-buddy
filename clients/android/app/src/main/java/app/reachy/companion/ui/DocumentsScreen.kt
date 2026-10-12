@@ -66,6 +66,7 @@ import app.reachy.companion.data.STATE_LABEL
 import app.reachy.companion.data.TIER_LABEL
 import app.reachy.companion.data.UPLOAD_MIME_TYPES
 import app.reachy.companion.data.citedPages
+import app.reachy.companion.data.cleanSnippet
 import app.reachy.companion.data.pagesLabel
 import app.reachy.companion.data.sizeLabel
 import app.reachy.companion.data.titleFromFilename
@@ -350,7 +351,7 @@ private fun SearchTab(docs: DocumentsModel, onOpenPage: (Int) -> Unit) {
                     val hit = result.hits[i]
                     Card(Modifier.fillMaxWidth().let { m -> if (hit.page != null) m.clickable { onOpenPage(hit.page) } else m }) {
                         Column(Modifier.padding(12.dp)) {
-                            Text(hit.snippet, style = MaterialTheme.typography.bodyMedium)
+                            Text(cleanSnippet(hit.snippet), style = MaterialTheme.typography.bodyMedium)
                             Text(
                                 if (hit.page != null) "Page ${hit.page}. Tap to see it in the inspector." else "Page not known",
                                 style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary,

@@ -175,3 +175,10 @@ fun parseExtracted(markdown: String): List<Part> {
     flush()
     return parts
 }
+
+private val IMAGE_REF = Regex("!\\[[^\\]]*]\\([^)]*\\)")
+private val TABLE_RULE = Regex("(\\|\\s*)?:?-{3,}:?(\\s*\\|)?")
+
+/** A search hit as plain reading text: markdown marks, image references (which carry internal locators) and table rules are dropped, table pipes become separators. */
+fun cleanSnippet(raw: String): String = raw.replace(IMAGE_REF, " ").replace(TABLE_RULE, " ").replace("|", " · ")
+    .replace(Regex("(?m)^\\s*#+\\s*"), "").replace(Regex("\\s*·(\\s*·)+"), " ·").replace(Regex("\\s+"), " ").trim { it == '·' || it == '…' || it.isWhitespace() }

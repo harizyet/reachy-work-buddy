@@ -1,8 +1,8 @@
 # Reachy Android companion app
 
-A user-centred phone client for reachy-hub (version 0.16.0): **Talk** (voice and chat, with previous
+A user-centred phone client for reachy-hub (version 0.17.0): **Talk** (voice and chat, with previous
 chats), **Reminders** (To Do and timed reminders), **Notes**, **Meetings** (record, review, play back, edit) and
-**Alarms**. Settings and configuration stay in the [web control panel](../operator-ui/README.md).
+**Documents** and **Alarms**. Settings and configuration stay in the [web control panel](../operator-ui/README.md).
 Decision: [ADR 0029](../../docs/adr/0029-android-companion-app.md); stages:
 [Phase 40](../../docs/phase-40.md).
 
@@ -16,6 +16,12 @@ Decision: [ADR 0029](../../docs/adr/0029-android-companion-app.md); stages:
 - **Meetings:** record (survives standby and other apps), a list with titles and descriptions, a transcript with a speaker per line,
   a player (tap a line to play from it), per-line Edit, a warning where the phone captured no audio, editable title and
   description (or written again from the transcript), Summary, Minutes, Use as context, deep-model reruns, delete.
+- **Documents:** the owner's document library ([Phase 50](../../docs/phase-50.md)). Upload a PDF, DOCX, PNG or JPEG through Android's own file picker (the app is given only the file you choose);
+  a list with status that refreshes while a document is being read; rename, classification (public, work private, sensitive), project and delete; **Ask**, **Search** and **Summaries** for one document;
+  *Read more carefully* to read the original again at the next extraction level; and **Inspect**: a page at a time, a toggle between MinerU's picture of the original (with its blocks outlined, tap one for
+  its type, position and MinerU's own crop) and the extracted text with tables. Chat has a document button: choose a ready document and typed messages in that chat are answered from it, with the pages
+  named; **Replace** and **Remove** change it. The attachment is the hub's record of the chat, so it survives restarts and shows on the web too. A document chosen before the first message is saved with the chat before anything is sent.
+  The phone never claims an owner or a privacy ceiling; the hub decides what a chat may draw on.
 - **Alarms:** an Apple-Clock-style list with switches, Edit and an Add/Edit sheet (time wheels, Repeat, Label, Sound, Volume). The phone also keeps its own
   alarm for each one and rings it when Reachy was offline, found nobody in the room or could not play it, even with the app closed. Menu: **Ring on this phone if Reachy can't**.
 - **Pixel Fold and tablets:** at 600 dp or wider the bottom bar becomes a rail and Notes, Meetings, Reminders and Talk show two panes.
@@ -41,9 +47,14 @@ Needs JDK 17 and the Android SDK (platform 35, build-tools 35.0.0). Set
 `sdk.dir` in the gitignored `local.properties`.
 
 ```bash
-./gradlew :app:testDebugUnitTest   # 63 JVM tests (mock hub, pure logic)
+./gradlew :app:testDebugUnitTest   # 76 JVM tests (mock hub, pure logic)
 ./gradlew :app:assembleDebug       # app/build/outputs/apk/debug/app-debug.apk
 ```
+
+## Checking on an emulator (documents)
+
+`clients/android/e2e/android_hub_server.py` is a throwaway hub with a real core, a disposable real PostgreSQL and a real document worker (see its docstring); reach it with `adb reverse`.
+The Documents checks of 2026-10-12 used it; see the verification record linked from [Phase 50](../../docs/phase-50.md#32-android-scope).
 
 ## Checking on an emulator
 

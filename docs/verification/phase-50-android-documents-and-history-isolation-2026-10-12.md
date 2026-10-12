@@ -1,0 +1,44 @@
+# Phase 50: conversation-history isolation and Android Documents (2026-10-12)
+
+Owner request (2026-10-12): fix the shared short-term history defect found at the chat-picker deployment, then add Android chat attachments and a Documents screen on the existing library. **Everything here is local and committed; nothing is deployed.** Keep Phase 50F and Proxmox deferred; Phase 48 artifacts unchanged.
+
+## A. Conversation-history isolation
+
+### What was wrong
+Core keyed its short-term conversation (model messages, carried privacy label, pending alarm offer, search thread) by the hub *session*, one per owner across every channel and every saved web or Android chat. A document's answers in chat A therefore stayed in the model's context in chat B, which could repeat or mis-tag them. Document access itself was never at fault (the document store and ceilings held).
+
+### What changed
+* The **hub derives** a `history_scope` from the stored chat and its attached context: `chat:<id>`, `chat:<id>:doc:<document id>` (an attached document wins) or `chat:<id>:mtg:<digest of meeting id>`. It is sent only on core's service-token `/conversation`; the hub's `InboundMessage` has no such field, so a client cannot choose, forge or impersonate a scope, and a chat id the owner does not own is 404/403 before any scope exists.
+* Core keys history, pending alarm offers and the search thread by session plus scope (`history_key`). Telemetry, shadow routing and candidate capture still use the session id, so Phase 48 data and every frozen file are unchanged.
+* A new chat starts empty; changing or removing the document, or choosing a meeting, starts that context's own history (returning resumes it); the shared session history (voice, Telegram, robot) never contains chat turns and keeps its continuity.
+* **Restoration:** when core holds no history for a scope (restart, or eviction beyond 64 scoped histories) the hub sends up to six of that chat's own saved exchanges recorded under the same context (`prior_turns`); core restores them labelled work-private and ignores `prior_turns` if any history exists. A turn now records the `meeting_id` it was sent under.
+* **Deleting a chat** calls the new `POST /conversation/forget`.
+* **One-off document questions** (Documents screens, `context_document_id` with no chat) are scoped `docqa:<document id>`.
+* Not changed (accepted): spoken Android turns have no chat and share the voice/session history; no document text is added to memory or the knowledge index.
+
+### Verification
+* Core: 7 new tests (scopes do not see each other; context change is clean; unscoped continuity unchanged and free of chat turns; restoration only when empty and never overriding live history; forget by prefix without touching a chat id that merely starts the same; bounded scoped histories; seeded label).
+* Hub through the real chain (real core, real worker app over a fake engine, model recording what it saw): chats never share history incl. a sensitive document; a client cannot choose or forge it (extra body fields, another chat id, another user); switching or removing a document starts clean for that context; restoration after core loses its memory comes from that chat's own turns only and never seeds a spoken turn; voice continuity; per-document one-off history; delete forgets and each context has its scope key. 18 tests in that file.
+* **Real PostgreSQL** (disposable `pgvector/pgvector:pg16`, core migrations applied): the chat store round-trips attachment state entries and `meeting_id` and refuses another owner's chat; the document-library Postgres suite passes (8 tests).
+* **Live, over the real stack on a device:** with the real worker, real MinerU and the real local model, a new Android chat asked the document's content and answered "I don't have access…" (the original defect would have answered from the other chat); replacing the document answered only from the new document; after Remove the earlier document's answers were not in context.
+* Full suites (final run): 3,108 passed, 5 failed: the 4 baseline failures below plus `test_wake` (embodiment, untouched; a timing flake that passes alone). The baseline failures (`test_spoken_command_text_does_not_actuate_the_robot`, two knowledge tests, `test_sample_responses_still_match_the_hub`) also fail on the untouched tree; the web samples snapshot was already stale (it predates the picker). Ruff is clean for services, shared and the new fixture (the older web e2e fixtures already fail ruff).
+
+### Not yet accepted
+The owner's decision is needed before declaring cross-conversation document isolation accepted: it needs a **core and hub deployment** (hub alone is not enough, core must understand `history_scope`). Deployment recreates core, so Phase 48 cohort bookkeeping applies.
+
+## B. Android chat attachments and Documents
+
+### What was built (Android 0.17.0, `clients/android`)
+* **Chat:** a document button, a picker of the library (only ready documents selectable), "Answering from: …" with Replace and Remove, a warning for a deleted document, "From pages N of “…”" under answers and in reopened chats. The attachment is the hub's (`PUT /chats/{id}/document`, `GET /chats/{id}`), so Android and web share one implementation; choosing a document lets go of a chosen meeting and the reverse. A document chosen before the first message is saved right after the chat is created and before the message; if that fails nothing is sent.
+* **Documents tab:** upload through `OpenDocument` (PDF, DOCX, PNG, JPEG; no storage permission), list with live status, rename, classification, project, delete, Ask, Search (hit opens the page in the inspector), Summaries (ordinary, executive, technical; stale flag; write again), *Read more carefully* (next tier) and *Try reading again*, and the Inspect tab: Original/Extracted toggle (a Word document opens on Extracted), MinerU's page picture with blocks outlined (tap for type, position and MinerU's crop), page controls, zoom, extracted text with tables rendered as grids. Wide windows get a list and detail pane.
+* All through existing routes; no Android-specific backend, retrieval or parser. The app sends no owner or ceiling; MinerU's HTML is never rendered.
+
+### Verification
+* **JVM:** 76 tests (63 existing + 13 new): request shapes (CSRF, multipart upload streamed from the picked file, patch bodies send only what changed, reprocess with and without a tier, question names only the document, search, summaries, inspector, attachment set/replace/remove and 404), parsing of the hub's shapes incl. unknown fields, citation pages, availability, upload type check, block hit-testing, extracted-markdown parsing (pipe and HTML tables as text only), snippet cleaning.
+* **Device (emulator, API 34, phone and unfolded size) against a throwaway hub with a real core, a disposable real PostgreSQL and a real MinerU worker (6 GB, as production):** sign-in; upload of a 2-page PDF via the system picker, a DOCX and a PNG (status Reading then Ready, Basic for PDF/PNG, Flash for DOCX); the picker greys out an unsupported `.txt`; Ask (correct figures, "From page 1"); Search with real page numbers; an executive summary; rename, classification, project; escalation Basic to Standard completed on real MinerU (no OOM at 6 GB); inspector: the page image with correctly aligned block boxes, the table block's metadata and MinerU's crop, the extracted text with the table grid; chat: attach before the first message, cited answer, follow-up, full app restart then reopen (attachment and citations restored), new chat clean, switch back, replace, remove, deleted document (warning and the fixed reply, no content); PostgreSQL contents matched (4 attachment state entries, 6 turns, outputs removed with the document). No server or worker errors.
+* **Found and fixed during the device pass:** six tab labels wrapped mid-word (now one line, "Docs"); the page picture was cut off at 1x because its width was measured inside the scroller; raw markdown and an internal locator showed in search snippets; a Word document opened on an empty Original view.
+* **Observed, not changed:** at a 4 GB limit the worker's MinerU server was OOM-killed and the worker kept answering 502 `server_not_running` until it was restarted, with no self-recovery (production has 6 GB and has not hit this).
+* **Not covered:** a physical device; sensitive-document display ceilings by channel beyond the hub tests; meeting-context exclusivity on a device (no meetings in the fixture; unit and hub tests cover it); TalkBack and large-font accessibility; very large or many-page documents (50 MB limit and the worker's page cap are the server's).
+
+### Rollout when approved
+Hub and core images (history isolation needs both; no schema change) and the new APK (`app/build/outputs/apk/debug/app-debug.apk`). Keep rollback images and the existing verified backups. Then the owner's own acceptance on the phone.

@@ -47,9 +47,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.sp
 import app.reachy.companion.AppViewModel
 
-private enum class Tab(val title: String) { Talk("Talk"), Todo("Reminders"), Notes("Notes"), Meetings("Meetings"), Documents("Documents"), Alarms("Alarms") }
+private enum class Tab(val title: String, val barLabel: String = title) { Talk("Talk"), Todo("Reminders"), Notes("Notes"), Meetings("Meetings"), Documents("Documents", "Docs"), Alarms("Alarms") }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,7 +100,7 @@ fun Shell(model: AppViewModel) {
         bottomBar = {
             if (!wide) NavigationBar {
                 for (item in Tab.entries) NavigationBarItem(
-                    selected = tab == item, onClick = { tab = item }, label = { Text(item.title) },
+                    selected = tab == item, onClick = { tab = item }, label = { Text(item.barLabel, maxLines = 1, softWrap = false, fontSize = 10.sp) },
                     icon = { TabIcon(model, item) },
                 )
             }
@@ -109,7 +110,7 @@ fun Shell(model: AppViewModel) {
         Row(modifier) {
         if (wide) NavigationRail {
             for (item in Tab.entries) NavigationRailItem(
-                selected = tab == item, onClick = { tab = item }, label = { Text(item.title) }, icon = { TabIcon(model, item) },
+                selected = tab == item, onClick = { tab = item }, label = { Text(item.barLabel) }, icon = { TabIcon(model, item) },
             )
         }
         Column(Modifier.weight(1f)) {
