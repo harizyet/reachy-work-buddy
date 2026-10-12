@@ -133,6 +133,7 @@ import time
 from collections.abc import AsyncIterator, Callable, Sequence
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
+from urllib.parse import quote
 
 import httpx
 from fastapi import (
@@ -228,12 +229,20 @@ from shared.models.session import (
     InteractionMode,
     PrivacyContext,
 )
-from shared.models.web_chat import ChatCreate, ChatRecord, ChatTurn
+from shared.models.web_chat import (
+    ChatCitation,
+    ChatCreate,
+    ChatDocumentRef,
+    ChatDocumentSet,
+    ChatRecord,
+    ChatTurn,
+)
 from shared.models.websearch import TurnWebSearch
 from shared.protocols.commands import TELEGRAM_COMMANDS
 from shared.protocols.memory_candidates_api import PRIVACY_STATE
 from shared.protocols.operator_api import (
     CHAT,
+    CHAT_DOCUMENT,
     CHATS,
     ROBOT_MOTION_SETTINGS,
     ROBOT_VOICE,
@@ -1527,13 +1536,45 @@ def create_app(
         check_chat_user(body.user_id)
         return await app.state.chat_store.create(ChatRecord(user_id=body.user_id, title=body.title))
 
+    async def document_exists(document_id: str) -> bool | None:
+        """Does the library still hold this document? None when that cannot be told (the library is off or core is unreachable): the chat then does not claim either way."""
+        try:
+            response = await companion_core_client.document_request("GET", f"/document-library/documents/{quote(document_id, safe='')}", timeout=10.0)
+        except (httpx.HTTPError, ValueError):
+            return None
+        if response.status_code == 200:
+            return True
+        return False if response.status_code == 404 and "document" in response.text.lower() else None
+
     @app.get(CHAT, dependencies=[Depends(require_remote_auth)])
     async def get_chat(chat_id: str, user_id: str):
         check_chat_user(user_id)
         record = await app.state.chat_store.get(user_id, chat_id)
         if record is None:
             raise HTTPException(404, "Chat not found")
+        if record.document is not None:
+            record.document.available = await document_exists(record.document.id) is not False  # a stale attachment is shown as such; core re-checks it on every turn regardless
         return record
+
+    @app.put(CHAT_DOCUMENT, dependencies=[Depends(require_remote_auth), Depends(require_csrf)])
+    async def set_chat_document(chat_id: str, body: ChatDocumentSet):
+        """Attach, replace or remove the document this saved conversation answers from. The attachment lives in the chat's own archive and applies to every later message of that chat (and only that chat)
+        until it is changed here; core still checks the document's class, project, state and source integrity on every turn."""
+        check_chat_user(body.user_id)
+        record = await app.state.chat_store.get(body.user_id, chat_id)
+        if record is None:
+            raise HTTPException(404, "Chat not found")
+        ref = None
+        if body.document_id is not None:
+            try:
+                response = await companion_core_client.document_request("GET", f"/document-library/documents/{quote(body.document_id, safe='')}", timeout=15.0)
+            except (httpx.HTTPError, ValueError):
+                raise HTTPException(502, "The document library is unavailable") from None
+            if response.status_code != 200:
+                raise HTTPException(404 if response.status_code == 404 else 502, "No such document" if response.status_code == 404 else "The document library is unavailable")
+            ref = ChatDocumentRef(id=response.json()["id"], title=str(response.json().get("title", ""))[:200])
+        await app.state.chat_store.set_document(chat_id, ref)
+        return {"document": ref}
 
     @app.delete(CHAT, dependencies=[Depends(require_remote_auth)])
     async def delete_chat(chat_id: str, user_id: str):
@@ -1555,7 +1596,10 @@ def create_app(
         record = await app.state.chat_store.get(message.user_id, message.chat_id)
         if record is None:
             raise HTTPException(404, "Chat not found")
-        turn = ChatTurn(text=message.text)
+        # The conversation's own attachment decides which document (if any) answers; a document id sent with the message is ignored here, so a message can neither smuggle in another document nor
+        # lose the attachment. Removing or replacing it is an explicit action (PUT /chats/{id}/document).
+        message = message.model_copy(update={"context_document_id": record.document.id if record.document else None})
+        turn = ChatTurn(text=message.text, document=ChatDocumentRef(id=record.document.id, title=record.document.title) if record.document else None)
         # Persist before invoking: a lost response must never look safe to retry.
         await app.state.chat_store.append(record.id, turn)
         try:
@@ -1566,6 +1610,7 @@ def create_app(
             raise
         turn.reply = result.reply
         turn.web_search = result.web_search
+        turn.citations = [ChatCitation(document_id=str(c["document_id"]), title=str(c["title"])[:200], page=int(c["page"])) for c in result.citations if c.get("page")]
         turn.status = "complete"
         await app.state.chat_store.finish(record.id, turn)
         return result

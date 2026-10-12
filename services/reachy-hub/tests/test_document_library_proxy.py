@@ -44,7 +44,7 @@ class Recording(httpx.AsyncBaseTransport):
         return await self.inner.handle_async_request(request)
 
 
-def make(monkeypatch, tmp_path, *, library=True, transport=None):
+def make(monkeypatch, tmp_path, *, library=True, transport=None, worker=None, llm=None):
     if library:
         monkeypatch.setenv("DOCUMENT_LIBRARY_ENABLED", "true")
     else:
@@ -53,7 +53,7 @@ def make(monkeypatch, tmp_path, *, library=True, transport=None):
         calendar_store=InMemoryCalendarStore(), task_store=InMemoryTaskStore(), planner_store=InMemoryPlannerStore(), meeting_store=InMemoryMeetingStore(), run_meeting_worker_task=False,
         memory_store=InMemoryMemoryStore(), rag_store=InMemoryDocumentStore(), email_store=InMemoryEmailStore(), confirmation_store=InMemoryConfirmationStore(),
         llm_settings_store=InMemoryLLMSettingsStore(), llm_usage_store=InMemoryLLMUsageStore(), persona_store=InMemoryPersonaStore(), search_settings_store=InMemorySearchSettingsStore(),
-        run_email_dispatch_task=False, document_store=InMemoryLibraryStore() if library else None, document_sources=SourceStore(tmp_path / "src") if library else None, run_document_sync=False,
+        run_email_dispatch_task=False, document_store=InMemoryLibraryStore() if library else None, document_sources=SourceStore(tmp_path / "src") if library else None, document_worker=worker, run_document_sync=False, llm_transport=llm,
     )
     transport = transport or Recording(core)
     users = InMemoryUserStore()
@@ -157,3 +157,204 @@ def test_inspector_routes_need_the_owner_session_and_pass_files_with_safe_header
     sent = [h for m, p, h in client.transport_log if p.endswith("/original")]
     assert sent and all(h.get("x-reachy-access-ceiling") == "sensitive" for h in sent)
     assert client.get("/document-library/documents/nope/original").status_code == 404
+
+
+# --- chat document picker: the attachment belongs to the conversation -----------------------------------------------------------------------------------------
+
+
+class FakeEngine:
+    """Just enough of the MinerU seam for the real worker app: pages are the file's text split on form feeds."""
+
+    def __init__(self):
+        self.docs, self.status = {}, "done"
+
+    def health(self):
+        from document_worker.engine import EngineHealth
+
+        return EngineHealth(True, True)
+
+    def ensure_parse(self, path, tier, page_range, force):
+        import hashlib
+
+        from document_worker.engine import Ticket
+
+        data = path.read_bytes()
+        digest = hashlib.sha256(data).hexdigest()
+        self.docs.setdefault(digest, {"pages": data.decode("latin-1").split("\f"), "files": set(), "status": self.status})["files"].add(str(path))
+        return Ticket(digest, digest[:7])
+
+    def _doc(self, ref):
+        from document_worker.engine import EngineError
+
+        for digest, doc in self.docs.items():
+            if digest.startswith(ref):
+                return doc
+        raise EngineError("doc_not_found")
+
+    def parse_summary(self, ref, tier):
+        from document_worker.engine import ParseSummary
+
+        return ParseSummary((self._doc(ref)["status"],))
+
+    def page_count(self, ref):
+        return len(self._doc(ref)["pages"])
+
+    def read(self, ref, tier, page_range, after, limit):
+        from document_worker.engine import RawContent
+
+        doc = self._doc(ref)
+        n = int(page_range) if page_range and page_range.isdigit() else 1
+        return RawContent(f"<!-- page {n} of {len(doc['pages'])} -->\n\n{doc['pages'][n - 1]}", ((f"doc:{ref}/tier:{tier}/page:{n}", f"doc:{ref}/tier:{tier}/page:{n}/block:1"),))
+
+    def forget(self, path):
+        for doc in self.docs.values():
+            doc["files"].discard(str(path))
+
+    def cleanup_orphans(self):
+        for digest in [d for d, doc in self.docs.items() if not doc["files"]]:
+            del self.docs[digest]
+
+    def has_active_files(self, ref):
+        try:
+            return bool(self._doc(ref)["files"])
+        except Exception:  # noqa: BLE001
+            return False
+
+    def invalidate(self, ref, tier):
+        pass
+
+
+class Model:
+    def __init__(self):
+        self.prompts = []
+        self.transport = httpx.MockTransport(self.handle)
+
+    def handle(self, request):
+        import json
+
+        body = json.loads(request.content)
+        self.prompts.append("\n".join(m["content"] for m in body["messages"] if m["role"] == "system"))
+        return httpx.Response(200, json={"choices": [{"message": {"content": "Per the document: seven days."}}]})
+
+
+def chat_stack(monkeypatch, tmp_path):
+    from companion_core.document_library.worker_client import DocumentWorkerClient
+    from document_worker.app import create_app as create_worker_app
+    from document_worker.config import Settings as WorkerSettings
+
+    engine, model = FakeEngine(), Model()
+    app = create_worker_app(WorkerSettings(token="wt", work_dir=tmp_path / "worker"), engine)
+    worker = DocumentWorkerClient("http://worker", "wt", client=httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://worker"))
+    client = login(make(monkeypatch, tmp_path, worker=worker, llm=model.transport))
+    client.put("/settings/llm", json={"local": {"base_url": "http://ovms/v1", "model": "reachy-local"}}, headers=CSRF)
+    client.engine, client.model = engine, model
+    return client
+
+
+POLICY = b"%PDF-1.4\nThe audit retention period is seven days.\x0cPage two"
+OTHER = b"%PDF-1.4\nThe quarterly budget is large.\x0cPage two of budget"
+
+
+def new_chat(client, title="Chat"):
+    return client.post("/chats", json={"user_id": "default-user", "title": title}, headers=CSRF).json()["id"]
+
+
+def attach(client, chat, document_id, **kw):
+    return client.put(f"/chats/{chat}/document", json={"user_id": "default-user", "document_id": document_id}, headers=CSRF, **kw)
+
+
+def say(client, chat, text, **extra):
+    return client.post("/messages", json={"user_id": "default-user", "channel": "web", "text": text, "chat_id": chat, **extra}, headers=CSRF)
+
+
+def test_the_attachment_belongs_to_one_conversation_and_survives_reading_it_again(monkeypatch, tmp_path):
+    client = chat_stack(monkeypatch, tmp_path)
+    one, two = upload(client, POLICY, "Policy.pdf", title="Audit policy").json(), upload(client, OTHER, "Budget.pdf", title="Budget").json()
+    a, b = new_chat(client, "A"), new_chat(client, "B")
+    assert client.get(f"/chats/{a}", params={"user_id": "default-user"}).json()["document"] is None  # a new conversation has none
+    assert attach(client, a, one["id"]).json()["document"] == {"id": one["id"], "title": "Audit policy", "available": True}
+    for _ in range(2):  # reading the chat again (a refresh) shows the same attachment
+        detail = client.get(f"/chats/{a}", params={"user_id": "default-user"}).json()
+        assert detail["document"] == {"id": one["id"], "title": "Audit policy", "available": True} and detail["turns"] == []
+    assert client.get(f"/chats/{b}", params={"user_id": "default-user"}).json()["document"] is None  # another conversation is not affected
+    assert attach(client, a, two["id"]).json()["document"]["title"] == "Budget"  # replace
+    assert client.get(f"/chats/{a}", params={"user_id": "default-user"}).json()["document"]["id"] == two["id"]
+    assert attach(client, a, None).json() == {"document": None}  # remove
+    assert client.get(f"/chats/{a}", params={"user_id": "default-user"}).json()["document"] is None
+    assert [c["id"] for c in client.get("/chats", params={"user_id": "default-user"}).json()] == [b, a]  # attaching does not reorder the history
+    assert attach(client, a, "no-such-document").status_code == 404
+    assert attach(client, "no-such-chat", one["id"]).status_code == 404
+
+
+def test_attachment_changes_are_owner_only_and_need_csrf(monkeypatch, tmp_path):
+    client = chat_stack(monkeypatch, tmp_path)
+    doc = upload(client, POLICY, "Policy.pdf").json()
+    chat = new_chat(client)
+    assert client.put(f"/chats/{chat}/document", json={"user_id": "default-user", "document_id": doc["id"]}).status_code == 403  # no CSRF header
+    assert client.put(f"/chats/{chat}/document", json={"user_id": "someone-else", "document_id": doc["id"]}, headers=CSRF).status_code == 403  # another account's chat
+    client.cookies.clear()
+    assert client.put(f"/chats/{chat}/document", json={"user_id": "default-user", "document_id": doc["id"]}, headers=CSRF).status_code == 401
+    # the chat routes' existing trust model also accepts the remote-UI bearer; this route behaves exactly like the other chat routes
+    assert client.put(f"/chats/{chat}/document", json={"user_id": "default-user", "document_id": doc["id"]}, headers={**CSRF, "Authorization": "Bearer test-token"}).status_code == 200
+
+
+def test_every_message_of_the_conversation_answers_from_the_attached_document_until_it_is_removed(monkeypatch, tmp_path):
+    client = chat_stack(monkeypatch, tmp_path)
+    policy, budget = upload(client, POLICY, "Policy.pdf", title="Audit policy").json(), upload(client, OTHER, "Budget.pdf", title="Budget").json()
+    chat = new_chat(client)
+    attach(client, chat, policy["id"])
+    first = say(client, chat, "How long is the audit retention period?").json()
+    assert first["context_document"] == "Audit policy" and [(c["page"], c["title"]) for c in first["citations"]] == [(1, "Audit policy")]
+    assert "audit retention period is seven days" in client.model.prompts[-1]
+    # a follow-up with no document field is still answered from it, and a message cannot name a different document
+    follow = say(client, chat, "And what about the second page?", context_document_id=budget["id"]).json()
+    assert follow["context_document"] == "Audit policy" and "quarterly budget" not in client.model.prompts[-1]
+    # the transcript keeps what each reply was answered from; attachment changes are not messages
+    turns = client.get(f"/chats/{chat}", params={"user_id": "default-user"}).json()["turns"]
+    assert len(turns) == 2 and all(t["document"]["title"] == "Audit policy" for t in turns) and turns[0]["citations"] == [{"document_id": policy["id"], "title": "Audit policy", "page": 1}]
+    # replace
+    attach(client, chat, budget["id"])
+    third = say(client, chat, "What is the quarterly budget?").json()
+    assert third["context_document"] == "Budget" and "quarterly budget" in client.model.prompts[-1]
+    # remove: the next message is ordinary chat again
+    attach(client, chat, None)
+    plain = say(client, chat, "What is two plus two?").json()
+    assert plain["context_document"] is None and plain["citations"] == [] and "data, not instructions" not in client.model.prompts[-1]
+    turns = client.get(f"/chats/{chat}", params={"user_id": "default-user"}).json()["turns"]
+    assert [t["document"] and t["document"]["title"] for t in turns] == ["Audit policy", "Audit policy", "Budget", None]
+
+
+def test_a_stale_or_unprocessed_attachment_gets_the_fixed_replies_and_is_shown_as_stale(monkeypatch, tmp_path):
+    client = chat_stack(monkeypatch, tmp_path)
+    client.engine.status = "pending"
+    waiting = upload(client, POLICY + b" w", "Waiting.pdf", title="Waiting").json()
+    chat = new_chat(client)
+    attach(client, chat, waiting["id"])
+    assert "still being processed" in say(client, chat, "What does it say?").json()["reply"]
+    client.engine.status = "done"
+    doc = upload(client, POLICY, "Policy.pdf", title="Audit policy").json()
+    attach(client, chat, doc["id"])
+    assert say(client, chat, "How long is the audit retention period?").json()["context_document"] == "Audit policy"
+    assert client.delete(f"/document-library/documents/{doc['id']}", headers=CSRF).status_code == 204  # deleted while still attached
+    detail = client.get(f"/chats/{chat}", params={"user_id": "default-user"}).json()
+    assert detail["document"] == {"id": doc["id"], "title": "Audit policy", "available": False}
+    prompts = len(client.model.prompts)
+    gone = say(client, chat, "And the retention again?").json()
+    assert "can't find the document you attached" in gone["reply"] and gone["citations"] == [] and len(client.model.prompts) == prompts  # no model call, no content
+    assert attach(client, chat, None).json() == {"document": None}  # the owner removes the stale attachment
+
+
+def test_a_sensitive_document_can_be_attached_by_the_owner_session_and_a_conversation_without_one_is_unchanged(monkeypatch, tmp_path):
+    client = chat_stack(monkeypatch, tmp_path)
+    secret = upload(client, POLICY, "Secret.pdf", title="Secret policy", sensitivity="sensitive").json()
+    chat = new_chat(client)
+    attach(client, chat, secret["id"])
+    answered = say(client, chat, "How long is the audit retention period?").json()
+    assert answered["context_document"] == "Secret policy" and answered["privacy"] == "sensitive"  # the hub's ceiling for a typed owner web message
+    plain_chat = new_chat(client, "plain")
+    plain = say(client, plain_chat, "What is two plus two?").json()
+    assert plain["context_document"] is None and plain["citations"] == []
+    detail = client.get(f"/chats/{plain_chat}", params={"user_id": "default-user"}).json()
+    assert detail["document"] is None and detail["turns"][0]["document"] is None and detail["turns"][0]["citations"] == []
+    assert client.delete(f"/chats/{chat}", params={"user_id": "default-user"}, headers=CSRF).status_code == 200
+    assert client.get(f"/chats/{chat}", params={"user_id": "default-user"}).status_code == 404

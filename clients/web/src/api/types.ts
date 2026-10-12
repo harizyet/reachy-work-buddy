@@ -328,15 +328,29 @@ export interface ChatRecord {
   updated_at: string;
 }
 
+/** The document a saved conversation answers from (Phase 50). `available` is false when the document has been deleted since. */
+export interface ChatDocument {
+  id: string;
+  title: string;
+  available: boolean;
+}
+export interface ChatCitation {
+  document_id: string;
+  title: string;
+  page: number;
+}
 export interface ChatTurn {
   id: string;
   text: string;
   reply: string | null;
   status: string; // 'pending' | 'complete' | 'unknown'
   web_search: WebSearch | null;
+  document: ChatDocument | null;
+  citations: ChatCitation[];
 }
 
 export interface ChatDetail extends ChatRecord {
+  document: ChatDocument | null;
   turns: ChatTurn[];
 }
 
@@ -344,6 +358,8 @@ export interface MessageResult {
   reply: string;
   web_search: WebSearch | null;
   context_meeting: string | null;
+  context_document: string | null;
+  citations: ChatCitation[];
 }
 
 export interface SessionInfo {
@@ -377,10 +393,27 @@ export function parseChatRecord(value: unknown, what = 'chat'): ChatRecord {
 }
 export const parseChatRecords = (value: unknown): ChatRecord[] => list(value, 'chats').map((v, i) => parseChatRecord(v, `chats[${i}]`));
 
+export const parseChatDocumentRef = (value: unknown): ChatDocument | null => parseChatDocument(value, 'document');
+
+function parseChatDocument(value: unknown, what: string): ChatDocument | null {
+  if (value == null) return null;
+  const d = obj(value, what);
+  return { id: str(d.id, `${what}.id`), title: str(d.title, `${what}.title`), available: d.available === undefined ? true : bool(d.available, `${what}.available`) };
+}
+
+function parseCitations(value: unknown, what: string): ChatCitation[] {
+  if (value == null) return [];
+  return list(value, what).map((item, i) => {
+    const c = obj(item, `${what}[${i}]`);
+    return { document_id: str(c.document_id, `${what}[${i}].document_id`), title: str(c.title, `${what}[${i}].title`), page: num(c.page, `${what}[${i}].page`) };
+  });
+}
+
 export function parseChatDetail(value: unknown): ChatDetail {
   const o = obj(value, 'chat');
   return {
     ...parseChatRecord(value),
+    document: parseChatDocument(o.document, 'chat.document'),
     turns: list(o.turns, 'chat.turns').map((item, i) => {
       const t = obj(item, `chat.turns[${i}]`);
       return {
@@ -389,6 +422,8 @@ export function parseChatDetail(value: unknown): ChatDetail {
         reply: t.reply == null ? null : str(t.reply, `chat.turns[${i}].reply`),
         status: str(t.status, `chat.turns[${i}].status`),
         web_search: parseWebSearch(t.web_search, `chat.turns[${i}].web_search`),
+        document: parseChatDocument(t.document, `chat.turns[${i}].document`),
+        citations: parseCitations(t.citations, `chat.turns[${i}].citations`),
       };
     }),
   };
@@ -400,6 +435,8 @@ export function parseMessageResult(value: unknown): MessageResult {
     reply: str(o.reply, 'message.reply'),
     web_search: parseWebSearch(o.web_search, 'message.web_search'),
     context_meeting: o.context_meeting == null ? null : str(o.context_meeting, 'message.context_meeting'),
+    context_document: o.context_document == null ? null : str(o.context_document, 'message.context_document'),
+    citations: parseCitations(o.citations, 'message.citations'),
   };
 }
 

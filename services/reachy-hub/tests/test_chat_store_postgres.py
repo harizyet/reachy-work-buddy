@@ -53,3 +53,36 @@ def test_delete_removes_the_chat_and_its_turns_for_the_owner_only(database):
             await pool.close()
 
     asyncio.run(run())
+
+
+def test_the_attachment_is_a_state_entry_in_the_chat_archive_not_a_message(database):
+    from shared.models.web_chat import ChatCitation, ChatDocumentRef
+
+    async def run() -> None:
+        pool = AsyncConnectionPool(database, open=False)
+        await pool.open()
+        store = PostgresChatStore(pool)
+        try:
+            chat = await store.create(ChatRecord(user_id="owner", title="Docs"))
+            before = (await store.get("owner", chat.id)).updated_at
+            assert (await store.get("owner", chat.id)).document is None
+            await store.set_document(chat.id, ChatDocumentRef(id="d1", title="Policy", available=False))
+            detail = await store.get("owner", chat.id)
+            assert detail.document == ChatDocumentRef(id="d1", title="Policy") and detail.turns == [] and detail.updated_at == before  # `available` is never stored; no message, no reordering
+            turn = ChatTurn(text="q", document=ChatDocumentRef(id="d1", title="Policy"))
+            await store.append(chat.id, turn)
+            turn.reply, turn.status, turn.citations = "a", "complete", [ChatCitation(document_id="d1", title="Policy", page=3)]
+            await store.finish(chat.id, turn)
+            await store.set_document(chat.id, ChatDocumentRef(id="d2", title="Budget"))  # replace
+            detail = await store.get("owner", chat.id)
+            assert detail.document.id == "d2" and len(detail.turns) == 1 and detail.turns[0].document.id == "d1" and detail.turns[0].citations[0].page == 3
+            await store.set_document(chat.id, None)  # remove
+            assert (await store.get("owner", chat.id)).document is None
+            assert await store.delete("owner", chat.id)  # the state entries go with the chat
+            async with pool.connection() as conn:
+                cursor = await conn.execute("SELECT count(*) FROM web_chat_turns WHERE chat_id = %s", (chat.id,))
+                assert (await cursor.fetchone())[0] == 0
+        finally:
+            await pool.close()
+
+    asyncio.run(run())

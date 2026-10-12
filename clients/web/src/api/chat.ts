@@ -1,11 +1,13 @@
 import { request } from './client';
 import {
   parseChatDetail,
+  parseChatDocumentRef,
   parseChatRecord,
   parseChatRecords,
   parseMessageResult,
   parseSession,
   type ChatDetail,
+  type ChatDocument,
   type ChatRecord,
   type MessageResult,
   type SessionInfo,
@@ -34,3 +36,9 @@ export interface SendMessage {
 }
 export const sendMessage = async (message: SendMessage, signal?: AbortSignal): Promise<MessageResult> =>
   parseMessageResult(await request('/messages', { method: 'POST', body: { channel: 'web', input_modality: 'text', ...message }, signal }));
+
+/** Attach, replace (give another id) or remove (null) the document this conversation answers from. The hub keeps it with the chat and applies it to every later message. */
+export const setChatDocument = async (chatId: string, user: string, documentId: string | null, signal?: AbortSignal): Promise<ChatDocument | null> => {
+  const result = (await request(`/chats/${q(chatId)}/document`, { method: 'PUT', body: { user_id: user, document_id: documentId }, signal })) as { document: unknown };
+  return parseChatDocumentRef(result.document);
+};

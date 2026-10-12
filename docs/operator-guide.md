@@ -132,6 +132,10 @@ The **Documents** page (web) keeps your files and lets Reachy answer from them. 
 * **Delete** removes the original, what was read from it and its summaries. If the reading service cannot confirm right away the document is marked for deletion and unusable, and the removal is retried.
 * What is read from a document is a machine's reading and a summary is a language model's wording of it: both can be wrong. The original is what counts.
 
+## Chatting about a document (Phase 50)
+
+In **Chat**, **Attach a document** (below the message box, shown when the document library is on) lets Reachy answer a conversation from one of your documents. Choose a ready document from the list; "Answering from: <title>" appears with **Replace** and **Remove**. Every follow-up message in that conversation is answered from the document, with the local model, and the answer ends with the pages it used ("From pages 1, 4 of ..."); if the document does not cover the question Reachy says it could not find it. The attachment belongs to that conversation: it is still there after you refresh the page or come back to the chat, other conversations are not affected, and a new conversation starts with nothing attached. Remove it and the next message is ordinary chat again. If the document is deleted while attached, the chat says so and Reachy answers that it can't find the document until you remove it or choose another. Reachy re-checks the document's class, project, state and the integrity of the stored original on every message. Tick "Use frontier model" only if you accept sending the document's excerpts to your cloud provider; a sensitive document is never sent there. Choosing a document lets go of a meeting chosen as context, and the reverse.
+
 ## Alarms
 
 The **Alarms** tab (web) and the **Alarms** tab in the Android app work like a

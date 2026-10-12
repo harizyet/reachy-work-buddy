@@ -1,7 +1,7 @@
 """Real in-process hub in front of a REAL companion-core with the document library on and a REAL document worker (MinerU) for the Phase 50 inspector browser check. Nothing is scripted
 except that the sync loop (core's lifespan does not run in process) is played by a background task. Needs a running worker:
 
-    DOCUMENT_WORKER_URL=http://127.0.0.1:18700 DOCUMENT_WORKER_TOKEN=... python e2e/documents_hub_server.py PORT
+    DOCUMENT_WORKER_URL=http://127.0.0.1:18700 DOCUMENT_WORKER_TOKEN=... [E2E_LLM_BASE_URL=http://127.0.0.1:8003/v1] python e2e/documents_hub_server.py PORT
 
 Owner login `owner` / `correct-password`. Test fixture only; never a deployment; it needs a MinerU worker, so it is not part of the default Playwright suite.
 """
@@ -45,6 +45,10 @@ def build():
 
 
 async def serve(client, core, port: int):
+    if os.environ.get("E2E_LLM_BASE_URL"):  # a real local model for the chat checks (the fixture core is otherwise unconfigured)
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=core), base_url="http://core") as direct:
+            reply = await direct.put("/settings/llm", json={"local": {"base_url": os.environ["E2E_LLM_BASE_URL"], "model": os.environ.get("E2E_LLM_MODEL", "reachy-local")}})
+            reply.raise_for_status()
     server = uvicorn.Server(uvicorn.Config(client.app, host="127.0.0.1", port=port, log_level="warning"))
 
     async def sync():

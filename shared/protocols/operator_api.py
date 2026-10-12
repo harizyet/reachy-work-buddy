@@ -66,6 +66,7 @@ MEETING_CORRECTION = "/meetings/{meeting_id}/corrections/{segment}"
 # Hub-owned web transcript records.
 CHATS = "/chats"
 CHAT = "/chats/{chat_id}"
+CHAT_DOCUMENT = "/chats/{chat_id}/document"  # PUT {user_id, document_id|null}: attach, replace or remove the document this conversation answers from (Phase 50)
 
 # Owner to-do / reminders / notes. Hub proxies to companion-core's /tasks,
 # /reminders and /notes under this prefix.

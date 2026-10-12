@@ -3,7 +3,9 @@ import { Button } from '../../components/ui/Button';
 import { Dialog } from '../../components/ui/Dialog';
 import type { TelegramHealth } from '../../api/types';
 import { SearchDetails, SourcesList, withCitations } from './citations';
+import { DocumentPicker } from './DocumentPicker';
 import { useChat, type ChatMessage } from './ChatProvider';
+import { useLibraryEnabled } from '../documents/useDocuments';
 
 // The fixed set of explicit commands the parser accepts: used only for autocomplete and buttons here, never to decide
 // anything (that is companion_core/commands/parser.py).
@@ -28,6 +30,8 @@ export function ChatPage() {
   const chat = useChat();
   const [deleting, setDeleting] = useState<{ id: string; title: string } | null>(null);
   const [historySearch, setHistorySearch] = useState('');
+  const [picking, setPicking] = useState(false);
+  const library = useLibraryEnabled();
   const textRef = useRef<HTMLTextAreaElement>(null);
   const logRef = useRef<HTMLDivElement>(null);
   const busy = chat.pending || chat.reading;
@@ -199,6 +203,33 @@ export function ChatPage() {
               </small>
             </div>
           )}
+          {library.data === true && (
+            <div className="my-2" aria-label="Document attachment">
+              {chat.attached ? (
+                <div className={`rounded border p-2 text-sm ${chat.attached.available ? 'border-[var(--border)]' : 'border-[var(--warn)]'}`}>
+                  <span>
+                    Answering from: <strong>{chat.attached.title}</strong>
+                  </span>{' '}
+                  <button type="button" className="ml-2 rounded border border-[var(--border)] px-2 py-0.5" disabled={busy} onClick={() => setPicking(true)}>
+                    Replace
+                  </button>{' '}
+                  <button type="button" aria-label="Stop answering from this document" className="rounded border border-[var(--border)] px-2 py-0.5" disabled={busy} onClick={() => void chat.attachDocument(null)}>
+                    Remove
+                  </button>
+                  {!chat.attached.available && (
+                    <small role="alert" className="block text-[var(--warn)]">This document is no longer available, so Reachy cannot answer from it. Remove it or choose another.</small>
+                  )}
+                  <small className="block text-[var(--muted)]">
+                    Follow-up messages in this conversation are answered from this document with the local model, and show the pages used. Tick "Use frontier model" below only if you accept sending its excerpts to your cloud provider (never for a sensitive document).
+                  </small>
+                </div>
+              ) : (
+                <Button variant="secondary" disabled={busy || !chat.user} onClick={() => setPicking(true)}>
+                  Attach a document
+                </Button>
+              )}
+            </div>
+          )}
           {hints.length > 0 && hints[0] !== chat.draft && (
             <div className="my-1 flex flex-wrap gap-1">
               {hints.map((c) => (
@@ -220,6 +251,18 @@ export function ChatPage() {
           </div>
         </form>
       </section>
+
+      {picking && (
+        <DocumentPicker
+          open
+          currentId={chat.attached?.id ?? null}
+          onClose={() => setPicking(false)}
+          onChoose={(doc) => {
+            setPicking(false);
+            void chat.attachDocument({ id: doc.id, title: doc.title });
+          }}
+        />
+      )}
 
       <Dialog open={deleting !== null} title="Delete this chat?" onClose={() => setDeleting(null)}>
         <h2 className="text-lg font-semibold">Delete this chat?</h2>
@@ -252,6 +295,11 @@ function Message({ message, onRun, disabled }: { message: ChatMessage; onRun: (c
       <p className="whitespace-pre-wrap break-words">{cited ? withCitations(message.text, message.webSearch!.results) : message.text}</p>
       {cited && <SourcesList results={message.webSearch!.results} />}
       {!message.fromUser && message.webSearch && <SearchDetails search={message.webSearch} />}
+      {!message.fromUser && message.fromDocument && (
+        <small className="block text-[var(--muted)]">
+          {`From pages ${message.fromDocument.pages.join(', ')} of “${message.fromDocument.title}”. The wording is Reachy's; check the original for anything that matters.`}
+        </small>
+      )}
       {!message.fromUser && message.fromMeeting && <small className="block text-[var(--muted)]">{`From the meeting “${message.fromMeeting}”`}</small>}
       {command && (
         <button

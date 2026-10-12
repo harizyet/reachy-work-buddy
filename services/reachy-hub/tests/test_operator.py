@@ -733,4 +733,4 @@ def test_documents_are_core_only_by_design():
     client = make_client()
     paths = client.app.openapi()["paths"]
     assert not [p for p in paths if p.startswith("/documents")]
-    assert all(p.startswith("/document-library") for p in paths if "document" in p)
+    assert all(p.startswith("/document-library") or p == "/chats/{chat_id}/document" for p in paths if "document" in p)  # plus the chat attachment route (Phase 50)

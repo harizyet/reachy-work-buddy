@@ -1,10 +1,11 @@
 """Hub-owned transcript archive. It never replays a turn into core."""
 from typing import Protocol
+from uuid import uuid4
 
 from psycopg.types.json import Jsonb
 
 from shared.database import check_schema, open_pool
-from shared.models.web_chat import ChatDetail, ChatRecord, ChatTurn
+from shared.models.web_chat import ChatDetail, ChatDocumentRef, ChatRecord, ChatTurn
 
 
 class ChatStore(Protocol):
@@ -14,11 +15,13 @@ class ChatStore(Protocol):
     async def delete(self, user_id: str, chat_id: str) -> bool: ...
     async def append(self, chat_id: str, turn: ChatTurn) -> None: ...
     async def finish(self, chat_id: str, turn: ChatTurn) -> None: ...
+    async def set_document(self, chat_id: str, document: ChatDocumentRef | None) -> None: ...
 
 
 class InMemoryChatStore:
     def __init__(self):
         self.records: dict[str, ChatDetail] = {}
+        self.documents: dict[str, ChatDocumentRef] = {}
 
     async def create(self, record):
         self.records[record.id] = ChatDetail(**record.model_dump())
@@ -31,13 +34,24 @@ class InMemoryChatStore:
 
     async def get(self, user_id, chat_id):
         record = self.records.get(chat_id)
-        return record.model_copy(deep=True) if record and record.user_id == user_id else None
+        if not record or record.user_id != user_id:
+            return None
+        copy = record.model_copy(deep=True)
+        copy.document = self.documents.get(chat_id)
+        return copy
+
+    async def set_document(self, chat_id, document):
+        if document is None:
+            self.documents.pop(chat_id, None)
+        else:
+            self.documents[chat_id] = document
 
     async def delete(self, user_id, chat_id):
         record = self.records.get(chat_id)
         if record is None or record.user_id != user_id:
             return False
         del self.records[chat_id]
+        self.documents.pop(chat_id, None)
         return True
 
     async def append(self, chat_id, turn):
@@ -98,9 +112,13 @@ class PostgresChatStore:
             cursor = await conn.execute(
                 'SELECT data FROM web_chat_turns WHERE chat_id=%s ORDER BY sequence', (chat_id,),
             )
-            return ChatDetail(**self._record(row).model_dump(), turns=[
-                ChatTurn.model_validate(r[0]) for r in await cursor.fetchall()
-            ])
+            turns, document = [], None
+            for (data,) in await cursor.fetchall():
+                if data.get("kind") == "attachment":  # a state entry in the same archive (no extra table): the last one is the current attachment; it is not a message
+                    document = ChatDocumentRef.model_validate(data["document"]) if data.get("document") else None
+                else:
+                    turns.append(ChatTurn.model_validate(data))
+            return ChatDetail(**self._record(row).model_dump(), turns=turns, document=document)
 
     async def delete(self, user_id, chat_id):
         # The turns go with the chat, in one transaction, and only for the owner's own chat.
@@ -124,3 +142,9 @@ class PostgresChatStore:
         async with self.pool.connection() as conn:
             await conn.execute('UPDATE web_chat_turns SET data=%s WHERE id=%s AND chat_id=%s',
                                (Jsonb(turn.model_dump(mode='json')), turn.id, chat_id))
+
+    async def set_document(self, chat_id, document):
+        """Record the conversation's attachment (or its removal) as a state entry in the chat's own archive. It does not touch the chat's updated time and is never shown as a message."""
+        entry = {"id": str(uuid4()), "kind": "attachment", "document": document.model_dump(mode="json", exclude={"available"}) if document else None}
+        async with self.pool.connection() as conn:
+            await conn.execute("INSERT INTO web_chat_turns (id, chat_id, data) VALUES (%s,%s,%s)", (entry["id"], chat_id, Jsonb(entry)))

@@ -1,9 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { fetchMe } from '../../api/auth';
-import { createChat, deleteChat, getChat, getSession, listChats, sendMessage } from '../../api/chat';
+import { createChat, deleteChat, getChat, getSession, listChats, sendMessage, setChatDocument } from '../../api/chat';
 import { currentGeneration, StaleSessionError } from '../../api/client';
-import type { ChatRecord, WebSearch } from '../../api/types';
+import type { ChatDocument, ChatRecord, WebSearch } from '../../api/types';
 import { useStatus } from '../overview/useStatus';
 
 export interface ChatMessage {
@@ -14,6 +14,8 @@ export interface ChatMessage {
   note?: boolean;
   webSearch?: WebSearch | null;
   fromMeeting?: string | null;
+  /** The document this reply was answered from, with the pages whose excerpts were supplied (never page numbers the model wrote). */
+  fromDocument?: { title: string; pages: number[] } | null;
   /** A short note under the message: "Reply not received" or "Reply not recorded…". */
   failure?: string;
 }
@@ -45,7 +47,10 @@ function useChatController() {
   const [reading, setReading] = useState(false);
   const [notice, setNotice] = useState('');
   const [historyNotice, setHistoryNotice] = useState('');
-  const [context, setContext] = useState<MeetingContext | null>(null);
+  const [context, setContextState] = useState<MeetingContext | null>(null);
+  // The document this conversation answers from. For a saved chat the hub keeps it with the chat (so it survives a refresh and belongs to that chat only); before the first message of a new
+  // chat it is held here and saved as soon as the chat exists.
+  const [attached, setAttached] = useState<ChatDocument | null>(null);
   // History and session are only read once the Chat page has been opened, not at every sign-in.
   const [visited, setVisited] = useState(false);
 
@@ -82,6 +87,12 @@ function useChatController() {
     setMessages([]);
   }, []);
 
+  // One source at a time: a meeting and a document are two different things to answer from, so choosing one lets go of the other.
+  const setContext = useCallback((next: MeetingContext | null) => {
+    setContextState(next);
+    if (next) setAttached(null);
+  }, []);
+
   const setUser = useCallback(
     (value: string): boolean => {
       const next = value.trim();
@@ -92,6 +103,7 @@ function useChatController() {
         initialized.current = false;
         setUserState(next);
         setActiveChat(null);
+        setAttached(null);
         setTitle(NEW_CHAT_TITLE);
         setMessages([]);
         setDraft('');
@@ -123,6 +135,8 @@ function useChatController() {
         if (!live(version) || read !== readVersion.current) return;
         setActiveChat(record.id);
         setTitle(record.title);
+        setAttached(record.document); // each conversation has its own attachment (or none)
+        if (record.document) setContextState(null);
         const out: ChatMessage[] = [];
         for (const turn of record.turns) {
           out.push({
@@ -132,7 +146,15 @@ function useChatController() {
             fromUser: true,
             failure: turn.status !== 'complete' ? 'Reply not recorded. This message may have been processed; check before sending again.' : undefined,
           });
-          if (turn.reply !== null) out.push({ key: key(), speaker: 'Reachy', text: turn.reply, fromUser: false, webSearch: turn.web_search });
+          if (turn.reply !== null)
+            out.push({
+              key: key(),
+              speaker: 'Reachy',
+              text: turn.reply,
+              fromUser: false,
+              webSearch: turn.web_search,
+              fromDocument: turn.document && turn.citations.length > 0 ? { title: turn.document.title, pages: [...new Set(turn.citations.map((c) => c.page))].sort((a, b) => a - b) } : null,
+            });
         }
         setMessages(out);
         setHistoryNotice('');
@@ -160,6 +182,7 @@ function useChatController() {
     if (pending || reading) return;
     initialized.current = true;
     setActiveChat(null);
+    setAttached(null); // a new conversation starts with nothing attached
     setTitle(NEW_CHAT_TITLE);
     clearView();
     setDraft('');
@@ -175,6 +198,7 @@ function useChatController() {
       queryClient.setQueryData<ChatRecord[]>(['chat', 'history', user], (old) => old?.filter((r) => r.id !== record.id));
       if (activeChat === record.id) {
         setActiveChat(null);
+        setAttached(null);
         setTitle(NEW_CHAT_TITLE);
         clearView();
         setNotice('');
@@ -184,6 +208,26 @@ function useChatController() {
       if (live(version) && !(error instanceof StaleSessionError)) {
         setHistoryNotice(`Could not delete chat: ${error instanceof Error ? error.message : 'unknown error'}`);
       }
+    }
+  };
+
+  // Attach, replace or remove. In a saved chat the hub records it first and the view follows what the hub says; in a new chat it is held until the first message creates the chat.
+  const attachDocument = async (document: { id: string; title: string } | null): Promise<void> => {
+    if (pending || reading) return;
+    const version = epoch.current;
+    if (!activeChat || !user) {
+      setAttached(document ? { id: document.id, title: document.title, available: true } : null);
+      if (document) setContextState(null);
+      return;
+    }
+    try {
+      const saved = await setChatDocument(activeChat, user, document?.id ?? null);
+      if (!live(version)) return;
+      setAttached(saved ? { ...saved, available: true } : null);
+      if (saved) setContextState(null);
+      setNotice('');
+    } catch (error) {
+      if (live(version) && !(error instanceof StaleSessionError)) setNotice(`Could not ${document ? 'attach that document' : 'remove the document'}: ${error instanceof Error ? error.message : 'unknown error'}`);
     }
   };
 
@@ -218,6 +262,8 @@ function useChatController() {
         setActiveChat(record.id);
         setTitle(record.title);
         initialized.current = true;
+        if (attached) await setChatDocument(record.id, recipient, attached.id, abort.signal); // the chat now exists: keep the attachment with it before the first message is answered
+        if (!live(version)) return;
       }
       sentKey = key();
       setMessages((m) => [...m, { key: sentKey as number, speaker: 'You', text, fromUser: true }]);
@@ -235,7 +281,18 @@ function useChatController() {
         abort.signal,
       );
       if (!live(version)) return;
-      setMessages((m) => [...m, { key: key(), speaker: 'Reachy', text: result.reply, fromUser: false, webSearch: result.web_search, fromMeeting: result.context_meeting }]);
+      setMessages((m) => [
+        ...m,
+        {
+          key: key(),
+          speaker: 'Reachy',
+          text: result.reply,
+          fromUser: false,
+          webSearch: result.web_search,
+          fromMeeting: result.context_meeting,
+          fromDocument: result.context_document && result.citations.length > 0 ? { title: result.context_document, pages: [...new Set(result.citations.map((c) => c.page))].sort((a, b) => a - b) } : null,
+        },
+      ]);
       setNotice('');
       void queryClient.invalidateQueries({ queryKey: ['chat', 'session', recipient] });
     } catch (error) {
@@ -301,6 +358,8 @@ function useChatController() {
     context,
     setContext,
     clearContext: () => setContext(null),
+    attached,
+    attachDocument,
     openChat,
     newChat,
     remove,
