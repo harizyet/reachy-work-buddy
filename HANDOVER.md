@@ -4,9 +4,9 @@ Current session snapshot: 2026-10-10 (Phase 44 selective answering: see "Phase 4
 The [documentation index](docs/README.md) defines ownership;
 [project state](docs/project-state.md) owns deployment limits and open acceptance.
 
-## Extraction inspector (built locally 2026-10-12, NOT deployed; waits for owner approval)
+## Extraction inspector DEPLOYED 2026-10-12 (awaiting the owner's browser acceptance)
 
-An Inspect extraction view in the Documents tab reusing MinerU 4.0.12 (page and block pictures, structured result, HTML renderer, markdown, downloads) through worker, core and the hub proxy: [record](docs/verification/phase-50-extraction-inspector-2026-10-12.md). Needs a rebuild of document-worker, core and hub (no migration, no new flag); verified with a real worker and real headless browser on a throwaway stack. Do not deploy without the owner's approval; production is unchanged.
+[Deployment record](docs/verification/phase-50-inspector-deployment-2026-10-12.md), [design and hardening](docs/verification/phase-50-extraction-inspector-2026-10-12.md). Commit `d316829`; core `7abec2fd5c32`, hub `7b8cf16b39ee`, document-worker `67931dbfc4e6`; no migration (schema `031_documents`); downtime 10 s. MinerU's HTML/CSS is allowlist-sanitised in the worker and shown only in a locked frame (real-browser hostile-markup check: nothing escaped). Verified live on the owner's existing document (read-only, unchanged) and probes (tables, figures, tiers to Advanced, ceilings, integrity). **Open: the owner's authenticated browser UAT at `http://10.180.1.23:8080/hub/web/#/documents`.** Rollback assets `reachy-rollback/*:pre-inspector` and the `before-inspector` dump/archive stay until accepted. Phase 48: new segment H from 04:30:07 UTC; 15 `probe-050` turns in total to subtract.
 
 ## Phase 50 DEPLOYED 2026-10-12 (library ON; read this first)
 
