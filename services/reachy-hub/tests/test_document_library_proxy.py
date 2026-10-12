@@ -459,3 +459,18 @@ def test_deleting_a_chat_tells_core_to_forget_its_history_and_contexts_use_their
     assert client.delete(f"/chats/{chat}", params={"user_id": "default-user"}, headers=CSRF).status_code == 200
     assert keys() == []
     assert any(p.endswith("/conversation/forget") for _m, p, _h in client.transport_log)
+
+
+def test_a_one_off_document_question_has_its_own_history_per_document_not_the_shared_session(monkeypatch, tmp_path):
+    client = chat_stack(monkeypatch, tmp_path)
+    policy, budget = upload(client, POLICY, "Policy.pdf", title="Audit policy").json(), upload(client, OTHER, "Budget.pdf", title="Budget").json()
+    ask = lambda doc, text: client.post("/messages", json={"user_id": "default-user", "channel": "web", "text": text, "context_document_id": doc}, headers=CSRF)
+    spoken = {"user_id": "default-user", "channel": "reachy", "input_modality": "voice"}
+    client.post("/messages", json={**spoken, "text": "Spoken first."}, headers=CSRF)
+    assert ask(policy["id"], "How long is the audit retention period?").status_code == 200
+    ask(budget["id"], "What is the quarterly budget?")
+    assert client.model.history[-1] == ["What is the quarterly budget?"]  # another document's answers are not in this one's context
+    ask(policy["id"], "And on the second page?")
+    assert client.model.history[-1][:2] == ["How long is the audit retention period?", "Per the document: seven days."]  # continuity per document
+    client.post("/messages", json={**spoken, "text": "Spoken again."}, headers=CSRF)
+    assert client.model.history[-1] == ["Spoken first.", "Per the document: seven days.", "Spoken again."]  # the shared session never saw the document questions

@@ -1613,6 +1613,10 @@ def create_app(
     @app.post("/messages")
     async def post_message(message: InboundMessage, request: Request) -> MessageResponse:
         if not message.chat_id:
+            # A one-off question about a document (the Documents screens) is its own conversation per document, never the shared session history; no
+            # document, no scope. The document id is only a name for the scope: core re-checks the owner's access to it on the turn.
+            if message.context_document_id and message.channel == Channel.WEB and message.input_modality == InputModality.TEXT:
+                return await handle_inbound_message(message, history_scope="docqa:" + message.context_document_id[:64])
             return await handle_inbound_message(message)
         # Even an injected-store development app requires auth for the archive.
         await require_remote_auth(request, request.headers.get("Authorization"))
