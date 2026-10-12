@@ -86,3 +86,24 @@ def test_the_attachment_is_a_state_entry_in_the_chat_archive_not_a_message(datab
             await pool.close()
 
     asyncio.run(run())
+
+
+def test_a_turns_meeting_and_its_order_survive_the_archive_so_history_can_be_restored(database):
+    async def run() -> None:
+        pool = AsyncConnectionPool(database, open=False)
+        await pool.open()
+        store = PostgresChatStore(pool)
+        try:
+            chat = await store.create(ChatRecord(user_id="owner", title="Meeting"))
+            for n, meeting in enumerate((None, "m1", "m1")):
+                turn = ChatTurn(text=f"q{n}", meeting_id=meeting)
+                await store.append(chat.id, turn)
+                turn.reply, turn.status = f"a{n}", "complete"
+                await store.finish(chat.id, turn)
+            turns = (await store.get("owner", chat.id)).turns
+            assert [(t.text, t.reply, t.meeting_id) for t in turns] == [("q0", "a0", None), ("q1", "a1", "m1"), ("q2", "a2", "m1")]
+            assert await store.get("someone-else", chat.id) is None  # the hub only ever restores a history from the signed-in owner's own chat
+        finally:
+            await pool.close()
+
+    asyncio.run(run())

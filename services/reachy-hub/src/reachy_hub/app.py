@@ -125,6 +125,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import hashlib
 import logging
 import os
 import secrets
@@ -232,6 +233,7 @@ from shared.models.session import (
 from shared.models.web_chat import (
     ChatCitation,
     ChatCreate,
+    ChatDetail,
     ChatDocumentRef,
     ChatDocumentSet,
     ChatRecord,
@@ -1468,7 +1470,9 @@ def create_app(
             delivered=delivered,
         )
 
-    async def handle_inbound_message(message: InboundMessage) -> MessageResponse:
+    async def handle_inbound_message(
+        message: InboundMessage, *, history_scope: str | None = None, prior_turns: list[dict[str, str]] | None = None,
+    ) -> MessageResponse:
         """Shared by POST /messages and the Telegram poll loop — the same
         normalization path regardless of which channel a message arrived
         on, per ADR 0002."""
@@ -1486,6 +1490,7 @@ def create_app(
                 force_frontier=message.force_frontier,
                 context_meeting_id=message.context_meeting_id,
                 context_document_id=message.context_document_id,
+                history_scope=history_scope, prior_turns=prior_turns,
                 # Typed messages from the authenticated owner's web or Android session may read their sensitive documents; every other channel keeps core's default (work-private) and a
                 # spoken turn is capped at public by core. Only set when the hub enforces authentication on this route.
                 access_ceiling="sensitive" if accounts_service_token and message.channel == Channel.WEB and message.input_modality == InputModality.TEXT else None,
@@ -1582,7 +1587,28 @@ def create_app(
         check_chat_user(user_id)
         if not await app.state.chat_store.delete(user_id, chat_id):
             raise HTTPException(404, "Chat not found")
+        # Core's short-term copy of the conversation goes with it. Best effort: it is memory only and evicts on its own.
+        session = await app.state.session_store.get_by_user(user_id)
+        if session is not None:
+            with contextlib.suppress(httpx.HTTPError):
+                await companion_core_client.forget_history(session.session_id, f"chat:{chat_id}")
         return {"deleted": True}
+
+    def chat_history_scope(record: ChatDetail, message: InboundMessage) -> tuple[str, list[dict[str, str]]]:
+        """What core keeps this chat's short-term history under, and the chat's own earlier exchanges to restore it from if core lost them.
+
+        Derived here from the stored chat record (owned by the signed-in user) and its attached context, never from anything the client sent beyond the
+        chat id the record was loaded with. A different attachment or meeting is a different scope, so a document's answers are never in the model's context
+        under another document, a meeting or none. Each scope's earlier turns come only from turns recorded under that same context."""
+        if message.context_document_id:
+            context, same = f":doc:{message.context_document_id}", lambda t: t.document is not None and t.document.id == message.context_document_id
+        elif message.context_meeting_id:
+            digest = hashlib.sha256(message.context_meeting_id.encode()).hexdigest()[:16]
+            context, same = f":mtg:{digest}", lambda t: t.document is None and t.meeting_id == message.context_meeting_id
+        else:
+            context, same = "", lambda t: t.document is None and t.meeting_id is None
+        earlier = [t for t in record.turns if t.status == "complete" and t.reply and same(t)][-6:]
+        return f"chat:{record.id}{context}", [{"text": t.text[:4000], "reply": t.reply[:4000]} for t in earlier]
 
     @app.post("/messages")
     async def post_message(message: InboundMessage, request: Request) -> MessageResponse:
@@ -1598,12 +1624,18 @@ def create_app(
             raise HTTPException(404, "Chat not found")
         # The conversation's own attachment decides which document (if any) answers; a document id sent with the message is ignored here, so a message can neither smuggle in another document nor
         # lose the attachment. Removing or replacing it is an explicit action (PUT /chats/{id}/document).
-        message = message.model_copy(update={"context_document_id": record.document.id if record.document else None})
-        turn = ChatTurn(text=message.text, document=ChatDocumentRef(id=record.document.id, title=record.document.title) if record.document else None)
+        # An attached document and a meeting are exclusive contexts; the attachment wins, as the web and Android clients already enforce.
+        message = message.model_copy(update={
+            "context_document_id": record.document.id if record.document else None,
+            "context_meeting_id": None if record.document else message.context_meeting_id,
+        })
+        scope, prior = chat_history_scope(record, message)
+        turn = ChatTurn(text=message.text, document=ChatDocumentRef(id=record.document.id, title=record.document.title) if record.document else None,
+                        meeting_id=message.context_meeting_id)
         # Persist before invoking: a lost response must never look safe to retry.
         await app.state.chat_store.append(record.id, turn)
         try:
-            result = await handle_inbound_message(message)
+            result = await handle_inbound_message(message, history_scope=scope, prior_turns=prior)
         except Exception:
             turn.status = "unknown"
             await app.state.chat_store.finish(record.id, turn)

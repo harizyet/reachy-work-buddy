@@ -66,6 +66,7 @@ def make(monkeypatch, tmp_path, *, library=True, transport=None, worker=None, ll
         client_factory=lambda url: EmbodimentClient(url, transport=httpx.ASGITransport(app=embodiment)),
     ))
     client.transport_log = getattr(transport, "seen", [])
+    client.core = core
     return client
 
 
@@ -227,6 +228,7 @@ class FakeEngine:
 class Model:
     def __init__(self):
         self.prompts = []
+        self.history = []  # per model call, the non-system messages (the short-term conversation the model saw)
         self.transport = httpx.MockTransport(self.handle)
 
     def handle(self, request):
@@ -234,6 +236,7 @@ class Model:
 
         body = json.loads(request.content)
         self.prompts.append("\n".join(m["content"] for m in body["messages"] if m["role"] == "system"))
+        self.history.append([m["content"] for m in body["messages"] if m["role"] != "system"])
         return httpx.Response(200, json={"choices": [{"message": {"content": "Per the document: seven days."}}]})
 
 
@@ -358,3 +361,101 @@ def test_a_sensitive_document_can_be_attached_by_the_owner_session_and_a_convers
     assert detail["document"] is None and detail["turns"][0]["document"] is None and detail["turns"][0]["citations"] == []
     assert client.delete(f"/chats/{chat}", params={"user_id": "default-user"}, headers=CSRF).status_code == 200
     assert client.get(f"/chats/{chat}", params={"user_id": "default-user"}).status_code == 404
+
+
+# --- conversation-history isolation (found at the chat-picker deployment): each saved chat, and each context attached to it, has its own short-term history ---
+
+
+def test_chats_never_share_short_term_history_even_with_documents_and_sensitive_content(monkeypatch, tmp_path):
+    client = chat_stack(monkeypatch, tmp_path)
+    secret = upload(client, POLICY, "Secret.pdf", title="Secret policy", sensitivity="sensitive").json()
+    budget = upload(client, OTHER, "Budget.pdf", title="Budget").json()
+    a, b, c = new_chat(client, "A"), new_chat(client, "B"), new_chat(client, "C")
+    attach(client, a, secret["id"])
+    attach(client, c, budget["id"])
+    assert say(client, a, "How long is the audit retention period?").json()["privacy"] == "sensitive"
+    seen = len(client.model.history)
+    say(client, b, "What did we just talk about?")  # a new chat with nothing attached starts clean
+    say(client, c, "What is the quarterly budget?")  # another chat with another document does too
+    for call in client.model.history[seen:]:
+        assert not any("seven days" in m or "audit retention" in m for m in call)
+    assert client.model.history[seen] == ["What did we just talk about?"] and client.model.history[seen + 1] == ["What is the quarterly budget?"]
+    # the same chat keeps its own continuity
+    say(client, a, "And the second page?")
+    assert client.model.history[-1][:2] == ["How long is the audit retention period?", "Per the document: seven days."]
+
+
+def test_a_client_cannot_choose_or_forge_the_history_it_is_answered_under(monkeypatch, tmp_path):
+    client = chat_stack(monkeypatch, tmp_path)
+    a, b = new_chat(client, "A"), new_chat(client, "B")
+    say(client, a, "My secret code word is marmalade.")
+    seen = len(client.model.history)
+    # extra fields in the request body that name a scope, prior turns or another chat's history are not part of the contract and change nothing
+    forged = say(client, b, "What is my code word?", history_scope="chat:" + a, prior_turns=[{"text": "x", "reply": "y"}], conversation_id="c")
+    assert forged.status_code == 200 and client.model.history[seen] == ["What is my code word?"]
+    assert client.post("/messages", json={"user_id": "default-user", "channel": "web", "text": "hi", "chat_id": "00000000-no-such-chat"}, headers=CSRF).status_code == 404
+    assert client.post("/messages", json={"user_id": "someone-else", "channel": "web", "text": "hi", "chat_id": a}, headers=CSRF).status_code == 403
+
+
+def test_switching_or_removing_the_document_starts_a_clean_history_for_that_context(monkeypatch, tmp_path):
+    client = chat_stack(monkeypatch, tmp_path)
+    policy, budget = upload(client, POLICY, "Policy.pdf", title="Audit policy").json(), upload(client, OTHER, "Budget.pdf", title="Budget").json()
+    chat = new_chat(client)
+    say(client, chat, "Plain fact: the office cat is called Biscuit.")
+    attach(client, chat, policy["id"])
+    say(client, chat, "How long is the audit retention period?")
+    attach(client, chat, budget["id"])
+    say(client, chat, "What is the quarterly budget?")
+    assert client.model.history[-1] == ["What is the quarterly budget?"]  # the old document's answers are not in the new document's context
+    attach(client, chat, None)
+    say(client, chat, "What is the cat called?")
+    assert client.model.history[-1][:2] == ["Plain fact: the office cat is called Biscuit.", "Per the document: seven days."]  # back to the plain context, its own turns only
+    assert not any("audit retention" in m or "quarterly" in m for m in client.model.history[-1])
+
+
+def test_a_chat_restored_after_core_lost_its_memory_continues_from_its_own_saved_turns_only(monkeypatch, tmp_path):
+    client = chat_stack(monkeypatch, tmp_path)
+    policy = upload(client, POLICY, "Policy.pdf", title="Audit policy").json()
+    a, b = new_chat(client, "A"), new_chat(client, "B")
+    attach(client, a, policy["id"])
+    say(client, a, "How long is the audit retention period?")
+    say(client, b, "Plain question in B.")
+    client.core.state.conversation_store.clear()  # core restarted: its in-memory history is gone, the hub's saved chats are not
+    say(client, a, "And the second page?")
+    assert client.model.history[-1] == ["How long is the audit retention period?", "Per the document: seven days.", "And the second page?"]
+    say(client, b, "Another in B.")
+    assert client.model.history[-1] == ["Plain question in B.", "Per the document: seven days.", "Another in B."]  # restored from B's own turns, not A's
+    # a spoken, unscoped turn is never seeded from a chat
+    client.core.state.conversation_store.clear()
+    spoken = client.post("/messages", json={"user_id": "default-user", "channel": "reachy", "text": "Spoken hello", "input_modality": "voice"}, headers=CSRF)
+    assert spoken.status_code == 200 and client.model.history[-1] == ["Spoken hello"]
+
+
+def test_voice_and_unsaved_turns_keep_the_shared_session_history_and_chats_do_not_leak_into_it(monkeypatch, tmp_path):
+    client = chat_stack(monkeypatch, tmp_path)
+    chat = new_chat(client)
+    spoken = {"user_id": "default-user", "channel": "reachy", "input_modality": "voice"}
+    client.post("/messages", json={**spoken, "text": "First spoken."}, headers=CSRF)
+    say(client, chat, "A typed chat message.")
+    client.post("/messages", json={**spoken, "text": "Second spoken."}, headers=CSRF)
+    assert client.model.history[-1][-3:] == ["First spoken.", "Per the document: seven days.", "Second spoken."] and "A typed chat message." not in client.model.history[-1]
+
+
+def test_deleting_a_chat_tells_core_to_forget_its_history_and_contexts_use_their_own_scopes(monkeypatch, tmp_path):
+    client = chat_stack(monkeypatch, tmp_path)
+    policy = upload(client, POLICY, "Policy.pdf", title="Audit policy").json()
+    chat = new_chat(client)
+    say(client, chat, "Plain.")
+    attach(client, chat, policy["id"])
+    say(client, chat, "How long is the audit retention period?")
+    attach(client, chat, None)
+    say(client, chat, "A meeting question.", context_meeting_id="m1")  # no such meeting: whatever core answers, it is recorded under the meeting's own scope
+    store = client.core.state.conversation_store
+    keys = lambda: sorted(k.split("\x1f", 1)[1] for k in store._messages if "\x1f" in k)
+    import hashlib
+
+    meeting_scope = f"chat:{chat}:mtg:" + hashlib.sha256(b"m1").hexdigest()[:16]
+    assert keys() == sorted([f"chat:{chat}", f"chat:{chat}:doc:{policy['id']}", meeting_scope])
+    assert client.delete(f"/chats/{chat}", params={"user_id": "default-user"}, headers=CSRF).status_code == 200
+    assert keys() == []
+    assert any(p.endswith("/conversation/forget") for _m, p, _h in client.transport_log)

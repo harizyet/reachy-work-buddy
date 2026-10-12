@@ -51,6 +51,7 @@ class ChatTurn(BaseModel):
     web_search: TurnWebSearch | None = None
     document: ChatDocumentRef | None = None  # the attachment this reply was answered under
     citations: list[ChatCitation] = Field(default_factory=list)
+    meeting_id: str | None = Field(default=None, max_length=200)  # the meeting attached when this turn was sent; restores the right history after a restart
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 

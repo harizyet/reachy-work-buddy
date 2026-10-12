@@ -26,6 +26,7 @@ from shared.protocols.brain_api import (
     BRAIN_NODES,
     BRAIN_SUMMARY,
 )
+from shared.protocols.conversation_api import CONVERSATION, CONVERSATION_FORGET
 from shared.protocols.document_library_api import ACCESS_CEILING_HEADER
 from shared.protocols.memory_candidates_api import (
     MEMORY_CANDIDATES,
@@ -63,9 +64,10 @@ class CompanionCoreClient:
     async def send_turn(
         self, session_id: str, conversation_id: str, channel: str, text: str, *, input_modality: str = "text", force_frontier: bool = False,
         context_meeting_id: str | None = None, context_document_id: str | None = None, access_ceiling: str | None = None,
+        history_scope: str | None = None, prior_turns: list[dict[str, str]] | None = None,
     ) -> dict[str, Any]:
         resp = await self._client.post(
-            "/conversation",
+            CONVERSATION,
             timeout=130.0,
             # The trusted ceiling for document content on this channel (Phase 50; only the hub sets it, from the authenticated channel).
             headers={ACCESS_CEILING_HEADER: access_ceiling} if access_ceiling else None,
@@ -78,10 +80,18 @@ class CompanionCoreClient:
                 "force_frontier": force_frontier,
                 "context_meeting_id": context_meeting_id,
                 "context_document_id": context_document_id,
+                # Server-derived (the saved chat and its attached context); no client field can reach these.
+                "history_scope": history_scope,
+                "prior_turns": prior_turns or [],
             },
         )
         resp.raise_for_status()
         return resp.json()
+
+    async def forget_history(self, session_id: str, history_scope: str) -> None:
+        """A saved chat was deleted: core drops the short-term history it held for it."""
+        resp = await self._client.post(CONVERSATION_FORGET, json={"session_id": session_id, "history_scope": history_scope}, timeout=15.0)
+        resp.raise_for_status()
 
     async def due_reminders(self, within_minutes: int = 15) -> list[dict[str, Any]]:
         """Phase 10: events companion-core's calendar store considers due

@@ -32,3 +32,12 @@ tracked on the session and drives the response router (ADR 0004... see
   output time.
 - Two clients open on the same session (e.g. web + phone) both observe state
   changes; `reachy-hub` is responsible for fan-out, not `companion-core`.
+
+## Amendment (2026-10-12): saved chats have their own short-term history
+
+One session per user still holds state shared across channels (mode, active channel, privacy context, and the short-term history of voice, Telegram and any
+turn not sent from a saved chat). A **saved web or Android chat is not that shared conversation**: it is a separate, owner-visible record, and core's
+short-term history for it is scoped to the chat and to the context attached to it. The hub derives the scope (`chat:<chat id>` plus `:doc:<document id>`
+or `:mtg:<meeting digest>`) from the stored chat and its attachment and sends it as `history_scope`; nothing a client sends can name a scope. Reason: a
+shared history let one chat's document answers appear in another chat (found at the chat-picker deployment). Details: the
+[service reference](../reference/services.md#chat-history-scope).

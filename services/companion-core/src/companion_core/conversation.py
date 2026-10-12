@@ -27,6 +27,11 @@ from shared.models.response import Privacy
 # context can no longer repeat what caused it.
 CONTEXT_MESSAGES = 15
 
+# Scoped histories (one per saved chat and attached context) are kept only in memory; the least recently started are dropped beyond this many,
+# so an owner who opens many chats cannot grow the process without bound. Their transcripts remain in the hub and are re-supplied on demand.
+MAX_SCOPED_HISTORIES = 64
+SCOPE_SEPARATOR = "\x1f"
+
 _RANK = {Privacy.PUBLIC: 0, Privacy.WORK_PRIVATE: 1, Privacy.SENSITIVE: 2}
 
 
@@ -57,8 +62,50 @@ class ConversationStore:
             self._private_marks.clear()
             self._search_topics.clear()
 
+    def _all_keys(self) -> set[str]:
+        return set(self._turns) | set(self._messages) | set(self._private_marks) | set(self._search_topics)
+
+    def seed_if_empty(self, key: str, exchanges: list[tuple[str, str]]) -> bool:
+        """Restore a saved chat's earlier exchanges when core holds none for it (core restarted, or the history was evicted). They are labelled work-private,
+        since what each reply drew on is not known here. Never touches a history that already has turns."""
+        with self._lock:
+            if self._messages.get(key):
+                return False
+            self._evict_scoped_locked(key)
+            turns = self._turns.setdefault(key, [])
+            messages = self._messages.setdefault(key, [])
+            for text, reply in exchanges:
+                turns.append(Turn(channel="web", text=text))
+                messages.append({"role": "user", "content": text})
+                messages.append({"role": "assistant", "content": reply})
+                self._private_marks.setdefault(key, []).append((len(messages) - 1, Privacy.WORK_PRIVATE))
+            return True
+
+    def _evict_scoped_locked(self, incoming: str) -> None:
+        if SCOPE_SEPARATOR not in incoming:
+            return
+        scoped = [k for k in self._messages if SCOPE_SEPARATOR in k and k != incoming]
+        for key in scoped[: max(0, len(scoped) + 1 - MAX_SCOPED_HISTORIES)]:
+            self._drop_locked(key)
+
+    def _drop_locked(self, key: str) -> None:
+        self._turns.pop(key, None)
+        self._messages.pop(key, None)
+        self._private_marks.pop(key, None)
+        self._search_topics.pop(key, None)  # the turn lock stays: dropping a held lock would let two turns of one chat interleave
+
+    def forget_prefix(self, prefix: str) -> int:
+        """Drop the history of a saved chat and of each context it was held under (`prefix` and `prefix:<context>`)."""
+        with self._lock:
+            keys = [k for k in self._all_keys() if k == prefix or k.startswith(prefix + ":")]
+            for key in keys:
+                self._drop_locked(key)
+            return len(keys)
+
     def append(self, session_id: str, channel: str, text: str) -> list[Turn]:
         with self._lock:
+            if session_id not in self._messages:
+                self._evict_scoped_locked(session_id)
             turns = self._turns.setdefault(session_id, [])
             turns.append(Turn(channel=channel, text=text))
             self._messages.setdefault(session_id, []).append({"role": "user", "content": text})

@@ -364,6 +364,7 @@ from shared.models.websearch import (
     SearchSource,
     TurnWebSearch,
 )
+from shared.protocols.conversation_api import CONVERSATION_FORGET
 from shared.protocols.document_library_api import ACCESS_CEILING_HEADER
 from shared.protocols.memory_candidates_api import MEMORY_CANDIDATES_CAPTURE_COUNTERS
 from shared.protocols.operator_api import (
@@ -373,6 +374,21 @@ from shared.protocols.operator_api import (
     WEBSEARCH_LOG,
     WEBSEARCH_SETTINGS,
 )
+
+
+class PriorTurn(BaseModel):
+    text: str = Field(max_length=4000)
+    reply: str = Field(max_length=4000)
+
+
+class ForgetHistoryRequest(BaseModel):
+    session_id: str
+    history_scope: str = Field(min_length=1, max_length=200)
+
+
+def history_key(session_id: str, scope: str | None) -> str:
+    """What the short-term history is stored under: the session, narrowed to a saved chat's scope when the hub supplies one."""
+    return f"{session_id}\x1f{scope}" if scope else session_id
 
 
 class ConversationTurnRequest(BaseModel):
@@ -386,6 +402,11 @@ class ConversationTurnRequest(BaseModel):
     context_meeting_id: str | None = None
     # One document attached to the conversation (Phase 50E): the answer draws only on excerpts of this document.
     context_document_id: str | None = None
+    # Hub-set only (never taken from a client): scopes the short-term history, pending alarm offer and search thread to one saved web chat and its
+    # attached context, so chats do not read each other's turns. None keeps the per-session history shared with voice, Telegram and the robot.
+    history_scope: str | None = Field(default=None, max_length=200)
+    # The saved chat's own earlier turns, supplied by the hub for a scope core holds no history for (after a restart); ignored otherwise.
+    prior_turns: list[PriorTurn] = Field(default_factory=list, max_length=8)
 
 
 class ConversationTurnResponse(BaseModel):
@@ -1226,8 +1247,17 @@ def create_app(
             doc_access = access_from_ceiling(request.headers.get(ACCESS_CEILING_HEADER), voice=turn.input_modality == InputModality.VOICE)  # the hub's ceiling for this channel
         except ValueError:
             raise HTTPException(400, "Unknown access ceiling") from None
-        async with conversation_store.turn_lock(turn.session_id):
+        async with conversation_store.turn_lock(history_key(turn.session_id, turn.history_scope)):
             return await process_conversation_turn(turn, doc_access)
+
+    @app.post(CONVERSATION_FORGET)
+    async def forget_conversation_history(body: ForgetHistoryRequest) -> dict:
+        """The hub deleted a saved chat: drop the short-term history core held for it (transcript text, pending offers), so nothing of it outlives the chat."""
+        prefix = history_key(body.session_id, body.history_scope)
+        removed = conversation_store.forget_prefix(prefix)
+        for key in [k for k in alarm_offers if k == prefix or k.startswith(prefix + ":")]:
+            alarm_offers.pop(key, None)
+        return {"removed": removed}
 
     async def process_conversation_turn(turn: ConversationTurnRequest, doc_access) -> ConversationTurnResponse:
         document_evidence = None
@@ -1237,7 +1267,10 @@ def create_app(
         meeting_missing = False
         selective_privacy: Privacy | None = None
         generation = conversation_store.generation
-        history = conversation_store.append(turn.session_id, turn.channel, turn.text)
+        hkey = history_key(turn.session_id, turn.history_scope)
+        if turn.history_scope and turn.prior_turns:
+            conversation_store.seed_if_empty(hkey, [(p.text, p.reply) for p in turn.prior_turns])
+        history = conversation_store.append(hkey, turn.channel, turn.text)
 
         # Phase 24b: only an explicit, unambiguously-parsed command may
         # reach these actions — free-form text (however phrase-matched)
@@ -1316,9 +1349,9 @@ def create_app(
                 ),
             )
 
-        offer = alarm_offers.get(turn.session_id)
+        offer = alarm_offers.get(hkey)
         if offer is not None and offer.expires_at <= now_utc:
-            offer = alarm_offers.pop(turn.session_id)
+            offer = alarm_offers.pop(hkey)
             offer = None
         offer_reply: str | None = None
         if offer is not None:
@@ -1326,7 +1359,7 @@ def create_app(
                 offer_reply = alarm_intent.classify_reply(intent_text)
             if offer_reply in (None, "other"):
                 offer_reply = None
-                alarm_offers.pop(turn.session_id, None)
+                alarm_offers.pop(hkey, None)
         alarm_phrase = parsed_command.argument or "" if reachy_command == "alarm" else alarm_intent.match_set(intent_text)
         alarm_list_query = reachy_command == "alarms" or (
             alarm_phrase is None and alarm_intent.is_alarm_query(intent_text)
@@ -1425,7 +1458,7 @@ def create_app(
             production_handler = "alarms.offer"
             persona = await app.state.persona_store.get()
             if offer_reply == "no":
-                alarm_offers.pop(turn.session_id, None)
+                alarm_offers.pop(hkey, None)
                 reply = render("alarm_declined", persona.tone)
             else:
                 when = alarm_intent.parse_when(intent_text, now_utc, persona.timezone, day=offer.day)
@@ -1439,7 +1472,7 @@ def create_app(
                     alarm = await app.state.planner_store.add_alarm(
                         offer.label, due, reminder_id=offer.reminder_id, station_id=station.id if station else None
                     )
-                    alarm_offers.pop(turn.session_id, None)
+                    alarm_offers.pop(hkey, None)
                     when_text = alarm_intent.format_alarm_when(due, persona.timezone, now_utc)
                     reply = render(
                         "alarm_set", persona.tone, when=when_text, station=f" with {station.name}" if station else ""
@@ -1494,7 +1527,7 @@ def create_app(
                     reminder_when = f"{due_local:%a %d %b at %I:%M %p}"
                     reply += render("reminder_added", persona.tone, when=reminder_when)
                     await receipt("reminder.created", "reminder", reminder.id, Reminder=reminder_text, When=reminder_when)
-                    alarm_offers[turn.session_id] = alarm_intent.AlarmOffer(
+                    alarm_offers[hkey] = alarm_intent.AlarmOffer(
                         reminder_id=reminder.id,
                         label=reminder_text,
                         reminder_due=due_at,
@@ -1832,7 +1865,7 @@ def create_app(
                     try:
                         persona = await app.state.persona_store.get()
                         search_config = await app.state.search_settings_store.get()
-                        search_topic = conversation_store.search_topic(turn.session_id)
+                        search_topic = conversation_store.search_topic(hkey)
                         attached = None
                         if turn.context_meeting_id:
                             attached = await app.state.meeting_store.get_meeting(turn.context_meeting_id)
@@ -1850,11 +1883,11 @@ def create_app(
                         grounding_messages: list[dict[str, str]] = []
                         if searched:
                             topic_query = build_query(
-                                turn.text, conversation_store.previous_user_message(turn.session_id),
+                                turn.text, conversation_store.previous_user_message(hkey),
                                 search_topic=search_topic,
                             )
                             conversation_store.set_search_topic(
-                                turn.session_id, next_search_topic(turn.text, topic_query, search_topic),
+                                hkey, next_search_topic(turn.text, topic_query, search_topic),
                             )
                             query = localize_query(topic_query, persona.location)
                             attempts = []
@@ -1905,7 +1938,7 @@ def create_app(
                             *([{"role": "system", "content": document_context_text}] if document_context_text else []),
                             *([{"role": "system", "content": SPOKEN_REPLY_INSTRUCTION}]
                               if turn.input_modality == InputModality.VOICE else []),
-                            *conversation_store.messages(turn.session_id),
+                            *conversation_store.messages(hkey),
                         ]
                         spoken = turn.input_modality == InputModality.VOICE
                         call_config = config
@@ -1943,14 +1976,14 @@ def create_app(
                 # The model's own wording is not classified (owner, 2026-09-26):
                 # "reviewing your schedule" in a morning-routine answer kept it
                 # off the speaker. Earlier private content still carries.
-                privacy = conversation_store.reply_privacy(turn.session_id, privacy)
+                privacy = conversation_store.reply_privacy(hkey, privacy)
 
         if generation != conversation_store.generation:
             return ConversationTurnResponse(
                 reply="The account connection changed. Please ask again.",
                 turn_count=0, privacy=Privacy.WORK_PRIVATE,
             )
-        conversation_store.record_reply(turn.session_id, reply, privacy, carried=carried)
+        conversation_store.record_reply(hkey, reply, privacy, carried=carried)
         # Shadow mode: the reply above is final. This only snapshots plain data into a background task that appends a record;
         # it cannot alter the response, consent, draft, memory, task or robot state (see shadow_router/shadow.py).
         shadow = app.state.shadow_router
