@@ -36,6 +36,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.runtime.mutableFloatStateOf
@@ -75,6 +76,7 @@ fun TalkScreen(model: AppViewModel, speakReplies: Boolean, modifier: Modifier = 
 private fun TalkContent(model: AppViewModel, speakReplies: Boolean) {
     val context = LocalContext.current
     var draft by remember { mutableStateOf("") }
+    var picking by remember { mutableStateOf(false) }
     var micError by remember { mutableStateOf<String?>(null) }
     // Full-screen voice conversation: listen, send, speak the reply, listen again, until it is closed.
     var voiceMode by remember { mutableStateOf(false) }
@@ -152,6 +154,8 @@ private fun TalkContent(model: AppViewModel, speakReplies: Boolean) {
         VoiceModeScreen(phase, heard, level, micError ?: model.chatStatus, muted, phoneVoice, { phoneVoice = it; model.prefs.phoneVoice = it; output.stop() }, { toggleMute() }, { closeVoice() })
     }
 
+    if (picking) DocumentPicker(model, onChosen = { model.attachDocument(it); picking = false }, onClose = { picking = false })
+
     val listState = rememberLazyListState()
     LaunchedEffect(model.chat.size) { if (model.chat.isNotEmpty()) listState.animateScrollToItem(model.chat.lastIndex) }
 
@@ -167,7 +171,7 @@ private fun TalkContent(model: AppViewModel, speakReplies: Boolean) {
                 }
             }
             LazyColumn(state = listState, contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(model.chat) { line -> Bubble(line.text, line.fromOwner, line.failed, line.context, line.sources, line.searchFailed) }
+                items(model.chat) { line -> Bubble(line.text, line.fromOwner, line.failed, line.context, line.sources, line.searchFailed, line.document, line.pages) }
                 if (model.sending) item { Text("Reachy is thinking…", style = MaterialTheme.typography.bodySmall) }
             }
         }
@@ -188,8 +192,22 @@ private fun TalkContent(model: AppViewModel, speakReplies: Boolean) {
                 color = if (model.contextCloud) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
             )
         }
+        model.attachedDocument?.let { doc ->
+            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                AssistChip(onClick = { picking = true }, label = { Text("Answering from: ${doc.title}", maxLines = 1) })
+                TextButton({ picking = true }) { Text("Replace") }
+                TextButton({ model.attachDocument(null) }) { Text("Remove") }
+            }
+            Text(
+                if (doc.available) "Typed messages are answered from this document only, with the pages named. Spoken messages are not."
+                else "This document is no longer available. Remove it to chat normally, or choose another.",
+                style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 16.dp),
+                color = if (doc.available) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error,
+            )
+        }
         (micError ?: model.chatStatus)?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 16.dp)) }
         Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton({ picking = true }, enabled = !model.sending) { Icon(Icons.Default.Description, "Answer from a document") }
             OutlinedTextField(
                 draft, { draft = it }, Modifier.weight(1f), placeholder = { Text("Message Reachy") }, maxLines = 4,
             )
@@ -204,7 +222,7 @@ private fun TalkContent(model: AppViewModel, speakReplies: Boolean) {
 @Composable
 private fun Bubble(
     text: String, fromOwner: Boolean, failed: Boolean, context: String? = null,
-    sources: List<WebSource> = emptyList(), searchFailed: Boolean = false,
+    sources: List<WebSource> = emptyList(), searchFailed: Boolean = false, document: String? = null, pages: List<Int> = emptyList(),
 ) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (fromOwner) Arrangement.End else Arrangement.Start) {
         // Selectable so a reply (or what was heard) can be long-pressed, highlighted and copied.
@@ -243,6 +261,7 @@ private fun Bubble(
                 }
             } else if (searchFailed) Text("The web search was unavailable for this answer.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
             if (context != null) Text("From the meeting “$context”", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+            if (document != null && pages.isNotEmpty()) Text("From ${app.reachy.companion.data.pagesLabel(pages)} of “$document”", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
             if (failed) Text("Reply not received", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
         }
         }

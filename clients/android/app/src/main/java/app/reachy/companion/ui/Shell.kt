@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.Badge
@@ -48,7 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import app.reachy.companion.AppViewModel
 
-private enum class Tab(val title: String) { Talk("Talk"), Todo("Reminders"), Notes("Notes"), Meetings("Meetings"), Alarms("Alarms") }
+private enum class Tab(val title: String) { Talk("Talk"), Todo("Reminders"), Notes("Notes"), Meetings("Meetings"), Documents("Documents"), Alarms("Alarms") }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -121,6 +122,7 @@ fun Shell(model: AppViewModel) {
             Tab.Todo -> RemindersScreen(model, Modifier.weight(1f))
             Tab.Notes -> NotesScreen(model, Modifier.weight(1f))
             Tab.Meetings -> MeetingsScreen(model, Modifier.weight(1f), onUseAsContext = { tab = Tab.Talk })
+            Tab.Documents -> DocumentsScreen(model, Modifier.weight(1f))
             Tab.Alarms -> AlarmsScreen(model, Modifier.weight(1f))
         }
         }
@@ -138,6 +140,7 @@ private fun TabIcon(model: AppViewModel, item: Tab) {
                 Tab.Todo -> Icons.Default.CheckCircle
                 Tab.Notes -> Icons.AutoMirrored.Filled.Notes
                 Tab.Meetings -> Icons.Default.Mic
+                Tab.Documents -> Icons.Default.Description
                 Tab.Alarms -> Icons.Default.Alarm
             }, item.title,
         )

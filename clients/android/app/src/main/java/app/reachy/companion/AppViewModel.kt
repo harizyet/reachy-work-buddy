@@ -27,13 +27,20 @@ import java.io.File
 data class ChatLine(
     val fromOwner: Boolean, val text: String, val failed: Boolean = false, val context: String? = null,
     val sources: List<app.reachy.companion.data.WebSource> = emptyList(), val searchFailed: Boolean = false,
+    /** The attached document this reply was answered from and the pages whose excerpts were supplied. */
+    val document: String? = null, val pages: List<Int> = emptyList(),
 )
 
 /** A saved chat as it is shown in the Talk screen: each typed message, then its reply when one was recorded. */
 fun chatLines(detail: app.reachy.companion.data.ChatDetail): List<ChatLine> = detail.turns.flatMap { turn ->
     listOfNotNull(
         ChatLine(true, turn.text, failed = turn.status != "complete"),   // no recorded reply: shown as "Reply not received"
-        turn.reply?.let { ChatLine(false, it, sources = turn.webSearch?.results.orEmpty(), searchFailed = turn.webSearch?.failed == true) },
+        turn.reply?.let {
+            ChatLine(
+                false, it, sources = turn.webSearch?.results.orEmpty(), searchFailed = turn.webSearch?.failed == true,
+                document = turn.document?.title, pages = app.reachy.companion.data.citedPages(turn.citations),
+            )
+        },
     )
 }
 
@@ -46,6 +53,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var userId: String? = null
     val player = MeetingPlayer(File(app.cacheDir, "meeting-audio")) { id, file -> api.downloadAudio(id, file) }
     private var chatId: String? = null
+    val docs = DocumentsModel({ api }, { userId }, viewModelScope) { failed(it) }
 
     var session by mutableStateOf(Session.Checking); private set
     var loginError by mutableStateOf<String?>(null); private set
@@ -102,7 +110,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 api = ReachyApi(prefs.baseUrl, cookieJar)
                 api.login(username, password)
                 userId = api.userId()
-                chat.clear(); chatId = null
+                chat.clear(); chatId = null; attachedDocument = null; docs.clear()
                 session = Session.SignedIn
                 resumeDeepReview()
             } catch (e: ApiException) {
@@ -114,7 +122,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun signOut() {
-        viewModelScope.launch { api.logout(); chat.clear(); chatHistory.clear(); tasks.clear(); notes.clear(); meetings.clear(); processing.clear(); meetingLinks.clear(); processingPoll?.cancel(); chatId = null; if (recording) stopRecording(); DeepReviewController.job = null; session = Session.SignedOut }
+        viewModelScope.launch { api.logout(); chat.clear(); attachedDocument = null; docs.clear(); chatHistory.clear(); tasks.clear(); notes.clear(); meetings.clear(); processing.clear(); meetingLinks.clear(); processingPoll?.cancel(); chatId = null; if (recording) stopRecording(); DeepReviewController.job = null; session = Session.SignedOut }
     }
 
     private fun failed(e: Exception): String {
@@ -131,9 +139,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         chat.add(line)
         viewModelScope.launch {
             try {
-                if (!spoken && chatId == null) { chatId = api.createChat(user, message).id; runCatching { chatHistory.replace(api.chats(user)) } }
+                if (!spoken && chatId == null) {
+                    chatId = api.createChat(user, message).id; runCatching { chatHistory.replace(api.chats(user)) }
+                    // A document chosen before the first message is saved on the hub with the new chat, before anything is sent: a message must
+                    // never go out as ordinary chat when the owner meant it to be answered from the document.
+                    val chosen = attachedDocument
+                    if (chosen != null) {
+                        try { attachedDocument = api.setChatDocument(user, chatId!!, chosen.id) } catch (e: Exception) {
+                            chat.remove(line); chatStatus = "The document could not be attached (${failed(e)}). Nothing was sent."; return@launch
+                        }
+                    }
+                }
                 val reply = api.send(user, message, spoken, chatId, contextMeeting?.first, forceFrontier = contextCloud && contextMeeting != null)
-                chat.add(ChatLine(false, reply.reply, context = reply.contextMeeting, sources = reply.webSearch?.results.orEmpty(), searchFailed = reply.webSearch?.failed == true)); lastReply = reply.reply; replySeq++
+                chat.add(ChatLine(
+                    false, reply.reply, context = reply.contextMeeting, sources = reply.webSearch?.results.orEmpty(), searchFailed = reply.webSearch?.failed == true,
+                    document = reply.contextDocument, pages = app.reachy.companion.data.citedPages(reply.citations),
+                )); lastReply = reply.reply; replySeq++
                 if (!spoken) runCatching { chatHistory.replace(api.chats(user)) }   // the chat moves to the top
             } catch (e: Exception) {
                 // Never retried automatically: the hub may already have acted on the message.
@@ -149,10 +170,31 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Answer context questions with the cloud model instead (the meeting text is sent to the provider). */
     var contextCloud by mutableStateOf(false)
 
-    fun useAsContext(meeting: Meeting) { contextMeeting = meeting.id to meeting.title; contextCloud = false }
+    fun useAsContext(meeting: Meeting) {
+        // One source at a time: the hub answers from an attached document first, so choosing a meeting lets go of it.
+        if (attachedDocument != null) attachDocument(null)
+        contextMeeting = meeting.id to meeting.title; contextCloud = false
+    }
     fun clearContext() { contextMeeting = null; contextCloud = false }
 
-    fun newChat() { chat.clear(); chatId = null; chatStatus = null }
+    fun newChat() { chat.clear(); chatId = null; chatStatus = null; attachedDocument = null }
+
+    /**
+     * The document this chat answers from. For a saved chat it is the hub's own record (it survives restarts and other devices); for a chat not
+     * yet started it is held here and saved the moment the chat is created, before the first message.
+     */
+    var attachedDocument by mutableStateOf<app.reachy.companion.data.ChatDocument?>(null); private set
+
+    /** Attaches or replaces the chat's document, or removes it (null). Choosing one lets go of a chosen meeting. */
+    fun attachDocument(document: app.reachy.companion.data.DocumentItem?) {
+        val user = userId ?: return
+        val id = chatId
+        if (document != null) clearContext()
+        if (id == null) { attachedDocument = document?.let { app.reachy.companion.data.ChatDocument(it.id, it.title) }; return }
+        viewModelScope.launch {
+            try { attachedDocument = api.setChatDocument(user, id, document?.id); chatStatus = null } catch (e: Exception) { chatStatus = failed(e) }
+        }
+    }
 
     /** The saved chats (newest first) and the one open in the Talk screen. */
     val chatHistory = mutableStateListOf<app.reachy.companion.data.ChatRecord>()
@@ -168,6 +210,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val detail = api.chat(user, id)
                 chat.replace(chatLines(detail)); chatId = detail.id; chatStatus = null; listError = null
+                attachedDocument = detail.document
+                if (detail.document != null) clearContext()
             } catch (e: Exception) { listError = failed(e) }
         }
     }

@@ -25,6 +25,7 @@ import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okio.source
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -372,4 +373,88 @@ class ReachyApi(baseUrl: String, private val cookieJar: PersistentCookieJar, cli
 
     suspend fun receipts(): List<Receipt> =
         json.decodeFromString(ListSerializer(Receipt.serializer()), call(req("/planner/receipts").build()))
+
+    // --- Document library (Phase 50). The same owner routes the web Documents page uses; the hub sets the access ceiling itself. ---
+
+    private val documents = "/document-library/documents"
+
+    suspend fun documentLibraryEnabled(): Boolean =
+        json.parseToJsonElement(call(req("/document-library/config").build())).jsonObject["enabled"]?.jsonPrimitive?.booleanOrNull == true
+
+    suspend fun documents(): List<DocumentItem> =
+        json.decodeFromString(ListSerializer(DocumentItem.serializer()), call(req(documents).build()))
+
+    suspend fun document(id: String): DocumentItem = json.decodeFromString(call(req("$documents/${enc(id)}").build()))
+
+    /** Streams the picked file to the hub; [length] is the size when the provider knows it (else the upload is chunked). */
+    suspend fun uploadDocument(
+        name: String, contentType: String, length: Long, open: () -> java.io.InputStream?,
+        title: String?, sensitivity: String, projectScope: String?,
+    ): DocumentItem {
+        val file = object : RequestBody() {
+            override fun contentType() = contentType.toMediaType()
+            override fun contentLength() = length
+            override fun writeTo(sink: okio.BufferedSink) {
+                (open() ?: throw IOException("The file could not be opened")).use { input -> sink.writeAll(input.source()) }
+            }
+        }
+        val form = MultipartBody.Builder().setType(MultipartBody.FORM)
+            .addFormDataPart("file", name, file)
+            .addFormDataPart("sensitivity", sensitivity)
+            .addFormDataPart("processing_priority", "normal")
+        title?.takeIf { it.isNotBlank() }?.let { form.addFormDataPart("title", it.trim()) }
+        projectScope?.takeIf { it.isNotBlank() }?.let { form.addFormDataPart("project_scope", it.trim()) }
+        return json.decodeFromString(call(req(documents).post(form.build()).build()))
+    }
+
+    /** Only the fields given change; a null [projectScope] clears it when [clearProject] is set. */
+    suspend fun patchDocument(id: String, title: String? = null, sensitivity: String? = null, projectScope: String? = null, clearProject: Boolean = false): DocumentItem =
+        json.decodeFromString(call(req("$documents/${enc(id)}").patch(jsonBody(buildJsonObject {
+            title?.let { put("title", it.trim()) }
+            sensitivity?.let { put("sensitivity", it) }
+            if (clearProject) put("project_scope", kotlinx.serialization.json.JsonNull) else projectScope?.let { put("project_scope", it.trim()) }
+        })).build()))
+
+    /** Reads the retained original again, at [tier] when given (the next extraction level up). */
+    suspend fun reprocessDocument(id: String, tier: String?): DocumentItem =
+        json.decodeFromString(call(req("$documents/${enc(id)}/reprocess").post(jsonBody(buildJsonObject { tier?.let { put("tier", it) } })).build()))
+
+    suspend fun deleteDocument(id: String) { call(req("$documents/${enc(id)}").delete().build()) }
+
+    suspend fun searchDocument(id: String, query: String): DocumentSearch =
+        json.decodeFromString(call(req("$documents/${enc(id)}/search").post(jsonBody(buildJsonObject { put("query", query); put("limit", 10) })).build()))
+
+    suspend fun summaries(id: String): List<DocumentSummary> =
+        json.decodeFromString(ListSerializer(DocumentSummary.serializer()), call(req("$documents/${enc(id)}/summaries").build()))
+
+    suspend fun startSummary(id: String, style: String, force: Boolean = false): DocumentSummary =
+        json.decodeFromString(call(req("$documents/${enc(id)}/summaries").post(jsonBody(buildJsonObject { put("style", style); put("force", force) })).build()))
+
+    /** A one-off question about one document, sent as an ordinary typed message; the hub keeps its history per document. */
+    suspend fun askDocument(userId: String, documentId: String, text: String): Reply =
+        json.decodeFromString(call(req("/messages").post(jsonBody(buildJsonObject {
+            put("user_id", userId); put("channel", "web"); put("input_modality", "text"); put("text", text); put("context_document_id", documentId)
+        })).build()))
+
+    suspend fun inspectPage(id: String, page: Int): InspectPage = json.decodeFromString(call(req("$documents/${enc(id)}/inspect/pages/$page").build()))
+
+    /** MinerU's picture of the original page, or of one block's crop when [block] is given (PNG or JPEG bytes). */
+    suspend fun pageImage(id: String, page: Int, block: Int? = null): ByteArray = withContext(Dispatchers.IO) {
+        val path = "$documents/${enc(id)}/inspect/pages/$page" + (block?.let { "/blocks/$it" } ?: "") + "/image"
+        http.newCall(req(path).build()).execute().use { response ->
+            if (!response.isSuccessful) throw ApiException(response.code, errorDetail(response.body?.string().orEmpty()) ?: "The picture is not available (${response.code})")
+            response.body!!.bytes()
+        }
+    }
+
+    /** Attaches, replaces (another id) or removes (null) the document a saved chat answers from. The hub holds it; the chat keeps it across restarts and devices. */
+    suspend fun setChatDocument(userId: String, chatId: String, documentId: String?): ChatDocument? {
+        val text = call(req("/chats/${enc(chatId)}/document").put(jsonBody(buildJsonObject {
+            put("user_id", userId); put("document_id", documentId?.let { JsonPrimitive(it) } ?: kotlinx.serialization.json.JsonNull)
+        })).build())
+        return json.parseToJsonElement(text).jsonObject["document"]?.takeIf { it !is kotlinx.serialization.json.JsonNull }
+            ?.let { json.decodeFromJsonElement(ChatDocument.serializer(), it) }
+    }
+
+    private fun enc(value: String) = java.net.URLEncoder.encode(value, "UTF-8").replace("+", "%20")
 }

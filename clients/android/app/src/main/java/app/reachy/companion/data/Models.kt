@@ -92,6 +92,9 @@ data class Reply(
     val reply: String,
     @SerialName("context_meeting") val contextMeeting: String? = null,
     @SerialName("web_search") val webSearch: WebSearch? = null,
+    /** The title of the attached document this reply was answered from, and the pages whose excerpts were supplied. */
+    @SerialName("context_document") val contextDocument: String? = null,
+    val citations: List<Citation> = emptyList(),
 )
 
 @Serializable
@@ -108,10 +111,13 @@ data class ChatRecord(val id: String, val title: String = "", @SerialName("updat
 data class ChatTurnRecord(
     val text: String, val reply: String? = null, val status: String = "complete",
     @SerialName("web_search") val webSearch: WebSearch? = null,
+    val document: ChatDocument? = null,
+    val citations: List<Citation> = emptyList(),
 )
 
+/** [document] is the chat's server-held attachment; `available` is false when the document has since been deleted. */
 @Serializable
-data class ChatDetail(val id: String, val title: String = "", val turns: List<ChatTurnRecord> = emptyList())
+data class ChatDetail(val id: String, val title: String = "", val turns: List<ChatTurnRecord> = emptyList(), val document: ChatDocument? = null)
 
 @Serializable
 data class StatusInfo(@SerialName("default_user_id") val defaultUserId: String? = null)
