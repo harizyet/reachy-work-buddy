@@ -228,6 +228,9 @@ describe('Documents', () => {
       const frame = await screen.findByTitle(/Extracted page 1, rendered by MinerU/);
       expect(frame).toHaveAttribute('sandbox', '');
       expect(frame.getAttribute('srcdoc')).toContain("default-src 'none'");
+      for (const directive of ["img-src 'none'", "connect-src 'none'", "form-action 'none'", "base-uri 'none'", "frame-src 'none'", "object-src 'none'"]) expect(frame.getAttribute('srcdoc')).toContain(directive);
+      expect(frame.getAttribute('srcdoc')).toContain('no-referrer');
+      expect(frame.getAttribute('sandbox')).toBe(''); // not even allow-same-origin, allow-scripts, allow-forms, allow-popups or allow-top-navigation
       expect(frame.getAttribute('srcdoc')).toContain('Extracted text 1');
       expect(document.querySelector('.docvortex-text, script')).toBeNull(); // nothing from the extraction was put into the page itself
       await user.click(screen.getByRole('tab', { name: 'Markdown' }));

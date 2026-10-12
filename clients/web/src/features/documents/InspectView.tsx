@@ -16,8 +16,10 @@ const EXPORTS: { kind: ExportKind; label: string; ext: string }[] = [
   { kind: 'middle_json', label: 'Structured result (JSON)', ext: 'json' },
 ];
 
-// The right-hand pane shows MinerU's own HTML for the page. It is document-derived text, so it only ever goes into a sandboxed frame: no scripts, no same-origin access, no network.
-const FRAME_POLICY = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">`;
+// The right-hand pane shows MinerU's own HTML for the page. It is document-derived, so three independent layers stand between it and the owner's session: the worker has already rebuilt it from an
+// allowlist (no scripts, frames, images, links, forms, styles attributes or URLs); it only ever goes into a frame with an empty `sandbox` (no scripts, no same-origin access, no top navigation,
+// no popups, no forms); and the frame's own policy forbids every kind of fetch, form post and base change. Exported so a test can check the exact policy the page uses.
+export const FRAME_POLICY = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'"><meta name="referrer" content="no-referrer"><base target="_blank">`;
 const safeName = (value: string) => value.replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^[._]+|[._]+$/g, '').slice(0, 60) || 'document';
 
 /** An image fetched with the signed-in session and shown through a temporary object URL (a plain <img src> would not carry the session). */

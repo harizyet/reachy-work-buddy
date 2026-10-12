@@ -13,9 +13,9 @@ import os
 import re
 from pathlib import Path
 
+from document_worker import htmlsafe
 from document_worker.engine import EngineError, LayoutBlock, PageLayout, RenderedImage
 
-_SCRIPT = re.compile(r"<script\b.*?</script\s*>", re.IGNORECASE | re.DOTALL)
 _STYLE = re.compile(r"<style\b[^>]*>.*?</style\s*>", re.IGNORECASE | re.DOTALL)
 _IMAGE_MIME = {"image/png", "image/jpeg", "image/webp"}
 _MAX_RESULTS = 4  # parsed results kept in memory (a document at a tier each)
@@ -75,7 +75,7 @@ class Inspector:
             raise EngineError("not_cached")
         middle = newest.model_copy(update={"pages": pages})
         standalone = render(middle, RenderFormat.HTML)  # MinerU's own stylesheet comes with its standalone page; the page's scripts (a CDN math library) are never used
-        css = "".join(_STYLE.findall(standalone))
+        css = "".join(_STYLE.findall(standalone))  # the rules only; htmlsafe.sanitize_css strips anything that could fetch or execute
         result = _Result(middle, sizes, css)
         while len(_cache) >= _MAX_RESULTS:
             _cache.pop(next(iter(_cache)))
@@ -88,11 +88,6 @@ class Inspector:
         if found is None:
             raise EngineError("page_not_cached")
         return found
-
-    @staticmethod
-    def _clean(text: str) -> str:
-        """Defence in depth: the fragment is rendered without scripts, and anything that looks like one is removed before it leaves."""
-        return _SCRIPT.sub("", text)
 
     @staticmethod
     def _no_paths(payload: bytes) -> bytes:
@@ -120,7 +115,7 @@ class Inspector:
 
         result = self._result(backend_ref, tier)
         one = result.middle.model_copy(update={"pages": [self._page(result, page)]})
-        return self._clean(result.css + render_html(one, standalone=False))
+        return htmlsafe.document(result.css, render_html(one, standalone=False))  # rebuilt from an allowlist; MinerU's own escaping is not the only line of defence
 
     def image(self, backend_ref: str, tier: str, page: int, block: int | None, image_format: str) -> RenderedImage:
         locator = f"doc:{backend_ref}/tier:{tier}/page:{page}" + (f"/block:{block}" if block else "")
@@ -149,8 +144,10 @@ class Inspector:
         elif kind == "middle_json":
             payload = json.dumps(middle.model_dump(mode="json"), ensure_ascii=False, indent=2).encode()
         elif kind == "html":
-            body = self._clean(render_html(middle, standalone=False))
-            payload = f'<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src data:">{result.css}</head><body>{body}</body></html>'.encode()
+            payload = (
+                '<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; base-uri \'none\'; form-action \'none\'">'
+                f"</head><body>{htmlsafe.document(result.css, render_html(middle, standalone=False))}</body></html>"
+            ).encode()
         else:
             raise EngineError("invalid_request")
         return self._no_paths(payload)
