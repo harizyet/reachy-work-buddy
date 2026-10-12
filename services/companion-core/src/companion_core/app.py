@@ -267,6 +267,13 @@ from companion_core.llm.postgres_store import (
 )
 from companion_core.llm.router import route_completion
 from companion_core.llm.store import LLMSettingsStore, LLMUsageStore, masked_config
+from companion_core.meeting_analysis import service as analysis_service
+from companion_core.meeting_analysis.postgres_store import PostgresMeetingAnalysisStore
+from companion_core.meeting_analysis.routes import install_meeting_analysis_routes
+from companion_core.meeting_analysis.store import (
+    InMemoryMeetingAnalysisStore,
+    MeetingAnalysisStore,
+)
 from companion_core.meetings import corrections as meeting_corrections
 from companion_core.meetings import describe as meeting_describe
 from companion_core.meetings import outputs as meeting_outputs
@@ -693,12 +700,16 @@ def create_app(
     notepad_store: NotepadStore | None = None,
     notepad_provider: notepad_service.Provider | None = None,
     run_notepad_runner: bool = True,
+    meeting_analysis_store: MeetingAnalysisStore | None = None,
+    meeting_analysis_provider: analysis_service.Provider | None = None,
+    run_meeting_analysis_runner: bool = True,
     document_store: LibraryStore | None = None,
     document_sources: SourceStore | None = None,
     document_worker: DocumentWorkerClient | None = None,
     run_document_sync: bool = True,
 ) -> FastAPI:
     documents_on = document_library_service.enabled()  # Phase 50B: read once; with it off nothing is built, no table is read, no directory is created and the routes do not exist
+    analysis_on = analysis_service.enabled()  # Phase 31: read once; with it off nothing is built, no table is read, the knowledge index adds nothing and the routes do not exist
     notepad_on = notepad_service.enabled()  # Phase 49: read once; with it off nothing is built, no table is read and the routes do not exist
     candidates_on, capture_on = candidate_service.candidates_enabled(), candidate_service.capture_enabled()  # read once: routes and lifespan always agree
     hub_base_url = hub_base_url or os.environ.get("REACHY_HUB_URL", "http://reachy-hub:8000")
@@ -843,6 +854,21 @@ def create_app(
             app.state.confirmation_store = await PostgresConfirmationStore.connect(db)
         if owns_meeting_store:
             app.state.meeting_store = await PostgresMeetingStore.connect(db)
+        analysis_task = None
+        if analysis_on:
+            # Built before the knowledge index starts: its meeting adapter reads these items. Local model only, like Phase 49.
+            analysis_store = meeting_analysis_store
+            if analysis_store is None and db is not None and owns_task_store and owns_planner_store:
+                analysis_store = await PostgresMeetingAnalysisStore.connect(db)
+            elif analysis_store is None:
+                analysis_store = InMemoryMeetingAnalysisStore()
+                logging.getLogger("companion_core.meeting_analysis").warning("meeting analysis is enabled without a database: runs and items are not durable")
+            app.state.meeting_analysis_store = analysis_store
+            if app.state.meeting_analysis_service is None:
+                app.state.meeting_analysis_service = analysis_service.MeetingAnalysisService(
+                    analysis_store, app.state.meeting_store, app.state.task_store, app.state.planner_store, notepad_timezone, provider=meeting_analysis_provider or notepad_local_provider)
+            if run_meeting_analysis_runner:
+                analysis_task = asyncio.create_task(notepad_service.run_loop(app.state.meeting_analysis_service, concurrency=1))  # the same bounded runner: process_next, reconcile, wake
 
         if owns_accounts:
             app.state.accounts = AccountService(await PostgresAccountRepository.connect(db))
@@ -886,11 +912,12 @@ def create_app(
             knowledge_indexing = await knowledge_runtime.start_indexing(
                 dsn=db, memory=app.state.memory_store, documents=app.state.rag_store,
                 meetings=app.state.meeting_store, planner=app.state.planner_store, tasks=app.state.task_store,
+                meeting_analysis=lambda: app.state.meeting_analysis_store,
             )
         # Measure-only knowledge shadow (Phase 44E follow-up). Off by default; it reads the index and the stores and writes aggregate counts only.
         if app.state.knowledge_shadow is None and knowledge_shadow_enabled() and db is not None and owns_meeting_store:
             shadow_adapters = build_adapters(memory=app.state.memory_store, documents=app.state.rag_store, meetings=app.state.meeting_store,
-                                             planner=app.state.planner_store, tasks=app.state.task_store)
+                                             planner=app.state.planner_store, tasks=app.state.task_store, meeting_analysis=lambda: app.state.meeting_analysis_store)
             app.state.knowledge_shadow = knowledge_shadow_from_env(
                 retriever=Retriever(search=PostgresSearch(db.pool), config=B1A, clock=lambda: datetime.now(UTC), adapters=shadow_adapters),
                 tasks=app.state.task_store, planner=app.state.planner_store, adapters=shadow_adapters, memory=app.state.memory_store,
@@ -901,7 +928,7 @@ def create_app(
         # Phase 44E integration: deterministic cited answering over the existing authorised retrieval. Both flags default off; with either off nothing is built.
         if app.state.selective_answerer is None and selective_answer.selective_enabled() and db is not None and owns_meeting_store:
             selective_adapters = build_adapters(memory=app.state.memory_store, documents=app.state.rag_store, meetings=app.state.meeting_store,
-                                                planner=app.state.planner_store, tasks=app.state.task_store)
+                                                planner=app.state.planner_store, tasks=app.state.task_store, meeting_analysis=lambda: app.state.meeting_analysis_store)
 
             async def selective_vocabulary() -> frozenset[str]:
                 return await knowledge_qualify.build_vocabulary(selective_adapters)
@@ -972,7 +999,7 @@ def create_app(
         # Phase 44E selective shadow: classifies and assesses internally after the reply is final and never releases anything. Off unless its own flag, retrieval and a log path are set.
         if app.state.selective_shadow is None and selective_shadow.selective_shadow_enabled() and db is not None and owns_meeting_store:
             observer_adapters = build_adapters(memory=app.state.memory_store, documents=app.state.rag_store, meetings=app.state.meeting_store,
-                                               planner=app.state.planner_store, tasks=app.state.task_store)
+                                               planner=app.state.planner_store, tasks=app.state.task_store, meeting_analysis=lambda: app.state.meeting_analysis_store)
 
             async def observer_vocabulary() -> frozenset[str]:
                 return await knowledge_qualify.build_vocabulary(observer_adapters)
@@ -1003,6 +1030,14 @@ def create_app(
             if provenance_only is not None:
                 with contextlib.suppress(Exception):
                     await provenance_only.close()
+            if analysis_task is not None:
+                analysis_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await analysis_task
+                logging.getLogger("companion_core.meeting_analysis").info("meeting analysis summary: %s", app.state.meeting_analysis_service.summary())
+                if meeting_analysis_store is None:
+                    with contextlib.suppress(Exception):
+                        await app.state.meeting_analysis_service.store.close()
             if notepad_task is not None:
                 notepad_task.cancel()
                 with contextlib.suppress(asyncio.CancelledError, Exception):
@@ -1124,6 +1159,11 @@ def create_app(
     app.state.document_library = None  # Phase 50B: built in the lifespan only when DOCUMENT_LIBRARY_ENABLED is true (or at once when a store and a source store are injected)
     if documents_on and document_store is not None and document_sources is not None:
         app.state.document_library = document_library_service.DocumentService(document_store, document_sources, document_worker, provider=document_local_provider)
+    app.state.meeting_analysis_store = meeting_analysis_store  # Phase 31: the knowledge adapters read it; None while MEETING_ANALYSIS_ENABLED is off
+    app.state.meeting_analysis_service = None  # built in the lifespan only when the flag is on (or at once when a store is injected)
+    if analysis_on and meeting_analysis_store is not None and meeting_store is not None and task_store is not None and planner_store is not None:
+        app.state.meeting_analysis_service = analysis_service.MeetingAnalysisService(
+            meeting_analysis_store, meeting_store, task_store, planner_store, notepad_timezone, provider=meeting_analysis_provider or notepad_local_provider)
     app.state.notepad_service = None  # Phase 49: built in the lifespan only when NOTEPAD_PROCESSING_ENABLED is true (or at once when a store is injected)
     if notepad_on and notepad_store is not None and planner_store is not None and task_store is not None:
         app.state.notepad_service = notepad_service.NotepadService(notepad_store, planner_store, task_store, notepad_timezone, provider=notepad_provider or notepad_local_provider, meetings=meeting_store)
@@ -2026,6 +2066,9 @@ def create_app(
     if notepad_on:
         install_notepad_routes(app)
 
+    if analysis_on:
+        install_meeting_analysis_routes(app)
+
     if documents_on:
         install_document_library_routes(app)
 
@@ -2244,6 +2287,7 @@ def create_app(
         return build_adapters(
             memory=app.state.memory_store, documents=app.state.rag_store, meetings=app.state.meeting_store,
             planner=app.state.planner_store, tasks=app.state.task_store,
+            meeting_analysis=lambda: app.state.meeting_analysis_store,
         )
 
     def brain_access():
@@ -3015,6 +3059,8 @@ def create_app(
         await app.state.meeting_store.delete_meeting(meeting_id)
         if app.state.notepad_service is not None:
             await app.state.notepad_service.meeting_deleted(meeting_id)  # only the association rows go; notes and proposals keep their own text
+        if app.state.meeting_analysis_service is not None:
+            await app.state.meeting_analysis_service.meeting_deleted(meeting_id)  # its analysis goes with it; a task already made from an action stays
         return {"deleted": True}
 
     @app.get("/deep-review/info")
