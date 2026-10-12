@@ -28,6 +28,17 @@ MinerU 4.0 already provides:
 
 MinerU explicitly positions its document library and locators for agent reading workflows, while remaining separate from higher-level chat/RAG orchestration.
 
+## 0. Revised execution sequence (owner decision, 2026-10-12)
+
+This section supersedes the Proxmox-first ordering and the "Proxmox worker preferentially" statements in sections 16, 17, 38 and 39 for the purpose of *sequencing*. The architecture is unchanged: **Reachy is independent of where the document worker executes; the worker's location is a deployment configuration detail (`DOCUMENT_WORKER_URL` and the token), never an application dependency.** Proxmox is simply another deployment target and does not block development or validation of the document features.
+
+1. **Integrate on the existing MS-01 homelab.** The existing document-worker runs beside Reachy's current services under Docker Compose (profile `documents`), in its own CPU-only container with no GPU access, Vulkan masked, telemetry disabled and every verified hardening control; reached over the internal Docker network. Reachy's authoritative source store (`document-source`) and MinerU's derived storage (`document-worker-data`) stay separate. Production vLLM and its GPU allocation are not touched.
+2. **Integrated deployment gate (needs the owner's explicit approval before any production migration or service recreation):** back up the database and `document-source`; apply `031_documents` with the controlled migration procedure; recreate the required services with `DOCUMENT_LIBRARY_ENABLED=false`; verify existing behaviour and regressions; enable the library in a controlled rollout; exercise upload, processing, status sync, scoped read/search, reprocess, duplicate content, deletion and recovery with the real worker; verify privacy ceilings, sensitivity and project isolation, source integrity, telemetry and CPU-only operation; record the Phase 48 evaluation boundary and leave its frozen artifacts and controls alone. Local rehearsal of this gate (bundle, drill, defects fixed) is recorded in the [50C record](verification/phase-50c-integration-2026-10-12.md).
+3. **Develop the document assistant** once the integrated backend is validated: 50E document-scoped conversation and Q&A; 50F federated retrieval through the Phase 44 authorization and source-revalidation contracts; 50G page/block provenance and citations; 50H summarization and analysis; 50D tier escalation including Advanced when lower-tier extraction is insufficient; 50J the Web Documents tab with upload, management and processing status (including the hub proxy that supplies the trusted access ceiling); then functional, security, lifecycle and end-to-end acceptance. Priority is a usable document assistant, not further research or comparative benchmarking. Local development of these stages proceeds behind the existing flags while the gate waits for approval.
+4. **Proxmox last, after functional acceptance on the MS-01:** provision the Ubuntu guest; deploy the same pinned, hardened CPU-only image ([deploy/document-worker/](../deploy/document-worker/README.md)); configure its persistent MinerU storage and verified model assets; change the worker endpoint configuration; rebuild derived MinerU state from Reachy's originals where needed (the sync loop already does this); re-run the integration, security and recovery checks; confirm that moving the worker needs no application change. The interactive/priority GPU path (50I) is designed against the same principle.
+
+Revised order: 50A, 50B, 50C (done locally) then the MS-01 gate (awaiting approval), 50E to 50H and 50D and 50J (local development meanwhile), acceptance, then Proxmox.
+
 ## 1. Architectural decision
 
 Phase 50 adopts the following ownership boundary:
@@ -1410,6 +1421,8 @@ processing isolation
 ```
 
 ## 37. Implementation sequence
+
+Superseded for ordering by [section 0](#0-revised-execution-sequence-owner-decision-2026-10-12): the MS-01 integrated gate follows 50C, the stages below follow it, and Proxmox deployment is the last step (it was previously part of 50I and the first deployment).
 
 ```text
 ADR-0034 alignment
