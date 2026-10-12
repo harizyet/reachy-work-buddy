@@ -27,6 +27,7 @@ from shared.models.response import Privacy
 
 # Summaries and minutes are written by a model from the transcript, so they rank below what people actually said.
 GENERATED_CONFIDENCE = 0.5
+_PRIVACY_RANK = {Privacy.PUBLIC: 0, Privacy.WORK_PRIVATE: 1, Privacy.SENSITIVE: 2}
 
 Status = Literal["visible", "missing", "forgotten", "expired", "hidden"]
 
@@ -143,8 +144,9 @@ class MeetingAdapter:
 
     source_type: SourceType = "meeting"
 
-    def __init__(self, store: MeetingStore) -> None:
+    def __init__(self, store: MeetingStore, analysis=None) -> None:
         self._store = store
+        self._analysis = analysis  # Phase 31: a callable returning the meeting-analysis store, or None while the feature is off
 
     async def state(self, source_id: str) -> SourceState:
         meeting = await self._store.get_meeting(source_id)
@@ -175,7 +177,30 @@ class MeetingAdapter:
                     confidence=GENERATED_CONFIDENCE, observed_at=output.generated_at, title=meeting.title,
                     authority="model_generated",
                 ))
+        items += await self._analysis_items(meeting)
         return SourceState("visible", items)
+
+    async def _analysis_items(self, meeting) -> list[Indexable]:
+        """Phase 31: only an action the owner explicitly confirmed, worded from the item and carrying its evidence timestamps, model-generated in its wording (the segments it cites are indexed
+        too, so the source words stay retrievable). Decisions, open questions and pending actions are unreviewed and are never offered (see meeting_analysis.store.retrievable)."""
+        store = self._analysis() if self._analysis is not None else None
+        if store is None:
+            return []
+        from companion_core.meeting_analysis.store import retrievable
+
+        out: list[Indexable] = []
+        for item in await store.list_items(meeting_id=meeting.id):
+            if not retrievable(item):
+                continue
+            body = item.final_text if item.edited and item.final_text else item.text  # the owner's own words once they edited an action
+            who = f" Assigned to: {item.assignee}." if item.assignee else ""
+            text = f"Action: {body}.{who} Evidence at {item.stamps()}."
+            out.append(Indexable(
+                ref=_ref("meeting", meeting.id, f"analysis:{item.id}"), kind="meeting_minutes", text=text, match_text=text, sensitivity=max(meeting.sensitivity, item.sensitivity, key=_PRIVACY_RANK.__getitem__),
+                local_only=True, project_scope=meeting.project_scope, confidence=GENERATED_CONFIDENCE, observed_at=meeting.started_at or meeting.created_at, title=meeting.title,
+                section="Action", start_seconds=item.evidence[0].start, authority="model_generated",
+            ))
+        return out
 
     async def list_ids(self) -> list[str]:
         return [m.id for m in await self._store.list_meetings()]
@@ -246,10 +271,10 @@ class ReminderAdapter:
 
 def build_adapters(
     *, memory: MemoryStore, documents: DocumentStore, meetings: MeetingStore, planner: PlannerStore, tasks: TaskStore,
-    clock=lambda: datetime.now(UTC),
+    clock=lambda: datetime.now(UTC), meeting_analysis=None,
 ) -> dict[str, SourceAdapter]:
     adapters: list[SourceAdapter] = [
-        MemoryAdapter(memory, clock), DocumentAdapter(documents), MeetingAdapter(meetings), NoteAdapter(planner),
+        MemoryAdapter(memory, clock), DocumentAdapter(documents), MeetingAdapter(meetings, meeting_analysis), NoteAdapter(planner),
         TaskAdapter(tasks), ReminderAdapter(planner),
     ]
     return {a.source_type: a for a in adapters}

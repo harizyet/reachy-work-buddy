@@ -35,7 +35,7 @@ class IndexingHandle:
 
 async def start_indexing(
     *, dsn: str, memory, documents, meetings, planner, tasks, embed_fn=None, embedding_model=None,
-    interval: float = 5.0, reconcile_every: float | None = None,
+    interval: float = 5.0, reconcile_every: float | None = None, meeting_analysis=None,
 ) -> IndexingHandle:
     # How long text from an expired memory can linger in the index before reconciliation removes it (revalidation hides it at once).
     reconcile_every = reconcile_every or float(os.environ.get("KNOWLEDGE_RECONCILE_SECONDS", "3600"))
@@ -51,7 +51,7 @@ async def start_indexing(
         torch.set_num_threads(max(1, int(os.environ.get("KNOWLEDGE_EMBED_THREADS", "2"))))
     index, outbox = await PostgresKnowledgeIndex.connect(dsn), await PostgresOutbox.connect(dsn)
     worker = IndexingWorker(
-        adapters=build_adapters(memory=memory, documents=documents, meetings=meetings, planner=planner, tasks=tasks),
+        adapters=build_adapters(memory=memory, documents=documents, meetings=meetings, planner=planner, tasks=tasks, meeting_analysis=meeting_analysis),
         index=index, outbox=outbox, embed_fn=embed_fn, embedding_model=embedding_model or "unknown",
     )
     task = asyncio.create_task(worker.loop(interval=interval, reconcile_every=reconcile_every))

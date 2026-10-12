@@ -60,8 +60,8 @@ def display_name(meeting: Meeting, label: str) -> str:
     named = meeting.speaker_names.get(label)
     if named:
         return named
-    prefix = "SPEAKER_"
-    if label.startswith(prefix) and label[len(prefix) :].isdigit():
+    prefix = "speaker_"  # the sidecar's labels come as SPEAKER_00 or speaker_0
+    if label.casefold().startswith(prefix) and label[len(prefix) :].isdigit():
         return f"Speaker {int(label[len(prefix) :]) + 1}"
     return label
 

@@ -36,7 +36,7 @@ export const TERMINAL = ['complete', 'failed', 'cancelled'];
 export function speakerName(meeting: Meeting, label: string): string {
   const named = meeting.speaker_names[label];
   if (named) return named;
-  const match = /^SPEAKER_(\d+)$/.exec(label);
+  const match = /^SPEAKER_(\d+)$/i.exec(label); // the sidecar's labels come as SPEAKER_00 or speaker_0
   return match ? `Speaker ${Number(match[1]) + 1}` : label;
 }
 
