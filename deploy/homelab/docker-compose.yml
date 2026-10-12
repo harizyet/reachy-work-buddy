@@ -490,7 +490,7 @@ services:
       # document-source: back it up with the database); the document worker (profile "documents") is optional and only reached when DOCUMENT_WORKER_URL is set.
       DOCUMENT_LIBRARY_ENABLED: ${DOCUMENT_LIBRARY_ENABLED:-false}
       DOCUMENT_SOURCE_DIR: /data/document-source
-      DOCUMENT_WORKER_URL: ${DOCUMENT_WORKER_URL:-}
+      DOCUMENT_WORKER_URL: ${DOCUMENT_WORKER_URL:-http://document-worker:8000}
       DOCUMENT_WORKER_TOKEN: ${DOCUMENT_WORKER_TOKEN:-}
       DOCUMENT_LIBRARY_SYNC_SECONDS: ${DOCUMENT_LIBRARY_SYNC_SECONDS:-5}
       DOCUMENT_LIBRARY_RECONCILE_SECONDS: ${DOCUMENT_LIBRARY_RECONCILE_SECONDS:-300}
@@ -532,6 +532,10 @@ services:
       # same reasoning as the reachy-hub/companion-core comment below.
     expose:
       - "8000"
+    # Phase 50: the document worker (profile "documents") is reached over this internal-only network; the worker has no route to the internet.
+    networks:
+      - default
+      - documents
 
   # Phase 29 (docs/phase-29.md): coding-agent session supervisor. Owns
   # project/session/event/usage records (Postgres, migration 013, 29.27) and

@@ -41,7 +41,21 @@ Owner decisions: allow `sensitive` documents on trusted owner surfaces by channe
 * **Gate drill** `tools/document_gate_drill.py`, run against that real worker with a throwaway PostgreSQL and source store: **the owner's duplicate-bytes scenario passed** (A work-private/Basic and B sensitive/Standard on one PDF: reprocess A leaves B valid, delete A leaves B valid and the original, delete B removes the original, the records and the worker's state), and **the restore scenario passed** (database and source store restored, worker state destroyed and a fresh worker started, both documents rebuilt READY from the restored originals).
 * **Defects the drill found, fixed:** (1) the PostgreSQL store refused the `backend` field the service updates while the in-memory twin accepted it, so the whole upload path failed on a real database (both stores now share one allow-list, and a test runs the service lifecycle on the real store); (2) READY documents were never checked against the worker, so a worker restored from nothing left them stale (the loop now reconciles READY documents every `DOCUMENT_LIBRARY_RECONCILE_SECONDS`, and a read that finds the worker empty returns the document to the loop with a 409 instead of a server error).
 
-## Gate status
+## Gate status and the prepared MS-01 procedure (revised 2026-10-12)
 
-* **Blocked at step 1** (prepare Proxmox storage and model cache): this session has no route to the Proxmox host (it is not on the tailnet list, not in `~/.ssh/config`, and the repository does not name it). Needed from the owner: the host's address and how to reach it (SSH user), whether Docker is installed there, and the private address and port the worker should bind.
-* Steps 5 to 13 (backup, migration `031_documents`, recreate core/hub/coding-agent, flag off, verify, enable, one controlled real run, cleanup check, new Phase 48 boundary) run on the MS-01 and do not depend on the Proxmox route to start, but the owner's order puts the worker first, so they have not been started.
+The owner deferred Proxmox to the end of Phase 50 ([phase-50 section 0](../phase-50.md#0-revised-execution-sequence-owner-decision-2026-10-12)). The gate now runs on this MS-01 and **waits for the owner's explicit approval before any production backup-and-migrate or service recreation. Nothing below has been run against production.**
+
+Compose changes already made (take effect only when the services are recreated at the gate): `companion-core` joins the internal-only `documents` network and defaults `DOCUMENT_WORKER_URL` to `http://document-worker:8000`; the `document-worker` service (profile `documents`) is on that network only, read-only, capability-free, no GPU, 6 GiB / 4 CPUs; core also gets the `document-source` volume and the library flags (all off by default).
+
+Procedure, once approved (each step verified before the next; the Phase 48 cohort boundary is recorded at the core recreate, as for Phase 49):
+
+1. **Preflight:** disk space, no pending alarm or reminder window, read the Phase 48 counters route before the restart, note the running image ids and tag rollback images (`reachy-rollback/*:pre-031`).
+2. **Worker first, unconnected:** put the verified models in `DOCUMENT_WORKER_MODELS_DIR` (`deploy/document-worker/verify-models.sh`), set `DOCUMENT_WORKER_TOKEN` in `deploy/homelab/.env` (mode 600, never printed), build and start only `document-worker` with `--profile documents --no-deps`; run `deploy/document-worker/verify-worker.sh` against it (container name from this project) and confirm vLLM's GPU memory is unchanged.
+3. **Backup:** `pg_dump` of the database (restored into a throwaway container to prove it) and a copy of `document-source` (empty at this point; the procedure is rehearsed so it exists before the first document).
+4. **Migrate:** stop core, hub and coding-agent gracefully, wait for PgBouncer's idle connections, run `migrate` (`031_documents`), start the three with `DOCUMENT_LIBRARY_ENABLED=false`.
+5. **Verify existing behaviour** and run the regression suites; confirm the flag-off routes 404.
+6. **Enable:** set `DOCUMENT_LIBRARY_ENABLED=true`, recreate core only (a second boundary for the 48 cohorts, recorded).
+7. **Controlled run with the real worker:** upload, status sync, scoped read and search, reprocess, the duplicate-bytes scenario (A work-private/Basic, B sensitive/Standard), deletion, the restore drill (`tools/document_gate_drill.py` against a throwaway database and the live worker), privacy ceilings, telemetry still disabled, CPU-only (no non-vLLM GPU process during Standard processing).
+8. **Record** the result, the rollback assets (dump, image tags, `rollback-031.sql`) and the 48 boundary; keep the rollback assets until the owner accepts.
+
+Rollback: stop core, hub and coding-agent; `rollback-031.sql`; previous images; the worker is independent and can simply be stopped.
