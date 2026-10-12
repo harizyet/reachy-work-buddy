@@ -68,7 +68,7 @@ Not reused, and why: `notepad_jobs`/`notepad_proposals` tables (keyed by note; d
 
 ## 4. Flag and rollout
 
-`MEETING_ANALYSIS_ENABLED` (default off, not in Compose). With it off the tables are never read and the routes do not exist (404). Explicit owner request only; no automatic analysis on completion in this phase. Deployment needs the owner's approval (backup, migration `032`, core + hub + coding-agent together because `SCHEMA_REVISION` moves, and a Phase 48 cohort boundary because core is recreated).
+`MEETING_ANALYSIS_ENABLED` (default off, passed through by Compose from `.env`). With it off the tables are never read and the routes do not exist (404). Explicit owner request only; no automatic analysis on completion in this phase. Deployment needs the owner's approval (backup, migration `032`, core + hub + coding-agent together because `SCHEMA_REVISION` moves, and a Phase 48 cohort boundary because core is recreated).
 
 ## 5. Verification plan
 
