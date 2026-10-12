@@ -51,7 +51,7 @@ New segments from this change (the earlier segment, "cohort E", ran 2026-10-11 1
 | Segment | From (UTC) | To | Capture counters at the end | Notes |
 |---|---|---|---|---|
 | F | 02:19:51 | 02:20:24 | `{"attempted":2,"excluded_channel":2}` | the migration cutover with the library off; two ordinary probe turns on channel `probe-050` ("What is two plus two?", "What are my tasks?") |
-| G | 02:20:26 | open | `{"attempted":11,"excluded_channel":11}` at 04:00 or so (all on `probe-050`) | the library on. These 11 probe turns were document-attached or refused; a turn with a document attached passes `attached_meeting=true` to the capture, shadow and selective observers, as a meeting does, so they are skipped by design; the telemetry that confirms it is flushed at the next graceful stop. |
+| G | 02:20:26 | open | `{"attempted":11,"excluded_channel":11}` when last read, after all the checks (all on `probe-050`) | the library on. These 11 probe turns were document-attached or refused; a turn with a document attached passes `attached_meeting=true` to the capture, shadow and selective observers, as a meeting does, so they are skipped by design; the telemetry that confirms it is flushed at the next graceful stop. |
 
 Subtract the 13 `probe-050` turns from any 48B/48F window. Shadow-file copies at the boundaries: `~/reachy-backups/phase48-boundary-050/selective-shadow.cohortE-end.jsonl` and `...cohortF-end.jsonl`. No frozen artifact, router, registry, retrieval, evidence rule or answerer was modified (hash-identical files above); the one call-site change is the `attached_meeting` flag described above, which does nothing when no document is attached.
 
