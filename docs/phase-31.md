@@ -74,7 +74,7 @@ Not reused, and why: `notepad_jobs`/`notepad_proposals` tables (keyed by note; d
 
 Unit and in-process tests for the validator (fabricated segment, wrong quote, injected instruction, assignee not in quote, relative time without a start, gap-flagged segment), the store state machine (including crash takeover, double accept, dismissed stays dismissed after re-analysis), the service with a fake model, routes, the hub proxy chain, and the adapter. A migration, rollback and retrieval round trip on a disposable pgvector container. Then a development run of the real 7B over the real 1,419 s recording, reported with counts and the owner's judgement left open. Final acceptance (not claimable from this phase's local work): a real 30–60 minute meeting, owner-reviewed, with the metrics Phase 27 lists.
 
-## 6. Owner-supervised real-meeting trial (next milestone, after deployment and separate approval to enable)
+## 6. Owner-supervised real-meeting trial (next milestone; preparation in the [trial preparation record](verification/phase-31-trial-preparation-2026-10-12.md), activation needs separate approval)
 
 **Frozen for the whole trial:** prompt `meeting-analysis-2`, `meeting_analysis/support.py`, the extraction schema and the 7B model. No tuning, no model swaps, no extra Deep Local runs. Any defect found goes into the report and waits for a decision.
 
