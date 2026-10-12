@@ -80,7 +80,7 @@ Open `http://<MS-01 address>:8080/hub/web/#/documents` (for example `http://10.1
 
 ## Not verified, or open
 
-* The owner-authenticated browser pass; the hub's session-cookie path to the Documents routes was tested with the in-process chain and anonymous refusals live, not with a real owner login (no owner credentials were used).
+* (Closed: the owner's authenticated browser pass succeeded.) The hub's session-cookie path to the Documents routes was tested with the in-process chain and anonymous refusals live, not with a real owner login (no owner credentials were used).
 * Large or complex documents beyond the 7-page and one-page samples; Q&A quality on real scans; scan-heavy performance on this CPU (Standard about 5 s per page, Advanced about 90 s per page measured on small pages).
 * The unexplained 106 MiB GPU blip above.
 * 50F federation (not started, flag-free and untouched), Android Documents screen, chat document picker, Proxmox (deferred until the feature is accepted).
