@@ -26,6 +26,7 @@ from shared.protocols.brain_api import (
     BRAIN_NODES,
     BRAIN_SUMMARY,
 )
+from shared.protocols.document_library_api import ACCESS_CEILING_HEADER
 from shared.protocols.memory_candidates_api import (
     MEMORY_CANDIDATES,
     MEMORY_CANDIDATES_FORGET_CONVERSATION,
@@ -61,11 +62,13 @@ class CompanionCoreClient:
 
     async def send_turn(
         self, session_id: str, conversation_id: str, channel: str, text: str, *, input_modality: str = "text", force_frontier: bool = False,
-        context_meeting_id: str | None = None,
+        context_meeting_id: str | None = None, context_document_id: str | None = None, access_ceiling: str | None = None,
     ) -> dict[str, Any]:
         resp = await self._client.post(
             "/conversation",
             timeout=130.0,
+            # The trusted ceiling for document content on this channel (Phase 50; only the hub sets it, from the authenticated channel).
+            headers={ACCESS_CEILING_HEADER: access_ceiling} if access_ceiling else None,
             json={
                 "session_id": session_id,
                 "conversation_id": conversation_id,
@@ -74,6 +77,7 @@ class CompanionCoreClient:
                 "input_modality": input_modality,
                 "force_frontier": force_frontier,
                 "context_meeting_id": context_meeting_id,
+                "context_document_id": context_document_id,
             },
         )
         resp.raise_for_status()

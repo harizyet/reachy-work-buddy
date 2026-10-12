@@ -32,6 +32,14 @@ from companion_core.document_library.models import (
     tier_for,
     utcnow,
 )
+from companion_core.document_library.qa import (
+    MAX_PAGES,
+    WHOLE_DOCUMENT_PAGES,
+    Evidence,
+    Passage,
+    clean_page,
+    keywords,
+)
 from companion_core.document_library.source_store import (
     SourceCorrupt,
     SourceRejected,
@@ -395,6 +403,29 @@ class DocumentService:
             if exc.status == 404:
                 raise DocumentError(404, "No such location in the document") from None
             raise await self._worker_failed(document, exc) from None
+
+    async def evidence_for_question(self, document_id: str, access: AccessContext, question: str) -> Evidence:
+        """The excerpts of this one document that bear on a question: pages found by searching inside it (the whole text if it is only a few pages and nothing specific was found),
+        each read from the worker. Raises DocumentError exactly as read/search do; an empty passage list means the document does not appear to cover the question."""
+        document = await self._readable(document_id, access)
+        terms = keywords(question)
+        pages: list[tuple[int, str | None]] = []
+        try:
+            for query in ([" ".join(terms)] if len(terms) > 1 else []) + terms[:4]:
+                result = await self.worker.search(document.id, query, limit=10)
+                pages = list(dict.fromkeys((h.page, h.locator) for h in result.hits if h.page is not None))
+                if pages:
+                    break
+            if not pages and document.page_count and document.page_count <= WHOLE_DOCUMENT_PAGES:
+                pages = [(n, None) for n in range(1, document.page_count + 1)]
+            passages = []
+            for page, locator in sorted(pages)[:MAX_PAGES]:
+                text = clean_page((await self.worker.read(document.id, page_range=str(page), limit=8000)).content)
+                if text:
+                    passages.append(Passage(page=page, text=text, locator=locator))
+        except WorkerError as exc:
+            raise await self._worker_failed(document, exc) from None
+        return Evidence(document=document, passages=passages)
 
     async def search(self, document_id: str, access: AccessContext, query: str, *, limit: int = 10) -> DocumentSearchOut:
         document = await self._readable(document_id, access)

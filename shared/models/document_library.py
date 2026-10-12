@@ -56,3 +56,12 @@ class DocumentSearchOut(BaseModel):
     evidence_type: str
     hits: list[DocumentHitOut]
     complete: bool
+
+
+class Citation(BaseModel):
+    """Where an answer's excerpt came from: the document and the page whose text was supplied to the model. Never a page the model wrote."""
+
+    document_id: str
+    title: str
+    page: int
+    locator: str | None = None

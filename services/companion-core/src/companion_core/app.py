@@ -221,7 +221,10 @@ from companion_core.deep_review import (
     DeepReviewUnavailable,
     ModelManagerClient,
 )
+from companion_core.document_library import qa as document_qa
 from companion_core.document_library import service as document_library_service
+from companion_core.document_library.access import access_from_ceiling
+from companion_core.document_library.models import DocumentError
 from companion_core.document_library.postgres_store import (
     PostgresDocumentStore as PostgresLibraryStore,  # the older text-RAG store keeps the plain names
 )
@@ -346,6 +349,7 @@ from companion_core.websearch.store import (
 )
 from shared.database import DatabaseManager
 from shared.models.deep_review import DeepReviewInfo, DeepReviewJob
+from shared.models.document_library import Citation
 from shared.models.llm import LLMConfigPatch, LLMRoutingMode
 from shared.models.memory import MemoryRecord, MemoryType
 from shared.models.note_tag import NoteTag
@@ -360,6 +364,7 @@ from shared.models.websearch import (
     SearchSource,
     TurnWebSearch,
 )
+from shared.protocols.document_library_api import ACCESS_CEILING_HEADER
 from shared.protocols.memory_candidates_api import MEMORY_CANDIDATES_CAPTURE_COUNTERS
 from shared.protocols.operator_api import (
     LLM_SETTINGS,
@@ -379,11 +384,15 @@ class ConversationTurnRequest(BaseModel):
     force_frontier: bool = False
     # A meeting the owner attached as context for this conversation (Phase 43).
     context_meeting_id: str | None = None
+    # One document attached to the conversation (Phase 50E): the answer draws only on excerpts of this document.
+    context_document_id: str | None = None
 
 
 class ConversationTurnResponse(BaseModel):
     web_search: TurnWebSearch | None = None
     context_meeting: str | None = None  # the title of the meeting this reply drew on, if any
+    context_document: str | None = None  # the title of the attached document this reply was answered from, if any
+    citations: list[Citation] = []  # the document pages whose excerpts were supplied for this reply
     reply: str
     turn_count: int
     privacy: Privacy
@@ -1182,12 +1191,34 @@ def create_app(
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    @app.post("/conversation")
-    async def conversation_turn(turn: ConversationTurnRequest) -> ConversationTurnResponse:
-        async with conversation_store.turn_lock(turn.session_id):
-            return await process_conversation_turn(turn)
+    async def document_turn(turn: ConversationTurnRequest, access):
+        """Gather the attached document's evidence for this question. Returns (fixed reply or None, evidence or None); a fixed reply means the model is not called."""
+        service = app.state.document_library
+        if service is None:
+            return document_qa.NOT_FOUND_DOCUMENT, None
+        try:
+            document = await service.get(turn.context_document_id)
+            if turn.force_frontier and document.sensitivity is Privacy.SENSITIVE:
+                return document_qa.NO_FRONTIER_FOR_SENSITIVE, None
+            evidence = await service.evidence_for_question(turn.context_document_id, access, turn.text)
+        except DocumentError as exc:
+            return {403: document_qa.NOT_AVAILABLE, 404: document_qa.NOT_FOUND_DOCUMENT, 409: document_qa.NOT_READY}.get(exc.status, document_qa.UNAVAILABLE), None
+        if not evidence.passages:
+            return document_qa.not_found_in(evidence.document.title), evidence
+        return None, evidence
 
-    async def process_conversation_turn(turn: ConversationTurnRequest) -> ConversationTurnResponse:
+    @app.post("/conversation")
+    async def conversation_turn(turn: ConversationTurnRequest, request: Request) -> ConversationTurnResponse:
+        try:
+            doc_access = access_from_ceiling(request.headers.get(ACCESS_CEILING_HEADER), voice=turn.input_modality == InputModality.VOICE)  # the hub's ceiling for this channel
+        except ValueError:
+            raise HTTPException(400, "Unknown access ceiling") from None
+        async with conversation_store.turn_lock(turn.session_id):
+            return await process_conversation_turn(turn, doc_access)
+
+    async def process_conversation_turn(turn: ConversationTurnRequest, doc_access) -> ConversationTurnResponse:
+        document_evidence = None
+        document_reply: str | None = None
         web_search = None
         context_title: str | None = None
         meeting_missing = False
@@ -1776,7 +1807,7 @@ def create_app(
                     reply = selective.reply
                     production_handler = selective.handler
                     selective_privacy = selective.privacy
-                elif app.state.intent_router_enabled and ((inferred := await intent_router.infer(turn.text, config, transport=llm_transport, meeting_attached=bool(turn.context_meeting_id))).decision is not None or inferred.fail_closed):
+                elif app.state.intent_router_enabled and ((inferred := await intent_router.infer(turn.text, config, transport=llm_transport, meeting_attached=bool(turn.context_meeting_id or turn.context_document_id))).decision is not None or inferred.fail_closed):
                     # Hybrid routing: unresolved natural language about the owner's own records. The local model only picks one of the existing READ handlers from a closed schema;
                     # the handler reads the stores under the turn's trusted access and writes every word of the reply. A routing failure for a records question lists nothing.
                     if inferred.decision is None:
@@ -1794,7 +1825,9 @@ def create_app(
                             attached = await app.state.meeting_store.get_meeting(turn.context_meeting_id)
                             if attached is None or not attached.transcript_segments:
                                 attached, meeting_missing = None, True
-                        searched = should_search(
+                        if turn.context_document_id:
+                            document_reply, document_evidence = await document_turn(turn, doc_access)
+                        searched = (turn.context_document_id is None) and should_search(
                             turn.text, policy=search_config.policy, follows_search=search_topic is not None,
                         ) or (
                             attached is not None
@@ -1847,6 +1880,7 @@ def create_app(
                                 attached, turn.text, searched=searched and not failed
                             )
                             context_title = attached.title
+                        document_context_text = document_qa.build_prompt(document_evidence.document, document_evidence.passages) if document_evidence is not None and document_reply is None else None
                         history_with_persona = [
                             {"role": "system", "content": persona.system_prompt},
                             *([{"role": "system", "content": TONE_INSTRUCTIONS[persona.tone]}]
@@ -1855,22 +1889,26 @@ def create_app(
                             context_message(persona, datetime.now(UTC)),
                             *grounding_messages,
                             *([{"role": "system", "content": meeting_context_text}] if meeting_context_text else []),
+                            *([{"role": "system", "content": document_context_text}] if document_context_text else []),
                             *([{"role": "system", "content": SPOKEN_REPLY_INSTRUCTION}]
                               if turn.input_modality == InputModality.VOICE else []),
                             *conversation_store.messages(turn.session_id),
                         ]
                         spoken = turn.input_modality == InputModality.VOICE
                         call_config = config
-                        if meeting_context_text and not turn.force_frontier:
+                        if (meeting_context_text or document_context_text) and not turn.force_frontier:
                             call_config = config.model_copy(
                                 update={"routing": config.routing.model_copy(update={"mode": LLMRoutingMode.LOCAL_ONLY})}
                             )
-                        reply = await route_completion(
-                            call_config, history_with_persona, app.state.llm_usage_store,
-                            force_frontier=turn.force_frontier, transport=llm_transport,
-                            local_max_tokens=SPOKEN_REPLY_MAX_TOKENS if spoken else None,
-                        )
-                        if attached is None and record_reference.claims_unsupplied_provenance(reply):
+                        if document_reply is not None:
+                            reply = document_reply  # fixed: nothing found, not available, not ready; the model is not called
+                        else:
+                            reply = await route_completion(
+                                call_config, history_with_persona, app.state.llm_usage_store,
+                                force_frontier=turn.force_frontier, transport=llm_transport,
+                                local_max_tokens=SPOKEN_REPLY_MAX_TOKENS if spoken else None,
+                            )
+                        if attached is None and document_evidence is None and record_reference.claims_unsupplied_provenance(reply):
                             # The turn supplied no record, so crediting the owner's notes or meetings is invented provenance; the content is withheld too.
                             reply = record_reference.COULD_NOT_ESTABLISH
                             production_handler = "records.provenance_blocked"
@@ -1883,6 +1921,8 @@ def create_app(
             privacy = classify_question_privacy(turn.text)
             if context_title:
                 privacy = Privacy.WORK_PRIVATE  # the answer draws on meeting speech: never spoken on a shared speaker
+            if turn.context_document_id:
+                privacy = access_rules.effective_sensitivity(Privacy.WORK_PRIVATE, privacy, document_evidence.document.sensitivity if document_evidence is not None else Privacy.WORK_PRIVATE)  # a document's class travels with the answer
             if selective_privacy is not None:
                 privacy = access_rules.effective_sensitivity(privacy, selective_privacy)  # a reply that cites a work-private record is never spoken on a shared speaker
             carried = privacy
@@ -1914,24 +1954,27 @@ def create_app(
             with contextlib.suppress(Exception):  # measure-only: nothing in it may reach the production turn
                 kshadow.submit(KnowledgeShadowTurn(
                     session_id=turn.session_id, text=turn.text, modality=str(turn.input_modality.value), privacy=str(privacy.value),
-                    production_handler=production_handler, attached_meeting=bool(turn.context_meeting_id),
+                    production_handler=production_handler, attached_meeting=bool(turn.context_meeting_id or turn.context_document_id),
                 ))
         capture = app.state.candidate_capture
         if capture is not None and not slash_input:
             with contextlib.suppress(Exception):  # off the critical path: nothing in it may reach the production turn
                 capture.submit(candidate_service.CaptureTurn(
                     session_id=turn.session_id, conversation_id=turn.conversation_id, turn_index=len(history), channel=turn.channel, text=turn.text,
-                    modality=str(turn.input_modality.value), production_handler=production_handler, attached_meeting=bool(turn.context_meeting_id),
+                    modality=str(turn.input_modality.value), production_handler=production_handler, attached_meeting=bool(turn.context_meeting_id or turn.context_document_id),
                     privacy_label=str(privacy.value)))
         sshadow = app.state.selective_shadow
         if sshadow is not None and not slash_input:
             with contextlib.suppress(Exception):  # measure-only: nothing in it may reach the production turn
                 sshadow.submit(selective_shadow.SelectiveShadowTurn(
                     session_id=turn.session_id, text=turn.text, modality=str(turn.input_modality.value), privacy=str(privacy.value),
-                    production_handler=production_handler, attached_meeting=bool(turn.context_meeting_id),
+                    production_handler=production_handler, attached_meeting=bool(turn.context_meeting_id or turn.context_document_id),
                 ))
         return ConversationTurnResponse(
             reply=reply, turn_count=len(history), privacy=privacy, web_search=web_search, context_meeting=context_title,
+            context_document=document_evidence.document.title if document_evidence is not None else None,
+            citations=[Citation(document_id=document_evidence.document.id, title=document_evidence.document.title, page=p.page, locator=p.locator) for p in document_evidence.passages]
+            if document_evidence is not None and document_reply is None else [],
         )
 
     if notepad_on:
@@ -1974,7 +2017,7 @@ def create_app(
             if not app.state.intent_router_enabled:
                 return record_reference.COULD_NOT_ESTABLISH
             config = await app.state.llm_settings_store.get()
-            inferred = await intent_router.infer(turn.text, config, transport=llm_transport, meeting_attached=bool(turn.context_meeting_id))
+            inferred = await intent_router.infer(turn.text, config, transport=llm_transport, meeting_attached=bool(turn.context_meeting_id or turn.context_document_id))
             return (await run_routed(inferred.decision, turn)).reply if inferred.decision is not None else record_reference.COULD_NOT_ESTABLISH
         found = await record_reference.resolve(
             ref.title, planner=app.state.planner_store, meetings=app.state.meeting_store, access=selective_answer.access_for(str(turn.input_modality.value)),
@@ -1993,7 +2036,7 @@ def create_app(
             # A turn that names a note or meeting belongs to the record handler above (its title may say "tasks", which the frozen 44E status classifier would take for a task-list
             # question). It is claimed long before this point; the guard keeps it that way if the dispatch order ever changes, without touching the frozen knowledge/routing.py.
             return None
-        return await answerer.answer(turn.text, modality=str(turn.input_modality.value), attached_meeting=bool(turn.context_meeting_id))
+        return await answerer.answer(turn.text, modality=str(turn.input_modality.value), attached_meeting=bool(turn.context_meeting_id or turn.context_document_id))
 
     @app.post("/calendar/events")
     async def add_calendar_event(event: CalendarEvent) -> CalendarEvent:

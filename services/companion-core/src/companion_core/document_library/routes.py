@@ -4,13 +4,13 @@ They sit behind the service-token middleware like every other core route. Nothin
 
 from __future__ import annotations
 
-import os
 from collections.abc import AsyncIterator
 from typing import Annotated
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from pydantic import BaseModel, ConfigDict, Field
 
+from companion_core.document_library.access import access_from_ceiling
 from companion_core.document_library.models import (
     MAX_PROJECT,
     MAX_TITLE,
@@ -127,15 +127,10 @@ def install_document_library_routes(app: FastAPI) -> None:
 
     def access(request: Request):
         """The caller's access context, from the ceiling the hub established for the authenticated channel (never from the request body or the document). Absent: work-private."""
-        from companion_core.semantic.access import access_for_owner
-
-        raw = request.headers.get(ACCESS_CEILING_HEADER)
         try:
-            ceiling = Privacy(raw) if raw else Privacy.WORK_PRIVATE
+            return access_from_ceiling(request.headers.get(ACCESS_CEILING_HEADER))
         except ValueError:
             raise HTTPException(400, "Unknown access ceiling") from None
-        return access_for_owner(os.environ.get("OWNER_USER_ID", "default-user"), channel_private=ceiling is not Privacy.PUBLIC, allow_sensitive=ceiling is Privacy.SENSITIVE,
-                                destinations=frozenset({"local"}))
 
     @app.post(DOCUMENT_LIBRARY_REPROCESS)
     async def reprocess(document_id: str, body: ReprocessBody | None = None) -> DocumentOut:

@@ -263,10 +263,14 @@ class InboundMessage(BaseModel):
     chat_id: str | None = None
     # A meeting attached as context for the conversation (Phase 43); only the generic chat answer uses it.
     context_meeting_id: str | None = None
+    # A document attached to the conversation (Phase 50E); the answer draws only on excerpts of it.
+    context_document_id: str | None = None
 
 
 class MessageResponse(BaseModel):
     web_search: TurnWebSearch | None = None
+    context_document: str | None = None
+    citations: list[dict] = []
     session_id: str
     conversation_id: str
     active_channel: Channel
@@ -1470,6 +1474,10 @@ def create_app(
                 input_modality=message.input_modality.value,
                 force_frontier=message.force_frontier,
                 context_meeting_id=message.context_meeting_id,
+                context_document_id=message.context_document_id,
+                # Typed messages from the authenticated owner's web or Android session may read their sensitive documents; every other channel keeps core's default (work-private) and a
+                # spoken turn is capped at public by core. Only set when the hub enforces authentication on this route.
+                access_ceiling="sensitive" if accounts_service_token and message.channel == Channel.WEB and message.input_modality == InputModality.TEXT else None,
             )
         except httpx.HTTPError as exc:
             raise HTTPException(status_code=502, detail=f"companion-core unreachable: {exc}") from exc
@@ -1498,6 +1506,8 @@ def create_app(
             privacy=privacy,
             reply=result["reply"],
             web_search=result.get("web_search"),
+            context_document=result.get("context_document"),
+            citations=result.get("citations") or [],
             context_meeting=result.get("context_meeting"),
         )
 

@@ -673,3 +673,48 @@ def regenerate() -> None:
 
 if __name__ == "__main__":
     sys.exit(regenerate())
+
+
+class RecordingCore(httpx.AsyncBaseTransport):
+    """The real core app behind the hub client, remembering what the hub sent on /conversation."""
+
+    def __init__(self):
+        self.inner = httpx.ASGITransport(app=create_core_app(
+            calendar_store=InMemoryCalendarStore(), task_store=InMemoryTaskStore(), planner_store=InMemoryPlannerStore(), meeting_store=InMemoryMeetingStore(), run_meeting_worker_task=False,
+            memory_store=InMemoryMemoryStore(), rag_store=InMemoryDocumentStore(), email_store=InMemoryEmailStore(), confirmation_store=InMemoryConfirmationStore(),
+            llm_settings_store=InMemoryLLMSettingsStore(), llm_usage_store=InMemoryLLMUsageStore(), persona_store=InMemoryPersonaStore(), search_settings_store=InMemorySearchSettingsStore(),
+            run_email_dispatch_task=False))
+        self.turns = []
+
+    async def handle_async_request(self, request):
+        if request.url.path == "/conversation":
+            import json
+
+            self.turns.append((dict(request.headers), json.loads(request.content)))
+        return await self.inner.handle_async_request(request)
+
+
+def test_the_hub_sets_the_document_ceiling_from_the_authenticated_channel_only():
+    core = RecordingCore()
+    client = make_client(accounts_service_token="svc", companion_core_client=CompanionCoreClient("http://core", transport=core))
+    client.post("/auth/login", json={"username": "owner", "password": "correct-password"}, headers=CSRF)
+
+    def send(**fields):
+        body = {"user_id": "default-user", "channel": "web", "text": "what does it say", "context_document_id": "doc-1", **fields}
+        assert client.post("/messages", json=body, headers=CSRF).status_code == 200
+        return core.turns[-1]
+
+    headers, body = send()  # the owner's typed web (or Android) message
+    assert headers["x-reachy-access-ceiling"] == "sensitive" and body["context_document_id"] == "doc-1"
+    headers, _ = send(input_modality="voice")  # spoken: core caps it, and the hub does not raise it
+    assert "x-reachy-access-ceiling" not in headers
+    headers, _ = send(channel="telegram")  # Telegram keeps core's default until its trusted-owner ceiling is wired
+    assert "x-reachy-access-ceiling" not in headers
+    # nothing in the message body can ask for a ceiling
+    headers, body = send(access_ceiling="sensitive", ceiling="sensitive")
+    assert "access_ceiling" not in body and headers["x-reachy-access-ceiling"] == "sensitive"
+    # a hub that does not enforce authentication never raises the ceiling
+    open_core = RecordingCore()
+    open_client = make_client(companion_core_client=CompanionCoreClient("http://core", transport=open_core))
+    assert open_client.post("/messages", json={"user_id": "u", "channel": "web", "text": "hi", "context_document_id": "d"}).status_code in (200, 401)
+    assert all("x-reachy-access-ceiling" not in h for h, _ in open_core.turns)
