@@ -382,6 +382,7 @@ for (const mount of MOUNTS) {
       await expect(page.getByRole('heading', { name: 'Search API usage' })).toBeVisible();
       await expect(page.getByText('This month')).toBeVisible();
       await expect(page.getByText('response · reachy').first()).toBeVisible(); // the seeded chat turn's delivery record
+      await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: /^Assistant/ }).click();
       await page.getByRole('link', { name: 'Coding agents' }).click();
       await expect(page.getByRole('heading', { name: 'Coding agents' }).first()).toBeVisible();
       await expect(page.getByText('Terminal sessions').first()).toBeVisible();
@@ -411,6 +412,7 @@ for (const mount of MOUNTS) {
         // The browser has already abandoned this request; answering is harmless and must not matter.
         await route.fulfill({ json: [{ id: 'z', text: secret, status: 'open' }] }).catch(() => undefined);
       });
+      await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: /^Planner/ }).click();
       await page.getByRole('link', { name: 'To Do' }).click();
       await page.getByRole('button', { name: 'Log out' }).click();
       await expect(page.getByRole('heading', { name: 'Sign in to Reachy' })).toBeVisible();

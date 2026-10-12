@@ -20,6 +20,7 @@ for (const [name, viewport] of [['desktop', { width: 1280, height: 900 }], ['mob
   await page.getByLabel(/password/i).fill('correct-password');
   await page.getByRole('button', { name: /sign in/i }).click();
   await page.getByRole('navigation', { name: 'Main' }).waitFor(); // signed in
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: /^Library/ }).click();
   await page.getByRole('link', { name: 'Documents' }).click();
   await page.getByRole('heading', { name: 'Documents' }).waitFor();
   await page.setInputFiles('input[type=file]', `${samples}/complex.pdf`);

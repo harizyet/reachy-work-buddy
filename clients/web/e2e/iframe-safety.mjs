@@ -52,6 +52,7 @@ for (const [name, viewport] of [['desktop', { width: 1280, height: 900 }], ['mob
     body.markdown = '<script>parent.__pwned="markdown"</script> ' + body.markdown;
     await route.fulfill({ response: real, json: body });
   });
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: /^Library/ }).click();
   await page.getByRole('link', { name: 'Documents' }).click();
   await page.setInputFiles('input[type=file]', `${samples}/complex.pdf`);
   await page.getByLabel('Title (optional)').fill(`Hostile ${name}`);

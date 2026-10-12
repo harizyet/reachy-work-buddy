@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createFakeHub } from './fakeHub';
-import { renderApp, SAMPLE_STATUS } from './helpers';
+import { navLink, renderApp, SAMPLE_STATUS } from './helpers';
 import type { SceneProps } from '../src/features/brain/BrainScene';
 
 const sceneProps: SceneProps[] = [];
@@ -179,6 +179,6 @@ describe('Brain route', () => {
     expect(await screen.findByRole('heading', { name: 'Brain' })).toBeInTheDocument();
     await userEvent.setup().click(await screen.findByRole('radio', { name: 'Synthetic demonstration' }));
     expect(await screen.findByText(/Showing 600 of 600/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Brain' })).toHaveAttribute('aria-current', 'page');
+    expect(await navLink(userEvent.setup(), 'Brain')).toHaveAttribute('aria-current', 'page');
   });
 });

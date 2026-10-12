@@ -1,3 +1,5 @@
+import { screen, within } from '@testing-library/react';
+import type { UserEvent } from '@testing-library/user-event';
 import { QueryClient } from '@tanstack/react-query';
 import { render } from '@testing-library/react';
 import { vi } from 'vitest';
@@ -51,4 +53,21 @@ export function testQueryClient(): QueryClient {
 export function renderApp(hash = '#/', client: QueryClient = testQueryClient()) {
   window.location.hash = hash;
   return { client, ...render(<Providers client={client}><AppRouter /></Providers>) };
+}
+
+const NAV_GROUP: Record<string, string> = {
+  Meetings: 'Library', Notes: 'Library', Documents: 'Library',
+  'To Do': 'Planner', Reminders: 'Planner', Alarms: 'Planner',
+  Memory: 'Assistant', Activity: 'Assistant', Brain: 'Assistant', 'Coding agents': 'Assistant',
+};
+
+/** Opens the category menu holding a page link (top-level links need no menu) and returns the link. */
+export async function navLink(user: UserEvent, name: string) {
+  const group = NAV_GROUP[name];
+  if (group) {
+    const nav = within(await screen.findByRole('navigation', { name: 'Main' }));
+    const button = nav.getByRole('button', { name: new RegExp(`^${group}`) });
+    if (button.getAttribute('aria-expanded') !== 'true') await user.click(button);
+  }
+  return screen.findByRole('link', { name });
 }

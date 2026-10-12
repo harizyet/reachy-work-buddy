@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFakeHub, jsonResponse } from './fakeHub';
-import { renderApp, SAMPLE_STATUS } from './helpers';
+import { navLink, renderApp, SAMPLE_STATUS } from './helpers';
 
 const NOW = new Date().toISOString();
 const doc = (id: string, title: string, extra: Record<string, unknown> = {}) => ({
@@ -93,7 +93,7 @@ describe('Documents', () => {
     hubWith({ enabled: false });
     renderApp('#/documents');
     await screen.findByText(/document library is not turned on/);
-    expect(screen.getByRole('link', { name: 'Documents' })).toBeInTheDocument();
+    expect(await navLink(userEvent.setup(), 'Documents')).toBeInTheDocument();
   });
 
   it('lists documents as literal text with their state and class', async () => {

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { parseCandidates } from '../src/api/memoryCandidates';
 import { createFakeHub, jsonResponse } from './fakeHub';
-import { renderApp, SAMPLE_STATUS } from './helpers';
+import { navLink, renderApp, SAMPLE_STATUS } from './helpers';
 
 const NOW = new Date().toISOString();
 const LATER = new Date(Date.now() + 14 * 86_400_000).toISOString();
@@ -61,7 +61,7 @@ describe('Memory suggestions', () => {
     expect(container.querySelector('img')).toBeNull();
     expect(screen.getByText(/Nothing is saved until you accept it here/)).toBeInTheDocument();
     expect(screen.getByText(/from your web chat/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Memory' })).toBeInTheDocument();
+    expect(await navLink(userEvent.setup(), 'Memory')).toBeInTheDocument();
   });
 
   it('accepts as it is, sending an empty body, and confirms what was saved', async () => {

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { request } from '../src/api/client';
 import { SAVE_DELAY_MS } from '../src/features/notes/useNotesEditor';
 import { createFakeHub, jsonResponse, type FakeHub } from './fakeHub';
-import { renderApp, SAMPLE_STATUS } from './helpers';
+import { navLink, renderApp, SAMPLE_STATUS } from './helpers';
 
 // Authentication-generation isolation (Phase 47B). Each case starts a request in one session and lets
 // its answer arrive after the session has ended or changed. The answer must not restore signed-in UI,
@@ -126,7 +126,7 @@ describe('across a logout and a new sign-in', () => {
     await signInAgain(user, 'other');
     await screen.findByRole('heading', { name: 'System status' });
     hub.data.tasks = []; // the second owner has no tasks
-    await user.click(screen.getByRole('link', { name: 'To Do' }));
+    await user.click(await navLink(user, 'To Do'));
     await screen.findByText('Nothing to do yet.');
 
     await act(async () => old[0]!.resolve(jsonResponse([{ id: 't1', text: SECRET, status: 'open' }])));
@@ -145,7 +145,7 @@ describe('across a logout and a new sign-in', () => {
     hub.hold((c) => c === 'GET /planner/tasks'); // the new owner's list is slow
     await signInAgain(user, 'other');
     await screen.findByRole('heading', { name: 'System status' });
-    await user.click(screen.getByRole('link', { name: 'To Do' }));
+    await user.click(await navLink(user, 'To Do'));
     await screen.findByText('Loading…');
     expect(document.body.textContent).not.toContain(SECRET);
   });
@@ -214,7 +214,7 @@ describe('Notes editor and logout', () => {
     renderApp('#/notes');
     const user = setup();
     await openNote(user);
-    await user.click(screen.getByRole('link', { name: 'To Do' }));
+    await user.click(await navLink(user, 'To Do'));
     await waitFor(() => expect(hub.calls).toContain('PUT /planner/notes/n1'));
   });
 });

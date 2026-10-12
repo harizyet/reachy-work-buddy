@@ -34,6 +34,7 @@ for (const [name, viewport] of [['desktop', { width: 1280, height: 1000 }], ['mo
   await page.getByRole('navigation', { name: 'Main' }).waitFor();
 
   // two ready documents
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: /^Library/ }).click();
   await page.getByRole('link', { name: 'Documents' }).click();
   for (const [file, title] of [['northwind.pdf', `Vendor requirements ${name}`], ['complex.pdf', `Capacity report ${name}`]]) {
     await page.setInputFiles('input[type=file]', `${samples}/${file}`);
@@ -83,6 +84,7 @@ for (const [name, viewport] of [['desktop', { width: 1280, height: 1000 }], ['mo
   // a deleted document is shown as unavailable and gets the fixed reply
   await choose(`Vendor requirements ${name}`);
   await attachment().getByText(`Vendor requirements ${name}`).waitFor();
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: /^Library/ }).click();
   await page.getByRole('link', { name: 'Documents' }).click();
   await page.getByRole('button', { name: new RegExp(`Vendor requirements ${name}`) }).first().click();
   await page.getByRole('button', { name: 'Delete…' }).click();

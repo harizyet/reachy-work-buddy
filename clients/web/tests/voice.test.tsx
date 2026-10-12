@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OVERVIEW_POLL_MS, RENEW_MS, WAKE_POLL_MS } from '../src/features/voice/VoiceProvider';
 import { createFakeHub, jsonResponse } from './fakeHub';
-import { renderApp, SAMPLE_STATUS } from './helpers';
+import { navLink, renderApp, SAMPLE_STATUS } from './helpers';
 
 const status = { ...SAMPLE_STATUS, default_user_id: 'owner-user', owner_bound: true };
 const wait = (ms: number) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
@@ -48,7 +48,7 @@ describe('Robot microphone', () => {
     const user = setup();
     await user.click(await screen.findByRole('button', { name: 'Start listening' }));
     await screen.findByText('Listening — speak now');
-    await user.click(screen.getByRole('link', { name: 'To Do' }));
+    await user.click(await navLink(user, 'To Do'));
     const before = count(hub.calls, 'POST /robot-voice/renew');
     await wait(RENEW_MS * 4);
     expect(count(hub.calls, 'POST /robot-voice/renew')).toBeGreaterThan(before);

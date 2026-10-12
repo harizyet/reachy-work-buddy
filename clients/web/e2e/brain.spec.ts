@@ -38,6 +38,7 @@ async function openBrain(page: Page, data: 'synthetic' | 'live' = 'synthetic') {
     await page.getByRole('button', { name: 'Sign in' }).click();
   }
   await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: /^Assistant/ }).click();
   await page.getByRole('link', { name: 'Brain' }).click();
   await expect(page.getByRole('heading', { name: 'Brain' })).toBeVisible();
   if (data === 'synthetic') await page.getByRole('radio', { name: 'Synthetic demonstration' }).check();
@@ -80,6 +81,7 @@ test.describe('Brain view', () => {
     await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
     expect(requests.some((p) => /BrainScene/.test(p))).toBe(false); // the 3D code is not loaded until asked for
     requests.length = 0;
+    await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: /^Assistant/ }).click();
     await page.getByRole('link', { name: 'Brain' }).click();
     await page.getByRole('radio', { name: 'Synthetic demonstration' }).check();
     await expect(page.getByTestId('brain-canvas').locator('canvas')).toBeVisible();
@@ -200,6 +202,7 @@ test.describe('Brain view', () => {
     const heap = () => page.evaluate(() => (performance as unknown as { memory: { usedJSHeapSize: number } }).memory.usedJSHeapSize);
     const gc = () => page.evaluate(() => (window as unknown as { gc?: () => void }).gc?.());
     for (let i = 0; i < 2; i++) {
+      await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: /^Assistant/ }).click();
       await page.getByRole('link', { name: 'Brain' }).click();
       await expect(page.getByTestId('brain-canvas').locator('canvas')).toBeVisible();
       await page.getByRole('link', { name: 'Overview' }).click();
@@ -207,6 +210,7 @@ test.describe('Brain view', () => {
     await gc();
     const base = await heap();
     for (let i = 0; i < 10; i++) {
+      await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: /^Assistant/ }).click();
       await page.getByRole('link', { name: 'Brain' }).click();
       await expect(page.getByTestId('brain-canvas').locator('canvas')).toBeVisible();
       await page.getByRole('link', { name: 'Overview' }).click();
@@ -271,6 +275,7 @@ test.describe('Brain view', () => {
     const box = page.getByRole('checkbox', { name: 'Glow effect (bloom)' });
     await expect(box).toBeChecked();
     await box.uncheck();
+    await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: /^Assistant/ }).click();
     await page.getByRole('link', { name: 'Brain' }).click();
     await expect(page.getByTestId('brain-canvas').locator('canvas')).toBeVisible();
     await expect.poll(() => draws(page)).toBeGreaterThan(20);

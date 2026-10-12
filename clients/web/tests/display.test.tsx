@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getBloom } from '../src/app/displayPrefs';
 import type { SceneProps } from '../src/features/brain/BrainScene';
 import { createFakeHub } from './fakeHub';
-import { renderApp, SAMPLE_STATUS } from './helpers';
+import { navLink, renderApp, SAMPLE_STATUS } from './helpers';
 
 const sceneProps: SceneProps[] = [];
 vi.mock('../src/features/brain/BrainScene', () => ({
@@ -34,7 +34,7 @@ describe('Display setting: bloom', () => {
     expect(window.localStorage.getItem('reachy.web.brain.bloom')).toBe('0');
     expect(getBloom()).toBe(false);
 
-    await user.click(screen.getByRole('link', { name: 'Brain' }));
+    await user.click(await navLink(user, 'Brain'));
     await screen.findByTestId('scene-stub');
     expect(sceneProps.at(-1)!.bloom).toBe(false);
 
@@ -42,7 +42,7 @@ describe('Display setting: bloom', () => {
     await user.click(await screen.findByRole('tab', { name: 'Display' }));
     await user.click(await screen.findByRole('checkbox', { name: 'Glow effect (bloom)' }));
     expect(window.localStorage.getItem('reachy.web.brain.bloom')).toBe('1');
-    await user.click(screen.getByRole('link', { name: 'Brain' }));
+    await user.click(await navLink(user, 'Brain'));
     await screen.findByTestId('scene-stub');
     expect(sceneProps.at(-1)!.bloom).toBe(true);
   });
