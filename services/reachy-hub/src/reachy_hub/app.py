@@ -172,6 +172,7 @@ from reachy_hub.interruption_policy import (
     is_occupied,
 )
 from reachy_hub.keyring import Keyring
+from reachy_hub.meeting_analysis import install_meeting_analysis_routes
 from reachy_hub.memory_candidates import install_memory_candidate_routes
 from reachy_hub.notepad_processing import install_notepad_processing_routes
 from reachy_hub.notification_queue import NotificationQueue, QueuedNotification
@@ -994,6 +995,7 @@ def create_app(
     install_brain_routes(app, require_owner_session, companion_core_client)  # Phase 47D: read-only, owner session only
     install_document_library_routes(app, require_owner_session, companion_core_client)  # Phase 50J: owner session plus CSRF; sets the trusted ceiling; core decides (and 404s) when the feature is off
     install_notepad_processing_routes(app, require_owner_session, companion_core_client)  # Phase 49: owner session plus CSRF; core decides (and 404s) when the feature is off
+    install_meeting_analysis_routes(app, require_owner_session, companion_core_client)  # Phase 31: owner session plus CSRF; core decides (and 404s) when the feature is off
     install_memory_candidate_routes(app, require_owner_session, companion_core_client)  # Phase 44F: owner session plus CSRF; core decides (and 404s) when the feature is off
 
     @app.get(PRIVACY_STATE, dependencies=[Depends(require_remote_auth)])
