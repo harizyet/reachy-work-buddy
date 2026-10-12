@@ -4,9 +4,9 @@ Current session snapshot: 2026-10-10 (Phase 44 selective answering: see "Phase 4
 The [documentation index](docs/README.md) defines ownership;
 [project state](docs/project-state.md) owns deployment limits and open acceptance.
 
-## Chat document picker (built locally 2026-10-12, NOT deployed; waits for owner approval)
+## Chat document picker DEPLOYED 2026-10-12 (hub only; awaiting the owner's authenticated browser acceptance)
 
-A persistent per-conversation document attachment in the web chat ([record](docs/verification/phase-50-chat-document-picker-2026-10-12.md)): hub `PUT /chats/{id}/document`, the attachment kept as a state entry in `web_chat_turns` JSON (no schema change), the hub applies it to every message of the chat and ignores a client-sent document, core's existing per-turn revalidation and fixed replies unchanged, web picker/indicator/citations. Verified with a real worker, model and browser on a throwaway stack. Deploying means rebuilding the hub only (no migration, no flag, no core or worker change); do not deploy without the owner's approval.
+[Deployment record](docs/verification/phase-50-chat-picker-deployment-2026-10-12.md), [design](docs/verification/phase-50-chat-document-picker-2026-10-12.md). Commit `b1fabcd`; hub `48bf81c3bb52` (was `7b8cf16b39ee`, kept as `reachy-rollback/reachy-hub:pre-chat-picker`); core, worker, vLLM, coding-agent untouched; no migration. Verified live over HTTP (auth/CSRF, attach, cited answer, follow-up, refresh, replace, remove, deleted/unprocessed/sensitive documents, meeting context). **Open finding for the owner:** core's short-term history is per session, not per web chat, so a "new conversation" can still repeat or mis-tag content from earlier turns (the document store itself did not leak; pre-existing, a core change to fix). Phase 48 unchanged; 14 `web`-channel verification turns to subtract from 48B/48F windows (29 in total). Rollback assets kept until the owner accepts.
 
 ## Extraction inspector DEPLOYED 2026-10-12 and ACCEPTED by the owner (their authenticated browser test passed)
 
