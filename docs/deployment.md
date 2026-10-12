@@ -784,7 +784,7 @@ backup needs no extra service: it polls the hub's existing `/planner/alarms`. Re
 
 Migration `031_documents` (one table; `SCHEMA_REVISION` is now `031_documents`, so a deploy means backup, then core, hub and coding-agent together, on owner approval). Rollback: `deploy/homelab/rollback-031.sql`
 (drops only the catalogue; the originals on disk are untouched). Core gets the volume `document-source` (Reachy's authoritative originals; **back it up with the database**: it is the system of record, the worker's
-data is rebuildable) and the flags `DOCUMENT_LIBRARY_ENABLED` (default false), `DOCUMENT_WORKER_URL` and `DOCUMENT_WORKER_TOKEN` (set both to enable submission and the sync loop, `DOCUMENT_LIBRARY_SYNC_SECONDS` default 5). Nothing here is deployed yet; the integrated deployment gate is described in the [50C record](verification/phase-50c-integration-2026-10-12.md#integrated-deployment-gate).
+data is rebuildable) and the flags `DOCUMENT_LIBRARY_ENABLED` (default false), `DOCUMENT_WORKER_URL` and `DOCUMENT_WORKER_TOKEN` (set both to enable submission and the sync loop, `DOCUMENT_LIBRARY_SYNC_SECONDS` default 5). **Deployed 2026-10-12** ([record](verification/phase-50-deployment-2026-10-12.md)): library enabled, worker in the `documents` profile on the internal network, `document-source` volume created and archived.
 
 ## Document worker
 
@@ -815,7 +815,7 @@ explicitly disposable project. Leave unrelated services such as OVMS alone.
 ## Schema upgrades and credential keys
 
 Core and hub require the revision declared in
-[`shared/database.py`](../shared/database.py) (now `030_note_tags`, applied to the homelab 2026-10-11, [record](verification/note-tags-deployment-2026-10-11.md); `029_notepad_processing` was applied on 2026-10-11, [Phase 49 deployment](verification/phase-49-deployment-2026-10-11.md); the 028 upgrade was on 2026-10-10, [Phase 44 deployment](verification/phase-44-deployment-2026-10-10.md); older revisions are listed in the phase records).
+[`shared/database.py`](../shared/database.py) (now `031_documents`, applied to the homelab 2026-10-12 with the document library enabled, [record](verification/phase-50-deployment-2026-10-12.md); `030_note_tags` was applied 2026-10-11, [record](verification/note-tags-deployment-2026-10-11.md); `029_notepad_processing` was applied on 2026-10-11, [Phase 49 deployment](verification/phase-49-deployment-2026-10-11.md); the 028 upgrade was on 2026-10-10, [Phase 44 deployment](verification/phase-44-deployment-2026-10-10.md); older revisions are listed in the phase records).
 The ordered Alembic history ships
 in core's image; SQL stores perform compatibility checks, not startup DDL.
 Compose runs `migrate` before hub/core, including through
@@ -839,6 +839,8 @@ Revision `018_action_receipts` (Phase 39, [ADR 0028](adr/0028-persona-responses-
 Revision `019_meeting_annotations` (Phase 41, [ADR 0030](adr/0030-meeting-speaker-names-and-reviewed-corrections.md)) adds `meetings.speaker_names` and `meetings.transcript_corrections`. Deployed 2026-10-07 (backup `reachy-before-phase41-20261007-1333.dump`; 5 existing meetings kept). Rebuild `migrate`, `companion-core`, `reachy-hub` and `coding-agent-service` together.
 
 Revision `020_meeting_terms` (Phase 41) adds `meetings.key_terms` and the `meeting_terms` glossary table. Deployed 2026-10-07 (backup `reachy-before-meeting-terms-20261007-1456.dump`; 5 existing meetings kept).
+
+Revision `031_documents` ([Phase 50](phase-50.md), **applied 2026-10-12**, [record](verification/phase-50-deployment-2026-10-12.md)) adds `documents` (the catalogue of uploaded documents: policy, state, hash, opaque backend reference) and `document_outputs` (summaries derived from them); the originals live on the volume `document-source`, not in the database. `deploy/homelab/rollback-031.sql` drops both tables and returns the revision to 030 (the originals are untouched; summaries are regenerable). Every service checks the schema head, so it was deployed as a backup, then core, hub and coding-agent together.
 
 Revision `030_note_tags` adds one nullable column, `notes.tag` (the note's folder path, [`shared/models/note_tag.py`](../shared/models/note_tag.py)); no table, trigger or index changes and existing notes stay untagged. `deploy/homelab/rollback-030.sql` drops the column (tags are lost, no note or text is) and returns the revision to 029. Every service checks the schema head, so deploying it means a backup, then core, hub and coding-agent together, on owner approval. Applied 2026-10-11 with the same sequence as 029.
 
