@@ -6,7 +6,7 @@ Question: are the weak extraction results of the [Phase 31 audit](phase-31-meeti
 
 - Input: the owner's 24-minute test recording (349 STT segments, 4 diarization labels, 19,089 characters, 5 chunks), already through the live sidecars.
 - Models through the existing model manager (ADR 0031), both served as `reachy-local`, context 8,192, temperature 0, Qwen3 thinking off as configured: **Qwen2.5-7B-Instruct-AWQ** (fast tier, normal) and **Qwen3-14B-AWQ** (Deep Local, one `run --lease` window holding the deep tier for all three 14B arms; the manager restored the 7B itself and reported `ready_t1`, healthy, no error).
-- Arms per model: the original transcript (twice, to see variance) and a corrected transcript. Correction = three systematic, high-confidence term fixes applied through the existing `transcript_corrections` overlay on 12 segments ("data leak" to "data lake", "Stahub/Starhub" to "StarHub", "Ookar/Ooklar" to "Ookla"); nothing else was edited.
+- Arms per model: the original transcript (twice, to see variance) and a corrected transcript. Correction = three systematic, high-confidence term fixes applied through the existing `transcript_corrections` overlay on 12 segments ("data leak" to "data lake", and the two spellings each of a company and a product name made consistent); nothing else was edited.
 - Cloud: **not run**. No explicit authorization to send this recording out, and no sanitized equivalent was made.
 - Judging: one reader (me), no independent review. Each item was marked S (the quote supports the item as that kind of finding), P (related but the item adds or changes something) or N (not supported, or the wrong kind). Reference commitments: 12 explicit ones identified by reading the sentences around every commitment-worded segment (9 strong, 3 weak); an action "catches" one if its evidence lies within two segments of it, and "with support" if it is also S or P.
 
@@ -46,7 +46,7 @@ Corrected transcript: 7B kept 13 of 18 items by position and kind, 14B 39 of 44;
 
 Why not the others: switching to the 14B alone buys recall but multiplies the review burden (44 items, 26 unsupported, 3.2 times slower, plus the fixed swap cost and about two minutes during which Reachy's model is not available) at the same share of supported items. A cloud fallback has no evidence in its favour (not measured, and the recording is local-only data under ADR 0030/0032) and the problems seen are not ones a larger model alone removes.
 
-Smallest changes the data supports (none made here; each needs your approval and a re-measure on the same transcript):
+Smallest changes the data supports (none made in this record; items 1 and 2 were then approved and implemented, see the [extraction-quality record](phase-31-extraction-quality-2026-10-12.md)):
 
 1. Prompt: say that a decision requires explicit agreement and a question must be one still open after the speaker's own answer; forbid speaker labels in the wording (the 14B violated this 14 times).
 2. Validator/UI, no model call: show only `stated` items by default with the others collapsed under "weaker suggestions", and make the question label require a real question (more than a short fragment and an interrogative, not just a `?`). On this recording that alone turns the 7B's list into 4 items with no unsupported one, at the cost of recall.
