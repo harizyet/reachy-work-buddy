@@ -73,3 +73,26 @@ Not reused, and why: `notepad_jobs`/`notepad_proposals` tables (keyed by note; d
 ## 5. Verification plan
 
 Unit and in-process tests for the validator (fabricated segment, wrong quote, injected instruction, assignee not in quote, relative time without a start, gap-flagged segment), the store state machine (including crash takeover, double accept, dismissed stays dismissed after re-analysis), the service with a fake model, routes, the hub proxy chain, and the adapter. A migration, rollback and retrieval round trip on a disposable pgvector container. Then a development run of the real 7B over the real 1,419 s recording, reported with counts and the owner's judgement left open. Final acceptance (not claimable from this phase's local work): a real 30–60 minute meeting, owner-reviewed, with the metrics Phase 27 lists.
+
+## 6. Owner-supervised real-meeting trial (next milestone, after deployment and separate approval to enable)
+
+**Frozen for the whole trial:** prompt `meeting-analysis-2`, `meeting_analysis/support.py`, the extraction schema and the 7B model. No tuning, no model swaps, no extra Deep Local runs. Any defect found goes into the report and waits for a decision.
+
+**Known limitations to state in the report, not to hide:**
+
+- `stated` means only that the quote is in the transcript and has wording of the right kind (explicit agreement, a promise or request, a real unanswered question) and covers the finding's own words. It is **not independently verified**: it is a deterministic check by the same pipeline, and on the 24-minute development recording one `stated` action was still mis-worded. Everything is model-written from a speech-to-text transcript.
+- **Question-recall regression:** the stricter question rules (prompt v2 plus the validator) cost the 7B its one genuine open question on the development recording (1 listed before, 0 after); only the 14B found it. Open questions the 7B does not list are expected to be missed.
+- The 7B often cites a neighbouring sentence for a conclusion (9 of 17 findings unsupported on the development recording). Recall of commitments is partial (6 of 10 reference commitments had a supported finding, 2 strictly).
+- Evidence so far: one 24-minute recording, one reader.
+
+**Acceptance report (owner-supervised, a real 30 to 60 minute multi-speaker meeting)** records, from the owner's own reading of the transcript and the Analysis tab:
+
+1. Meeting facts: duration, speakers, analysis time, STT/diarization times if the recording is new.
+2. **Missed commitments:** promises or requests in the meeting with no finding, listed with their timestamps; and the same count restricted to the default (`stated`) view.
+3. **Missed open questions:** real questions left open with no finding.
+4. **Unsupported findings:** findings whose quote does not support them, split by `stated` and `uncertain`, and by kind; also wrong-kind items and duplicates.
+5. **Source navigation:** whether "Play from" and the quoted line led to the right moment, whether the segment ids, timestamps and speaker labels matched the recording, and how fast the owner could check a finding.
+6. **Practical usefulness:** what the owner would have done without it, what they confirmed as tasks, what they dismissed, time spent reviewing, and whether retrieval later answered a question about the meeting with a correct, cited answer.
+7. A recommendation (keep on, keep off, or what must change first), signed off by the owner.
+
+The trial does not enable anything beyond `MEETING_ANALYSIS_ENABLED`; no finding is promoted automatically and no task exists without the owner's confirmation.
