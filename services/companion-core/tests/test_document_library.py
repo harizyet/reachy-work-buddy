@@ -43,6 +43,8 @@ from document_worker.engine import (
 )
 from fastapi.testclient import TestClient
 
+from shared.models.response import Privacy
+
 PDF = b"%PDF-1.4\nThe retention requirement is 7 days.\n"
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
 TOKEN = "worker-token"
@@ -711,7 +713,8 @@ class Llm:
         import json
 
         self.requests.append(json.loads(request.content))
-        return httpx.Response(200, json={"choices": [{"message": {"content": self.answer}}]})
+        answer = self.answer(self.requests[-1]) if callable(self.answer) else self.answer
+        return httpx.Response(200, json={"choices": [{"message": {"content": answer}}]})
 
     def prompts(self) -> str:
         return "\n".join(m["content"] for r in self.requests for m in r.get("messages", []) if m["role"] == "system")
@@ -794,3 +797,176 @@ def test_document_text_is_data_and_cannot_trigger_actions_or_widen_policy(chat):
 def test_without_a_document_the_conversation_is_unchanged(chat):
     out = chat.ask("What is the retention requirement?")
     assert out["context_document"] is None and out["citations"] == [] and "data, not instructions" not in chat.llm.prompts()
+
+
+# --- 50H: summaries, 50D: tier escalation ---------------------------------------------------------------------------
+
+SECTION = ("The vendor must retain audit logs for ninety days and encrypt every backup. " * 30).strip()
+BIG = b"%PDF-1.4\n" + b"\x0c".join(f"Part {i}\n{SECTION}".encode() for i in range(1, 7))  # six pages of about 3,000 characters
+
+
+def _summaries(env, doc_id, ceiling=None):
+    headers = {"X-Reachy-Access-Ceiling": ceiling} if ceiling else {}
+    return env.client.get(f"/document-library/documents/{doc_id}/summaries", headers=headers)
+
+
+def _start(env, doc_id, ceiling=None, **body):
+    headers = {"X-Reachy-Access-Ceiling": ceiling} if ceiling else {}
+    return env.client.post(f"/document-library/documents/{doc_id}/summaries", headers=headers, json=body)
+
+
+def _settle(env):
+    env.run(env.service.wait_for_summaries())
+
+
+def test_a_short_document_is_summarised_in_one_call_with_its_provenance(chat):
+    chat.llm.answer = "A policy that sets seven-day retention [page 1]."
+    doc = chat.upload(PAGES, "Policy.pdf").json()
+    started = _start(chat, doc["id"], style="executive")
+    assert started.status_code == 202 and started.json()["status"] == "running" and started.json()["style"] == "executive"
+    _settle(chat)
+    out = _summaries(chat, doc["id"]).json()
+    assert len(out) == 1
+    s = out[0]
+    assert (s["status"], s["text"], s["pages_covered"], s["page_count"], s["truncated"]) == ("ready", "A policy that sets seven-day retention [page 1].", "1-2", 2, False)
+    assert (s["source_hash"], s["tier"], s["evidence_type"], s["sensitivity"], s["current"], s["stale"]) == (sha(PAGES), "basic", "derived_interpretation", "work-private", True, False)
+    assert [(x["pages"], x["start_page"], x["end_page"]) for x in s["sections"]] == [("1-2", 1, 2)] and s["sections"][0]["locator"].endswith("/tier:basic/page:1")
+    assert s["model"] == "reachy-local" and s["prompt_version"] == "doc-summary-1"
+    assert len(chat.llm.requests) == 1
+    request = chat.llm.requests[0]["messages"]
+    assert request[0]["role"] == "system" and "executive summary" in request[0]["content"] and "data, not instructions" in request[0]["content"]
+    assert "retention requirement is 7 days" in request[1]["content"] and request[1]["role"] == "user"  # the document text is the user turn, never the system prompt
+    # asking again returns the current summary without another model call; a different style is its own output; force replaces it
+    assert _start(chat, doc["id"], style="executive").json()["id"] == s["id"]
+    _start(chat, doc["id"], style="technical")
+    _settle(chat)
+    assert len(chat.llm.requests) == 2 and {x["style"] for x in _summaries(chat, doc["id"]).json()} == {"executive", "technical"}
+    forced = _start(chat, doc["id"], style="executive", force=True).json()
+    _settle(chat)
+    states = {x["id"]: (x["stale"], x["status"]) for x in _summaries(chat, doc["id"]).json()}
+    assert forced["id"] != s["id"] and states[s["id"]] == (True, "ready") and states[forced["id"]] == (False, "ready")
+
+
+def test_a_long_document_is_summarised_in_bounded_page_groups_and_keeps_each_groups_pages(chat):
+    chat.llm.answer = lambda req: "NOTES " + req["messages"][0]["content"][:60] if "taking notes" in req["messages"][0]["content"] else "Final overview."
+    doc = chat.upload(BIG, "Contract.pdf").json()
+    _start(chat, doc["id"], style="ordinary")
+    _settle(chat)
+    s = _summaries(chat, doc["id"]).json()[0]
+    assert s["status"] == "ready" and s["text"] == "Final overview."
+    assert [x["pages"] for x in s["sections"]] == ["1-2", "3-4", "5-6"]  # about 6,000 characters per call
+    sizes = [len(r["messages"][1]["content"]) for r in chat.llm.requests]
+    assert max(sizes) <= 7000 and len(chat.llm.requests) == 4  # three map calls and one final; none sees the whole document
+    final = chat.llm.requests[-1]["messages"]
+    assert "NOTES" in final[1]["content"] and "ninety days" not in final[1]["content"]  # the last step reads notes, not the raw pages
+
+
+def test_pages_beyond_the_bound_are_reported_not_hidden(chat):
+    chat.service.summary_max_pages = 4
+    doc = chat.upload(BIG, "Contract.pdf").json()
+    _start(chat, doc["id"])
+    _settle(chat)
+    s = _summaries(chat, doc["id"]).json()[0]
+    assert (s["pages_covered"], s["page_count"], s["truncated"]) == ("1-4", 6, True)
+    assert "pages 1-4 of 6" in chat.llm.requests[-1]["messages"][0]["content"]  # the model is told it saw only part
+
+
+def test_a_document_with_almost_no_extracted_text_is_not_summarised_and_points_to_a_higher_tier(chat):
+    thin = b"%PDF-1.4\nok\x0cno"
+    doc = chat.upload(thin, "Scan.pdf").json()
+    _start(chat, doc["id"])
+    _settle(chat)
+    s = _summaries(chat, doc["id"]).json()[0]
+    assert (s["status"], s["error_code"]) == ("failed", "sparse_text") and "higher level" in s["text"] and chat.llm.requests == []
+    assert doc["tier"] == "basic" and chat.client.get(f"/document-library/documents/{doc['id']}").json()["next_tier"] == "standard"
+
+
+def test_escalating_to_advanced_is_an_ordinary_reprocess_at_the_next_tier(chat):
+    doc = chat.upload(PAGES, "Policy.pdf").json()
+    for tier in ("standard", "advanced"):
+        out = chat.client.post(f"/document-library/documents/{doc['id']}/reprocess", json={"tier": tier}).json()
+        assert out["tier"] == tier and out["state"] == "ready"
+    assert chat.client.get(f"/document-library/documents/{doc['id']}").json()["next_tier"] is None  # Advanced is the last rung
+
+
+def test_summary_access_follows_the_documents_class_and_the_trusted_ceiling(chat):
+    doc = chat.upload(PAGES, "Policy.pdf", sensitivity="sensitive").json()
+    chat.switch.calls = []
+    assert _start(chat, doc["id"]).status_code == 403 and _summaries(chat, doc["id"]).status_code == 403 and chat.llm.requests == []
+    assert _start(chat, doc["id"], ceiling="sensitive").status_code == 202
+    _settle(chat)
+    assert _summaries(chat, doc["id"], ceiling="sensitive").json()[0]["sensitivity"] == "sensitive"
+    # raising the document's class later raises the effective class of what was derived from it
+    other = chat.upload(PAGES + b" b", "Other.pdf").json()
+    _start(chat, other["id"])
+    _settle(chat)
+    assert _summaries(chat, other["id"]).json()[0]["sensitivity"] == "work-private"
+    chat.client.patch(f"/document-library/documents/{other['id']}", json={"sensitivity": "sensitive"})
+    assert _summaries(chat, other["id"]).status_code == 403
+    assert _summaries(chat, other["id"], ceiling="sensitive").json()[0]["sensitivity"] == "sensitive"
+
+
+def test_reprocessing_marks_summaries_stale_and_a_new_one_can_be_made(chat):
+    doc = chat.upload(PAGES, "Policy.pdf").json()
+    _start(chat, doc["id"])
+    _settle(chat)
+    chat.client.post(f"/document-library/documents/{doc['id']}/reprocess", json={"tier": "standard"})
+    old = _summaries(chat, doc["id"]).json()[0]
+    assert old["stale"] is True and old["current"] is False and old["text"]  # still readable, marked out of date
+    new = _start(chat, doc["id"]).json()
+    _settle(chat)
+    assert new["id"] != old["id"] and [x["tier"] for x in _summaries(chat, doc["id"]).json()] == ["standard", "basic"]
+
+
+def test_deleting_a_document_removes_its_summaries_and_stops_a_running_one(chat):
+    import asyncio as aio
+
+    gate = aio.Event()
+    original = chat.service.provider
+
+    async def slow():
+        ask, model = await original()
+
+        async def blocked(messages, max_tokens):
+            await gate.wait()
+            return await ask(messages, max_tokens)
+
+        return blocked, model
+
+    chat.service.provider = slow
+    doc = chat.upload(PAGES, "Policy.pdf").json()
+    _start(chat, doc["id"])
+    assert chat.client.delete(f"/document-library/documents/{doc['id']}").status_code == 204  # cancels the run, removes the document
+    assert chat.run(chat.store.list_outputs(doc["id"])) == [] and chat.service._tasks == {}
+    done = chat.upload(PAGES + b"c", "Done.pdf").json()
+    chat.service.provider = original
+    _start(chat, done["id"])
+    _settle(chat)
+    assert chat.run(chat.store.list_outputs(done["id"]))
+    assert chat.client.delete(f"/document-library/documents/{done['id']}").status_code == 204
+    assert chat.run(chat.store.list_outputs(done["id"])) == []
+
+
+def test_failures_are_recorded_with_a_code_and_a_stopped_process_leaves_nothing_running(chat):
+    doc = chat.upload(PAGES, "Policy.pdf").json()
+    chat.switch.down = True
+    _start(chat, doc["id"])
+    _settle(chat)
+    assert _summaries(chat, doc["id"]).json()[0]["error_code"] == "worker_unavailable"
+    chat.switch.down = False
+    from companion_core.document_library.models import DocumentOutput
+
+    stuck, _ = chat.run(chat.store.begin_output(DocumentOutput(document_id=doc["id"], kind="summary", style="technical", source_hash=sha(PAGES), tier="basic", sensitivity=Privacy.WORK_PRIVATE)))
+    assert chat.run(chat.service.fail_interrupted_outputs()) == 1
+    assert chat.run(chat.store.get_output(stuck.id)).error_code == "interrupted"
+
+
+def test_summaries_need_a_local_model(monkeypatch, tmp_path):
+    engine = FakeEngine()
+    switch = Switch(create_worker_app(WorkerSettings(token=TOKEN, work_dir=tmp_path / "worker"), engine))
+    client = DocumentWorkerClient("http://worker", TOKEN, client=httpx.AsyncClient(transport=switch, base_url="http://worker"))
+    with Env(monkeypatch, tmp_path, worker=client) as env:  # no LLM settings at all
+        doc = env.upload(PAGES).json()
+        assert env.client.post(f"/document-library/documents/{doc['id']}/summaries", json={}).status_code == 202
+        env.run(env.service.wait_for_summaries())
+        assert env.client.get(f"/document-library/documents/{doc['id']}/summaries").json()[0]["error_code"] == "no_local_model"

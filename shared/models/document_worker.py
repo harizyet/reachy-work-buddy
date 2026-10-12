@@ -16,6 +16,7 @@ class WorkerTier(StrEnum):
     FLASH = "flash"
     BASIC = "basic"
     STANDARD = "standard"
+    ADVANCED = "advanced"  # quality escalation: very slow on CPU (minutes per page), asked for explicitly, served by the same worker and models
 
 
 class WorkerState(StrEnum):

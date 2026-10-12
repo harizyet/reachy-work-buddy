@@ -95,3 +95,56 @@ class DocumentError(Exception):
         super().__init__(detail)
         self.status = status
         self.detail = detail
+
+
+TIER_LADDER = ("flash", "basic", "standard", "advanced")
+
+
+def next_tier(tier: str | None) -> str | None:
+    """The next extraction tier up when the current one is not enough (Advanced is the last and is very slow on CPU, so it is only ever asked for explicitly)."""
+    if tier not in TIER_LADDER:
+        return None
+    index = TIER_LADDER.index(tier) + 1
+    return TIER_LADDER[index] if index < len(TIER_LADDER) else None
+
+
+class SummaryStyle(StrEnum):
+    ORDINARY = "ordinary"
+    EXECUTIVE = "executive"
+    TECHNICAL = "technical"
+
+
+class OutputStatus(StrEnum):
+    RUNNING = "running"
+    READY = "ready"
+    FAILED = "failed"
+
+
+SUMMARY_PROMPT_VERSION = "doc-summary-1"
+EVIDENCE_INTERPRETATION = "derived_interpretation"  # ADR 0034: a summary is Reachy's reading of a machine's reading of the original
+
+
+@dataclass(frozen=True)
+class DocumentOutput:
+    """A derived interpretation of one document at one extraction revision. It names the original's hash and the tier it was read at, inherits the document's class (and keeps
+    the higher of that and any later change), and is marked stale when the document is reprocessed; it is deleted with the document."""
+
+    document_id: str
+    kind: str
+    style: str
+    source_hash: str
+    tier: str
+    sensitivity: Privacy
+    id: str = field(default_factory=lambda: uuid.uuid4().hex)
+    status: OutputStatus = OutputStatus.RUNNING
+    text: str = ""
+    sections: tuple = ()  # ({"pages": "1-4", "start_page": 1, "end_page": 4, "summary": "...", "locator": "doc:.../page:1"}, ...)
+    pages_covered: str | None = None
+    page_count: int | None = None
+    truncated: bool = False  # the document has more pages than were summarised
+    model: str | None = None
+    prompt_version: str = SUMMARY_PROMPT_VERSION
+    stale: bool = False
+    error_code: str | None = None
+    created_at: datetime = field(default_factory=utcnow)
+    updated_at: datetime = field(default_factory=utcnow)

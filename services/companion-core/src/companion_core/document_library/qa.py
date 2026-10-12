@@ -52,8 +52,8 @@ class Evidence:
     passages: list[Passage]
 
 
-def clean_page(content: str) -> str:
-    return " ".join(_PAGE_MARKER.sub("", content).split())[:MAX_PAGE_CHARS]
+def clean_page(content: str, limit: int = MAX_PAGE_CHARS) -> str:
+    return " ".join(_PAGE_MARKER.sub("", content).split())[:limit]
 
 
 def build_prompt(document: Document, passages: list[Passage]) -> str:

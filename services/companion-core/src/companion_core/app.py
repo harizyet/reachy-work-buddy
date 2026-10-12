@@ -702,6 +702,18 @@ def create_app(
             return await route_completion(local_only, messages, app.state.llm_usage_store, transport=llm_transport, local_max_tokens=max_tokens, timeout=120.0, temperature=0.0)  # extraction is repeatable: no sampling
 
         return ask, config.local.model
+    async def document_local_provider():
+        """The local model only, for summaries: document text is never sent to a cloud model by this path. None when no local provider is configured."""
+        config = await app.state.llm_settings_store.get()
+        if config.local is None:
+            return None
+        local_only = config.model_copy(update={"routing": config.routing.model_copy(update={"mode": LLMRoutingMode.LOCAL_ONLY})})
+
+        async def ask(messages: list[dict[str, str]], max_tokens: int) -> str:
+            return await route_completion(local_only, messages, app.state.llm_usage_store, transport=llm_transport, local_max_tokens=max_tokens, timeout=180.0, temperature=0.0)
+
+        return ask, config.local.model
+
     coding_agent_base_url = coding_agent_base_url or os.environ.get(
         "CODING_AGENT_SERVICE_URL", "http://coding-agent-service:8000"
     )
@@ -909,9 +921,10 @@ def create_app(
                 worker = document_owned_worker = DocumentWorkerClient(os.environ["DOCUMENT_WORKER_URL"], os.environ.get("DOCUMENT_WORKER_TOKEN", ""))
             sources = document_sources or SourceStore(Path(os.environ.get("DOCUMENT_SOURCE_DIR", "/data/document-source")))
             if app.state.document_library is None:
-                app.state.document_library = document_library_service.DocumentService(doc_store, sources, worker)
+                app.state.document_library = document_library_service.DocumentService(doc_store, sources, worker, provider=document_local_provider)
             with contextlib.suppress(Exception):
                 await app.state.document_library.finish_deletions()  # a deletion the worker could not confirm last time is retried at start
+                await app.state.document_library.fail_interrupted_outputs()  # a summary a stopped process left running will never finish
             if app.state.document_library.worker is not None and run_document_sync:
                 document_sync_task = asyncio.create_task(document_library_service.run_sync_loop(app.state.document_library, document_library_service.sync_seconds()))
         candidate_store = candidate_task = None
@@ -1089,7 +1102,7 @@ def create_app(
     app.state.intent_router_enabled = intent_router.enabled()  # INTENT_ROUTER_ENABLED, default off; read once at startup like the other rollout flags
     app.state.document_library = None  # Phase 50B: built in the lifespan only when DOCUMENT_LIBRARY_ENABLED is true (or at once when a store and a source store are injected)
     if documents_on and document_store is not None and document_sources is not None:
-        app.state.document_library = document_library_service.DocumentService(document_store, document_sources, document_worker)
+        app.state.document_library = document_library_service.DocumentService(document_store, document_sources, document_worker, provider=document_local_provider)
     app.state.notepad_service = None  # Phase 49: built in the lifespan only when NOTEPAD_PROCESSING_ENABLED is true (or at once when a store is injected)
     if notepad_on and notepad_store is not None and planner_store is not None and task_store is not None:
         app.state.notepad_service = notepad_service.NotepadService(notepad_store, planner_store, task_store, notepad_timezone, provider=notepad_provider or notepad_local_provider, meetings=meeting_store)
@@ -1973,7 +1986,7 @@ def create_app(
         return ConversationTurnResponse(
             reply=reply, turn_count=len(history), privacy=privacy, web_search=web_search, context_meeting=context_title,
             context_document=document_evidence.document.title if document_evidence is not None else None,
-            citations=[Citation(document_id=document_evidence.document.id, title=document_evidence.document.title, page=p.page, locator=p.locator) for p in document_evidence.passages]
+            citations=[Citation(document_id=document_evidence.document.id, title=document_evidence.document.title, page=p.page, locator=p.locator, source_hash=document_evidence.document.source_hash, tier=document_evidence.document.tier) for p in document_evidence.passages]
             if document_evidence is not None and document_reply is None else [],
         )
 

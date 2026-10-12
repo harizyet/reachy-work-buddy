@@ -9,6 +9,7 @@ Rules that live here and nowhere else:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import os
 import zipfile
@@ -16,6 +17,7 @@ from collections.abc import AsyncIterator, Callable
 from datetime import datetime
 from pathlib import Path
 
+from companion_core.document_library import summary
 from companion_core.document_library.models import (
     DEFAULT_SENSITIVITY,
     EXTENSION_ALIASES,
@@ -26,8 +28,11 @@ from companion_core.document_library.models import (
     SYNCABLE,
     Document,
     DocumentError,
+    DocumentOutput,
     DocumentState,
+    OutputStatus,
     Priority,
+    SummaryStyle,
     extension_of,
     tier_for,
     utcnow,
@@ -50,6 +55,7 @@ from companion_core.document_library.worker_client import (
     DocumentWorkerClient,
     WorkerError,
 )
+from companion_core.llm.client import ProviderUnavailable
 from companion_core.semantic.access import scope_permits, within_ceiling
 from companion_core.semantic.model import AccessContext
 from shared.models.document_library import (
@@ -63,6 +69,10 @@ from shared.models.response import Privacy
 ENABLED_FLAG = "DOCUMENT_LIBRARY_ENABLED"
 logger = logging.getLogger("companion_core.document_library")
 UNSET = object()
+def clean_page_text(content: str) -> str:
+    return clean_page(content, summary.MAX_PAGE_CHARS)
+
+
 EVIDENCE_TYPE = "derived_extraction"  # ADR 0034: parsed text is a machine's reading of the original, never the source itself
 _STATE = {
     WorkerState.QUEUED: DocumentState.QUEUED,
@@ -71,6 +81,13 @@ _STATE = {
     WorkerState.PARTIAL: DocumentState.PARTIAL,
     WorkerState.FAILED: DocumentState.FAILED,
 }
+
+
+def summary_max_pages() -> int:
+    try:
+        return max(1, int(os.environ.get("DOCUMENT_LIBRARY_SUMMARY_MAX_PAGES", "60")))
+    except ValueError:
+        return 60
 
 
 def sync_seconds() -> float:
@@ -121,13 +138,16 @@ def _clean_project(value: str | None) -> str | None:
 
 
 class DocumentService:
-    def __init__(self, store: DocumentStore, sources: SourceStore, worker: DocumentWorkerClient | None, *, clock: Callable[[], datetime] = utcnow, max_bytes: int | None = None) -> None:
+    def __init__(self, store: DocumentStore, sources: SourceStore, worker: DocumentWorkerClient | None, *, clock: Callable[[], datetime] = utcnow, max_bytes: int | None = None, provider=None) -> None:
         self.store = store
         self.sources = sources
         self.worker = worker
         self.clock = clock
         self.max_bytes = max_bytes or max_upload_bytes()
         self._locks: dict[str, asyncio.Lock] = {}
+        self.provider = provider  # async () -> (ask(messages, max_tokens) -> str, model name) | None: the LOCAL model only; summaries never leave this host
+        self._tasks: dict[str, asyncio.Task] = {}
+        self.summary_max_pages = summary_max_pages()
 
     def _lock(self, document_id: str) -> asyncio.Lock:
         """One lock per document for submit, reprocess and delete, so a deletion can never finish before a submission it raced with (which would leave the worker holding a copy)."""
@@ -232,6 +252,14 @@ class DocumentService:
                 done += await self._finish(document)
         return done
 
+    async def _cancel_tasks(self, document_id: str) -> None:
+        for output_id, task in list(self._tasks.items()):
+            output = await self.store.get_output(output_id)
+            if output is not None and output.document_id == document_id and not task.done():
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await task
+
     async def _finish(self, document: Document) -> bool:
         if document.backend_ref is not None:
             if self.worker is None:
@@ -243,6 +271,8 @@ class DocumentService:
                 return False
             if not result.verified:
                 return False
+        await self._cancel_tasks(document.id)
+        await self.store.delete_outputs(document.id)  # derived outputs go with the document
         await self.store.remove(document.id)
         if await self.store.count_by_hash(document.source_hash) == 0:
             await self.sources.delete(document.source_hash)
@@ -330,6 +360,7 @@ class DocumentService:
         async with self._lock(document_id):
             document = await self.require_usable(document_id)
             chosen = tier or WorkerTier(tier_for(document.mime_type, document.processing_priority))
+            await self.store.supersede_outputs(document_id, self.clock())  # what was derived from the old extraction is out of date from now on
             try:
                 if document.backend_ref is None:
                     await self.store.update(document_id, self.clock(), tier=chosen.value, error_code=None)
@@ -437,6 +468,115 @@ class DocumentService:
             document_id=document.id, title=document.title, source_hash=document.source_hash, evidence_type=EVIDENCE_TYPE, complete=result.complete,
             hits=[DocumentHitOut(snippet=h.snippet, page=h.page, locator=h.locator) for h in result.hits],
         )
+
+
+    # --- summaries (50H) -----------------------------------------------------------------------------------------
+
+    async def summaries(self, document_id: str, access: AccessContext) -> tuple[Document, list[DocumentOutput]]:
+        document = await self.require_usable(document_id)
+        self.authorize(document, access)
+        return document, await self.store.list_outputs(document_id)
+
+    async def summarize(self, document_id: str, access: AccessContext, style: SummaryStyle, *, force: bool = False) -> DocumentOutput:
+        """Start (or return the current) summary of one style. The work runs in the background; poll `summaries`. A current ready summary is returned as it is unless `force`."""
+        document = await self._readable(document_id, access)
+        if self.provider is None:
+            raise DocumentError(503, "No local model is configured for summaries")
+        async with self._lock(document.id):
+            if force:
+                await self.store.supersede_outputs(document.id, self.clock(), kind="summary", style=style.value)
+            output, created = await self.store.begin_output(
+                DocumentOutput(document_id=document.id, kind="summary", style=style.value, source_hash=document.source_hash, tier=document.tier or "basic",
+                               sensitivity=document.sensitivity, created_at=self.clock(), updated_at=self.clock())
+            )
+            if created:
+                task = asyncio.create_task(self._run_summary(document, output.id, style))
+                self._tasks[output.id] = task
+                task.add_done_callback(lambda _t, key=output.id: self._tasks.pop(key, None))
+        return output
+
+    async def wait_for_summaries(self) -> None:
+        """For tests and shutdown: wait until no summary is running."""
+        while self._tasks:
+            await asyncio.gather(*list(self._tasks.values()), return_exceptions=True)
+
+    async def fail_interrupted_outputs(self) -> int:
+        return await self.store.fail_running_outputs(self.clock())
+
+    async def _fail_output(self, output_id: str, code: str, text: str = "") -> None:
+        await self.store.finish_output(output_id, self.clock(), status=OutputStatus.FAILED, error_code=code, text=text)
+
+    async def _run_summary(self, document: Document, output_id: str, style: SummaryStyle) -> None:
+        try:
+            provider = await self.provider()
+            if provider is None:
+                await self._fail_output(output_id, "no_local_model")
+                return
+            ask, model = provider
+            count = document.page_count or 1
+            last = min(count, self.summary_max_pages)
+            pages: list[tuple[int, str]] = []
+            for number in range(1, last + 1):
+                text = clean_page_text(await self._page(document, number))
+                if text:
+                    pages.append((number, text))
+            if sum(len(t) for _n, t in pages) < summary.SPARSE_CHARS_PER_PAGE * last:
+                await self._fail_output(output_id, "sparse_text", summary.SPARSE_TEXT)
+                return
+            partial = f"pages 1-{last} of {count}" if count > last else None
+            groups = summary.group_pages(pages)
+            sections: list[dict] = []
+            if len(groups) == 1:
+                text = await ask(summary.single_messages(document.title, style, groups[0].text, partial=partial), summary.FINAL_TOKENS)
+                sections.append(self._section(document, groups[0], text))
+            else:
+                notes = []
+                for group in groups:
+                    note = (await ask(summary.map_messages(document.title, group), summary.MAP_TOKENS)).strip()
+                    notes.append((group, note))
+                    sections.append(self._section(document, group, note))
+                combined = [n for _g, n in notes]
+                while sum(len(n) for n in combined) > summary.REDUCE_CHARS and len(combined) > 1:
+                    batches, batch, size = [], [], 0
+                    for note in combined:
+                        if batch and size + len(note) > summary.REDUCE_CHARS:
+                            batches.append(batch)
+                            batch, size = [], 0
+                        batch.append(note)
+                        size += len(note)
+                    batches.append(batch)
+                    if len(batches) == len(combined):
+                        break  # nothing can be merged within the budget; the final call receives clipped notes
+                    combined = [(await ask(summary.combine_messages(document.title, "\n\n".join(b)), summary.MAP_TOKENS)).strip() for b in batches]
+                text = await ask(summary.final_messages(document.title, style, "\n\n".join(combined)[: summary.REDUCE_CHARS * 2], partial=partial), summary.FINAL_TOKENS)
+            current = await self.store.get(document.id)
+            if current is None or current.state is DocumentState.DELETING:
+                return  # the document went away while this ran; its outputs are removed with it
+            await self.store.finish_output(
+                output_id, self.clock(), status=OutputStatus.READY, text=text.strip(), sections=tuple(sections), pages_covered=f"1-{last}" if last > 1 else "1",
+                page_count=count, truncated=count > last, model=model, error_code=None,
+            )
+            if current.tier != document.tier or current.backend_revision != document.backend_revision:
+                await self.store.supersede_outputs(document.id, self.clock(), kind="summary", style=style.value)  # reprocessed while this ran: out of date on arrival
+        except asyncio.CancelledError:
+            with contextlib.suppress(Exception):
+                await self._fail_output(output_id, "cancelled")
+            raise
+        except WorkerError as exc:
+            await self._fail_output(output_id, "worker_unavailable" if self._transient(exc) else "worker_refused")
+        except ProviderUnavailable:
+            await self._fail_output(output_id, "model_unavailable")
+        except Exception:
+            logger.exception("summary generation failed")
+            await self._fail_output(output_id, "error")
+
+    async def _page(self, document: Document, number: int) -> str:
+        return (await self.worker.read(document.id, page_range=str(number), limit=30000)).content
+
+    @staticmethod
+    def _section(document: Document, group: summary.Group, text: str) -> dict:
+        locator = f"doc:{document.backend_ref}/tier:{document.tier}/page:{group.start}" if document.backend_ref and document.tier else None
+        return {"pages": group.pages, "start_page": group.start, "end_page": group.end, "summary": text.strip(), "locator": locator}
 
 
 def reconcile_seconds() -> float:

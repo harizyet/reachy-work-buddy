@@ -48,7 +48,9 @@ _CHUNK = 1 << 20
 
 def create_app(settings: Settings | None = None, engine: DocumentEngine | None = None) -> FastAPI:
     settings = settings or Settings.from_env()
-    engine = engine or DoclibEngine(managed_tier=max(settings.tiers, key=("flash", "basic", "standard").index).value)
+    # The managed server's capability tier tops out at Standard; Advanced is served by the same server and models (checked in the 50D spike), so it is never the server tier.
+    served = [t for t in settings.tiers if t is not WorkerTier.ADVANCED] or [WorkerTier.FLASH]
+    engine = engine or DoclibEngine(managed_tier=max(served, key=("flash", "basic", "standard").index).value)
     service = DocumentService(engine, DocumentStore(settings.work_dir), settings)
 
     @asynccontextmanager

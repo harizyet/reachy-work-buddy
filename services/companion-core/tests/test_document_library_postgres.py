@@ -139,3 +139,35 @@ def test_the_service_lifecycle_runs_on_the_real_store(dsn, tmp_path):
             await store.close()
 
     asyncio.run(go())
+
+
+def test_derived_outputs_on_the_real_store(dsn):
+    from companion_core.document_library.models import DocumentOutput, OutputStatus
+
+    async def go():
+        store = await PostgresDocumentStore.connect(dsn)
+        try:
+            d = doc()
+            await store.add(d)
+            first = DocumentOutput(document_id=d.id, kind="summary", style="executive", source_hash=HASH, tier="basic", sensitivity=Privacy.SENSITIVE, created_at=NOW, updated_at=NOW)
+            got, created = await store.begin_output(first)
+            assert created and got.id == first.id
+            again, created = await store.begin_output(DocumentOutput(document_id=d.id, kind="summary", style="executive", source_hash=HASH, tier="basic", sensitivity=Privacy.SENSITIVE))
+            assert not created and again.id == first.id  # one current output per document, kind and style
+            other, created = await store.begin_output(DocumentOutput(document_id=d.id, kind="summary", style="technical", source_hash=HASH, tier="basic", sensitivity=Privacy.SENSITIVE))
+            assert created
+            done = await store.finish_output(first.id, NOW, status=OutputStatus.READY, text="body", sections=({"pages": "1", "start_page": 1, "end_page": 1, "summary": "s", "locator": None},), pages_covered="1", page_count=1, model="m")
+            assert (done.status, done.text, done.sections[0]["summary"], done.sensitivity) == (OutputStatus.READY, "body", "s", Privacy.SENSITIVE)
+            with pytest.raises(ValueError):
+                await store.finish_output(first.id, NOW, source_hash="b" * 64)
+            assert await store.supersede_outputs(d.id, NOW, kind="summary", style="executive") == 1
+            replacement, created = await store.begin_output(DocumentOutput(document_id=d.id, kind="summary", style="executive", source_hash=HASH, tier="standard", sensitivity=Privacy.SENSITIVE))
+            assert created and replacement.id != first.id and (await store.get_output(first.id)).stale
+            assert await store.fail_running_outputs(NOW) == 2  # the technical and the replacement were still running
+            assert {o.error_code for o in await store.list_outputs(d.id) if o.status is OutputStatus.FAILED} == {"interrupted"}
+            assert len(await store.list_outputs(d.id)) == 3 and other.id
+            assert await store.delete_outputs(d.id) == 3 and await store.list_outputs(d.id) == []
+        finally:
+            await store.close()
+
+    asyncio.run(go())

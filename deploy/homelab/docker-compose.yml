@@ -629,7 +629,7 @@ services:
       DOCUMENT_WORKER_TOKEN: ${DOCUMENT_WORKER_TOKEN:-}
       DOCUMENT_WORKER_MAX_UPLOAD_BYTES: ${DOCUMENT_WORKER_MAX_UPLOAD_BYTES:-52428800}
       DOCUMENT_WORKER_MAX_PAGES: ${DOCUMENT_WORKER_MAX_PAGES:-200}
-      DOCUMENT_WORKER_TIERS: ${DOCUMENT_WORKER_TIERS:-flash,basic,standard}
+      DOCUMENT_WORKER_TIERS: ${DOCUMENT_WORKER_TIERS:-flash,basic,standard,advanced}
     volumes:
       - document-worker-data:/data
       - ${DOCUMENT_WORKER_MODELS_DIR:-./document-models}:/models:ro

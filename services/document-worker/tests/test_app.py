@@ -19,7 +19,7 @@ DOC_A = pdf_bytes("Page one\nThe retention requirement is 7 days.", "Page two\nT
 
 def test_health_is_open_and_reports_readiness_and_telemetry(client, engine):
     assert client.get("/health").json() == {
-        "ok": True, "engine_ready": True, "telemetry_disabled": True, "tiers": ["flash", "basic", "standard"], "detail": None,
+        "ok": True, "engine_ready": True, "telemetry_disabled": True, "tiers": ["flash", "basic", "standard", "advanced"], "detail": None,
     }
     engine.telemetry_disabled = False
     body = client.get("/health").json()
@@ -50,7 +50,7 @@ def test_ingest_rejects_wrong_hash_type_size_and_extension(client):
     assert client.upload("d2", b"not a pdf at all", extension="pdf").json() == {"error": "content_type_mismatch"}
     assert client.upload("d3", pdf_bytes("x" * 5000)).status_code == 413
     assert client.upload("d4", DOC_A, extension="exe").json() == {"error": "unsupported_type"}
-    assert client.upload("d5", DOC_A, tier="advanced").status_code == 422
+    assert client.upload("d5", DOC_A, tier="turbo").status_code == 422
     assert client.upload("d6", DOC_A, source_hash="xyz").json() == {"error": "bad_hash"}
     assert client.upload("../evil", DOC_A).status_code == 422
     # a rejected upload leaves nothing behind
@@ -157,7 +157,8 @@ def test_parse_with_force_invalidates_then_reparses(client, engine):
     client.upload("doc1", DOC_A)
     body = client.post("/documents/doc1/parse", headers=AUTH, json={"tier": "standard", "force": True}).json()
     assert engine.invalidated == [(sha(DOC_A)[:7], "standard")] and body["tier"] == "standard"
-    assert client.post("/documents/doc1/parse", headers=AUTH, json={"tier": "advanced"}).status_code == 422
+    assert client.post("/documents/doc1/parse", headers=AUTH, json={"tier": "turbo"}).status_code == 422
+    assert client.post("/documents/doc1/parse", headers=AUTH, json={"tier": "advanced"}).json()["tier"] == "advanced"  # the quality-escalation tier is served like the others
 
 
 def test_delete_removes_the_document_and_verifies(client, engine):
@@ -195,3 +196,15 @@ def test_page_range_is_sent_for_pdf_only(client, engine):
     docx = b"PK\x03\x04 fake docx"
     assert client.upload("doc2", docx, extension="docx", tier="flash").status_code == 200
     assert engine.page_ranges == [(".pdf", "1-5"), (".docx", None)]
+
+
+def test_a_worker_can_be_configured_without_the_advanced_tier(client, engine, settings):
+    from dataclasses import replace
+
+    from document_worker.app import create_app
+
+    from shared.models.document_worker import WorkerTier
+
+    limited = type(client)(create_app(replace(settings, tiers=(WorkerTier.FLASH, WorkerTier.BASIC, WorkerTier.STANDARD)), engine))
+    assert limited.upload("doc1", DOC_A, tier="advanced").json() == {"error": "tier_not_enabled"}
+    assert limited.get("/health").json()["tiers"] == ["flash", "basic", "standard"]

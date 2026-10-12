@@ -15,3 +15,4 @@ DOCUMENT_LIBRARY_SEARCH = "/document-library/documents/{document_id}/search"  # 
 # owner web or Android session -> "sensitive"; owner Telegram -> its existing trusted-owner ceiling; robot voice, a shared speaker or uncertain identity -> a lower one. Core is
 # reachable only with the service token, so the header cannot come from a browser or from document text. Absent means "work-private" (the conservative default); an unknown value is refused.
 ACCESS_CEILING_HEADER = "X-Reachy-Access-Ceiling"
+DOCUMENT_LIBRARY_SUMMARIES = "/document-library/documents/{document_id}/summaries"  # GET: summaries of this document (newest first). POST {style, force?}: start one (ordinary, executive, technical)

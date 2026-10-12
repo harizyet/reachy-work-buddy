@@ -23,6 +23,7 @@ class DocumentOut(BaseModel):
     tier: str | None
     page_count: int | None
     error_code: str | None
+    next_tier: str | None = None  # the extraction level to ask for if this one is not good enough (Advanced is the last)
     created_at: datetime
     updated_at: datetime
 
@@ -65,3 +66,42 @@ class Citation(BaseModel):
     title: str
     page: int
     locator: str | None = None
+    source_hash: str | None = None  # the original the page was read from
+    tier: str | None = None  # the extraction level it was read at
+    evidence_type: str = "derived_extraction"
+
+
+class SummarySectionOut(BaseModel):
+    pages: str  # "1-4": the page group this section was written from
+    start_page: int
+    end_page: int
+    summary: str
+    locator: str | None = None
+
+
+class SummaryOut(BaseModel):
+    """A summary of one document: Reachy's reading of a machine's reading of the original (`evidence_type: derived_interpretation`). It names the original's hash and the extraction tier,
+    carries the document's class, and says whether it is current (the document has not been reprocessed since) or stale."""
+
+    id: str
+    document_id: str
+    title: str
+    kind: str
+    style: str
+    status: str
+    text: str
+    sections: list[SummarySectionOut]
+    pages_covered: str | None
+    page_count: int | None
+    truncated: bool
+    source_hash: str
+    tier: str
+    sensitivity: Privacy
+    model: str | None
+    prompt_version: str
+    stale: bool
+    current: bool
+    error_code: str | None
+    evidence_type: str = "derived_interpretation"
+    created_at: datetime
+    updated_at: datetime

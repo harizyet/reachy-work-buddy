@@ -16,13 +16,18 @@ from companion_core.document_library.models import (
     MAX_TITLE,
     Document,
     DocumentError,
+    DocumentOutput,
     Priority,
+    SummaryStyle,
+    next_tier,
 )
 from companion_core.document_library.service import UNSET, DocumentService
 from shared.models.document_library import (
     DocumentContentOut,
     DocumentOut,
     DocumentSearchOut,
+    SummaryOut,
+    SummarySectionOut,
 )
 from shared.models.document_worker import WorkerTier
 from shared.models.response import Privacy
@@ -35,6 +40,7 @@ from shared.protocols.document_library_api import (
     DOCUMENT_LIBRARY_READ,
     DOCUMENT_LIBRARY_REPROCESS,
     DOCUMENT_LIBRARY_SEARCH,
+    DOCUMENT_LIBRARY_SUMMARIES,
 )
 
 _CHUNK = 1 << 20
@@ -47,6 +53,25 @@ class PatchBody(BaseModel):
     project_scope: str | None = Field(default=None, max_length=MAX_PROJECT)
     sensitivity: Privacy | None = None
     processing_priority: Priority | None = None
+
+
+class SummaryBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    style: SummaryStyle = SummaryStyle.ORDINARY
+    force: bool = False
+
+
+def summary_out(document: Document, output: DocumentOutput) -> SummaryOut:
+    from companion_core.semantic.access import effective_sensitivity
+
+    return SummaryOut(
+        id=output.id, document_id=output.document_id, title=document.title, kind=output.kind, style=output.style, status=output.status.value, text=output.text,
+        sections=[SummarySectionOut(**dict(section)) for section in output.sections], pages_covered=output.pages_covered, page_count=output.page_count, truncated=output.truncated,
+        source_hash=output.source_hash, tier=output.tier, sensitivity=effective_sensitivity(output.sensitivity, document.sensitivity), model=output.model, prompt_version=output.prompt_version,
+        stale=output.stale, current=not output.stale and output.source_hash == document.source_hash and output.tier == (document.tier or output.tier), error_code=output.error_code,
+        created_at=output.created_at, updated_at=output.updated_at,
+    )
 
 
 class ReprocessBody(BaseModel):
@@ -66,7 +91,7 @@ def out(document: Document) -> DocumentOut:
     return DocumentOut(
         id=document.id, title=document.title, filename=document.filename, mime_type=document.mime_type, size_bytes=document.size_bytes, source_hash=document.source_hash,
         sensitivity=document.sensitivity, project_scope=document.project_scope, state=document.state.value, processing_priority=document.processing_priority.value, tier=document.tier,
-        page_count=document.page_count, error_code=document.error_code, created_at=document.created_at, updated_at=document.updated_at,
+        page_count=document.page_count, error_code=document.error_code, next_tier=next_tier(document.tier), created_at=document.created_at, updated_at=document.updated_at,
     )
 
 
@@ -153,3 +178,14 @@ def install_document_library_routes(app: FastAPI) -> None:
     @app.post(DOCUMENT_LIBRARY_SEARCH)
     async def search(request: Request, document_id: str, body: SearchBody) -> DocumentSearchOut:
         return await run(service().search(document_id, access(request), body.query, limit=body.limit))
+
+    @app.get(DOCUMENT_LIBRARY_SUMMARIES)
+    async def summaries(request: Request, document_id: str) -> list[SummaryOut]:
+        document, outputs = await run(service().summaries(document_id, access(request)))
+        return [summary_out(document, o) for o in outputs]
+
+    @app.post(DOCUMENT_LIBRARY_SUMMARIES, status_code=202)
+    async def summarize(request: Request, document_id: str, body: SummaryBody | None = None) -> SummaryOut:
+        body = body or SummaryBody()
+        output = await run(service().summarize(document_id, access(request), body.style, force=body.force))
+        return summary_out(await run(service().get(document_id)), output)
