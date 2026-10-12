@@ -7,7 +7,7 @@ Owner decision 2026-10-12: close 50A with the PNG/JPEG test, then build 50B; do 
 * `companion_core/document_library/`: `models.py` (Document, states `uploaded/queued/processing/ready/partial/failed/deleting`, priorities), `source_store.py` (content-addressed, write-once, re-verified), `store.py` and `postgres_store.py`, `service.py`, `routes.py`, `worker_client.py` (Reachy's client for the document worker, 50A contract).
 * `031_documents` migration and `deploy/homelab/rollback-031.sql`; `SCHEMA_REVISION` is `031_documents`.
 * Shared: `shared/protocols/document_library_api.py`, `shared/models/document_library.py`.
-* Wiring in `create_app` behind `DOCUMENT_LIBRARY_ENABLED` (default off); compose passes the flag, `DOCUMENT_SOURCE_DIR`, worker URL and token, and the new volume `document-source`. Reference: [services](../reference/services.md#document-library-phase-50b), [deployment](../deployment.md#document-library-phase-50b).
+* Wiring in `create_app` behind `DOCUMENT_LIBRARY_ENABLED` (default off); compose passes the flag, `DOCUMENT_SOURCE_DIR`, worker URL and token, and the new volume `document-source`. Reference: [services](../reference/services.md#document-library-phase-50b-50c), [deployment](../deployment.md#document-library-phase-50b).
 
 ## Design points
 

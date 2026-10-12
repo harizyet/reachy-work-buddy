@@ -1,11 +1,13 @@
 # Project state
 
-Snapshot: 2026-10-08 (the sections on Phase 30 onward and the hardware limits were last reviewed 2026-10-02). This page owns current deployment and cross-phase
+Snapshot: 2026-10-12 (the Phase 30 priority text and the hardware limits were last reviewed 2026-10-02; Phases 44 to 50 and the Android app 2026-10-12). This page owns current deployment and cross-phase
 acceptance limits. The [phase ledger](plan.md#6-implementation-roadmap)
 owns phase status and scope; dated [verification records](README.md#verification-records)
 own evidence. This snapshot is not a live health check.
 
 ## Current priority and next gates
+
+**Latest (2026-10-12):** the owner's order is Phase 50 document intelligence (deployed and accepted; remaining: 50F federation once the Phase 48 window permits, then Proxmox last). The Phase 30 text below was last reviewed 2026-10-02 and is kept for the stabilization work it still owns. Current work, rollback assets and machine state are in [HANDOVER](../HANDOVER.md).
 
 Phases 0–29 are the historical ledger; remaining work follows the
 [forward roadmap](plan.md#forward-roadmap-phases-30) (30 stabilization, then
@@ -44,16 +46,19 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
 
 ## Implemented but not fully accepted
 
+- **Document intelligence (50): DEPLOYED and owner-accepted 2026-10-12 on the MS-01** (schema `031_documents`, `DOCUMENT_LIBRARY_ENABLED=true`, the CPU-only `document-worker` with MinerU). Upload, processing, scoped cited Q&A, summaries, Advanced-tier escalation, the extraction inspector, the chat document picker, per-chat conversation-history isolation, worker OOM recovery and Android Documents (app 0.17.0) are live and were accepted by the owner. **Not started:** 50F federated retrieval (waits for the Phase 48 window), the rest of 50J, and the Proxmox worker move. Known minor item: core's reconcile loop rewrites a ready document's `updated_at` each cycle. Backups must include the `document-source` volume. See [Phase 50](phase-50.md), [deployment](verification/phase-50-deployment-2026-10-12.md) and [HANDOVER](../HANDOVER.md).
+- **Notepad (49) and note folders:** Phase 49 processing is deployed (migration 029, 2026-10-11) and **enabled** (`NOTEPAD_PROCESSING_ENABLED=true`); note folder tags (migration 030) are deployed. The web folder fix and the Android 0.16.0 processing panel were confirmed by the owner on 2026-10-12; no separate record. Task-query routing ("what's my task for next week?") was confirmed by the owner on 2026-10-12. See [Phase 49](phase-49.md) and the [note-tags record](verification/note-tags-deployment-2026-10-11.md).
+
 - **Hybrid intent router (not a numbered phase): DEPLOYED 2026-10-11 and ENABLED (`INTENT_ROUTER_ENABLED=true`); owner acceptance of everyday use is open.** The local 7B picks one existing read handler for natural-language questions about the owner's records; it is read-only, fail-closed for questions that need the owner's records, and deterministic about dates and access ([ADR 0033](adr/0033-llm-assisted-read-routing.md)). The same rollout fixed task-reply privacy (replies were labelled from the question and ignored the channel ceiling) and the title-only named note, and rotated the SearXNG secret ([privacy and rotation record](verification/privacy-remediation-and-searxng-rotation-2026-10-11.md)). Core runs commit `41a81a0`. Known limits, none a deployment blocker: substring search, titles containing write verbs, questions with no personal cue still reach ordinary chat, `tasks.capture` and `tasks.complete` ceilings verified by tests only. Rollback images before 2026-10-11 12:59 UTC carry the old privacy defect. Phase 48 cohorts: boundaries 4 and 5 in the [trial log](verification/phase-48b-capture-trial-2026-10-10.md).
 
-- **Semantic knowledge and selective answering (44): ENGINEERING COMPLETE and DEPLOYED (2026-10-10) with every new feature DISABLED pending activation; research acceptance outstanding.** The homelab database is at `028_memory_candidates` and core, hub and coding-agent run commit `ca21d72` ([deployment record](verification/phase-44-deployment-2026-10-10.md)); indexing, retrieval, selective answering, shadow and memory-candidate capture are all OFF. The authoritative handover is the [Phase 44 closure report](phase-44-closure-report.md). Complete for the local milestone and pushed: selective answering integration, the selective shadow with hardened telemetry, and 44F memory-candidate capture and review (migration 028 is applied to production; every new flag is OFF and absent from Compose). Deferred by explicit decision: 44C and 44G. Blocked operationally: production indexing and retrieval (off-host backup, isolated restore, memory baseline, bulk-load contention, rehearsed rollback). Not done: dev16 acceptance and independent validation. Earlier deployed state:
+- **Semantic knowledge and selective answering (44): ENGINEERING COMPLETE and DEPLOYED (2026-10-10) with every new feature DISABLED pending activation; research acceptance outstanding.** The homelab database was at `028_memory_candidates` when this was written (now `031_documents`) and core, hub and coding-agent run commit `ca21d72` ([deployment record](verification/phase-44-deployment-2026-10-10.md)); indexing, retrieval, selective answering, shadow and memory-candidate capture are all OFF. The authoritative handover is the [Phase 44 closure report](phase-44-closure-report.md). Complete for the local milestone and pushed: selective answering integration, the selective shadow with hardened telemetry, and 44F memory-candidate capture and review (migration 028 is applied to production; every new flag is OFF and absent from Compose). Deferred by explicit decision: 44C and 44G. Blocked operationally: production indexing and retrieval (off-host backup, isolated restore, memory baseline, bulk-load contention, rehearsed rollback). Not done: dev16 acceptance and independent validation. Earlier deployed state:
   deployed, all with
   indexing, retrieval and shadow OFF: migrations 026 (source sensitivity) and
   027 (knowledge index and outbox), and the 44H unclaimed-action boundary in
   core. Robot acceptance of the 44A deployment, a browser pass and Telegram
   receipt of the smoke reminder were still pending when recorded in
   [HANDOVER](../HANDOVER.md). **Not deployed:** the selective-answering work
-  (Stage B-1 and its integration, behind OFF flags), 44F, retrieval and shadow rollout. The scorer-v3 research that was
+  (Stage B-1 and its integration; selective answering is absent from production), 44F. **Since this item was written, Phase 48 activated** the memory-candidate review, supervised capture, indexing, retrieval and selective shadow flags in production (checked read-only 2026-10-11: indexing, retrieval, shadow, candidates and capture on); see [Phase 48](phase-48.md) and its frozen evidence windows. The scorer-v3 research that was
   meant to validate a severe-hallucination detector **failed its formal
   validation and was stopped on 2026-10-10**; the scorer is research-only and
   not used for any enforcement. B-1 is the primary release candidate but is
@@ -87,10 +92,11 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
   and the [next diagnostic run](phase-27.md#before-alignment-representative-speech-acceptance).
 
 - **Android app and phone-facing screens (40, 38.8/38.9):** built through app
-  0.16.0 (0.14.0 and earlier verified on an emulator; 0.15.0 to 0.16.0 only by unit tests, see [Phase 40](phase-40.md)),
-  and verified on an emulator (including the Fold's inner-screen size and a phone
-  alarm firing with the app killed and the hub down), with the hub features deployed. Not
-  accepted on a physical phone or Pixel Fold. Open: spoken replies on the owner's
+  0.17.0. 0.16.0 and 0.17.0 (note folders, the processing panel, Documents and the chat
+  picker) were accepted by the owner on a physical phone on 2026-10-12, and 0.14.0 and
+  earlier were verified on an emulator (including the Fold's inner-screen size and a phone
+  alarm firing with the app killed and the hub down), with the hub features deployed
+  (see [Phase 40](phase-40.md)). Not accepted on a Pixel Fold. Open: spoken replies on the owner's
   phone (reported silent after 0.12.1, not reproduced; 0.12.2 hardened playback),
   the phone alarm in Doze and against a real "robot unavailable" or "nobody detected"
   outcome, and the web screens against the production hub. Alarm times are read in the

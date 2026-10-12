@@ -59,7 +59,7 @@ PgBouncer statistics since its restart in the drill (3,134 transactions, 6,300 q
 - **Pending, not waived:** robot connectivity and voice (not tested; nothing was sent to the robot); a browser pass through the web UI; the owner's confirmation that the Telegram push for the smoke reminder arrived.
 - Move the encrypted key backup off this machine when convenient.
 - The hub's speech model cache has the same re-download behaviour core's embedding model had; adding a volume is a small separate change.
-- Follow-up item: replace application superuser access with least-privilege roles ([Phase 45 section 10](../phase-45.md#10-follow-up-least-privilege-database-roles)).
+- Follow-up item: replace application superuser access with least-privilege roles ([Phase 45 section 10](../phase-45.md#10-follow-up-least-privilege-database-roles-now-phase-46)).
 - Phase 44 stays paused; the repeat indexing trial can now be planned against the new connection budget when the owner chooses.
 
 ## Acceptance (owner, 2026-10-08)
