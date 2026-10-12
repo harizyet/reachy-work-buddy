@@ -44,6 +44,14 @@ data class DocumentSummary(
     @SerialName("error_code") val errorCode: String? = null,
 )
 
+val SUMMARY_STYLES = listOf("ordinary", "executive", "technical")
+
+/** Which summary style is on screen: the one the owner chose, else the first that exists, else none. The style buttons choose; they write only when the style has no summary yet. */
+fun shownSummaryStyle(chosen: String?, summaries: List<DocumentSummary>): String? = chosen ?: SUMMARY_STYLES.firstOrNull { style -> summaries.any { it.style == style } }
+
+/** Pressing a style button writes a summary only when none of that style exists: a current one is returned unchanged by the hub, so asking again would show nothing new. */
+fun needsWriting(style: String, summaries: List<DocumentSummary>): Boolean = summaries.none { it.style == style }
+
 @Serializable
 data class DocumentHit(val snippet: String = "", val page: Int? = null)
 

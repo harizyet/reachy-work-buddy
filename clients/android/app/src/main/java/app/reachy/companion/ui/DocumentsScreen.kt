@@ -67,7 +67,9 @@ import app.reachy.companion.data.TIER_LABEL
 import app.reachy.companion.data.UPLOAD_MIME_TYPES
 import app.reachy.companion.data.citedPages
 import app.reachy.companion.data.cleanSnippet
+import app.reachy.companion.data.needsWriting
 import app.reachy.companion.data.pagesLabel
+import app.reachy.companion.data.shownSummaryStyle
 import app.reachy.companion.data.sizeLabel
 import app.reachy.companion.data.titleFromFilename
 import app.reachy.companion.data.uploadContentType
@@ -367,19 +369,31 @@ private fun SearchTab(docs: DocumentsModel, onOpenPage: (Int) -> Unit) {
 
 @Composable
 private fun SummariesTab(docs: DocumentsModel) {
+    // The buttons choose which summary is shown below; one is written only when its style has none yet (see shownSummaryStyle and needsWriting).
+    var chosen by remember(docs.openId) { mutableStateOf<String?>(null) }
+    val shown = shownSummaryStyle(chosen, docs.summaries)
+    val labels = listOf("ordinary" to "Ordinary", "executive" to "Executive", "technical" to "Technical")
     LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
-            Text("Summarise this document", style = MaterialTheme.typography.titleSmall)
+            Text("Summaries of this document", style = MaterialTheme.typography.titleSmall)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
-                for ((style, label) in listOf("ordinary" to "Ordinary", "executive" to "Executive", "technical" to "Technical")) {
-                    OutlinedButton({ docs.summarize(style) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)) { Text(label) }
+                for ((style, label) in labels) {
+                    val exists = !needsWriting(style, docs.summaries)
+                    val running = docs.summaries.any { it.style == style && it.status == "running" }
+                    val text = if (running) "$label…" else if (exists) label else "Write ${label.lowercase()}"
+                    val onClick = { chosen = style; if (!exists) docs.summarize(style) }
+                    val padding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)
+                    if (shown == style) FilledTonalButton(onClick, enabled = !running, contentPadding = padding) { Text(text) }
+                    else OutlinedButton(onClick, enabled = !running, contentPadding = padding) { Text(text) }
                 }
             }
             docs.summaryError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+            if (shown == null) Text("No summary yet. Choose a style to have Reachy write one.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp))
             Text("A summary is Reachy's reading of the extracted text, not the original; check the pages it names.", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 4.dp))
         }
-        items(docs.summaries.size) { i ->
-            val s = docs.summaries[i]
+        val visible = docs.summaries.filter { it.style == shown }
+        items(visible.size) { i ->
+            val s = visible[i]
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(s.style.replaceFirstChar { it.uppercase() } + (s.pagesCovered?.let { " · pages $it" } ?: ""), style = MaterialTheme.typography.labelLarge)
