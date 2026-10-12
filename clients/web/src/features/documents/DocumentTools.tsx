@@ -109,21 +109,41 @@ function SearchPanel({ doc }: { doc: DocumentDto }) {
 function SummariesPanel({ doc }: { doc: DocumentDto }) {
   const summaries = useSummaries(doc.id);
   const { summarize } = useDocumentActions();
-  const running = new Set((summaries.data ?? []).filter((s) => s.status === 'running').map((s) => s.style));
+  const [chosen, setChosen] = useState<SummaryStyle | null>(null);
+  const list = summaries.data ?? [];
+  const has = (style: SummaryStyle) => list.some((s) => s.style === style);
+  const running = new Set(list.filter((s) => s.status === 'running').map((s) => s.style));
+  // The buttons choose which summary is shown. Before the owner chooses, the first one that exists is shown. A style with no summary yet is written when its button is pressed;
+  // pressing the button of one that exists only shows it (the server returns a current summary as it is, so asking again would change nothing on screen).
+  const shown = chosen ?? STYLES.find(({ style }) => has(style))?.style ?? null;
+  const shownList = list.filter((s) => s.style === shown);
+  const choose = (style: SummaryStyle) => {
+    setChosen(style);
+    if (!has(style)) summarize.mutate({ id: doc.id, style });
+  };
   return (
     <section aria-label="Summaries">
       <h3 className="font-medium">Summaries</h3>
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div role="group" aria-label="Summary style" className="mt-2 flex flex-wrap gap-2">
         {STYLES.map(({ style, label }) => (
-          <Button key={style} variant="secondary" disabled={summarize.isPending || running.has(style)} onClick={() => summarize.mutate({ id: doc.id, style })}>
-            {running.has(style) ? `${label}…` : label}
+          <Button
+            key={style}
+            variant="secondary"
+            aria-pressed={shown === style}
+            className={shown === style ? 'ring-2 ring-[var(--accent)]' : ''}
+            disabled={summarize.isPending || running.has(style)}
+            onClick={() => choose(style)}
+          >
+            {running.has(style) ? `${label}…` : has(style) ? label : `Write ${label.toLowerCase()}`}
           </Button>
         ))}
       </div>
       {message(summarize.error) && <p role="alert" className="mt-2 text-sm text-[var(--bad)]">{message(summarize.error)}</p>}
       {summaries.isPending && <Spinner label="Loading summaries" />}
+      {!summaries.isPending && shown === null && <p className="mt-3 text-sm text-[var(--muted)]">No summary yet. Choose a style to have Reachy write one.</p>}
+      {shown !== null && shownList.length === 0 && summarize.isPending && <p role="status" className="mt-3 text-sm text-[var(--muted)]">Starting the {STYLE_NAME[shown].toLowerCase()}…</p>}
       <ul className="mt-3 space-y-3">
-        {(summaries.data ?? []).map((s) => (
+        {shownList.map((s) => (
           <SummaryCard key={s.id} summary={s} onRedo={() => summarize.mutate({ id: doc.id, style: s.style, force: true })} busy={summarize.isPending} />
         ))}
       </ul>

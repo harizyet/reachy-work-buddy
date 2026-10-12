@@ -162,10 +162,45 @@ describe('Documents', () => {
     await screen.findByText('It sets seven-day retention [page 1].');
     expect(screen.getByText('Out of date')).toBeInTheDocument();
     expect(screen.getByText(/Read at basic · pages 1-2 of 2 · reachy-local/)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Executive summary' }));
+    await user.click(screen.getByRole('button', { name: 'Write executive summary' }));
     await waitFor(() => expect(hub.seen.some((s) => s.path.endsWith('/summaries') && s.method === 'POST' && (s.body as any).style === 'executive')).toBe(true));
+    await user.click(screen.getByRole('button', { name: 'Technical summary' })); // the one that exists is shown again, without asking for it a second time
+    await screen.findByText('It sets seven-day retention [page 1].');
     await user.click(screen.getByRole('button', { name: 'Make it again' }));
     await waitFor(() => expect(hub.seen.some((s) => (s.body as any)?.force === true && (s.body as any).style === 'technical')).toBe(true));
+  });
+
+  it('the style buttons choose which summary is shown; one that exists is shown at once without a request, one that does not is written', async () => {
+    const hub = hubWith({ docs: [doc('d1', 'Policy')], summaries: [
+      summary('s1', 'ordinary', { text: 'Plain summary text.' }), summary('s2', 'executive', { text: 'Executive summary text.' })] });
+    renderApp('#/documents/d1');
+    const user = userEvent.setup();
+    await screen.findByText('Plain summary text.');
+    const group = screen.getByRole('group', { name: 'Summary style' });
+    expect(within(group).getByRole('button', { name: 'Summary' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByText('Executive summary text.')).not.toBeInTheDocument(); // only the chosen style is on screen
+    await user.click(within(group).getByRole('button', { name: 'Executive summary' }));
+    expect(await screen.findByText('Executive summary text.')).toBeInTheDocument();
+    expect(screen.queryByText('Plain summary text.')).not.toBeInTheDocument();
+    expect(within(group).getByRole('button', { name: 'Executive summary' })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(within(group).getByRole('button', { name: 'Summary' }));
+    expect(await screen.findByText('Plain summary text.')).toBeInTheDocument();
+    expect(hub.seen.filter((s) => s.path.endsWith('/summaries') && s.method === 'POST')).toHaveLength(0); // showing what exists asks for nothing
+    await user.click(within(group).getByRole('button', { name: 'Write technical summary' }));
+    await waitFor(() => expect(hub.seen.filter((s) => s.path.endsWith('/summaries') && s.method === 'POST')).toHaveLength(1));
+    expect(within(group).getByRole('button', { name: 'Technical summary…' })).toBeDisabled(); // writing: the button says so
+    expect(screen.queryByText('Plain summary text.')).not.toBeInTheDocument();
+    expect(await screen.findByText('Writing')).toBeInTheDocument();
+  });
+
+  it('with no summary yet it says so and writes the one chosen', async () => {
+    const hub = hubWith({ docs: [doc('d1', 'Policy')] });
+    renderApp('#/documents/d1');
+    const user = userEvent.setup();
+    expect(await screen.findByText('No summary yet. Choose a style to have Reachy write one.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Write summary' }));
+    await waitFor(() => expect(hub.seen.some((s) => s.path.endsWith('/summaries') && s.method === 'POST' && (s.body as any).style === 'ordinary')).toBe(true));
+    expect(await screen.findByText('Writing')).toBeInTheDocument();
   });
 
   it('explains a failed summary instead of showing an empty one', async () => {
