@@ -23,11 +23,13 @@ import { Card } from '../../components/ui/Card';
 import { Dialog } from '../../components/ui/Dialog';
 import { Spinner } from '../../components/ui/Spinner';
 import { useChat } from '../chat/ChatProvider';
+import { AnalysisPanel } from './AnalysisPanel';
 import { useDeepReview } from './DeepReview';
 import { DELETABLE, READY, TIER_LABEL, formatTimestamp, silentSeconds, silentSummary, speakerName, statusDescription, statusLabel } from './format';
+import { useAnalysisEnabled } from './useMeetingAnalysis';
 import { useAcceptMeeting, useMeeting } from './useMeetings';
 
-type Section = 'transcript' | 'summary' | 'minutes';
+type Section = 'transcript' | 'summary' | 'minutes' | 'analysis';
 type Task = 'corrections' | 'summary' | 'minutes';
 
 const messageOf = (error: unknown) => (error instanceof Error ? error.message : 'Something went wrong');
@@ -38,6 +40,7 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
   const chat = useChat();
   const navigate = useNavigate();
   const deep = useDeepReview();
+  const analysisOn = useAnalysisEnabled().data === true;
   const [section, setSection] = useState<Section>('transcript');
   const [status, setStatus] = useState('');
   const [outputStatus, setOutputStatus] = useState('');
@@ -52,6 +55,7 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
   const [suggestModel, setSuggestModel] = useState('local');
   const [playing, setPlaying] = useState(-1);
   const player = useRef<HTMLAudioElement>(null);
+  const seekAfterShow = useRef<number | null>(null);
   const meeting = query.data;
 
   // A review that finished while this meeting is open delivers its result here.
@@ -64,6 +68,16 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
       if (job.result) showResult(job.result);
     } else void query.refetch();
   }); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // "Play from here" on the analysis tab switches to the transcript, where the recording is, and starts at that line.
+  useEffect(() => {
+    const audio = player.current;
+    const at = seekAfterShow.current;
+    if (section !== 'transcript' || at === null || !audio) return;
+    seekAfterShow.current = null;
+    audio.currentTime = Math.max(0, at);
+    void audio.play?.()?.catch?.(() => undefined);
+  });
 
   if (query.isPending) return <Spinner label="Loading" />;
   if (!meeting) return <ErrorState message={query.error?.message ?? 'Meeting not found'} onRetry={() => void query.refetch()} />;
@@ -200,7 +214,7 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
 
       {ready && (
         <div role="group" aria-label="What to do with this meeting" className="my-3 flex flex-wrap gap-2">
-          {(['summary', 'minutes', 'transcript'] as const).map((name) => (
+          {([ 'summary', 'minutes', ...(analysisOn ? (['analysis'] as const) : []), 'transcript'] as const).map((name) => (
             <Button key={name} variant="secondary" aria-pressed={shownSection === name} className={shownSection === name ? 'ring-2 ring-[var(--accent)]' : ''} onClick={() => pick(name)}>
               {name[0]!.toUpperCase() + name.slice(1)}
             </Button>
@@ -264,6 +278,16 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
             )}
           </div>
         </div>
+      )}
+
+      {ready && shownSection === 'analysis' && (
+        <AnalysisPanel
+          meetingId={id}
+          onShow={(seconds) => {
+            seekAfterShow.current = seconds;
+            setSection('transcript');
+          }}
+        />
       )}
 
       {shownSection === 'transcript' && (
