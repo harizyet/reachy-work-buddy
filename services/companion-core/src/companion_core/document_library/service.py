@@ -8,6 +8,7 @@ Rules that live here and nowhere else:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import zipfile
@@ -22,10 +23,13 @@ from companion_core.document_library.models import (
     MAX_PROJECT,
     MAX_TITLE,
     MAX_UPLOAD_BYTES,
+    SYNCABLE,
     Document,
     DocumentError,
     DocumentState,
     Priority,
+    extension_of,
+    tier_for,
     utcnow,
 )
 from companion_core.document_library.source_store import (
@@ -38,11 +42,34 @@ from companion_core.document_library.worker_client import (
     DocumentWorkerClient,
     WorkerError,
 )
+from companion_core.semantic.access import scope_permits, within_ceiling
+from companion_core.semantic.model import AccessContext
+from shared.models.document_library import (
+    DocumentContentOut,
+    DocumentHitOut,
+    DocumentSearchOut,
+)
+from shared.models.document_worker import DocumentStatus, WorkerState, WorkerTier
 from shared.models.response import Privacy
 
 ENABLED_FLAG = "DOCUMENT_LIBRARY_ENABLED"
 logger = logging.getLogger("companion_core.document_library")
 UNSET = object()
+EVIDENCE_TYPE = "derived_extraction"  # ADR 0034: parsed text is a machine's reading of the original, never the source itself
+_STATE = {
+    WorkerState.QUEUED: DocumentState.QUEUED,
+    WorkerState.PROCESSING: DocumentState.PROCESSING,
+    WorkerState.READY: DocumentState.READY,
+    WorkerState.PARTIAL: DocumentState.PARTIAL,
+    WorkerState.FAILED: DocumentState.FAILED,
+}
+
+
+def sync_seconds() -> float:
+    try:
+        return max(0.5, float(os.environ.get("DOCUMENT_LIBRARY_SYNC_SECONDS", "5")))
+    except ValueError:
+        return 5.0
 
 
 def enabled() -> bool:
@@ -92,6 +119,11 @@ class DocumentService:
         self.worker = worker
         self.clock = clock
         self.max_bytes = max_bytes or max_upload_bytes()
+        self._locks: dict[str, asyncio.Lock] = {}
+
+    def _lock(self, document_id: str) -> asyncio.Lock:
+        """One lock per document for submit, reprocess and delete, so a deletion can never finish before a submission it raced with (which would leave the worker holding a copy)."""
+        return self._locks.setdefault(document_id, asyncio.Lock())
 
     # --- upload and catalogue -------------------------------------------------------------------------------
 
@@ -119,11 +151,15 @@ class DocumentService:
             sensitivity=sensitivity or DEFAULT_SENSITIVITY, project_scope=project, processing_priority=priority, created_at=self.clock(), updated_at=self.clock(),
         )
         try:
-            return await self.store.add(document)
+            await self.store.add(document)
         except Exception:
             if await self.store.count_by_hash(source_hash) == 0:
                 await self.sources.delete(source_hash)  # the blob was ours alone; do not leave an orphan
             raise
+        if self.worker is None:
+            return document
+        async with self._lock(document.id):
+            return await self._try_submit(document)  # best effort: if the worker is down the document stays `uploaded` and the sync loop submits it later
 
     async def list_documents(self) -> list[Document]:
         return await self.store.list()
@@ -172,17 +208,20 @@ class DocumentService:
     async def delete(self, document_id: str) -> None:
         """Mark it deleting (unusable at once), have the backend forget it, then remove the record and, if no other document shares the bytes, the original.
         If the backend cannot confirm, the document stays in DELETING and finish_deletions() retries it; the caller is told to try again."""
-        document = await self.store.begin_delete(document_id, self.clock())
-        if document is None:
-            raise DocumentError(404, "No such document")
-        if not await self._finish(document):
+        async with self._lock(document_id):
+            document = await self.store.begin_delete(document_id, self.clock())
+            if document is None:
+                raise DocumentError(404, "No such document")
+            finished = await self._finish(document)
+        if not finished:
             raise DocumentError(502, "The document is marked for deletion but the document worker could not confirm it yet; it will be retried")
 
     async def finish_deletions(self) -> int:
         """Retry every document stuck in DELETING (called at startup and when the worker returns). Returns how many were completed."""
         done = 0
         for document in await self.store.deleting():
-            done += await self._finish(document)
+            async with self._lock(document.id):
+                done += await self._finish(document)
         return done
 
     async def _finish(self, document: Document) -> bool:
@@ -201,3 +240,172 @@ class DocumentService:
             await self.sources.delete(document.source_hash)
         return True
 
+
+    # --- processing: submit, sync, reprocess ------------------------------------------------------------------
+
+    async def _apply(self, document_id: str, status: DocumentStatus) -> Document | None:
+        return await self.store.update(
+            document_id, self.clock(), state=_STATE[status.state], backend=status.backend, backend_ref=status.backend_ref, backend_revision=status.source_hash,
+            tier=status.tier.value, page_count=status.page_count, error_code=status.error_code,
+        )
+
+    async def _fail(self, document_id: str, code: str) -> Document | None:
+        return await self.store.update(document_id, self.clock(), state=DocumentState.FAILED, error_code=code)
+
+    async def _submit(self, document: Document) -> Document | None:
+        """Give the verified original to the worker and record its reference and state. Raises WorkerError; the caller decides whether that is transient. Call with the document's lock held."""
+        current = await self.store.get(document.id)
+        if current is None or current.state is DocumentState.DELETING:
+            return current
+        try:
+            data = await self.sources.read_verified(current.source_hash)
+        except SourceCorrupt:
+            logger.error("a stored original no longer matches its hash (document %s); it is not sent to the worker", current.id)
+            return await self._fail(current.id, "source_corrupt")
+        tier = WorkerTier(current.tier or tier_for(current.mime_type, current.processing_priority))
+        status = await self.worker.ingest(current.id, current.source_hash, tier, extension_of(current.mime_type), data)
+        return await self._apply(current.id, status)
+
+    @staticmethod
+    def _transient(exc: WorkerError) -> bool:
+        return exc.status == 0 or exc.status >= 500
+
+    async def _try_submit(self, document: Document) -> Document:
+        try:
+            return await self._submit(document) or document
+        except WorkerError as exc:
+            if self._transient(exc):
+                logger.info("the document worker is not available for a submission: %s", exc.code)
+                return document
+            return await self._fail(document.id, exc.code) or document
+
+    async def sync_once(self) -> int:
+        """One pass of the sync loop: submit documents the worker has not been given, and move the state of the others to what the worker reports. A worker that lost a document
+        (for example rebuilt from nothing) is given it again from the authoritative original. Returns how many documents changed."""
+        if self.worker is None:
+            return 0
+        changed = 0
+        for listed in await self.store.pending_sync():
+            async with self._lock(listed.id):
+                current = await self.store.get(listed.id)
+                if current is None or current.state not in SYNCABLE:
+                    continue
+                try:
+                    if current.state is DocumentState.UPLOADED:
+                        new = await self._submit(current)
+                    else:
+                        try:
+                            new = await self._apply(current.id, await self.worker.status(current.id))
+                        except WorkerError as exc:
+                            if exc.status != 404:
+                                raise
+                            await self.store.update(current.id, self.clock(), state=DocumentState.UPLOADED, backend_ref=None, backend_revision=None, page_count=None, error_code=None)
+                            new = await self._submit(current)
+                except WorkerError as exc:
+                    if self._transient(exc):
+                        continue
+                    new = await self._fail(current.id, exc.code)
+                if new is not None and (new.state, new.page_count, new.error_code) != (current.state, current.page_count, current.error_code):
+                    changed += 1
+        return changed
+
+    async def reprocess(self, document_id: str, tier: WorkerTier | None = None) -> Document:
+        """Parse the retained original again (never a patch of old results): the worker drops the cached parse for these bytes and starts over at `tier` (default: the tier policy)."""
+        if self.worker is None:
+            raise DocumentError(503, "The document worker is not configured")
+        async with self._lock(document_id):
+            document = await self.require_usable(document_id)
+            chosen = tier or WorkerTier(tier_for(document.mime_type, document.processing_priority))
+            try:
+                if document.backend_ref is None:
+                    await self.store.update(document_id, self.clock(), tier=chosen.value, error_code=None)
+                    updated = await self._submit(await self.get(document_id))
+                else:
+                    updated = await self._apply(document_id, await self.worker.parse(document_id, chosen, force=True))
+            except WorkerError as exc:
+                raise self._refusal(exc) from None
+            if updated is None:
+                raise DocumentError(404, "No such document")
+            return updated
+
+    @staticmethod
+    def _refusal(exc: WorkerError) -> DocumentError:
+        if exc.status == 0 or exc.status >= 500:
+            return DocumentError(503, "The document worker is unavailable")
+        if exc.code == "not_ready":
+            return DocumentError(409, "The document is not processed yet")
+        return DocumentError(502, "The document worker refused the request")
+
+    async def _worker_failed(self, document: Document, exc: WorkerError) -> DocumentError:
+        """A read the worker could not serve. If it says the parse is not there, our READY was stale (another document with the same bytes was reprocessed, or the worker lost its cache):
+        take the worker's state now so the sync loop watches this document again, and tell the caller it is not ready."""
+        if exc.code == "not_ready":
+            try:
+                await self._apply(document.id, await self.worker.status(document.id))
+            except WorkerError:
+                pass
+        return self._refusal(exc)
+
+    # --- reading, always from the Reachy document id -------------------------------------------------------------
+
+    @staticmethod
+    def authorize(document: Document, access: AccessContext) -> None:
+        """The check before any worker call that reads content: the channel's sensitivity ceiling and the project scope, from the Reachy record, never from the backend."""
+        if not within_ceiling(document.sensitivity, access.sensitivity_ceiling) or not scope_permits(access, document.project_scope):
+            raise DocumentError(403, "This document is not available here")
+
+    async def _readable(self, document_id: str, access: AccessContext) -> Document:
+        document = await self.require_usable(document_id)
+        self.authorize(document, access)
+        if self.worker is None:
+            raise DocumentError(503, "The document worker is not configured")
+        if document.state not in (DocumentState.READY, DocumentState.PARTIAL):
+            raise DocumentError(409, "The document is not processed yet")
+        return document
+
+    def _content(self, document: Document, read) -> DocumentContentOut:
+        return DocumentContentOut(
+            document_id=document.id, title=document.title, source_hash=document.source_hash, evidence_type=EVIDENCE_TYPE, tier=read.tier.value, content=read.content,
+            start=read.ranges[0].start if read.ranges else None, end=read.ranges[-1].end if read.ranges else None, truncated=read.truncated,
+            next_page_range=read.next_page_range, next_after=read.next_after,
+        )
+
+    async def read(self, document_id: str, access: AccessContext, *, page_range: str | None = None, after: str | None = None, limit: int = 8000) -> DocumentContentOut:
+        document = await self._readable(document_id, access)
+        try:
+            return self._content(document, await self.worker.read(document.id, page_range=page_range, after=after, limit=limit))
+        except WorkerError as exc:
+            raise await self._worker_failed(document, exc) from None
+
+    async def read_locator(self, document_id: str, access: AccessContext, locator: str, *, context: int = 0, limit: int = 8000) -> DocumentContentOut:
+        document = await self._readable(document_id, access)
+        try:
+            return self._content(document, await self.worker.read_locator(document.id, locator, context=context, limit=limit))
+        except WorkerError as exc:
+            if exc.status == 404:
+                raise DocumentError(404, "No such location in the document") from None
+            raise await self._worker_failed(document, exc) from None
+
+    async def search(self, document_id: str, access: AccessContext, query: str, *, limit: int = 10) -> DocumentSearchOut:
+        document = await self._readable(document_id, access)
+        try:
+            result = await self.worker.search(document.id, query, limit=limit)
+        except WorkerError as exc:
+            raise await self._worker_failed(document, exc) from None
+        return DocumentSearchOut(
+            document_id=document.id, title=document.title, source_hash=document.source_hash, evidence_type=EVIDENCE_TYPE, complete=result.complete,
+            hits=[DocumentHitOut(snippet=h.snippet, page=h.page, locator=h.locator) for h in result.hits],
+        )
+
+
+async def run_sync_loop(service: DocumentService, interval: float) -> None:
+    """Keep document states current and submit what is waiting. Errors are logged, never fatal; the interval is DOCUMENT_LIBRARY_SYNC_SECONDS."""
+    while True:
+        try:
+            await service.sync_once()
+            await service.finish_deletions()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("document sync pass failed")
+        await asyncio.sleep(interval)

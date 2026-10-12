@@ -196,7 +196,7 @@ class DocumentService:
         path = self.store.source_path(document_id, meta.extension)
         try:
             if force:
-                self.engine.invalidate(meta.backend_ref)
+                self.engine.invalidate(meta.backend_ref, tier_name)
                 self._forget_cache(meta.backend_ref)
             self.engine.ensure_parse(path, tier_name, self._page_range(meta.extension), force)
         except EngineError as exc:

@@ -25,3 +25,34 @@ class DocumentOut(BaseModel):
     error_code: str | None
     created_at: datetime
     updated_at: datetime
+
+
+class DocumentContentOut(BaseModel):
+    """A bounded read of a document's parsed text. `evidence_type` says it is derived extraction (OCR/parse), not the source; `source_hash` ties it to the original."""
+
+    document_id: str
+    title: str
+    source_hash: str
+    evidence_type: str
+    tier: str
+    content: str
+    start: str | None = None  # first and last locators covered, for citation and continuation
+    end: str | None = None
+    truncated: bool = False
+    next_page_range: str | None = None
+    next_after: str | None = None
+
+
+class DocumentHitOut(BaseModel):
+    snippet: str
+    page: int | None = None  # only when the text was found on that page
+    locator: str | None = None
+
+
+class DocumentSearchOut(BaseModel):
+    document_id: str
+    title: str
+    source_hash: str
+    evidence_type: str
+    hits: list[DocumentHitOut]
+    complete: bool

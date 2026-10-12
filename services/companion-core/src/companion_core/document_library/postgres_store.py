@@ -90,3 +90,8 @@ class PostgresDocumentStore:
         async with self._pool.connection() as conn:
             rows = await (await conn.execute(f"SELECT {_COLUMNS} FROM documents WHERE state = 'deleting' ORDER BY updated_at")).fetchall()
         return [_document(r) for r in rows]
+
+    async def pending_sync(self) -> list[Document]:
+        async with self._pool.connection() as conn:
+            rows = await (await conn.execute(f"SELECT {_COLUMNS} FROM documents WHERE state IN ('uploaded', 'queued', 'processing', 'partial') ORDER BY created_at")).fetchall()
+        return [_document(r) for r in rows]

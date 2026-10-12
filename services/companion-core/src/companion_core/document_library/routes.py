@@ -4,10 +4,11 @@ They sit behind the service-token middleware like every other core route. Nothin
 
 from __future__ import annotations
 
+import os
 from collections.abc import AsyncIterator
 from typing import Annotated
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel, ConfigDict, Field
 
 from companion_core.document_library.models import (
@@ -18,12 +19,21 @@ from companion_core.document_library.models import (
     Priority,
 )
 from companion_core.document_library.service import UNSET, DocumentService
-from shared.models.document_library import DocumentOut
+from shared.models.document_library import (
+    DocumentContentOut,
+    DocumentOut,
+    DocumentSearchOut,
+)
+from shared.models.document_worker import WorkerTier
 from shared.models.response import Privacy
 from shared.protocols.document_library_api import (
     DOCUMENT_LIBRARY_CONFIG,
     DOCUMENT_LIBRARY_DOCUMENT,
     DOCUMENT_LIBRARY_DOCUMENTS,
+    DOCUMENT_LIBRARY_LOCATOR,
+    DOCUMENT_LIBRARY_READ,
+    DOCUMENT_LIBRARY_REPROCESS,
+    DOCUMENT_LIBRARY_SEARCH,
 )
 
 _CHUNK = 1 << 20
@@ -36,6 +46,19 @@ class PatchBody(BaseModel):
     project_scope: str | None = Field(default=None, max_length=MAX_PROJECT)
     sensitivity: Privacy | None = None
     processing_priority: Priority | None = None
+
+
+class ReprocessBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    tier: WorkerTier | None = None
+
+
+class SearchBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    query: str = Field(min_length=1, max_length=500)
+    limit: int = Field(default=10, ge=1, le=20)
 
 
 def out(document: Document) -> DocumentOut:
@@ -100,3 +123,30 @@ def install_document_library_routes(app: FastAPI) -> None:
     @app.delete(DOCUMENT_LIBRARY_DOCUMENT, status_code=204)
     async def delete(document_id: str) -> None:
         await run(service().delete(document_id))
+
+    def access():
+        """The owner reading on screen, as for the Brain: private channel, work-private ceiling, local only. A sensitive document is refused here until a trusted caller can say more."""
+        from companion_core import brain
+
+        return brain.owner_access(os.environ.get("OWNER_USER_ID", "default-user"))
+
+    @app.post(DOCUMENT_LIBRARY_REPROCESS)
+    async def reprocess(document_id: str, body: ReprocessBody | None = None) -> DocumentOut:
+        return out(await run(service().reprocess(document_id, (body or ReprocessBody()).tier)))
+
+    @app.get(DOCUMENT_LIBRARY_READ)
+    async def read(
+        document_id: str,
+        page_range: str | None = Query(default=None, max_length=64, pattern=r"^\d+(-\d+)?(,\d+(-\d+)?)*$"),
+        after: str | None = Query(default=None, max_length=256),
+        limit: int = Query(default=8000, ge=500, le=30000),
+    ) -> DocumentContentOut:
+        return await run(service().read(document_id, access(), page_range=page_range, after=after, limit=limit))
+
+    @app.get(DOCUMENT_LIBRARY_LOCATOR)
+    async def locator(document_id: str, locator: str = Query(max_length=256), context: int = Query(default=0, ge=0, le=3), limit: int = Query(default=8000, ge=500, le=30000)) -> DocumentContentOut:
+        return await run(service().read_locator(document_id, access(), locator, context=context, limit=limit))
+
+    @app.post(DOCUMENT_LIBRARY_SEARCH)
+    async def search(document_id: str, body: SearchBody) -> DocumentSearchOut:
+        return await run(service().search(document_id, access(), body.query, limit=body.limit))

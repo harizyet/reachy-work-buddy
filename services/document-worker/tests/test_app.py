@@ -156,7 +156,7 @@ def test_read_before_ready_is_a_conflict(client, engine):
 def test_parse_with_force_invalidates_then_reparses(client, engine):
     client.upload("doc1", DOC_A)
     body = client.post("/documents/doc1/parse", headers=AUTH, json={"tier": "standard", "force": True}).json()
-    assert engine.invalidated == [sha(DOC_A)[:7]] and body["tier"] == "standard"
+    assert engine.invalidated == [(sha(DOC_A)[:7], "standard")] and body["tier"] == "standard"
     assert client.post("/documents/doc1/parse", headers=AUTH, json={"tier": "advanced"}).status_code == 422
 
 

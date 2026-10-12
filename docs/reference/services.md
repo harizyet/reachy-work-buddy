@@ -601,20 +601,25 @@ Resources are addressed by **Reachy's document id**, not the backend reference, 
 Backend messages (which can contain paths) never reach a response: errors are `{"error": code}` and only the code is logged.
 Health requires the engine ready **and** MinerU telemetry disabled (the worker disables it at start and re-checks).
 
-## Document library (Phase 50B)
+## Document library (Phase 50B, 50C)
 
 Part of companion-core (`companion_core/document_library/`), behind `DOCUMENT_LIBRARY_ENABLED` (default off; routes 404 and nothing is built or read when off). Needs migration `031_documents`.
-Routes (`shared/protocols/document_library_api.py`, under `/document-library` because `/documents` is the older text-RAG ingest, untouched), service-token protected like every core route; the hub does not proxy them yet:
+**Not the legacy `/documents` routes**: those (Phase 5) ingest pasted text into the chunk-RAG store and are untouched; the file-backed subsystem lives under `/document-library` and the two are deliberately not merged.
+Routes (`shared/protocols/document_library_api.py`) are service-token protected like every core route; the hub does not proxy them yet:
 
 | Route | Behaviour |
 |---|---|
 | `GET /document-library/config` | `{enabled}` |
-| `POST /document-library/documents` (multipart `file`, optional `title`, `sensitivity`, `project_scope`, `processing_priority`) | Stores the original once in the source store, creates a record in state `uploaded`. Type is decided by content (pdf, png, jpg, docx; a docx must be a Word package) and must agree with the extension; the size limit is `DOCUMENT_LIBRARY_MAX_UPLOAD_BYTES` (default 50 MiB, an operational default). No class given means `work-private`; content never sets or lowers it. |
-| `GET /document-library/documents`, `GET .../{id}` | Catalogue and detail: policy and state, never a path or a backend internal. |
-| `PATCH .../{id}` | Title, project scope (explicit null clears), sensitivity, priority; sensitivity and priority cannot be cleared; state and hash are not editable. |
-| `DELETE .../{id}` | Marks `deleting` (unusable at once), asks the worker to forget it, then removes the record and, only if no other document has the same hash, the original. If the worker cannot confirm, the answer is 502, the document stays `deleting` (cannot be revived) and is retried at startup. |
+| `POST /document-library/documents` (multipart `file`, optional `title`, `sensitivity`, `project_scope`, `processing_priority`) | Stores the original once in the source store, creates the record, and (if a worker is configured) submits it at once. Type is decided by content (pdf, png, jpg, docx) and must agree with the extension; limit `DOCUMENT_LIBRARY_MAX_UPLOAD_BYTES` (default 50 MiB, an operational default). No class given means `work-private`; content never sets or lowers it. |
+| `GET /document-library/documents`, `GET .../{id}` | Catalogue and detail: policy, state, tier, pages, error code; never a path or the backend reference. |
+| `PATCH .../{id}` | Title, project scope (explicit null clears), sensitivity, priority; state and hash are not editable. |
+| `POST .../{id}/reprocess` `{tier?}` | Parses the retained original again for the same document (the worker drops only that tier's cached parse); a failed document can be retried this way. |
+| `GET .../{id}/read`, `GET .../{id}/locator`, `POST .../{id}/search` | Bounded reads and search inside this one document, by Reachy id. Responses carry `title`, `source_hash` and `evidence_type: "derived_extraction"`; hits carry a page only when the text was found there. 409 until processed, 403 above the caller's sensitivity ceiling or outside its project scope (checked from the Reachy record before any worker call; these routes use the owner on-screen context, work-private ceiling, so a `sensitive` document is refused until a trusted caller can say more). |
+| `DELETE .../{id}` | Marks `deleting` (unusable at once), the worker forgets it and must confirm, then the record and, only if no other document has the same hash, the original go. Unconfirmed: 502, stays `deleting`, retried by the sync loop and at startup. |
 
-Originals live in the content-addressed source store (`DOCUMENT_SOURCE_DIR`, `sha256/ab/cd/<hash>`, write-once, re-verified before use: a mismatch is 409, never served). Identical bytes uploaded twice are two documents with their own policy and one blob. `backend_ref` is an opaque pointer to the worker's object and is shared by identical bytes; authorization always starts from the document id. `DocumentWorkerClient` is Reachy's only client for the [document worker](#document-worker-phase-50a). Processing, reading, search and reprocess belong to 50C onward.
+**Lifecycle.** `uploaded` (original stored) to `queued`, `processing`, `ready` / `partial` / `failed` as the worker reports; `deleting` is terminal from outside. A sync loop (`DOCUMENT_LIBRARY_SYNC_SECONDS`, default 5, only when `DOCUMENT_WORKER_URL` is set) submits `uploaded` documents the worker has not been given, follows `queued`/`processing`/`partial` documents to the worker's state, gives a document back to a worker that lost it (404) from the authoritative original, and retries deletions. A worker that is down is transient (nothing fails); a refusal (for example `tier_not_enabled`) marks the document `failed` with the code. Submit, reprocess and delete share a per-document lock so a deletion cannot finish before a racing submission. Initial tier policy (full policy is 50D): Word documents Flash; PDFs and images Basic (they may be scans); interactive priority Standard.
+
+Originals live in the content-addressed source store (`DOCUMENT_SOURCE_DIR`, `sha256/ab/cd/<hash>`, write-once, re-verified before use: a mismatch is 409 on reads and `failed` / `source_corrupt` on submission, never served or sent). Identical bytes uploaded twice are two documents with their own policy and one blob; `backend_ref` is an opaque pointer shared by identical bytes, and authorization always starts from the document id. `DocumentWorkerClient` is Reachy's only client for the [document worker](#document-worker-phase-50a).
 
 ## Shared contracts and clients
 

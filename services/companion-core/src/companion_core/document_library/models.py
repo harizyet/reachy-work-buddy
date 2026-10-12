@@ -33,6 +33,9 @@ class DocumentState(StrEnum):
     DELETING = "deleting"  # nothing may read it from here on; deletion is retried until the backend confirms
 
 
+SYNCABLE = (DocumentState.UPLOADED, DocumentState.QUEUED, DocumentState.PROCESSING, DocumentState.PARTIAL)  # states the sync loop still has work for
+
+
 class Priority(StrEnum):
     BACKGROUND = "background"  # the default for a passive upload
     NORMAL = "normal"
@@ -47,6 +50,19 @@ FILE_TYPES: dict[str, tuple[str, tuple[bytes, ...]]] = {
     "docx": ("application/vnd.openxmlformats-officedocument.wordprocessingml.document", (b"PK\x03\x04",)),
 }
 EXTENSION_ALIASES = {"jpeg": "jpg"}
+_EXTENSION_BY_MIME = {mime: ext for ext, (mime, _magic) in FILE_TYPES.items()}
+
+
+def extension_of(mime_type: str) -> str:
+    return _EXTENSION_BY_MIME[mime_type]
+
+
+def tier_for(mime_type: str, priority: Priority) -> str:
+    """The initial processing tier (50C; the full policy is 50D). Word documents carry native text, so Flash reads them fully; PDFs and images may be scans, so they get OCR (Basic) even in the
+    background; an interactive request asks for the visual path (Standard)."""
+    if priority is Priority.INTERACTIVE:
+        return "standard"
+    return "flash" if extension_of(mime_type) == "docx" else "basic"
 
 
 @dataclass(frozen=True)

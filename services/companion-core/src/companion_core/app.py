@@ -666,6 +666,7 @@ def create_app(
     document_store: LibraryStore | None = None,
     document_sources: SourceStore | None = None,
     document_worker: DocumentWorkerClient | None = None,
+    run_document_sync: bool = True,
 ) -> FastAPI:
     documents_on = document_library_service.enabled()  # Phase 50B: read once; with it off nothing is built, no table is read, no directory is created and the routes do not exist
     notepad_on = notepad_service.enabled()  # Phase 49: read once; with it off nothing is built, no table is read and the routes do not exist
@@ -886,7 +887,7 @@ def create_app(
         elif notepad_store is None and db is not None and owns_planner_store and owns_task_store:
             # Processing is off, but provenance written while it was on stays readable (the Brain's derived_from edges): a read-only store, no service, no runner, no routes.
             provenance_only = app.state.notepad_provenance = await PostgresNotepadStore.connect(db)
-        document_owned_store = document_owned_worker = None
+        document_owned_store = document_owned_worker = document_sync_task = None
         if documents_on:
             doc_store = document_store
             if doc_store is None and db is not None:
@@ -902,6 +903,8 @@ def create_app(
                 app.state.document_library = document_library_service.DocumentService(doc_store, sources, worker)
             with contextlib.suppress(Exception):
                 await app.state.document_library.finish_deletions()  # a deletion the worker could not confirm last time is retried at start
+            if app.state.document_library.worker is not None and run_document_sync:
+                document_sync_task = asyncio.create_task(document_library_service.run_sync_loop(app.state.document_library, document_library_service.sync_seconds()))
         candidate_store = candidate_task = None
         if candidates_on:
             candidate_store = memory_candidate_store
@@ -944,6 +947,10 @@ def create_app(
         try:
             yield
         finally:
+            if document_sync_task is not None:
+                document_sync_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await document_sync_task
             if document_owned_worker is not None:
                 with contextlib.suppress(Exception):
                     await document_owned_worker.close()
@@ -2195,9 +2202,11 @@ def create_app(
 
         return await brain.edges_among([i for i in ids.split(",") if i][:1000], brain_adapters(), brain_access(), app.state.notepad_provenance)
 
+    # LEGACY text-chunk RAG (Phase 5): `/documents` ingests pasted text into the pgvector chunk store (`rag_store`). It is NOT the file-backed document subsystem; that is the document library
+    # under `/document-library` (Phase 50, companion_core/document_library). The two are deliberately separate and unmerged.
     @app.post("/documents")
     async def ingest_document(request: CreateDocumentRequest) -> list[DocumentChunk]:
-        """Operator/setup API, not an agent tool — nothing here crawls or
+        """Legacy text-chunk RAG ingest (Phase 5; see the document library for files). Operator/setup API, not an agent tool — nothing here crawls or
         pulls in documents on its own; this is how they get in at all."""
         return await app.state.rag_store.ingest_document(
             title=request.title, content=request.content, source=request.source,

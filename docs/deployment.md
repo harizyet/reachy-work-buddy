@@ -784,7 +784,7 @@ backup needs no extra service: it polls the hub's existing `/planner/alarms`. Re
 
 Migration `031_documents` (one table; `SCHEMA_REVISION` is now `031_documents`, so a deploy means backup, then core, hub and coding-agent together, on owner approval). Rollback: `deploy/homelab/rollback-031.sql`
 (drops only the catalogue; the originals on disk are untouched). Core gets the volume `document-source` (Reachy's authoritative originals; **back it up with the database**: it is the system of record, the worker's
-data is rebuildable) and the flags `DOCUMENT_LIBRARY_ENABLED` (default false), `DOCUMENT_WORKER_URL` and `DOCUMENT_WORKER_TOKEN` (both optional until 50C). Nothing here is deployed yet.
+data is rebuildable) and the flags `DOCUMENT_LIBRARY_ENABLED` (default false), `DOCUMENT_WORKER_URL` and `DOCUMENT_WORKER_TOKEN` (set both to enable submission and the sync loop, `DOCUMENT_LIBRARY_SYNC_SECONDS` default 5). Nothing here is deployed yet; the integrated deployment gate is described in the [50C record](verification/phase-50c-integration-2026-10-12.md#integrated-deployment-gate).
 
 ## Document worker
 

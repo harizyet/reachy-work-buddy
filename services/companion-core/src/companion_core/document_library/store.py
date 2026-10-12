@@ -6,7 +6,7 @@ from dataclasses import replace
 from datetime import datetime
 from typing import Protocol
 
-from companion_core.document_library.models import Document, DocumentState
+from companion_core.document_library.models import SYNCABLE, Document, DocumentState
 
 
 class DocumentStore(Protocol):
@@ -18,6 +18,7 @@ class DocumentStore(Protocol):
     async def count_by_hash(self, source_hash: str) -> int: ...
     async def remove(self, document_id: str) -> bool: ...
     async def deleting(self) -> list[Document]: ...
+    async def pending_sync(self) -> list[Document]: ...
 
 
 class InMemoryDocumentStore:
@@ -58,6 +59,9 @@ class InMemoryDocumentStore:
 
     async def deleting(self) -> list[Document]:
         return [d for d in self._docs.values() if d.state is DocumentState.DELETING]
+
+    async def pending_sync(self) -> list[Document]:
+        return sorted((d for d in self._docs.values() if d.state in SYNCABLE), key=lambda d: d.created_at)
 
     async def close(self) -> None:
         return None

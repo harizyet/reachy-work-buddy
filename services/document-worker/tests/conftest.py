@@ -100,10 +100,10 @@ class FakeEngine:
                 hits.append(RawHit(sha[:7], "\n\n".join(segs)))
         return hits[offset : offset + limit], len(hits)
 
-    def invalidate(self, ref):
+    def invalidate(self, ref, tier):
         self._maybe_fail()
         self._doc(ref)
-        self.invalidated.append(ref)
+        self.invalidated.append((ref, tier))
 
     def forget(self, path):
         self._maybe_fail()

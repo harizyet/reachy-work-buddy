@@ -89,6 +89,7 @@ def test_the_real_store_keeps_a_deleting_document_deleting(dsn):
             assert (moved.state, moved.backend_ref, moved.page_count, moved.title, moved.sensitivity, moved.project_scope) == (DocumentState.READY, "abc1234", 3, "New", Privacy.SENSITIVE, "Alpha")
             with pytest.raises(ValueError):
                 await store.update(a.id, NOW, source_hash="b" * 64)  # the hash and id are not updatable
+            assert [d.id for d in await store.pending_sync()] == [b.id]  # b is `uploaded`; a is ready, then deleting: neither is polled
             assert (await store.begin_delete(a.id, NOW)).state is DocumentState.DELETING
             assert (await store.begin_delete(a.id, NOW)).state is DocumentState.DELETING  # idempotent
             assert await store.update(a.id, NOW, state=DocumentState.READY) is None  # it cannot be revived
