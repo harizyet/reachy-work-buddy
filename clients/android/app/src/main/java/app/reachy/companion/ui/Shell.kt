@@ -6,6 +6,9 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
@@ -61,7 +64,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.sp
 import app.reachy.companion.AppViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun Shell(model: AppViewModel) {
     var nav by rememberSaveable(stateSaver = androidx.compose.runtime.saveable.Saver<NavState, String>(save = { it.encode() }, restore = { decodeNav(it) })) { mutableStateOf(NavState()) }
@@ -70,6 +73,7 @@ fun Shell(model: AppViewModel) {
     var menu by remember { mutableStateOf(false) }
     var speak by remember { mutableStateOf(model.prefs.speakReplies) }
     val wide = isWide()
+    val imeOpen = WindowInsets.isImeVisible
     var phoneAlarms by remember { mutableStateOf(model.prefs.phoneAlarms) }
     var meetingReminders by remember { mutableStateOf(model.prefs.meetingReminders) }
     val context = LocalContext.current
@@ -124,7 +128,8 @@ fun Shell(model: AppViewModel) {
             })
         },
         bottomBar = {
-            if (!wide) NavigationBar {
+            // With the keyboard open the bar is hidden: it sits under the keyboard, and the screens already add the keyboard's height as padding, so keeping it left a gap as tall as the bar.
+            if (!wide && !imeOpen) NavigationBar {
                 for (item in Primary.entries) NavigationBarItem(
                     selected = nav.primary == item, onClick = { nav = nav.selectPrimary(item) }, label = { Text(item.title, maxLines = 1) },
                     icon = { PrimaryIcon(model, item) },
