@@ -107,8 +107,10 @@ _LEAVE = re.compile(
 
 
 def is_meetings_query(text: str) -> bool:
+    """A question about the owner's meetings in a named time ("tomorrow", "next week"). Without a time it is not claimed: "Which meetings mention the review?" is a records question."""
     lowered = text.strip().lower()
-    return bool(_MEETINGS.search(lowered)) and not _NOT_A_LOOKUP.search(lowered)
+    scope = time_scope(lowered)
+    return bool(_MEETINGS.search(lowered)) and not _NOT_A_LOOKUP.search(lowered) and (scope.window is not None or scope.problem is not None)
 
 
 def is_leave_query(text: str) -> bool:

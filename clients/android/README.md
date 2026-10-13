@@ -24,6 +24,7 @@ Decision: [ADR 0029](../../docs/adr/0029-android-companion-app.md); stages:
   The phone never claims an owner or a privacy ceiling; the hub decides what a chat may draw on.
 - **Alarms:** an Apple-Clock-style list with switches, Edit and an Add/Edit sheet (time wheels, Repeat, Label, Sound, Volume). The phone also keeps its own
   alarm for each one and rings it when Reachy was offline, found nobody in the room or could not play it, even with the app closed. Menu: **Ring on this phone if Reachy can't**.
+- **Meeting reminders** ([ADR 0035](../../docs/adr/0035-read-only-ics-calendar-and-meeting-reminders.md)): a notification before each meeting from the owner's calendar feed, with **Start recording** (opens Meetings with the meeting prepared; never starts the microphone) and **Dismiss**. Scheduled on the phone, so it works offline and after a restart; the Meetings tab lists the next 3 days with the hub's classification and says what blocks delivery. Menu: **Meeting reminders**. Calendar titles are kept in app-private storage and removed on sign-out. `e2e/android_calendar_hub_server.py` is the emulator fixture.
 - **Pixel Fold and tablets:** at 600 dp or wider the bottom bar becomes a rail and Notes, Meetings, Reminders and Talk show two panes.
   Folding or unfolding re-lays out in place without restarting.
 
