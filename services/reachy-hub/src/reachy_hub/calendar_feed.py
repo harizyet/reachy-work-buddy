@@ -9,9 +9,10 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from typing import Any
+from urllib.parse import unquote
 
 import httpx
-from fastapi import Depends, HTTPException, Query
+from fastapi import Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -22,11 +23,15 @@ from shared.protocols.calendar_feed_api import (
     CORE_FEED_REFRESH,
     CORE_OVERRIDES,
     CORE_REMINDERS,
+    CORE_SCHEDULE,
     HUB_EVENTS,
     HUB_FEED,
     HUB_FEED_REFRESH,
     HUB_OVERRIDES,
     HUB_REMINDERS,
+    HUB_SCHEDULE,
+    HUB_UPLOAD,
+    MAX_UPLOAD_BYTES,
 )
 
 _NO_STORE = {"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"}
@@ -98,6 +103,25 @@ def install_calendar_feed_routes(app, require_owner_session, core) -> None:
     @app.get(HUB_REMINDERS, dependencies=owner)
     async def reminders(hours: int | None = Query(default=None, ge=1, le=168)):
         return await forward(lambda: core.planner_request("GET", CORE_REMINDERS, params={"hours": str(hours)} if hours else None))
+
+    @app.put(HUB_UPLOAD, dependencies=owner_change)
+    async def feed_upload(request: Request):
+        """The owner's ICS file, validated whole by core and published as one new revision. The file is never logged and never echoed."""
+        declared = request.headers.get("content-length")
+        if declared and declared.isdigit() and int(declared) > MAX_UPLOAD_BYTES:
+            raise HTTPException(400, "too_large")
+        body = bytearray()
+        async for chunk in request.stream():
+            body.extend(chunk)
+            if len(body) > MAX_UPLOAD_BYTES:
+                raise HTTPException(400, "too_large")
+        filename = unquote(request.headers.get("x-filename", "")) or None
+        return await forward(lambda: core.calendar_upload(bytes(body), filename))
+
+    @app.get(HUB_SCHEDULE, dependencies=owner)
+    async def schedule(start: datetime, end: datetime, include_cancelled: bool = False):
+        return await forward(lambda: core.planner_request(
+            "GET", CORE_SCHEDULE, params={"start": start.isoformat(), "end": end.isoformat(), "include_cancelled": str(include_cancelled).lower()}))
 
     @app.get(HUB_EVENTS, dependencies=owner)
     async def events(start: datetime, end: datetime, include_cancelled: bool = False):

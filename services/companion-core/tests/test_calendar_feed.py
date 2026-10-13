@@ -144,17 +144,22 @@ def test_freshness_turns_stale_with_age_and_recovers():
     assert status["freshness"] == "fresh" and status["error"] is None and status["consecutive_failures"] == 0
 
 
-def test_before_the_first_download_the_status_says_never():
-    service, _fetcher, _clock = make()
+def test_a_link_is_stored_only_once_it_has_been_downloaded_and_validated():
+    service, fetcher, _clock = make()
     assert run(service.status())["freshness"] == "not_configured"
-    run(service.set_url(URL))
-    assert run(service.status())["freshness"] == "never"
+    fetcher.error = "http_404"
+    with pytest.raises(FeedError):
+        run(service.set_url(URL))
+    status = run(service.status())
+    assert status["configured"] is False and status["error"] == "http_404" and run(service._store.get_url()) is None  # a link that does not work changes nothing
+    fetcher.error = None
+    assert run(service.set_url(URL))["freshness"] == "fresh"
 
 
 def test_refresh_runs_on_the_configured_interval_only():
     service, fetcher, clock = make(refresh_minutes=30)
-    run(service.set_url(URL))
-    assert run(service.refresh_if_due()) is True and fetcher.fetched == 1
+    run(service.set_url(URL))  # downloads and publishes at once
+    assert fetcher.fetched == 1
     clock.now += timedelta(minutes=29)
     assert run(service.refresh_if_due()) is False and fetcher.fetched == 1
     clock.now += timedelta(minutes=2)
@@ -321,7 +326,7 @@ def test_rules_change_the_result_without_a_new_download():
     at = datetime(2026, 10, 19, tzinfo=UTC)
     assert "Floating sync" in titles(run(service.reminders(at, hours=168)))
     run(service.set_config(FeedConfig(device_horizon_hours=168, rules=ClassificationRules(owner_emails=["owner@example.com"], remind_keyword_meetings=False))))
-    assert "Floating sync" not in titles(run(service.reminders(at, hours=168))) and fetcher.fetched == 1
+    assert "Floating sync" not in titles(run(service.reminders(at, hours=168))) and fetcher.fetched == 2  # set_url and the first refresh; the rule change downloaded nothing
 
 
 def test_leave_suppression_is_off_by_default_and_works_when_on():

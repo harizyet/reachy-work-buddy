@@ -7,8 +7,9 @@ stored URL.
 from __future__ import annotations
 
 from datetime import datetime
+from urllib.parse import unquote
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from companion_core.calendar.classify import EventClass
@@ -21,6 +22,9 @@ from shared.protocols.calendar_feed_api import (
     CORE_FEED_REFRESH,
     CORE_OVERRIDES,
     CORE_REMINDERS,
+    CORE_SCHEDULE,
+    CORE_UPLOAD,
+    MAX_UPLOAD_BYTES,
 )
 
 
@@ -29,7 +33,7 @@ class FeedUpdate(BaseModel):
 
     url: str | None = Field(default=None, max_length=2048, repr=False)  # repr=False: the URL is a secret, keep it out of any accidental log of the model
     config: FeedConfig | None = None
-    refresh: bool = True  # download once straight away after a new URL, so the owner sees whether it works
+    refresh: bool = True  # accepted for older clients; a new URL is always downloaded and validated before it is stored
 
 
 class OverrideBody(BaseModel):
@@ -65,10 +69,25 @@ def install_calendar_routes(app: FastAPI) -> None:
             if body.config is not None:
                 await svc.set_config(body.config)
             if body.url is not None:
-                await svc.set_url(body.url)
-                if body.refresh:
-                    return await svc.refresh()
+                return await svc.set_url(body.url)  # downloads and validates first; a link that does not work changes nothing
             return await svc.status()
+        except FeedError as exc:
+            raise HTTPException(400, exc.code) from None
+
+    @app.put(CORE_UPLOAD)
+    async def feed_upload(request: Request) -> dict:
+        """The owner's ICS file replaces the source: the whole file is validated first and published atomically, so a bad file changes nothing."""
+        svc = service()
+        declared = request.headers.get("content-length")
+        if declared and declared.isdigit() and int(declared) > MAX_UPLOAD_BYTES:
+            raise HTTPException(400, "too_large")
+        body = bytearray()
+        async for chunk in request.stream():
+            body.extend(chunk)
+            if len(body) > MAX_UPLOAD_BYTES:
+                raise HTTPException(400, "too_large")
+        try:
+            return await svc.upload(bytes(body), unquote(request.headers.get("x-filename", "")) or None)
         except FeedError as exc:
             raise HTTPException(400, exc.code) from None
 
@@ -99,6 +118,13 @@ def install_calendar_routes(app: FastAPI) -> None:
     @app.get(CORE_REMINDERS)
     async def meeting_reminders(hours: int | None = Query(default=None, ge=1, le=168)) -> dict:
         return await service().reminders(hours=hours)
+
+    @app.get(CORE_SCHEDULE)
+    async def schedule(start: datetime, end: datetime, include_cancelled: bool = False) -> dict:
+        store = app.state.calendar_store
+        if not isinstance(store, FeedCalendar):
+            raise HTTPException(503, "calendar_feed_unavailable")
+        return await store.schedule(start, end, include_cancelled=include_cancelled)
 
     @app.get(CORE_EVENTS)
     async def list_events(start: datetime, end: datetime, include_cancelled: bool = False, only_occupying: bool = Query(default=False, alias="occupying")) -> list[CalendarEvent]:

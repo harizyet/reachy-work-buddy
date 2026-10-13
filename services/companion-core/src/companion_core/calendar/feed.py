@@ -28,7 +28,7 @@ from companion_core.calendar.classify import (
     classify,
     reminder_decision,
 )
-from companion_core.calendar.ics import FeedError, parse_feed
+from companion_core.calendar.ics import FeedError, ParsedFeed, parse_feed
 from companion_core.calendar.models import CalendarEvent
 from companion_core.calendar.safe_fetch import FeedFetcher
 from companion_core.calendar.store import CalendarStore
@@ -36,6 +36,7 @@ from companion_core.calendar.store import CalendarStore
 log = logging.getLogger("companion_core.calendar.feed")
 
 MAX_OVERRIDES = 500
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 UNTITLED = "(untitled event)"
 HIDDEN_TITLE = "Busy"
 
@@ -74,7 +75,10 @@ class FeedStatus(BaseModel):
     last_success_at: datetime | None = None
     error: str | None = None  # a fixed code from safe_fetch / ics, never text from the feed
     consecutive_failures: int = 0
-    host: str | None = None  # the host only; the path of a feed URL is part of the secret
+    host: str | None = None  # the host only; the path of a feed URL is part of the secret. For an uploaded file, its (sanitised) name
+    source: str | None = None  # "url" or "upload": what the stored secret is
+    generation: int = 0  # the calendar revision: advanced only when a new snapshot (or a rule or override that changes the result) has been published
+    digest: str | None = None  # fingerprint of the published snapshot, so an identical refresh or repeated upload does not advance the generation
 
 
 class FeedState(BaseModel):
@@ -88,8 +92,8 @@ class FeedState(BaseModel):
 class FeedStore(Protocol):
     async def load(self) -> FeedState: ...
     async def get_url(self) -> str | None: ...
-    async def set_url(self, url: str, host: str) -> None: ...
-    async def clear(self) -> None: ...
+    async def publish(self, value: str | None, snapshot: Snapshot, status: FeedStatus) -> None: ...
+    async def clear(self, generation: int) -> None: ...
     async def save_config(self, config: FeedConfig) -> None: ...
     async def save_overrides(self, overrides: dict[str, str]) -> None: ...
     async def save_snapshot(self, snapshot: Snapshot, status: FeedStatus) -> None: ...
@@ -109,13 +113,15 @@ class InMemoryFeedStore:
     async def get_url(self) -> str | None:
         return self._url
 
-    async def set_url(self, url: str, host: str) -> None:
-        self._url = url
-        self._state = self._state.model_copy(update={"configured": True, "snapshot": None, "status": FeedStatus(host=host)})
+    async def publish(self, value: str | None, snapshot: Snapshot, status: FeedStatus) -> None:
+        """Replaces the source (when given) and the snapshot in one step: a reader sees the old calendar or the new one, never a mixture."""
+        if value is not None:
+            self._url = value
+        self._state = self._state.model_copy(update={"configured": True, "snapshot": snapshot, "status": status})
 
-    async def clear(self) -> None:
+    async def clear(self, generation: int) -> None:
         self._url = None
-        self._state = FeedState(config=self._state.config, overrides=self._state.overrides)
+        self._state = FeedState(config=self._state.config, overrides=self._state.overrides, status=FeedStatus(generation=generation))
 
     async def save_config(self, config: FeedConfig) -> None:
         self._state = self._state.model_copy(update={"config": config})
@@ -159,6 +165,9 @@ class CalendarFeedService:
         self._timezone = timezone
         self._lock = asyncio.Lock()
         self._state: FeedState | None = None  # core is the only writer, so this copy is the truth between writes
+        self._epoch = 0  # advanced whenever the source is replaced; a refresh that started under an older epoch is discarded instead of overwriting the newer source
+        self._refresh_task: asyncio.Future | None = None  # concurrent refreshes share one download
+        self._uploads: dict[str, asyncio.Future] = {}  # identical concurrent uploads share one parse
 
     async def _load(self) -> FeedState:
         if self._state is None:
@@ -183,7 +192,7 @@ class CalendarFeedService:
     # --- configuration -------------------------------------------------------------------------------------------------------------------------------------
 
     def _brief(self, state: FeedState, now: datetime) -> dict:
-        """Whether the feed is set up and how fresh the snapshot is. Never the URL; the host only."""
+        """Whether the feed is set up, how fresh the snapshot is and which revision it is. Never the URL; the host (or the uploaded file's name) only."""
         status, config = state.status, state.config
         age = None if status.last_success_at is None else int((now - status.last_success_at).total_seconds())
         if not state.configured:
@@ -192,10 +201,13 @@ class CalendarFeedService:
             freshness = "never"
         else:
             freshness = "fresh" if age <= 2 * config.refresh_minutes * 60 + 300 else "stale"
+        refreshing = self._refresh_task is not None and not self._refresh_task.done()
+        sync = "not_configured" if not state.configured else "refreshing" if refreshing else "error" if status.error else "stale" if freshness == "stale" else "ok" if freshness == "fresh" else "never"
         return {
-            "configured": state.configured, "host": status.host, "freshness": freshness, "last_success_at": status.last_success_at, "last_attempt_at": status.last_attempt_at,
-            "age_seconds": age, "error": status.error, "consecutive_failures": status.consecutive_failures,
-            "event_count": len(state.snapshot.facts) if state.snapshot else 0, "truncated": bool(state.snapshot and state.snapshot.truncated),
+            "configured": state.configured, "host": status.host, "source": status.source, "freshness": freshness, "sync_state": sync, "last_success_at": status.last_success_at,
+            "last_attempt_at": status.last_attempt_at, "age_seconds": age, "error": status.error, "consecutive_failures": status.consecutive_failures,
+            "event_count": len([f for f in state.snapshot.facts if f.status != "cancelled"]) if state.snapshot else 0, "truncated": bool(state.snapshot and state.snapshot.truncated),
+            "generation": status.generation, "snapshot_revision": state.snapshot.revision if state.snapshot else None,
         }
 
     def _public(self, state: FeedState, now: datetime) -> dict:
@@ -204,17 +216,17 @@ class CalendarFeedService:
     async def status(self) -> dict:
         return self._public(await self._load(), self._clock())
 
-    async def set_url(self, url: str) -> dict:
-        """Checks the URL (scheme, port, resolved addresses) and stores it encrypted. The caller never gets it back."""
-        async with self._lock:
-            host = await self._fetcher.check(url)
-            await self._store.set_url(url.strip(), host)
-            self._invalidate()
-        return await self.status()
+    async def _bump(self) -> None:
+        """A rule, a setting or an override changed what the calendar shows: that is a new revision too, so every client re-reads."""
+        state = await self._load()
+        await self._store.save_status(state.status.model_copy(update={"generation": state.status.generation + 1}))
+        self._invalidate()
 
     async def clear(self) -> dict:
         async with self._lock:
-            await self._store.clear()
+            state = await self._load()
+            await self._store.clear(state.status.generation + 1)
+            self._epoch += 1
             self._invalidate()
         return await self.status()
 
@@ -222,6 +234,7 @@ class CalendarFeedService:
         async with self._lock:
             await self._store.save_config(config)
             self._invalidate()
+            await self._bump()
         return await self.status()
 
     async def set_override(self, key: str, classification: str | None) -> dict:
@@ -240,49 +253,132 @@ class CalendarFeedService:
                 overrides[key] = classification
             await self._store.save_overrides(overrides)
             self._invalidate()
+            await self._bump()
         return await self.status()
 
-    # --- refresh ---------------------------------------------------------------------------------------------------------------------------------------------
+    # --- replacing the source and refreshing ----------------------------------------------------------------------------------------------------------------
+
+    async def _parse(self, body: bytes, state: FeedState, now: datetime) -> tuple[ParsedFeed, datetime, datetime]:
+        """Parses and validates the WHOLE calendar before anything is published. A calendar with no events is valid: it is an intentional empty snapshot."""
+        zone = await self._zone(state)
+        rules = state.config.rules
+        start, end = now - timedelta(days=2), now + timedelta(days=state.config.horizon_days)
+        parsed = await asyncio.wait_for(
+            asyncio.to_thread(parse_feed, body, window_start=start, window_end=end, tz=zone, owner_emails=frozenset(a.lower() for a in rules.owner_emails)), timeout=60,
+        )
+        return parsed, start, end
+
+    async def _failed(self, code: str, epoch: int | None = None) -> None:
+        """Records that an attempt failed, without touching the snapshot or the source: the last valid calendar stays available."""
+        async with self._lock:
+            if epoch is not None and epoch != self._epoch:
+                return  # a newer source replaced this one while it was being fetched; this failure is not about the current one
+            state = await self._load()
+            status = state.status.model_copy(update={"last_attempt_at": self._clock(), "error": code, "consecutive_failures": state.status.consecutive_failures + 1})
+            await self._store.save_status(status)
+            self._invalidate()
+        log.warning("calendar source rejected: %s", code)
+
+    async def _publish(self, parsed: ParsedFeed, window: tuple[datetime, datetime], now: datetime, *, value: str | None, kind: str, label: str | None, epoch: int | None) -> dict:
+        """The one place a snapshot becomes the active calendar: one atomic store write, then the epoch and the caches move. Returns the status."""
+        async with self._lock:
+            if epoch is not None and epoch != self._epoch:
+                return await self.status()  # superseded: an older refresh must never overwrite a newer source
+            state = await self._load()
+            old = state.status
+            digest = hashlib.sha256("|".join(f"{f.key}:{f.revision}" for f in parsed.facts).encode()).hexdigest()[:16]
+            snapshot = Snapshot(facts=parsed.facts, fetched_at=now, window_start=window[0], window_end=window[1], truncated=parsed.truncated, skipped=parsed.skipped, revision=digest)
+            changed = old.digest != digest or old.source != kind or old.host != label
+            status = old.model_copy(update={
+                "last_attempt_at": now, "last_success_at": now, "error": None, "consecutive_failures": 0, "source": kind, "host": label, "digest": digest,
+                "generation": old.generation + (1 if changed else 0),
+            })
+            await self._store.publish(value, snapshot, status)
+            if value is not None:
+                self._epoch += 1
+            self._invalidate()
+        log.info("calendar published: %d occurrences, %d skipped, generation %d", len(parsed.facts), parsed.skipped, status.generation)
+        return await self.status()
+
+    async def set_url(self, url: str) -> dict:
+        """Checks the URL, downloads and validates the calendar, and only then stores the URL (encrypted) and publishes. A URL that does not work changes nothing. The caller never gets it back."""
+        host = await self._fetcher.check(url)
+        now = self._clock()
+        try:
+            fetched = await self._fetcher.fetch(url.strip())
+            parsed, start, end = await self._parse(fetched.body, await self._load(), now)
+        except FeedError as exc:
+            await self._failed(exc.code)
+            raise
+        except Exception as exc:  # noqa: BLE001 - never log the message: it can quote the URL or the feed
+            await self._failed("internal_error")
+            log.warning("calendar url failed: %s", type(exc).__name__)
+            raise FeedError("internal_error") from None
+        return await self._publish(parsed, (start, end), now, value=url.strip(), kind="url", label=host, epoch=None)
+
+    async def upload(self, data: bytes, filename: str | None = None) -> dict:
+        """The owner's ICS file replaces the source at once: validated whole, then published atomically. Identical concurrent uploads share one parse."""
+        if len(data) > MAX_UPLOAD_BYTES:
+            raise FeedError("too_large")
+        key = hashlib.sha256(data).hexdigest()
+        running = self._uploads.get(key)
+        if running is not None:
+            return await asyncio.shield(running)
+        task = asyncio.ensure_future(self._upload_once(data, filename))
+        self._uploads[key] = task
+        try:
+            return await asyncio.shield(task)
+        finally:
+            if task.done():
+                self._uploads.pop(key, None)
+
+    async def _upload_once(self, data: bytes, filename: str | None) -> dict:
+        now = self._clock()
+        label = "".join(c for c in (filename or "").replace("\\", "/").rsplit("/", 1)[-1] if c.isprintable())[:80] or "uploaded file"
+        try:
+            text = data.decode("utf-8-sig")
+            if not text.lstrip().upper().startswith("BEGIN:VCALENDAR"):
+                raise FeedError("not_calendar")
+            parsed, start, end = await self._parse(data, await self._load(), now)
+        except UnicodeDecodeError:
+            await self._failed("not_calendar")
+            raise FeedError("not_calendar") from None
+        except FeedError as exc:
+            await self._failed(exc.code)
+            raise
+        except Exception as exc:  # noqa: BLE001
+            await self._failed("internal_error")
+            log.warning("calendar upload failed: %s", type(exc).__name__)
+            raise FeedError("internal_error") from None
+        return await self._publish(parsed, (start, end), now, value=text, kind="upload", label=label, epoch=None)
 
     async def refresh(self) -> dict:
+        """Downloads (or re-reads the uploaded file) and publishes. Concurrent calls share one run."""
+        task = self._refresh_task
+        if task is None or task.done():
+            task = self._refresh_task = asyncio.ensure_future(self._refresh_once())
+        return await asyncio.shield(task)
+
+    async def _refresh_once(self) -> dict:
         async with self._lock:
             state = await self._load()
-            url = await self._store.get_url()
-            now = self._clock()
-            if url is None:
-                return self._public(state, now)
-            status = state.status.model_copy(update={"last_attempt_at": now})
-            try:
-                zone = await self._zone(state)
-                fetched = await self._fetcher.fetch(url)
-                rules = state.config.rules
-                window_start = now - timedelta(days=2)
-                window_end = now + timedelta(days=state.config.horizon_days)
-                parsed = await asyncio.wait_for(
-                    asyncio.to_thread(
-                        parse_feed, fetched.body, window_start=window_start, window_end=window_end, tz=zone,
-                        owner_emails=frozenset(a.lower() for a in rules.owner_emails),
-                    ),
-                    timeout=60,
-                )
-            except FeedError as exc:
-                await self._store.save_status(status.model_copy(update={"error": exc.code, "consecutive_failures": status.consecutive_failures + 1}))
-                self._invalidate()
-                log.warning("calendar feed refresh failed: %s", exc.code)
-                return await self.status()
-            except Exception as exc:  # noqa: BLE001 - never put the message in a log: library errors can quote the URL or the feed
-                await self._store.save_status(status.model_copy(update={"error": "internal_error", "consecutive_failures": status.consecutive_failures + 1}))
-                self._invalidate()
-                log.warning("calendar feed refresh failed: %s", type(exc).__name__)
-                return await self.status()
-            digest = hashlib.sha256("|".join(f"{f.key}:{f.revision}" for f in parsed.facts).encode()).hexdigest()[:16]
-            snapshot = Snapshot(
-                facts=parsed.facts, fetched_at=now, window_start=window_start, window_end=window_end, truncated=parsed.truncated, skipped=parsed.skipped, revision=digest,
-            )
-            await self._store.save_snapshot(snapshot, status.model_copy(update={"last_success_at": now, "error": None, "consecutive_failures": 0}))
-            self._invalidate()
-            log.info("calendar feed refreshed: %d occurrences, %d skipped", len(parsed.facts), parsed.skipped)
-        return await self.status()
+            value = await self._store.get_url()
+            epoch = self._epoch
+            kind, label = state.status.source or "url", state.status.host
+        now = self._clock()
+        if value is None:
+            return await self.status()
+        try:
+            body = value.encode() if kind == "upload" else (await self._fetcher.fetch(value)).body
+            parsed, start, end = await self._parse(body, await self._load(), now)
+        except FeedError as exc:
+            await self._failed(exc.code, epoch)
+            return await self.status()
+        except Exception as exc:  # noqa: BLE001 - never put the message in a log: library errors can quote the URL or the feed
+            await self._failed("internal_error", epoch)
+            log.warning("calendar refresh failed: %s", type(exc).__name__)
+            return await self.status()
+        return await self._publish(parsed, (start, end), now, value=None, kind=kind, label=label, epoch=epoch)
 
     async def refresh_if_due(self) -> bool:
         state = await self._load()
@@ -307,8 +403,8 @@ class CalendarFeedService:
         leave = [(f.start, f.end) for f, c in rows if c.event_class is EventClass.LEAVE_OR_OOO and f.status != "cancelled"]
         return [(f, c, reminder_decision(f, c, rules, leave)) for f, c in rows]
 
-    async def events(self, start: datetime, end: datetime, *, include_cancelled: bool = False) -> list[CalendarEvent]:
-        state = await self._load()
+    async def events(self, start: datetime, end: datetime, *, include_cancelled: bool = False, state: FeedState | None = None) -> list[CalendarEvent]:
+        state = state or await self._load()
         out = []
         for facts, classification, blocked in self._classified(state):
             overlaps = facts.start < end and (facts.end > start or (facts.end == facts.start and facts.start >= start))
@@ -351,8 +447,8 @@ class FeedCalendar:
     async def add_event(self, event: CalendarEvent) -> CalendarEvent:
         return await self.inner.add_event(event)
 
-    async def _others(self, events: list[CalendarEvent]) -> list[CalendarEvent]:
-        state = await self.feed._load()
+    async def _others(self, events: list[CalendarEvent], state: FeedState | None = None) -> list[CalendarEvent]:
+        state = state or await self.feed._load()
         out = []
         for event in events:
             if event.classification is None:
@@ -366,7 +462,17 @@ class FeedCalendar:
 
     async def list_events(self, start: datetime, end: datetime, *, include_cancelled: bool = False) -> list[CalendarEvent]:
         others = await self._others(await self.inner.list_events(start, end))
-        return sorted(others + await self.feed.events(start, end, include_cancelled=include_cancelled), key=lambda e: e.start)
+        return sorted(others + await self.feed.events(start, end, include_cancelled=include_cancelled), key=lambda e: (e.start, e.end, e.id))
+
+    async def schedule(self, start: datetime, end: datetime, *, include_cancelled: bool = False) -> dict:
+        """What the Calendar screens show, from ONE revision: the events and the feed's status are read from the same state, so a client never pairs events of one
+        revision with the generation of another. Events are in chronological order."""
+        state = await self.feed._load()
+        now = self.feed._clock()
+        others = await self._others(await self.inner.list_events(start, end), state)
+        events = sorted(others + await self.feed.events(start, end, include_cancelled=include_cancelled, state=state), key=lambda e: (e.start, e.end, e.id))
+        brief = self.feed._brief(state, now)
+        return {"generation": brief["generation"], "snapshot_revision": brief["snapshot_revision"], "generated_at": now, "feed": brief, "events": events}
 
     async def next_event(self, after: datetime) -> CalendarEvent | None:
         # "What's next" means the next thing at a time: a leave day or an all-day banner is not it.

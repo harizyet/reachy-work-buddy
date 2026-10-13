@@ -53,27 +53,29 @@ class PostgresFeedStore:
             except SecretUnavailable:
                 return None  # the key or the secret is gone; the owner sets the URL again
 
-    async def set_url(self, url: str, host: str) -> None:
+    async def publish(self, value: str | None, snapshot: Snapshot, status: FeedStatus) -> None:
+        """One transaction: the (encrypted) source, the snapshot and the status change together, or none of them does."""
         async with self._pool.connection() as conn:
             cursor = await conn.execute("SELECT secret_ref FROM calendar_feed WHERE id = 'owner' FOR UPDATE")
             row = await cursor.fetchone()
-            existing = row[0] if row else None
-            try:
-                ref = await self._secrets.put(conn, CONTEXT, url, existing)
-            except SecretUnavailable:
-                ref = await self._secrets.put(conn, CONTEXT, url, None)  # the old one cannot be read; replace it
+            ref = row[0] if row else None
+            if value is not None:
+                try:
+                    ref = await self._secrets.put(conn, CONTEXT, value, ref)
+                except SecretUnavailable:
+                    ref = await self._secrets.put(conn, CONTEXT, value, None)  # the old one cannot be read; replace it
             await conn.execute(
-                "UPDATE calendar_feed SET secret_ref = %s, snapshot = NULL, status = %s WHERE id = 'owner'",
-                (ref, Jsonb(FeedStatus(host=host).model_dump(mode="json"))),
+                "UPDATE calendar_feed SET secret_ref = %s, snapshot = %s, status = %s WHERE id = 'owner'",
+                (ref, Jsonb(snapshot.model_dump(mode="json")), Jsonb(status.model_dump(mode="json"))),
             )
 
-    async def clear(self) -> None:
+    async def clear(self, generation: int) -> None:
         async with self._pool.connection() as conn:
             cursor = await conn.execute("SELECT secret_ref FROM calendar_feed WHERE id = 'owner' FOR UPDATE")
             row = await cursor.fetchone()
             if row and row[0]:
                 await self._secrets.delete(conn, CONTEXT, row[0])
-            await conn.execute("UPDATE calendar_feed SET secret_ref = NULL, snapshot = NULL, status = '{}' WHERE id = 'owner'")
+            await conn.execute("UPDATE calendar_feed SET secret_ref = NULL, snapshot = NULL, status = %s WHERE id = 'owner'", (Jsonb(FeedStatus(generation=generation).model_dump(mode="json")),))
 
     async def save_config(self, config: FeedConfig) -> None:
         async with self._pool.connection() as conn:

@@ -14,3 +14,10 @@ HUB_REMINDERS = "/calendar-feed/reminders"
 HUB_EVENTS = "/calendar-feed/events"
 
 CLASSIFICATIONS = ("meeting", "personal_appointment", "leave_or_ooo", "all_day", "unknown_timed", "busy_private")
+
+# The Calendar screens (Web and Android) read ONE revision through this: events plus the feed's status, from the same state.
+CORE_SCHEDULE = "/calendar/schedule"  # GET ?start&end[&include_cancelled]: {generation, snapshot_revision, generated_at, feed, events}
+CORE_UPLOAD = "/calendar/feed/upload"  # PUT raw ICS (header X-Filename optional): validate the whole file, then replace the source atomically
+HUB_SCHEDULE = "/calendar-feed/schedule"
+HUB_UPLOAD = "/calendar-feed/upload"
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024

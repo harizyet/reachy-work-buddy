@@ -273,3 +273,59 @@ def test_a_stale_feed_is_said_in_the_answer(client, world):
 def test_unrelated_meeting_requests_are_not_calendar_lookups(client):
     for text in ("Summarize the meeting", "start a meeting recording", "What did we decide in the meeting notes?", "Cancel my meeting tomorrow"):
         assert "Design review" not in ask(client, text)["reply"], text
+
+
+# --- immediate synchronisation: upload and the one-revision schedule ----------------------------------------------------------------------------------------------
+
+def ics_of(*events) -> bytes:
+    return ("BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//t//EN\n" + "\n".join(events) + "\nEND:VCALENDAR\n").encode()
+
+
+def simple(uid, start, title, *extra):
+    return vevent(uid, f"DTSTART:{stamp(start)}", f"DTEND:{stamp(start + timedelta(hours=1))}", f"SUMMARY:{title}", *extra)
+
+
+def test_an_uploaded_file_replaces_the_source_at_once_and_is_visible_through_the_same_api(client):
+    tomorrow = (datetime.now(UTC) + timedelta(days=1)).replace(hour=3, minute=0, second=0, microsecond=0)
+    people = (f"ATTENDEE:mailto:{OWNER}", "ATTENDEE:mailto:dev@example.com")
+    body = ics_of(*[simple(f"u{i}", tomorrow + timedelta(hours=i * 2), f"Upload meeting {i}", *people) for i in range(5)])
+    before = client.get("/calendar/feed").json()["generation"]
+    response = client.put("/calendar/feed/upload", content=body, headers={"X-Filename": "C%3A%5Ctmp%5Cweek.ics", "Content-Type": "text/calendar"})
+    status = response.json()
+    assert response.status_code == 200 and status["source"] == "upload" and status["host"] == "week.ics" and status["event_count"] == 5 and status["generation"] == before + 1
+    shown = window(client, days_from=1, days=1)
+    assert [e["title"] for e in shown] == [f"Upload meeting {i}" for i in range(5)]  # the previous calendar's events are gone, these are in order
+    assert client.get("/calendar/meeting-reminders", params={"hours": 168}).json()["snapshot_revision"] == status["snapshot_revision"]
+    replaced = client.put("/calendar/feed/upload", content=ics_of(*[simple(f"u{i}", tomorrow + timedelta(hours=i * 2), f"Upload meeting {i}", *people) for i in range(3)])).json()
+    assert replaced["event_count"] == 3 and [e["title"] for e in window(client, days_from=1, days=1)] == [f"Upload meeting {i}" for i in range(3)]
+
+
+def test_a_bad_upload_is_refused_with_a_fixed_code_and_changes_nothing_but_the_error(client):
+    good = client.get("/calendar/feed").json()
+    for body in (b"BEGIN:VCALENDAR\nbroken secret-token-xyz", b"<html></html>", b"\xff\xfe\x00\x00"):
+        refused = client.put("/calendar/feed/upload", content=body)
+        assert refused.status_code == 400 and refused.json() == {"detail": "not_calendar"} and "secret-token" not in refused.text
+    after = client.get("/calendar/feed").json()
+    assert after["generation"] == good["generation"] and after["snapshot_revision"] == good["snapshot_revision"] and after["error"] == "not_calendar" and after["sync_state"] == "error"
+    assert after["event_count"] == good["event_count"] > 0 and any(e["title"] == "Sprint planning" for e in window(client))  # the last valid calendar is still served
+    too_big = client.put("/calendar/feed/upload", content=b"BEGIN:VCALENDAR\n" + b"X-A:" + b"a" * (10 * 1024 * 1024) + b"\nEND:VCALENDAR\n")
+    assert too_big.status_code == 400 and too_big.json() == {"detail": "too_large"}
+
+
+def test_a_valid_empty_calendar_clears_the_events_and_the_reminders(client):
+    empty = client.put("/calendar/feed/upload", content=ics_of()).json()
+    assert empty["error"] is None and empty["sync_state"] == "ok" and empty["event_count"] == 0
+    assert window(client) == [] and client.get("/calendar/meeting-reminders", params={"hours": 168}).json()["reminders"] == []
+
+
+def test_the_schedule_is_one_revision_in_chronological_order_with_both_clocks(client):
+    start = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+    response = client.get("/calendar/schedule", params={"start": start.isoformat(), "end": (start + timedelta(days=9)).isoformat()})
+    view = response.json()
+    assert response.status_code == 200 and view["generation"] == view["feed"]["generation"] == client.get("/calendar/feed").json()["generation"]
+    assert view["snapshot_revision"] == view["feed"]["snapshot_revision"] and view["feed"]["sync_state"] == "ok" and view["feed"]["source"] == "url"
+    starts = [e["start"] for e in view["events"]]
+    assert starts == sorted(starts) and {e["classification"] for e in view["events"]} >= {"meeting", "leave_or_ooo", "busy_private", "personal_appointment"}
+    assert view["feed"]["last_success_at"] and view["feed"]["last_attempt_at"] and "secret-token" not in response.text
+    busy = next(e for e in view["events"] if e["classification"] == "busy_private")
+    assert busy["title"] == "Busy" and busy["location"] is None and busy["redacted"] and "Secret errand" not in response.text

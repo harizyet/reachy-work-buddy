@@ -294,6 +294,15 @@ class CompanionCoreClient:
         resp.raise_for_status()
         return resp.json()
 
+    async def calendar_upload(self, body: bytes, filename: str | None) -> Any:
+        """The owner's ICS file, passed on as the raw body (ADR 0035). Core validates the whole file and answers with the feed status."""
+        headers = {"Content-Type": "text/calendar"}
+        if filename:
+            headers["X-Filename"] = quote(filename[:200], safe="")
+        resp = await self._client.put("/calendar/feed/upload", content=body, headers=headers, timeout=90.0)
+        resp.raise_for_status()
+        return resp.json()
+
     async def document_request(self, method: str, path: str, *, json: Any = None, params: dict[str, Any] | None = None, data: dict[str, str] | None = None,
                                files: Any = None, headers: dict[str, str] | None = None, timeout: float = 30.0) -> httpx.Response:
         """Document library passthrough (Phase 50J). Returns the response whatever its status so the proxy can pass the refusals that matter; transport errors raise."""

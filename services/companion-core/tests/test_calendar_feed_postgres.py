@@ -9,7 +9,12 @@ from uuid import uuid4
 
 import psycopg
 import pytest
-from companion_core.calendar.feed import CalendarFeedService, FeedConfig
+from companion_core.calendar.feed import (
+    CalendarFeedService,
+    FeedConfig,
+    FeedStatus,
+    Snapshot,
+)
 from companion_core.calendar.feed_store import PostgresFeedStore
 from companion_core.calendar.safe_fetch import FetchResult
 from companion_core.migrations.__main__ import upgrade
@@ -45,6 +50,11 @@ def sql(dsn, query, params=None):
         return cur.fetchall() if cur.description else None
 
 
+async def put(store, value, kind="url"):
+    snapshot = Snapshot(facts=[], fetched_at=NOW, window_start=NOW, window_end=NOW, revision="r")
+    await store.publish(value, snapshot, FeedStatus(host="calendar.example.com", source=kind, generation=1, digest="r"))
+
+
 class Fetcher:
     async def check(self, url):
         return "calendar.example.com"
@@ -73,7 +83,7 @@ def test_the_migration_adds_one_table_with_one_empty_row(dsn):
 
 def test_the_url_is_stored_encrypted_and_nowhere_in_plain_text(dsn):
     async def go(store):
-        await store.set_url(URL, "calendar.example.com")
+        await put(store, URL)
         assert await store.get_url() == URL
     with_store(dsn, go)
     ref = sql(dsn, "SELECT secret_ref FROM calendar_feed")[0][0]
@@ -87,21 +97,21 @@ def test_the_url_is_stored_encrypted_and_nowhere_in_plain_text(dsn):
 
 def test_replacing_the_url_reuses_one_secret_row_and_clearing_deletes_it(dsn):
     async def go(store):
-        await store.set_url(URL, "calendar.example.com")
-        await store.set_url(URL.replace("abcdef", "ghijkl"), "calendar.example.com")
+        await put(store, URL)
+        await put(store, URL.replace("abcdef", "ghijkl"))
         assert (await store.get_url()).count("ghijkl") == 1
         assert sql(dsn, "SELECT count(*) FROM secrets WHERE provider = 'ics'") == [(1,)]
-        await store.clear()
+        await store.clear(5)
         assert await store.get_url() is None and (await store.load()).configured is False
     with_store(dsn, go)
     assert sql(dsn, "SELECT count(*) FROM secrets WHERE provider = 'ics'") == [(0,)]
 
 
 def test_a_url_that_can_no_longer_be_decrypted_reads_as_unset_not_as_a_crash(dsn):
-    with_store(dsn, lambda store: store.set_url(URL, "calendar.example.com"))
+    with_store(dsn, lambda store: put(store, URL))
     async def go(store):
         assert await store.get_url() is None  # the key changed: the owner sets the URL again
-        await store.set_url(URL, "calendar.example.com")  # and that works
+        await put(store, URL)  # and that works
         assert await store.get_url() == URL
     with_store(dsn, go, keys=OTHER_KEYS)
 
@@ -133,7 +143,7 @@ def test_state_survives_a_restart_and_a_second_service_object(dsn):
 
 def test_the_rollback_script_removes_the_feed_and_its_secret_and_nothing_else(dsn):
     async def go(store):
-        await store.set_url(URL, "calendar.example.com")
+        await put(store, URL)
         # another provider's secret must survive the rollback
         async with store._pool.connection() as conn:
             await PostgresSecretStore(KEYS).put(conn, SecretContext("owner", "google", "refresh-token"), "g-refresh-token")
@@ -147,3 +157,34 @@ def test_the_rollback_script_removes_the_feed_and_its_secret_and_nothing_else(ds
     assert sql(dsn, "SELECT count(*) FROM calendar_events") == [(1,)]
     upgrade(dsn, KEYS)  # applies again after a rollback
     assert sql(dsn, "SELECT version_num FROM alembic_version") == [("033_calendar_feed",)] and sql(dsn, "SELECT id FROM calendar_feed") == [("owner",)]
+
+
+def test_an_uploaded_file_is_stored_encrypted_and_survives_a_restart_with_the_same_revision(dsn):
+    body = (FIXTURE).replace(b"SUMMARY:Design review", b"SUMMARY:Design review\nDESCRIPTION:confidential agenda text")
+
+    async def first():
+        store = await PostgresFeedStore.connect(dsn, PostgresSecretStore(KEYS))
+        service = CalendarFeedService(store, Fetcher(), clock=lambda: NOW)
+        await service.set_config(FeedConfig(device_horizon_hours=168, rules={"owner_emails": ["owner@example.com"]}))
+        status = await service.upload(body, "/home/me/week.ics")
+        again = await service.upload(body, "week.ics")
+        assert again["generation"] == status["generation"]  # a repeated upload is not a new revision
+        await store.close()
+        return status
+
+    status = asyncio.run(first())
+    ref = sql(dsn, "SELECT secret_ref FROM calendar_feed")[0][0]
+    cipher = bytes(sql(dsn, "SELECT ciphertext FROM secrets WHERE id = %s", (ref,))[0][0])
+    assert b"confidential" not in cipher and b"Design review" not in cipher
+    assert "confidential" not in str(sql(dsn, "SELECT config::text, coalesce(snapshot::text,''), status::text FROM calendar_feed"))  # a description is never kept in the clear either
+    assert status["host"] == "week.ics" and status["source"] == "upload"
+
+    async def second():
+        store = await PostgresFeedStore.connect(dsn, PostgresSecretStore(KEYS))
+        service = CalendarFeedService(store, Fetcher(), clock=lambda: NOW)
+        before = await service.status()
+        refreshed = await service.refresh()  # re-reads the stored file; the Fetcher is never asked
+        await store.close()
+        return before, refreshed
+    before, refreshed = asyncio.run(second())
+    assert before["generation"] == status["generation"] == refreshed["generation"] and refreshed["error"] is None and before["event_count"] > 15

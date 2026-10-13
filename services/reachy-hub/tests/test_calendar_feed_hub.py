@@ -64,7 +64,7 @@ def login(client):
 
 
 WHEN = {"start": "2026-10-12T00:00:00+00:00", "end": "2026-10-18T00:00:00+00:00"}
-ROUTES = [("get", "/calendar-feed", None), ("put", "/calendar-feed", {"url": URL}), ("delete", "/calendar-feed", None), ("post", "/calendar-feed/refresh", {}),
+ROUTES = [("put", "/calendar-feed/upload", {}), ("get", "/calendar-feed/schedule?" + "&".join(f"{k}={v}" for k, v in WHEN.items()).replace("+", "%2B"), None), ("get", "/calendar-feed", None), ("put", "/calendar-feed", {"url": URL}), ("delete", "/calendar-feed", None), ("post", "/calendar-feed/refresh", {}),
           ("put", "/calendar-feed/overrides", {"key": "ics:abcde", "classification": "meeting"}), ("get", "/calendar-feed/reminders", None), ("get", "/calendar-feed/events?" + "&".join(f"{k}={v}" for k, v in WHEN.items()).replace("+", "%2B"), None)]
 CHANGES = [r for r in ROUTES if r[0] != "get"]
 
@@ -169,7 +169,7 @@ def test_the_hubs_event_in_progress_question_asks_for_occupying_events_only():
 
 def test_a_leave_day_does_not_make_the_owner_occupied_but_a_timed_event_does():
     """The path the alarm and reminder delivery really takes: the hub asks core for events in progress (occupying only) and treats any as 'occupied'."""
-    hub, core, service, _requests = build()
+    hub, core, _service, _requests = build()
     with hub:
         login(hub)
         hub.put("/calendar-feed", json={"url": URL, "config": {"rules": {"owner_emails": ["owner@example.com"]}}}, headers=CSRF)
@@ -181,3 +181,21 @@ def test_a_leave_day_does_not_make_the_owner_occupied_but_a_timed_event_does():
         assert [e["title"] for e in in_meeting] == ["Incident review"]
         plain = asyncio.run(client._client.get("/calendar/events", params={"start": leave_midday.isoformat(), "end": (leave_midday + timedelta(seconds=1)).isoformat()}))
         assert [e["title"] for e in plain.json()] == ["Annual leave"]  # without occupying, the leave day would have blocked delivery all day
+
+
+def test_the_owner_uploads_a_file_through_the_hub_and_sees_it_on_the_schedule():
+    hub, _core, service, requests = build()
+    with hub:
+        login(hub)
+        body = (b"BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//t//EN\nBEGIN:VEVENT\nUID:h@t\nDTSTAMP:20261001T000000Z\nDTSTART:20261013T020000Z\nDTEND:20261013T030000Z\n"
+                b"SUMMARY:Uploaded via hub\nATTENDEE:mailto:a@example.com\nATTENDEE:mailto:b@example.com\nEND:VEVENT\nEND:VCALENDAR\n")
+        put = hub.put("/calendar-feed/upload", content=body, headers={**CSRF, "X-Filename": "my%20week.ics", "Content-Type": "text/calendar"})
+        assert put.status_code == 200 and put.json()["source"] == "upload" and put.json()["host"] == "my week.ics" and put.json()["event_count"] == 1 and not requests
+        view = hub.get("/calendar-feed/schedule", params=WHEN).json()
+        assert [e["title"] for e in view["events"]] == ["Uploaded via hub"] and view["generation"] == put.json()["generation"] == hub.get("/calendar-feed").json()["generation"]
+        bad = hub.put("/calendar-feed/upload", content=b"<html>nope secret-token</html>", headers=CSRF)
+        assert bad.status_code == 400 and bad.json() == {"detail": "not_calendar"} and "secret-token" not in bad.text
+        big = hub.put("/calendar-feed/upload", content=b"x" * (10 * 1024 * 1024 + 1), headers=CSRF)
+        assert big.status_code == 400 and big.json() == {"detail": "too_large"}
+        assert hub.get("/calendar-feed/schedule", params=WHEN).json()["generation"] == view["generation"]  # nothing moved
+    assert asyncio.run(service.status())["error"] == "not_calendar"
