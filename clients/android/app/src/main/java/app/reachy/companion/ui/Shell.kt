@@ -60,7 +60,10 @@ fun Shell(model: AppViewModel) {
     var speak by remember { mutableStateOf(model.prefs.speakReplies) }
     val wide = isWide()
     var phoneAlarms by remember { mutableStateOf(model.prefs.phoneAlarms) }
+    var meetingReminders by remember { mutableStateOf(model.prefs.meetingReminders) }
     val context = LocalContext.current
+    // A meeting reminder's "Start recording" lands on the Meetings tab, where the recorder waits for the owner's tap.
+    LaunchedEffect(model.prepared) { if (model.prepared != null) tab = Tab.Meetings }
     // The phone's backup alarm needs notifications to show its Stop button (Android 13+); ask once.
     val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     LaunchedEffect(Unit) {
@@ -68,6 +71,9 @@ fun Shell(model: AppViewModel) {
         if (Build.VERSION.SDK_INT >= 33 && model.prefs.phoneAlarms && !model.prefs.askedAlarmNotifications &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) { model.prefs.askedAlarmNotifications = true; notifications.launch(Manifest.permission.POST_NOTIFICATIONS) }
+        else if (Build.VERSION.SDK_INT >= 33 && model.prefs.meetingReminders && !model.prefs.askedReminderNotifications &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) { model.prefs.askedReminderNotifications = true; notifications.launch(Manifest.permission.POST_NOTIFICATIONS) }
     }
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -92,6 +98,15 @@ fun Shell(model: AppViewModel) {
                     DropdownMenuItem(
                         { Text(if (phoneAlarms) "Ring on this phone if Reachy can't: on" else "Ring on this phone if Reachy can't: off") },
                         { phoneAlarms = !phoneAlarms; model.prefs.phoneAlarms = phoneAlarms; model.loadAlarms(); menu = false },
+                    )
+                    DropdownMenuItem(
+                        { Text(if (meetingReminders) "Meeting reminders: on" else "Meeting reminders: off") },
+                        {
+                            meetingReminders = !meetingReminders; model.setMeetingReminders(meetingReminders); menu = false
+                            if (meetingReminders && Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                                model.prefs.askedReminderNotifications = true; notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        },
                     )
                     DropdownMenuItem({ Text("Sign out") }, { menu = false; model.signOut() })
                 }

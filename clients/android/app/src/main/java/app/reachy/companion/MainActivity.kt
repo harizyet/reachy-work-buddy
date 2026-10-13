@@ -1,6 +1,8 @@
 package app.reachy.companion
 
+import android.content.Intent
 import android.os.Bundle
+import androidx.core.app.NotificationManagerCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -24,7 +26,22 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        prepareFrom(intent)
         setContent { MaterialTheme(colorScheme = colors) { Surface(Modifier.fillMaxSize()) { Root(model) } } }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        prepareFrom(intent)
+    }
+
+    /** A meeting reminder's "Start recording" lands here. It prepares the recorder on the Meetings tab and clears the notification; it starts nothing. */
+    private fun prepareFrom(intent: Intent?) {
+        val meeting = MeetingReminderScheduler.preparedFromIntent(intent) ?: return
+        model.prepareMeeting(meeting)
+        NotificationManagerCompat.from(this).cancel(MeetingReminderScheduler.notificationId(meeting.key))
+        setIntent(Intent())  // handled once: a rotation or a restart must not prepare it again
     }
 }
 

@@ -125,14 +125,16 @@ private fun MeetingList(model: AppViewModel, modifier: Modifier) {
     var glossary by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<Meeting?>(null) }
     var confirmClear by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { model.retryPendingUploads() }
+    LaunchedEffect(Unit) { model.retryPendingUploads(); model.refreshReminders() }
     LaunchedEffect(RecordingController.uploadedCount) { model.loadMeetings() }
     LaunchedEffect(recording) {
         // Derived from the start time, so the timer is right after returning to this tab.
         while (recording) { elapsed = (System.currentTimeMillis() - model.recordingStartedAt) / 1000; delay(500) }
     }
 
-    fun begin() { error = null; model.startRecording() }
+    // The card's Record button goes through the same microphone and notification permissions as the main one, then starts with the meeting attached.
+    var fromCard by remember { mutableStateOf(false) }
+    fun begin() { error = null; if (fromCard) model.startPreparedRecording() else model.startRecording(); fromCard = false }
     // Android 13+ hides the "recording" notification unless allowed; recording still works if declined.
     val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { begin() }
     fun beginWithNotifications() {
@@ -175,8 +177,13 @@ private fun MeetingList(model: AppViewModel, modifier: Modifier) {
             }
             if (recording) Text("Recording continues if you lock the phone or switch apps.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
         }
+        PreparedMeetingCard(model, onRecord = {
+            fromCard = true
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) beginWithNotifications() else permission.launch(Manifest.permission.RECORD_AUDIO)
+        }, onOpen = { model.showMeeting(it) })
         TextButton({ glossary = true }, contentPadding = PaddingValues(horizontal = 16.dp)) { Text("My terms (names and products Reachy should recognise)") }
         ErrorLine(error ?: model.recordError ?: model.listError)
+        UpcomingSchedule(model)
         if (model.meetings.isEmpty()) Text("No meetings yet.", Modifier.padding(16.dp))
         val failedCount = model.meetings.count { it.status == "failed" || it.status == "cancelled" }
         if (failedCount > 0) TextButton({ confirmClear = true }, contentPadding = PaddingValues(horizontal = 16.dp)) {

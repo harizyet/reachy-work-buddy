@@ -23,6 +23,7 @@ import { Dialog } from '../../components/ui/Dialog';
 import { Spinner } from '../../components/ui/Spinner';
 import { goExternal } from '../../utils/navigation';
 import { Check, TextField } from '../settings/fields';
+import { CalendarFeed } from './CalendarFeed';
 import { CodingCredentials } from './CodingCredentials';
 import { sayAccount, shellQuote } from './messages';
 
@@ -50,6 +51,7 @@ export function AccountsTab() {
   return (
     <div className="space-y-4">
       <GoogleCard />
+      <CalendarFeed />
       <CodingCredentials />
     </div>
   );

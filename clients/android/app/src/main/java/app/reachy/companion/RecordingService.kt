@@ -18,8 +18,16 @@ import androidx.compose.runtime.setValue
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import app.reachy.companion.data.PersistentCookieJar
+import app.reachy.companion.data.PreparedMeeting
 import app.reachy.companion.data.Prefs
 import app.reachy.companion.data.ReachyApi
+import app.reachy.companion.data.RecordingGate
+import app.reachy.companion.data.RecordingPlan
+import app.reachy.companion.data.decodePlan
+import app.reachy.companion.data.encodePlan
+import app.reachy.companion.data.recordingGate
+import app.reachy.companion.data.recordingTitle
+import app.reachy.companion.data.scheduledText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -36,12 +44,16 @@ object RecordingController {
     var startedAt by mutableStateOf(0L); internal set
     var uploading by mutableStateOf(false); internal set
     var error by mutableStateOf<String?>(null)
+    /** The calendar meeting being recorded, when the recording was started from a meeting reminder. It follows the clip until the upload, so a restart does not lose it. */
+    var plan by mutableStateOf<RecordingPlan?>(null); internal set
     /** Bumped after each successful upload so the Meetings list reloads. */
     var uploadedCount by mutableIntStateOf(0); internal set
 
-    fun start(context: Context) {
+    fun start(context: Context, prepared: PreparedMeeting? = null) {
         error = null
-        ContextCompat.startForegroundService(context, Intent(context, RecordingService::class.java).setAction(RecordingService.START))
+        val intent = Intent(context, RecordingService::class.java).setAction(RecordingService.START)
+        if (prepared != null) intent.putExtra(RecordingService.PLAN_KEY, prepared.key).putExtra(RecordingService.PLAN_TITLE, prepared.title).putExtra(RecordingService.PLAN_START, prepared.startMs)
+        ContextCompat.startForegroundService(context, intent)
     }
 
     fun stop(context: Context) {
@@ -49,6 +61,17 @@ object RecordingController {
     }
 
     fun pendingDir(context: Context) = File(context.filesDir, "pending-meetings").apply { mkdirs() }
+
+    /** The note kept beside a clip while it waits to upload. */
+    fun planFile(clip: File) = File(clip.parentFile, clip.name + ".meeting.json")
+
+    /** Calendar occurrences that have a recording on this phone waiting to upload. */
+    fun pendingKeys(context: Context): Set<String> =
+        pendingDir(context).listFiles().orEmpty().filter { it.name.endsWith(".meeting.json") }.mapNotNull { decodePlan(runCatching { it.readText() }.getOrDefault(""))?.key }.toSet()
+
+    /** Whether a recording for this meeting may start now: not while one is running, not when one was already recorded or is waiting to upload. */
+    fun gate(context: Context, prepared: PreparedMeeting): RecordingGate =
+        recordingGate(prepared, MeetingReminderScheduler.recordedMeetings(context), pendingKeys(context), recording, plan?.key)
 }
 
 /**
@@ -70,15 +93,17 @@ class RecordingService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            START -> begin()
+            START -> begin(intent.getStringExtra(PLAN_KEY)?.let { RecordingPlan(it, intent.getStringExtra(PLAN_TITLE), intent.getLongExtra(PLAN_START, 0L)) })
             STOP -> finish()
             else -> if (!RecordingController.recording) stopSelf()
         }
         return START_NOT_STICKY
     }
 
-    private fun begin() {
+    private fun begin(plan: RecordingPlan?) {
         if (RecordingController.recording) return
+        // A second tap or a second notification for a meeting that is already recorded, or waiting to upload, must not make a second recording.
+        if (plan != null && RecordingController.gate(this, PreparedMeeting(plan.key, plan.title, plan.startMs)) != RecordingGate.Ready) { stopSelf(); return }
         enterForeground("Recording meeting", stoppable = true)
         try {
             recorder.start()
@@ -89,6 +114,7 @@ class RecordingService : Service() {
         wakeLock = (getSystemService(POWER_SERVICE) as PowerManager)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "reachy:recording").apply { acquire(4 * 60 * 60 * 1000L) }
         RecordingController.startedAt = System.currentTimeMillis()
+        RecordingController.plan = plan
         RecordingController.recording = true
     }
 
@@ -103,6 +129,7 @@ class RecordingService : Service() {
         }
         val pending = File(RecordingController.pendingDir(this), clip.name)
         if (!clip.renameTo(pending)) { clip.copyTo(pending, overwrite = true); clip.delete() }
+        keepPlan(pending)
         enterForeground("Uploading meeting…", stoppable = false)
         RecordingController.uploading = true
         scope.launch {
@@ -117,11 +144,17 @@ class RecordingService : Service() {
         // Killed or swiped away mid-recording: keep what was captured rather than losing it.
         if (RecordingController.recording) {
             RecordingController.recording = false
-            recorder.stop()?.let { it.renameTo(File(RecordingController.pendingDir(this), it.name)) }
+            recorder.stop()?.let { val kept = File(RecordingController.pendingDir(this), it.name); it.renameTo(kept); keepPlan(kept) }
         }
         releaseWakeLock()
         scope.cancel()
         super.onDestroy()
+    }
+
+    /** Writes the calendar meeting beside the clip (so the title and identity survive until the upload) and clears it from the live state. */
+    private fun keepPlan(clip: File) {
+        RecordingController.plan?.let { runCatching { RecordingController.planFile(clip).writeText(encodePlan(it)) } }
+        RecordingController.plan = null
     }
 
     private fun releaseWakeLock() { wakeLock?.takeIf { it.isHeld }?.release(); wakeLock = null }
@@ -149,6 +182,9 @@ class RecordingService : Service() {
     companion object {
         const val START = "app.reachy.companion.RECORD_START"
         const val STOP = "app.reachy.companion.RECORD_STOP"
+        const val PLAN_KEY = "plan_key"
+        const val PLAN_TITLE = "plan_title"
+        const val PLAN_START = "plan_start"
         private const val CHANNEL = "recording"
         private const val NOTIFICATION_ID = 7
     }
@@ -159,12 +195,19 @@ suspend fun uploadPending(context: Context): String? {
     val prefs = Prefs(context)
     if (prefs.baseUrl.isBlank()) return "not signed in"
     val api = ReachyApi(prefs.baseUrl, PersistentCookieJar({ prefs.cookies }, { prefs.cookies = it }))
-    for (clip in RecordingController.pendingDir(context).listFiles().orEmpty().sortedBy { it.name }) {
+    for (clip in RecordingController.pendingDir(context).listFiles().orEmpty().filter { it.name.endsWith(".m4a") }.sortedBy { it.name }) {
         val stamp = clip.name.removePrefix("recording-").removeSuffix(".m4a").toLongOrNull() ?: clip.lastModified()
-        val title = "Meeting " + SimpleDateFormat("d MMM HH:mm", Locale.getDefault()).format(Date(stamp))
+        val plan = RecordingController.planFile(clip).takeIf { it.exists() }?.let { decodePlan(runCatching { it.readText() }.getOrDefault("")) }
+        val title = plan?.let { recordingTitle(PreparedMeeting(it.key, it.title, it.startMs)) } ?: ("Meeting " + SimpleDateFormat("d MMM HH:mm", Locale.getDefault()).format(Date(stamp)))
         try {
-            api.uploadMeeting(title, clip)
+            val meeting = api.uploadMeeting(title, clip)
             clip.delete()
+            RecordingController.planFile(clip).delete()
+            if (plan != null) {
+                // The calendar's title is the owner's, so it is set as theirs (an automatic title does not replace it); the time goes in the description. Best effort: the upload already succeeded.
+                runCatching { api.renameMeeting(meeting.id, title, scheduledText(plan.startMs)) }
+                MeetingReminderScheduler.noteRecorded(context, plan.key, meeting.id)
+            }
             RecordingController.uploadedCount++
         } catch (e: Exception) {
             return e.message ?: "network error"

@@ -83,6 +83,44 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun startRecording() = RecordingController.start(getApplication())
     fun stopRecording() = RecordingController.stop(getApplication())
 
+    /** The meeting a reminder prepared. Nothing records until the owner taps Record. */
+    var prepared by mutableStateOf<app.reachy.companion.data.PreparedMeeting?>(null); private set
+    fun prepareMeeting(meeting: app.reachy.companion.data.PreparedMeeting) { prepared = meeting }
+    fun clearPrepared() { prepared = null }
+    fun preparedGate(): app.reachy.companion.data.RecordingGate? = prepared?.let { RecordingController.gate(getApplication(), it) }
+    fun startPreparedRecording() {
+        val meeting = prepared ?: return
+        if (RecordingController.gate(getApplication(), meeting) == app.reachy.companion.data.RecordingGate.Ready) RecordingController.start(getApplication(), meeting)
+    }
+
+    /** Meeting reminders: what is wrong with delivery, the upcoming events with their classification, and a refresh from the hub. */
+    var reminderIssues by mutableStateOf<List<app.reachy.companion.data.ReminderIssue>>(emptyList()); private set
+    val schedule = mutableStateListOf<app.reachy.companion.data.CalendarItem>()
+    var scheduleError by mutableStateOf<String?>(null); private set
+
+    fun refreshReminders() {
+        viewModelScope.launch {
+            MeetingReminderScheduler.syncFromHub(getApplication())
+            reminderIssues = MeetingReminderScheduler.issues(getApplication())
+            loadSchedule()
+        }
+    }
+
+    fun setMeetingReminders(on: Boolean) {
+        prefs.meetingReminders = on
+        if (on) refreshReminders() else { MeetingReminderScheduler.disarm(getApplication()); reminderIssues = MeetingReminderScheduler.issues(getApplication()); schedule.clear() }
+    }
+
+    private suspend fun loadSchedule() {
+        if (!prefs.meetingReminders) return
+        val start = java.time.ZonedDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.DAYS)
+        scheduleError = try {
+            schedule.clear()
+            schedule.addAll(api.calendarEvents(start.toOffsetDateTime().toString(), start.plusDays(3).toOffsetDateTime().toString()).filter { app.reachy.companion.data.onSchedule(it) })
+            null
+        } catch (e: Exception) { "The calendar could not be loaded" }
+    }
+
     /** Retries clips whose upload failed earlier, then refreshes the list. */
     fun retryPendingUploads() {
         viewModelScope.launch {
@@ -97,7 +135,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun resume() {
         if (prefs.baseUrl.isBlank()) { session = Session.SignedOut; return }
         session = try { api.me(); userId = api.userId(); Session.SignedIn } catch (e: Exception) { Session.SignedOut }
-        if (session == Session.SignedIn) resumeDeepReview()
+        if (session == Session.SignedIn) { resumeDeepReview(); refreshReminders() }
     }
 
     fun signIn(url: String, username: String, password: String) {
@@ -113,6 +151,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 chat.clear(); chatId = null; attachedDocument = null; docs.clear()
                 session = Session.SignedIn
                 resumeDeepReview()
+                refreshReminders()
             } catch (e: ApiException) {
                 loginError = if (e.unauthorized) "Wrong username or password" else e.message
             } catch (e: Exception) {
@@ -122,7 +161,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun signOut() {
-        viewModelScope.launch { api.logout(); chat.clear(); attachedDocument = null; docs.clear(); chatHistory.clear(); tasks.clear(); notes.clear(); meetings.clear(); processing.clear(); meetingLinks.clear(); processingPoll?.cancel(); chatId = null; if (recording) stopRecording(); DeepReviewController.job = null; session = Session.SignedOut }
+        viewModelScope.launch { api.logout(); chat.clear(); attachedDocument = null; docs.clear(); chatHistory.clear(); tasks.clear(); notes.clear(); meetings.clear(); processing.clear(); meetingLinks.clear(); processingPoll?.cancel(); chatId = null; if (recording) stopRecording(); DeepReviewController.job = null
+            MeetingReminderScheduler.disarm(getApplication()); schedule.clear(); prepared = null; reminderIssues = emptyList(); session = Session.SignedOut }
     }
 
     private fun failed(e: Exception): String {
