@@ -182,7 +182,8 @@ class CalendarFeedService:
 
     # --- configuration -------------------------------------------------------------------------------------------------------------------------------------
 
-    def _public(self, state: FeedState, now: datetime) -> dict:
+    def _brief(self, state: FeedState, now: datetime) -> dict:
+        """Whether the feed is set up and how fresh the snapshot is. Never the URL; the host only."""
         status, config = state.status, state.config
         age = None if status.last_success_at is None else int((now - status.last_success_at).total_seconds())
         if not state.configured:
@@ -195,8 +196,10 @@ class CalendarFeedService:
             "configured": state.configured, "host": status.host, "freshness": freshness, "last_success_at": status.last_success_at, "last_attempt_at": status.last_attempt_at,
             "age_seconds": age, "error": status.error, "consecutive_failures": status.consecutive_failures,
             "event_count": len(state.snapshot.facts) if state.snapshot else 0, "truncated": bool(state.snapshot and state.snapshot.truncated),
-            "config": config.model_dump(mode="json"), "overrides": dict(state.overrides),
         }
+
+    def _public(self, state: FeedState, now: datetime) -> dict:
+        return self._brief(state, now) | {"config": state.config.model_dump(mode="json"), "overrides": dict(state.overrides)}
 
     async def status(self) -> dict:
         return self._public(await self._load(), self._clock())
@@ -334,7 +337,7 @@ class CalendarFeedService:
         items.sort(key=lambda item: (item["start"], item["event_key"]))
         return {
             "generated_at": now, "horizon_end": horizon, "lead_minutes": config.lead_minutes,
-            "snapshot_revision": state.snapshot.revision if state.snapshot else None, "feed": self._public(state, now) | {"overrides": None, "config": None},
+            "snapshot_revision": state.snapshot.revision if state.snapshot else None, "feed": self._brief(state, now),
             "reminders": items,
         }
 
