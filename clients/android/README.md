@@ -1,6 +1,6 @@
 # Reachy Android companion app
 
-A user-centred phone client for reachy-hub (version 0.17.1): **Talk** (voice and chat, with previous
+A user-centred phone client for reachy-hub (version 0.18.0): **Talk** (voice and chat, with previous
 chats), **Reminders** (To Do and timed reminders), **Notes**, **Meetings** (record, review, play back, edit) and
 **Documents** and **Alarms**, grouped under four destinations (below). Settings and configuration stay in the [web control panel](../operator-ui/README.md).
 Decision: [ADR 0029](../../docs/adr/0029-android-companion-app.md); stages:
