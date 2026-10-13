@@ -193,6 +193,23 @@ def test_proxy_masked_settings_and_status_real_chain():
     assert client.get("/ui-legacy/").headers["cache-control"] == "no-cache"
 
 
+def test_local_stats_proxy_requires_login_and_reaches_core_chain():
+    def vllm(request):
+        if request.url.path == "/metrics":
+            return httpx.Response(200, text='vllm:num_requests_running{engine="0"} 3.0\n')
+        if request.url.path == "/v1/models":
+            return httpx.Response(200, json={"data": [{"id": "reachy-local", "max_model_len": 8192}]})
+        return httpx.Response(200)
+
+    client = make_client(llm_transport=httpx.MockTransport(vllm))
+    assert client.get("/llm/local-stats").status_code == 401
+    login(client)
+    assert client.get("/llm/local-stats").json() == {"status": "not_configured"}
+    client.put("/settings/llm", json={"local": {"base_url": "http://vllm:8000/v1", "model": "reachy-local"}}, headers=CSRF)
+    stats = client.get("/llm/local-stats").json()
+    assert stats["status"] == "ok" and stats["metrics"]["requests_running"] == 3.0
+
+
 def test_meetings_proxy_upload_list_get_cancel_require_auth(monkeypatch):
     from starlette.datastructures import UploadFile
 

@@ -8,6 +8,7 @@ import { fetchAudit, fetchNotifications } from '../../api/status';
 import { useChat } from '../chat/ChatProvider';
 import { Meters } from '../settings/SearchTab';
 import { useSearchLog } from '../settings/useSettings';
+import { LocalModelCard } from './LocalModelCard';
 import { useStatus } from './useStatus';
 
 interface Row {
@@ -91,6 +92,7 @@ export function OverviewPage() {
               <EmptyState>Usage unavailable — companion core is not responding.</EmptyState>
             )}
           </Card>
+          <LocalModelCard />
           <Card eyebrow="GROUNDING" title="Search API usage">
             <SearchUsage />
           </Card>

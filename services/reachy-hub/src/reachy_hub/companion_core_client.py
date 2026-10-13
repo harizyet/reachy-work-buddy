@@ -33,6 +33,7 @@ from shared.protocols.memory_candidates_api import (
     MEMORY_CANDIDATES_FORGET_CONVERSATION,
 )
 from shared.protocols.operator_api import (
+    LLM_LOCAL_STATS,
     LLM_SETTINGS,
     LLM_USAGE,
     MEETING,
@@ -151,6 +152,11 @@ class CompanionCoreClient:
 
     async def get_llm_usage(self, *, limit: int = 50, since_hours: int = 24) -> dict:
         response = await self._client.get(LLM_USAGE, params={"limit": limit, "since_hours": since_hours})
+        response.raise_for_status()
+        return response.json()
+
+    async def get_llm_local_stats(self) -> dict:
+        response = await self._client.get(LLM_LOCAL_STATS)
         response.raise_for_status()
         return response.json()
 

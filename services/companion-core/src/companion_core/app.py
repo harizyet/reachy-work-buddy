@@ -261,6 +261,7 @@ from companion_core.knowledge.shadow import shadow_enabled as knowledge_shadow_e
 from companion_core.knowledge.shadow import shadow_from_env as knowledge_shadow_from_env
 from companion_core.knowledge.sources import build_adapters
 from companion_core.llm.client import ProviderUnavailable
+from companion_core.llm.local_stats import fetch_local_stats
 from companion_core.llm.postgres_store import (
     PostgresLLMSettingsStore,
     PostgresLLMUsageStore,
@@ -375,6 +376,7 @@ from shared.protocols.conversation_api import CONVERSATION_FORGET
 from shared.protocols.document_library_api import ACCESS_CEILING_HEADER
 from shared.protocols.memory_candidates_api import MEMORY_CANDIDATES_CAPTURE_COUNTERS
 from shared.protocols.operator_api import (
+    LLM_LOCAL_STATS,
     LLM_SETTINGS,
     LLM_USAGE,
     PERSONA_SETTINGS,
@@ -1239,6 +1241,10 @@ def create_app(
         store = app.state.llm_usage_store
         return {"entries": [e.model_dump(mode="json") for e in await store.list_recent(limit)],
                 **await store.summary(datetime.now(UTC) - timedelta(hours=since_hours))}
+
+    @app.get(LLM_LOCAL_STATS)
+    async def get_llm_local_stats() -> dict:
+        return await fetch_local_stats((await app.state.llm_settings_store.get()).local, transport=llm_transport)
 
     if not owns_calendar_store:
         app.state.calendar_store = calendar_store

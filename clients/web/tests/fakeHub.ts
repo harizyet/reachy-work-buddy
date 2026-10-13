@@ -289,6 +289,7 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
       return jsonResponse({ ...data.websearch, usage: { period: data.searchLog.usage.period, used: data.searchLog.usage.used } });
     }
     if (path === '/websearch/log') return jsonResponse(data.searchLog);
+    if (path === '/llm/local-stats') return jsonResponse({ status: 'unavailable' });
     m = path.match(/^\/sessions\/([^/]+)\/(mode|dnd)$/);
     if (m) {
       const info = data.sessions.get(decodeURIComponent(m[1]!));

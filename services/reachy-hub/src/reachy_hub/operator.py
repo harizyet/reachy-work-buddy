@@ -27,6 +27,7 @@ from shared.protocols.operator_api import (
     DEEP_REVIEW_CURRENT,
     DEEP_REVIEW_INFO,
     DEEP_REVIEW_JOB,
+    LLM_LOCAL_STATS,
     LLM_SETTINGS,
     LLM_USAGE,
     MEETING,
@@ -273,6 +274,10 @@ def install_operator_routes(
         since_hours: int = Query(24, ge=1, le=8760),
     ) -> dict:
         return await proxy(core.get_llm_usage, limit=limit, since_hours=since_hours)
+
+    @app.get(LLM_LOCAL_STATS, dependencies=dependencies)
+    async def local_stats() -> dict:
+        return await proxy(core.get_llm_local_stats)
 
     def meeting_error(exc: httpx.HTTPStatusError):
         # 27.1: companion-core's own 404/409/422 are meaningful to the

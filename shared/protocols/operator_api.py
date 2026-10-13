@@ -2,6 +2,8 @@
 
 LLM_SETTINGS = "/settings/llm"
 LLM_USAGE = "/llm/usage"
+# Live health and load of the local vLLM server (owner Overview card).
+LLM_LOCAL_STATS = "/llm/local-stats"
 PERSONA_SETTINGS = "/settings/persona"
 WEBSEARCH_SETTINGS = "/settings/websearch"
 # Phase 24a follow-up: in-memory owner debug view of recent searches.

@@ -50,6 +50,7 @@ browser/channel transport. Debug robot calls go through hub.
 | `GET/POST /planner/alarms`, `PATCH/DELETE /planner/alarms/{id}`, `POST /planner/alarms/stop`, `GET/POST /planner/stations`, `GET /planner/stations/search?q=`, `DELETE /planner/stations/{id}` (hub) | Phase 38.6: owner-cookie/CSRF proxies to core `/alarms` and `/stations` for the Alarms tab; `search` queries TuneIn with the SSRF guard; `stop` calls the in-process `AlarmDeliverer.stop()` and returns `{"stopped": bool}` |
 | `GET /coding-agents/completions/due` | Phase 29.6: newly-terminal or owner-awaiting coding-agent sessions, claimed once per session turn so reachy-hub's poll loop never double-notifies; same pure-query shape as `/calendar/reminders/due` |
 | `GET`, `PUT /settings/llm`; `GET /llm/usage` | Internal settings/usage; operator callers use authenticated hub proxies |
+| `GET /llm/local-stats` | Live vLLM health, served model and load, read from the configured local provider's `/health`, `/v1/models` and `/metrics`; a fixed set of numbers, `status` is `ok`, `unavailable` or `not_configured` |
 | `GET`, `PUT /settings/persona` | Assistant name/system prompt/location/time zone/tone (`persona_config` table; `tone` is one of default, cheery, serious, formal, casual, playful, calm, migration 017, sent as a style-only system message after the system prompt); prepended as a system message on the generic LLM branch only |
 | `GET`, `PUT /settings/websearch` | Web-search grounding policy/provider (`search_config` table); Phase 24a, see below |
 | `/debug/robots/...` | Debug integration plumbing, not a stable agent-tool API |
@@ -196,6 +197,7 @@ WebRTC, and static UI. It does not own reasoning policy or motor control.
 | `POST /auth/login`, `/auth/logout`; `GET /auth/me` | Owner-cookie lifecycle; login/logout require CSRF header |
 | `GET /status` | Authenticated component probes, model config/usage, Telegram polling health, default user ID |
 | `GET`, `PUT /settings/llm`; `GET /llm/usage` | Authenticated core proxies; usage defaults `limit=50`, `since_hours=24` |
+| `GET /llm/local-stats` | Authenticated core proxy for the web Overview "Local model server (vLLM)" card (polled every 5 s) |
 | `GET`, `PUT /settings/persona` | Authenticated core proxy for assistant name/system prompt |
 | `GET`, `PUT /settings/websearch` | Authenticated core proxy for web-search grounding policy/provider (Phase 24a) |
 
