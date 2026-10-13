@@ -185,16 +185,28 @@ from companion_core import (
 from companion_core import receipts as action_receipts
 from companion_core.action_boundary import unclaimed_action_reply
 from companion_core.briefing import BriefingItem, build_briefing
+from companion_core.calendar.feed import (
+    CalendarFeedService,
+    FeedCalendar,
+    run_refresh_loop,
+)
+from companion_core.calendar.feed_store import PostgresFeedStore
 from companion_core.calendar.models import CalendarEvent
 from companion_core.calendar.postgres_store import PostgresCalendarStore
 from companion_core.calendar.reminders import due_reminders, reminder_urgency
+from companion_core.calendar.routes import install_calendar_routes
+from companion_core.calendar.safe_fetch import FeedFetcher
 from companion_core.calendar.store import CalendarStore
 from companion_core.calendar_intent import (
+    format_leave_reply,
+    format_meetings_reply,
     format_next_event_reply,
     format_today_schedule_reply,
+    is_leave_query,
+    is_meetings_query,
     is_next_event_query,
     is_today_schedule_query,
-    today_window,
+    query_window,
 )
 from companion_core.clock_intent import format_clock_reply, match_local_clock
 from companion_core.coding_agent_client import CodingAgentServiceClient
@@ -672,6 +684,8 @@ def create_app(
     hub_base_url: str | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
     calendar_store: CalendarStore | None = None,
+    calendar_feed_service: CalendarFeedService | None = None,
+    run_calendar_feed_loop: bool = True,
     task_store: TaskStore | None = None,
     planner_store: PlannerStore | None = None,
     memory_store: MemoryStore | None = None,
@@ -718,6 +732,19 @@ def create_app(
 
     async def notepad_timezone() -> str:
         return (await app.state.persona_store.get()).timezone
+
+    async def calendar_feed_note() -> str:
+        """A calendar answer that rests on an old or missing download says so: the snapshot is the last good one, and it is not presented as current."""
+        feed = getattr(app.state, "calendar_feed", None)
+        if feed is None:
+            return ""
+        status = await feed.status()
+        if status["freshness"] == "stale":
+            hours = max(1, status["age_seconds"] // 3600)
+            return f"\n(Your calendar feed was last updated {hours} hour{'s' if hours != 1 else ''} ago, so this may be out of date.)"
+        if status["freshness"] == "never":
+            return "\n(Your calendar feed has not been loaded yet, so this only covers the other calendars.)"
+        return ""
 
     def notepad_concurrency() -> int:
         try:
@@ -793,6 +820,7 @@ def create_app(
     owns_persona_store = persona_store is None
     owns_search_settings = search_settings_store is None
     owns_calendar_store = calendar_store is None
+    owns_calendar_feed = calendar_feed_service is None
     owns_task_store = task_store is None
     owns_planner_store = planner_store is None
     owns_memory_store = memory_store is None
@@ -877,6 +905,15 @@ def create_app(
         if getattr(app.state, "accounts", None) and not isinstance(app.state.calendar_store, AccountCalendar):
             app.state.calendar_store = AccountCalendar(app.state.calendar_store, app.state.accounts)
             app.state.email_store = AccountEmail(app.state.email_store, app.state.accounts)
+        # ADR 0035: the read-only ICS feed. It needs the encrypted secret store the Google account uses, so it exists only where that does.
+        if owns_calendar_feed and owns_accounts and db is not None:
+            app.state.calendar_feed = CalendarFeedService(
+                await PostgresFeedStore.connect(db, app.state.accounts.repository.secrets),
+                FeedFetcher(allow_local=os.environ.get("CALENDAR_FEED_ALLOW_LOCAL_FOR_TESTING") == "1"), timezone=notepad_timezone,
+            )
+        if app.state.calendar_feed is not None and not isinstance(app.state.calendar_store, FeedCalendar):
+            app.state.calendar_store = FeedCalendar(app.state.calendar_store, app.state.calendar_feed)
+        feed_task = asyncio.create_task(run_refresh_loop(app.state.calendar_feed)) if app.state.calendar_feed is not None and run_calendar_feed_loop else None
 
         # Only actually dispatches drafts whose dispatch_at has passed —
         # queueing a draft doesn't send it, this loop noticing it's due
@@ -1077,6 +1114,12 @@ def create_app(
                 dispatch_task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await dispatch_task
+            if feed_task is not None:
+                feed_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await feed_task
+            if owns_calendar_feed and app.state.calendar_feed is not None:
+                await app.state.calendar_feed._store.close()
             if meeting_worker_task is not None:
                 meeting_worker_task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
@@ -1122,7 +1165,9 @@ def create_app(
     app = FastAPI(title="companion-core", lifespan=lifespan)
 
     app.state.accounts = account_service
+    app.state.calendar_feed = calendar_feed_service
     install_accounts(app, accounts_service_token)
+    install_calendar_routes(app)
 
     @app.middleware("http")
     async def protect_account_data(request, call_next):
@@ -1266,6 +1311,8 @@ def create_app(
     if account_service is not None and calendar_store is not None and email_store is not None:
         app.state.calendar_store = AccountCalendar(calendar_store, account_service)
         app.state.email_store = AccountEmail(email_store, account_service)
+    if calendar_feed_service is not None:
+        app.state.calendar_store = FeedCalendar(app.state.calendar_store, calendar_feed_service)
 
     @app.get("/health")
     async def health() -> dict[str, str]:
@@ -1496,9 +1543,21 @@ def create_app(
             privacy = Privacy.WORK_PRIVATE
         elif reachy_command == "today" or is_today_schedule_query(intent_text):
             production_handler = "calendar.today"
-            start, end = today_window(datetime.now(UTC))
-            events = await app.state.calendar_store.list_events(start, end)
-            reply = format_today_schedule_reply(events)
+            zone = await notepad_timezone()
+            window = query_window("today", datetime.now(UTC), zone)  # the owner's day, not the UTC day
+            events = await app.state.calendar_store.list_events(window.start, window.end)
+            reply = format_today_schedule_reply(events, zone) + await calendar_feed_note()
+            privacy = Privacy.WORK_PRIVATE
+        elif is_meetings_query(intent_text) or is_leave_query(intent_text):
+            leave = is_leave_query(intent_text)
+            production_handler = "calendar.leave" if leave else "calendar.meetings"
+            zone = await notepad_timezone()
+            window = query_window(intent_text, datetime.now(UTC), zone, default_days=31 if leave else None)
+            if window.problem:
+                reply = window.problem
+            else:
+                events = await app.state.calendar_store.list_events(window.start, window.end)
+                reply = (format_leave_reply(events, window.label, zone) if leave else format_meetings_reply(events, window.label, zone)) + await calendar_feed_note()
             privacy = Privacy.WORK_PRIVATE
         elif offer_reply is not None:
             production_handler = "alarms.offer"
@@ -2139,10 +2198,6 @@ def create_app(
         sync in this V0.1 default, this is how events get into the store at
         all. The agent's own access is read-only (next_event et al.)."""
         return await app.state.calendar_store.add_event(event)
-
-    @app.get("/calendar/events")
-    async def list_calendar_events(start: datetime, end: datetime) -> list[CalendarEvent]:
-        return await app.state.calendar_store.list_events(start, end)
 
     @app.get("/calendar/next")
     async def next_calendar_event() -> CalendarEvent | None:

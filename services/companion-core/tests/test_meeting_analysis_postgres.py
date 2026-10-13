@@ -47,6 +47,7 @@ from shared.models.response import Privacy
 pytestmark = pytest.mark.skipif(not os.environ.get("DATABASE_MIGRATION_TEST_URL"), reason="requires explicitly disposable Postgres with pgvector")
 KEYS = Keyring("one", {"one": b"\x01" * 32})
 ROLLBACK = Path(__file__).resolve().parents[3] / "deploy" / "homelab" / "rollback-032.sql"
+ROLLBACK_033 = ROLLBACK.with_name("rollback-033.sql")  # the head is 033 now (calendar feed): the runbook undoes it first
 NOW = datetime(2026, 10, 12, 10, 0, tzinfo=UTC)
 TEXTS = ["Let's fix the migration date.", "Agreed, we will migrate the cluster in the first week of November.", "Alice will contact the vendor about compatibility by Friday."]
 
@@ -103,7 +104,7 @@ def item_of(run, quote, kind=ItemKind.ACTION, segment=2, **over):
 # ---- migration 032 ------------------------------------------------------------------------------------------------------------------------------
 
 def test_the_migration_creates_only_bookkeeping_and_one_trigger_into_the_existing_outbox(dsn):
-    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("032_meeting_analysis",)]
+    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("033_calendar_feed",)]
     assert {r[0] for r in sql(dsn, "SELECT tablename FROM pg_tables WHERE tablename LIKE 'meeting_analysis_%'")} == {"meeting_analysis_runs", "meeting_analysis_items"}
     for table in ("meeting_analysis_runs", "meeting_analysis_items"):
         assert sql(dsn, f"SELECT count(*) FROM pg_constraint WHERE conrelid = '{table}'::regclass AND contype = 'f'") == [(0,)]  # no key into meetings or tasks
@@ -139,6 +140,7 @@ def test_the_rollback_script_removes_only_the_analysis_and_the_migration_applies
     sql(dsn, "INSERT INTO meeting_analysis_items (id, run_id, meeting_id, transcript_hash, kind, text, evidence, status, fingerprint, prompt_version, sensitivity, record_id, created_at) "
              "VALUES ('i','r','m1','h','action','t','[{\"segment\": 0}]','accepted','f','v','work-private','t1',now())")
     with psycopg.connect(dsn) as conn:
+        conn.execute(ROLLBACK_033.read_text())
         conn.execute(ROLLBACK.read_text())  # one transaction, as the script's own instructions require
     assert sql(dsn, "SELECT version_num FROM alembic_version") == [("031_documents",)]
     assert sql(dsn, "SELECT count(*) FROM pg_tables WHERE tablename LIKE 'meeting_analysis_%'") == [(0,)]
@@ -146,7 +148,7 @@ def test_the_rollback_script_removes_only_the_analysis_and_the_migration_applies
     assert sql(dsn, "SELECT text FROM tasks") == [("confirmed from a meeting",)] and sql(dsn, "SELECT count(*) FROM meetings") == [(1,)]  # authoritative data stays
     sql(dsn, "UPDATE meetings SET title = 'y'")  # the meetings trigger still works without ours
     upgrade(dsn, KEYS)
-    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("032_meeting_analysis",)] and sql(dsn, "SELECT count(*) FROM meeting_analysis_items") == [(0,)]
+    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("033_calendar_feed",)] and sql(dsn, "SELECT count(*) FROM meeting_analysis_items") == [(0,)]
 
 
 # ---- the real store -----------------------------------------------------------------------------------------------------------------------------

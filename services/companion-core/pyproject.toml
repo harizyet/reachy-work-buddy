@@ -24,6 +24,8 @@ dependencies = [
     # (see the root pyproject.toml comment; same issue reachy-embodiment
     # hit with silero-vad in Phase 8).
     "torch",
+    "icalendar>=6.1",
+    "recurring-ical-events>=3.4",
 ]
 
 [tool.uv.sources]

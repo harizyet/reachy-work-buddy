@@ -156,6 +156,7 @@ from reachy_hub import alarm_audio
 from reachy_hub.alarm_delivery import AlarmContext, AlarmDeliverer
 from reachy_hub.audit_log import AuditEntry, AuditLog
 from reachy_hub.brain import install_brain_routes
+from reachy_hub.calendar_feed import install_calendar_feed_routes
 from reachy_hub.chat_store import ChatStore, InMemoryChatStore, PostgresChatStore
 from reachy_hub.coding_agent_client import CodingAgentServiceClient
 from reachy_hub.companion_core_client import CompanionCoreClient
@@ -995,6 +996,7 @@ def create_app(
     install_brain_routes(app, require_owner_session, companion_core_client)  # Phase 47D: read-only, owner session only
     install_document_library_routes(app, require_owner_session, companion_core_client)  # Phase 50J: owner session plus CSRF; sets the trusted ceiling; core decides (and 404s) when the feature is off
     install_notepad_processing_routes(app, require_owner_session, companion_core_client)  # Phase 49: owner session plus CSRF; core decides (and 404s) when the feature is off
+    install_calendar_feed_routes(app, require_owner_session, companion_core_client)  # ADR 0035: owner session plus CSRF; the feed URL is a credential and is never returned
     install_meeting_analysis_routes(app, require_owner_session, companion_core_client)  # Phase 31: owner session plus CSRF; core decides (and 404s) when the feature is off
     install_memory_candidate_routes(app, require_owner_session, companion_core_client)  # Phase 44F: owner session plus CSRF; core decides (and 404s) when the feature is off
 

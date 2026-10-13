@@ -129,7 +129,8 @@ class CompanionCoreClient:
         right now", not "what's coming up"."""
         resp = await self._client.get(
             "/calendar/events",
-            params={"start": now.isoformat(), "end": (now + timedelta(seconds=1)).isoformat()},
+            # occupying=true: an all-day banner, a leave day, a cancelled or declined event or one shown as free does not mean the owner is busy (ADR 0035).
+            params={"start": now.isoformat(), "end": (now + timedelta(seconds=1)).isoformat(), "occupying": "true"},
             timeout=45,
         )
         resp.raise_for_status()
