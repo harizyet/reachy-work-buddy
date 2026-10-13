@@ -12,6 +12,7 @@ import {
   saveFeedConfig,
   saveFeedUrl,
   setOverride,
+  uploadFeedFile,
   type EventClass,
   type FeedEvent,
   type FeedStatus,
@@ -23,6 +24,7 @@ import { Spinner } from '../../components/ui/Spinner';
 import { selectClass } from '../settings/fields';
 
 const KEY = ['calendar-feed'];
+const SCHEDULE = ['calendar-schedule'];
 const FRESHNESS: Record<FeedStatus['freshness'], string> = {
   not_configured: 'Not set up',
   never: 'Not loaded yet',
@@ -47,7 +49,7 @@ const when = (e: FeedEvent) => {
 // The feed URL is write-only: it is sent once and only its host is shown back.
 export function CalendarFeed() {
   const client = useQueryClient();
-  const status = useQuery({ queryKey: KEY, queryFn: ({ signal }) => getFeed(signal), refetchOnMount: 'always', retry: false });
+  const status = useQuery({ queryKey: KEY, queryFn: ({ signal }) => getFeed(signal), refetchOnMount: 'always', refetchInterval: 20_000, retry: false });
   const [message, setMessage] = useState('');
   const [url, setUrl] = useState('');
   const done = (s: FeedStatus) => client.setQueryData(KEY, s);
@@ -59,6 +61,17 @@ export function CalendarFeed() {
       done(s);
       setMessage(s.error ? feedProblem(s.error) : 'Calendar feed saved and loaded.');
       void client.invalidateQueries({ queryKey: ['calendar-feed-events'] });
+      void client.invalidateQueries({ queryKey: SCHEDULE });
+    },
+    onError: fail,
+  });
+  const upload = useMutation({
+    mutationFn: uploadFeedFile,
+    onSuccess: (s) => {
+      done(s);
+      setMessage(`Calendar file loaded: ${s.event_count} events.`);
+      void client.invalidateQueries({ queryKey: ['calendar-feed-events'] });
+      void client.invalidateQueries({ queryKey: SCHEDULE });
     },
     onError: fail,
   });
@@ -68,10 +81,11 @@ export function CalendarFeed() {
       done(s);
       setMessage(s.error ? feedProblem(s.error) : 'Refreshed.');
       void client.invalidateQueries({ queryKey: ['calendar-feed-events'] });
+      void client.invalidateQueries({ queryKey: SCHEDULE });
     },
     onError: fail,
   });
-  const remove = useMutation({ mutationFn: removeFeed, onSuccess: (s) => { done(s); setMessage('Calendar feed removed.'); }, onError: fail });
+  const remove = useMutation({ mutationFn: removeFeed, onSuccess: (s) => { done(s); setMessage('Calendar feed removed.'); void client.invalidateQueries({ queryKey: SCHEDULE }); void client.invalidateQueries({ queryKey: ['calendar-feed-events'] }); }, onError: fail });
   const data = status.data;
   return (
     <Card eyebrow="CALENDAR" title="Calendar feed (read-only)">
@@ -84,7 +98,7 @@ export function CalendarFeed() {
       {data && (
         <>
           <p className="text-sm" aria-label="Calendar feed status">
-            {data.configured ? `Feed from ${data.host ?? 'a saved address'}. ${FRESHNESS[data.freshness]}` : 'No feed set up.'}
+            {data.configured ? `${data.source === 'upload' ? 'Uploaded file' : 'Feed from'} ${data.host ?? 'a saved address'}. ${FRESHNESS[data.freshness]}` : 'No feed set up.'}
             {data.last_success_at && ` Last loaded ${new Date(data.last_success_at).toLocaleString()}.`}
             {data.error && ` ${feedProblem(data.error)}`}
             {data.configured && data.freshness !== 'never' && ` ${data.event_count} events in the next ${data.config.horizon_days} days.`}
@@ -105,6 +119,24 @@ export function CalendarFeed() {
             {data.configured && <Button variant="secondary" disabled={refresh.isPending} onClick={() => refresh.mutate()}>Refresh now</Button>}
             {data.configured && <Button variant="secondary" disabled={remove.isPending} onClick={() => remove.mutate()}>Remove feed</Button>}
           </form>
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <label className="text-sm">
+              Or upload an .ics file (replaces the calendar at once; a file that cannot be read changes nothing)
+              <input
+                type="file"
+                accept=".ics,text/calendar"
+                aria-label="Upload an ICS file"
+                className="mt-1 block text-sm"
+                disabled={upload.isPending}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (file) { setMessage(''); upload.mutate(file); }
+                }}
+              />
+            </label>
+            {data.source === 'upload' && <span className="text-sm">Source: uploaded file {data.host}</span>}
+          </div>
           <Settings status={data} onSaved={(s) => { done(s); setMessage('Settings saved.'); }} onError={fail} />
           {data.configured && <Schedule status={data} onChanged={done} onError={fail} />}
         </>
@@ -161,7 +193,7 @@ function Settings({ status, onSaved, onError }: { status: FeedStatus; onSaved: (
 
 function Schedule({ status, onChanged, onError }: { status: FeedStatus; onChanged: (s: FeedStatus) => void; onError: (e: unknown) => void }) {
   const events = useQuery({
-    queryKey: ['calendar-feed-events', status.last_success_at, JSON.stringify(status.overrides), status.config.rules],
+    queryKey: ['calendar-feed-events', status.generation, status.last_success_at, JSON.stringify(status.overrides), status.config.rules],
     queryFn: ({ signal }) => {
       const start = new Date();
       start.setHours(0, 0, 0, 0);

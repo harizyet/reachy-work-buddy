@@ -18,7 +18,8 @@ const ev = (over: Record<string, unknown> = {}) => ({
   status: 'confirmed', response: null, redacted: false, title_missing: false, source: 'ics', event_key: 'ics:a:0', series_key: 'ics:a', recurring: false, remind: true, remind_blocked: null, ...over,
 });
 
-function setup(options: { feed?: Record<string, unknown>; events?: Record<string, unknown>[]; saveError?: { code: number; detail: string } } = {}) {
+function setup(options: { feed?: Record<string, unknown>; events?: Record<string, unknown>[]; saveError?: { code: number; detail: string }; uploadError?: string } = {}) {
+  const uploads: { type: string; name: string; body: unknown }[] = [];
   createFakeHub({ status: { ...SAMPLE_STATUS, default_user_id: 'owner-user', owner_bound: true } });
   const base = globalThis.fetch;
   const server = { feed: status(options.feed), events: options.events ?? [], calls: [] as { call: string; body: any }[] };
@@ -26,7 +27,7 @@ function setup(options: { feed?: Record<string, unknown>; events?: Record<string
     const url = new URL(String(input), 'http://hub.test');
     if (!url.pathname.startsWith('/calendar-feed')) return base(input, init);
     const method = init?.method ?? 'GET';
-    const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+    const body = typeof init?.body === 'string' ? JSON.parse(init.body) : undefined; // an upload sends the file itself
     const call = `${method} ${url.pathname}`;
     server.calls.push({ call, body });
     if (call === 'GET /calendar-feed') return jsonResponse(server.feed);
@@ -34,6 +35,12 @@ function setup(options: { feed?: Record<string, unknown>; events?: Record<string
       if (body.url && options.saveError) return jsonResponse({ detail: options.saveError.detail }, options.saveError.code);
       if (body.url) server.feed = status({ configured: true, host: new URL(body.url).hostname, freshness: 'fresh', last_success_at: '2030-01-02T07:00:00Z', age_seconds: 0, event_count: server.events.length, config: server.feed.config, overrides: server.feed.overrides });
       if (body.config) server.feed = { ...server.feed, config: body.config } as any;
+      return jsonResponse(server.feed);
+    }
+    if (call === 'PUT /calendar-feed/upload') {
+      uploads.push({ type: String((init?.headers as Record<string, string>)['Content-Type']), name: decodeURIComponent(String((init?.headers as Record<string, string>)['X-Filename'])), body: init?.body });
+      if (options.uploadError) return jsonResponse({ detail: options.uploadError }, 400);
+      server.feed = status({ configured: true, host: uploads.at(-1)!.name, source: 'upload', freshness: 'fresh', sync_state: 'ok', last_success_at: '2030-01-02T07:00:00Z', age_seconds: 0, event_count: 5, generation: 7, config: server.feed.config, overrides: {} });
       return jsonResponse(server.feed);
     }
     if (call === 'POST /calendar-feed/refresh') return jsonResponse(server.feed);
@@ -47,7 +54,7 @@ function setup(options: { feed?: Record<string, unknown>; events?: Record<string
     if (call === 'DELETE /calendar-feed/overrides') return jsonResponse(server.feed);
     return jsonResponse({ detail: 'Not Found' }, 404);
   }));
-  return server;
+  return Object.assign(server, { uploads });
 }
 
 afterEach(() => vi.unstubAllGlobals());
@@ -146,5 +153,28 @@ describe('Calendar feed card', () => {
     await user.click(await c.findByRole('button', { name: 'Remove feed' }));
     await waitFor(() => expect(c.getByLabelText('Calendar feed status')).toHaveTextContent('No feed set up.'));
     expect(server.calls.map((x) => x.call)).toContain('DELETE /calendar-feed');
+  });
+
+  it('uploads an ICS file as the new source and shows what was loaded; a file that cannot be read is refused in words', async () => {
+    const server = setup({ feed: { configured: true, host: 'calendar.example.com', freshness: 'fresh', last_success_at: '2030-01-02T07:00:00Z', age_seconds: 0 } });
+    renderApp('#/settings/accounts');
+    const user = userEvent.setup();
+    const c = await card();
+    const file = new File(['BEGIN:VCALENDAR\nEND:VCALENDAR\n'], 'my week.ics', { type: 'text/calendar' });
+    await user.upload(await c.findByLabelText('Upload an ICS file'), file);
+    await waitFor(() => expect(c.getByLabelText('Calendar feed status')).toHaveTextContent('Uploaded file my week.ics. Up to date'));
+    expect(server.uploads[0]).toMatchObject({ type: 'text/calendar', name: 'my week.ics' });
+    expect(server.uploads[0]!.body).toBe(file);
+    expect(screen.getByText('Calendar file loaded: 5 events.')).toBeInTheDocument();
+  });
+
+  it('refuses a bad file and keeps the status as it was', async () => {
+    setup({ feed: { configured: true, host: 'calendar.example.com', freshness: 'fresh', last_success_at: '2030-01-02T07:00:00Z', age_seconds: 0 }, uploadError: 'not_calendar' });
+    renderApp('#/settings/accounts');
+    const user = userEvent.setup();
+    const c = await card();
+    await user.upload(await c.findByLabelText('Upload an ICS file'), new File(['<html>'], 'x.ics'));
+    expect(await screen.findByText(/did not return a calendar/)).toBeInTheDocument();
+    expect(c.getByLabelText('Calendar feed status')).toHaveTextContent('Feed from calendar.example.com');
   });
 });

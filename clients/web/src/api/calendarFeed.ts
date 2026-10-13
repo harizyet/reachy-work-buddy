@@ -31,6 +31,10 @@ export interface FeedConfig {
 export interface FeedStatus {
   configured: boolean;
   host: string | null;
+  source?: 'url' | 'upload' | null;
+  sync_state?: 'not_configured' | 'never' | 'refreshing' | 'ok' | 'error' | 'stale';
+  generation?: number;
+  snapshot_revision?: string | null;
   freshness: 'not_configured' | 'never' | 'fresh' | 'stale';
   last_success_at: string | null;
   last_attempt_at: string | null;
@@ -41,6 +45,16 @@ export interface FeedStatus {
   truncated: boolean;
   config: FeedConfig;
   overrides: Record<string, string>;
+}
+/** The feed's status as the schedule carries it: the same fields without the settings and overrides. */
+export type FeedBrief = Omit<FeedStatus, 'config' | 'overrides'>;
+/** Events and status read from ONE revision of the calendar. */
+export interface Schedule {
+  generation: number;
+  snapshot_revision: string | null;
+  generated_at: string;
+  feed: FeedBrief;
+  events: FeedEvent[];
 }
 export interface FeedEvent {
   title: string;
@@ -77,6 +91,25 @@ function parseEvents(value: unknown): FeedEvent[] {
     return item as unknown as FeedEvent;
   });
 }
+
+function parseSchedule(value: unknown): Schedule {
+  if (!isObject(value) || typeof value.generation !== 'number' || !isObject(value.feed) || typeof value.feed.configured !== 'boolean') throw new ApiShapeError('calendar schedule');
+  return { ...(value as unknown as Schedule), events: parseEvents(value.events) };
+}
+
+export const getSchedule = async (start: Date, end: Date, signal?: AbortSignal): Promise<Schedule> =>
+  parseSchedule(await request(`/calendar-feed/schedule?${new URLSearchParams({ start: start.toISOString(), end: end.toISOString() })}`, { signal }));
+
+/** Sends an ICS file as the new source. The hub validates the whole file; a bad one changes nothing. */
+export const uploadFeedFile = async (file: File): Promise<FeedStatus> => {
+  const { hubBase, ApiError } = await import('./client');
+  const response = await fetch(hubBase() + '/calendar-feed/upload', {
+    method: 'PUT', cache: 'no-store', credentials: 'same-origin', headers: { 'X-Reachy-CSRF': '1', 'Content-Type': 'text/calendar', 'X-Filename': encodeURIComponent(file.name) }, body: file,
+  });
+  const body = (await response.json().catch(() => ({}))) as { detail?: unknown };
+  if (!response.ok) throw new ApiError(typeof body.detail === 'string' ? body.detail : `Request failed (${response.status})`, response.status);
+  return parseStatus(body);
+};
 
 export const getFeed = async (signal?: AbortSignal): Promise<FeedStatus> => parseStatus(await request('/calendar-feed', { signal }));
 /** Sets the feed URL (write-only) and downloads once so the owner sees whether it works. */
