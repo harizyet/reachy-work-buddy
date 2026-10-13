@@ -8,6 +8,7 @@ import { CalendarPage } from '../features/calendar/CalendarPage';
 import { ChatPage } from '../features/chat/ChatPage';
 import { CodingPage } from '../features/coding/CodingPage';
 import { DocumentsPage } from '../features/documents/DocumentsPage';
+import { HomePage } from '../features/home/HomePage';
 import { MeetingsPage } from '../features/meetings/MeetingsPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { MemorySuggestionsPage } from '../features/memory/MemorySuggestionsPage';
@@ -33,7 +34,7 @@ function NotFound() {
   return (
     <div className="py-16 text-center">
       <h1 className="text-xl font-semibold">Page not found</h1>
-      <a className="mt-3 inline-block underline" href="#/">Back to Overview</a>
+      <a className="mt-3 inline-block underline" href="#/">Back to Home</a>
     </div>
   );
 }
@@ -45,7 +46,8 @@ export function AppRoutes() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route element={<Protected />}>
-        <Route index element={<OverviewPage />} />
+        <Route index element={<HomePage />} />
+        <Route path="system" element={<OverviewPage />} />
         <Route path="meetings" element={<MeetingsPage />} />
         <Route path="meetings/:id" element={<MeetingsPage />} />
         <Route path="brain" element={<Suspense fallback={<Spinner label="Loading the Brain view" />}><BrainPage /></Suspense>} />

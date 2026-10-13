@@ -6,7 +6,7 @@ type Entry = Item | { label: string; items: Item[] };
 
 // Top-level links stay one click away; everything else sits in a category menu.
 export const NAV: Entry[] = [
-  { to: '/', label: 'Overview', end: true },
+  { to: '/', label: 'Home', end: true },
   { to: '/chat', label: 'Chat' },
   {
     label: 'Library',
@@ -32,6 +32,7 @@ export const NAV: Entry[] = [
       { to: '/activity', label: 'Activity' },
       { to: '/brain', label: 'Brain' },
       { to: '/coding', label: 'Coding agents' },
+      { to: '/system', label: 'System' },
     ],
   },
   { to: '/settings', label: 'Settings' },

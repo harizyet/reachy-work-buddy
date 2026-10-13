@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.Badge
@@ -53,6 +54,7 @@ import app.reachy.companion.data.Section
 import app.reachy.companion.data.decodeNav
 import app.reachy.companion.data.encode
 import app.reachy.companion.data.hasSecondary
+import app.reachy.companion.data.sectionFor
 import app.reachy.companion.data.sectionsOf
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -151,6 +153,7 @@ fun Shell(model: AppViewModel) {
         if (hasSecondary(nav.primary)) SecondaryNav(nav.primary, section) { nav = nav.open(it) }
         saveable.SaveableStateProvider(section.name) {
             when (section) {
+                Section.Home -> HomeScreen(model, Modifier.weight(1f), onOpen = { ref -> sectionFor(ref)?.let { nav = nav.open(it) } })
                 Section.Talk -> if (wide) TwoPane(Modifier.weight(1f), listWidth = 300, list = { ChatHistoryPanel(model) }, detail = { TalkScreen(model, speak, Modifier) })
                     else TalkScreen(model, speak, Modifier.weight(1f))
                 Section.Reminders -> RemindersScreen(model, Modifier.weight(1f))
@@ -181,6 +184,7 @@ private fun PrimaryIcon(model: AppViewModel, item: Primary) {
     BadgedBox(badge = { if (item == Primary.Meetings && model.recording) Badge(containerColor = androidx.compose.ui.graphics.Color(0xFFC62828)) }) {
         Icon(
             when (item) {
+                Primary.Home -> Icons.Default.Home
                 Primary.Talk -> Icons.AutoMirrored.Filled.Chat
                 Primary.Planner -> Icons.Default.CalendarMonth
                 Primary.Meetings -> Icons.Default.Mic

@@ -9,6 +9,17 @@ import samples from '../src/api/samples.json';
 
 export const SAMPLE_STATUS = samples.status;
 
+/** A minimal valid Home snapshot: every source empty, nothing private. */
+export const SAMPLE_HOME = {
+  generated_at: '2030-01-02T08:00:00+00:00', timezone: 'UTC', date: '2030-01-02', partial: false, restricted: false, quick_actions: [],
+  sources: { schedule: 'empty', tasks: 'empty', reminders: 'empty', reviews: 'off', weather: 'not_configured' },
+  schedule: { status: 'empty', events: [], all_day: [], next_event: null, feed_configured: false },
+  tasks: { status: 'empty', total: 0, shown: 0, items: [] },
+  reminders: { status: 'empty', upcoming_days: 7, counts: { overdue: 0, today: 0, upcoming: 0 }, overdue: [], today: [], upcoming: [] },
+  reviews: { status: 'off', total: 0 },
+  weather: { status: 'not_configured', detail: 'no_location' },
+};
+
 export interface Call {
   path: string;
   method: string;
@@ -58,7 +69,7 @@ export function renderApp(hash = '#/', client: QueryClient = testQueryClient()) 
 const NAV_GROUP: Record<string, string> = {
   Meetings: 'Library', Notes: 'Library', Documents: 'Library',
   'To Do': 'Planner', Reminders: 'Planner', Alarms: 'Planner', Calendar: 'Planner',
-  Memory: 'Assistant', Activity: 'Assistant', Brain: 'Assistant', 'Coding agents': 'Assistant',
+  Memory: 'Assistant', Activity: 'Assistant', Brain: 'Assistant', 'Coding agents': 'Assistant', System: 'Assistant',
 };
 
 /** Opens the category menu holding a page link (top-level links need no menu) and returns the link. */

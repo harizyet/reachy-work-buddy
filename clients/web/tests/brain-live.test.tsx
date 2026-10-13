@@ -140,7 +140,7 @@ describe('Brain with the owner’s records', () => {
     const { client } = renderApp('#/brain');
     const user = setup();
     await screen.findByText(/Showing 6 of 6/);
-    await user.click(screen.getByRole('link', { name: 'Overview' }));
+    await user.click(screen.getByRole('link', { name: 'Home' }));
     await waitFor(() => expect(client.getQueryCache().findAll({ queryKey: ['brain'] })).toHaveLength(0));
     expect(JSON.stringify({ ...window.localStorage }) + JSON.stringify({ ...window.sessionStorage })).not.toMatch(/Groceries|Falcon/);
   });

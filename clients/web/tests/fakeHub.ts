@@ -38,6 +38,9 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
     stations: seed.stations ?? [],
     search: seed.search ?? [],
     stopped: false,
+    home: { generated_at: '2030-01-02T08:00:00+00:00', timezone: 'UTC', date: '2030-01-02', partial: false, restricted: false, quick_actions: [], sources: { schedule: 'empty', tasks: 'empty', reminders: 'empty', reviews: 'off', weather: 'not_configured' },
+      schedule: { status: 'empty', events: [], all_day: [], next_event: null, feed_configured: false }, tasks: { status: 'empty', total: 0, shown: 0, items: [] },
+      reminders: { status: 'empty', upcoming_days: 7, counts: { overdue: 0, today: 0, upcoming: 0 }, overdue: [], today: [], upcoming: [] }, reviews: { status: 'off', total: 0 }, weather: { status: 'not_configured' } } as any,
     brain: { nodes: [] as any[], hidden: new Set<string>() },
     audit: [] as any[],
     queued: [] as any[],
@@ -168,6 +171,7 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
     }
     if (!user) return jsonResponse({ detail: 'Login required' }, 401);
     if (path === '/status') return jsonResponse(seed.status);
+    if (path === '/home') return jsonResponse(data.home);
     if (path === '/planner/tasks' && method === 'GET') return jsonResponse(data.tasks);
     if (path === '/planner/tasks' && method === 'POST') {
       const task: FakeTask = { id: nextId('t'), text: body.text, status: 'open' };

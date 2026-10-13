@@ -2,13 +2,14 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createFakeHub } from './fakeHub';
-import { json, renderApp, SAMPLE_STATUS, stubHub } from './helpers';
+import { json, renderApp, SAMPLE_HOME, SAMPLE_STATUS, stubHub } from './helpers';
 
 afterEach(() => vi.unstubAllGlobals());
 
 const signedIn = {
   '/auth/me': () => json({ username: 'owner' }),
   '/status': () => json(SAMPLE_STATUS),
+  '/home': () => json(SAMPLE_HOME),
 };
 
 describe('protected routing', () => {
@@ -30,7 +31,7 @@ describe('protected routing', () => {
   it('sends a signed-in owner away from the login page', async () => {
     stubHub(signedIn);
     renderApp('#/login');
-    expect(await screen.findByRole('heading', { name: 'System status' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Home' })).toBeInTheDocument();
   });
 
   it('shows a not-found page inside the guard for unknown routes', async () => {
@@ -41,18 +42,19 @@ describe('protected routing', () => {
 });
 
 describe('sign-in', () => {
-  it('posts credentials with the CSRF header, clears the password and reaches Overview', async () => {
+  it('posts credentials with the CSRF header, clears the password and reaches Home', async () => {
     const calls = stubHub({
       '/auth/me': () => json({ detail: 'Login required' }, 401),
       '/auth/login': () => json({ username: 'owner' }),
       '/status': () => json(SAMPLE_STATUS),
+      '/home': () => json(SAMPLE_HOME),
     });
     renderApp('#/login');
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText('Username'), 'owner');
     await user.type(screen.getByLabelText('Password'), 'correct-password');
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
-    expect(await screen.findByRole('heading', { name: 'System status' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Home' })).toBeInTheDocument();
     const login = calls.find((c) => c.path === '/auth/login');
     expect(login?.body).toEqual({ username: 'owner', password: 'correct-password' });
     expect(login?.headers['X-Reachy-CSRF']).toBe('1');
@@ -76,7 +78,7 @@ describe('sign-in', () => {
 describe('logout and session expiry clear private data', () => {
   it('drops the query cache and the page on logout, even if the request fails', async () => {
     const calls = stubHub({ ...signedIn, '/auth/logout': () => json({ detail: 'boom' }, 500) });
-    const { client } = renderApp('#/');
+    const { client } = renderApp('#/system');
     await screen.findByRole('heading', { name: 'System status' });
     expect(client.getQueryData(['status'])).toBeDefined();
     await userEvent.setup().click(screen.getByRole('button', { name: 'Log out' }));
@@ -92,7 +94,7 @@ describe('logout and session expiry clear private data', () => {
       '/auth/me': () => json({ username: 'owner' }),
       '/status': () => (expired ? json({ detail: 'Login required' }, 401) : json(SAMPLE_STATUS)),
     });
-    const { client } = renderApp('#/');
+    const { client } = renderApp('#/system');
     await screen.findByText('Reachy hub');
     expired = true;
     await client.refetchQueries({ queryKey: ['status'] }).catch(() => undefined);
@@ -102,10 +104,10 @@ describe('logout and session expiry clear private data', () => {
   });
 });
 
-describe('Overview', () => {
+describe('System page', () => {
   it('lists components, a registered robot and usage from the hub status', async () => {
     stubHub(signedIn);
-    renderApp('#/');
+    renderApp('#/system');
     const card = await screen.findByRole('region', { name: 'Components' });
     for (const name of ['Reachy hub', 'Companion core', 'Language model', 'Telegram', 'desk']) {
       expect(within(card).getByText(name)).toBeInTheDocument();
@@ -121,7 +123,7 @@ describe('Overview', () => {
       '/auth/me': () => json({ username: 'owner' }),
       '/status': () => (fail ? json({ detail: 'Companion core unavailable' }, 502) : json(SAMPLE_STATUS)),
     });
-    renderApp('#/');
+    renderApp('#/system');
     expect(await screen.findByRole('alert')).toHaveTextContent('Companion core unavailable');
     fail = false;
     await userEvent.setup().click(screen.getByRole('button', { name: 'Try again' }));
@@ -131,7 +133,7 @@ describe('Overview', () => {
   it('marks degraded components and never interprets server text as HTML', async () => {
     const hostile = { ...SAMPLE_STATUS, telegram: { ...SAMPLE_STATUS.telegram, configured: true, healthy: false, last_poll_error: '<img src=x onerror=alert(1)>' }, companion_core: { status: 'unavailable' } };
     stubHub({ ...signedIn, '/status': () => json(hostile) });
-    const { container } = renderApp('#/');
+    const { container } = renderApp('#/system');
     await screen.findByText('Reachy hub');
     expect(container.querySelector('img')).toBeNull();
     expect(screen.getByText(/<img src=x onerror=alert\(1\)>/)).toBeInTheDocument();
@@ -144,7 +146,7 @@ describe('Overview', () => {
       '/auth/me': () => json({ username: 'owner' }),
       '/status': () => (fail ? json({ detail: 'down' }, 502) : json(SAMPLE_STATUS)),
     });
-    const { client } = renderApp('#/');
+    const { client } = renderApp('#/system');
     await screen.findByText('Reachy hub');
     fail = true;
     await client.refetchQueries({ queryKey: ['status'] }).catch(() => undefined);
@@ -153,7 +155,7 @@ describe('Overview', () => {
   });
 });
 
-describe('Overview extras', () => {
+describe('System page extras', () => {
   const withUsage = {
     ...SAMPLE_STATUS,
     llm: {
@@ -174,7 +176,7 @@ describe('Overview extras', () => {
 
   it('shows the model-call table with literal text, an escalation note and missing token counts as dashes', async () => {
     stubHub({ '/auth/me': () => json({ username: 'owner' }), '/status': () => json(withUsage), '/websearch/log': () => json({ usage: null, entries: [] }) });
-    const { container } = renderApp('#/');
+    const { container } = renderApp('#/system');
     const table = within(await screen.findByRole('table'));
     expect(table.getByText('local / qwen')).toBeInTheDocument();
     expect(table.getByText('12 / 3')).toBeInTheDocument();
@@ -190,7 +192,7 @@ describe('Overview extras', () => {
     const hub = createFakeHub({ status: { ...SAMPLE_STATUS, default_user_id: 'owner-user' } });
     hub.data.audit = [{ action: null, reason: null, delivery_channel: 'reachy' }, { action: 'dnd', reason: 'do not disturb' }];
     hub.data.queued = [{ text: 'Reminder: call <b>Lisa</b>' }, { reason: 'policy' }, {}];
-    renderApp('#/');
+    renderApp('#/system');
     expect(await screen.findByText('This month (2030-01, UTC)')).toBeInTheDocument();
     expect(screen.getByText('brave', { exact: false })).toBeInTheDocument();
     expect(await screen.findByText('response · reachy')).toBeInTheDocument();
@@ -204,7 +206,7 @@ describe('Overview extras', () => {
   it('says so when companion core cannot report usage', async () => {
     const degraded = { ...SAMPLE_STATUS, llm: { ...SAMPLE_STATUS.llm, usage: { status: 'unavailable' } } };
     stubHub({ '/auth/me': () => json({ username: 'owner' }), '/status': () => json(degraded), '/websearch/log': () => json({ usage: null, entries: [] }) });
-    renderApp('#/');
+    renderApp('#/system');
     expect((await screen.findAllByText('Usage unavailable — companion core is not responding.')).length).toBeGreaterThan(0);
   });
 });

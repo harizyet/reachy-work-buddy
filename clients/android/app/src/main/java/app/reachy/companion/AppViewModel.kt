@@ -169,6 +169,67 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         } catch (e: Exception) { "The calendar could not be loaded" }
     }
 
+    // --- Home (docs/phase-51.md) ---------------------------------------------------------------------------------------------------------------------
+    var homeView by mutableStateOf<app.reachy.companion.data.HomeSnapshot?>(null); private set
+    var homeCheckedMs by mutableStateOf<Long?>(null); private set
+    /** True when the last attempt to reach the hub failed, so what is shown is the copy saved on this phone (or nothing yet). */
+    var homeOffline by mutableStateOf(false); private set
+    var homeLoading by mutableStateOf(false); private set
+    var homeBusy by mutableStateOf<Set<String>>(emptySet()); private set
+    var homeError by mutableStateOf<String?>(null); private set
+    var homeBrief by mutableStateOf<app.reachy.companion.data.HomeBrief?>(null); private set
+    var homeBriefBusy by mutableStateOf(false); private set
+    var homeBriefError by mutableStateOf<String?>(null); private set
+
+    /** Shows the saved copy at once (so Home is never blank offline), then asks the hub for the current snapshot. */
+    fun openHome() {
+        if (homeView == null) HomeCache.read(getApplication())?.let { homeView = it.view; homeCheckedMs = it.checkedAtMs; homeOffline = true }
+        loadHome()
+    }
+
+    fun loadHome() {
+        viewModelScope.launch {
+            homeLoading = true
+            try {
+                val view = api.home()
+                val now = System.currentTimeMillis()
+                homeView = view; homeCheckedMs = now; homeOffline = false; homeError = null
+                HomeCache.write(getApplication(), CachedHome(view, now))
+            } catch (e: ApiException) { homeOffline = true; homeError = if (e.unauthorized) "Sign in again" else "Home could not be loaded (${e.message})" }
+            catch (e: Exception) { homeOffline = true; homeError = null }
+            finally { homeLoading = false }
+        }
+    }
+
+    /** One card refreshes on its own: only its section changes, and the others keep what they show. */
+    fun refreshHomeSection(name: String) {
+        if (name in homeBusy) return
+        viewModelScope.launch {
+            homeBusy = homeBusy + name
+            try {
+                val fresh = api.home(listOf(name))
+                val merged = homeView?.let { app.reachy.companion.data.mergeSection(it, fresh, name) } ?: fresh
+                val now = System.currentTimeMillis()
+                homeView = merged; homeOffline = false; homeError = null; homeCheckedMs = now
+                HomeCache.write(getApplication(), CachedHome(merged, now))
+            } catch (e: ApiException) { homeError = if (e.unauthorized) "Sign in again" else "That section could not be refreshed" }
+            catch (e: Exception) { homeError = "The hub could not be reached"; homeOffline = true }
+            finally { homeBusy = homeBusy - name }
+        }
+    }
+
+    fun briefMe() {
+        viewModelScope.launch {
+            homeBriefBusy = true; homeBriefError = null
+            try { homeBrief = api.homeBrief(true) }
+            catch (e: ApiException) { homeBriefError = if (e.unauthorized) "Sign in again" else "The briefing could not be prepared" }
+            catch (e: Exception) { homeBriefError = "The hub could not be reached, so there is no briefing right now" }
+            finally { homeBriefBusy = false }
+        }
+    }
+
+    fun closeBrief() { homeBrief = null; homeBriefError = null }
+
     /** Retries clips whose upload failed earlier, then refreshes the list. */
     fun retryPendingUploads() {
         viewModelScope.launch {
@@ -210,7 +271,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun signOut() {
         viewModelScope.launch { api.logout(); chat.clear(); attachedDocument = null; docs.clear(); chatHistory.clear(); tasks.clear(); notes.clear(); meetings.clear(); processing.clear(); meetingLinks.clear(); processingPoll?.cancel(); chatId = null; if (recording) stopRecording(); DeepReviewController.job = null
-            MeetingReminderScheduler.disarm(getApplication()); CalendarCache.clear(getApplication()); calendarView = null; calendarCheckedMs = null; schedule.clear(); prepared = null; reminderIssues = emptyList(); session = Session.SignedOut }
+            MeetingReminderScheduler.disarm(getApplication()); CalendarCache.clear(getApplication()); HomeCache.clear(getApplication()); homeView = null; homeCheckedMs = null; homeBrief = null; homeBriefError = null; homeError = null; calendarView = null; calendarCheckedMs = null; schedule.clear(); prepared = null; reminderIssues = emptyList(); session = Session.SignedOut }
     }
 
     private fun failed(e: Exception): String {

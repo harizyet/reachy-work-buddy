@@ -17,7 +17,7 @@ const hub = (stats: () => Response) => ({ '/auth/me': () => json({ username: 'ow
 describe('Local model card', () => {
   it('shows health, model and formatted metrics, with missing values as dashes', async () => {
     stubHub(hub(() => json(OK)));
-    renderApp('#/');
+    renderApp('#/system');
     const card = within(await screen.findByRole('region', { name: 'Local model server (vLLM)' }));
     expect(await card.findByText('Healthy')).toBeInTheDocument();
     expect(card.getByText('reachy-local · 8,192 token context')).toBeInTheDocument();
@@ -30,15 +30,15 @@ describe('Local model card', () => {
 
   it('says when the server is down, unconfigured or the request fails', async () => {
     stubHub(hub(() => json({ status: 'unavailable' })));
-    const first = renderApp('#/');
+    const first = renderApp('#/system');
     expect(await screen.findByText('Not responding')).toBeInTheDocument();
     first.unmount();
     stubHub(hub(() => json({ status: 'not_configured' })));
-    const second = renderApp('#/');
+    const second = renderApp('#/system');
     expect(await screen.findByText(/No local model is configured/)).toBeInTheDocument();
     second.unmount();
     stubHub(hub(() => json({ detail: 'Companion core unavailable' }, 502)));
-    renderApp('#/');
+    renderApp('#/system');
     expect(await screen.findByText(/Local model stats unavailable — Companion core unavailable/)).toBeInTheDocument();
   });
 

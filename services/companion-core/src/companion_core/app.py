@@ -260,6 +260,7 @@ from companion_core.email.workflow import (
     queue_draft_for_sending,
     run_dispatch_loop,
 )
+from companion_core.home_routes import install_home_routes
 from companion_core.hub_client import HubClient
 from companion_core.knowledge import qualify as knowledge_qualify
 from companion_core.knowledge import runtime as knowledge_runtime
@@ -350,6 +351,7 @@ from companion_core.task_intent import (
 from companion_core.tasks.models import Task, TaskStatus
 from companion_core.tasks.postgres_store import PostgresTaskStore
 from companion_core.tasks.store import TaskStore
+from companion_core.weather import WeatherService
 from companion_core.websearch.debug_log import SearchDebugLog, SearchLogEntry
 from companion_core.websearch.policy import (
     build_query,
@@ -723,6 +725,7 @@ def create_app(
     document_sources: SourceStore | None = None,
     document_worker: DocumentWorkerClient | None = None,
     run_document_sync: bool = True,
+    weather_service: WeatherService | None = None,
 ) -> FastAPI:
     documents_on = document_library_service.enabled()  # Phase 50B: read once; with it off nothing is built, no table is read, no directory is created and the routes do not exist
     analysis_on = analysis_service.enabled()  # Phase 31: read once; with it off nothing is built, no table is read, the knowledge index adds nothing and the routes do not exist
@@ -2133,6 +2136,9 @@ def create_app(
 
     if analysis_on:
         install_meeting_analysis_routes(app)
+
+    app.state.weather = weather_service or WeatherService()  # Home's weather section; it never blocks another section and fails to a status of its own
+    install_home_routes(app, notepad_provider or notepad_local_provider)  # read-only; the narrative uses the local model only
 
     if documents_on:
         install_document_library_routes(app)

@@ -93,7 +93,7 @@ describe('after the session expires (a 401 elsewhere)', () => {
     await act(async () => me[0]!.resolve(jsonResponse({ username: 'owner' })));
     await wait(50);
     expect(screen.getByRole('heading', { name: 'Sign in to Reachy' })).toBeInTheDocument();
-    expect(screen.queryByText('System status')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Home' })).not.toBeInTheDocument();
   });
 });
 
@@ -106,11 +106,11 @@ describe('across a logout and a new sign-in', () => {
     await waitFor(() => expect(pending).toHaveLength(1));
     await logout(user);
     await signInAgain(user);
-    expect(await screen.findByRole('heading', { name: 'System status' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Home' })).toBeInTheDocument();
 
     await act(async () => pending[0]!.resolve(jsonResponse({ detail: 'Login required' }, 401)));
     await wait(50);
-    expect(screen.getByRole('heading', { name: 'System status' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Home' })).toBeInTheDocument();
     expect(screen.queryByText(/session has ended/)).not.toBeInTheDocument();
   });
 
@@ -124,7 +124,7 @@ describe('across a logout and a new sign-in', () => {
     await logout(user);
     hub.release(tasksCall); // only the old session's request was slow
     await signInAgain(user, 'other');
-    await screen.findByRole('heading', { name: 'System status' });
+    await screen.findByRole('heading', { name: 'Home' });
     hub.data.tasks = []; // the second owner has no tasks
     await user.click(await navLink(user, 'To Do'));
     await screen.findByText('Nothing to do yet.');
@@ -144,7 +144,7 @@ describe('across a logout and a new sign-in', () => {
     await logout(user);
     hub.hold((c) => c === 'GET /planner/tasks'); // the new owner's list is slow
     await signInAgain(user, 'other');
-    await screen.findByRole('heading', { name: 'System status' });
+    await screen.findByRole('heading', { name: 'Home' });
     await user.click(await navLink(user, 'To Do'));
     await screen.findByText('Loading…');
     expect(document.body.textContent).not.toContain(SECRET);

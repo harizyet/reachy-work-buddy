@@ -482,6 +482,10 @@ services:
       MEMORY_CANDIDATES_CAPTURE_ENABLED: ${MEMORY_CANDIDATES_CAPTURE_ENABLED:-false}
       # Phase 49: optional Notepad processing (jobs, owner-reviewed proposals, task inquiry). Off by default; needs migration 029 first and the owner's approval (docs/phase-49.md).
       NOTEPAD_PROCESSING_ENABLED: ${NOTEPAD_PROCESSING_ENABLED:-false}
+      WEATHER_ENABLED: ${WEATHER_ENABLED:-true}  # Home's weather card (Phase 51); needs the persona location; false removes the Open-Meteo call
+      WEATHER_CACHE_MINUTES: ${WEATHER_CACHE_MINUTES:-30}
+      WEATHER_TIMEOUT_SECONDS: ${WEATHER_TIMEOUT_SECONDS:-5}
+      WEATHER_STALE_HOURS: ${WEATHER_STALE_HOURS:-6}
       # Hybrid intent router (docs/verification/intent-router-2026-10-11.md): the local model picks one existing READ handler for natural-language record questions. Default OFF: no classifier call
       # and no records-grounding clarification. Matcher narrowing, the mixed read/write refusal and 44H are not behind it.
       INTENT_ROUTER_ENABLED: ${INTENT_ROUTER_ENABLED:-false}

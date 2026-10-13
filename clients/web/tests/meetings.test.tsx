@@ -364,7 +364,7 @@ describe('Deep local review', () => {
     await waitFor(() => expect(h.calls).toContain('POST /meetings/m1/corrections/deep-review'));
     expect(await screen.findByText('Reachy is unavailable: deep review in progress.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Suggest corrections' })).toBeDisabled();
-    await user.click(screen.getByRole('link', { name: 'Overview' })); // the banner follows the owner around
+    await user.click(screen.getByRole('link', { name: 'Home' })); // the banner follows the owner around
     expect(screen.getByText('Reachy is unavailable: deep review in progress.')).toBeInTheDocument();
 
     const job = h.data.deepJobs[0];

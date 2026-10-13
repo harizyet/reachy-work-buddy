@@ -167,6 +167,7 @@ from reachy_hub.enrollment_store import (
     FilesystemEnrollmentStore,
     InMemoryEnrollmentStore,
 )
+from reachy_hub.home import install_home_routes
 from reachy_hub.interruption_policy import (
     decide_action,
     downgrade_for_presence,
@@ -998,6 +999,7 @@ def create_app(
     install_notepad_processing_routes(app, require_owner_session, companion_core_client)  # Phase 49: owner session plus CSRF; core decides (and 404s) when the feature is off
     install_calendar_feed_routes(app, require_owner_session, companion_core_client)  # ADR 0035: owner session plus CSRF; the feed URL is a credential and is never returned
     install_meeting_analysis_routes(app, require_owner_session, companion_core_client)  # Phase 31: owner session plus CSRF; core decides (and 404s) when the feature is off
+    install_home_routes(app, require_owner_session, companion_core_client)  # Phase 51: the Home snapshot and brief; read-only, owner session only (CSRF for the POST)
     install_memory_candidate_routes(app, require_owner_session, companion_core_client)  # Phase 44F: owner session plus CSRF; core decides (and 404s) when the feature is off
 
     @app.get(PRIVACY_STATE, dependencies=[Depends(require_remote_auth)])
