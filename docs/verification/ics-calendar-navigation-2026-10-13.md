@@ -32,3 +32,8 @@ Behaviour checks (accessibility tree via uiautomator, as noted):
 * Back on a primary destination does not return to Talk (unchanged); Back inside a screen behaves as before.
 * Not run on a physical phone or a real Fold. Screenshot of the unfolded layout is the emulator's 2208x1840 mode; folding/unfolding live (configuration change) was not exercised.
 * Earlier note: an `adb am start` check needs nested quoting for titles with spaces; the first deep-link attempt failed for that reason, not the app.
+
+## Addendum: no obsolete reminder notification after a sync (release criterion)
+
+A notification already showing for a meeting that was later moved, cancelled, declined or removed is now taken down when the phone synchronises (`staleNotifications`: compares what each shown notification announced with the hub's current set; an unchanged meeting's notification is left alone). Before this, only the *pending alarm* was cancelled and a notification already in the shade stayed.
+Emulator, throwaway hub: two meetings 6 and 7 minutes out, both notifications showing; one moved 34 minutes later and one cancelled in the calendar. With the app open on the Calendar tab both notifications were gone within about 20 seconds and the moved one was re-armed (21:24). With the app on another screen and in the background, nothing changed until the background check (forced here with `cmd jobscheduler run`; in normal use it runs about every 15 minutes), after which both were gone and the moved meeting's alarm was re-armed. 114 JVM tests (1 new).

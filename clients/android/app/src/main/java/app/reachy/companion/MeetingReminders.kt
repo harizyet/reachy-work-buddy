@@ -27,6 +27,7 @@ import app.reachy.companion.data.reconcile
 import app.reachy.companion.data.reminderIssues
 import app.reachy.companion.data.reminderText
 import app.reachy.companion.data.reminderTitle
+import app.reachy.companion.data.staleNotifications
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -52,6 +53,8 @@ data class ReminderState(
     val syncFailed: Boolean = false,
     val lastSyncAtMs: Long = 0L,
     val blockedAtMs: Long = 0L,
+    /** Notifications this phone has posted and not seen dismissed: occurrence key to the start time each announced, so a moved or cancelled meeting's notification can be taken down. */
+    val shown: Map<String, Long> = emptyMap(),
 )
 
 object ReminderStore {
@@ -132,14 +135,20 @@ object MeetingReminderScheduler {
                 runCatching { manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, item.fireAtMs, intent) }
             }
         }
-        ReminderStore.update(context) { it.copy(armed = planned.associate { p -> p.key to p.fireAtMs }) }
+        // A notification already showing for a meeting that has since been moved, cancelled or removed must not stay: it would send the owner to a meeting that is not there.
+        val stale = staleNotifications(state.shown, set)
+        val shownNow = NotificationManagerCompat.from(context)
+        for (key in stale) shownNow.cancel(notificationId(key))
+        ReminderStore.update(context) { it.copy(armed = planned.associate { p -> p.key to p.fireAtMs }, shown = it.shown - stale) }
     }
 
     /** Cancels every armed alarm and shown notification and forgets the stored calendar data (sign-out, or the owner turning reminders off). */
     fun disarm(context: Context) {
         val manager = context.getSystemService(AlarmManager::class.java)
         val shown = NotificationManagerCompat.from(context)
-        for (key in ReminderStore.read(context).armed.keys) { manager.cancel(fireIntent(context, key)); shown.cancel(notificationId(key)) }
+        val state = ReminderStore.read(context)
+        for (key in state.armed.keys) manager.cancel(fireIntent(context, key))
+        for (key in state.armed.keys + state.shown.keys) shown.cancel(notificationId(key))
         // The calendar titles and times go; which meetings already have a recording stays, so a reminder turned on again cannot make a second record.
         ReminderStore.update(context) { ReminderState(recorded = it.recorded) }
     }
@@ -215,14 +224,14 @@ object MeetingReminderScheduler {
             .addAction(0, "Dismiss", dismissIntent(context, key))
             .build()
         manager.notify(notificationId(key), notification)
-        ReminderStore.update(context) { it.copy(fired = it.fired + firedKey(key, startMs)) }
+        ReminderStore.update(context) { it.copy(fired = it.fired + firedKey(key, startMs), shown = it.shown + (key to startMs)) }
         return true
     }
 
     fun dismiss(context: Context, key: String) {
         NotificationManagerCompat.from(context).cancel(notificationId(key))
         val startMs = ReminderStore.read(context).set?.reminders?.firstOrNull { it.eventKey == key }?.start?.let { runCatching { millis(it) }.getOrNull() } ?: return
-        ReminderStore.update(context) { it.copy(fired = it.fired + firedKey(key, startMs)) }
+        ReminderStore.update(context) { it.copy(fired = it.fired + firedKey(key, startMs), shown = it.shown - key) }
     }
 
     /** What an intent from a notification asks the app to prepare, or null when it is not acceptable. */

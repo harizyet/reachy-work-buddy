@@ -105,6 +105,15 @@ fun reconcile(armed: Map<String, Long>, planned: List<PlannedReminder>, rearmAll
     )
 }
 
+/**
+ * Notifications that are showing but no longer true: the meeting was cancelled, declined, removed or reclassified (no reminder for it in the hub's set), or it moved (its start is not
+ * the start the notification announced). [shown] maps an occurrence key to the start time its notification announced. A notification whose meeting is unchanged is left alone.
+ */
+fun staleNotifications(shown: Map<String, Long>, set: ReminderSet): Set<String> {
+    val current = set.reminders.filter { it.classification == "meeting" }.associate { it.eventKey to runCatching { millis(it.start) }.getOrNull() }
+    return shown.filter { (key, start) -> current[key] != start }.keys
+}
+
 /** Entries older than a day are forgotten, so the record does not grow for ever. */
 fun pruneFired(fired: Set<String>, nowMs: Long): Set<String> =
     fired.filter { (it.substringAfterLast('@', "").toLongOrNull() ?: 0L) > nowMs - 24 * 3_600_000L }.toSet()
