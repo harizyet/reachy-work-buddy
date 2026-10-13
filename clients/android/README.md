@@ -2,9 +2,13 @@
 
 A user-centred phone client for reachy-hub (version 0.17.1): **Talk** (voice and chat, with previous
 chats), **Reminders** (To Do and timed reminders), **Notes**, **Meetings** (record, review, play back, edit) and
-**Documents** and **Alarms**. Settings and configuration stay in the [web control panel](../operator-ui/README.md).
+**Documents** and **Alarms**, grouped under four destinations (below). Settings and configuration stay in the [web control panel](../operator-ui/README.md).
 Decision: [ADR 0029](../../docs/adr/0029-android-companion-app.md); stages:
 [Phase 40](../../docs/phase-40.md).
+
+## Navigation
+
+Four primary destinations: **Talk**; **Planner** (Calendar, Reminders, Alarms); **Meetings** (recording, history, analysis); **Library** (Notes, Documents). A bottom `NavigationBar` on a phone, a `NavigationRail` from 600 dp wide (an unfolded Fold, a tablet, landscape). Planner and Library show their screens as labelled text tabs under the app bar and each remembers the screen that was open when you come back to it. The structure is plain Compose state (`data/Navigation.kt`, tested on the JVM; no navigation library). Recording, its status bar, the chat-history drawer, notification actions and alarms are unaffected by moving between destinations. A meeting reminder's **Start recording** opens Meetings with the meeting prepared. Evidence: [navigation record](../../docs/verification/ics-calendar-navigation-2026-10-13.md).
 
 ## What it does
 
