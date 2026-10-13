@@ -144,6 +144,9 @@ object MeetingReminderScheduler {
         ReminderStore.update(context) { ReminderState(recorded = it.recorded) }
     }
 
+    /** The calendar revision the armed reminders were built from, or null before the first sync. */
+    fun appliedGeneration(context: Context): Long? = ReminderStore.read(context).set?.feed?.generation
+
     fun exactAllowed(context: Context): Boolean =
         Build.VERSION.SDK_INT < 31 || context.getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
 

@@ -206,6 +206,15 @@ class ReachyApi(baseUrl: String, private val cookieJar: PersistentCookieJar, cli
         return json.decodeFromString(ListSerializer(CalendarItem.serializer()), call(Request.Builder().url(url).build()))
     }
 
+    /** Events and the feed's status from one revision of the calendar, for the Calendar screen. */
+    suspend fun calendarSchedule(startIso: String, endIso: String): ScheduleView {
+        val url = (base + "/calendar-feed/schedule").toHttpUrl().newBuilder().addQueryParameter("start", startIso).addQueryParameter("end", endIso).build()
+        return json.decodeFromString(call(Request.Builder().url(url).build()))
+    }
+
+    /** Asks the hub to download and publish the calendar source now (the owner's manual Refresh). */
+    suspend fun refreshCalendar() { call(req("/calendar-feed/refresh").post("{}".toRequestBody("application/json".toMediaType())).build()) }
+
     suspend fun meetings(): List<Meeting> =
         json.decodeFromString(ListSerializer(Meeting.serializer()), call(req("/meetings").build()))
 

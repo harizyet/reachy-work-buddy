@@ -37,6 +37,14 @@ data class FeedBrief(
     val freshness: String = "never",
     @SerialName("age_seconds") val ageSeconds: Long? = null,
     val error: String? = null,
+    val host: String? = null,
+    val source: String? = null,
+    @SerialName("sync_state") val syncState: String? = null,
+    @SerialName("last_success_at") val lastSuccessAt: String? = null,
+    @SerialName("last_attempt_at") val lastAttemptAt: String? = null,
+    @SerialName("event_count") val eventCount: Int = 0,
+    val generation: Long = 0,
+    @SerialName("snapshot_revision") val snapshotRevision: String? = null,
 )
 
 @Serializable
