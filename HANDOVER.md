@@ -4,9 +4,9 @@ Current session snapshot: 2026-10-12 (newest sections first: Phase 31 local buil
 The [documentation index](docs/README.md) defines ownership;
 [project state](docs/project-state.md) owns deployment limits and open acceptance.
 
-## Overview vLLM card (2026-10-13; local, uncommitted, NOT deployed)
+## Overview vLLM card DEPLOYED 2026-10-13 (core + hub; owner browser check pending)
 
-New Overview card "Local model server (vLLM)": core `GET /llm/local-stats` (`companion_core/llm/local_stats.py`) reads vLLM `/health`, `/v1/models`, `/metrics` at the configured local provider URL and returns a fixed set of numbers; hub proxy in `operator.py`; web `features/overview/LocalModelCard.tsx`. Counters are since the vLLM container started. Tests: `test_local_stats.py` (core), hub chain test in `test_operator.py`, web `local-model-card.test.tsx` (293 web tests pass); ruff clean. **Not exercised against the real vLLM container or in a browser; deploy (core + hub rebuild) needs the owner.** Stage explicitly.
+[Deployment record](docs/verification/overview-vllm-card-deployment-2026-10-13.md). Commit `913c46e`; core `3f792ddf4d35` (was `df320da58e2f`), hub `bb72e8f83964` (was `ca1dd34bcede`); rollback tags `reachy-rollback/*:pre-vllm-card`, keep until accepted. New Overview card "Local model server (vLLM)": core `GET /llm/local-stats` reads vLLM `/health`, `/v1/models`, `/metrics`; verified live against the real vLLM. Core restart ended the Phase 48 segment that began 2026-10-12 14:27:44 UTC (counters `{}`, saved in `~/reachy-backups/phase48-boundary-vllm-card/`); new segment from this restart. Phase 31 trial flag unchanged.
 
 ## Phase 31 trial ENABLED 2026-10-12 14:27 UTC (no analysis run yet): core `df320da58e2f` (`fa418f2`), `MEETING_ANALYSIS_ENABLED=true` in `deploy/homelab/.env` (backup `.env.bak-before-meeting-analysis`); [Step A](docs/verification/phase-31-trial-step-a-deployment-2026-10-12.md), [Step B](docs/verification/phase-31-trial-step-b-activation-2026-10-12.md); Phase 48 segment from 14:27:44 UTC, 8 `probe-031` turns to subtract in total; rollback: restore `.env` backup and recreate core. Prompt, validator, 7B frozen; do not start Deep Local jobs; only the owner starts an analysis. Earlier text: Phase 31 meeting analysis DEPLOYED 2026-10-12 14:06 UTC with the feature OFF (branch `phase-31-meeting-analysis` `d94293b`, not merged)
 
