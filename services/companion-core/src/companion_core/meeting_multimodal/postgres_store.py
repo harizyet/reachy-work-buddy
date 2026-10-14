@@ -31,7 +31,7 @@ from shared.models.response import Privacy
 _LINK = "meeting_id, document_id, link_status, linked_by, created_at, updated_at"
 _RUN = "id, meeting_id, kind, status, ceiling, transcript_hash, doc_revisions, inputs_hash, attempts, error, model, force, stats, created_at, started_at, finished_at, lease_until"
 _ALIGN = ("id, run_id, meeting_id, window_key, segment_ids, start_s, end_s, document_id, page, locator, slide_title, alternatives, certainty, method, relation, reason, model_note, shared_terms, "
-          "explicit_refs, contradictions, transcript_revision, document_revision, analysis_version, model, sensitivity, project_scope, created_at")
+          "explicit_refs, contradictions, unchecked, transcript_revision, document_revision, analysis_version, model, sensitivity, project_scope, created_at")
 _REVIEW = "meeting_id, window_key, decision, document_id, page, rejected_document_id, rejected_page, transcript_revision, document_revision, created_at, updated_at"
 _ITEM = ("id, run_id, meeting_id, transcript_hash, kind, text, evidence, assignee, stated_time, ambiguity, support, status, fingerprint, model, prompt_version, sensitivity, project_scope, "
          "final_text, edited, record_kind, record_id, created_at, accepting_at, decided_at")
@@ -146,6 +146,10 @@ class PostgresMultimodalStore:
                 f") RETURNING {_RUN}", (now, now + timedelta(seconds=LEASE_SECONDS), now))).fetchone()
         return _run(row) if row else None
 
+    async def requeue_processing(self) -> int:
+        async with self._pool.connection() as conn:
+            return (await conn.execute("UPDATE meeting_multimodal_runs SET status = 'queued', lease_until = NULL WHERE status = 'processing'")).rowcount
+
     async def _processing_meeting(self, conn, run_id: str) -> str | None:
         row = await (await conn.execute("SELECT meeting_id FROM meeting_multimodal_runs WHERE id = %s AND status = 'processing' FOR UPDATE", (run_id,))).fetchone()
         return row[0] if row else None
@@ -162,10 +166,10 @@ class PostgresMultimodalStore:
             await conn.execute("DELETE FROM meeting_slide_alignments WHERE meeting_id = %s", (meeting_id,))  # the previous run's estimates; the owner's reviews are a different table
             for a in alignments:
                 await conn.execute(
-                    f"INSERT INTO meeting_slide_alignments ({_ALIGN}) VALUES ({_marks(27)})",
+                    f"INSERT INTO meeting_slide_alignments ({_ALIGN}) VALUES ({_marks(28)})",
                     (a.id, a.run_id, a.meeting_id, a.window_key, Jsonb(a.segment_ids), a.start, a.end, a.document_id, a.page, a.locator, a.slide_title,
                      Jsonb([x.model_dump(mode="json") for x in a.alternatives]), a.certainty.value, a.method.value, a.relation.value, a.reason, a.model_note, Jsonb(a.shared_terms),
-                     Jsonb(a.explicit_refs), Jsonb([x.model_dump(mode="json") for x in a.contradictions]), a.transcript_revision, a.document_revision, a.analysis_version, a.model,
+                     Jsonb(a.explicit_refs), Jsonb([x.model_dump(mode="json") for x in a.contradictions]), a.unchecked, a.transcript_revision, a.document_revision, a.analysis_version, a.model,
                      a.sensitivity.value, a.project_scope, a.created_at))
             await self._succeed(conn, run_id, model, stats, now)
             return len(alignments)

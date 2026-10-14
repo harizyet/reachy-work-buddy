@@ -12,7 +12,6 @@ Phase 31's transcript-only analysis is a separate capability and is not changed:
 
 from __future__ import annotations
 
-import json
 import re
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -37,6 +36,7 @@ from companion_core.meeting_multimodal.models import (
     ItemKind,
     ItemStatus,
     Support,
+    first_json_object,
     item_fingerprint,
     locator,
     same_item,
@@ -111,13 +111,12 @@ class _Output(BaseModel):
 
 
 def parse_output(raw: str) -> _Output | None:
-    text = raw.strip()
-    start, end = text.find("{"), text.rfind("}")
-    if start < 0 or end <= start:
+    found = first_json_object(raw)
+    if found is None:
         return None
     try:
-        return _Output.model_validate(json.loads(text[start:end + 1]))
-    except (ValueError, ValidationError):
+        return _Output.model_validate(found)
+    except ValidationError:
         return None
 
 

@@ -1042,6 +1042,7 @@ def create_app(
                     mm_store, app.state.meeting_store, app.state.document_library, app.state.task_store, app.state.planner_store, provider=meeting_multimodal_provider or notepad_local_provider)
                 app.state.document_library.deletion_listeners.append(app.state.meeting_multimodal_service.document_deleted)
             if run_multimodal_runner:
+                await app.state.meeting_multimodal_service.requeue_interrupted()  # a run the previous process left processing starts again now, not after its lease
                 multimodal_task = asyncio.create_task(notepad_service.run_loop(app.state.meeting_multimodal_service, concurrency=1))  # the same bounded runner: process_next, reconcile, wake
         candidate_store = candidate_task = None
         if candidates_on:

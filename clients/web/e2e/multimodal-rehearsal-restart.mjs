@@ -1,0 +1,38 @@
+// Phase 53 UAT rehearsal (not part of the CI suite). Needs the disposable stack described in docs/verification/phase-53-uat-rehearsal-2026-10-14.md; run from clients/web: node e2e/multimodal-rehearsal-restart.mjs <scratch dir holding deck.pdf>
+import { chromium } from '@playwright/test';
+import { execSync } from 'node:child_process';
+import fs from 'node:fs';
+const SP = process.argv[2]; const BASE = 'http://127.0.0.1:' + (process.env.MM_PORT ?? '18060') + '/web/';
+const out = {}; const say = (k, v) => { out[k] = v; console.log(k, JSON.stringify(v)); };
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
+let analysisPosts = 0; page.on('request', (r) => { if (r.method() === 'POST' && /multimodal\/analysis$/.test(r.url())) analysisPosts++; });
+await page.goto(BASE + '#/meetings/uat-meeting');
+await page.getByLabel('Username').fill('owner'); await page.getByLabel('Password').fill('correct-password'); await page.getByRole('button', { name: 'Sign in' }).click();
+await page.getByRole('navigation', { name: 'Main' }).waitFor();
+await page.goto(BASE + '#/meetings/uat-meeting');
+await page.getByRole('button', { name: 'Documents', exact: true }).click();
+const btn = page.getByRole('button', { name: 'Analyse with documents' });
+await btn.dblclick();
+const prog = page.getByRole('status', { name: 'Analysing with the documents progress' });
+await prog.waitFor({ timeout: 15000 });
+say('double_click_posts', analysisPosts);
+await page.waitForTimeout(12000);
+say('progress_before_kill', await prog.innerText());
+const t = Date.now();
+execSync(`kill -9 $(cat ${SP}/server.pid)`);
+say('killed', true);
+await page.waitForTimeout(8000);
+say('ui_while_hub_down', (await page.locator('section[aria-label="Attached documents"]').innerText().catch(() => 'section gone')).replace(/\s+/g, ' ').slice(0, 300));
+await page.screenshot({ path: `${SP}/shots/11-hub-down.png` });
+// restart WITHOUT the stall: the interrupted run must start again at once, not after its 15 minute lease
+const restart = Date.now();
+execSync(`${SP}/start_server.sh`);
+await page.getByText('Analysis: Done').waitFor({ timeout: 300000 });
+say('restart_to_done_s', (Date.now() - restart) / 1000);
+say('tab_still_open_without_reload', await page.getByLabel('Combined findings').isVisible());
+say('findings', await page.getByLabel('Combined findings').locator('h4').allInnerTexts());
+say('tasks', await page.evaluate(async () => (await (await fetch('/planner/tasks')).json()).length));
+await page.screenshot({ path: `${SP}/shots/12-after-restart.png`, fullPage: true });
+fs.writeFileSync(`${SP}/uat3.json`, JSON.stringify(out, null, 1));
+await browser.close();

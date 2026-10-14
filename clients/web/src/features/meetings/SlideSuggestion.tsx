@@ -69,9 +69,20 @@ export function SlideSuggestion({ window: w, continued, actions }: { window: Win
     }
     return (
       <div className="mt-2 text-xs text-[var(--muted)]" data-window={w.window_key}>
-        No confident slide association.{' '}
+        {w.unchecked ? 'Not checked: the model’s answer for this part could not be used.' : 'No confident slide association.'}{' '}
         <button type="button" className="underline" aria-expanded={picking} onClick={() => setPicking((v) => !v)}>Choose a page</button>
         {picking && <PagePicker documents={actions.documents} disabled={actions.busy} onPick={(t) => { setPicking(false); actions.onReview(w.window_key, 'replaced', t); }} />}
+      </div>
+    );
+  }
+
+  // A Low estimate is a hint, not a result: one muted line, no box, no certainty badge, and it opens to the same details and corrections.
+  const low = shown.authority === 'suggested' && shown.certainty === 'low' && !stale && !open;
+  if (low) {
+    return (
+      <div className="mt-1 text-xs text-[var(--muted)]" data-window={w.window_key} data-certainty="low">
+        Possibly page {shown.page}{shown.slide_title ? ` (${shown.slide_title})` : ''} · low certainty ·{' '}
+        <button type="button" className="underline" aria-expanded={false} aria-label={`Details for slide ${shown.page} at ${formatTimestamp(w.start)}`} onClick={() => setOpen(true)}>Details</button>
       </div>
     );
   }
@@ -91,7 +102,7 @@ export function SlideSuggestion({ window: w, continued, actions }: { window: Win
         <span className="min-w-0 flex-1 break-words">
           <strong>{owner ? 'Slide' : 'Likely slide'} {shown.page}</strong>
           {shown.slide_title ? ` — ${shown.slide_title}` : ''}
-          <span className="text-[var(--muted)]">{` · ${shown.document_title}`}</span>
+          <span className="text-[var(--muted)]">{` · ${shown.document_title} · this part of the transcript, ${formatTimestamp(w.start)}–${formatTimestamp(w.end)}`}</span>
         </span>
         {shown.certainty && <span className="rounded border border-[var(--border)] px-1 text-xs" title={CERTAINTY_HELP[shown.certainty]}>{`Certainty: ${CERTAINTY_LABEL[shown.certainty]}`}</span>}
         {owner && <span className="rounded border border-[var(--accent)] px-1 text-xs">Confirmed by you</span>}

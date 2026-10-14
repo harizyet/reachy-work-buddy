@@ -79,6 +79,7 @@ _SQL = [
         shared_terms JSONB NOT NULL DEFAULT '[]',
         explicit_refs JSONB NOT NULL DEFAULT '[]',
         contradictions JSONB NOT NULL DEFAULT '[]',
+        unchecked BOOLEAN NOT NULL DEFAULT FALSE,
         transcript_revision TEXT NOT NULL,
         document_revision TEXT NOT NULL DEFAULT '',
         analysis_version TEXT NOT NULL,

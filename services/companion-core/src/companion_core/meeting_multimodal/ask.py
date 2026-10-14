@@ -16,7 +16,6 @@ With nothing retrieved the reply is fixed and the model is not called. The excer
 
 from __future__ import annotations
 
-import json
 import re
 from dataclasses import dataclass, field
 
@@ -24,7 +23,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from companion_core.document_library.qa import keywords
 from companion_core.meeting_multimodal.alignment import Window, tokens
-from companion_core.meeting_multimodal.models import locator
+from companion_core.meeting_multimodal.models import first_json_object, locator
 from companion_core.notepad_processing.extraction import _INSTRUCTION
 
 MAX_TRANSCRIPT = 5  # transcript windows supplied
@@ -121,13 +120,12 @@ class _Output(BaseModel):
 
 
 def parse_output(raw: str) -> _Output | None:
-    text = raw.strip()
-    start, end = text.find("{"), text.rfind("}")
-    if start < 0 or end <= start:
+    found = first_json_object(raw)
+    if found is None:
         return None
     try:
-        return _Output.model_validate(json.loads(text[start:end + 1]))
-    except (ValueError, ValidationError):
+        return _Output.model_validate(found)
+    except ValidationError:
         return None
 
 

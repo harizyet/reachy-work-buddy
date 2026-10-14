@@ -109,6 +109,14 @@ class Readable:
     document: Document
 
 
+def counts_as_discussed(shown: dict | None, stale: bool) -> bool:
+    """Whether a page shown for a window may be used beyond the transcript card itself (as context for an analysis, as a link in an answer, as 'this page was discussed'): the owner's valid decision, or an
+    estimate of High or Medium certainty that is current. A Low estimate is shown dimly for the owner to look at and is otherwise not relied on."""
+    if shown is None or stale or shown["authority"] == "owner_stale":
+        return False
+    return shown["authority"] == "owner" or shown["certainty"] in (Certainty.HIGH.value, Certainty.MEDIUM.value)
+
+
 def state_of(run: Run | None) -> str:
     return "not_run" if run is None else run.status.value
 
@@ -246,7 +254,7 @@ class MeetingMultimodalService:
         items = [i for i in await self.store.list_items(meeting_id=meeting_id) if self._may_see(i.sensitivity, i.project_scope, access)]  # a finding that used a document above this caller's class is not listed, not counted
         arun, nrun = self._visible(arun, access), self._visible(nrun, access)
         texts = {s.index: s.text for s in segs}
-        shown = {(v["shown"]["document_id"], v["shown"]["page"]) for v in views if v["shown"] and not v["stale"] and v["shown"]["authority"] != "owner_stale"}
+        shown = {(v["shown"]["document_id"], v["shown"]["page"]) for v in views if counts_as_discussed(v["shown"], v["stale"])}
         undiscussed = [] if not aligns else [
             {"document_id": r.document.id, "document_title": r.document.title, "page": n}
             for r in docs if ready(r.document) for n in range(1, (r.document.page_count or 0) + 1) if (r.document.id, n) not in shown]
@@ -255,14 +263,19 @@ class MeetingMultimodalService:
             "sensitivity": self._effective_sensitivity(meeting, [r.document for r in docs]).value,
             "documents": [self._document_view(r) for r in docs],
             "transcript_hash": current_hash,
-            "alignment": {"state": state_of(arun), "run": arun.view() if arun else None, "transcript_changed": bool(arun and current_hash and arun.transcript_hash != current_hash),
+            "alignment": {"state": state_of(arun), "run": arun.view() if arun else None, "partial": self._partial(arun, sum(1 for a in aligns if a.unchecked), len(aligns)), "transcript_changed": bool(arun and current_hash and arun.transcript_hash != current_hash),
                           "documents_changed": bool(arun and any(arun.doc_revisions.get(d) not in (None, rev) for d, rev in revisions.items())),
                           "documents_added": bool(arun and any(d not in arun.doc_revisions for d in revisions if ready(by_id[d].document)))},
-            "analysis": {"state": state_of(nrun), "run": nrun.view() if nrun else None, "items": [self.item_view(i, texts, revisions) for i in items]},
+            "analysis": {"state": state_of(nrun), "run": nrun.view() if nrun else None, "partial": self._partial(nrun, int((nrun.stats if nrun else {}).get("chunks_failed", 0)), int((nrun.stats if nrun else {}).get("chunks", 0))), "items": [self.item_view(i, texts, revisions) for i in items]},
             "windows": views,
             "unaddressed": undiscussed,
             "disclaimer": "Which page was discussed is an estimate from the wording of the discussion. Nothing here shows what was on a screen at any time.",
         }
+
+    @staticmethod
+    def _partial(run: Run | None, missing: int, total: int) -> dict | None:
+        """A finished run that could not read some parts says so: what is missing is unchecked, which is different from checked and empty."""
+        return {"missing": missing, "of": total} if run is not None and run.status is RunStatus.SUCCEEDED and missing > 0 else None
 
     def window_view(self, a: Alignment, review: Review | None, window: align_mod.Window | None, revisions: dict[str, str], docs: dict[str, Readable]) -> dict:
         """One window as the owner sees it: Reachy's estimate, the owner's decision, and what is shown (the owner's decision wins while it is valid)."""
@@ -309,7 +322,7 @@ class MeetingMultimodalService:
                 # a different suggestion from a later run is a new proposal: it is shown as such
         return {
             "window_key": a.window_key, "segment_ids": a.segment_ids, "start": a.start, "end": a.end, "suggestion": suggestion, "owner": owner, "review_status": status, "shown": shown,
-            "source_changed": source_changed, "document_changed": document_changed, "stale": source_changed or document_changed,
+            "source_changed": source_changed, "document_changed": document_changed, "stale": source_changed or document_changed, "unchecked": a.unchecked,
         }
 
     @staticmethod
@@ -379,6 +392,14 @@ class MeetingMultimodalService:
             raise MultimodalError(409, "This meeting is already being processed")
         self.wake.set()
         return await self.overview(run.meeting_id, access)
+
+    async def requeue_interrupted(self) -> int:
+        """Called once when this process starts its runner (there is one runner): runs the previous process left `processing` are queued again at once."""
+        n = await self.store.requeue_processing()
+        if n:
+            self._count("requeued", n)
+            self.wake.set()
+        return n
 
     async def process_next(self) -> bool:
         """Claim and process one run. Returns whether there was one. Never raises."""
@@ -454,11 +475,11 @@ class MeetingMultimodalService:
         effective: dict[str, tuple[str, int] | None] = {}
         for a in aligns:
             view = self.window_view(a, reviews.get(a.window_key), win.get(a.window_key), revisions, docs)
-            effective[a.window_key] = (view["shown"]["document_id"], view["shown"]["page"]) if view["shown"] and not view["stale"] and view["shown"]["authority"] != "owner_stale" else None
+            effective[a.window_key] = (view["shown"]["document_id"], view["shown"]["page"]) if counts_as_discussed(view["shown"], view["stale"]) else None
         ctx = analysis_mod.Context(run_id=run.id, meeting_id=meeting.id, meeting_title=meeting.title, transcript_hash=run.transcript_hash, segments=segs, windows=list(win.values()), decks=decks,
                                    effective=effective, sensitivity=level, project_scope=scope)
         items, rejected = await analysis_mod.extract(ctx, ask, model=model)
-        stats = {"documents": len(decks), "windows": len(win), "found": len(items), **{f"rejected_{k}": v for k, v in rejected.items()}, "elapsed_ms": round((time.monotonic() - started) * 1000)}
+        stats = {"documents": len(decks), "windows": len(win), "chunks": len(analysis_mod.chunks(ctx)), "chunks_failed": rejected.get("bad_model_output_chunk", 0), "found": len(items), **{f"rejected_{k}": v for k, v in rejected.items()}, "elapsed_ms": round((time.monotonic() - started) * 1000)}
         await self.store.complete_analysis(run.id, items, model=model, stats=stats, now=self.clock())
 
     # -- the owner's decisions ----------------------------------------------------------------------------------------------
@@ -532,7 +553,7 @@ class MeetingMultimodalService:
         def trusted(view: dict) -> tuple[str, int, str] | None:
             """The page a window may be linked to in an answer: the owner's valid decision, or a current suggestion. Stale estimates are never used."""
             shown = view["shown"]
-            if not shown or view["stale"] or shown["authority"] == "owner_stale":
+            if not counts_as_discussed(shown, view["stale"]):
                 return None
             return shown["document_id"], shown["page"], shown["authority"]
 
@@ -617,11 +638,9 @@ class MeetingMultimodalService:
         possible = []
         for key, tid in windows_used.items():
             view = views.get(key)
-            if view is None or view["stale"] or not view["shown"]:
+            if view is None or not counts_as_discussed(view["shown"], view["stale"]):
                 continue
             shown = view["shown"]
-            if shown["authority"] == "owner_stale":
-                continue
             did = pages_used.get((shown["document_id"], shown["page"]))
             if did:
                 links.append({"transcript": tid, "document": did, "window_key": key, "authority": shown["authority"], "certainty": shown["certainty"],

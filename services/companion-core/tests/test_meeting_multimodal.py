@@ -544,3 +544,17 @@ def test_reprocessing_a_document_makes_estimates_and_decisions_stale_until_rerun
         assert again["window"]["review_status"] == "confirmed"
 
     run(go())
+
+
+def test_a_model_that_keeps_writing_after_its_answer_still_gives_the_answer():
+    """Found in the UAT rehearsal: the 7B wrote a valid object and then a stray string and a second object; reading from the first brace to the last discarded a good answer."""
+    from companion_core.meeting_multimodal import analysis as an
+    from companion_core.meeting_multimodal import ask as aq
+    from companion_core.meeting_multimodal.models import first_json_object
+
+    tail = '"unknown"{"text":"stray"}'
+    assert al.parse_choice('{"choice": 1, "alternatives": [], "reason": "x"}' + tail).choice == 1
+    assert aq.parse_output('{"parts":[{"kind":"unknown","text":"t","cites":[]}]}' + tail).parts[0].kind == "unknown"
+    assert an.parse_output('{"items": []}' + tail).items == []
+    assert first_json_object('Sure! ```json\n{"a": {"b": 1}}\n``` done {"c": 2}') == {"a": {"b": 1}}
+    assert first_json_object("no object") is None and first_json_object('{"broken": ') is None and first_json_object("[1, 2]") is None

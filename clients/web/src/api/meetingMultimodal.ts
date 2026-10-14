@@ -77,6 +77,7 @@ export interface WindowDto {
   source_changed: boolean;
   document_changed: boolean;
   stale: boolean;
+  unchecked: boolean;
 }
 export interface RunDto {
   id: string;
@@ -84,6 +85,12 @@ export interface RunDto {
   error: string | null;
   model: string | null;
   stats: Record<string, number>;
+  created_at: string | null;
+  started_at: string | null;
+}
+export interface Partial_ {
+  missing: number;
+  of: number;
 }
 export interface Cite {
   source: 'transcript' | 'document';
@@ -120,8 +127,8 @@ export interface Overview {
   sensitivity: string;
   documents: AttachedDocument[];
   transcript_hash: string | null;
-  alignment: { state: RunState; run: RunDto | null; transcript_changed: boolean; documents_changed: boolean; documents_added: boolean };
-  analysis: { state: RunState; run: RunDto | null; items: FindingDto[] };
+  alignment: { state: RunState; run: RunDto | null; partial: Partial_ | null; transcript_changed: boolean; documents_changed: boolean; documents_added: boolean };
+  analysis: { state: RunState; run: RunDto | null; partial: Partial_ | null; items: FindingDto[] };
   windows: WindowDto[];
   unaddressed: Unaddressed[];
   disclaimer: string;
@@ -184,6 +191,11 @@ const state = (v: unknown, what: string): RunState => {
   return v as RunState;
 };
 
+function parsePartial(value: unknown): Partial_ | null {
+  if (value == null) return null;
+  const p = rec(value, 'partial');
+  return { missing: num(p.missing, 'partial.missing'), of: num(p.of, 'partial.of') };
+}
 function parseRun(value: unknown): RunDto | null {
   if (value == null) return null;
   const r = rec(value, 'run');
@@ -193,6 +205,8 @@ function parseRun(value: unknown): RunDto | null {
     error: opt(r.error, 'run.error'),
     model: opt(r.model, 'run.model'),
     stats: Object.fromEntries(Object.entries(rec(r.stats ?? {}, 'run.stats')).filter(([, v]) => typeof v === 'number')) as Record<string, number>,
+    created_at: opt(r.created_at, 'run.created_at'),
+    started_at: opt(r.started_at, 'run.started_at'),
   };
 }
 function parseCite(value: unknown): Cite {
@@ -274,6 +288,7 @@ export function parseWindow(value: unknown): WindowDto {
     source_changed: w.source_changed === true,
     document_changed: w.document_changed === true,
     stale: w.stale === true,
+    unchecked: w.unchecked === true,
   };
 }
 export function parseOverview(value: unknown): Overview {
@@ -292,8 +307,8 @@ export function parseOverview(value: unknown): Overview {
       };
     }),
     transcript_hash: opt(o.transcript_hash, 'overview.transcript_hash'),
-    alignment: { state: state(a.state, 'alignment.state'), run: parseRun(a.run), transcript_changed: a.transcript_changed === true, documents_changed: a.documents_changed === true, documents_added: a.documents_added === true },
-    analysis: { state: state(n.state, 'analysis.state'), run: parseRun(n.run), items: arr(n.items, 'analysis.items').map(parseFinding) },
+    alignment: { state: state(a.state, 'alignment.state'), run: parseRun(a.run), partial: parsePartial(a.partial), transcript_changed: a.transcript_changed === true, documents_changed: a.documents_changed === true, documents_added: a.documents_added === true },
+    analysis: { state: state(n.state, 'analysis.state'), run: parseRun(n.run), partial: parsePartial(n.partial), items: arr(n.items, 'analysis.items').map(parseFinding) },
     windows: arr(o.windows, 'overview.windows').map(parseWindow),
     unaddressed: arr(o.unaddressed, 'overview.unaddressed').map((u) => {
       const x = rec(u, 'unaddressed');

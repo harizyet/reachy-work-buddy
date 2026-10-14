@@ -1,6 +1,6 @@
 # Phase 53 â€” Multimodal meeting intelligence
 
-**Status (2026-10-14): BUILT LOCALLY on `feature/meeting-multimodal`; NOT merged, NOT deployed, flag OFF.** Core, hub and web are implemented and tested (mock, disposable PostgreSQL, one real-infrastructure trial). Android is not changed. Production needs the owner's approval (migration `034`). Evidence: [verification record](verification/phase-53-multimodal-meetings-2026-10-14.md). Decision record: [ADR 0037](adr/0037-multimodal-meeting-evidence-and-slide-alignment.md). Roadmap row: [plan.md](plan.md#6-implementation-roadmap).
+**Status (2026-10-14, after a browser UAT rehearsal on a disposable stack: [record](verification/phase-53-uat-rehearsal-2026-10-14.md)): BUILT LOCALLY on `feature/meeting-multimodal`; NOT merged, NOT deployed, flag OFF.** Core, hub and web are implemented and tested (mock, disposable PostgreSQL, one real-infrastructure trial). Android is not changed. Production needs the owner's approval (migration `034`). Evidence: [verification record](verification/phase-53-multimodal-meetings-2026-10-14.md). Decision record: [ADR 0037](adr/0037-multimodal-meeting-evidence-and-slide-alignment.md). Roadmap row: [plan.md](plan.md#6-implementation-roadmap).
 
 Extends [Phase 27](phase-27.md) (recording, transcript, timestamps), [Phase 31](phase-31.md) (analysis, evidence validation, owner-reviewed actions; unchanged), [Phase 49](phase-49.md) (patterns) and [Phase 50](phase-50.md) (documents, pages, MinerU) under [ADR 0034](adr/0034-source-evidence-and-derived-artifacts.md). Phase 50F federation, Phase 48 selective answering and Phase 44 indexing are not touched or enabled.
 
@@ -76,7 +76,7 @@ Signals: *E* an explicit reference resolved to the page; *L* lexical support (â‰
 | **Low** | any other chosen page (weak, ambiguous, several plausible, or the model chose a page that is not the leader) |
 | **Unknown** | nothing chosen: no candidate had lexical support and nothing resolved, or the model declined and nothing was named |
 
-The model cannot raise a label. Alternatives (up to three) are kept for Medium and Low. The reason shown is built from the signals (resolved reference, shared words, "continues the previous page", "other pages also share words"); the model's own comment is stored and shown separately, labelled as the model's. No number is shown or implied to be a probability. Each row above is a unit test (`test_certainty_rules`).
+The model cannot raise a label. **Only an owner decision or a current High or Medium estimate is relied on** (as analysis context, as a link in an answer, as "this page was discussed"); a Low estimate is shown as one muted line and is used only after the owner confirms it, and "unknown" is a valid result that is never replaced by a guess. A window whose model answer was unusable is stored as *unchecked* ("not checked", not "nothing fits") and a run with unreadable parts reports a partial result. Alternatives (up to three) are kept for Medium and Low. The reason shown is built from the signals (resolved reference, shared words, "continues the previous page", "other pages also share words"); the model's own comment is stored and shown separately, labelled as the model's. No number is shown or implied to be a probability. Each row above is a unit test (`test_certainty_rules`).
 
 ### 4.4 Revisions and staleness
 

@@ -8,6 +8,7 @@ question, action candidate, discussion point) whose evidence is a verified trans
 from __future__ import annotations
 
 import hashlib
+import json
 import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -28,6 +29,19 @@ MAX_LINKS = 8  # documents attached to one meeting
 RECORD_NAMESPACE = uuid.UUID("53a0c0de-5353-4153-8153-53a0c0de5353")
 RECEIPT_NAMESPACE = uuid.UUID("53a0c0de-5353-4153-8153-53a0c0de5354")
 _RANK = {Privacy.PUBLIC: 0, Privacy.WORK_PRIVATE: 1, Privacy.SENSITIVE: 2}
+
+
+def first_json_object(raw: str) -> dict | None:
+    """The first complete JSON object in a model reply, whatever surrounds it. A 7B sometimes keeps writing after the closing brace (a stray string or a second object); taking the text from the first
+    brace to the LAST brace would then discard a perfectly good answer. Only a first object that is itself valid JSON counts."""
+    start = raw.find("{")
+    if start < 0:
+        return None
+    try:
+        value, _ = json.JSONDecoder().raw_decode(raw[start:])
+    except ValueError:
+        return None
+    return value if isinstance(value, dict) else None
 
 
 def utcnow() -> datetime:
@@ -167,6 +181,7 @@ class Alignment(BaseModel):
     shared_terms: list[str] = Field(default_factory=list)
     explicit_refs: list[str] = Field(default_factory=list)  # what the speakers said ("slide 7") and how it resolved
     contradictions: list[Contradiction] = Field(default_factory=list)
+    unchecked: bool = False  # the model's answer for this window could not be used: "no page" here means "not checked", not "checked and nothing fits"
     transcript_revision: str  # the current text of exactly these segments when the estimate was made
     document_revision: str = ""  # the chosen document's revision (its original, parser revision and extraction tier)
     analysis_version: str = ANALYSIS_VERSION

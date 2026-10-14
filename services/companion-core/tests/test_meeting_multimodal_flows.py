@@ -20,7 +20,7 @@ from companion_core.document_library.access import access_from_ceiling
 from companion_core.email.store import InMemoryEmailStore
 from companion_core.llm.store import InMemoryLLMSettingsStore, InMemoryLLMUsageStore
 from companion_core.meeting_multimodal import ask as ask_mod
-from companion_core.meeting_multimodal.models import action_record_id
+from companion_core.meeting_multimodal.models import Certainty, action_record_id
 from companion_core.meeting_multimodal.service import MultimodalError
 from companion_core.meeting_multimodal.store import InMemoryMultimodalStore
 from companion_core.memory.store import InMemoryMemoryStore
@@ -454,8 +454,13 @@ def test_deleting_a_document_removes_every_derived_artifact_at_once_and_only_tho
     async def go():
         w = await world([ARCH, SECURITY], decks=(DECK_A, DECK_B), model=Model(CHOICES))
         w.model.analysis = analysis_script(w.meeting)
-        view = await analysed(w)
-        await w.svc.review(w.mid, view["windows"][0]["window_key"], OWNER, decision="confirmed")
+        first = (await w.aligned(OWNER))["windows"][0]
+        assert first["suggestion"]["certainty"] != "high"  # two similar decks: the estimate alone is not relied on...
+        await w.svc.review(w.mid, first["window_key"], OWNER, decision="confirmed")  # ...so the owner's confirmation is what lets the analysis quote that page
+        await w.svc.enqueue_analysis(w.mid, OWNER)
+        assert await w.svc.process_next()
+        view = await w.svc.overview(w.mid, OWNER)
+        assert any(c["source"] == "document" for i in view["analysis"]["items"] for c in i["evidence"])
         action = next(i for i in view["analysis"]["items"] if i["kind"] == "action")
         await w.svc.accept(action["id"], OWNER)
         await w.lib.delete(w.docs[0].id)  # the real service: deleting state, listeners, removal
@@ -608,3 +613,152 @@ def test_a_meeting_without_documents_is_untouched_by_the_feature(monkeypatch):
     with AppEnv(monkeypatch) as e:
         assert e.client.get(f"/meetings/{e.meeting.id}").status_code == 200  # the existing meeting API is unchanged
         assert make_meeting([TELEMETRY]).transcript_segments
+
+
+# -- UAT rehearsal follow-ups: Low estimates, partial results, slow runs, restart, repeats ----------------------------------------------------------
+
+def test_a_low_estimate_is_shown_but_never_relied_on_until_the_owner_confirms_it():
+    async def go():
+        vague = ["Both retention and the budget came up today,", "and we compared the forecast with the compaction numbers,", "honestly each matters about as much as the other."]
+        w = await world([vague, ARCH], model=Model([("retention and the budget", None, "Telemetry Pipeline"), ("jetson edge node", None, "Edge Architecture")], answer=lambda u: [
+            {"kind": "speaker", "text": "They compared retention and budget.", "cites": [label_with(u, "retention", "T")]}]))
+        view = await w.aligned(OWNER)
+        low = view["windows"][0]
+        assert low["suggestion"]["certainty"] == "low" and low["shown"]["page"] == 3  # the owner can see it...
+        assert 3 in {u["page"] for u in view["unaddressed"]}  # ...but it does not count as page 3 having been discussed
+        out = await w.svc.ask(w.mid, OWNER, "What was said about retention and the budget?")
+        assert out["associations"] == []  # an answer does not link a spoken stretch to a page on a Low estimate
+        await w.svc.review(w.mid, low["window_key"], OWNER, decision="confirmed")
+        confirmed = await w.svc.overview(w.mid, OWNER)
+        assert 3 not in {u["page"] for u in confirmed["unaddressed"]}  # the owner's confirmation makes it count
+
+    run(go())
+
+
+def test_a_window_whose_model_answer_is_unusable_is_unchecked_not_empty():
+    async def go():
+        w = await world([ARCH, TELEMETRY], model=Model(CHOICES))
+        real = w.model._choose
+        w.model._choose = lambda user: "no json here" if "Telemetry ingestion" in user.split("<<<DISCUSSION>>>")[1] else real(user)
+        view = await w.aligned(OWNER)
+        assert view["alignment"]["state"] == "succeeded" and view["alignment"]["partial"] == {"missing": 1, "of": 2}
+        bad = next(x for x in view["windows"] if x["unchecked"])
+        assert bad["shown"] is None and bad["start"] == 39.0
+        stored = next(a for a in await w.store.list_alignments(w.mid) if a.unchecked)
+        assert "could not be used" in stored.reason and stored.certainty is Certainty.UNKNOWN
+        w.model._choose = lambda user: "never json"
+        await w.svc.enqueue_alignment(w.mid, OWNER, force=True)
+        await w.svc.process_next()
+        assert (await w.svc.overview(w.mid, OWNER))["alignment"]["run"]["error"] == "bad_model_output"  # nothing usable at all is a failure, not a partial result
+
+    run(go())
+
+
+def test_an_analysis_with_an_unreadable_chunk_is_reported_as_partial_and_keeps_the_rest():
+    async def go():
+        w = await world([ARCH] * 20 + [SECURITY], model=Model(CHOICES))
+        calls = {"n": 0}
+        script = analysis_script(w.meeting)
+
+        def flaky(user):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise ValueError("bad")
+            return script(user)
+
+        original = w.model.provider
+
+        async def provider():
+            ask, name = await original()
+
+            async def wrapped(messages, tokens):
+                if messages[0]["content"].startswith("You read part of ONE meeting transcript together"):
+                    calls["n"] += 1
+                    if calls["n"] == 1:
+                        return "this is not JSON"
+                return await ask(messages, tokens)
+
+            return wrapped, name
+
+        w.svc.provider = provider
+        w.model.analysis = script
+        view = await analysed(w)
+        partial = view["analysis"]["partial"]
+        assert partial and partial["missing"] == 1 and partial["of"] >= 2 and view["analysis"]["state"] == "succeeded"
+        assert any(i["kind"] == "action" for i in view["analysis"]["items"])  # the readable parts still produced findings
+        assert await w.tasks.list_tasks() == []
+
+    run(go())
+
+
+def test_a_slow_run_times_out_with_a_fixed_code_and_a_retry_can_finish_it(monkeypatch):
+    async def go():
+        import asyncio as aio
+
+        from companion_core.meeting_multimodal import service as service_mod
+
+        w = await world([ARCH], model=Model(CHOICES))
+        await w.link_all(OWNER)
+        slow = {"on": True}
+        original = w.model.provider
+
+        async def provider():
+            ask, name = await original()
+
+            async def wrapped(messages, tokens):
+                if slow["on"]:
+                    await aio.sleep(5)
+                return await ask(messages, tokens)
+
+            return wrapped, name
+
+        w.svc.provider = provider
+        monkeypatch.setattr(service_mod, "RUN_TIMEOUT_SECONDS", 0.05)
+        await w.svc.enqueue_alignment(w.mid, OWNER)
+        assert await w.svc.process_next()
+        status = (await w.svc.overview(w.mid, OWNER))["alignment"]
+        assert status["state"] == "failed" and status["run"]["error"] == "timeout"
+        slow["on"] = False
+        monkeypatch.setattr(service_mod, "RUN_TIMEOUT_SECONDS", 30)
+        await w.svc.retry(status["run"]["id"], OWNER)
+        assert await w.svc.process_next()
+        assert (await w.svc.overview(w.mid, OWNER))["alignment"]["state"] == "succeeded"
+
+    run(go())
+
+
+def test_after_a_restart_a_run_left_processing_starts_again_at_once_and_finishes_once():
+    async def go():
+        from companion_core.meeting_multimodal.service import MeetingMultimodalService
+
+        w = await world([ARCH, SECURITY], model=Model(CHOICES))
+        w.model.analysis = analysis_script(w.meeting)
+        await w.link_all(OWNER)
+        await w.svc.enqueue_analysis(w.mid, OWNER)
+        assert await w.svc.process_next()  # the page estimates
+        assert await w.store.claim_next(w.svc.clock()) is not None  # the analysis is claimed and the process dies
+        fresh = MeetingMultimodalService(w.store, w.meetings, w.lib, w.tasks, w.planner, provider=w.model.provider)  # a new process, the same database
+        assert not await fresh.process_next()  # its lease has not expired, so without the startup step it would wait
+        assert await fresh.requeue_interrupted() == 1
+        assert await fresh.process_next()
+        view = await fresh.overview(w.mid, OWNER)
+        assert view["analysis"]["state"] == "succeeded" and len(view["analysis"]["items"]) == 4
+        assert await fresh.requeue_interrupted() == 0 and not await fresh.process_next()
+
+    run(go())
+
+
+def test_repeated_and_simultaneous_requests_make_one_run_each():
+    async def go():
+        w = await world([ARCH, SECURITY], model=Model(CHOICES))
+        w.model.analysis = analysis_script(w.meeting)
+        await w.link_all(OWNER)
+        results = await asyncio.gather(*(w.svc.enqueue_analysis(w.mid, OWNER) for _ in range(6)))
+        assert sum(1 for r in results if r["created"]) == 1
+        aligns = await asyncio.gather(*(w.svc.enqueue_alignment(w.mid, OWNER) for _ in range(6)))
+        assert sum(1 for r in aligns if r["created"]) <= 1
+        while await w.svc.process_next():
+            pass
+        assert len(await w.store.list_items(meeting_id=w.mid)) == 4 and await w.tasks.list_tasks() == []
+
+    run(go())

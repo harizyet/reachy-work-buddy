@@ -15,7 +15,6 @@ Everything the model returns is validated: a choice must be one of the candidate
 
 from __future__ import annotations
 
-import json
 import math
 import re
 from collections.abc import Awaitable, Callable
@@ -33,6 +32,7 @@ from companion_core.meeting_multimodal.models import (
     Method,
     Relation,
     digest,
+    first_json_object,
     locator,
 )
 from companion_core.notepad_processing.extraction import (
@@ -376,13 +376,12 @@ class _Choice(BaseModel):
 
 
 def parse_choice(raw: str) -> _Choice | None:
-    text = raw.strip()
-    start, end = text.find("{"), text.rfind("}")
-    if start < 0 or end <= start:
+    found = first_json_object(raw)
+    if found is None:
         return None
     try:
-        return _Choice.model_validate(json.loads(text[start:end + 1]))
-    except (ValueError, ValidationError):
+        return _Choice.model_validate(found)
+    except ValidationError:
         return None
 
 
@@ -451,6 +450,7 @@ async def align(
         note: str | None = None
         contradiction: Contradiction | None = None
         extra: list[Cand] = []
+        unchecked = False
         if worth_asking:
             before = _clip(all_windows[n - 1].text, 10_000)[-CONTEXT_CHARS:] if n > 0 else ""
             after = _clip(all_windows[n + 1].text, CONTEXT_CHARS) if n + 1 < len(all_windows) else ""
@@ -459,6 +459,7 @@ async def align(
             parsed = parse_choice(await ask(build_messages(window, cands, by_id, before, after, previous_title), MAX_TOKENS))
             if parsed is None:
                 stats["bad_output"] += 1
+                unchecked = True
             else:
                 note = _note(parsed.reason)
                 if parsed.choice:
@@ -486,7 +487,7 @@ async def align(
             run_id=run_id, meeting_id=meeting_id, window_key=window.key, segment_ids=[s.index for s in window.segs], start=window.start, end=window.end,
             document_id=chosen.document_id if chosen else None, page=chosen.page.number if chosen else None, locator=locator(chosen.document_id, chosen.page.number) if chosen else None,
             slide_title=chosen.page.title if chosen else None, alternatives=alternatives, certainty=certainty, method=method, relation=relation,
-            reason=explain(chosen, certainty, cands, refs, by_id), model_note=note if chosen is not None else None, shared_terms=chosen.shared[:8] if chosen else [],
+            reason="The model's answer for this part could not be used, so it was not checked." if unchecked else explain(chosen, certainty, cands, refs, by_id), unchecked=unchecked, model_note=note if chosen is not None else None, shared_terms=chosen.shared[:8] if chosen else [],
             explicit_refs=[r.describe(by_id) for r in refs], contradictions=[contradiction] if contradiction else [], transcript_revision=window.revision,
             document_revision=deck.revision if deck else "", analysis_version=ANALYSIS_VERSION, model=model, sensitivity=sensitivity, project_scope=project_scope))
         stats[certainty.value] += 1

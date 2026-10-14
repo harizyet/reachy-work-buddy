@@ -44,6 +44,7 @@ class MultimodalStore(Protocol):
     async def get_run(self, run_id: str) -> Run | None: ...
     async def latest_run(self, meeting_id: str, kind: RunKind) -> Run | None: ...
     async def claim_next(self, now: datetime) -> Run | None: ...
+    async def requeue_processing(self) -> int: ...
     async def complete_alignment(self, run_id: str, alignments: list[Alignment], *, model: str, stats: dict, now: datetime) -> int: ...
     async def complete_analysis(self, run_id: str, items: list[Item], *, model: str, stats: dict, now: datetime) -> int: ...
     async def fail_run(self, run_id: str, error: str, *, now: datetime) -> None: ...
@@ -146,6 +147,15 @@ class InMemoryMultimodalStore:
 
     def _finish(self, run: Run, model: str, stats: dict, now: datetime) -> None:
         self._runs[run.id] = run.model_copy(update={"status": RunStatus.SUCCEEDED, "model": model, "stats": stats, "finished_at": now, "lease_until": None, "error": None})
+
+    async def requeue_processing(self) -> int:
+        """At startup of the one process that runs these: a run left `processing` belongs to a process that no longer exists, so it is queued again now instead of after its lease."""
+        n = 0
+        for key, r in list(self._runs.items()):
+            if r.status is RunStatus.PROCESSING:
+                self._runs[key] = r.model_copy(update={"status": RunStatus.QUEUED, "lease_until": None})
+                n += 1
+        return n
 
     async def complete_alignment(self, run_id: str, alignments: list[Alignment], *, model: str, stats: dict, now: datetime) -> int:
         run = self._runs.get(run_id)

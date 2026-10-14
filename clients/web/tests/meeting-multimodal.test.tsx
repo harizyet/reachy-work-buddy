@@ -127,7 +127,7 @@ describe('Attached documents tab', () => {
   it('shows the pages nothing was matched to, with the caveat', async () => {
     setup();
     await openTab('Documents');
-    const summary = await screen.findByText(/Pages with no discussion matched to them \(1\)/);
+    const summary = await screen.findByText(/Pages with no confident discussion matched to them \(1\)/);
     expect(summary).toBeInTheDocument();
     expect(screen.getByText(/does not prove they were not shown/)).toBeInTheDocument();
   });
@@ -260,5 +260,68 @@ describe('Questions and findings', () => {
     await waitFor(() => expect(server.calls.map((c) => c.call)).toContain('POST /meeting-multimodal/items/f1/accept'));
     await user.click(await within(await screen.findByLabelText('Combined findings')).findByRole('button', { name: 'Dismiss' }));
     await waitFor(() => expect(server.calls.map((c) => c.call)).toContain('POST /meeting-multimodal/items/f2/dismiss'));
+  });
+});
+
+describe('Low, unchecked, partial and slow results', () => {
+  it('shows a Low estimate as one muted line that opens to the usual details, and keeps "none" a valid result', async () => {
+    setup({ data: overview({ windows: [
+      win({ suggestion: suggestion({ certainty: 'low' }), shown: shown({ certainty: 'low' }) }),
+      win({ window_key: '1-1', segment_ids: [1], start: 20, end: 28, suggestion: null, shown: null }),
+    ] }) });
+    const user = await openTab('Transcript');
+    const hint = await screen.findByText(/Possibly page 2/);
+    expect(hint).toHaveTextContent('low certainty');
+    expect(screen.queryByText('Certainty: Low')).not.toBeInTheDocument(); // no badge, no box
+    expect(screen.queryByRole('button', { name: 'Confirm' })).not.toBeInTheDocument();
+    expect(screen.getByText(/No confident slide association/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Details for slide 2 at 0:00' }));
+    expect(screen.getByRole('button', { name: 'Confirm' })).toBeInTheDocument();
+    expect(screen.getByText('Certainty: Low')).toBeInTheDocument();
+  });
+
+  it('says "not checked" for a part the model could not answer, which is different from no match', async () => {
+    setup({ data: overview({ windows: [win({ suggestion: null, shown: null, unchecked: true })] }) });
+    await openTab('Transcript');
+    expect(await screen.findByText(/Not checked: the model’s answer for this part could not be used/)).toBeInTheDocument();
+    expect(screen.queryByText(/No confident slide association/)).not.toBeInTheDocument();
+  });
+
+  it('presents incomplete runs as partial results', async () => {
+    setup({ data: overview({
+      alignment: { state: 'succeeded', run: { id: 'r1', status: 'succeeded', error: null, model: 'm', stats: {}, created_at: null, started_at: null }, partial: { missing: 2, of: 21 }, transcript_changed: false, documents_changed: false, documents_added: false },
+      analysis: { state: 'succeeded', run: { id: 'a1', status: 'succeeded', error: null, model: 'm', stats: {}, created_at: null, started_at: null }, partial: { missing: 1, of: 6 }, items: [] },
+    }) });
+    await openTab('Documents');
+    expect(await screen.findByText(/Partial result: 2 of 21 parts of the transcript could not be checked/)).toBeInTheDocument();
+    expect(screen.getByText(/Partial result: 1 of 6 parts of the meeting could not be read, so any findings from them are missing/)).toBeInTheDocument();
+  });
+
+  it('shows elapsed time while a run works, blocks a second start, and sends one request per click', async () => {
+    const created = new Date(Date.now() - 45_000).toISOString();
+    const { server } = setup({ data: overview({ analysis: { state: 'processing', run: { id: 'a1', status: 'processing', error: null, model: null, stats: {}, created_at: created, started_at: created }, partial: null, items: [] } }) });
+    await openTab('Documents');
+    const progress = await screen.findByRole('status', { name: 'Analysing with the documents progress' });
+    expect(progress).toHaveTextContent(/working · 4\d s/);
+    expect(progress).toHaveTextContent('You can leave this page');
+    expect(screen.getByRole('button', { name: 'Analyse with documents' })).toBeDisabled();
+    expect(server.calls.filter((c) => c.call === 'POST /meetings/m1/multimodal/analysis')).toHaveLength(0);
+  });
+});
+
+describe('Connection loss during a run', () => {
+  it('says so while the hub is unreachable and keeps what it had', async () => {
+    const { server } = setup();
+    const user = await openTab('Documents');
+    await screen.findByRole('list', { name: 'Attached documents list' });
+    const real = globalThis.fetch;
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).includes('multimodal')) throw new TypeError('network down');
+      return real(input, init);
+    }));
+    await user.click(screen.getByRole('button', { name: 'Estimate the pages again' }));
+    await waitFor(() => expect(screen.getByText(/Can.t reach Reachy right now|network down|Failed to fetch/)).toBeInTheDocument());
+    expect(screen.getByRole('list', { name: 'Attached documents list' })).toBeInTheDocument();
+    expect(server.calls.length).toBeGreaterThan(0);
   });
 });

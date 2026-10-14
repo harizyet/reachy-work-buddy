@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ApiError, StaleSessionError } from '../../api/client';
 import { uploadDocument } from '../../api/documents';
-import type { Answer, FindingDto, Overview, RunState } from '../../api/meetingMultimodal';
+import type { Answer, FindingDto, Overview, Partial_, RunDto, RunState } from '../../api/meetingMultimodal';
 import { Button } from '../../components/ui/Button';
 import { StatusPill, type Tone } from '../../components/ui/StatusPill';
 import { useDocuments } from '../documents/useDocuments';
@@ -34,6 +34,12 @@ export function DocumentsPanel({ meetingId, onShow }: { meetingId: string; onSho
   const query = useOverview(meetingId, true);
   const act = useMultimodalActions(meetingId);
   const data = query.data;
+  const sent = useRef(0); // a double click sends one request: the button is disabled only after the next render, which a quick second click can beat
+  const once = (go: () => void) => {
+    if (Date.now() - sent.current < 1500) return;
+    sent.current = Date.now();
+    go();
+  };
   if (query.isPending) return <p className="text-sm" role="status">Loading…</p>;
   if (!data) return <p role="alert" className="text-sm text-[var(--bad)]">{message(query.error) ?? 'Could not load the attached documents.'}</p>;
   const ready = data.documents.some((d) => d.ready);
@@ -64,12 +70,17 @@ export function DocumentsPanel({ meetingId, onShow }: { meetingId: string; onSho
       <Attach meetingId={meetingId} attached={data.documents.map((d) => d.document_id)} onAttach={(id) => act.attach.mutate(id)} busy={act.attach.isPending} />
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <Button disabled={!ready || aligning || act.align.isPending} onClick={() => act.align.mutate(data.alignment.state === 'succeeded')}>{data.alignment.state === 'succeeded' ? 'Estimate the pages again' : 'Estimate the pages'}</Button>
+        <Button disabled={!ready || aligning || act.align.isPending} onClick={() => once(() => act.align.mutate(data.alignment.state === 'succeeded'))}>{data.alignment.state === 'succeeded' ? 'Estimate the pages again' : 'Estimate the pages'}</Button>
         <StatusPill tone={RUN_TONE[data.alignment.state]}>{`Pages: ${RUN_LABEL[data.alignment.state]}`}</StatusPill>
-        <Button variant="secondary" disabled={!ready || analysing || aligning || act.analyse.isPending} onClick={() => act.analyse.mutate(data.analysis.state === 'succeeded')}>Analyse with documents</Button>
+        <Button variant="secondary" disabled={!ready || analysing || aligning || act.analyse.isPending} onClick={() => once(() => act.analyse.mutate(data.analysis.state === 'succeeded'))}>Analyse with documents</Button>
         <StatusPill tone={RUN_TONE[data.analysis.state]}>{`Analysis: ${RUN_LABEL[data.analysis.state]}`}</StatusPill>
       </div>
       {!ready && data.documents.length > 0 && <p className="mt-1 text-xs text-[var(--muted)]">Waiting for an attached document to finish being read.</p>}
+      {query.isError && <p role="status" className="mt-2 text-xs text-[var(--warn)]">Can&apos;t reach Reachy right now. What is shown may be out of date; it keeps trying, and a running job continues on its own.</p>}
+      <Progress label="Estimating the pages" state={data.alignment.state} run={data.alignment.run} />
+      <Progress label="Analysing with the documents" state={data.analysis.state} run={data.analysis.run} />
+      <PartialNote what="parts of the transcript could not be checked, so they have no page estimate (that is different from nothing fitting)" partial={data.alignment.partial} />
+      <PartialNote what="parts of the meeting could not be read, so any findings from them are missing" partial={data.analysis.partial} />
       {[data.alignment, data.analysis].map((r, i) => r.state === 'failed' && r.run && (
         <p key={i} role="alert" className="mt-2 text-[var(--bad)]">
           {FAILURE[r.run.error ?? ''] ?? 'It failed.'}{' '}
@@ -88,18 +99,45 @@ export function DocumentsPanel({ meetingId, onShow }: { meetingId: string; onSho
   );
 }
 
+/** Elapsed time and what to expect while a run is waiting or working; the page keeps polling, so closing it loses nothing. */
+function Progress({ label, state, run }: { label: string; state: RunState; run: RunDto | null }) {
+  const [now, setNow] = useState(() => Date.now());
+  const active = state === 'queued' || state === 'processing';
+  useEffect(() => {
+    if (!active) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [active]);
+  if (!active) return null;
+  const since = run?.created_at ? Math.max(0, Math.round((now - Date.parse(run.created_at)) / 1000)) : 0;
+  return (
+    <p role="status" aria-label={`${label} progress`} className="mt-2 text-xs text-[var(--muted)]">
+      {`${label}: ${state === 'queued' ? 'waiting its turn' : 'working'} · ${since} s. A long meeting can take a minute or two. You can leave this page; it carries on and the result will be here.`}
+    </p>
+  );
+}
+
+function PartialNote({ what, partial }: { what: string; partial: Partial_ | null }) {
+  if (!partial) return null;
+  return (
+    <p role="status" className="mt-2 rounded border border-[var(--warn)] p-2 text-xs text-[var(--warn)]">
+      {`Partial result: ${partial.missing} of ${partial.of} ${what}. Run it again to retry those parts.`}
+    </p>
+  );
+}
+
 function PagesSummary({ data }: { data: Overview }) {
-  const estimated = data.windows.filter((w) => w.shown);
+  const estimated = data.windows.filter((w) => w.shown && (w.shown.authority === 'owner' || w.shown.certainty === 'high' || w.shown.certainty === 'medium'));
   if (data.alignment.state !== 'succeeded' && data.windows.length === 0) return null;
   const counts = { high: 0, medium: 0, low: 0, unknown: 0 };
   for (const w of data.windows) counts[w.suggestion?.certainty ?? 'unknown'] += 1;
   return (
     <div className="mt-3 text-xs text-[var(--muted)]" aria-label="Page estimates">
-      <p>{`${estimated.length} of ${data.windows.length} parts of the transcript have a page shown (high ${counts.high}, medium ${counts.medium}, low ${counts.low}). The rest have no confident page; open the Transcript to read, confirm or correct them.`}</p>
+      <p>{`${estimated.length} of ${data.windows.length} parts of the transcript have a confident page (high ${counts.high}, medium ${counts.medium}); ${counts.low} more have only a low-certainty hint and ${counts.unknown} have none, which is a valid result. Open the Transcript to read, confirm or correct them.`}</p>
       {data.unaddressed.length > 0 && (
         <details className="mt-1">
-          <summary className="cursor-pointer">{`Pages with no discussion matched to them (${data.unaddressed.length})`}</summary>
-          <p>This only means the wording of the discussion did not match them. It does not prove they were not shown.</p>
+          <summary className="cursor-pointer">{`Pages with no confident discussion matched to them (${data.unaddressed.length})`}</summary>
+          <p>This only means the wording of the discussion did not match them confidently. It does not prove they were not shown.</p>
           <ul className="mt-1 flex flex-wrap gap-2">
             {data.unaddressed.slice(0, 80).map((u) => (
               <li key={`${u.document_id}:${u.page}`}><Link className="underline" to={openSlide(u.document_id, u.page)}>{`${data.documents.length > 1 ? u.document_title + ' ' : ''}p.${u.page}`}</Link></li>
