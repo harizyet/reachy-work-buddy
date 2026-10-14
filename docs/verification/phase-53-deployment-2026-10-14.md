@@ -45,3 +45,9 @@ Core was recreated, so a new Phase 48 segment starts at 07:44:07 UTC. Reading th
 ## Next, each needing separate authorization
 
 Merging the branch to `main`; enabling `MEETING_MULTIMODAL_ENABLED` (set it in `deploy/homelab/.env` and recreate core only; roll back by setting it false); the owner's acceptance on their own deck and meeting. Release the `pre-034` images and the extra dump only after the owner accepts.
+
+## Activation (2026-10-14, owner: "turn the feature on")
+
+`MEETING_MULTIMODAL_ENABLED=true` set in `deploy/homelab/.env` (backup `.env.bak-before-multimodal`, kept beside it) and **only core recreated** (`up -d --no-build --no-deps --force-recreate companion-core`, same image `e92463cc8334`; hub, coding-agent, worker and the database untouched). Preconditions: no alarm due within 15 minutes. Core restarted at 07:57:48 UTC (process start 2026-10-14T07:57:50.102595584Z); a new Phase 48 segment begins there, and the previous segment's counters were again not saved (same permission denial).
+
+Verified from inside core with the service token: `/meeting-multimodal/config` → `{"enabled":true}`, `/meetings` and `/meeting-analysis/config` answer as before; core env shows `MEETING_MULTIMODAL_ENABLED=true`, `DOCUMENT_LIBRARY_ENABLED=true`; clean startup, no error in the log. **Not verified:** the owner's browser session (Documents tab, slide cards, Q&A, analysis) and a real attach on production data; those are the owner's acceptance. **Rollback:** set the flag to false (or restore the `.env` backup) and recreate core; the tables and any attachments stay but are unreachable until it is on again.
