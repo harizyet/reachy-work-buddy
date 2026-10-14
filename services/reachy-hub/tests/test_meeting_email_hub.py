@@ -78,7 +78,7 @@ def login(client):
 
 ROUTES = [
     ("get", "/meeting-email/config", None), ("get", "/meeting-email/sender", None), ("put", "/meeting-email/sender", {"host": "h", "from_address": SENDER}),
-    ("post", "/meeting-email/sender/verify", {}), ("put", "/meeting-email/sender/enabled", {"enabled": True}), ("delete", "/meeting-email/sender", None),
+    ("post", "/meeting-email/sender/verify", {}), ("post", "/meeting-email/sender/test", {"to": "a@example.org"}), ("put", "/meeting-email/sender/enabled", {"enabled": True}), ("delete", "/meeting-email/sender", None),
     ("get", "/meeting-email/groups", None), ("post", "/meeting-email/groups", {"name": "g", "addresses": ["a@example.org"]}), ("put", "/meeting-email/groups/abc", {"name": "g", "addresses": ["a@example.org"]}),
     ("delete", "/meeting-email/groups/abc", None), ("get", "/meeting-email/drafts", None), ("get", "/meeting-email/drafts/abc", None), ("put", "/meeting-email/drafts/abc", {"subject": "x"}),
     ("post", "/meeting-email/drafts/abc/approve", {"package_hash": "0" * 64, "confirmation": "SEND"}), ("post", "/meeting-email/drafts/abc/queue", {}), ("post", "/meeting-email/drafts/abc/cancel-send", {}),
@@ -136,6 +136,15 @@ def test_the_whole_flow_through_the_hub_keeps_the_credential_out_of_every_respon
         assert ok(hub.put("/meeting-email/sender/enabled", headers=CSRF, json={"enabled": True}), 409)["detail"]["code"] == "not_verified"
         asyncio.run(senders.record_verification(True, "connected"))  # the live verification is covered against Mailpit; here only the proxy matters
         assert ok(hub.put("/meeting-email/sender/enabled", headers=CSRF, json={"enabled": True}))["enabled"] is True
+
+        # the sender test: one fixed message to the typed address, through the proxy, with core enforcing the rules
+        bad = hub.post("/meeting-email/sender/test", headers=CSRF, json={"to": "not an address"})
+        assert bad.status_code == 422 and bad.json()["detail"]["code"] == "bad_recipient"
+        assert hub.post("/meeting-email/sender/test", headers=CSRF, json={"to": "a@example.org", "also": "b@example.org"}).status_code == 422
+        tested = ok(hub.post("/meeting-email/sender/test", headers=CSRF, json={"to": "Owner.Test@Example.org"}))
+        assert tested["status"] == "sent" and tested["to"] == "owner.test@example.org" and tested["provider_response"] == "250 ok"
+        assert sent[-1][0].subject == "Reachy test email" and sent[-1][0].kind == "sender_test" and sent[-1][1] == []
+        sent.clear()
 
         draft = ok(hub.post(f"/meetings/{meeting_id}/email/prepare", headers=CSRF, json={"to": ["Colleague@Example.org"], "cc": ["boss@example.org"]}))
         assert draft["status"] == "ready_for_review" and draft["recipients"]["to"] == ["colleague@example.org"] and "Priya Shah proposed" in draft["body"]

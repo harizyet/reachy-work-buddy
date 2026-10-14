@@ -6,6 +6,7 @@ package; any edit returns the package to review. Nothing here regenerates approv
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
@@ -21,6 +22,7 @@ from companion_core.email.mime import (
 )
 from companion_core.email.models import (
     MEETING_MINUTES_KIND,
+    SENDER_TEST_KIND,
     DraftStatus,
     EmailDraft,
     Recipients,
@@ -30,7 +32,9 @@ from companion_core.email.store import EmailStore
 from companion_core.email.workflow import (
     DEFAULT_SEND_DELAY_SECONDS,
     DraftNotQueuedError,
+    SendFn,
     cancel_queued_draft,
+    dispatch_due_drafts,
 )
 from companion_core.meeting_distribution import package as pkg
 from companion_core.meeting_distribution.groups import GroupStore
@@ -39,6 +43,8 @@ from shared.models.response import Privacy
 from shared.models.session import InputModality
 
 CONFIRM_WORD = "SEND"
+TEST_PER_HOUR = 5  # a test is for checking the account, not for sending mail: a handful an hour is plenty
+TEST_MIN_GAP_SECONDS = 10
 
 
 class DistributionError(Exception):
@@ -60,10 +66,12 @@ class MeetingEmailService:
         owner_emails: Callable[[], Awaitable[list[str]]] | None = None,
         attendees: Callable[[Meeting], Awaitable[list[str]]] | None = None,
         delay_seconds: int = DEFAULT_SEND_DELAY_SECONDS,
+        send_fn: SendFn | None = None,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
     ) -> None:
         self.emails, self.meetings, self.senders, self.groups, self.analysis = emails, meetings, senders, groups, analysis
         self._timezone, self._owner_emails, self._attendees, self.delay_seconds, self.clock = timezone, owner_emails, attendees, delay_seconds, clock
+        self._send_fn = send_fn
 
     # -- helpers -------------------------------------------------------------------------------------------------------------------------------
 
@@ -285,6 +293,52 @@ class MeetingEmailService:
             raise DistributionError(409, "Only a message with an unknown delivery can be settled.", "bad_state")
         await self.emails.add_event(draft_id, "owner_confirmed_delivered" if delivered else "owner_reopened", {})
         return await self._view(settled)
+
+    # -- the sender test -----------------------------------------------------------------------------------------------------------------------
+
+    async def send_test(self, to: str, *, modality: InputModality = InputModality.TEXT) -> dict:
+        """The owner's deliberate one-off test of the dedicated sender, to the single address typed in Settings. The message is fixed text with no meeting content and no attachment, it needs
+        the sender to be configured, verified and switched on (so "off" really means off), and it is limited to a few an hour. It is an ordinary stored draft sent by the existing dispatch
+        loop's code path (claimed, hash-checked, recorded in the draft's history), immediately instead of after the undo window: the owner is waiting for the answer, the content is
+        fixed, and it can go only to the address the owner just typed. Text only (ADR 0011)."""
+        require_text(modality)
+        try:
+            recipient = normalize_address(to)
+        except AddressError as exc:
+            raise DistributionError(422, str(exc), "bad_recipient") from None
+        settings = await self.senders.get()
+        if not settings.configured:
+            raise DistributionError(409, "Set up the outbound sender first.", "no_sender")
+        if not settings.enabled:
+            raise DistributionError(409, "Sending is turned off. Verify the connection and turn sending on first.", "sending_off")
+        now = self.clock()
+        recent = [d for d in await self.emails.list_drafts(kind=SENDER_TEST_KIND) if now - d.created_at < timedelta(hours=1)]
+        if len(recent) >= TEST_PER_HOUR or any(now - d.created_at < timedelta(seconds=TEST_MIN_GAP_SECONDS) for d in recent):
+            raise DistributionError(409, f"Test emails are limited to {TEST_PER_HOUR} an hour. Wait a little and try again.", "rate_limited")
+        sender = await self._sender_address()
+        body = (
+            f"This is a test message from Reachy.\n\nIt was sent at {now.strftime('%Y-%m-%d %H:%M')} UTC from {sender}, because the owner asked for a test of the outbound email account.\n"
+            "If you received it, the account works. It contains no meeting content and no attachment, and nothing else will follow from it.\n"
+        )
+        draft = EmailDraft(to=recipient, subject="Reachy test email", body=body, status=DraftStatus.READY_FOR_REVIEW, kind=SENDER_TEST_KIND, recipients=Recipients(to=[recipient]),
+                           source={"purpose": "sender_test"}, sender=sender)
+        saved = await self.emails.create_package(draft, [])
+        approved = await self.emails.approve_reviewed(saved.id, package_hash=saved.package_hash or "", message_id=f"<{uuid.uuid4().hex}@{sender.rpartition('@')[2]}>")
+        await self.emails.add_event(saved.id, "prepared", {"purpose": "sender_test", "recipient": recipient})
+        if approved is None or await self.emails.queue_draft(saved.id, dispatch_at=now) is None:
+            raise DistributionError(409, "The test message could not be queued.", "bad_state")
+        await self.emails.add_event(saved.id, "approved", {"recipients": [recipient]})
+        await self.emails.add_event(saved.id, "queued", {"dispatch_at": now.isoformat()})
+        if self._send_fn is not None:
+            await dispatch_due_drafts(self.emails, send_fn=self._send_fn, now=now + timedelta(seconds=1))  # the same claim, hash check and outcome handling as every send
+        for _ in range(40):  # a loop pass may have claimed it a moment earlier: wait briefly for the outcome
+            final = await self.emails.get_draft(saved.id)
+            if final is not None and final.status not in (DraftStatus.QUEUED, DraftStatus.SENDING):
+                break
+            await asyncio.sleep(0.25)
+        final = await self.emails.get_draft(saved.id)
+        return {"id": saved.id, "status": final.status.value if final else "unknown", "to": recipient, "provider_response": final.provider_response if final else None,
+                "error": final.last_error if final and final.status in (DraftStatus.FAILED, DraftStatus.UNKNOWN_DELIVERY) else None}
 
     # -- reads ---------------------------------------------------------------------------------------------------------------------------------
 

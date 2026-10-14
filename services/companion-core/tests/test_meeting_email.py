@@ -730,3 +730,96 @@ def test_the_request_is_not_recognised_when_the_feature_is_off_and_sending_wordi
         reply = _say(w, text, "voice")
         assert "prepared a draft" not in reply
     assert asyncio.run(w.emails.list_drafts(kind=MEETING_MINUTES_KIND)) == [] and w.sent == []
+
+
+# ---- the sender test: one fixed message to the address typed in Settings ----------------------------------------------------------------------------
+
+def test_a_test_email_goes_to_the_typed_address_with_fixed_text_no_attachment_and_no_meeting_content():
+    w = W()
+    r = w.client.post("/meeting-email/sender/test", json={"to": "Owner.Test@Example.org"})
+    assert r.status_code == 200 and r.json()["status"] == "sent" and r.json()["to"] == "owner.test@example.org" and r.json()["provider_response"] == "2.0.0 OK queued"
+    [(draft, blobs)] = w.sent
+    assert draft.kind == "sender_test" and draft.subject == "Reachy test email" and draft.sender == SENDER and blobs == []
+    assert draft.recipients.everyone() == ["owner.test@example.org"] and draft.attachments == []
+    assert "test message from Reachy" in draft.body and "no meeting content" in draft.body
+    assert "Weekly sync" not in draft.body and "Priya" not in draft.body and "SECRET-TRANSCRIPT-LINE" not in draft.body  # nothing from any meeting
+    assert [e.event for e in asyncio.run(w.emails.list_events(draft.id))] == ["prepared", "approved", "queued", "sending", "sent"]  # recorded like every other message
+    assert w.client.get("/meeting-email/drafts").json() == []  # it is not a meeting message, and it cannot be opened, edited or approved as one
+    assert w.client.get(f"/meeting-email/drafts/{draft.id}").status_code == 404
+    assert w.dispatch(minutes=30) == 0 and len(w.sent) == 1  # a later pass never sends it again
+
+
+@pytest.mark.parametrize("bad", ["", "nobody", "a@b", "a b@example.org", "a@example.org\r\nBcc: evil@example.net", "Name <a@example.org>", "a@example.org, b@example.org"])
+def test_a_test_email_needs_exactly_one_plain_valid_address(bad):
+    w = W()
+    r = w.client.post("/meeting-email/sender/test", json={"to": bad})
+    assert r.status_code == 422 and code(r) == "bad_recipient"
+    assert w.sent == [] and asyncio.run(w.emails.list_drafts(kind="sender_test")) == []
+    assert w.client.post("/meeting-email/sender/test", json={"to": "a@example.org", "also": "b@example.org"}).status_code == 422  # a second recipient cannot be smuggled in
+
+
+def test_a_test_email_needs_a_configured_and_switched_on_sender_so_off_really_means_off():
+    off = W(enabled=False)
+    r = off.client.post("/meeting-email/sender/test", json={"to": "a@example.org"})
+    assert r.status_code == 409 and code(r) == "sending_off" and off.sent == [] and asyncio.run(off.emails.list_drafts(kind="sender_test")) == []
+    none = W(with_sender=False)
+    r = none.client.post("/meeting-email/sender/test", json={"to": "a@example.org"})
+    assert r.status_code == 409 and code(r) == "no_sender" and none.sent == []
+
+
+def test_test_emails_are_rate_limited_to_a_few_an_hour_with_a_short_gap():
+    w = W()
+    clock = {"now": datetime.now(UTC)}
+    w.service.clock = lambda: clock["now"]
+    assert w.client.post("/meeting-email/sender/test", json={"to": "a@example.org"}).status_code == 200
+    again = w.client.post("/meeting-email/sender/test", json={"to": "a@example.org"})
+    assert again.status_code == 409 and code(again) == "rate_limited"  # too soon after the last one
+    for _ in range(4):
+        clock["now"] += timedelta(seconds=20)
+        assert w.client.post("/meeting-email/sender/test", json={"to": "a@example.org"}).status_code == 200
+    clock["now"] += timedelta(seconds=20)
+    sixth = w.client.post("/meeting-email/sender/test", json={"to": "a@example.org"})
+    assert sixth.status_code == 409 and code(sixth) == "rate_limited" and len(w.sent) == 5
+    clock["now"] += timedelta(hours=1)  # the window moves on
+    assert w.client.post("/meeting-email/sender/test", json={"to": "a@example.org"}).status_code == 200
+
+
+def test_a_failed_or_ambiguous_test_reports_what_happened_and_is_never_retried():
+    w = W()
+
+    async def refused(draft):
+        raise SendRefused("authentication failed: 535")
+
+    w.service._send_fn = refused
+    r = w.client.post("/meeting-email/sender/test", json={"to": "a@example.org"}).json()
+    assert r["status"] == "failed" and "authentication failed" in r["error"]
+    clock = datetime.now(UTC)
+    w.service.clock = lambda: clock + timedelta(minutes=5)
+
+    async def lost(draft):
+        raise SendUnknown("no final answer after sending: timeout")
+
+    w.service._send_fn = lost
+    r = w.client.post("/meeting-email/sender/test", json={"to": "a@example.org"}).json()
+    assert r["status"] == "unknown_delivery" and "no final answer" in r["error"]
+    assert w.dispatch(minutes=120) == 0 and w.sent == []  # neither is picked up again by the loop
+
+
+def test_a_test_email_is_text_only_and_refuses_voice_at_the_service_layer_and_needs_the_service_token():
+    w = W()
+    with pytest.raises(VoiceConfirmationNotAllowedError):
+        asyncio.run(w.service.send_test("a@example.org", modality=InputModality.VOICE))
+    assert w.sent == [] and asyncio.run(w.emails.list_drafts(kind="sender_test")) == []
+    assert TestClient(w.app).post("/meeting-email/sender/test", json={"to": "a@example.org"}).status_code in (401, 403)
+    for text in ("send a test email to a@example.org", "send a test email"):
+        for modality in ("text", "voice"):
+            _say(w, text, modality)
+    assert w.sent == [] and asyncio.run(w.emails.list_drafts(kind="sender_test")) == []  # nothing in conversation reaches it
+
+
+def test_a_test_email_never_falls_back_to_the_deployment_environment_sender(monkeypatch):
+    monkeypatch.setenv("SMTP_HOST", "smtp.example.test")
+    w = W(with_sender=False)
+    draft = EmailDraft(to="a@example.org", subject="Reachy test email", body="x", kind="sender_test", recipients=Recipients(to=["a@example.org"]))
+    with pytest.raises(SendRefused, match="no outbound sender"):
+        asyncio.run(MailSender(w.sender_store)(draft))

@@ -25,7 +25,11 @@ from companion_core.email.mime import (
     envelope_recipients,
     normalize_address,
 )
-from companion_core.email.models import MEETING_MINUTES_KIND, EmailDraft
+from companion_core.email.models import (
+    MEETING_MINUTES_KIND,
+    SENDER_TEST_KIND,
+    EmailDraft,
+)
 from companion_core.email.sender_config import (
     GMAIL_HOST,
     MailSenderStore,
@@ -70,8 +74,8 @@ class MailSender:
         configured = await self.store.get() if self.store is not None else SenderSettings()
         if configured.configured:
             return configured, await self.store.password()
-        if draft is not None and draft.kind == MEETING_MINUTES_KIND:
-            raise SendRefused("no outbound sender is configured")  # a meeting package never falls back to the deployment environment
+        if draft is not None and draft.kind in (MEETING_MINUTES_KIND, SENDER_TEST_KIND):
+            raise SendRefused("no outbound sender is configured")  # a meeting package or a sender test never falls back to the deployment environment
         if not self.allow_env:
             raise SendRefused("no outbound sender is configured")
         env = env_settings()

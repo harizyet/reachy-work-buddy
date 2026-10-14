@@ -256,3 +256,48 @@ describe('Outbound meeting email settings', () => {
     await waitFor(() => expect(h.data.email.groups).toEqual([]));
   });
 });
+
+describe('Send a test email', () => {
+  const open = async () => {
+    renderApp('#/settings/accounts');
+    return within(await screen.findByRole('region', { name: 'Send a test email' }));
+  };
+
+  it('sends one test message to the typed address and says what happened', async () => {
+    const h = hub();
+    const section = await open();
+    const user = userEvent.setup();
+    expect(section.getByRole('button', { name: 'Send test email' })).toBeDisabled(); // nobody typed yet
+    await user.type(section.getByLabelText('Send the test email to'), 'Owner.Test@Example.org');
+    await user.click(section.getByRole('button', { name: 'Send test email' }));
+    expect(await section.findByRole('status', { name: 'Test email result' })).toHaveTextContent('Test email sent to owner.test@example.org (server reply: 2.0.0 OK queued). Check that inbox');
+    expect(h.data.email.tests).toEqual(['Owner.Test@Example.org']);
+    expect(section.getByText(/It contains no meeting content/)).toBeInTheDocument();
+  });
+
+  it('cannot be used while sending is off, and says why', async () => {
+    const h = hub();
+    h.data.email.sender = { ...h.data.email.sender, enabled: false };
+    const section = await open();
+    await userEvent.setup().type(section.getByLabelText('Send the test email to'), 'a@example.org');
+    expect(section.getByRole('button', { name: 'Send test email' })).toBeDisabled();
+    expect(section.getByText('Verify the connection and turn sending on first.')).toBeInTheDocument();
+    expect(h.data.email.tests).toEqual([]);
+  });
+
+  it('shows the server\'s refusal for a bad address and the reason when the mail server fails', async () => {
+    const h = hub();
+    const section = await open();
+    const user = userEvent.setup();
+    const box = section.getByLabelText('Send the test email to');
+    await user.type(box, 'not-an-address');
+    await user.click(section.getByRole('button', { name: 'Send test email' }));
+    expect(await section.findByRole('status', { name: 'Test email result' })).toHaveTextContent('not a valid email address: not-an-address');
+    await user.clear(box);
+    await user.type(box, 'a@example.org');
+    h.data.email.testFails = 'authentication failed: 535';
+    await user.click(section.getByRole('button', { name: 'Send test email' }));
+    await waitFor(() => expect(section.getByRole('status', { name: 'Test email result' })).toHaveTextContent('The test email to a@example.org was not sent: authentication failed: 535.'));
+    expect(h.data.email.tests).toEqual([]);
+  });
+});

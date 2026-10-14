@@ -372,6 +372,31 @@ def test_a_bcc_recipient_is_an_envelope_recipient_only_and_is_in_no_transmitted_
     assert "hidden.person@example.org" not in data and "Bcc" not in data  # ...but appears nowhere in what is transmitted
 
 
+def test_the_sender_test_reaches_the_typed_inbox_through_real_smtp_with_fixed_text_and_no_attachment(mailpit):
+    async def go():
+        store, emails, meetings = await sender_store(mailpit), InMemoryEmailStore(), InMemoryMeetingStore()
+        service = MeetingEmailService(emails=emails, meetings=meetings, senders=store, groups=InMemoryGroupStore(), send_fn=MailSender(store, tls_context=mailpit.tls))
+        return await service.send_test("Owner.Test.Inbox@Example.org")
+
+    result = asyncio.run(go())
+    assert result["status"] == "sent" and result["to"] == INBOX and result["provider_response"]
+    [summary] = mailpit.messages()
+    message = mailpit.message(summary["ID"])
+    assert message["Subject"] == "Reachy test email" and message["From"]["Address"] == USER and [a["Address"] for a in message["To"]] == [INBOX]
+    assert message["Attachments"] == [] and "test message from Reachy" in message["Text"] and "no meeting content" in message["Text"]
+
+
+def test_a_test_email_with_a_wrong_password_fails_without_leaking_it_and_nothing_arrives(mailpit):
+    async def go():
+        store, emails, meetings = await sender_store(mailpit, password="wrong-password"), InMemoryEmailStore(), InMemoryMeetingStore()
+        service = MeetingEmailService(emails=emails, meetings=meetings, senders=store, groups=InMemoryGroupStore(), send_fn=MailSender(store, tls_context=mailpit.tls))
+        return await service.send_test(INBOX)
+
+    result = asyncio.run(go())
+    assert result["status"] == "failed" and "authentication failed" in result["error"] and "wrong-password" not in str(result)
+    assert mailpit.messages() == []
+
+
 # ---- failures ------------------------------------------------------------------------------------------------------------------------------------
 
 def test_authentication_failure_at_dispatch_fails_the_message_once_without_retrying_or_leaking_the_credential(mailpit):

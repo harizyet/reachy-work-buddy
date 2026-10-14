@@ -41,6 +41,10 @@ class EnabledBody(Strict):
     enabled: bool
 
 
+class SenderTestBody(Strict):
+    to: str = Field(max_length=254)
+
+
 class GroupBody(Strict):
     name: str = Field(max_length=80)
     addresses: list[str] = Field(max_length=20)
@@ -129,6 +133,11 @@ def install_meeting_email_routes(app: FastAPI) -> None:
             return (await senders().set_enabled(body.enabled)).view()
         except SenderConfigError as exc:
             raise HTTPException(status_code=409, detail={"message": str(exc), "code": "not_verified"}) from None
+
+    @app.post(api.SENDER_TEST)
+    async def test_sender(body: SenderTestBody) -> dict:
+        """Send one fixed test message to the address the owner typed. Needs the sender enabled; text-only and owner-session-only; limited to a few an hour."""
+        return await run(svc().send_test(body.to, modality=InputModality.TEXT))
 
     @app.delete(api.SENDER)
     async def disconnect_sender() -> dict:

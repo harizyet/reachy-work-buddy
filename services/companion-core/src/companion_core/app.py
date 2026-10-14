@@ -1278,7 +1278,8 @@ def create_app(
         return MeetingEmailService(
             emails=app.state.email_store, meetings=app.state.meeting_store, senders=app.state.mail_sender_store, groups=app.state.recipient_group_store,
             analysis=app.state.meeting_analysis_service, timezone=notepad_timezone, owner_emails=owner_emails, attendees=attendees,
-            delay_seconds=email_send_delay_seconds if email_send_delay_seconds is not None else DEFAULT_SEND_DELAY_SECONDS)
+            delay_seconds=email_send_delay_seconds if email_send_delay_seconds is not None else DEFAULT_SEND_DELAY_SECONDS,
+            send_fn=email_send_fn or MailSender(app.state.mail_sender_store, tls_context=mail_tls_context))
 
     if email_on:
         install_meeting_email_routes(app)

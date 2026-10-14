@@ -33,6 +33,7 @@ from pydantic import BaseModel, Field
 
 TEXT_KIND = "text"  # a draft written in conversation: one recipient, no attachment (the original kind)
 MEETING_MINUTES_KIND = "meeting_minutes"
+SENDER_TEST_KIND = "sender_test"  # the owner's one-off test of the dedicated sender: fixed text, one recipient, no meeting content
 
 
 class DraftStatus(StrEnum):

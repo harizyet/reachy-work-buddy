@@ -62,6 +62,10 @@ Gmail SMTP (`smtp.gmail.com:587`, STARTTLS, an app password on a **dedicated** a
 
 Stage D (recipients): manual entry, saved groups (`meeting_recipient_groups`), suggestions offered unchecked; the complete To/Cc/Bcc list is shown in every review. Stage F (safety): see [ADR 0039](adr/0039-supervised-meeting-minutes-email.md) decisions 3 and 5. Stage G: [verification record](verification/phase-55-meeting-minutes-email-2026-10-14.md).
 
+## Sender test (added 2026-10-14)
+
+Settings > Accounts > Outbound meeting email has a **Send a test email** box: type an address, press the button, and Reachy sends one fixed short message from the dedicated sender to it and reports what happened (sent with the server's reply, failed with the reason, or delivery unknown). Rules and the one exception to the ten-minute window are in the [ADR addendum](adr/0039-supervised-meeting-minutes-email.md#addendum-2026-10-14-the-sender-test). It needs sending to be on, so verify, enable, then test. Core `POST /meeting-email/sender/test`, hub proxy, `MailSender`/`MeetingEmailService.send_test`, web `MailSender.tsx`. Android has no sender setup (web only), so no Android test button.
+
 ## Stage H: deployment proposal (nothing below is authorised)
 
 Nothing is deployed, no production credential is configured and no real email has been sent. Production stays at schema `035_meeting_speaker_identity` with no sender until the owner approves each step separately.
@@ -82,7 +86,7 @@ Nothing is deployed, no production credential is configured and no real email ha
 
 Prerequisite: the deployment above through step 5, a dedicated Gmail account, and an inbox you own for testing. Check each box before widening anything.
 
-1. **Setup.** Settings > Accounts > Outbound meeting email: enter host, port, sender, username, app password; Save. The password field empties and only "A credential is saved." shows. Sending is OFF. Verify connection: it says nothing was sent and your test inbox received nothing. Turn sending on. Change any field: sending turns off again.
+1. **Setup and test email.** Settings > Accounts > Outbound meeting email: enter host, port, sender, username, app password; Save. The password field empties and only "A credential is saved." shows. Sending is OFF. Verify connection: it says nothing was sent and your test inbox received nothing. Turn sending on, then type your own test address in **Send a test email** and press the button: one short message arrives from the dedicated account (check spam too), with no meeting content and no attachment; the page shows the server's reply. Pressing it more than five times in an hour is refused. Turn sending off: the test button is disabled. Change any field: sending turns off again.
 2. **Wrong credential.** Save a wrong password, Verify: it fails with "authentication failed" and the password is not echoed. Restore the right one.
 3. **Prepare.** Open a finished meeting with confirmed speaker names, Share minutes, Prepare message. The body has the right title, date and time zone, participant names, the summary, the confirmed actions only, decisions labelled as not individually confirmed, and **no transcript text and no audio**.
 4. **Speaker names.** Rename a speaker (Identify speakers): Share minutes tells you the summary predates the names and refuses to prepare until you write it again. After rewriting, the new name appears.

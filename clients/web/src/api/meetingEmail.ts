@@ -172,6 +172,18 @@ export const verifySender = async (): Promise<{ ok: boolean; detail: string; sen
   return { ok: r.ok === true, detail: str(r.detail ?? '', 'verify.detail'), sender: parseSender(r.sender) };
 };
 export const setSenderEnabled = async (enabled: boolean): Promise<SenderDto> => parseSender(await request('/meeting-email/sender/enabled', { method: 'PUT', body: { enabled } }));
+export interface SenderTestResult {
+  id: string;
+  status: DraftStatus;
+  to: string;
+  provider_response: string | null;
+  error: string | null;
+}
+/** Sends one fixed test message to the typed address (needs sending on). The server limits how often and answers with what happened. */
+export const sendTestEmail = async (to: string): Promise<SenderTestResult> => {
+  const r = rec(await request('/meeting-email/sender/test', { method: 'POST', body: { to } }), 'test');
+  return { id: str(r.id, 'test.id'), status: str(r.status, 'test.status') as DraftStatus, to: str(r.to, 'test.to'), provider_response: opt(r.provider_response, 'test.provider_response'), error: opt(r.error, 'test.error') };
+};
 export const disconnectSender = async (): Promise<SenderDto> => parseSender(await request('/meeting-email/sender', { method: 'DELETE' }));
 
 export const listGroups = async (signal?: AbortSignal): Promise<GroupDto[]> => {

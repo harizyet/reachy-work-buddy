@@ -106,3 +106,33 @@ test('the Share minutes screen fits a phone without sideways scrolling', async (
   await expect(page.getByRole('region', { name: 'What will be sent' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
 });
+
+test('Settings can send one fixed test email to the typed address, and it contains no meeting content', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop');
+  await page.goto(URL_ + '#/settings/accounts');
+  const loginHeading = page.getByRole('heading', { name: 'Sign in to Reachy' });
+  const nav = page.getByRole('navigation', { name: 'Main' });
+  await expect(loginHeading.or(nav)).toBeVisible();
+  if (await loginHeading.isVisible()) {
+    await page.getByLabel('Username').fill('owner');
+    await page.getByLabel('Password').fill('correct-password');
+    await page.getByRole('button', { name: 'Sign in' }).click();
+  }
+  await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
+  await page.goto(URL_ + '#/settings/accounts');
+  const section = page.getByRole('region', { name: 'Send a test email' });
+  await expect(section).toBeVisible();
+  const before = (await mail(page)).length;
+  await expect(section.getByRole('button', { name: 'Send test email' })).toBeDisabled();
+  await section.getByLabel('Send the test email to').fill('Owner.Test.Inbox@example.org');
+  await section.getByRole('button', { name: 'Send test email' }).click();
+  await expect(section.getByRole('status', { name: 'Test email result' })).toContainText('Test email sent to owner.test.inbox@example.org', { timeout: 20000 });
+  const all = await mail(page);
+  expect(all).toHaveLength(before + 1);
+  const sent = all.at(-1)!;
+  expect(sent).toMatchObject({ subject: 'Reachy test email', to: 'owner.test.inbox@example.org', attachments: [] });
+  expect(sent.rcpts).toEqual(['owner.test.inbox@example.org']);
+  expect(sent.body).toContain('test message from Reachy');
+  expect(sent.body).not.toContain('Weekly sync');
+  expect(sent.body).not.toContain('Priya');
+});

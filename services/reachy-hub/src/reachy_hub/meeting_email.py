@@ -40,6 +40,10 @@ class EnabledBody(Strict):
     enabled: bool
 
 
+class SenderTestBody(Strict):
+    to: str = Field(max_length=254)
+
+
 class GroupBody(Strict):
     name: str = Field(max_length=80)
     addresses: list[str] = Field(max_length=20)
@@ -123,6 +127,10 @@ def install_meeting_email_routes(app, require_owner_session, core) -> None:
     @app.post(api.SENDER_VERIFY, dependencies=owner_change)
     async def verify_sender():
         return await forward(req("POST", api.SENDER_VERIFY, timeout=60.0))  # connects to the mail server; sends nothing
+
+    @app.post(api.SENDER_TEST, dependencies=owner_change)
+    async def test_sender(body: SenderTestBody):
+        return await forward(req("POST", api.SENDER_TEST, body, timeout=60.0))  # sends one fixed test message to the typed address; core enforces everything
 
     @app.put(api.SENDER_ENABLED, dependencies=owner_change)
     async def set_enabled(body: EnabledBody):

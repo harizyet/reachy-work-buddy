@@ -71,7 +71,7 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
     secrets: [] as string[], // every key the page ever sent, so a test can assert none came back
     saves: [] as { call: string; body: any }[],
     deepJobs: [] as any[],
-    email: { enabled: false, sender: { enabled: true, configured: true, host: 'smtp.example.test', port: 587, security: 'starttls', from_address: 'reachy.minutes@example.test', username: 'reachy.minutes@example.test', has_credential: true, verified_at: null, verified_ok: true, verified_detail: '' } as any, drafts: [] as any[], groups: [] as any[], suggestions: [] as any[], passwords: [] as string[], counter: 0, calls: [] as string[], sensitive: false, failApprove: null as any },
+    email: { enabled: false, sender: { enabled: true, configured: true, host: 'smtp.example.test', port: 587, security: 'starttls', from_address: 'reachy.minutes@example.test', username: 'reachy.minutes@example.test', has_credential: true, verified_at: null, verified_ok: true, verified_detail: '' } as any, drafts: [] as any[], groups: [] as any[], suggestions: [] as any[], passwords: [] as string[], tests: [] as string[], testFails: null as string | null, counter: 0, calls: [] as string[], sensitive: false, failApprove: null as any },
     suggestions: { suggestions: [], terms_used: 0, truncated: false } as any,
     sessions: new Map<string, { interaction_mode: string; dnd: boolean; active_channel: string }>(),
     messages: [] as any[],
@@ -105,6 +105,14 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
     if (path === '/meeting-email/sender/verify') {
       e.sender = { ...e.sender, verified_ok: true, verified_detail: 'ok', verified_at: '2030-01-02T08:00:00Z' };
       return jsonResponse({ ok: true, stage: 'authenticated', detail: 'connected to smtp.example.test:587 and signed in', sender: e.sender });
+    }
+    if (path === '/meeting-email/sender/test') {
+      e.calls.push(`TEST ${body.to}`);
+      if (!e.sender.enabled) return err(409, 'sending_off', 'Sending is turned off. Verify the connection and turn sending on first.');
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(body.to)) return err(422, 'bad_recipient', `not a valid email address: ${body.to}`);
+      if (e.testFails) return jsonResponse({ id: 't1', status: 'failed', to: body.to.toLowerCase(), provider_response: null, error: e.testFails });
+      e.tests = [...(e.tests ?? []), body.to];
+      return jsonResponse({ id: `t${e.tests.length}`, status: 'sent', to: body.to.toLowerCase(), provider_response: '2.0.0 OK queued', error: null });
     }
     if (path === '/meeting-email/sender/enabled') {
       if (body.enabled && !e.sender.verified_ok) return err(409, 'not_verified', 'verify the connection before enabling sending');
