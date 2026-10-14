@@ -13,15 +13,13 @@ import contextlib
 import logging
 import os
 import re
-import zipfile
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from datetime import datetime
 from pathlib import Path
 
 from companion_core.document_library import summary
 from companion_core.document_library.models import (
     DEFAULT_SENSITIVITY,
-    EXTENSION_ALIASES,
     FILE_TYPES,
     MAX_PROJECT,
     MAX_TITLE,
@@ -66,6 +64,12 @@ from shared.models.document_library import (
     DocumentSearchOut,
     InspectBlockOut,
     InspectPageOut,
+)
+from shared.models.document_types import (
+    UNREAD_PRESENTATIONS,
+    file_ok,
+    head_ok,
+    normalise_extension,
 )
 from shared.models.document_worker import (
     DocumentStatus,
@@ -118,20 +122,15 @@ def max_upload_bytes() -> int:
 
 
 def _extension(filename: str) -> str:
-    ext = Path(filename.replace("\\", "/")).suffix.lower().lstrip(".")
-    ext = EXTENSION_ALIASES.get(ext, ext)
+    ext = normalise_extension(filename)
     if ext not in FILE_TYPES:
-        raise DocumentError(415, "That file type is not supported")
+        raise DocumentError(415, "That file type is not supported" + (": export it as a PDF or PPTX first" if ext in UNREAD_PRESENTATIONS else ""))
     return ext
 
 
-def _check_docx(path: Path) -> None:
-    try:
-        with zipfile.ZipFile(path) as package:
-            if "word/document.xml" not in package.namelist():
-                raise SourceRejected(415, "That file type is not supported")
-    except zipfile.BadZipFile:
-        raise SourceRejected(415, "That file type is not supported") from None
+def _check_content(ext: str, path: Path) -> None:
+    if not file_ok(ext, path):
+        raise SourceRejected(415, "That file type is not supported")
 
 
 def _clean_title(value: str | None, filename: str) -> str:
@@ -157,6 +156,7 @@ class DocumentService:
         self.provider = provider  # async () -> (ask(messages, max_tokens) -> str, model name) | None: the LOCAL model only; summaries never leave this host
         self._tasks: dict[str, asyncio.Task] = {}
         self.summary_max_pages = summary_max_pages()
+        self.deletion_listeners: list[Callable[[str], Awaitable[None]]] = []  # Phase 53: services holding derived data about a document are told, before the backend is asked, that it is going
 
     def _lock(self, document_id: str) -> asyncio.Lock:
         """One lock per document for submit, reprocess and delete, so a deletion can never finish before a submission it raced with (which would leave the worker holding a copy)."""
@@ -175,11 +175,11 @@ class DocumentService:
         priority: Priority = Priority.BACKGROUND,
     ) -> Document:
         ext = _extension(filename)
-        mime, magics = FILE_TYPES[ext]
+        mime, _kind = FILE_TYPES[ext]
         project = _clean_project(project_scope)
         try:
             source_hash, size, _new = await self.sources.put(
-                chunks, max_bytes=self.max_bytes, head_ok=lambda head: any(head.startswith(m) for m in magics), validate=_check_docx if ext == "docx" else None
+                chunks, max_bytes=self.max_bytes, head_ok=lambda head: head_ok(ext, head), validate=lambda path: _check_content(ext, path)
             )
         except SourceRejected as exc:
             raise DocumentError(exc.status, exc.detail) from None
@@ -321,6 +321,9 @@ class DocumentService:
                     await task
 
     async def _finish(self, document: Document) -> bool:
+        for listener in self.deletion_listeners:
+            with contextlib.suppress(Exception):
+                await listener(document.id)  # idempotent: derived associations, estimates and findings are removed whether or not the backend confirms yet
         if document.backend_ref is not None:
             if self.worker is None:
                 return False

@@ -38,8 +38,11 @@ function useImage(key: readonly unknown[], load: (signal: AbortSignal) => Promis
   return { url, pending: query.isPending && enabled, failed: query.isError };
 }
 
-export function InspectView({ doc, onImprove, improving }: { doc: DocumentDto; onImprove: () => void; improving: boolean }) {
-  const [page, setPage] = useState(1);
+export function InspectView({ doc, onImprove, improving, initialPage }: { doc: DocumentDto; onImprove: () => void; improving: boolean; initialPage?: number }) {
+  const [page, setPage] = useState(initialPage ?? 1);
+  useEffect(() => {
+    if (initialPage !== undefined) setPage(initialPage);
+  }, [initialPage]);
   const [tab, setTab] = useState<Tab>('rendered');
   const [overlay, setOverlay] = useState(true);
   const [selected, setSelected] = useState<number | null>(null);

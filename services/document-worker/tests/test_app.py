@@ -191,9 +191,45 @@ def test_delete_keeps_the_record_when_the_backend_fails_so_it_can_be_retried(cli
     assert client.delete("/documents/doc1", headers=AUTH).json()["verified"] is True
 
 
+import io
+import zipfile
+
+
+def package(entry: str, mimetype: str | None = None) -> bytes:
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as z:
+        if mimetype:
+            z.writestr("mimetype", mimetype)
+        z.writestr(entry, "<x/>")
+    return buffer.getvalue()
+
+
+OLE = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\x00" * 40
+SAMPLES = {
+    "pptx": package("ppt/presentation.xml"), "xlsx": package("xl/workbook.xml"), "docx": package("word/document.xml"), "odp": package("content.xml", "application/vnd.oasis.opendocument.presentation"),
+    "odt": package("content.xml", "application/vnd.oasis.opendocument.text"), "ods": package("content.xml", "application/vnd.oasis.opendocument.spreadsheet"), "epub": package("c.opf", "application/epub+zip"),
+    "ppt": OLE, "doc": OLE, "xls": OLE, "rtf": b"{\\rtf1 hello}", "html": b"<html><body>hi</body></html>", "csv": b"a,b\n1,2\n", "tsv": b"a\tb\n1\t2\n",
+}
+
+
+def test_every_accepted_type_is_taken_by_content_and_parsed_whole(client, engine):
+    for n, (ext, data) in enumerate(SAMPLES.items()):
+        assert client.upload(f"t{n}", data, extension=ext, tier="flash").status_code == 200, ext
+    assert all(page_range is None for suffix, page_range in engine.page_ranges if suffix != ".pdf")  # only a PDF is parsed by page range
+
+
+def test_a_type_is_refused_when_its_content_is_not_that_type_and_unlisted_types_are_not_accepted(client):
+    wrong = {"pptx": package("word/document.xml"), "xlsx": b"PK\x03\x04 not a package", "ppt": b"%PDF-1.4 hello", "rtf": b"plain words", "html": b"<html>\x00\x01</html>", "odp": package("content.xml", "application/vnd.oasis.opendocument.text"),
+             "epub": package("c.opf", "application/zip")}
+    for n, (ext, data) in enumerate(wrong.items()):
+        assert client.upload(f"w{n}", data, extension=ext, tier="flash").status_code == 415, ext
+    for n, ext in enumerate(("txt", "md", "exe", "pptm", "key")):
+        assert client.upload(f"u{n}", b"hello world", extension=ext, tier="flash").status_code == 415, ext
+
+
 def test_page_range_is_sent_for_pdf_only(client, engine):
     client.upload("doc1", DOC_A)
-    docx = b"PK\x03\x04 fake docx"
+    docx = package("word/document.xml")
     assert client.upload("doc2", docx, extension="docx", tier="flash").status_code == 200
     assert engine.page_ranges == [(".pdf", "1-5"), (".docx", None)]
 
@@ -237,7 +273,7 @@ def test_inspect_images_come_from_the_backend_renderer_and_carry_safe_headers(cl
     assert client.get("/documents/doc1/inspect/pages/1/blocks/99/image", headers=AUTH).json() == {"error": "asset_not_found"}
     assert client.get("/documents/doc1/inspect/pages/1/image", headers=AUTH, params={"format": "gif"}).status_code == 422
     assert client.get("/documents/doc1/inspect/pages/9/image", headers=AUTH).json() == {"error": "page_not_found"}
-    docx = b"PK\x03\x04 fake docx"
+    docx = package("word/document.xml")
     client.upload("doc2", docx, extension="docx", tier="flash")
     assert client.get("/documents/doc2/inspect/pages/1/image", headers=AUTH).json() == {"error": "no_page_image"}  # MinerU renders page images for PDFs and images only
 

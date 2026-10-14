@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { StaleSessionError } from '../../api/client';
-import type { DocumentDto, Priority, Sensitivity } from '../../api/documents';
+import { ACCEPTED_FILES, type DocumentDto, type Priority, type Sensitivity } from '../../api/documents';
 import { EmptyState, ErrorState } from '../../components/shared/states';
 import { Button } from '../../components/ui/Button';
 import { Spinner } from '../../components/ui/Spinner';
@@ -30,7 +30,7 @@ export function DocumentsPage() {
     <section aria-labelledby="documents-title">
       <h1 id="documents-title" className="text-xl font-semibold">Documents</h1>
       <p className="mt-1 text-sm text-[var(--muted)]">
-        Upload a PDF, Word file or image. Reachy keeps the original, reads it locally, and can answer questions about it, search it and summarise it. What it reads is a machine&apos;s reading and can contain mistakes; the original is what counts.
+        Upload a PDF, a presentation (PowerPoint, OpenDocument), a Word, Excel or other office file, an EPUB, an HTML page, a CSV or an image. Reachy keeps the original, reads it locally, and can answer questions about it, search it and summarise it. What it reads is a machine&apos;s reading and can contain mistakes; the original is what counts.
       </p>
       {enabled.isPending && <Spinner label="Checking the document library" />}
       {enabled.error && <ErrorState message={enabled.error.message} onRetry={() => void enabled.refetch()} />}
@@ -99,7 +99,7 @@ function UploadForm() {
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="text-sm sm:col-span-2">
           File
-          <input key={input} type="file" accept=".pdf,.docx,.png,.jpg,.jpeg" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="mt-1 block w-full text-sm" />
+          <input key={input} type="file" accept={ACCEPTED_FILES} onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="mt-1 block w-full text-sm" />
         </label>
         <label className="text-sm">
           Title (optional)
@@ -136,8 +136,11 @@ function UploadForm() {
 function DocumentDetail({ doc }: { doc: DocumentDto }) {
   const { patch, reprocess, remove } = useDocumentActions();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const wanted = Number(params.get('page')); // a link from a meeting opens the inspector on that page
+  const initialPage = Number.isInteger(wanted) && wanted >= 1 ? wanted : undefined;
   const [confirm, setConfirm] = useState(false);
-  const [inspecting, setInspecting] = useState(false);
+  const [inspecting, setInspecting] = useState(initialPage !== undefined);
   const [title, setTitle] = useState(doc.title);
   const ready = doc.state === 'ready' || doc.state === 'partial';
   const failure = [patch, reprocess, remove].map((m) => m.error).find((e) => e && !(e instanceof StaleSessionError));
@@ -196,7 +199,7 @@ function DocumentDetail({ doc }: { doc: DocumentDto }) {
       )}
       {failure && <p role="alert" className="mt-2 text-sm text-[var(--bad)]">{failure.message}</p>}
 
-      {ready && inspecting && <InspectView doc={doc} improving={reprocess.isPending} onImprove={() => doc.next_tier && reprocess.mutate({ id: doc.id, tier: doc.next_tier })} />}
+      {ready && inspecting && <InspectView doc={doc} initialPage={initialPage} improving={reprocess.isPending} onImprove={() => doc.next_tier && reprocess.mutate({ id: doc.id, tier: doc.next_tier })} />}
       {ready ? <DocumentTools doc={doc} /> : doc.state !== 'failed' && <p className="mt-4 text-sm text-[var(--muted)]">Reachy is still reading this document. You can ask, search and summarise once it is ready.</p>}
     </article>
   );

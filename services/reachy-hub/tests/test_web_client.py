@@ -157,7 +157,7 @@ def _union(left, right):
                 for key in sorted(left.keys() | right.keys())}
     if isinstance(left, str) and isinstance(right, str):
         return "|".join(sorted(set(left.split("|")) | set(right.split("|"))))
-    return f"{left}|{right}"
+    return "|".join(sorted({str(left), str(right)}))  # sorted: the result must not depend on which record happens to come first
 
 
 def seed_brain(client: TestClient) -> dict[str, str]:

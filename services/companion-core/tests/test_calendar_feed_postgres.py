@@ -24,6 +24,7 @@ pytestmark = pytest.mark.skipif(not os.environ.get("DATABASE_MIGRATION_TEST_URL"
 KEYS = Keyring("one", {"one": b"\x01" * 32})
 OTHER_KEYS = Keyring("two", {"two": b"\x02" * 32})
 ROLLBACK = Path(__file__).resolve().parents[3] / "deploy" / "homelab" / "rollback-033.sql"
+ROLLBACK_034 = ROLLBACK.with_name("rollback-034.sql")  # the head is 034 now: it is undone first
 FIXTURE = (Path(__file__).parent / "fixtures" / "calendar" / "work-calendar.ics").read_bytes()
 URL = "https://calendar.example.com/private/abcdef-secret-token/basic.ics"
 NOW = datetime(2026, 10, 12, 1, 0, tzinfo=UTC)
@@ -74,7 +75,7 @@ def with_store(dsn, body, keys=KEYS):
 
 
 def test_the_migration_adds_one_table_with_one_empty_row(dsn):
-    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("033_calendar_feed",)]
+    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("034_meeting_multimodal",)]
     assert sql(dsn, "SELECT id, secret_ref, snapshot FROM calendar_feed") == [("owner", None, None)]
     assert sql(dsn, "SELECT count(*) FROM pg_constraint WHERE conrelid = 'calendar_feed'::regclass AND contype = 'c'") == [(1,)]  # only the owner row can exist
     with pytest.raises(psycopg.errors.CheckViolation):
@@ -150,13 +151,14 @@ def test_the_rollback_script_removes_the_feed_and_its_secret_and_nothing_else(ds
     with_store(dsn, go)
     sql(dsn, "INSERT INTO calendar_events (id, title, start_at, end_at) VALUES ('e1', 'Local', now(), now())")
     with psycopg.connect(dsn) as conn:
+        conn.execute(ROLLBACK_034.read_text())
         conn.execute(ROLLBACK.read_text())  # one transaction, as the script's own instructions require
     assert sql(dsn, "SELECT version_num FROM alembic_version") == [("032_meeting_analysis",)]
     assert sql(dsn, "SELECT count(*) FROM pg_tables WHERE tablename = 'calendar_feed'") == [(0,)]
     assert sql(dsn, "SELECT provider FROM secrets") == [("google",)]
     assert sql(dsn, "SELECT count(*) FROM calendar_events") == [(1,)]
     upgrade(dsn, KEYS)  # applies again after a rollback
-    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("033_calendar_feed",)] and sql(dsn, "SELECT id FROM calendar_feed") == [("owner",)]
+    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("034_meeting_multimodal",)] and sql(dsn, "SELECT id FROM calendar_feed") == [("owner",)]
 
 
 def test_an_uploaded_file_is_stored_encrypted_and_survives_a_restart_with_the_same_revision(dsn):

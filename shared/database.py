@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-SCHEMA_REVISION = "033_calendar_feed"
+SCHEMA_REVISION = "034_meeting_multimodal"
 
 
 async def check_schema(conn) -> None:

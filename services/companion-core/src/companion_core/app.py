@@ -288,6 +288,13 @@ from companion_core.meeting_analysis.store import (
     InMemoryMeetingAnalysisStore,
     MeetingAnalysisStore,
 )
+from companion_core.meeting_multimodal import service as multimodal_service
+from companion_core.meeting_multimodal.postgres_store import PostgresMultimodalStore
+from companion_core.meeting_multimodal.routes import install_meeting_multimodal_routes
+from companion_core.meeting_multimodal.store import (
+    InMemoryMultimodalStore,
+    MultimodalStore,
+)
 from companion_core.meetings import corrections as meeting_corrections
 from companion_core.meetings import describe as meeting_describe
 from companion_core.meetings import outputs as meeting_outputs
@@ -721,6 +728,9 @@ def create_app(
     meeting_analysis_store: MeetingAnalysisStore | None = None,
     meeting_analysis_provider: analysis_service.Provider | None = None,
     run_meeting_analysis_runner: bool = True,
+    meeting_multimodal_store: MultimodalStore | None = None,
+    meeting_multimodal_provider: multimodal_service.Provider | None = None,
+    run_multimodal_runner: bool = True,
     document_store: LibraryStore | None = None,
     document_sources: SourceStore | None = None,
     document_worker: DocumentWorkerClient | None = None,
@@ -728,6 +738,7 @@ def create_app(
     weather_service: WeatherService | None = None,
 ) -> FastAPI:
     documents_on = document_library_service.enabled()  # Phase 50B: read once; with it off nothing is built, no table is read, no directory is created and the routes do not exist
+    multimodal_on = documents_on and multimodal_service.enabled()  # Phase 53: needs the document library; read once; with it off nothing is built, no table is read and the routes do not exist
     analysis_on = analysis_service.enabled()  # Phase 31: read once; with it off nothing is built, no table is read, the knowledge index adds nothing and the routes do not exist
     notepad_on = notepad_service.enabled()  # Phase 49: read once; with it off nothing is built, no table is read and the routes do not exist
     candidates_on, capture_on = candidate_service.candidates_enabled(), candidate_service.capture_enabled()  # read once: routes and lifespan always agree
@@ -1017,6 +1028,22 @@ def create_app(
                 await app.state.document_library.fail_interrupted_outputs()  # a summary a stopped process left running will never finish
             if app.state.document_library.worker is not None and run_document_sync:
                 document_sync_task = asyncio.create_task(document_library_service.run_sync_loop(app.state.document_library, document_library_service.sync_seconds()))
+        multimodal_task = None
+        if multimodal_on:
+            mm_store = meeting_multimodal_store
+            if mm_store is None and db is not None and owns_task_store and owns_planner_store:
+                mm_store = await PostgresMultimodalStore.connect(db)
+            elif mm_store is None:
+                mm_store = InMemoryMultimodalStore()
+                logging.getLogger("companion_core.meeting_multimodal").warning("multimodal meeting intelligence is enabled without a database: attachments and estimates are not durable")
+            app.state.meeting_multimodal_store = mm_store
+            if app.state.meeting_multimodal_service is None:
+                app.state.meeting_multimodal_service = multimodal_service.MeetingMultimodalService(
+                    mm_store, app.state.meeting_store, app.state.document_library, app.state.task_store, app.state.planner_store, provider=meeting_multimodal_provider or notepad_local_provider)
+                app.state.document_library.deletion_listeners.append(app.state.meeting_multimodal_service.document_deleted)
+            if run_multimodal_runner:
+                await app.state.meeting_multimodal_service.requeue_interrupted()  # a run the previous process left processing starts again now, not after its lease
+                multimodal_task = asyncio.create_task(notepad_service.run_loop(app.state.meeting_multimodal_service, concurrency=1))  # the same bounded runner: process_next, reconcile, wake
         candidate_store = candidate_task = None
         if candidates_on:
             candidate_store = memory_candidate_store
@@ -1072,6 +1099,14 @@ def create_app(
             if provenance_only is not None:
                 with contextlib.suppress(Exception):
                     await provenance_only.close()
+            if multimodal_task is not None:
+                multimodal_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await multimodal_task
+                logging.getLogger("companion_core.meeting_multimodal").info("multimodal meeting summary: %s", app.state.meeting_multimodal_service.summary())
+                if meeting_multimodal_store is None:
+                    with contextlib.suppress(Exception):
+                        await app.state.meeting_multimodal_service.store.close()
             if analysis_task is not None:
                 analysis_task.cancel()
                 with contextlib.suppress(asyncio.CancelledError, Exception):
@@ -1214,6 +1249,12 @@ def create_app(
     if analysis_on and meeting_analysis_store is not None and meeting_store is not None and task_store is not None and planner_store is not None:
         app.state.meeting_analysis_service = analysis_service.MeetingAnalysisService(
             meeting_analysis_store, meeting_store, task_store, planner_store, notepad_timezone, provider=meeting_analysis_provider or notepad_local_provider)
+    app.state.meeting_multimodal_store = meeting_multimodal_store
+    app.state.meeting_multimodal_service = None  # Phase 53: built in the lifespan when the flag and the document library are on (or at once when a store is injected)
+    if multimodal_on and meeting_multimodal_store is not None and meeting_store is not None and task_store is not None and planner_store is not None and app.state.document_library is not None:
+        app.state.meeting_multimodal_service = multimodal_service.MeetingMultimodalService(
+            meeting_multimodal_store, meeting_store, app.state.document_library, task_store, planner_store, provider=meeting_multimodal_provider or notepad_local_provider)
+        app.state.document_library.deletion_listeners.append(app.state.meeting_multimodal_service.document_deleted)
     app.state.notepad_service = None  # Phase 49: built in the lifespan only when NOTEPAD_PROCESSING_ENABLED is true (or at once when a store is injected)
     if notepad_on and notepad_store is not None and planner_store is not None and task_store is not None:
         app.state.notepad_service = notepad_service.NotepadService(notepad_store, planner_store, task_store, notepad_timezone, provider=notepad_provider or notepad_local_provider, meetings=meeting_store)
@@ -2142,6 +2183,9 @@ def create_app(
 
     if documents_on:
         install_document_library_routes(app)
+
+    if multimodal_on:
+        install_meeting_multimodal_routes(app)
 
     if candidates_on:
         install_candidate_routes(app, capture_on=capture_on)
@@ -3128,6 +3172,8 @@ def create_app(
             await app.state.notepad_service.meeting_deleted(meeting_id)  # only the association rows go; notes and proposals keep their own text
         if app.state.meeting_analysis_service is not None:
             await app.state.meeting_analysis_service.meeting_deleted(meeting_id)  # its analysis goes with it; a task already made from an action stays
+        if app.state.meeting_multimodal_service is not None:
+            await app.state.meeting_multimodal_service.meeting_deleted(meeting_id)  # its attachments, page estimates, corrections and findings go with it; a task already made stays
         return {"deleted": True}
 
     @app.get("/deep-review/info")

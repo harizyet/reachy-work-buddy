@@ -9,9 +9,10 @@ import shutil
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from shared.models.document_types import TYPES
 from shared.models.document_worker import DOCUMENT_ID_RE
 
-EXTENSIONS = ("pdf", "png", "jpg", "docx")
+EXTENSIONS = tuple(TYPES)  # shared/models/document_types.py: the types MinerU was shown to parse
 
 
 @dataclass

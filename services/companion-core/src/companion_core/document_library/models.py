@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
 
+from shared.models.document_types import ALIASES, MIME_TO_EXTENSION, TYPES, native_text
 from shared.models.response import Privacy
 
 DEFAULT_SENSITIVITY = Privacy.WORK_PRIVATE  # the system-wide default for owner records; an upload that names no class gets this, and content never lowers it
@@ -43,19 +44,13 @@ class Priority(StrEnum):
     INTERACTIVE = "interactive"
 
 
-# type by content: extension -> (mime type, first bytes). A docx is additionally checked to be an OOXML word package.
-FILE_TYPES: dict[str, tuple[str, tuple[bytes, ...]]] = {
-    "pdf": ("application/pdf", (b"%PDF-",)),
-    "png": ("image/png", (b"\x89PNG\r\n\x1a\n",)),
-    "jpg": ("image/jpeg", (b"\xff\xd8\xff",)),
-    "docx": ("application/vnd.openxmlformats-officedocument.wordprocessingml.document", (b"PK\x03\x04",)),
-}
-EXTENSION_ALIASES = {"jpeg": "jpg"}
-_EXTENSION_BY_MIME = {mime: ext for ext, (mime, _magic) in FILE_TYPES.items()}
+# type by content (shared/models/document_types.py): the extension picks the type, the content must be that type. Only types MinerU was shown to parse are accepted.
+FILE_TYPES = {ext: (t.mime, t) for ext, t in TYPES.items()}
+EXTENSION_ALIASES = ALIASES
 
 
 def extension_of(mime_type: str) -> str:
-    return _EXTENSION_BY_MIME[mime_type]
+    return MIME_TO_EXTENSION[mime_type]
 
 
 def tier_for(mime_type: str, priority: Priority) -> str:
@@ -63,7 +58,7 @@ def tier_for(mime_type: str, priority: Priority) -> str:
     background; an interactive request asks for the visual path (Standard)."""
     if priority is Priority.INTERACTIVE:
         return "standard"
-    return "flash" if extension_of(mime_type) == "docx" else "basic"
+    return "flash" if native_text(extension_of(mime_type)) else "basic"
 
 
 @dataclass(frozen=True)

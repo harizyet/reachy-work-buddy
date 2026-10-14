@@ -301,6 +301,46 @@ def test_upload_rejects_by_content_not_by_name(env):
     assert len(env.client.get("/document-library/documents").json()) == 3  # the rejected ones left no record
 
 
+def package(entry: str, mimetype: str | None = None) -> bytes:
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as z:
+        if mimetype:
+            z.writestr("mimetype", mimetype)
+        z.writestr(entry, "<x/>")
+    return buffer.getvalue()
+
+
+OLE = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\x00" * 40
+WIDER = {
+    "deck.pptx": (package("ppt/presentation.xml"), "application/vnd.openxmlformats-officedocument.presentationml.presentation"),
+    "sheet.xlsx": (package("xl/workbook.xml"), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+    "talk.odp": (package("content.xml", "application/vnd.oasis.opendocument.presentation"), "application/vnd.oasis.opendocument.presentation"),
+    "old.ppt": (OLE, "application/vnd.ms-powerpoint"), "old.doc": (OLE, "application/msword"), "old.xls": (OLE, "application/vnd.ms-excel"),
+    "memo.rtf": (b"{\\rtf1 hello}", "application/rtf"), "page.html": (b"<html><body>hi</body></html>", "text/html"), "page.htm": (b"<p>hi</p>", "text/html"),
+    "data.csv": (b"a,b\n1,2\n", "text/csv"), "data.tsv": (b"a\tb\n1\t2\n", "text/tab-separated-values"), "book.epub": (package("c.opf", "application/epub+zip"), "application/epub+zip"),
+}
+
+
+def test_every_type_the_reader_was_shown_to_parse_is_accepted_by_content_and_native_text_gets_the_fast_tier(env):
+    for name, (data, mime) in WIDER.items():
+        r = env.upload(data, name)
+        assert r.status_code == 201, name
+        assert r.json()["mime_type"] == mime and tier_for(mime, Priority.BACKGROUND) == "flash", name  # native text: the fastest tier reads it fully
+    assert tier_for("application/pdf", Priority.BACKGROUND) == "basic" and tier_for("image/png", Priority.BACKGROUND) == "basic"  # a PDF or picture may be a scan: OCR
+
+
+def test_wider_types_are_still_refused_when_the_content_is_not_that_type(env):
+    refused = {"fake.pptx": package("word/document.xml"), "fake2.pptx": b"PK\x03\x04 nope", "fake.xlsx": package("ppt/presentation.xml"), "fake.ppt": PDF, "fake.rtf": b"plain",
+               "fake.html": b"<p>\x00</p>", "fake.odp": package("content.xml", "application/vnd.oasis.opendocument.text"), "fake.epub": package("c.opf", "application/zip"), "empty.csv": b""}
+    for name, data in refused.items():
+        assert env.upload(data, name).status_code == 415, name
+    for name in ("notes.txt", "readme.md", "talk.key", "talk.pps", "talk.pptm", "run.exe"):
+        r = env.upload(b"hello world", name)
+        assert r.status_code == 415, name
+    assert "export it as a PDF or PPTX" in env.upload(b"x", "talk.key").json()["detail"]
+    assert len(env.client.get("/document-library/documents").json()) == 0
+
+
 def test_upload_enforces_the_byte_limit(monkeypatch, tmp_path):
     with Env(monkeypatch, tmp_path, max_bytes=60) as env:
         assert env.upload(PDF).status_code == 201
@@ -1069,3 +1109,12 @@ def test_the_original_downloads_verified_even_when_the_worker_is_down(backend):
     path.chmod(0o640)
     path.write_bytes(b"tampered")
     assert backend.client.get(f"/document-library/documents/{doc['id']}/original").status_code == 409
+
+
+def test_the_web_clients_accepted_file_list_is_the_servers():
+    from pathlib import Path
+
+    from shared.models.document_types import ACCEPT_ATTRIBUTE
+
+    ts = (Path(__file__).resolve().parents[3] / "clients" / "web" / "src" / "api" / "documents.ts").read_text()
+    assert f"ACCEPTED_FILES = '{ACCEPT_ATTRIBUTE}'" in ts

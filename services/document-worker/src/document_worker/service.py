@@ -18,6 +18,7 @@ from document_worker import locators, ranking
 from document_worker.config import Settings
 from document_worker.engine import DocumentEngine, EngineError
 from document_worker.store import EXTENSIONS, DocumentStore, Meta
+from shared.models.document_types import PAGE_PICTURE_TYPES, file_ok, head_ok
 from shared.models.document_worker import (
     SHA256_PATTERN,
     ContentRange,
@@ -34,16 +35,10 @@ from shared.models.document_worker import (
     WorkerTier,
 )
 
-_MAGIC = {
-    "pdf": (b"%PDF-",),
-    "png": (b"\x89PNG\r\n\x1a\n",),
-    "jpg": (b"\xff\xd8\xff",),
-    "docx": (b"PK\x03\x04",),
-}
 _PAGE_RANGE_RE = re.compile(r"^\d+(-\d+)?(,\d+(-\d+)?)*$")
 _PAGE_MARKER_RE = re.compile(r"<!--\s*page \d+ of \d+\s*-->")
 _BACKEND_LOCATOR = re.compile(r"doc:[0-9a-f]+/tier:[a-z]+/page:(\d+)(?:/block:(\d+))?")
-_PAGE_IMAGE_TYPES = {"pdf", "png", "jpg"}  # MinerU renders page and block images from PDF and image sources only
+_PAGE_IMAGE_TYPES = PAGE_PICTURE_TYPES  # MinerU renders page and block images from PDF and image sources only
 _NOT_READY = {"tier_not_cached", "page_not_cached", "not_cached", "parse_not_required"}
 _ALREADY_GONE = {"file_not_found", "doc_not_found"}
 _PAGE_CACHE = 2000  # parsed pages kept in memory across all documents (a few MB)
@@ -140,7 +135,7 @@ class DocumentService:
                     out.write(chunk)
             if digest.hexdigest() != source_hash:
                 raise WorkerError(400, "hash_mismatch")
-            if not any(head.startswith(m) for m in _MAGIC[extension]):
+            if not head_ok(extension, head) or not file_ok(extension, staging):  # the content must be what the type says, by its leading bytes and (packaged formats, text) as a whole
                 raise WorkerError(415, "content_type_mismatch")
             path = self.store.source_path(document_id, extension)
             staging.replace(path)

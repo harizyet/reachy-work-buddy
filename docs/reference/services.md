@@ -679,6 +679,10 @@ See [user workflows](../operator-guide.md#connect-gmail-and-google-calendar),
 [installation and limits](../deployment.md#google-application-setup), and
 [verification](../verification/phase-23-accounts-2026-09-23.md).
 
+## Multimodal meeting intelligence (Phase 53)
+
+companion-core `companion_core/meeting_multimodal/` and routes under `/meetings/{id}/multimodal` and `/meeting-multimodal` ([ADR 0037](adr/0037-multimodal-meeting-evidence-and-slide-alignment.md), [Phase 53](phase-53.md)); constants in `shared/protocols/meeting_multimodal_api.py`; the hub proxies them for the owner session only and sets the access ceiling (`reachy_hub/meeting_multimodal.py`). Flag `MEETING_MULTIMODAL_ENABLED` (default off, needs the document library); schema `034_meeting_multimodal` (five tables, no foreign keys, `deploy/homelab/rollback-034.sql`). Web: the Documents tab and slide cards in the transcript (`clients/web/src/features/meetings`). Not on Android. Not built on Phase 31's frozen files, Phase 44 indexing or Phase 48/50F.
+
 ## Home dashboard (Phase 51)
 
 companion-core `GET /home[?sections=]` and `POST /home/brief` ([ADR 0036](adr/0036-home-dashboard.md), [Phase 51](phase-51.md)); the hub proxies both for the owner session (`reachy_hub/home.py`, CSRF on the POST). Read-only; sections `schedule`, `tasks`, `reminders`, `reviews`, `weather`, each with its own `status`; records are filtered by the caller's ceiling and scope before counting. Weather: `companion_core/weather.py` (Open-Meteo, `WEATHER_*` settings). Existing `GET /briefing` and `POST /briefing/{user_id}` are unchanged.

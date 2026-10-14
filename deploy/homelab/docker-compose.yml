@@ -492,6 +492,7 @@ services:
       NOTEPAD_PROCESSING_CONCURRENCY: ${NOTEPAD_PROCESSING_CONCURRENCY:-1}
       # Phase 31: owner-requested meeting analysis (decisions, open questions, action candidates). Off by default; needs migration 032 first and the owner's separate approval to enable (docs/phase-31.md).
       MEETING_ANALYSIS_ENABLED: ${MEETING_ANALYSIS_ENABLED:-false}
+      MEETING_MULTIMODAL_ENABLED: ${MEETING_MULTIMODAL_ENABLED:-false}  # Phase 53; also needs DOCUMENT_LIBRARY_ENABLED
       # Phase 50B: the document library (uploads, catalogue, deletion; docs/phase-50.md). Off by default; needs migration 031 first. DOCUMENT_SOURCE_DIR is Reachy's authoritative store of originals (volume
       # document-source: back it up with the database); the document worker (profile "documents") is optional and only reached when DOCUMENT_WORKER_URL is set.
       DOCUMENT_LIBRARY_ENABLED: ${DOCUMENT_LIBRARY_ENABLED:-false}

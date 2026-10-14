@@ -33,7 +33,8 @@ from shared.protocols.memory_candidates_api import PRIVACY_STATE
 pytestmark = pytest.mark.skipif(not os.environ.get("DATABASE_MIGRATION_TEST_URL"), reason="requires explicitly disposable Postgres with pgvector")
 KEYS = Keyring("one", {"one": b"\x01" * 32})
 ROLLBACK = Path(__file__).resolve().parents[3] / "deploy" / "homelab" / "rollback-028.sql"
-ROLLBACK_033 = ROLLBACK.with_name("rollback-033.sql")  # the head is 033 now (calendar feed): the runbook undoes it first
+ROLLBACK_033 = ROLLBACK.with_name("rollback-033.sql")  # the head is 034 now (multimodal meetings): the runbook undoes 034, then 033, first
+ROLLBACK_034 = ROLLBACK.with_name("rollback-034.sql")
 ROLLBACK_032 = ROLLBACK.with_name("rollback-032.sql")  # the head is 032 now (meeting analysis): the runbook undoes it first
 ROLLBACK_031 = ROLLBACK.with_name("rollback-031.sql")  # the head is 031 now (documents): the runbook undoes it first
 ROLLBACK_030 = ROLLBACK.with_name("rollback-030.sql")
@@ -73,7 +74,7 @@ def row(dsn, **over):
 # ---- migration 028 ----------------------------------------------------------------------------------------------------------------------------
 
 def test_the_migration_creates_only_candidate_bookkeeping_with_structural_guarantees(dsn):
-    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("033_calendar_feed",)]
+    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("034_meeting_multimodal",)]
     assert {r[0] for r in sql(dsn, "SELECT tablename FROM pg_tables WHERE tablename LIKE 'memory_candidate%'")} == {"memory_candidates", "memory_candidate_suppressions", "memory_candidate_counters"}
     assert sql(dsn, "SELECT count(*) FROM pg_trigger WHERE tgrelid = 'memory_candidates'::regclass AND NOT tgisinternal") == [(0,)]  # no trigger: nothing reaches the index or outbox
     assert sql(dsn, "SELECT count(*) FROM pg_constraint WHERE conrelid IN ('memory_candidates'::regclass, 'memory_candidate_suppressions'::regclass) AND contype = 'f'") == [(0,)]
@@ -105,6 +106,7 @@ def test_the_rollback_script_removes_the_bookkeeping_keeps_accepted_memories_and
     row(dsn)
     sql(dsn, "INSERT INTO memories VALUES ('m1','working','accepted fact','candidate:abc',NULL,1.0,'work-private',now(),NULL,NULL,NULL)")
     with psycopg.connect(dsn) as conn:
+        conn.execute(ROLLBACK_034.read_text())
         conn.execute(ROLLBACK_033.read_text())
         conn.execute(ROLLBACK_032.read_text())
         conn.execute(ROLLBACK_031.read_text())
@@ -119,7 +121,7 @@ def test_the_rollback_script_removes_the_bookkeeping_keeps_accepted_memories_and
     assert sql(dsn, "SELECT count(*) FROM pg_indexes WHERE indexname = 'memories_candidate_source_uq'") == [(0,)]
     assert sql(dsn, "SELECT content FROM memories WHERE id = 'm1'") == [("accepted fact",)]  # the memory the owner accepted stays
     upgrade(dsn, KEYS)  # applying again after a rollback or a restore works
-    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("033_calendar_feed",)] and sql(dsn, "SELECT count(*) FROM memory_candidates") == [(0,)]
+    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("034_meeting_multimodal",)] and sql(dsn, "SELECT count(*) FROM memory_candidates") == [(0,)]
     assert sql(dsn, "SELECT content FROM memories WHERE id = 'm1'") == [("accepted fact",)]
 
 
