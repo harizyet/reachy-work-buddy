@@ -23,6 +23,7 @@ from companion_core.email.models import (
     DraftStatus,
     EmailDraft,
     Recipients,
+    rendered_body,
 )
 from companion_core.email.sender import (
     MailSender,
@@ -137,7 +138,7 @@ def _clean(mailpit):
 
 
 def settings(mailpit, **over) -> SenderSettings:
-    base = {"host": "127.0.0.1", "port": mailpit.smtp, "security": "starttls", "from_address": USER, "username": USER}
+    base = {"host": "127.0.0.1", "port": mailpit.smtp, "security": "starttls", "from_address": USER, "username": USER, "owner_name": "Hariz"}
     base.update(over)
     return SenderSettings(**base)
 
@@ -224,7 +225,9 @@ async def plain_store(port: int) -> InMemoryMailSenderStore:
 
 def package(**over) -> EmailDraft:
     base = {"to": "a@example.org", "subject": "Meeting minutes: Weekly sync", "body": "Hello\n\nThe minutes.\n", "kind": MEETING_MINUTES_KIND, "sender": USER, "message_id": "<fixed-id@example.test>",
-            "recipients": Recipients(to=["a@example.org"]), "approved_at": datetime.now(UTC), "status": DraftStatus.READY_FOR_REVIEW}
+            "recipients": Recipients(to=["a@example.org"]), "approved_at": datetime.now(UTC), "status": DraftStatus.READY_FOR_REVIEW,
+            "source": {"frame": {"template": "1", "owner": "Hariz", "title": "Weekly sync", "when": "Wed 14 Oct 2026, 06:00 (UTC)", "participants": [], "delivery": "other",
+                                 "provenance": {"status": "unverified", "external_steps": [], "rest_local": False, "digest": "x"}}}}
     base.update(over)
     return EmailDraft(**base)
 
@@ -323,7 +326,8 @@ def test_a_delivered_message_has_the_approved_subject_body_attachment_and_hidden
     assert [a["Address"] for a in message["To"]] == [INBOX] and [a["Address"] for a in message["Cc"]] == ["cc.person@example.org"]
     assert [a["Address"] for a in message["Bcc"]] == ["hidden.person@example.org"]  # delivered through the envelope (Mailpit adds its own display-only Bcc line to its stored copy)
     raw = mailpit.get(f"/api/v1/message/{summary['ID']}/raw").decode()
-    assert message["Text"].replace("\r\n", "\n").strip() == approved.body.strip()
+    assert message["Text"].replace("\r\n", "\n").strip() == rendered_body(approved).strip()  # the approved text inside the fixed identity and disclosure text
+    assert "Hello\n\nThe minutes." in message["Text"].replace("\r\n", "\n") and "A note about accuracy:" in message["Text"]
     assert "Message-ID: <fixed-id@example.test>" in raw
     [attachment] = message["Attachments"]
     assert attachment["FileName"] == "Weekly-sync-minutes.pdf" and attachment["ContentType"] == "application/pdf"
@@ -358,6 +362,10 @@ def test_the_whole_flow_from_a_completed_meeting_to_the_owners_test_inbox_throug
     message = mailpit.message(summary["ID"])
     assert message["Subject"] == draft["subject"] == "Meeting minutes: Weekly sync"
     assert "Priya Shah proposed shipping on Friday." in message["Text"] and "Wed 14 Oct 2026, 06:00 (UTC)" in message["Text"]
+    text = message["Text"].replace("\r\n", "\n")
+    assert "I'm Reachy, Hariz's personal AI assistant." in text and "Reviewed and approved by Hariz before sending." in text
+    assert "entirely on private infrastructure" not in text and "makes no claim about it" in text  # this meeting has no processing record: neutral, never local-only
+    assert "delivered through an external email provider, so the email and its attachment are transmitted" in text
     [attachment] = message["Attachments"]
     pdf = mailpit.get(f"/api/v1/message/{summary['ID']}/part/{attachment['PartID']}")
     assert pdf.startswith(b"%PDF-") and hashlib.sha256(pdf).hexdigest() == draft["attachments"][0]["sha256"]  # the very bytes the owner previewed

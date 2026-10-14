@@ -33,6 +33,7 @@ class SenderBody(Strict):
     security: Literal["starttls", "none"] = "starttls"
     from_address: str = Field(max_length=254)
     username: str = Field(default="", max_length=254)
+    owner_name: str = Field(default="", max_length=200)
     password: str | None = Field(default=None, max_length=256, repr=False)  # write-only: stored in the SecretStore, never returned or logged
     clear_password: bool = False
 
@@ -114,7 +115,7 @@ def install_meeting_email_routes(app: FastAPI) -> None:
 
     @app.put(api.SENDER)
     async def put_sender(body: SenderBody) -> dict:
-        settings = SenderSettings(host=body.host.strip(), port=body.port, security=body.security, from_address=body.from_address.strip(), username=body.username.strip())
+        settings = SenderSettings(host=body.host.strip(), port=body.port, security=body.security, from_address=body.from_address.strip(), username=body.username.strip(), owner_name=body.owner_name)
         try:
             return (await senders().save(settings, password=body.password or None, clear_password=body.clear_password)).view()
         except SenderConfigError as exc:

@@ -151,6 +151,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import dataclasses
 import logging
 import os
 import re
@@ -313,6 +314,7 @@ from companion_core.meeting_multimodal.store import (
 from companion_core.meetings import corrections as meeting_corrections
 from companion_core.meetings import describe as meeting_describe
 from companion_core.meetings import outputs as meeting_outputs
+from companion_core.meetings import provenance as meeting_provenance
 from companion_core.meetings import speaker_identity as meeting_identity
 from companion_core.meetings import speaker_samples as meeting_samples
 from companion_core.meetings.models import (
@@ -804,6 +806,20 @@ def create_app(
         except ValueError:
             return 1
 
+    def llm_location(config, *, cloud: bool) -> str:
+        """Where the chosen model runs, from the configuration in force now (ADR 0040): the cloud role is external; the local role is local only when its endpoint is on a private address or name."""
+        if cloud:
+            return "external"
+        return meeting_provenance.endpoint_location(config.local.base_url) if config.local is not None else "unverified"
+
+    async def local_llm_location() -> str:
+        return llm_location(await app.state.llm_settings_store.get(), cloud=False)
+
+    async def note_meeting_processing(meeting_id: str, step: str, where: str, *, subject: str | None = None) -> None:
+        """Record, before content is sent, that a step runs somewhere other than a confirmed-private model. Local steps are recorded with their result instead."""
+        if where != "local":
+            await app.state.meeting_store.record_processing(meeting_id, meeting_provenance.event(step, where, subject=subject))
+
     async def notepad_local_provider():
         """The local model only: private notes are never sent to a cloud model for extraction (Phase 49). None when no local provider is configured."""
         config = await app.state.llm_settings_store.get()
@@ -948,7 +964,7 @@ def create_app(
             app.state.meeting_analysis_store = analysis_store
             if app.state.meeting_analysis_service is None:
                 app.state.meeting_analysis_service = analysis_service.MeetingAnalysisService(
-                    analysis_store, app.state.meeting_store, app.state.task_store, app.state.planner_store, notepad_timezone, provider=meeting_analysis_provider or notepad_local_provider)
+                    analysis_store, app.state.meeting_store, app.state.task_store, app.state.planner_store, notepad_timezone, provider=meeting_analysis_provider or notepad_local_provider, location=local_llm_location)
             if run_meeting_analysis_runner:
                 analysis_task = asyncio.create_task(notepad_service.run_loop(app.state.meeting_analysis_service, concurrency=1))  # the same bounded runner: process_next, reconcile, wake
 
@@ -981,6 +997,8 @@ def create_app(
             if app.state.meeting_email is None:
                 app.state.meeting_email = build_meeting_email_service()
         send_fn = email_send_fn or MailSender(app.state.mail_sender_store, tls_context=mail_tls_context)
+        if app.state.meeting_email is not None:
+            send_fn = app.state.meeting_email.guard_send(send_fn)  # ADR 0040: a meeting message is refused if where the meeting was processed changed after approval
 
         # Only actually dispatches drafts whose dispatch_at has passed —
         # queueing a draft doesn't send it, this loop noticing it's due
@@ -1325,7 +1343,7 @@ def create_app(
     app.state.meeting_analysis_service = None  # built in the lifespan only when the flag is on (or at once when a store is injected)
     if analysis_on and meeting_analysis_store is not None and meeting_store is not None and task_store is not None and planner_store is not None:
         app.state.meeting_analysis_service = analysis_service.MeetingAnalysisService(
-            meeting_analysis_store, meeting_store, task_store, planner_store, notepad_timezone, provider=meeting_analysis_provider or notepad_local_provider)
+            meeting_analysis_store, meeting_store, task_store, planner_store, notepad_timezone, provider=meeting_analysis_provider or notepad_local_provider, location=local_llm_location)
     app.state.meeting_multimodal_store = meeting_multimodal_store
     app.state.meeting_multimodal_service = None  # Phase 53: built in the lifespan when the flag and the document library are on (or at once when a store is injected)
     if multimodal_on and meeting_multimodal_store is not None and meeting_store is not None and task_store is not None and planner_store is not None and app.state.document_library is not None:
@@ -2193,6 +2211,8 @@ def create_app(
                             call_config = config.model_copy(
                                 update={"routing": config.routing.model_copy(update={"mode": LLMRoutingMode.LOCAL_ONLY})}
                             )
+                        if attached is not None and turn.force_frontier and document_reply is None:
+                            await note_meeting_processing(attached.id, "conversation", "external")  # the owner chose the cloud model for a question that carries this meeting's content
                         if document_reply is not None:
                             reply = document_reply  # fixed: nothing found, not available, not ready; the model is not called
                         else:
@@ -3074,6 +3094,7 @@ def create_app(
         local_only = config.model_copy(
             update={"routing": config.routing.model_copy(update={"mode": LLMRoutingMode.LOCAL_ONLY})}
         )
+        await note_meeting_processing(meeting.id, "corrections", llm_location(config, cloud=use_cloud))
         groups = meeting_corrections.windows(
             meeting, meeting_corrections.CLOUD_WINDOW_CHARS if use_cloud else meeting_corrections.WINDOW_CHARS
         )
@@ -3197,6 +3218,8 @@ def create_app(
         local_only = config.model_copy(
             update={"routing": config.routing.model_copy(update={"mode": LLMRoutingMode.LOCAL_ONLY})}
         )
+        where = llm_location(config, cloud=use_cloud)
+        await note_meeting_processing(meeting.id, kind, where)  # before the transcript leaves, so a failed attempt still counts
 
         async def ask(messages: list[dict[str, str]], max_tokens: int) -> str:
             try:
@@ -3217,7 +3240,7 @@ def create_app(
             raise HTTPException(status_code=409, detail=str(exc)) from None
         if truncated:
             text += "\n\n(This meeting is very long: only the first part was covered.)"
-        updated = await app.state.meeting_store.set_output(meeting.id, kind, MeetingOutput(text=text, tier=tier, speaker_basis=speaker_basis(meeting.speaker_names) if meeting.speaker_names else None))
+        updated = await app.state.meeting_store.set_output(meeting.id, kind, MeetingOutput(text=text, tier=tier, speaker_basis=speaker_basis(meeting.speaker_names) if meeting.speaker_names else None, location=where))
         if updated is None:
             raise HTTPException(status_code=404, detail=f"no meeting '{meeting.id}'")
         return updated
@@ -3231,6 +3254,8 @@ def create_app(
         local_only = config.model_copy(
             update={"routing": config.routing.model_copy(update={"mode": LLMRoutingMode.LOCAL_ONLY})}
         )
+        where = llm_location(config, cloud=use_cloud)
+        await note_meeting_processing(meeting.id, "title", where)
 
         async def ask(messages: list[dict[str, str]], max_tokens: int) -> str:
             return await route_completion(
@@ -3240,7 +3265,8 @@ def create_app(
             )
 
         try:
-            return await meeting_describe.describe(meeting, ask)
+            described = await meeting_describe.describe(meeting, ask)
+            return dataclasses.replace(described, location=where) if described is not None else None
         except ProviderUnavailable:
             return None
 
@@ -3273,6 +3299,7 @@ def create_app(
         updated = await app.state.meeting_store.set_title(
             meeting.id, title=result.title, description=result.description or None,
             source="generated" if result.title else meeting.title_source,
+            processing=meeting_provenance.event("title", result.location),
         )
         if updated is None:
             raise HTTPException(status_code=404, detail=f"no meeting '{meeting_id}'")

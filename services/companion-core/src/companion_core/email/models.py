@@ -104,6 +104,16 @@ class EmailDraft(BaseModel):
     attachment_blobs: list[tuple[str, str, bytes]] = Field(default_factory=list, exclude=True)
 
 
+def rendered_body(draft: EmailDraft) -> str | None:
+    """The complete text of a meeting-minutes message (the edited body inside the fixed text), or None when its disclosure frame is missing or incomplete."""
+    from companion_core.email import frame
+
+    try:
+        return frame.render(draft.body, (draft.source or {}).get("frame"), has_attachment=bool(draft.attachments))
+    except frame.FrameError:
+        return None
+
+
 def package_hash(draft: EmailDraft, sender: str | None) -> str:
     """Identity of the exact delivery package: sender, complete recipient list, subject, body, each attachment's hash, and the source revision. Approval is bound to this value."""
     rec = draft.recipients or Recipients(to=[draft.to] if draft.to else [])
@@ -111,6 +121,8 @@ def package_hash(draft: EmailDraft, sender: str | None) -> str:
         "kind": draft.kind, "sender": sender, "to": sorted(rec.to), "cc": sorted(rec.cc), "bcc": sorted(rec.bcc), "subject": draft.subject, "body": draft.body,
         "attachments": sorted((a.name, a.content_type, a.sha256, a.size) for a in draft.attachments), "source": draft.source,
     }
+    if draft.kind == MEETING_MINUTES_KIND:
+        payload["rendered"] = rendered_body(draft)  # the fixed disclosure text is part of what the owner approves
     return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=True, separators=(",", ":")).encode()).hexdigest()
 
 

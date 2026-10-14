@@ -33,6 +33,7 @@ function SenderCard() {
   const [port, setPort] = useState('587');
   const [from, setFrom] = useState('');
   const [username, setUsername] = useState('');
+  const [ownerName, setOwnerName] = useState('');
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
@@ -47,6 +48,7 @@ function SenderCard() {
     setPort(String(data.port));
     setFrom(data.from_address);
     setUsername(data.username);
+    setOwnerName(data.owner_name);
     setPassword(''); // the typed credential is dropped as soon as the server has it
   }, [data]);
 
@@ -90,7 +92,7 @@ function SenderCard() {
 
   const save = () =>
     run('Saved. Verify the connection, then turn sending on.', () =>
-      saveSender({ host: host.trim(), port: Number(port) || 587, security: 'starttls', from_address: from.trim(), username: username.trim(), ...(password ? { password } : {}) }),
+      saveSender({ host: host.trim(), port: Number(port) || 587, security: 'starttls', from_address: from.trim(), username: username.trim(), owner_name: ownerName.trim(), ...(password ? { password } : {}) }),
     );
 
   return (
@@ -107,6 +109,13 @@ function SenderCard() {
           {data.verified_ok === false && ` Last check failed: ${data.verified_detail}`}
         </p>
       )}
+      <TextField
+        label="Your name"
+        value={ownerName}
+        onChange={(e) => setOwnerName(e.target.value)}
+        autoComplete="off"
+        hint="Used in the fixed text of every meeting email: “I'm Reachy, [your name]'s personal AI assistant”. Required to prepare a message."
+      />
       <TextField label="SMTP host" value={host} onChange={(e) => setHost(e.target.value)} autoComplete="off" />
       <TextField label="Port" value={port} inputMode="numeric" onChange={(e) => setPort(e.target.value)} hint="587 with STARTTLS. The connection is always encrypted before the password is sent." />
       <TextField label="Sender address" value={from} onChange={(e) => setFrom(e.target.value)} autoComplete="off" hint="Messages are sent as this address, and no other." />

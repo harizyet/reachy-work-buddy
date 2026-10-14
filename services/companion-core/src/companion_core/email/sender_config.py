@@ -42,6 +42,8 @@ class SenderSettings(BaseModel):
     security: Literal["starttls", "none"] = "starttls"
     from_address: str = ""
     username: str = ""
+    # The name messages use for the person Reachy writes for ("Reachy, Hariz's personal AI assistant"). Not an identity of the sending account, so changing it does not switch sending off.
+    owner_name: str = ""
     secret_ref: str | None = None
     verified_at: datetime | None = None
     verified_ok: bool | None = None
@@ -56,7 +58,7 @@ class SenderSettings(BaseModel):
         """What clients may see: no reference, no credential, only whether one is stored."""
         return {
             "enabled": self.enabled, "configured": self.configured, "host": self.host, "port": self.port, "security": self.security,
-            "from_address": self.from_address, "username": self.username, "has_credential": self.secret_ref is not None,
+            "from_address": self.from_address, "username": self.username, "owner_name": self.owner_name, "has_credential": self.secret_ref is not None,
             "verified_at": self.verified_at.isoformat() if self.verified_at else None, "verified_ok": self.verified_ok, "verified_detail": self.verified_detail,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
@@ -66,7 +68,15 @@ class SenderConfigError(ValueError):
     pass
 
 
+def clean_owner_name(value: str) -> str:
+    name = " ".join((value or "").split())
+    if len(name) > 80 or any(ord(c) < 32 or ord(c) == 127 for c in name):
+        raise SenderConfigError("the name is limited to 80 characters")
+    return name
+
+
 def validate(settings: SenderSettings, *, has_password: bool) -> None:
+    clean_owner_name(settings.owner_name)
     if not settings.host or any(c.isspace() for c in settings.host) or len(settings.host) > 253:
         raise SenderConfigError("a valid SMTP host is required")
     try:
@@ -123,6 +133,7 @@ class InMemoryMailSenderStore:
         password = clean_password(settings.host, password)
         merged, has_password = _merged(self._settings, settings, password=password, clear=clear_password)
         validate(merged, has_password=has_password)
+        merged = merged.model_copy(update={"owner_name": clean_owner_name(merged.owner_name)})
         if clear_password:
             self._password = None
         if password:
@@ -145,12 +156,12 @@ class InMemoryMailSenderStore:
         return self._settings
 
 
-_COLUMNS = "enabled, host, port, security, from_address, username, secret_ref, verified_at, verified_ok, verified_detail, updated_at"
+_COLUMNS = "enabled, host, port, security, from_address, username, secret_ref, verified_at, verified_ok, verified_detail, updated_at, owner_name"
 
 
 def _row(row: tuple) -> SenderSettings:
     return SenderSettings(enabled=row[0], host=row[1], port=row[2], security=row[3], from_address=row[4], username=row[5], secret_ref=row[6],
-                          verified_at=row[7], verified_ok=row[8], verified_detail=row[9], updated_at=row[10])
+                          verified_at=row[7], verified_ok=row[8], verified_detail=row[9], updated_at=row[10], owner_name=row[11])
 
 
 class PostgresMailSenderStore:
@@ -187,8 +198,8 @@ class PostgresMailSenderStore:
 
     async def _write(self, conn, s: SenderSettings) -> SenderSettings:
         await conn.execute(
-            "UPDATE mail_sender SET enabled=%s, host=%s, port=%s, security=%s, from_address=%s, username=%s, secret_ref=%s, verified_at=%s, verified_ok=%s, verified_detail=%s, updated_at=%s WHERE id = 1",
-            (s.enabled, s.host, s.port, s.security, s.from_address, s.username, s.secret_ref, s.verified_at, s.verified_ok, s.verified_detail, s.updated_at))
+            "UPDATE mail_sender SET enabled=%s, host=%s, port=%s, security=%s, from_address=%s, username=%s, secret_ref=%s, verified_at=%s, verified_ok=%s, verified_detail=%s, updated_at=%s, owner_name=%s WHERE id = 1",
+            (s.enabled, s.host, s.port, s.security, s.from_address, s.username, s.secret_ref, s.verified_at, s.verified_ok, s.verified_detail, s.updated_at, s.owner_name))
         return s
 
     async def save(self, settings: SenderSettings, *, password: str | None, clear_password: bool = False) -> SenderSettings:
@@ -197,6 +208,7 @@ class PostgresMailSenderStore:
             current = await self._locked(conn)
             merged, has_password = _merged(current, settings, password=password, clear=clear_password)
             validate(merged, has_password=has_password)
+            merged = merged.model_copy(update={"owner_name": clean_owner_name(merged.owner_name)})
             ref = current.secret_ref
             if clear_password and ref:
                 await self._secrets.delete(conn, CONTEXT, ref)

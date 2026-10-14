@@ -131,7 +131,7 @@ def test_the_whole_flow_through_the_hub_keeps_the_credential_out_of_every_respon
             return response.json()
 
         assert ok(hub.get("/meeting-email/config"))["enabled"] is True
-        sender = ok(hub.put("/meeting-email/sender", headers=CSRF, json={"host": "smtp.example.test", "from_address": SENDER, "username": SENDER, "password": PASSWORD}))
+        sender = ok(hub.put("/meeting-email/sender", headers=CSRF, json={"host": "smtp.example.test", "from_address": SENDER, "username": SENDER, "owner_name": "Hariz", "password": PASSWORD}))
         assert sender["has_credential"] is True and sender["enabled"] is False
         assert ok(hub.put("/meeting-email/sender/enabled", headers=CSRF, json={"enabled": True}), 409)["detail"]["code"] == "not_verified"
         asyncio.run(senders.record_verification(True, "connected"))  # the live verification is covered against Mailpit; here only the proxy matters

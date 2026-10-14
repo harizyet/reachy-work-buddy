@@ -39,7 +39,27 @@ data class EmailDraft(
     @SerialName("recipient_count") val recipientCount: Int = 0,
     val warnings: List<String> = emptyList(),
     val events: List<EmailEvent> = emptyList(),
+    // The fixed text Reachy adds around the editable message (ADR 0040): textBefore + body + textAfter is exactly what is sent. Null for a message prepared before this existed.
+    @SerialName("text_before") val textBefore: String? = null,
+    @SerialName("text_after") val textAfter: String? = null,
+    @SerialName("rendered_body") val renderedBody: String? = null,
+    val processing: EmailProcessing? = null,
 )
+
+@Serializable
+data class EmailProcessing(
+    val status: String = "unverified",
+    @SerialName("external_steps") val externalSteps: List<String> = emptyList(),
+    @SerialName("rest_local") val restLocal: Boolean = false,
+)
+
+/** What the AI-processing record says, in the owner's words. An unknown status is read as unverified, never as private. */
+fun processingLabel(processing: EmailProcessing?): String? = when (processing?.status) {
+    null -> null
+    "local" -> "Every recorded step ran on private infrastructure. The message says so."
+    "external" -> "An external AI service processed some of this meeting. The message says which part."
+    else -> "Where this meeting was processed could not be verified. The message makes no claim about it."
+}
 
 @Serializable
 data class EmailSender(
@@ -125,6 +145,7 @@ fun reviewLines(draft: EmailDraft): List<String> = buildList {
     if (draft.recipients.cc.isNotEmpty()) add("Cc: ${draft.recipients.cc.joinToString(", ")}")
     if (draft.recipients.bcc.isNotEmpty()) add("Bcc (hidden from the others): ${draft.recipients.bcc.joinToString(", ")}")
     add("Subject: ${draft.subject}")
+    processingLabel(draft.processing)?.let { add("AI processing: $it") }
     if (draft.attachments.isEmpty()) add("No attachment.")
     draft.attachments.forEach { add("Attachment: ${it.name} (${maxOf(1, it.size / 1024)} KB, fingerprint ${it.sha256.take(12)})") }
 }

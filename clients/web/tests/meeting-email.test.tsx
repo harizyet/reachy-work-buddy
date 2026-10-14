@@ -37,6 +37,34 @@ describe('Share minutes', () => {
     expect(await screen.findByText(/a message waits 10 minutes so you can still cancel it/)).toBeInTheDocument();
   });
 
+  it('shows the fixed opening and closing text read-only around the editable message, and what the AI-processing record says', async () => {
+    const h = hub();
+    renderApp('#/meetings/m1');
+    const user = await openShare();
+    await prepare(user);
+    const opening = within(screen.getByRole('region', { name: 'Opening text added by Reachy' }));
+    expect(opening.getByText(/I'm Reachy, Hariz's personal AI assistant/)).toBeInTheDocument();
+    expect(opening.getByText('Added automatically and cannot be edited.')).toBeInTheDocument();
+    const closing = within(screen.getByRole('region', { name: 'Closing text and disclosures added by Reachy' }));
+    expect(closing.getByText(/processed entirely on private infrastructure/)).toBeInTheDocument();
+    expect(closing.getByText(/delivered through Gmail/)).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Message' })).toBeInTheDocument(); // only the middle is editable
+    expect(within(screen.getByRole('region', { name: 'What will be sent' })).getByText(/AI processing: Every recorded step ran on private infrastructure/)).toBeInTheDocument();
+    expect(h.data.email.calls.some((c: string) => c.includes('approve'))).toBe(false);
+  });
+
+  it('says plainly when an external AI service was used or the processing could not be verified', async () => {
+    for (const [processing, text] of [['external', /An external AI service processed some of this meeting/], ['unverified', /could not be verified/]] as const) {
+      const h = hub();
+      h.data.email.processing = processing;
+      const { unmount } = renderApp('#/meetings/m1');
+      const user = await openShare();
+      await prepare(user);
+      expect(within(screen.getByRole('region', { name: 'What will be sent' })).getByText(text)).toBeInTheDocument();
+      unmount();
+    }
+  });
+
   it('is only offered when the server has the feature on', async () => {
     hub({ enabled: false });
     renderApp('#/meetings/m1');
@@ -209,15 +237,17 @@ describe('Outbound meeting email settings', () => {
 
   it('sends the password once, never shows it again, and clears the field', async () => {
     const h = hub();
-    h.data.email.sender = { ...h.data.email.sender, configured: false, has_credential: false, host: '', from_address: '', username: '', verified_ok: null, enabled: false };
+    h.data.email.sender = { ...h.data.email.sender, configured: false, has_credential: false, host: '', from_address: '', username: '', owner_name: '', verified_ok: null, enabled: false };
     await openSettings();
     const user = userEvent.setup();
     await user.type(screen.getByLabelText('SMTP host'), 'smtp.gmail.com');
     await user.type(screen.getByLabelText(/^Sender address/), 'reachy.minutes@gmail.com');
     await user.type(screen.getByLabelText('Username'), 'reachy.minutes@gmail.com');
+    await user.type(screen.getByLabelText(/^Your name/), 'Hariz');
     await user.type(screen.getByLabelText('Password or app password'), 'abcd-efgh-ijkl-mnop');
     await user.click(screen.getByRole('button', { name: 'Save sender' }));
     await waitFor(() => expect(h.data.email.passwords).toEqual(['abcd-efgh-ijkl-mnop']));
+    expect(h.data.email.sender.owner_name).toBe('Hariz'); // the name the fixed message text uses
     expect(await screen.findByLabelText('Password (leave empty to keep the saved one)')).toHaveValue('');
     expect(screen.getByRole('status', { name: 'Sender status' })).toHaveTextContent('A credential is saved.');
     expect(document.body.textContent).not.toContain('abcd-efgh-ijkl-mnop');

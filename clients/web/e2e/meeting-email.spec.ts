@@ -66,6 +66,12 @@ test('prepare, review, approve by typing SEND, and the delivered message matches
   expect(delivered!.cc).toBe('cc.person@example.org');
   expect(delivered!.headers).not.toContain('hidden.person@example.org'); // Bcc is an envelope recipient only
   expect(delivered!.body).toContain('Priya Shah proposed shipping on Friday');
+  // the fixed text came from the server, not from anything the owner could edit; this fixture meeting has no processing record, so it must not claim private processing
+  expect(delivered!.body).toContain("I'm Reachy, Hariz's personal AI assistant.");
+  expect(delivered!.body).toContain('A note about accuracy:');
+  expect(delivered!.body).toContain('makes no claim about it');
+  expect(delivered!.body).not.toContain('entirely on private infrastructure');
+  expect(delivered!.body).toContain('delivered through an external email provider');
   expect(delivered!.body + delivered!.attachments.map((a) => a.filename).join()).not.toContain('SECRET-TRANSCRIPT-LINE');
   expect(delivered!.attachments).toHaveLength(1);
   expect(delivered!.attachments[0]).toMatchObject({ filename: 'Weekly-sync-minutes-2026-10-14.pdf', type: 'application/pdf' });

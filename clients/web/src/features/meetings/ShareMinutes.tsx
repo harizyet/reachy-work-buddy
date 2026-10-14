@@ -258,7 +258,9 @@ function DraftView({ draft, meetingId, onChange, onClose, onRefresh }: { draft: 
             Subject
             <input className="mt-1 block w-full rounded border border-[var(--border)] bg-[var(--bg)] p-2" value={subject} maxLength={200} onChange={(e) => setSubject(e.target.value)} />
           </label>
+          {draft.text_before && <FixedText label="Opening text added by Reachy" text={draft.text_before} />}
           <Field label="Message" value={body} onChange={setBody} rows={14} />
+          {draft.text_after && <FixedText label="Closing text and disclosures added by Reachy" text={draft.text_after} />}
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={pdf} onChange={(e) => setPdf(e.target.checked)} /> Attach the minutes as a PDF
           </label>
@@ -364,6 +366,7 @@ function Review({ draft }: { draft: DraftDto }) {
       {r.cc.length > 0 && <p>{`Cc: ${r.cc.join(', ')}`}</p>}
       {r.bcc.length > 0 && <p>{`Bcc (hidden from the others): ${r.bcc.join(', ')}`}</p>}
       <p>{`Subject: ${draft.subject}`}</p>
+      {draft.processing && <p>{`AI processing: ${STATUS_TEXT[draft.processing.status]}`}</p>}
       {draft.attachments.length === 0 ? (
         <p>No attachment.</p>
       ) : (
@@ -382,5 +385,22 @@ function Review({ draft }: { draft: DraftDto }) {
 }
 
 function Readonly({ draft }: { draft: DraftDto }) {
-  return <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-words rounded border border-[var(--border)] p-2 text-sm">{draft.body}</pre>;
+  return <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-words rounded border border-[var(--border)] p-2 text-sm">{draft.rendered_body ?? draft.body}</pre>;
 }
+
+/** Fixed text the server adds from records (who Reachy is, the accuracy note, where the meeting was processed and how the email is delivered): shown so the owner approves it, never editable. */
+function FixedText({ label, text }: { label: string; text: string }) {
+  return (
+    <section aria-label={label} className="rounded border border-dashed border-[var(--border)] p-2 text-sm">
+      <h5 className="font-medium">{label}</h5>
+      <p className="text-xs text-[var(--muted)]">Added automatically and cannot be edited.</p>
+      <pre className="mt-1 whitespace-pre-wrap break-words">{text.trim()}</pre>
+    </section>
+  );
+}
+
+const STATUS_TEXT: Record<'local' | 'external' | 'unverified', string> = {
+  local: 'Every recorded step ran on private infrastructure. The message says so.',
+  external: 'An external AI service processed some of this meeting. The message says which part.',
+  unverified: 'Where this meeting was processed could not be verified. The message makes no claim about it.',
+};

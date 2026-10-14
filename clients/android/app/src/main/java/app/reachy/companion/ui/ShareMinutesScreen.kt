@@ -156,7 +156,9 @@ private fun DraftView(model: AppViewModel, draft: EmailDraft) {
                 }
             }
             OutlinedTextField(form.subject, { form = form.copy(subject = it.take(200)) }, Modifier.fillMaxWidth(), label = { Text("Subject") }, singleLine = true)
+            draft.textBefore?.let { FixedText("Opening text added by Reachy", it) }
             OutlinedTextField(form.body, { form = form.copy(body = it) }, Modifier.fillMaxWidth(), label = { Text("Message") }, minLines = 8)
+            draft.textAfter?.let { FixedText("Closing text and disclosures added by Reachy", it) }
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Switch(form.attachPdf, { form = form.copy(attachPdf = it) }, Modifier.semantics { contentDescription = "Attach the minutes as a PDF" })
                 Text("  Attach the minutes as a PDF", style = MaterialTheme.typography.bodyMedium)
@@ -167,7 +169,7 @@ private fun DraftView(model: AppViewModel, draft: EmailDraft) {
             }
             if (dirty) Text("You have unsaved changes. Save them, then review the message again before approving.", style = MaterialTheme.typography.bodySmall, color = GapText)
         } else {
-            Text(draft.body, style = MaterialTheme.typography.bodySmall)
+            Text(draft.renderedBody ?: draft.body, style = MaterialTheme.typography.bodySmall)
         }
 
         Card(Modifier.fillMaxWidth().semantics { contentDescription = "What will be sent" }) {
@@ -255,4 +257,17 @@ private fun renderPdf(file: File): List<Bitmap> {
         }
     }
     return out
+}
+
+
+/** Fixed text the server adds from records (who Reachy is, the accuracy note, where the meeting was processed and how the email is delivered): shown so the owner approves it, never editable. */
+@Composable
+private fun FixedText(label: String, text: String) {
+    Card(Modifier.fillMaxWidth().semantics { contentDescription = label }) {
+        Column(Modifier.padding(12.dp)) {
+            Text(label, style = MaterialTheme.typography.titleSmall)
+            Text("Added automatically and cannot be edited.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+            Text(text.trim(), Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodySmall)
+        }
+    }
 }

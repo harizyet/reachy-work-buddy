@@ -112,7 +112,7 @@ class W:
         return m.id
 
     async def _configure(self, enabled):
-        await self.sender_store.save(SenderSettings(host="smtp.example.test", from_address=SENDER, username=SENDER), password="app-password-1")
+        await self.sender_store.save(SenderSettings(host="smtp.example.test", from_address=SENDER, username=SENDER, owner_name="Hariz"), password="app-password-1")
         await self.sender_store.record_verification(True, "ok")
         if enabled:
             await self.sender_store.set_enabled(True)
@@ -170,7 +170,9 @@ def test_recipients_are_lowercased_deduplicated_across_lists_and_capped():
 
 
 def test_the_message_has_no_injected_headers_keeps_bcc_out_of_every_header_and_carries_the_attachment():
-    draft = EmailDraft(to="a@example.org", subject="Minutes", body="Hello\n\nBody", recipients=Recipients(to=["a@example.org"], cc=["b@example.org"], bcc=["secret@example.org"]), kind=MEETING_MINUTES_KIND)
+    frame = {"template": "1", "owner": "Hariz", "title": "Weekly sync", "when": "Wed", "participants": [], "provenance": {"status": "unverified"}, "delivery": "other"}
+    draft = EmailDraft(to="a@example.org", subject="Minutes", body="Hello\n\nBody", recipients=Recipients(to=["a@example.org"], cc=["b@example.org"], bcc=["secret@example.org"]), kind=MEETING_MINUTES_KIND,
+                       source={"frame": frame})
     message = mime.build_message(draft, sender=SENDER, attachments=[("m.pdf", "application/pdf", b"%PDF-1.4 fake")])
     raw = message.as_bytes().decode()
     assert "secret@example.org" not in raw and "Bcc" not in raw
@@ -203,7 +205,7 @@ def test_the_package_uses_owner_speaker_names_and_the_stored_outputs_and_leaves_
     w.analysis(items=[item("decision", "noted", "Ship on Friday"), item("action", "accepted", "Send the notes"), item("action", "pending", "Book the room", id="i-pending")])
     d = w.prepare()
     assert d["status"] == "ready_for_review" and d["kind"] == MEETING_MINUTES_KIND and d["recipient_count"] == 0
-    body = d["body"]
+    body = d["rendered_body"]
     assert "Weekly sync" in body and "Wed 14 Oct 2026, 06:00 (UTC)" in body and "Priya Shah" in body
     assert "proposed shipping on Friday" in body
     assert "SECRET-TRANSCRIPT-LINE" not in body and "audio-bytes" not in body  # no transcript, no recording
@@ -224,7 +226,7 @@ def test_the_date_is_shown_in_the_owners_time_zone_with_its_name():
         return "Asia/Singapore"
 
     w.service._timezone = singapore
-    assert "Wed 14 Oct 2026, 14:00 (Asia/Singapore)" in w.prepare()["body"]
+    assert "Wed 14 Oct 2026, 14:00 (Asia/Singapore)" in w.prepare()["rendered_body"]
 
 
 def test_unconfirmed_or_out_of_date_findings_are_never_presented_as_confirmed():

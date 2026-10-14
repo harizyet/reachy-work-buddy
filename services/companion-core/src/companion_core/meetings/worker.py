@@ -33,7 +33,7 @@ from collections.abc import Awaitable, Callable
 from io import BytesIO
 from typing import BinaryIO
 
-from companion_core.meetings import describe, silence
+from companion_core.meetings import describe, provenance, silence
 from companion_core.meetings.align import align
 from companion_core.meetings.models import Meeting
 from companion_core.meetings.speech_clients import (
@@ -101,7 +101,7 @@ async def transcribe(store: MeetingStore, meeting: Meeting, client: Transcriptio
     except SpeechServiceRejected as exc:
         await store.mark_failed(meeting.id, error_detail=f"transcription rejected: {exc}")
         return True
-    await store.mark_transcribed(meeting.id, transcript_segments=segments)
+    await store.mark_transcribed(meeting.id, transcript_segments=segments, processing=provenance.event("transcription", provenance.endpoint_location(getattr(client, "base_url", None))))
     return True
 
 
@@ -121,7 +121,7 @@ async def diarize(store: MeetingStore, meeting: Meeting, client: DiarizationClie
     except SpeechServiceRejected as exc:
         await store.mark_failed(meeting.id, error_detail=f"diarization rejected: {exc}")
         return True
-    await store.mark_diarized(meeting.id, diarization_segments=segments)
+    await store.mark_diarized(meeting.id, diarization_segments=segments, processing=provenance.event("diarization", provenance.endpoint_location(getattr(client, "base_url", None))))
     return True
 
 
@@ -129,7 +129,7 @@ async def align_stage(store: MeetingStore, meeting: Meeting) -> bool:
     """Phase 27.4: attribute each transcript segment to a speaker and complete the job. Pure and in-process, so there is
     no sidecar to wait for: it always makes progress (a crash is turned into a failed job by _try_stage)."""
     aligned = align(meeting.transcript_segments or [], meeting.diarization_segments)
-    await store.mark_aligned(meeting.id, aligned_segments=aligned)
+    await store.mark_aligned(meeting.id, aligned_segments=aligned, processing=provenance.event("speaker_processing", "local"))  # in-process code on the core itself, no model
     return True
 
 
@@ -149,6 +149,7 @@ async def describe_stage(store: MeetingStore, meeting: Meeting, describer: Descr
     await store.set_title(
         meeting.id, title=title, description=result.description,
         source=meeting.title_source if title is None else "generated",
+        processing=provenance.event("title", result.location),
     )
     return True
 

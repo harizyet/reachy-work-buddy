@@ -115,7 +115,7 @@ def build():
 async def serve(client, core, port: int):
     smtp = await Smtp().start()
     senders = core.state.mail_sender_store
-    await senders.save(SenderSettings(host="127.0.0.1", port=smtp.port, security="none", from_address=SENDER), password=None)
+    await senders.save(SenderSettings(host="127.0.0.1", port=smtp.port, security="none", from_address=SENDER, owner_name="Hariz"), password=None)
     await senders.record_verification(True, "fixture")
     await senders.set_enabled(True)
     from companion_core.email.sender import MailSender

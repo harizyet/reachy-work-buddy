@@ -11,7 +11,12 @@ from email.message import EmailMessage as MimeMessage
 from email.policy import SMTP as SMTP_POLICY
 from email.utils import format_datetime, make_msgid
 
-from companion_core.email.models import EmailDraft, Recipients
+from companion_core.email.models import (
+    MEETING_MINUTES_KIND,
+    EmailDraft,
+    Recipients,
+    rendered_body,
+)
 
 MAX_RECIPIENTS = 20
 MAX_SUBJECT = 200
@@ -88,7 +93,13 @@ def build_message(draft: EmailDraft, *, sender: str, attachments: list[tuple[str
     message["Message-ID"] = draft.message_id or make_msgid(domain=normalize_address(sender).rpartition("@")[2])
     if draft.in_reply_to:
         message["In-Reply-To"] = " ".join(draft.in_reply_to.split())
-    message.set_content(clean_body(draft.body), charset="utf-8", cte="quoted-printable")
+    if draft.kind == MEETING_MINUTES_KIND:
+        text = rendered_body(draft)  # the owner's text inside the fixed identity, accuracy, processing and delivery text; never sent without it
+        if text is None:
+            raise AddressError("this message has no verified disclosure text; prepare it again")
+        message.set_content(text, charset="utf-8", cte="quoted-printable")
+    else:
+        message.set_content(clean_body(draft.body), charset="utf-8", cte="quoted-printable")
     for name, content_type, data in attachments or []:
         maintype, _, subtype = content_type.partition("/")
         message.add_attachment(data, maintype=maintype, subtype=subtype, filename=name)

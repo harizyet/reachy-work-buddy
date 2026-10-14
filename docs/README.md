@@ -156,6 +156,7 @@ over the original decision where they explicitly change it.
 | [0037](adr/0037-multimodal-meeting-evidence-and-slide-alignment.md) | Multimodal meeting evidence and slide alignment (proposed) |
 | [0038](adr/0038-meeting-speaker-identification.md) | Owner-confirmed meeting speaker identities (proposed) |
 | [0039](adr/0039-supervised-meeting-minutes-email.md) | Supervised meeting-minutes email through a dedicated sender (proposed) |
+| [0040](adr/0040-verified-processing-provenance-in-email.md) | Verified processing provenance and fixed disclosures in meeting email (proposed) |
 
 ## Verification records
 

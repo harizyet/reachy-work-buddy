@@ -102,6 +102,7 @@ class HTTPTranscriptionClient:
         timeout: float | None = None,
     ) -> None:
         base = base_url or os.environ.get("TRANSCRIPTION_URL") or "http://transcription:8011"
+        self.base_url = base  # read by the worker to record where the audio was processed (ADR 0040)
         self._client = httpx.AsyncClient(base_url=base, transport=transport, timeout=_inference_timeout(timeout), headers=_auth_headers())
 
     async def aclose(self) -> None:
@@ -120,6 +121,7 @@ class HTTPDiarizationClient:
         timeout: float | None = None,
     ) -> None:
         base = base_url or os.environ.get("DIARIZATION_URL") or "http://diarization:8010"
+        self.base_url = base  # read by the worker to record where the audio was processed (ADR 0040)
         self._client = httpx.AsyncClient(base_url=base, transport=transport, timeout=_inference_timeout(timeout), headers=_auth_headers())
 
     async def aclose(self) -> None:

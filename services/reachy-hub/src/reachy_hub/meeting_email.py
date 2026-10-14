@@ -32,6 +32,7 @@ class SenderBody(Strict):
     security: Literal["starttls", "none"] = "starttls"
     from_address: str = Field(max_length=254)
     username: str = Field(default="", max_length=254)
+    owner_name: str = Field(default="", max_length=200)
     password: str | None = Field(default=None, max_length=256, repr=False)
     clear_password: bool = False
 

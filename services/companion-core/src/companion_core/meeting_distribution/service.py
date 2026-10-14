@@ -13,6 +13,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from companion_core.consent.gate import require_text
+from companion_core.email import frame as email_frame
 from companion_core.email.mime import (
     AddressError,
     clean_body,
@@ -27,6 +28,7 @@ from companion_core.email.models import (
     EmailDraft,
     Recipients,
 )
+from companion_core.email.sender import SendRefused
 from companion_core.email.sender_config import MailSenderStore
 from companion_core.email.store import EmailStore
 from companion_core.email.workflow import (
@@ -93,6 +95,13 @@ class MeetingEmailService:
             raise DistributionError(409, "Set up the outbound sender first (Settings, Outbound meeting email).", "no_sender")
         return normalize_address(settings.from_address)
 
+    async def _identity(self) -> tuple[str, str]:
+        """(owner name, delivery service) for the fixed text of a message. The name is required: a message must say whom Reachy writes for."""
+        settings = await self.senders.get()
+        if not settings.owner_name.strip():
+            raise DistributionError(409, "Enter your name in Settings (Outbound meeting email) so the message can say whom Reachy writes for.", "no_owner_name")
+        return settings.owner_name.strip(), email_frame.delivery_for(settings.host)
+
     async def _analysis_view(self, meeting_id: str) -> dict | None:
         if self.analysis is None:
             return None
@@ -122,7 +131,15 @@ class MeetingEmailService:
         settings = await self.senders.get()
         prepared = next((e for e in events if e.event == "prepared"), None)
         data = draft.model_dump(mode="json", exclude={"attachment_blobs"})
+        frame = (draft.source or {}).get("frame")
+        try:
+            before, after = email_frame.parts(frame, has_attachment=bool(draft.attachments))
+        except email_frame.FrameError:
+            before = after = None
         data.update({
+            "text_before": before, "text_after": after,  # the fixed text around the editable body, shown read-only; before + body + after is exactly what is sent
+            "rendered_body": before + draft.body.strip("\n") + after if before is not None and after is not None else None,
+            "processing": (frame or {}).get("provenance"),
             "meeting_title": meeting.title if meeting else None,
             "meeting_changed": bool(meeting is None or not pkg.source_is_current(draft.source or {}, meeting)),
             "sender_ready": bool(settings.configured and settings.enabled),
@@ -131,6 +148,19 @@ class MeetingEmailService:
             "recipient_count": len((draft.recipients or Recipients()).everyone()),
         })
         return data
+
+    def guard_send(self, send_fn: SendFn) -> SendFn:
+        """Wrap the real sender so a meeting-minutes message is refused if where the meeting was processed changed after it was approved (a cloud regeneration or question in the undo window).
+        The fixed text claims what the records said at approval; this keeps that true at the moment of sending. Other drafts pass straight through."""
+        async def guarded(draft: EmailDraft) -> str | None:
+            if draft.kind == MEETING_MINUTES_KIND:
+                source = draft.source or {}
+                meeting = await self.meetings.get_meeting(source.get("meeting_id", ""))
+                if meeting is None or not pkg.source_is_current(source, meeting):
+                    raise SendRefused("the meeting changed after this message was approved (where it was processed, its summary or its speaker names); prepare and approve it again")
+            return await send_fn(draft)
+
+        return guarded
 
     # -- config, groups, suggestions -----------------------------------------------------------------------------------------------------------
 
@@ -176,8 +206,9 @@ class MeetingEmailService:
             raise DistributionError(409, "This meeting is marked sensitive. Confirm that you want to prepare a message from it.", "sensitive_meeting")
         sender = await self._sender_address()
         recipients = self._recipients([*(to or []), *await self._expand(group_ids)], cc or [], bcc or [])
+        owner_name, delivery = await self._identity()
         built = pkg.build(meeting, await self._analysis_view(meeting_id), timezone=await self._timezone() if self._timezone else "UTC", include_pdf=include_pdf,
-                          sensitive_acknowledged=bool(allow_sensitive and meeting.sensitivity is Privacy.SENSITIVE))
+                          owner_name=owner_name, delivery=delivery, sensitive_acknowledged=bool(allow_sensitive and meeting.sensitivity is Privacy.SENSITIVE))
         blobs = [(built.pdf_name, "application/pdf", built.pdf)] if built.pdf else []
         draft = EmailDraft(to=recipients.to[0] if recipients.to else "", subject=built.subject, body=built.body, status=DraftStatus.READY_FOR_REVIEW, kind=MEETING_MINUTES_KIND,
                            recipients=recipients, source=built.source, sender=sender)
@@ -200,8 +231,9 @@ class MeetingEmailService:
             meeting = await self._meeting(source.get("meeting_id", ""))
             if meeting.stale_outputs:
                 raise DistributionError(409, "The summary or minutes is out of date with the speaker names. Write it again first.", "stale_outputs")
+            owner_name, delivery = await self._identity()
             built = pkg.build(meeting, await self._analysis_view(meeting.id), timezone=await self._timezone() if self._timezone else "UTC", include_pdf=want_pdf,
-                              sensitive_acknowledged=bool(source.get("sensitive_acknowledged")))
+                              owner_name=owner_name, delivery=delivery, sensitive_acknowledged=bool(source.get("sensitive_acknowledged")))
             source = built.source
             if refresh:
                 new_subject, new_body = built.subject, built.body
@@ -260,6 +292,8 @@ class MeetingEmailService:
             raise DistributionError(409, "The meeting changed since this message was prepared (summary, minutes or speaker names). Refresh the message and review it again.", "meeting_changed")
         if await self._sender_address() != draft.sender:
             raise DistributionError(409, "The sender changed since this message was approved. Review it again.", "sender_changed")
+        if email_frame.delivery_for(settings.host) != ((draft.source or {}).get("frame") or {}).get("delivery"):
+            raise DistributionError(409, "The mail service changed since this message was approved. Refresh the message and review it again.", "sender_changed")
         queued = await self.emails.queue_draft(draft_id, dispatch_at=self.clock() + timedelta(seconds=self.delay_seconds))
         if queued is None:
             raise DistributionError(409, "This message was already queued or changed.", "bad_state")

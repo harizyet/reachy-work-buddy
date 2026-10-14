@@ -45,6 +45,16 @@ export interface DraftDto {
   recipient_count: number;
   warnings: string[];
   events: EventDto[];
+  // The fixed text Reachy adds around the editable message (ADR 0040): text_before + body + text_after is exactly what is sent. Null for a message prepared before this existed.
+  text_before: string | null;
+  text_after: string | null;
+  rendered_body: string | null;
+  processing: ProcessingDto | null;
+}
+export interface ProcessingDto {
+  status: 'local' | 'external' | 'unverified';
+  external_steps: string[];
+  rest_local: boolean;
 }
 export interface SenderDto {
   enabled: boolean;
@@ -54,6 +64,7 @@ export interface SenderDto {
   security: 'starttls' | 'none';
   from_address: string;
   username: string;
+  owner_name: string;
   has_credential: boolean;
   verified_at: string | null;
   verified_ok: boolean | null;
@@ -122,11 +133,22 @@ export function parseDraft(value: unknown): DraftDto {
     sender_ready: d.sender_ready === true,
     recipient_count: typeof d.recipient_count === 'number' ? d.recipient_count : 0,
     warnings: Array.isArray(d.warnings) ? strings(d.warnings, 'draft.warnings') : [],
+    text_before: opt(d.text_before, 'draft.text_before'),
+    text_after: opt(d.text_after, 'draft.text_after'),
+    rendered_body: opt(d.rendered_body, 'draft.rendered_body'),
+    processing: parseProcessing(d.processing),
     events: (Array.isArray(d.events) ? d.events : []).map((e) => {
       const x = rec(e, 'event');
       return { at: str(x.at, 'event.at'), event: str(x.event, 'event.event'), detail: x.detail == null ? {} : rec(x.detail, 'event.detail') };
     }),
   };
+}
+
+function parseProcessing(value: unknown): ProcessingDto | null {
+  if (value == null) return null;
+  const p = rec(value, 'draft.processing');
+  const status = p.status === 'local' || p.status === 'external' ? p.status : 'unverified';
+  return { status, external_steps: Array.isArray(p.external_steps) ? strings(p.external_steps, 'processing.external_steps') : [], rest_local: p.rest_local === true };
 }
 
 export function parseSender(value: unknown): SenderDto {
@@ -139,6 +161,7 @@ export function parseSender(value: unknown): SenderDto {
     security: s.security === 'none' ? 'none' : 'starttls',
     from_address: str(s.from_address ?? '', 'sender.from_address'),
     username: str(s.username ?? '', 'sender.username'),
+    owner_name: str(s.owner_name ?? '', 'sender.owner_name'),
     has_credential: s.has_credential === true,
     verified_at: opt(s.verified_at, 'sender.verified_at'),
     verified_ok: typeof s.verified_ok === 'boolean' ? s.verified_ok : null,
@@ -163,6 +186,7 @@ export interface SenderInput {
   security: 'starttls' | 'none';
   from_address: string;
   username: string;
+  owner_name: string;
   password?: string;
   clear_password?: boolean;
 }

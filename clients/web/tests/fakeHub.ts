@@ -71,7 +71,7 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
     secrets: [] as string[], // every key the page ever sent, so a test can assert none came back
     saves: [] as { call: string; body: any }[],
     deepJobs: [] as any[],
-    email: { enabled: false, sender: { enabled: true, configured: true, host: 'smtp.example.test', port: 587, security: 'starttls', from_address: 'reachy.minutes@example.test', username: 'reachy.minutes@example.test', has_credential: true, verified_at: null, verified_ok: true, verified_detail: '' } as any, drafts: [] as any[], groups: [] as any[], suggestions: [] as any[], passwords: [] as string[], tests: [] as string[], testFails: null as string | null, counter: 0, calls: [] as string[], sensitive: false, failApprove: null as any },
+    email: { enabled: false, sender: { enabled: true, configured: true, host: 'smtp.example.test', port: 587, security: 'starttls', from_address: 'reachy.minutes@example.test', username: 'reachy.minutes@example.test', owner_name: 'Hariz', has_credential: true, verified_at: null, verified_ok: true, verified_detail: '' } as any, drafts: [] as any[], groups: [] as any[], suggestions: [] as any[], passwords: [] as string[], tests: [] as string[], testFails: null as string | null, counter: 0, calls: [] as string[], processing: null as any, sensitive: false, failApprove: null as any },
     suggestions: { suggestions: [], terms_used: 0, truncated: false } as any,
     sessions: new Map<string, { interaction_mode: string; dnd: boolean; active_channel: string }>(),
     messages: [] as any[],
@@ -95,7 +95,7 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
     if (path === '/meeting-email/sender' && method === 'GET') return jsonResponse(e.sender);
     if (path === '/meeting-email/sender' && method === 'PUT') {
       if (body.password) e.passwords.push(body.password);
-      e.sender = { ...e.sender, host: body.host, port: body.port, security: body.security, from_address: body.from_address, username: body.username, configured: true, has_credential: e.sender.has_credential || Boolean(body.password), enabled: false, verified_ok: null, verified_at: null, verified_detail: '' };
+      e.sender = { ...e.sender, host: body.host, port: body.port, security: body.security, from_address: body.from_address, username: body.username, owner_name: body.owner_name ?? '', configured: true, has_credential: e.sender.has_credential || Boolean(body.password), enabled: false, verified_ok: null, verified_at: null, verified_detail: '' };
       return jsonResponse(e.sender);
     }
     if (path === '/meeting-email/sender' && method === 'DELETE') {
@@ -209,7 +209,9 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
         id: `d${++e.counter}`, subject: `Meeting minutes: ${meeting.title}`, body: 'Summary and minutes of the meeting\n\nSUMMARY\nPriya Shah proposed shipping on Friday.\n', status: 'ready_for_review', kind: 'meeting_minutes',
         recipients: { to: [...(body.to ?? [])], cc: [...(body.cc ?? [])], bcc: [...(body.bcc ?? [])] }, attachments: body.include_pdf === false ? [] : [{ name: 'Weekly-sync-minutes.pdf', content_type: 'application/pdf', sha256: 'a'.repeat(64), size: 4096 }],
         package_hash: `hash-${++e.counter}`, approved_hash: null, sender: e.sender.from_address, message_id: null, dispatch_at: null, sent_at: null, created_at: '2030-01-02T07:00:00Z', attempts: 0, last_error: null,
-        provider_response: null, source: { meeting_id: meeting.id }, meeting_title: meeting.title, meeting_changed: false, warnings: ['1 action candidate not included: you have not confirmed it.'], events: [{ at: '2030-01-02T07:00:00Z', event: 'prepared', detail: {} }],
+        provider_response: null, source: { meeting_id: meeting.id }, meeting_title: meeting.title, meeting_changed: false,
+        text_before: "Hi everyone,\n\nI'm Reachy, Hariz's personal AI assistant.\n\nMeeting: Weekly sync\n", text_after: '\nA note about accuracy: I can make mistakes.\n\nThis meeting was processed entirely on private infrastructure. No meeting content was sent to external AI services. Email delivery is separate from AI processing: this message is delivered through Gmail.\n',
+        rendered_body: 'FULL TEXT', processing: { status: e.processing ?? 'local', external_steps: [], rest_local: true }, warnings: ['1 action candidate not included: you have not confirmed it.'], events: [{ at: '2030-01-02T07:00:00Z', event: 'prepared', detail: {} }],
       };
       e.drafts.unshift(draft);
       return jsonResponse({ ...draft, recipient_count: 0, sender_ready: e.sender.enabled });
