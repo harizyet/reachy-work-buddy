@@ -6,6 +6,7 @@ A sender with a username must use STARTTLS; an unauthenticated relay (Mailpit in
 from __future__ import annotations
 
 import os
+import re
 from datetime import UTC, datetime
 from typing import Literal, Protocol
 
@@ -23,6 +24,15 @@ from shared.database import check_schema, close_pool, open_pool
 
 CONTEXT = SecretContext("owner", "mail-sender", "password")
 GMAIL_HOST = "smtp.gmail.com"
+_INVISIBLE = re.compile(r"[\s\u200b-\u200f\u2060\ufeff]+")
+
+
+def clean_password(host: str, password: str | None) -> str | None:
+    """A Google app password is 16 letters that the Google page shows in groups with spaces; pasted, it can carry ordinary, non-breaking or zero-width spaces, and Google rejects those. For
+    Gmail every whitespace and invisible character is removed (an app password has none). Other servers' passwords are kept exactly as typed."""
+    if password and host.strip().lower() == GMAIL_HOST:
+        return _INVISIBLE.sub("", password)
+    return password
 
 
 class SenderSettings(BaseModel):
@@ -110,6 +120,7 @@ class InMemoryMailSenderStore:
         return self._password
 
     async def save(self, settings: SenderSettings, *, password: str | None, clear_password: bool = False) -> SenderSettings:
+        password = clean_password(settings.host, password)
         merged, has_password = _merged(self._settings, settings, password=password, clear=clear_password)
         validate(merged, has_password=has_password)
         if clear_password:
@@ -126,7 +137,7 @@ class InMemoryMailSenderStore:
         return self._settings
 
     async def record_verification(self, ok: bool, detail: str) -> SenderSettings:
-        self._settings = self._settings.model_copy(update={"verified_at": datetime.now(UTC), "verified_ok": ok, "verified_detail": detail[:200], "enabled": self._settings.enabled and ok})
+        self._settings = self._settings.model_copy(update={"verified_at": datetime.now(UTC), "verified_ok": ok, "verified_detail": detail[:300], "enabled": self._settings.enabled and ok})
         return self._settings
 
     async def disconnect(self) -> SenderSettings:
@@ -181,6 +192,7 @@ class PostgresMailSenderStore:
         return s
 
     async def save(self, settings: SenderSettings, *, password: str | None, clear_password: bool = False) -> SenderSettings:
+        password = clean_password(settings.host, password)
         async with self._pool.connection() as conn, conn.transaction():
             current = await self._locked(conn)
             merged, has_password = _merged(current, settings, password=password, clear=clear_password)
@@ -203,7 +215,7 @@ class PostgresMailSenderStore:
     async def record_verification(self, ok: bool, detail: str) -> SenderSettings:
         async with self._pool.connection() as conn, conn.transaction():
             current = await self._locked(conn)
-            return await self._write(conn, current.model_copy(update={"verified_at": datetime.now(UTC), "verified_ok": ok, "verified_detail": detail[:200], "enabled": current.enabled and ok}))
+            return await self._write(conn, current.model_copy(update={"verified_at": datetime.now(UTC), "verified_ok": ok, "verified_detail": detail[:300], "enabled": current.enabled and ok}))
 
     async def disconnect(self) -> SenderSettings:
         async with self._pool.connection() as conn, conn.transaction():

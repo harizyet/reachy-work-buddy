@@ -857,3 +857,58 @@ def test_a_server_with_no_password_sign_in_is_refused_with_a_clear_reason_and_no
     with pytest.raises(SendRefused, match="does not offer password sign-in"):
         asyncio.run(MailSender._sign_in(client, "user@example.test", "pw"))
     assert client.calls == []
+
+
+# ---- Gmail app passwords ---------------------------------------------------------------------------------------------------------------------------
+
+@pytest.mark.parametrize("typed, kept", [
+    ("abcd efgh ijkl mnop", "abcdefghijklmnop"),  # as Google shows it
+    ("abcd efgh ijkl mnop", "abcdefghijklmnop"),  # pasted with non-breaking spaces
+    ("  abcdefghijklmnop \n", "abcdefghijklmnop"),
+    ("abcd\u200befgh﻿ijkl⁠mnop", "abcdefghijklmnop"),  # zero-width characters
+])
+def test_a_pasted_gmail_app_password_loses_spaces_and_invisible_characters_but_other_servers_keep_theirs_exactly(typed, kept):
+    from companion_core.email.sender_config import clean_password
+
+    assert clean_password("smtp.gmail.com", typed) == kept and clean_password("SMTP.GMAIL.COM ", typed) == kept
+    assert clean_password("mail.example.org", typed) == typed and clean_password("smtp.gmail.com", None) is None and clean_password("smtp.gmail.com", "") == ""
+    store = InMemoryMailSenderStore()
+    asyncio.run(store.save(SenderSettings(host="smtp.gmail.com", from_address="a@gmail.com", username="a@gmail.com"), password=typed))
+    assert asyncio.run(store.password()) == kept  # what is stored is what Google will accept
+    other = InMemoryMailSenderStore()
+    asyncio.run(other.save(SenderSettings(host="mail.example.org", from_address="a@example.org", username="a@example.org"), password=typed))
+    assert asyncio.run(other.password()) == typed
+
+
+def test_a_google_rejection_says_to_use_an_app_password_for_this_account_and_other_servers_keep_their_own_message(monkeypatch):
+    import aiosmtplib
+
+    class Rejecting:
+        is_connected = False
+        def __init__(self, **kwargs):
+            self.esmtp_extensions = {"auth": "LOGIN PLAIN"}
+
+        async def connect(self):
+            return None
+
+        async def starttls(self, **kwargs):
+            return None
+
+        async def ehlo(self):
+            return None
+
+        async def auth_plain(self, user, password):
+            raise aiosmtplib.SMTPAuthenticationError(535, "5.7.8 Username and Password not accepted")
+
+    monkeypatch.setattr("companion_core.email.sender.aiosmtplib.SMTP", Rejecting)
+
+    async def verify(host, user):
+        store = InMemoryMailSenderStore()
+        await store.save(SenderSettings(host=host, from_address=user, username=user), password="abcdabcdabcdabcd")
+        return await MailSender(store, allow_env=False).verify()
+
+    google = asyncio.run(verify("smtp.gmail.com", "a@gmail.com"))
+    assert google["ok"] is False and "authentication failed (535)" in google["detail"] and "app password made for this account" in google["detail"] and "2-Step Verification" in google["detail"]
+    other = asyncio.run(verify("mail.example.org", "a@example.org"))
+    assert "authentication failed: 535 5.7.8 Username and Password not accepted" in other["detail"] and "app password" not in other["detail"]
+    assert "abcdabcdabcdabcd" not in str(google) + str(other)

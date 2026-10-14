@@ -111,7 +111,11 @@ class MailSender:
                 await self._sign_in(client, settings.username, password)
         except aiosmtplib.SMTPAuthenticationError as exc:
             await _close(client)
-            raise SendRefused(f"authentication failed: {exc.code} {_one_line(exc.message)}") from None
+            hint = (
+                " Google rejected the username or password. Use an app password made for this account (Google Account > Security > App passwords; the account needs 2-Step Verification), not the account's own password."
+                if settings.host.strip().lower() == GMAIL_HOST else ""
+            )
+            raise SendRefused(f"authentication failed ({exc.code}).{hint}" if hint else f"authentication failed: {exc.code} {_one_line(exc.message)}") from None
         except SendRefused:
             await _close(client)
             raise
