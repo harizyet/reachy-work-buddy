@@ -1,6 +1,6 @@
 # Phase 55 deployment: migration 036 and coordinated cutover, feature OFF (2026-10-14)
 
-Owner authorization (2026-10-14): "build and deploy for UAT". **Done: schema, images and the web/Android code. NOT done: enabling `MEETING_EMAIL_ENABLED`.** The write of that flag to `deploy/homelab/.env` was blocked by the permission layer (feature-flag write); it was not worked around, and it matches the deployment proposal (enabling is a separate step). Until it is on, the feature does not exist at runtime: core answers 404 for `/meeting-email/*` and the hub's config route is not reachable. No sender is configured, no credential exists, no email has been sent. Deployed from branch `feature/sender-test-email` (head `6bb7f46`; includes Phase 55 and the sender test email), **not merged to main**.
+Owner authorization (2026-10-14): "build and deploy for UAT". The schema, images and web/Android code were deployed first with the flag off (the first write of the flag was blocked by the permission layer and not worked around); **the flag was then enabled on the owner's explicit instruction ([below](#activation-2026-10-14-owner-enable-the-flag))**. No sender is configured, no credential exists, no email has been sent. Deployed from branch `feature/sender-test-email` (head `6bb7f46`; includes Phase 55 and the sender test email), **not merged to main**.
 
 | | Before | After |
 |---|---|---|
@@ -36,7 +36,13 @@ Counters read with core's token before the stop (documented route, no gate hit):
 
 **Not verified:** the owner session in a browser, the phone app, anything with the feature on (it is off), any real Gmail behaviour, a real recording upload, Telegram, robot, voice.
 
-## To start UAT (needs the owner's go-ahead for the flag)
-1. Enable: back up `deploy/homelab/.env`, add `MEETING_EMAIL_ENABLED=true`, recreate **core only** (`up -d --no-build --no-deps --force-recreate companion-core`; a new Phase 48 segment starts). Rollback: set it false and recreate core.
+## Activation (2026-10-14, owner: "enable the flag")
+
+\`MEETING_EMAIL_ENABLED=true\` added to \`deploy/homelab/.env\` (backup \`.env.bak-before-meeting-email\`, kept beside it; the diff showed exactly one added line) and **only core recreated** (graceful stop, \`up -d --no-build --no-deps --force-recreate companion-core\`, same image \`8381632b0fc1\`; hub, coding-agent, worker and database untouched). Preconditions: no alarm, reminder, analysis run or queued email within 15 minutes. Core stopped 15:33:56 UTC, running again 15:34:15 (about 19 s); **new Phase 48 segment from 15:34:17 UTC**; the previous segment's counters (\`{}\`) are in \`~/reachy-backups/phase48-boundary-036-flag/\`.
+
+Verified from inside core with the service token: the only environment difference is \`MEETING_EMAIL_ENABLED\` (now true); \`/meeting-email/config\` and \`/sender\` answer, reporting \`enabled: true\`, the sender **not configured and sending off, no credential**; \`/meeting-email/drafts\` and \`/groups\` answer (empty); \`email_drafts\` has 0 rows; meetings, tasks, notes, reminders, home, document, analysis, multimodal and capture routes answer; no error in the logs; the hub's meeting-email routes answer 401 without an owner session. **Not verified:** the owner's browser session (Settings card, Share minutes), the phone, and anything involving a real mailbox. **Rollback:** set the flag to false (or restore \`.env.bak-before-meeting-email\`) and recreate core; drafts and settings stay but become unreachable.
+
+## To start UAT
+1. ~~Enable the flag~~ done (above).
 2. The owner enters the dedicated Gmail details in Settings > Accounts > Outbound meeting email (the password goes through the form once; nothing in this deployment ever sees it), Verifies, turns sending on, and uses **Send a test email** to their own address.
 3. Install the Android debug APK `~/reachy-releases/reachy-companion-0.19.0-share-minutes-debug.apk` (sha256 `e4251b85595d50a03cad50de22ca8c9abc3b6a8d94ee6db120f35cd41b391528`; version still 0.19.0, replaces other 0.19.0 debug builds), then follow the UAT checklist in [Phase 55](../phase-55.md#uat-checklist).
