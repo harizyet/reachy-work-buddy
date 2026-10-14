@@ -687,3 +687,46 @@ def test_distribution_errors_carry_a_status_and_a_stable_code():
     assert (err.status, err.detail, err.code) == (409, "text", "bad_state")
     with pytest.raises(SenderConfigError):
         asyncio.run(InMemoryMailSenderStore().set_enabled(True))
+
+
+# ---- conversation: a draft may be requested, never approved or sent --------------------------------------------------------------------------------
+
+def _say(w, text, modality="text"):
+    return w.client.post("/conversation", json={"session_id": "s1", "conversation_id": "c1", "channel": "web", "text": text, "input_modality": modality}).json()["reply"]
+
+
+@pytest.mark.parametrize("modality", ["text", "voice"])
+@pytest.mark.parametrize("phrase", ["prepare an email with the minutes of Weekly sync", "Draft the minutes email for the weekly sync meeting.", "please prepare the email with the summary and minutes of weekly sync"])
+def test_a_spoken_or_typed_request_can_prepare_a_draft_but_it_has_no_recipients_and_nothing_is_sent(phrase, modality):
+    w = W()
+    reply = _say(w, phrase, modality)
+    assert "prepared a draft" in reply and "nothing has been sent" in reply and "can't approve or send it by voice or chat" in reply
+    [draft] = asyncio.run(w.emails.list_drafts(kind=MEETING_MINUTES_KIND))
+    assert draft.status == DraftStatus.READY_FOR_REVIEW and draft.recipients.everyone() == [] and draft.approved_hash is None
+    assert w.sent == [] and w.dispatch() == 0
+    assert w.client.get("/meeting-email/drafts").json()[0]["status"] == "ready_for_review"
+
+
+def test_a_draft_request_that_matches_no_meeting_or_several_creates_nothing_and_says_why():
+    w = W()
+    assert "couldn't find a finished meeting" in _say(w, "prepare an email with the minutes of Budget review")
+    other = asyncio.run(w.meetings.create_meeting(title="Weekly sync review", audio=b"x", source_filename="b.wav", content_type="audio/wav"))
+    w.meetings._touch(other, status=MeetingJobStatus.COMPLETE, transcript_segments=SEGMENTS)
+    assert "2 meetings match" in _say(w, "prepare an email with the minutes of Weekly sync")
+    assert asyncio.run(w.emails.list_drafts(kind=MEETING_MINUTES_KIND)) == []
+
+
+def test_a_draft_request_that_the_meeting_cannot_support_reports_the_reason_and_nothing_is_created():
+    w = W()
+    asyncio.run(w.meetings.set_speaker_names(w.meeting_id, {"SPEAKER_00": "Someone Else"}))  # the outputs no longer match the names
+    reply = _say(w, "prepare an email with the minutes of Weekly sync")
+    assert "couldn't prepare that draft" in reply and "speaker names changed" in reply and "Nothing has been sent" in reply
+    assert asyncio.run(w.emails.list_drafts(kind=MEETING_MINUTES_KIND)) == []
+
+
+def test_the_request_is_not_recognised_when_the_feature_is_off_and_sending_wording_is_never_a_draft_request():
+    w = W()
+    for text in ("send the minutes email for weekly sync", "approve the minutes email for weekly sync", "prepare and send an email with the minutes of weekly sync"):
+        reply = _say(w, text, "voice")
+        assert "prepared a draft" not in reply
+    assert asyncio.run(w.emails.list_drafts(kind=MEETING_MINUTES_KIND)) == [] and w.sent == []

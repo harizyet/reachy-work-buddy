@@ -25,6 +25,7 @@ import { goExternal } from '../../utils/navigation';
 import { Check, TextField } from '../settings/fields';
 import { CalendarFeed } from './CalendarFeed';
 import { CodingCredentials } from './CodingCredentials';
+import { MailSender } from './MailSender';
 import { sayAccount, shellQuote } from './messages';
 
 const KEY = ['accounts', 'google'] as const;
@@ -52,6 +53,7 @@ export function AccountsTab() {
     <div className="space-y-4">
       <GoogleCard />
       <CalendarFeed />
+      <MailSender />
       <CodingCredentials />
     </div>
   );

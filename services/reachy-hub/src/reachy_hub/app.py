@@ -175,6 +175,7 @@ from reachy_hub.interruption_policy import (
 )
 from reachy_hub.keyring import Keyring
 from reachy_hub.meeting_analysis import install_meeting_analysis_routes
+from reachy_hub.meeting_email import install_meeting_email_routes
 from reachy_hub.meeting_multimodal import install_meeting_multimodal_routes
 from reachy_hub.memory_candidates import install_memory_candidate_routes
 from reachy_hub.notepad_processing import install_notepad_processing_routes
@@ -1001,6 +1002,7 @@ def create_app(
     install_calendar_feed_routes(app, require_owner_session, companion_core_client)  # ADR 0035: owner session plus CSRF; the feed URL is a credential and is never returned
     install_meeting_analysis_routes(app, require_owner_session, companion_core_client)  # Phase 31: owner session plus CSRF; core decides (and 404s) when the feature is off
     install_meeting_multimodal_routes(app, require_owner_session, companion_core_client)  # Phase 53: owner session plus CSRF; sets the trusted ceiling; core decides (and 404s) when the feature is off
+    install_meeting_email_routes(app, require_owner_session, companion_core_client)  # Phase 55: owner session plus CSRF, never the bearer; core decides (and 404s) when the feature is off
     install_home_routes(app, require_owner_session, companion_core_client)  # Phase 51: the Home snapshot and brief; read-only, owner session only (CSRF for the POST)
     install_memory_candidate_routes(app, require_owner_session, companion_core_client)  # Phase 44F: owner session plus CSRF; core decides (and 404s) when the feature is off
 

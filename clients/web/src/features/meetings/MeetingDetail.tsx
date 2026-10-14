@@ -26,14 +26,16 @@ import { useChat } from '../chat/ChatProvider';
 import { AnalysisPanel } from './AnalysisPanel';
 import { DocumentsPanel } from './DocumentsPanel';
 import { SlideSuggestion } from './SlideSuggestion';
+import { ShareMinutes } from './ShareMinutes';
 import { SpeakerIdentify } from './SpeakerIdentify';
+import { useEmailConfig } from './useMeetingEmail';
 import { useMultimodalActions, useMultimodalEnabled, useOverview } from './useMeetingMultimodal';
 import { useDeepReview } from './DeepReview';
 import { DELETABLE, READY, TIER_LABEL, formatTimestamp, silentSeconds, silentSummary, speakerName, statusDescription, statusLabel } from './format';
 import { useAnalysisEnabled } from './useMeetingAnalysis';
 import { useAcceptMeeting, useMeeting } from './useMeetings';
 
-type Section = 'transcript' | 'summary' | 'minutes' | 'analysis' | 'documents' | 'speakers';
+type Section = 'transcript' | 'summary' | 'minutes' | 'analysis' | 'documents' | 'speakers' | 'share';
 type Task = 'corrections' | 'summary' | 'minutes';
 
 const messageOf = (error: unknown) => (error instanceof Error ? error.message : 'Something went wrong');
@@ -46,6 +48,7 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
   const deep = useDeepReview();
   const analysisOn = useAnalysisEnabled().data === true;
   const multimodalOn = useMultimodalEnabled().data === true;
+  const emailOn = useEmailConfig().data?.enabled === true;
   const overview = useOverview(id, multimodalOn);
   const multimodal = useMultimodalActions(id);
   const [section, setSection] = useState<Section>('transcript');
@@ -245,6 +248,11 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
               {name[0]!.toUpperCase() + name.slice(1)}
             </Button>
           ))}
+          {emailOn && (
+            <Button variant="secondary" aria-pressed={shownSection === 'share'} className={shownSection === 'share' ? 'ring-2 ring-[var(--accent)]' : ''} onClick={() => setSection('share')}>
+              Share minutes
+            </Button>
+          )}
           {Boolean(m.diarization_segments?.length) && (
             <Button variant="secondary" aria-pressed={shownSection === 'speakers'} className={shownSection === 'speakers' ? 'ring-2 ring-[var(--accent)]' : ''} onClick={() => setSection('speakers')}>
               Identify speakers
@@ -278,6 +286,8 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
           <button type="button" className="underline" onClick={() => setSection('speakers')}>Identify speakers again</button>
         </p>
       )}
+
+      {ready && emailOn && shownSection === 'share' && <ShareMinutes meeting={m} />}
 
       {ready && shownSection === 'speakers' && (
         <SpeakerIdentify

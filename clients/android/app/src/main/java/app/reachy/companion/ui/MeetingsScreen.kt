@@ -274,6 +274,7 @@ private fun MeetingDetail(model: AppViewModel, meeting: Meeting, modifier: Modif
                 FilterChip(section == "minutes", { section = "minutes"; if (meeting.minutes == null && model.generatingKind == null) model.generateOutput("minutes", "local") }, { Text("Minutes") })
                 FilterChip(section == "transcript", { section = "transcript" }, { Text("Transcript") })
                 if (meeting.speakers.orEmpty().isNotEmpty()) FilterChip(section == "speakers", { section = "speakers" }, { Text("Identify speakers") })
+                if (model.emailEnabled) FilterChip(section == "share", { section = "share" }, { Text("Share minutes") })
                 AssistChip({ model.useAsContext(meeting); onUseAsContext() }, { Text("Use as context") })
             }
         }
@@ -283,6 +284,11 @@ private fun MeetingDetail(model: AppViewModel, meeting: Meeting, modifier: Modif
         ) {
             Text("Speaker detection was run again, so the speaker names you gave before are not applied.", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = GapText)
             TextButton({ section = "speakers" }) { Text("Identify again") }
+        }
+        if (section == "share") {
+            DisposableEffect(meeting.id) { onDispose { model.clearEmail() } }
+            ShareMinutes(model, meeting)
+            return@Column
         }
         if (section == "speakers") {
             DisposableEffect(meeting.id) { onDispose { model.clearIdentify() } }

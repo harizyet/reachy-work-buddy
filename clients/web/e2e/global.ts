@@ -7,12 +7,14 @@ export const NOTEPAD_PORT = 18049; // Phase 49: a hub in front of a real core wi
 export const ANALYSIS_PORT = 18050; // Phase 31: a hub in front of a real core with meeting analysis on
 export const ANALYSIS_OFF_PORT = 18051; // ... and the same with it off, as deployed
 export const SPEAKERS_PORT = 18052; // Phase 54: a hub in front of a real core serving a real tone recording
+export const EMAIL_PORT = 18053; // Phase 55: a hub in front of a real core with the meeting email flow, the real sender and dispatch loop, and a capturing SMTP fixture
 
 let hub: ChildProcess | undefined;
 let notepadHub: ChildProcess | undefined;
 let analysisHub: ChildProcess | undefined;
 let analysisOffHub: ChildProcess | undefined;
 let speakersHub: ChildProcess | undefined;
+let emailHub: ChildProcess | undefined;
 let proxy: { close(): void } | undefined;
 
 async function waitFor(url: string) {
@@ -40,6 +42,8 @@ export default async function setup() {
   await waitFor(`http://127.0.0.1:${ANALYSIS_OFF_PORT}/web/`);
   speakersHub = spawn(python, ['e2e/speakers_hub_server.py', String(SPEAKERS_PORT)], { stdio: 'inherit' });
   await waitFor(`http://127.0.0.1:${SPEAKERS_PORT}/web/`);
+  emailHub = spawn(python, ['e2e/meeting_email_hub_server.py', String(EMAIL_PORT)], { stdio: 'inherit' });
+  await waitFor(`http://127.0.0.1:${EMAIL_PORT}/web/`);
   return async () => {
     proxy?.close();
     hub?.kill();
@@ -47,5 +51,6 @@ export default async function setup() {
     analysisHub?.kill();
     analysisOffHub?.kill();
     speakersHub?.kill();
+    emailHub?.kill();
   };
 }

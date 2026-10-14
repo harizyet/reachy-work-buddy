@@ -299,7 +299,10 @@ from companion_core.meeting_distribution.groups import (
     PostgresGroupStore,
 )
 from companion_core.meeting_distribution.routes import install_meeting_email_routes
-from companion_core.meeting_distribution.service import MeetingEmailService
+from companion_core.meeting_distribution.service import (
+    DistributionError,
+    MeetingEmailService,
+)
 from companion_core.meeting_multimodal import service as multimodal_service
 from companion_core.meeting_multimodal.postgres_store import PostgresMultimodalStore
 from companion_core.meeting_multimodal.routes import install_meeting_multimodal_routes
@@ -1532,6 +1535,7 @@ def create_app(
         restore_query = memory_intent.match_restore(intent_text)
         rag_query = rag_intent.match_query(intent_text)
         draft_request = email_intent.match_draft(intent_text)
+        minutes_email_query = email_intent.match_prepare_minutes(intent_text) if app.state.meeting_email is not None else None  # Phase 55: only when the feature is on
         approve_query = email_intent.match_approve(intent_text)
         cancel_send_query = email_intent.match_cancel_send(intent_text)
         send_query = email_intent.match_send(intent_text)
@@ -1899,6 +1903,22 @@ def create_app(
             messages = await app.state.email_store.list_received()
             reply = email_intent.format_inbox_reply(messages)
             privacy = Privacy.WORK_PRIVATE
+        elif minutes_email_query is not None:
+            production_handler = "email.minutes_draft"
+            # Prepares a draft for review and nothing else. No recipients are chosen, nothing is approved or queued, and the reply says so (ADR 0039).
+            wanted = minutes_email_query.casefold()
+            matches = [m for m in await app.state.meeting_store.list_meetings() if wanted in m.title.casefold() and m.transcript_segments]
+            if not matches:
+                reply = email_intent.format_minutes_draft_problem("I couldn't find a finished meeting with that name.")
+            elif len(matches) > 1:
+                reply = email_intent.format_minutes_draft_problem(f"{len(matches)} meetings match that name; say more of the title.")
+            else:
+                try:
+                    await app.state.meeting_email.prepare(matches[0].id)
+                    reply = email_intent.format_minutes_draft_reply(matches[0].title)
+                except DistributionError as exc:
+                    reply = email_intent.format_minutes_draft_problem(exc.detail)
+            privacy = Privacy.WORK_PRIVATE  # it names one of the owner's meetings: never spoken on a shared speaker
         elif draft_request:
             production_handler = "email.draft"
             to, body = draft_request
