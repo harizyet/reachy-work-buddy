@@ -67,3 +67,5 @@ The Documents checks of 2026-10-12 used it; see the verification record linked f
 Emulator checks use a throwaway hub with in-memory stores, never the production stack. To see the unfolded layout, switch the emulator with
 `adb shell wm size 2208x1840` and `adb shell wm density 380` (the Fold's inner screen) and back with `wm size reset` and `wm density reset`.
 Alarm scheduling shows in `adb shell dumpsys alarm`; the emulator has no audio output, so sound is not heard there.
+
+- **Home** (0.19.0, [Phase 51](../../docs/phase-51.md)): the default screen after sign-in and the first of five primary destinations (Home, Talk, Planner, Meetings, Library). Cards for today's schedule, reminders, open tasks, suggestions awaiting review and weather, each refreshing on its own; "Brief me on today"; tapping an item opens the screen that holds it (tasks open Reminders). The last snapshot is saved app-private (removed on sign-out) and shown with its age when the hub cannot be reached. `e2e/android_home_hub_server.py` is the emulator fixture.

@@ -5,9 +5,13 @@ Open `/hub/web/` through Caddy (direct hub: `/web/`; the old `/ui/` redirects th
 Overview, Chat, Meetings, To-do, Reminders, Notes, Coding agents, and Settings; the navigation links to telepresence. Both frontends
 are plain HTML/JS/CSS served by hub, with no build step or external assets.
 
-## Overview and session controls
+## Home
 
-Overview shows component health, search usage and its debug log, recent activity,
+Home is the landing page on the web and the first screen on the phone ([Phase 51](phase-51.md)): today's schedule, reminders (overdue, today, the next seven days), open tasks, suggestions waiting for your review, weather and shortcuts. Each card has its own Refresh and says plainly when its source is empty, off, out of date or could not be read. Suggestions (note proposals, meeting action candidates) are written by the local model and are not tasks, reminders or notes until you accept them on their own screens. "Brief me on today" lists the facts and, if the local model is up, words them as a short summary; the list is always shown beside it. Weather needs your location under Settings > Assistant. Sensitive records never appear on Home.
+
+## Overview and session controls (System page)
+
+The System page (Assistant menu on the web) shows component health, search usage and its debug log, recent activity,
 queued notifications, and model utilization. It loads your session automatically
 for activity reads. Configuration lives in Settings. The installation binds
 your login to its configured owner identity.

@@ -1331,3 +1331,7 @@ deployment before recovery. Do not run production and restored copies against
 the same live grant concurrently. Real Google refresh/revocation/reconnection
 and production audience approval remain acceptance requirements even when
 fixture tests pass; see [verification](verification/phase-23-accounts-2026-09-23.md).
+
+## Home weather settings (Phase 51)
+
+Core reads `WEATHER_ENABLED` (default on), `WEATHER_CACHE_MINUTES` (30), `WEATHER_TIMEOUT_SECONDS` (5) and `WEATHER_STALE_HOURS` (6); Compose passes them with those defaults, so nothing needs setting. The card queries Open-Meteo with the persona's location name and timezone only; set `WEATHER_ENABLED=false` in `deploy/homelab/.env` and recreate core to stop the call. Deploying Home is core and hub only (no migration); the Android APK is separate.

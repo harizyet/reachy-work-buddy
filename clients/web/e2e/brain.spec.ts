@@ -195,8 +195,8 @@ test.describe('Brain view', () => {
     await openBrain(page);
     await expect(page.getByTestId('brain-canvas').locator('canvas')).toBeVisible();
     await expect.poll(() => draws(page)).toBeGreaterThan(5);
-    await page.getByRole('link', { name: 'Overview' }).click();
-    await expect(page.getByRole('heading', { name: 'System status' })).toBeVisible();
+    await page.getByRole('link', { name: 'Home' }).click();
+    await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible();
     await expect.poll(() => page.evaluate(() => (window as unknown as { __contexts: WebGLRenderingContext[] }).__contexts.every((c) => c.isContextLost()))).toBe(true);
 
     const heap = () => page.evaluate(() => (performance as unknown as { memory: { usedJSHeapSize: number } }).memory.usedJSHeapSize);
@@ -205,7 +205,7 @@ test.describe('Brain view', () => {
       await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: /^Assistant/ }).click();
       await page.getByRole('link', { name: 'Brain' }).click();
       await expect(page.getByTestId('brain-canvas').locator('canvas')).toBeVisible();
-      await page.getByRole('link', { name: 'Overview' }).click();
+      await page.getByRole('link', { name: 'Home' }).click();
     }
     await gc();
     const base = await heap();
@@ -213,8 +213,8 @@ test.describe('Brain view', () => {
       await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: /^Assistant/ }).click();
       await page.getByRole('link', { name: 'Brain' }).click();
       await expect(page.getByTestId('brain-canvas').locator('canvas')).toBeVisible();
-      await page.getByRole('link', { name: 'Overview' }).click();
-      await expect(page.getByRole('heading', { name: 'System status' })).toBeVisible();
+      await page.getByRole('link', { name: 'Home' }).click();
+      await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible();
     }
     await gc();
     const after = await heap();

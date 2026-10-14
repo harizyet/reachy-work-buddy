@@ -1,13 +1,14 @@
 package app.reachy.companion.data
 
 /*
- * The app's navigation hierarchy: four primary destinations, two of which group secondary screens. Pure, so the structure (what lives where, where a deep link lands, what is
+ * The app's navigation hierarchy: five primary destinations, two of which group secondary screens. Pure, so the structure (what lives where, where a deep link lands, what is
  * restored when the owner comes back to a group) is tested on the JVM; the composables only draw it.
  */
 
-enum class Primary(val title: String) { Talk("Talk"), Planner("Planner"), Meetings("Meetings"), Library("Library") }
+enum class Primary(val title: String) { Home("Home"), Talk("Talk"), Planner("Planner"), Meetings("Meetings"), Library("Library") }
 
 enum class Section(val primary: Primary, val title: String) {
+    Home(Primary.Home, "Home"),
     Talk(Primary.Talk, "Talk"),
     Calendar(Primary.Planner, "Calendar"),
     Reminders(Primary.Planner, "Reminders"),
@@ -26,9 +27,10 @@ fun hasSecondary(primary: Primary): Boolean = sectionsOf(primary).size > 1
  * Where the owner is: the primary destination, and the last screen chosen inside each group, so leaving Planner for Meetings and coming back lands on the screen that was
  * open, not the first. Immutable; every move returns a new state.
  */
-data class NavState(val primary: Primary = Primary.Talk, val planner: Section = Section.Calendar, val library: Section = Section.Notes) {
+data class NavState(val primary: Primary = Primary.Home, val planner: Section = Section.Calendar, val library: Section = Section.Notes) {
     val current: Section
         get() = when (primary) {
+            Primary.Home -> Section.Home
             Primary.Talk -> Section.Talk
             Primary.Planner -> planner
             Primary.Meetings -> Section.Meetings

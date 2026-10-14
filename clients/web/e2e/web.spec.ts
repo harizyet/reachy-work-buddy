@@ -10,7 +10,7 @@ async function signIn(page: Page) {
   await page.getByLabel('Username').fill('owner');
   await page.getByLabel('Password').fill('correct-password');
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByRole('heading', { name: 'System status' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible(); // Home is the landing page; the old status page is System
 }
 
 for (const mount of MOUNTS) {
@@ -29,6 +29,8 @@ for (const mount of MOUNTS) {
       await page.getByRole('button', { name: 'Sign in' }).click();
       await expect(page.getByRole('alert')).toContainText('Invalid username or password');
       await signIn(page);
+      await page.evaluate(() => { window.location.hash = '#/system'; });
+      await expect(page.getByRole('heading', { name: 'System status' })).toBeVisible();
       const card = page.getByRole('region', { name: 'Components' });
       await expect(card.getByText('Reachy hub')).toBeVisible();
       await expect(card.getByText('Companion core')).toBeVisible();
@@ -40,7 +42,7 @@ for (const mount of MOUNTS) {
       await page.goto(mount.url);
       await signIn(page);
       await page.reload();
-      await expect(page.getByRole('heading', { name: 'System status' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible();
       await page.getByRole('button', { name: 'Log out' }).click();
       await expect(page.getByRole('heading', { name: 'Sign in to Reachy' })).toBeVisible();
       await page.goBack();
@@ -51,6 +53,24 @@ for (const mount of MOUNTS) {
       const base = new URL('../', mount.url).href;
       const status = await page.request.get(base + 'status');
       expect(status.status()).toBe(401);
+    });
+
+    test('Home shows every card from the real hub and core, briefs without a model, and never overflows sideways', async ({ page }) => {
+      await page.goto(mount.url);
+      await signIn(page);
+      for (const name of ["Today's schedule", 'Reminders', 'Open tasks', 'Waiting for your review', 'Weather', 'Quick actions']) {
+        await expect(page.getByRole('region', { name })).toBeVisible();
+      }
+      await expect(page.getByRole('region', { name: 'Open tasks' })).toContainText(/No open tasks|open task/);
+      await page.getByRole('button', { name: 'Refresh open tasks' }).click();
+      await expect(page.getByRole('button', { name: 'Refresh open tasks' })).toBeEnabled();
+      await page.getByRole('button', { name: 'Brief me on today' }).click();
+      await expect(page.getByRole('region', { name: "Today's briefing" })).toBeVisible();
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow).toBeLessThanOrEqual(0);
+      // The system page keeps every monitoring card.
+      await page.evaluate(() => { window.location.hash = '#/system'; });
+      await expect(page.getByRole('region', { name: 'Components' })).toBeVisible();
     });
 
     test('an expired session cookie returns to sign-in on reload', async ({ page, context }) => {

@@ -215,6 +215,16 @@ class ReachyApi(baseUrl: String, private val cookieJar: PersistentCookieJar, cli
     /** Asks the hub to download and publish the calendar source now (the owner's manual Refresh). */
     suspend fun refreshCalendar() { call(req("/calendar-feed/refresh").post("{}".toRequestBody("application/json".toMediaType())).build()) }
 
+    /** The Home snapshot (docs/phase-51.md), or only the named sections so one card refreshes on its own. Read-only. */
+    suspend fun home(sections: List<String>? = null): HomeSnapshot {
+        val url = (base + "/home").toHttpUrl().newBuilder().apply { if (!sections.isNullOrEmpty()) addQueryParameter("sections", sections.joinToString(",")) }.build()
+        return parseHome(call(Request.Builder().url(url).build()))
+    }
+
+    /** "Brief me on today": the deterministic lines, and the local model's wording of them when `narrative` is asked for and it checks out. Read-only. */
+    suspend fun homeBrief(narrative: Boolean): HomeBrief =
+        parseBrief(call(req("/home/brief").post(jsonBody(buildJsonObject { put("narrative", narrative) })).build()))
+
     suspend fun meetings(): List<Meeting> =
         json.decodeFromString(ListSerializer(Meeting.serializer()), call(req("/meetings").build()))
 

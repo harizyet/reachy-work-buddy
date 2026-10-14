@@ -164,7 +164,7 @@ describe('Coding agents polling', () => {
     const first = count();
     await act(async () => { await vi.advanceTimersByTimeAsync(CODING_POLL_MS + 200); });
     expect(count()).toBeGreaterThan(first);
-    await user.click(screen.getByRole('link', { name: 'Overview' }));
+    await user.click(screen.getByRole('link', { name: 'Home' }));
     const left = count();
     await act(async () => { await vi.advanceTimersByTimeAsync(CODING_POLL_MS * 3); });
     expect(count()).toBe(left);
