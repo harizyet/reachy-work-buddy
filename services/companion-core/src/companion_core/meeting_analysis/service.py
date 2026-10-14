@@ -159,21 +159,24 @@ class MeetingAnalysisService:
         now = snapshot(meeting) if meeting is not None and meeting.transcript_segments else None
         current = transcript_hash(now) if now is not None else None
         texts = {s.index: s.text for s in now} if now is not None else None
+        who = {s.index: s.speaker for s in now} if now is not None else None
         return {
             "meeting_id": meeting_id,
             "state": state_of(run, items),
             "run": run.view() if run else None,
             "transcript_changed_since_run": bool(run and current is not None and current != run.transcript_hash),
-            "items": [self._view(i, texts) for i in items],
+            "items": [self._view(i, texts, who) for i in items],
         }
 
     @staticmethod
-    def _view(item: Item, current: dict[int, str] | None) -> dict:
+    def _view(item: Item, current: dict[int, str] | None, speakers: dict[int, str | None] | None = None) -> dict:
         """`current` maps segment index to the segment's text as the transcript reads now. An item is flagged only when its own quote is no longer in its own segments (a correction touched
         them), not whenever any line of the meeting was edited."""
         data = item.model_dump(mode="json", exclude={"fingerprint", "final_text"})
         data["source_changed"] = current is not None and not all(
             all(n in current for n in e.segments or [e.segment]) and locate(" ".join(current[n] for n in e.segments or [e.segment]), e.quote) is not None for e in item.evidence)
+        # The name printed on the evidence was the speaker's name when the analysis ran; the owner may have renamed that speaker since.
+        data["attribution_changed"] = speakers is not None and any(e.speaker != speakers.get(e.segment, e.speaker) for e in item.evidence)
         if item.kind is ItemKind.ACTION:
             data["task_text"] = item.final_text or default_task_text(item)
         return data
@@ -194,13 +197,16 @@ class MeetingAnalysisService:
         rows = await self.store.list_items(statuses=(*OPEN_ITEMS,))
         titles: dict[str, str | None] = {}
         texts: dict[str, dict[int, str] | None] = {}
+        names: dict[str, dict[int, str | None] | None] = {}
         out = []
         for i in rows:
             if i.meeting_id not in titles:
                 meeting = await self.meetings.get_meeting(i.meeting_id)
                 titles[i.meeting_id] = meeting.title if meeting else None
-                texts[i.meeting_id] = {s.index: s.text for s in snapshot(meeting)} if meeting is not None and meeting.transcript_segments else None
-            out.append({**self._view(i, texts[i.meeting_id]), "meeting_title": titles[i.meeting_id]})
+                shown = snapshot(meeting) if meeting is not None and meeting.transcript_segments else None
+                texts[i.meeting_id] = {s.index: s.text for s in shown} if shown is not None else None
+                names[i.meeting_id] = {s.index: s.speaker for s in shown} if shown is not None else None
+            out.append({**self._view(i, texts[i.meeting_id], names[i.meeting_id]), "meeting_title": titles[i.meeting_id]})
         return {"items": out}
 
     async def provenance(self, record_id: str) -> dict | None:

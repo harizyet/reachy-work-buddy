@@ -21,6 +21,7 @@ Four primary destinations: **Talk**; **Planner** (Calendar, Reminders, Alarms); 
 - **Meetings:** record (survives standby and other apps), a list with titles and descriptions, a transcript with a speaker per line,
   a player (tap a line to play from it), per-line Edit, a warning where the phone captured no audio, editable title and
   description (or written again from the transcript), Summary, Minutes, Use as context, deep-model reruns, delete.
+- **Identify speakers** ([Phase 54](../../docs/phase-54.md)): a section in a completed meeting. Two or three short samples per detected speaker (play/pause, the time, "In recording", "Another sample"), a name field with names used before, Unknown and Skip, and one Save. Samples are time ranges of the recording played by the transcript's player. Not released: 0.19.0 is unchanged.
 - **Documents:** the owner's document library ([Phase 50](../../docs/phase-50.md)). Upload a PDF, DOCX, PNG or JPEG through Android's own file picker (the app is given only the file you choose);
   a list with status that refreshes while a document is being read; rename, classification (public, work private, sensitive), project and delete; **Ask**, **Search** and **Summaries** for one document;
   *Read more carefully* to read the original again at the next extraction level; and **Inspect**: a page at a time, a toggle between MinerU's picture of the original (with its blocks outlined, tap one for

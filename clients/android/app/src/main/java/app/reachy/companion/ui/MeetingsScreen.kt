@@ -31,6 +31,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import app.reachy.companion.data.countOccurrences
+import app.reachy.companion.data.outputIsStale
+import app.reachy.companion.data.speakerReviewNeeded
 import app.reachy.companion.data.lineAt
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Warning
@@ -211,7 +213,7 @@ private fun MeetingList(model: AppViewModel, modifier: Modifier) {
 
 private val GapIconColor = Color(0xFFB7791F)
 private val GapBackground = Color(0xFFFFF4D6)
-private val GapText = Color(0xFF5C4400)
+internal val GapText = Color(0xFF5C4400)
 
 @Composable
 private fun GapIcon(description: String, modifier: Modifier = Modifier) {
@@ -271,8 +273,21 @@ private fun MeetingDetail(model: AppViewModel, meeting: Meeting, modifier: Modif
                 FilterChip(section == "summary", { section = "summary"; if (meeting.summary == null && model.generatingKind == null) model.generateOutput("summary", "local") }, { Text("Summary") })
                 FilterChip(section == "minutes", { section = "minutes"; if (meeting.minutes == null && model.generatingKind == null) model.generateOutput("minutes", "local") }, { Text("Minutes") })
                 FilterChip(section == "transcript", { section = "transcript" }, { Text("Transcript") })
+                if (meeting.speakers.orEmpty().isNotEmpty()) FilterChip(section == "speakers", { section = "speakers" }, { Text("Identify speakers") })
                 AssistChip({ model.useAsContext(meeting); onUseAsContext() }, { Text("Use as context") })
             }
+        }
+        if (ready && meeting.speakerReviewNeeded && section != "speakers") Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).background(GapBackground, RoundedCornerShape(8.dp)).padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Speaker detection was run again, so the speaker names you gave before are not applied.", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = GapText)
+            TextButton({ section = "speakers" }) { Text("Identify again") }
+        }
+        if (section == "speakers") {
+            DisposableEffect(meeting.id) { onDispose { model.clearIdentify() } }
+            IdentifySpeakers(model, meeting, onShow = { seconds -> section = "transcript"; model.playMeetingFrom(meeting.id, seconds) })
+            return@Column
         }
         if (section != "transcript") {
             OutputPanel(model, meeting, section) { kind -> rerunKind = kind; model.loadDeepInfo(); choosingModel = true }
@@ -574,6 +589,10 @@ private fun OutputPanel(model: AppViewModel, meeting: Meeting, kind: String, onR
                 Button({ model.generateOutput(kind, "local") }, Modifier.padding(top = 8.dp)) { Text("Write the $name (local model)") }
             }
             else -> {
+                if (meeting.outputIsStale(kind)) Text(
+                    "This $name was written before the speaker names changed, so it may attribute things to the wrong person. Rerun it to update it.",
+                    Modifier.padding(bottom = 8.dp), style = MaterialTheme.typography.bodySmall, color = GapText,
+                )
                 SelectionContainer { Text(output.text) }
                 Text(
                     when (output.tier) {

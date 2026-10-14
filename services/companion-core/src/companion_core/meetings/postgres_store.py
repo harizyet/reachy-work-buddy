@@ -28,7 +28,9 @@ from companion_core.meetings.models import (
     Meeting,
     MeetingJobStatus,
     MeetingOutput,
+    SpeakerIdentityState,
 )
+from companion_core.meetings.speaker_identity import supersede
 from companion_core.meetings.store import MeetingNotCancellableError
 from shared.database import check_schema, close_pool, open_pool
 from shared.models.response import Privacy
@@ -37,7 +39,7 @@ _COLUMNS = (
     "id, title, project_scope, context, participants, started_at, source_filename, content_type, "
     "audio_path, normalized_audio_path, duration_seconds, transcript_segments, diarization_segments, "
     "status, error_detail, created_at, updated_at, speaker_names, transcript_corrections, key_terms, summary, minutes, "
-    "aligned_segments, audio_gaps, description, title_source, sensitivity"
+    "aligned_segments, audio_gaps, description, title_source, sensitivity, speaker_identity"
 )
 
 
@@ -70,6 +72,7 @@ def _from_row(row: tuple) -> Meeting:
         description=row[24],
         title_source=row[25],
         sensitivity=Privacy(row[26]),
+        speaker_identity=SpeakerIdentityState(**row[27]) if row[27] else SpeakerIdentityState(),
     )
 
 
@@ -135,14 +138,14 @@ class PostgresMeetingStore:
         async with self._pool.connection() as conn:
             await conn.execute(
                 f"INSERT INTO meetings ({_COLUMNS}) VALUES "
-                "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     meeting.id, meeting.title, meeting.project_scope, meeting.context, meeting.participants,
                     meeting.started_at, meeting.source_filename, meeting.content_type, meeting.audio_path,
                     meeting.normalized_audio_path, meeting.duration_seconds, None, None,
                     meeting.status.value, meeting.error_detail, meeting.created_at, meeting.updated_at,
                     Json({}), Json({}), Json([]), None, None, None, None, None, meeting.title_source,
-                    meeting.sensitivity.value,
+                    meeting.sensitivity.value, Json(meeting.speaker_identity.model_dump(mode="json")),
                 ),
             )
         return meeting
@@ -255,13 +258,16 @@ class PostgresMeetingStore:
     async def mark_diarized(
         self, meeting_id: str, *, diarization_segments: list[dict[str, Any]]
     ) -> Meeting | None:
+        existing = await self.get_meeting(meeting_id)
+        # A different diarization must not inherit names confirmed against the old one (Phase 54).
+        state, names = supersede(existing, diarization_segments) if existing else (SpeakerIdentityState(), {})
         async with self._pool.connection() as conn:
             cur = await conn.execute(
                 f"""
-                UPDATE meetings SET status = %s, diarization_segments = %s, updated_at = now()
+                UPDATE meetings SET status = %s, diarization_segments = %s, speaker_identity = %s, speaker_names = %s, updated_at = now()
                 WHERE id = %s AND status = %s RETURNING {_COLUMNS}
                 """,
-                (MeetingJobStatus.ALIGNING.value, Json(diarization_segments), meeting_id, MeetingJobStatus.DIARIZING.value),
+                (MeetingJobStatus.ALIGNING.value, Json(diarization_segments), Json(state.model_dump(mode="json")), Json(names), meeting_id, MeetingJobStatus.DIARIZING.value),
             )
             row = await cur.fetchone()
             return _from_row(row) if row else await self.get_meeting(meeting_id)
@@ -357,6 +363,16 @@ class PostgresMeetingStore:
             cur = await conn.execute(
                 f"UPDATE meetings SET speaker_names = %s, updated_at = now() WHERE id = %s RETURNING {_COLUMNS}",
                 (Json(names), meeting_id),
+            )
+            row = await cur.fetchone()
+            return _from_row(row) if row else None
+
+    async def set_speaker_identity(self, meeting_id: str, state: SpeakerIdentityState, names: dict[str, str]) -> Meeting | None:
+        """One write for the owner's decisions and the display names derived from them."""
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                f"UPDATE meetings SET speaker_identity = %s, speaker_names = %s, updated_at = now() WHERE id = %s RETURNING {_COLUMNS}",
+                (Json(state.model_dump(mode="json")), Json(names), meeting_id),
             )
             row = await cur.fetchone()
             return _from_row(row) if row else None

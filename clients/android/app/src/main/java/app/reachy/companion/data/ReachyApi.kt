@@ -243,6 +243,18 @@ class ReachyApi(baseUrl: String, private val cookieJar: PersistentCookieJar, cli
             put("names", buildJsonObject { names.forEach { (label, name) -> put(label, name) } })
         })).build()))
 
+    suspend fun identifySpeakers(id: String): IdentifyScreen =
+        json.decodeFromString(call(req("/meetings/$id/speakers/identify").build()))
+
+    /** Saves the owner's decisions (named, unknown, skipped or clear) in one request; the hub refuses it if the speaker detection changed since [fingerprint]. */
+    suspend fun confirmSpeakers(id: String, fingerprint: String?, decisions: Map<String, SpeakerDecision>): Meeting =
+        json.decodeFromString(call(req("/meetings/$id/speakers/identify").put(jsonBody(buildJsonObject {
+            if (fingerprint != null) put("fingerprint", fingerprint)
+            put("decisions", buildJsonObject {
+                decisions.forEach { (label, d) -> put(label, buildJsonObject { put("status", d.status); if (d.name != null) put("name", d.name) }) }
+            })
+        })).build()))
+
     /** Asks the local model for likely mis-heard words. Nothing is changed until a suggestion is applied. */
     suspend fun suggestCorrections(id: String, model: String = "local"): Suggestions {
         val slow = http.newBuilder().readTimeout(260, TimeUnit.SECONDS).build()

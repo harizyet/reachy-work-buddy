@@ -17,7 +17,9 @@ from companion_core.meetings.models import (
     Meeting,
     MeetingJobStatus,
     MeetingOutput,
+    SpeakerIdentityState,
 )
+from companion_core.meetings.speaker_identity import supersede
 from shared.models.response import Privacy
 
 
@@ -104,6 +106,8 @@ class MeetingStore(Protocol):
 
     async def mark_failed(self, meeting_id: str, *, error_detail: str) -> Meeting | None: ...
     async def cancel_meeting(self, meeting_id: str) -> Meeting | None: ...
+    async def set_speaker_identity(self, meeting_id: str, state: SpeakerIdentityState, names: dict[str, str]) -> Meeting | None: ...
+
     async def set_speaker_names(self, meeting_id: str, names: dict[str, str]) -> Meeting | None:
         """Replace the whole speaker-name map."""
         ...
@@ -290,8 +294,9 @@ class InMemoryMeetingStore:
             return None
         if meeting.status != MeetingJobStatus.DIARIZING:  # see mark_preprocessed's comment
             return meeting
+        state, names = supersede(meeting, diarization_segments)  # a different diarization must not inherit confirmed names
         return self._touch(
-            meeting, status=MeetingJobStatus.ALIGNING, diarization_segments=diarization_segments
+            meeting, status=MeetingJobStatus.ALIGNING, diarization_segments=diarization_segments, speaker_identity=state, speaker_names=names
         )
 
     async def mark_failed(self, meeting_id: str, *, error_detail: str) -> Meeting | None:
@@ -307,6 +312,10 @@ class InMemoryMeetingStore:
         if meeting.status not in CANCELLABLE_STATUSES:
             raise MeetingNotCancellableError(f"meeting '{meeting_id}' is past the cancellable stage")
         return self._touch(meeting, status=MeetingJobStatus.CANCELLED)
+
+    async def set_speaker_identity(self, meeting_id: str, state: SpeakerIdentityState, names: dict[str, str]) -> Meeting | None:
+        meeting = self._meetings.get(meeting_id)
+        return None if meeting is None else self._touch(meeting, speaker_identity=state, speaker_names=dict(names))
 
     async def set_speaker_names(self, meeting_id: str, names: dict[str, str]) -> Meeting | None:
         meeting = self._meetings.get(meeting_id)

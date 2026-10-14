@@ -298,12 +298,15 @@ from companion_core.meeting_multimodal.store import (
 from companion_core.meetings import corrections as meeting_corrections
 from companion_core.meetings import describe as meeting_describe
 from companion_core.meetings import outputs as meeting_outputs
+from companion_core.meetings import speaker_identity as meeting_identity
+from companion_core.meetings import speaker_samples as meeting_samples
 from companion_core.meetings.models import (
     DELETABLE_STATUSES,
     READY_FOR_OUTPUTS,
     SUPPORTED_AUDIO_EXTENSIONS,
     Meeting,
     MeetingOutput,
+    speaker_basis,
 )
 from companion_core.meetings.postgres_store import PostgresMeetingStore
 from companion_core.meetings.speech_clients import (
@@ -537,6 +540,21 @@ class SpeakerNamesRequest(BaseModel):
     """Partial update: a blank name clears that speaker's name."""
 
     names: dict[str, str] = Field(max_length=50)
+
+
+class SpeakerDecision(BaseModel):
+    """The owner's decision about one diarization label. `clear` removes the confirmation. A contact is a reference
+    only; an email address is never inferred from a name or a voice."""
+
+    status: Literal["named", "unknown", "skipped", "clear"]
+    name: str | None = Field(default=None, max_length=200)
+    contact_id: str | None = Field(default=None, max_length=100)
+
+
+class IdentifySpeakersRequest(BaseModel):
+    decisions: dict[str, SpeakerDecision] = Field(max_length=50)
+    # The `fingerprint` the owner's screen was loaded with; a changed diarization is refused rather than named blindly.
+    fingerprint: str | None = None
 
 
 class CorrectionRequest(BaseModel):
@@ -2895,20 +2913,62 @@ def create_app(
 
     @app.put("/meetings/{meeting_id}/speakers")
     async def set_meeting_speakers(meeting_id: str, request: SpeakerNamesRequest) -> Meeting:
+        """Name (or, with a blank name, clear) speakers. The same confirmation record as the Identify Speakers screen."""
         meeting = await _meeting_or_404(meeting_id)
-        known = {str(s.get("speaker")) for s in meeting.diarization_segments or [] if s.get("speaker")}
-        names = dict(meeting.speaker_names)
-        for label, name in request.names.items():
-            if label not in known:
-                raise HTTPException(status_code=422, detail=f"unknown speaker '{label[:40]}'")
-            name = " ".join(name.split())
-            if len(name) > 60:
-                raise HTTPException(status_code=422, detail="speaker names are limited to 60 characters")
-            if name:
-                names[label] = name
-            else:
-                names.pop(label, None)
-        return await app.state.meeting_store.set_speaker_names(meeting_id, names)
+        decisions = {label: ({"status": "named", "name": name} if " ".join(name.split()) else {"status": "clear"}) for label, name in request.names.items()}
+        return await _save_identities(meeting, decisions)
+
+    async def _save_identities(meeting: Meeting, decisions: dict[str, dict]) -> Meeting:
+        try:
+            state, names = meeting_identity.apply(meeting, decisions)
+        except meeting_identity.IdentityError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from None
+        saved = await app.state.meeting_store.set_speaker_identity(meeting.id, state, names)
+        if saved is None:
+            raise HTTPException(status_code=404, detail=f"no meeting '{meeting.id}'")
+        return saved
+
+    @app.get("/meetings/{meeting_id}/speakers/identify")
+    async def identify_speakers(meeting_id: str) -> dict:
+        """Everything the Identify Speakers screen needs: each diarization label with the owner's decision and a few
+        deterministic samples (time ranges of the existing recording, played through GET .../audio; nothing is
+        generated or stored). Names already used in other meetings are offered as suggestions."""
+        meeting = await _ready_meeting(meeting_id)
+        if not meeting.diarization_segments:
+            raise HTTPException(status_code=409, detail="this meeting has no speaker detection result")
+        state = meeting_identity.current_state(meeting)
+        found = meeting_samples.select(meeting.diarization_segments, meeting.transcript_segments, meeting.audio_gaps, meeting.duration_seconds)
+        lines = meeting_outputs.speakers(meeting)
+        counts: dict[str, int] = {}
+        for who in lines:
+            if who:
+                counts[who] = counts.get(who, 0) + 1
+        known: dict[str, None] = {}
+        for other in await app.state.meeting_store.list_meetings():
+            for name in [*(other.participants or []), *other.speaker_names.values()]:
+                known.setdefault(name, None)
+        superseded = state.superseded
+        return {
+            "meeting_id": meeting.id,
+            "fingerprint": state.fingerprint,
+            "speakers": [
+                {**item.view(), "display_name": meeting_outputs.display_name(meeting, item.label), "lines": counts.get(item.label, 0),
+                 "identity": (ident.model_dump(mode="json") if (ident := state.identities.get(item.label)) else None)}
+                for item in found
+            ],
+            "suggestions": list(known)[:100],
+            "needs_review": meeting_identity.needs_review(meeting),
+            "superseded": ({"identities": {k: v.model_dump(mode="json") for k, v in superseded.identities.items()}, "superseded_at": superseded.superseded_at.isoformat()} if superseded else None),
+            "stale_outputs": meeting.stale_outputs,
+        }
+
+    @app.put("/meetings/{meeting_id}/speakers/identify")
+    async def confirm_speakers(meeting_id: str, request: IdentifySpeakersRequest) -> Meeting:
+        """Save the owner's decisions. The names become the display names everywhere; raw labels and timestamps are untouched."""
+        meeting = await _ready_meeting(meeting_id)
+        if request.fingerprint is not None and request.fingerprint != meeting_identity.current_state(meeting).fingerprint:
+            raise HTTPException(status_code=409, detail="the speaker detection changed since you opened this screen; reload it")
+        return await _save_identities(meeting, {label: d.model_dump() for label, d in request.decisions.items()})
 
     @app.post("/meetings/{meeting_id}/corrections/suggest")
     async def suggest_meeting_corrections(
@@ -3077,7 +3137,7 @@ def create_app(
             raise HTTPException(status_code=409, detail=str(exc)) from None
         if truncated:
             text += "\n\n(This meeting is very long: only the first part was covered.)"
-        updated = await app.state.meeting_store.set_output(meeting.id, kind, MeetingOutput(text=text, tier=tier))
+        updated = await app.state.meeting_store.set_output(meeting.id, kind, MeetingOutput(text=text, tier=tier, speaker_basis=speaker_basis(meeting.speaker_names) if meeting.speaker_names else None))
         if updated is None:
             raise HTTPException(status_code=404, detail=f"no meeting '{meeting.id}'")
         return updated

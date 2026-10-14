@@ -244,11 +244,12 @@ def validate(output: _Output, run: Run, part: list[Seg], *, model: str) -> tuple
                 if _names(quoted, name):
                     assignee = name
                 elif first.speaker and name.casefold() == first.speaker.casefold() and _FIRST_PERSON.search(first.quote) and not notes_multi:
-                    assignee = first.speaker  # a commitment in the first person: the printed speaker label, which is not a confirmed identity
+                    assignee = first.speaker  # a commitment in the first person: the printed speaker name, which says who spoke, not who is responsible
+                    ambiguity.append("the assignee is whoever said it in the first person; a speaker's name is a label, not proof of who will do this")
                 else:
                     ambiguity.append("an assignee was suggested that the quote does not name; it was dropped")
             elif _FIRST_PERSON.search(evidence[0].quote) and evidence[0].speaker and not notes_multi:
-                ambiguity.append(f"said in the first person by {evidence[0].speaker}; the speaker label is not a confirmed identity")
+                ambiguity.append(f"said in the first person by {evidence[0].speaker}; a speaker's name is a label, not proof of who will do this")
             if not assignee:
                 ambiguity.append("who this was assigned to is not stated")
             if raw.stated_time:

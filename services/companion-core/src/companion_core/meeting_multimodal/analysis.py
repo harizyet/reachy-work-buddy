@@ -277,6 +277,7 @@ def validate(output: _Output, ctx: Context, chunk: Chunk, *, model: str) -> tupl
                     assignee = name
                 elif first.speaker and name.casefold() == first.speaker.casefold() and _FIRST_PERSON.search(first.quote):
                     assignee = first.speaker
+                    ambiguity.append("the assignee is whoever said it in the first person; a speaker's name is a label, not proof of who will do this")
                 else:
                     ambiguity.append("an assignee was suggested that the quote does not name; it was dropped")
             if not assignee:

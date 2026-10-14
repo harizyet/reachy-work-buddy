@@ -26,13 +26,14 @@ import { useChat } from '../chat/ChatProvider';
 import { AnalysisPanel } from './AnalysisPanel';
 import { DocumentsPanel } from './DocumentsPanel';
 import { SlideSuggestion } from './SlideSuggestion';
+import { SpeakerIdentify } from './SpeakerIdentify';
 import { useMultimodalActions, useMultimodalEnabled, useOverview } from './useMeetingMultimodal';
 import { useDeepReview } from './DeepReview';
 import { DELETABLE, READY, TIER_LABEL, formatTimestamp, silentSeconds, silentSummary, speakerName, statusDescription, statusLabel } from './format';
 import { useAnalysisEnabled } from './useMeetingAnalysis';
 import { useAcceptMeeting, useMeeting } from './useMeetings';
 
-type Section = 'transcript' | 'summary' | 'minutes' | 'analysis' | 'documents';
+type Section = 'transcript' | 'summary' | 'minutes' | 'analysis' | 'documents' | 'speakers';
 type Task = 'corrections' | 'summary' | 'minutes';
 
 const messageOf = (error: unknown) => (error instanceof Error ? error.message : 'Something went wrong');
@@ -244,6 +245,11 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
               {name[0]!.toUpperCase() + name.slice(1)}
             </Button>
           ))}
+          {Boolean(m.diarization_segments?.length) && (
+            <Button variant="secondary" aria-pressed={shownSection === 'speakers'} className={shownSection === 'speakers' ? 'ring-2 ring-[var(--accent)]' : ''} onClick={() => setSection('speakers')}>
+              Identify speakers
+            </Button>
+          )}
           <Button
             variant="secondary"
             onClick={() => {
@@ -266,12 +272,35 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
         </Button>
       )}
 
+      {ready && m.speaker_review_needed && shownSection !== 'speakers' && (
+        <p role="status" className="my-2 rounded border border-[var(--warn)] bg-[var(--warn-bg)] p-2 text-sm text-[var(--warn)]">
+          Speaker detection was run again, so the speaker names you gave before are not applied.{' '}
+          <button type="button" className="underline" onClick={() => setSection('speakers')}>Identify speakers again</button>
+        </p>
+      )}
+
+      {ready && shownSection === 'speakers' && (
+        <SpeakerIdentify
+          meeting={m}
+          onSaved={accept}
+          onShow={(seconds) => {
+            seekAfterShow.current = seconds;
+            setSection('transcript');
+          }}
+        />
+      )}
+
       {ready && (shownSection === 'summary' || shownSection === 'minutes') && (
         <div>
           <p role="status" className="text-sm">
             {generating === shownSection ? `Writing the ${shownSection} with the local model…` : outputStatus || (output ? '' : `No ${shownSection} yet.`)}
           </p>
           <div className="whitespace-pre-wrap break-words">{generating === shownSection ? '' : (output?.text ?? '')}</div>
+          {output && generating !== shownSection && m.stale_outputs.includes(shownSection) && (
+            <p role="status" className="my-1 rounded border border-[var(--warn)] bg-[var(--warn-bg)] p-2 text-sm text-[var(--warn)]">
+              {`This ${shownSection} was written before the speaker names changed, so it may attribute things to the wrong person. Rerun it to update it.`}
+            </p>
+          )}
           {output && generating !== shownSection && (
             <p className="text-sm text-[var(--muted)]">
               {`Written by ${TIER_LABEL[output.tier] ?? output.tier}${output.generated_at ? ' · ' + new Date(output.generated_at).toLocaleString() : ''}. A model wrote this from a speech-to-text transcript, so check it; if it is not accurate enough, rerun it on a stronger model.`}
