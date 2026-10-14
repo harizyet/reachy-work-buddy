@@ -20,6 +20,7 @@ export interface FakeMeeting {
   context?: string | null; duration_seconds?: number | null; error_detail?: string | null; transcript_segments?: any[] | null; diarization_segments?: any[] | null;
   aligned_segments?: any[] | null; audio_gaps?: any; speaker_names?: Record<string, string>; transcript_corrections?: Record<string, string>;
   summary?: any; minutes?: any;
+  identities?: Record<string, any>; fingerprint?: string; superseded?: any; stale_outputs?: string[]; samples?: Record<string, { samples: any[]; alternates: any[]; reason?: string | null }>;
 }
 
 export interface Deferred { resolve(response: Response): void; request: { path: string; method: string; signal?: AbortSignal | null } }
@@ -86,7 +87,7 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
   const meetingRoute = (method: string, path: string, body: any): Response => {
     const full = (m: FakeMeeting) => ({
       description: null, project_scope: null, participants: [], context: null, duration_seconds: null, error_detail: null, transcript_segments: null,
-      diarization_segments: null, aligned_segments: null, audio_gaps: null, speaker_names: {}, transcript_corrections: {}, summary: null, minutes: null, ...m,
+      diarization_segments: null, aligned_segments: null, audio_gaps: null, speaker_names: {}, transcript_corrections: {}, summary: null, minutes: null, stale_outputs: [], speaker_identity: { superseded: m.superseded ?? null }, ...m,
     });
     if (path === '/meetings' && method === 'GET') return jsonResponse(data.meetings.map(full));
     if (path === '/meetings' && method === 'POST') {
@@ -113,6 +114,30 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
     }
     if (rest === '/cancel') {
       meeting.status = 'cancelled';
+      return jsonResponse(full(meeting));
+    }
+    if (rest === '/speakers/identify' && method === 'GET') {
+      const labels = [...new Set((meeting.diarization_segments ?? []).map((x: any) => x.speaker))] as string[];
+      return jsonResponse({
+        meeting_id: meeting.id, fingerprint: meeting.fingerprint ?? 'fp1', suggestions: ['Dana Lee'], needs_review: Boolean(meeting.superseded), superseded: meeting.superseded ?? null, stale_outputs: meeting.stale_outputs ?? [],
+        speakers: labels.map((label, i) => ({
+          label, display_name: meeting.speaker_names?.[label] ?? `Speaker ${i + 1}`, seconds: 12.5, lines: 2, identity: meeting.identities?.[label] ?? null,
+          samples: meeting.samples?.[label]?.samples ?? [{ start: 1, end: 7, quality: 'good', notes: [], text: `sample one of ${label}` }, { start: 20, end: 27, quality: 'good', notes: [], text: `sample two of ${label}` }],
+          alternates: meeting.samples?.[label]?.alternates ?? [{ start: 40, end: 48, quality: 'good', notes: [], text: `spare of ${label}` }],
+          reason: meeting.samples?.[label]?.reason ?? null,
+        })),
+      });
+    }
+    if (rest === '/speakers/identify' && method === 'PUT') {
+      if (body.fingerprint && body.fingerprint !== (meeting.fingerprint ?? 'fp1')) return jsonResponse({ detail: 'the speaker detection changed since you opened this screen; reload it' }, 409);
+      meeting.identities = { ...(meeting.identities ?? {}) };
+      meeting.speaker_names = { ...(meeting.speaker_names ?? {}) };
+      for (const [label, d] of Object.entries(body.decisions as Record<string, any>)) {
+        if (d.status === 'clear') { delete meeting.identities[label]; delete meeting.speaker_names[label]; continue; }
+        meeting.identities[label] = { status: d.status, name: d.name ?? null, contact_id: d.contact_id ?? null };
+        if (d.status === 'named') meeting.speaker_names[label] = d.name; else delete meeting.speaker_names[label];
+      }
+      if (meeting.summary) meeting.stale_outputs = ['summary'];
       return jsonResponse(full(meeting));
     }
     if (rest === '/speakers') {

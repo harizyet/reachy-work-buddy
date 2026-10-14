@@ -18,12 +18,13 @@ ANALYZING remains declared for later phases but is not reachable.
 
 from __future__ import annotations
 
+import hashlib
 import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 from shared.models.response import Privacy
 
@@ -93,6 +94,42 @@ class MeetingOutput(BaseModel):
     text: str
     tier: str
     generated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    # Fingerprint of the owner's speaker names when this was written (`speaker_basis`). None: written before names were
+    # tracked, so whether it matches the current names cannot be told.
+    speaker_basis: str | None = None
+
+
+def speaker_basis(names: dict[str, str]) -> str:
+    """What generated text depends on in the speaker names: the label-to-name pairs, nothing else."""
+    return hashlib.sha256("\n".join(f"{k}\t{v}" for k, v in sorted(names.items())).encode()).hexdigest()[:16]
+
+
+class SpeakerIdentity(BaseModel):
+    """What the owner confirmed about one diarization label (Phase 54). `named` carries a name; `unknown` and `skipped`
+    record a decision not to name it. `contact_id` is an optional reference to a verified contact and is never an
+    email address: the name and any address verification are separate facts."""
+
+    status: Literal["named", "unknown", "skipped"]
+    name: str | None = None
+    contact_id: str | None = Field(default=None, max_length=100)
+    confirmed_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class SupersededIdentities(BaseModel):
+    """Confirmations that belonged to an earlier diarization. Kept for the owner to read, never applied."""
+
+    fingerprint: str | None = None
+    identities: dict[str, SpeakerIdentity] = Field(default_factory=dict)
+    superseded_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class SpeakerIdentityState(BaseModel):
+    """`fingerprint` identifies the diarization the confirmations were made against; `identities` is keyed by the raw
+    diarization label, which is never rewritten (ADR 0030)."""
+
+    fingerprint: str | None = None
+    identities: dict[str, SpeakerIdentity] = Field(default_factory=dict)
+    superseded: SupersededIdentities | None = None
 
 
 class Meeting(BaseModel):
@@ -131,6 +168,9 @@ class Meeting(BaseModel):
     # Owner-assigned display names, keyed by diarization label ("SPEAKER_00").
     # The raw diarization output is never rewritten (Phase 41, ADR 0030).
     speaker_names: dict[str, str] = Field(default_factory=dict)
+    # Phase 54: the owner's decision per label, with the diarization it was made against. `speaker_names` stays the
+    # one overlay every reader uses; it is the `named` identities of this state (plus any name set before Phase 54).
+    speaker_identity: SpeakerIdentityState = Field(default_factory=SpeakerIdentityState)
     # Meeting-specific vocabulary (product, project and people names) that corrections are matched against.
     key_terms: list[str] = Field(default_factory=list)
     # Owner-accepted text for a transcript segment, keyed by its index as a
@@ -142,3 +182,20 @@ class Meeting(BaseModel):
     error_detail: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def stale_outputs(self) -> list[str]:
+        """Generated summary/minutes written under different speaker names than the current ones. An output with no
+        recorded basis counts as stale when any name is set, because it cannot be shown to match."""
+        current = speaker_basis(self.speaker_names) if self.speaker_names else None
+        out = []
+        for kind in ("summary", "minutes"):
+            output = getattr(self, kind)
+            if output is None:
+                continue
+            was = output.speaker_basis if output.speaker_basis is not None else (None if not self.speaker_names else "unknown")
+            if was != current:
+                out.append(kind)
+        return out

@@ -1,12 +1,14 @@
 import { hubBase, request } from './client';
 import {
   parseDeepInfo,
+  parseIdentifyScreen,
   parseDeepJob,
   parseMeeting,
   parseMeetings,
   parseSuggestionResult,
   type DeepInfo,
   type DeepJob,
+  type IdentifyScreen,
   type Meeting,
   type SuggestionResult,
 } from './types';
@@ -24,6 +26,11 @@ export const cancelMeeting = async (meetingId: string): Promise<Meeting> =>
   parseMeeting(await request(`/meetings/${id(meetingId)}/cancel`, { method: 'POST' }));
 export const renameSpeaker = async (meetingId: string, label: string, name: string): Promise<Meeting> =>
   parseMeeting(await request(`/meetings/${id(meetingId)}/speakers`, { method: 'PUT', body: { names: { [label]: name } } }));
+export const getIdentifyScreen = async (meetingId: string, signal?: AbortSignal): Promise<IdentifyScreen> =>
+  parseIdentifyScreen(await request(`/meetings/${id(meetingId)}/speakers/identify`, { signal }));
+export type SpeakerDecision = { status: 'named'; name: string; contact_id?: string } | { status: 'unknown' | 'skipped' | 'clear' };
+export const confirmSpeakers = async (meetingId: string, fingerprint: string | null, decisions: Record<string, SpeakerDecision>): Promise<Meeting> =>
+  parseMeeting(await request(`/meetings/${id(meetingId)}/speakers/identify`, { method: 'PUT', body: { fingerprint, decisions } }));
 export const setTitle = async (meetingId: string, title: string, description: string): Promise<Meeting> =>
   parseMeeting(await request(`/meetings/${id(meetingId)}/title`, { method: 'PUT', body: { title, description } }));
 export const describeMeeting = async (meetingId: string): Promise<Meeting> =>

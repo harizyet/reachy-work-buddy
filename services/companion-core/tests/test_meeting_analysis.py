@@ -706,3 +706,18 @@ def test_speaker_labels_are_taken_out_of_the_finding_text_and_never_invented_bac
     assert sorted(found) == ["A participant and a participant agreed to use the open version", "Set up the VM and the software", "The system will be done soon"]
     assert all(any("speaker label" in a for a in i["ambiguity"]) for i in found.values())
     assert not any("Speaker" in i["text"] for i in found.values())
+
+
+# -- Phase 54: confirmed speaker names ------------------------------------------------------------------------------------------------
+
+def test_renaming_a_speaker_after_an_analysis_flags_the_run_and_the_items_and_a_first_person_assignee_is_marked_unproven(env):
+    before = run(env.analysed())
+    first_person = next(i for i in before["items"] if i["text"].startswith("Update the migration"))
+    assert first_person["assignee"] == "Hariz" and not first_person["attribution_changed"]
+    assert any("not proof of who will do this" in a for a in first_person["ambiguity"])  # a name given to a speaker is not proof of who owns the task
+    assert before["transcript_changed_since_run"] is False
+    run(env.meetings.set_speaker_names(env.meeting.id, {"SPEAKER_00": "Someone Else"}))
+    after = run(env.service.status(env.meeting.id))
+    assert after["transcript_changed_since_run"] is True  # the existing re-run mechanism applies
+    assert next(i for i in after["items"] if i["id"] == first_person["id"])["attribution_changed"] is True
+    assert next(i for i in after["items"] if i["text"].startswith("Contact the vendor"))["attribution_changed"] is False  # that line's speaker was not renamed

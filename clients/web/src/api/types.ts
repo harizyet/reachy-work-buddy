@@ -485,6 +485,10 @@ export interface Meeting {
   transcript_corrections: Record<string, string>;
   summary: MeetingOutput | null;
   minutes: MeetingOutput | null;
+  /** Generated text written under different speaker names than the current ones: 'summary' and/or 'minutes' (Phase 54). */
+  stale_outputs: string[];
+  /** A re-run of speaker detection replaced the speakers; the names confirmed before it were not carried over (Phase 54). */
+  speaker_review_needed: boolean;
 }
 
 export interface Suggestion {
@@ -575,7 +579,14 @@ export function parseMeeting(value: unknown, what = 'meeting'): Meeting {
     transcript_corrections: Object.fromEntries(Object.entries(corrections).map(([k, v]) => [k, str(v, 'correction')])),
     summary: parseOutput(o.summary, `${what}.summary`),
     minutes: parseOutput(o.minutes, `${what}.minutes`),
+    stale_outputs: o.stale_outputs == null ? [] : list(o.stale_outputs, `${what}.stale_outputs`).map((k) => str(k, 'stale output')),
+    speaker_review_needed: speakerReviewNeeded(o.speaker_identity),
   };
+}
+function speakerReviewNeeded(value: unknown): boolean {
+  if (value == null) return false;
+  const superseded = obj(value, 'speaker_identity').superseded;
+  return superseded != null && Object.keys(obj(obj(superseded, 'superseded').identities ?? {}, 'superseded.identities')).length > 0;
 }
 export const parseMeetings = (value: unknown): Meeting[] => list(value, 'meetings').map((v, i) => parseMeeting(v, `meetings[${i}]`));
 
@@ -1202,5 +1213,79 @@ export function parseBrainEdges(value: unknown): BrainEdgesDto {
       return { id: str(e.id, 'edge.id'), from: str(e.from, 'edge.from'), to: str(e.to, 'edge.to'), basis: e.basis == null ? '' : str(e.basis, 'edge.basis') };
     }),
     note: o.note == null ? '' : str(o.note, 'edges.note'),
+  };
+}
+
+// Identify Speakers (Phase 54). Samples are time ranges of the meeting recording; nothing about a voice is stored.
+export interface SpeakerSample {
+  start: number;
+  end: number;
+  quality: 'good' | 'low';
+  notes: string[];
+  text: string;
+}
+export interface SpeakerIdentityRecord {
+  status: 'named' | 'unknown' | 'skipped';
+  name: string | null;
+  contact_id: string | null;
+}
+export interface SpeakerCard {
+  label: string;
+  display_name: string;
+  seconds: number;
+  lines: number;
+  samples: SpeakerSample[];
+  alternates: SpeakerSample[];
+  reason: string | null;
+  identity: SpeakerIdentityRecord | null;
+}
+export interface IdentifyScreen {
+  meeting_id: string;
+  fingerprint: string | null;
+  speakers: SpeakerCard[];
+  suggestions: string[];
+  needs_review: boolean;
+  superseded: Record<string, SpeakerIdentityRecord> | null;
+}
+
+function parseSample(value: unknown, what: string): SpeakerSample {
+  const o = obj(value, what);
+  return {
+    start: num(o.start, `${what}.start`),
+    end: num(o.end, `${what}.end`),
+    quality: o.quality === 'low' ? 'low' : 'good',
+    notes: o.notes == null ? [] : list(o.notes, `${what}.notes`).map((n) => str(n, 'note')),
+    text: o.text == null ? '' : str(o.text, `${what}.text`),
+  };
+}
+function parseIdentity(value: unknown, what: string): SpeakerIdentityRecord | null {
+  if (value == null) return null;
+  const o = obj(value, what);
+  const status = str(o.status, `${what}.status`);
+  if (status !== 'named' && status !== 'unknown' && status !== 'skipped') throw new ApiShapeError(`${what}.status is not a known value`);
+  return { status, name: optionalStr(o.name, `${what}.name`), contact_id: optionalStr(o.contact_id, `${what}.contact_id`) };
+}
+export function parseIdentifyScreen(value: unknown): IdentifyScreen {
+  const o = obj(value, 'identify');
+  const superseded = o.superseded == null ? null : obj(obj(o.superseded, 'superseded').identities ?? {}, 'superseded.identities');
+  return {
+    meeting_id: str(o.meeting_id, 'identify.meeting_id'),
+    fingerprint: optionalStr(o.fingerprint, 'identify.fingerprint'),
+    speakers: list(o.speakers, 'identify.speakers').map((item, i) => {
+      const s = obj(item, `identify.speakers[${i}]`);
+      return {
+        label: str(s.label, 'speaker.label'),
+        display_name: str(s.display_name, 'speaker.display_name'),
+        seconds: num(s.seconds, 'speaker.seconds'),
+        lines: s.lines == null ? 0 : num(s.lines, 'speaker.lines'),
+        samples: list(s.samples ?? [], 'speaker.samples').map((x, n) => parseSample(x, `speaker.samples[${n}]`)),
+        alternates: list(s.alternates ?? [], 'speaker.alternates').map((x, n) => parseSample(x, `speaker.alternates[${n}]`)),
+        reason: optionalStr(s.reason, 'speaker.reason'),
+        identity: parseIdentity(s.identity, 'speaker.identity'),
+      };
+    }),
+    suggestions: o.suggestions == null ? [] : list(o.suggestions, 'identify.suggestions').map((n) => str(n, 'suggestion')),
+    needs_review: o.needs_review === true,
+    superseded: superseded && Object.fromEntries(Object.entries(superseded).map(([k, v]) => [k, parseIdentity(v, 'superseded identity')!])),
   };
 }

@@ -393,3 +393,106 @@ describe('Deep local review', () => {
     expect(await screen.findByText('Reloading the standard model')).toBeInTheDocument();
   });
 });
+
+describe('Identify speakers (Phase 54)', () => {
+  const open = async () => {
+    const user = setup();
+    await user.click(await screen.findByRole('button', { name: 'Identify speakers' }));
+    return user;
+  };
+
+  it('lists every speaker with playable samples, plays a sample from its start and stops at its end', async () => {
+    hub();
+    renderApp('#/meetings/m1');
+    await open();
+    expect(await screen.findByRole('heading', { name: /Speaker 1/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Speaker 2/ })).toBeInTheDocument();
+    const audio = document.querySelector('audio') as HTMLAudioElement; // the sample player (the transcript's own player is not on screen here)
+    const play = vi.fn(() => Promise.resolve());
+    const pause = vi.fn();
+    Object.assign(audio, { play, pause });
+    expect(screen.getAllByText(/0:01–0:07/).length).toBeGreaterThan(0);
+    expect(screen.getByText('“sample one of SPEAKER_00”')).toBeInTheDocument();
+    const user = setup();
+    await user.click(screen.getAllByRole('button', { name: 'Play Speaker 1 sample at 0:01–0:07' })[0]!);
+    expect(audio.currentTime).toBe(1);
+    expect(play).toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Pause Speaker 1 sample at 0:01–0:07' })).toHaveAttribute('aria-pressed', 'true');
+    audio.currentTime = 7.1;
+    audio.dispatchEvent(new Event('timeupdate'));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Play Speaker 1 sample at 0:01–0:07' })).toHaveAttribute('aria-pressed', 'false'));
+    expect(pause).toHaveBeenCalled();
+    expect(audio).toHaveAttribute('src', '/meetings/m1/audio'); // the existing authenticated recording route, nothing new
+  });
+
+  it('swaps in an alternative sample when one is unclear', async () => {
+    hub();
+    renderApp('#/meetings/m1');
+    const user = await open();
+    await screen.findByRole('heading', { name: /Speaker 1/ });
+    const first = within(screen.getByRole('listitem', { name: 'Speaker 1' }));
+    await user.click(first.getAllByRole('button', { name: /Another sample instead of 0:01–0:07/ })[0]!);
+    expect(first.queryByText('“sample one of SPEAKER_00”')).toBeNull();
+    expect(first.getByText('“spare of SPEAKER_00”')).toBeInTheDocument();
+  });
+
+  it('saves names, Unknown and Skip as one request and the transcript shows the names', async () => {
+    const h = hub();
+    renderApp('#/meetings/m1');
+    const user = await open();
+    await screen.findByRole('heading', { name: /Speaker 1/ });
+    await user.type(screen.getByLabelText('Who is Speaker 1?'), 'Priya Shah');
+    await user.click(within(screen.getByRole('listitem', { name: 'Speaker 2' })).getByRole('button', { name: 'Unknown' }));
+    await user.click(screen.getByRole('button', { name: 'Save 2 changes' }));
+    await waitFor(() => expect(h.bodies.find((b) => b.call === 'PUT /meetings/m1/speakers/identify')?.body).toEqual({
+      fingerprint: 'fp1', decisions: { SPEAKER_00: { status: 'named', name: 'Priya Shah' }, SPEAKER_01: { status: 'unknown' } } }));
+    expect(await screen.findByText('Saved. The transcript now shows these names.')).toBeInTheDocument();
+    expect(h.data.meetings[0]!.speaker_names).toEqual({ SPEAKER_00: 'Priya Shah' }); // unknown is not a name
+    await user.click(screen.getByRole('button', { name: 'Transcript' }));
+    expect(await screen.findByRole('button', { name: 'Rename Priya Shah' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rename Speaker 2' })).toBeInTheDocument(); // an unknown speaker stays generic
+  });
+
+  it('forces nothing: with no change Save is disabled, and Skip is recorded without a name', async () => {
+    const h = hub();
+    renderApp('#/meetings/m1');
+    const user = await open();
+    await screen.findByRole('heading', { name: /Speaker 1/ });
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    await user.click(within(screen.getByRole('listitem', { name: 'Speaker 1' })).getByRole('button', { name: 'Skip' }));
+    await user.click(screen.getByRole('button', { name: 'Save 1 change' }));
+    await waitFor(() => expect(h.bodies.find((b) => b.call === 'PUT /meetings/m1/speakers/identify')?.body).toEqual({ fingerprint: 'fp1', decisions: { SPEAKER_00: { status: 'skipped' } } }));
+  });
+
+  it('removes a saved name, and a changed diarization is refused with its message', async () => {
+    const h = hub([meeting({ speaker_names: { SPEAKER_00: 'Priya' }, identities: { SPEAKER_00: { status: 'named', name: 'Priya', contact_id: null } } })]);
+    renderApp('#/meetings/m1');
+    const user = await open();
+    expect(await screen.findByText('Saved as Priya.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Who is Priya?')).toHaveValue('Priya');
+    await user.click(screen.getByRole('button', { name: 'Remove name' }));
+    await user.click(screen.getByRole('button', { name: 'Save 1 change' }));
+    await waitFor(() => expect(h.data.meetings[0]!.speaker_names).toEqual({}));
+    h.data.meetings[0]!.fingerprint = 'changed';
+    await user.type(screen.getByLabelText('Who is Speaker 1?'), 'Tom');
+    await user.click(screen.getByRole('button', { name: 'Save 1 change' }));
+    expect(await screen.findByText(/speaker detection changed since you opened this screen/)).toBeInTheDocument();
+  });
+
+  it('warns when speaker detection was re-run and names were not carried over, and when a summary predates the names', async () => {
+    hub([meeting({ superseded: { identities: { SPEAKER_00: { status: 'named', name: 'Priya', contact_id: null } } }, summary: { text: 'Priya agreed.', tier: 'local', generated_at: null }, stale_outputs: ['summary'] })]);
+    renderApp('#/meetings/m1');
+    expect(await screen.findByText(/Speaker detection was run again, so the speaker names you gave before are not applied/)).toBeInTheDocument();
+    const user = setup();
+    await user.click(screen.getByRole('button', { name: 'Summary' }));
+    expect(await screen.findByText(/This summary was written before the speaker names changed/)).toBeInTheDocument();
+  });
+
+  it('shows why a speaker has no usable sample and escapes everything', async () => {
+    hub([meeting({ samples: { SPEAKER_01: { samples: [], alternates: [], reason: 'Too little <b>uninterrupted</b> speech.' } } })]);
+    const { container } = renderApp('#/meetings/m1');
+    await open();
+    expect(await screen.findByText('Too little <b>uninterrupted</b> speech.')).toBeInTheDocument();
+    expect(container.querySelector('b')).toBeNull();
+  });
+});

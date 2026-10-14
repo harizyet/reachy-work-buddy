@@ -40,6 +40,9 @@ data class Meeting(
     @SerialName("key_terms") val keyTerms: List<String> = emptyList(),
     val summary: MeetingOutput? = null,
     val minutes: MeetingOutput? = null,
+    // Phase 54: "summary" and/or "minutes" when written under different speaker names than the current ones.
+    @SerialName("stale_outputs") val staleOutputs: List<String> = emptyList(),
+    @SerialName("speaker_identity") val speakerIdentity: SpeakerIdentityState = SpeakerIdentityState(),
 )
 
 @Serializable

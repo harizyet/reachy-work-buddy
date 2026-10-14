@@ -12,7 +12,9 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.reachy.companion.data.ApiException
+import app.reachy.companion.data.IdentifyScreen
 import app.reachy.companion.data.Meeting
+import app.reachy.companion.data.SpeakerDecision
 import app.reachy.companion.data.MeetingLink
 import app.reachy.companion.data.HandoffOutcome
 import app.reachy.companion.data.MEETING_DEEP_LINK
@@ -735,6 +737,37 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun renameSpeaker(label: String, name: String) = annotate { api.setSpeakerNames(it, mapOf(label to name.trim())) }
+
+    // Identify Speakers (Phase 54): the screen's server data, and a one-line note on the last save.
+    var identify by mutableStateOf<IdentifyScreen?>(null); private set
+    var identifyNote by mutableStateOf<String?>(null); private set
+    var identifySaving by mutableStateOf(false); private set
+
+    fun loadIdentify() {
+        val id = openMeeting?.id ?: return
+        viewModelScope.launch {
+            try { identify = api.identifySpeakers(id); listError = null } catch (e: Exception) { identify = null; listError = failed(e) }
+        }
+    }
+
+    fun clearIdentify() { identify = null; identifyNote = null }
+
+    /** Saves the owner's decisions in one request, then reloads the screen so it shows what is stored. */
+    fun saveIdentify(decisions: Map<String, SpeakerDecision>) {
+        val id = openMeeting?.id ?: return
+        val fingerprint = identify?.fingerprint
+        identifySaving = true; identifyNote = null
+        viewModelScope.launch {
+            try {
+                openMeeting = api.confirmSpeakers(id, fingerprint, decisions)
+                identify = api.identifySpeakers(id)
+                identifyNote = "Saved. The transcript now shows these names."; listError = null
+            } catch (e: Exception) { identifyNote = failed(e) }
+            finally { identifySaving = false }
+        }
+    }
+
+    fun playSample(id: String, start: Double, end: Double) { viewModelScope.launch { player.playRange(id, start, end) } }
     /** Streams a reply in Reachy's voice; false (nothing played) when the hub cannot speak. */
     suspend fun replyStream(text: String, onRate: (Int) -> Unit, onPcm: (ByteArray, Int) -> Unit): Boolean =
         try { api.speechStream(text, onRate, onPcm) } catch (e: Exception) { false }

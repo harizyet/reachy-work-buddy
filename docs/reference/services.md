@@ -679,6 +679,10 @@ See [user workflows](../operator-guide.md#connect-gmail-and-google-calendar),
 [installation and limits](../deployment.md#google-application-setup), and
 [verification](../verification/phase-23-accounts-2026-09-23.md).
 
+## Identify Speakers (Phase 54)
+
+companion-core `GET /meetings/{id}/speakers/identify` (each diarization label with the owner's decision, up to three deterministic samples plus alternates as time ranges of the recording, a `fingerprint`, name suggestions, `needs_review`, `stale_outputs`) and `PUT` (decisions `named`/`unknown`/`skipped`/`clear` per label, optional `contact_id`, `fingerprint` checked: 409 if the diarization changed); the older `PUT /meetings/{id}/speakers` writes the same record. Samples are played through `GET /meetings/{id}/audio`; nothing is generated or stored. `Meeting` gains `speaker_identity`, `stale_outputs`; `MeetingOutput` gains `speaker_basis`. Hub proxies behind the owner session (`MEETING_SPEAKERS_IDENTIFY`). [ADR 0038](../adr/0038-meeting-speaker-identification.md), [Phase 54](../phase-54.md).
+
 ## Multimodal meeting intelligence (Phase 53)
 
 companion-core `companion_core/meeting_multimodal/` and routes under `/meetings/{id}/multimodal` and `/meeting-multimodal` ([ADR 0037](adr/0037-multimodal-meeting-evidence-and-slide-alignment.md), [Phase 53](phase-53.md)); constants in `shared/protocols/meeting_multimodal_api.py`; the hub proxies them for the owner session only and sets the access ceiling (`reachy_hub/meeting_multimodal.py`). Flag `MEETING_MULTIMODAL_ENABLED` (default off, needs the document library); schema `034_meeting_multimodal` (five tables, no foreign keys, `deploy/homelab/rollback-034.sql`). Web: the Documents tab and slide cards in the transcript (`clients/web/src/features/meetings`). Not on Android. Not built on Phase 31's frozen files, Phase 44 indexing or Phase 48/50F.

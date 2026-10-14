@@ -21,6 +21,7 @@ KEYS = Keyring("one", {"one": b"\x01" * 32})
 ROLLBACK = Path(__file__).resolve().parents[3] / "deploy" / "homelab" / "rollback-031.sql"
 ROLLBACK_033 = ROLLBACK.with_name("rollback-033.sql")  # the head is 034 now (multimodal meetings): the runbook undoes 034, then 033, first
 ROLLBACK_034 = ROLLBACK.with_name("rollback-034.sql")
+ROLLBACK_035 = ROLLBACK.with_name("rollback-035.sql")  # the head is 035 now (speaker identity): it is undone first
 ROLLBACK_032 = ROLLBACK.with_name("rollback-032.sql")  # the head is 032 now (meeting analysis): the runbook undoes it first
 NOW = datetime(2026, 10, 12, 9, 0, tzinfo=UTC)
 HASH = "a" * 64
@@ -53,7 +54,7 @@ def doc(**over) -> Document:
 
 
 def test_the_migration_adds_one_table_with_structural_guarantees(dsn):
-    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("034_meeting_multimodal",)]
+    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("035_meeting_speaker_identity",)]
     assert sql(dsn, "SELECT count(*) FROM pg_tables WHERE tablename = 'documents'") == [(1,)]
     assert sql(dsn, "SELECT count(*) FROM pg_trigger WHERE tgrelid = 'documents'::regclass AND NOT tgisinternal") == [(0,)]  # nothing reaches the index or outbox
     assert sql(dsn, "SELECT count(*) FROM pg_constraint WHERE conrelid = 'documents'::regclass AND contype = 'f'") == [(0,)]
@@ -70,6 +71,7 @@ def test_the_rollback_script_drops_only_the_catalogue_and_the_migration_can_run_
     sql(dsn, "INSERT INTO notes (id, title, body, created_at, updated_at, sensitivity) VALUES ('n1','t','b',now(),now(),'work-private')")
     sql(dsn, "INSERT INTO documents (id, title, filename, mime_type, source_hash, size_bytes, sensitivity, state, processing_priority, created_at, updated_at) VALUES ('d','t','f','m',%s,1,'public','uploaded','background',now(),now())", (HASH,))
     with psycopg.connect(dsn) as conn:
+        conn.execute(ROLLBACK_035.read_text())
         conn.execute(ROLLBACK_034.read_text())
         conn.execute(ROLLBACK_033.read_text())
         conn.execute(ROLLBACK_032.read_text())
@@ -79,7 +81,7 @@ def test_the_rollback_script_drops_only_the_catalogue_and_the_migration_can_run_
     assert sql(dsn, "SELECT count(*) FROM pg_tables WHERE tablename = 'documents'") == [(0,)]
     assert sql(dsn, "SELECT count(*) FROM notes") == [(1,)]
     upgrade(dsn, KEYS)
-    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("034_meeting_multimodal",)] and sql(dsn, "SELECT count(*) FROM documents") == [(0,)]
+    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("035_meeting_speaker_identity",)] and sql(dsn, "SELECT count(*) FROM documents") == [(0,)]
 
 
 def test_the_real_store_keeps_a_deleting_document_deleting(dsn):

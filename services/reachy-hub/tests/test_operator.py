@@ -34,7 +34,7 @@ def make_client(**kwargs):
         calendar_store=InMemoryCalendarStore(),
         task_store=InMemoryTaskStore(),
         planner_store=InMemoryPlannerStore(),
-        meeting_store=InMemoryMeetingStore(),
+        meeting_store=kwargs.pop("meeting_store", None) or InMemoryMeetingStore(),
         run_meeting_worker_task=False,
         memory_store=InMemoryMemoryStore(),
         rag_store=InMemoryDocumentStore(),
@@ -751,3 +751,29 @@ def test_documents_are_core_only_by_design():
     paths = client.app.openapi()["paths"]
     assert not [p for p in paths if p.startswith("/documents")]
     assert all(p.startswith("/document-library") or p == "/chats/{chat_id}/document" for p in paths if "document" in p)  # plus the chat attachment route (Phase 50)
+
+
+def test_identify_speakers_routes_require_auth_and_csrf_and_round_trip_through_core():
+    store = InMemoryMeetingStore()
+    client = make_client(meeting_store=store)
+    login(client)
+    meeting_id = client.post("/meetings", data={"title": "Weekly sync"}, files={"audio": ("m.wav", b"RIFF....WAVEfmt ", "audio/wav")}, headers=CSRF).json()["id"]
+    store._touch(store._meetings[meeting_id], status="complete", transcript_segments=[{"start": 0.0, "end": 9.0, "text": "we should plan the release for autumn"}],
+                 diarization_segments=[{"start": 0.0, "end": 9.0, "speaker": "SPEAKER_00"}])
+    url = f"/meetings/{meeting_id}/speakers/identify"
+
+    screen = client.get(url)
+    assert screen.status_code == 200 and screen.json()["speakers"][0]["label"] == "SPEAKER_00" and screen.json()["speakers"][0]["samples"]
+    body = {"fingerprint": screen.json()["fingerprint"], "decisions": {"SPEAKER_00": {"status": "named", "name": "Priya", "contact_id": "c1"}}}
+    assert client.put(url, json=body).status_code == 403  # no CSRF header
+    saved = client.put(url, json=body, headers=CSRF)
+    assert saved.status_code == 200 and saved.json()["speaker_names"] == {"SPEAKER_00": "Priya"}
+    assert client.put(url, json={"decisions": {"SPEAKER_00": {"status": "bogus"}}}, headers=CSRF).status_code == 422
+    assert client.put(url, json={"fingerprint": "stale", "decisions": {}}, headers=CSRF).status_code == 409
+    assert client.get("/meetings/nope/speakers/identify").status_code == 404
+
+    client.cookies.clear()  # an unauthenticated client gets neither the samples, the mapping nor the audio they point into
+    assert client.get(url).status_code == 401
+    assert client.put(url, json=body, headers=CSRF).status_code == 401
+    assert client.get(f"/meetings/{meeting_id}/audio").status_code == 401
+    assert client.get(f"/meetings/{meeting_id}").status_code == 401

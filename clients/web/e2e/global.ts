@@ -6,11 +6,13 @@ export const PROXY_PORT = 18048;
 export const NOTEPAD_PORT = 18049; // Phase 49: a hub in front of a real core with Notepad processing on
 export const ANALYSIS_PORT = 18050; // Phase 31: a hub in front of a real core with meeting analysis on
 export const ANALYSIS_OFF_PORT = 18051; // ... and the same with it off, as deployed
+export const SPEAKERS_PORT = 18052; // Phase 54: a hub in front of a real core serving a real tone recording
 
 let hub: ChildProcess | undefined;
 let notepadHub: ChildProcess | undefined;
 let analysisHub: ChildProcess | undefined;
 let analysisOffHub: ChildProcess | undefined;
+let speakersHub: ChildProcess | undefined;
 let proxy: { close(): void } | undefined;
 
 async function waitFor(url: string) {
@@ -36,11 +38,14 @@ export default async function setup() {
   await waitFor(`http://127.0.0.1:${ANALYSIS_PORT}/web/`);
   analysisOffHub = spawn(python, ['e2e/analysis_hub_server.py', String(ANALYSIS_OFF_PORT), 'off'], { stdio: 'inherit' });
   await waitFor(`http://127.0.0.1:${ANALYSIS_OFF_PORT}/web/`);
+  speakersHub = spawn(python, ['e2e/speakers_hub_server.py', String(SPEAKERS_PORT)], { stdio: 'inherit' });
+  await waitFor(`http://127.0.0.1:${SPEAKERS_PORT}/web/`);
   return async () => {
     proxy?.close();
     hub?.kill();
     notepadHub?.kill();
     analysisHub?.kill();
     analysisOffHub?.kill();
+    speakersHub?.kill();
   };
 }

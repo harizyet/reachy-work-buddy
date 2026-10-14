@@ -42,6 +42,7 @@ from shared.protocols.operator_api import (
     MEETING_OUTPUT,
     MEETING_OUTPUT_DEEP,
     MEETING_SPEAKERS,
+    MEETING_SPEAKERS_IDENTIFY,
     MEETING_TERMS,
     MEETING_TITLE,
     MEETINGS,
@@ -107,6 +108,17 @@ class MeetingTitleBody(BaseModel):
 
 class MeetingSpeakersBody(BaseModel):
     names: dict[str, str] = Field(max_length=50)
+
+
+class SpeakerDecisionBody(BaseModel):
+    status: Literal["named", "unknown", "skipped", "clear"]
+    name: str | None = Field(default=None, max_length=200)
+    contact_id: str | None = Field(default=None, max_length=100)
+
+
+class MeetingIdentifyBody(BaseModel):
+    decisions: dict[str, SpeakerDecisionBody] = Field(max_length=50)
+    fingerprint: str | None = Field(default=None, max_length=64)
 
 
 class MeetingCorrectionBody(BaseModel):
@@ -412,6 +424,14 @@ def install_operator_routes(
     @app.put(MEETING_SPEAKERS, dependencies=dependencies)
     async def set_meeting_speakers(meeting_id: str, body: MeetingSpeakersBody) -> dict:
         return await planner("PUT", f"/meetings/{quote(meeting_id, safe='')}/speakers", json=body.model_dump())
+
+    @app.get(MEETING_SPEAKERS_IDENTIFY, dependencies=dependencies)
+    async def identify_meeting_speakers(meeting_id: str) -> dict:
+        return await planner("GET", f"/meetings/{quote(meeting_id, safe='')}/speakers/identify")
+
+    @app.put(MEETING_SPEAKERS_IDENTIFY, dependencies=dependencies)
+    async def confirm_meeting_speakers(meeting_id: str, body: MeetingIdentifyBody) -> dict:
+        return await planner("PUT", f"/meetings/{quote(meeting_id, safe='')}/speakers/identify", json=body.model_dump())
 
     @app.put(MEETING_TITLE, dependencies=dependencies)
     async def rename_meeting(meeting_id: str, body: MeetingTitleBody) -> dict:
