@@ -41,4 +41,4 @@ Counters were read with core's service token before the stop (documented route; 
 
 ## Owner acceptance (2026-10-14)
 
-The owner reported real-voice UAT "tested and passed" (not itemised). The deployment is accepted. Not yet done, each needing the owner's say: merge to `main`, and release of the `pre-035` rollback images and the stop-time dump.
+The owner reported real-voice UAT "tested and passed" (not itemised). The deployment is accepted. Merged to `main` on the owner's request (`8c24dd4`, 2026-10-14) and the feature branch deleted. Still open, needing the owner's say: release of the `pre-035` rollback images and the stop-time dump.
