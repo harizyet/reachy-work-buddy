@@ -1,6 +1,6 @@
 # Phase 53 deployment: migration 034 and coordinated cutover, feature OFF (2026-10-14)
 
-Owner authorization (2026-10-14): "commit push and deploy", then "ok i approve" after the first production step was blocked, and "ok approved" after the migration step was blocked. **It covers the cutover below only. It does not cover enabling `MEETING_MULTIMODAL_ENABLED`**, which stays false and needs a separate approval. The branch was pushed but **not merged** to `main`.
+Owner authorization (2026-10-14): "commit push and deploy", then "ok i approve" after the first production step was blocked, and "ok approved" after the migration step was blocked. **It covers the cutover below only. It does not cover enabling `MEETING_MULTIMODAL_ENABLED`**, which stays false and needs a separate approval. The branch was pushed and, after the deployment, merged to `main` on the owner's request (`94e7842`, 2026-10-14).
 
 | | Before | After |
 |---|---|---|
@@ -44,7 +44,7 @@ Core was recreated, so a new Phase 48 segment starts at 07:44:07 UTC. Reading th
 
 ## Next, each needing separate authorization
 
-Merging the branch to `main`; enabling `MEETING_MULTIMODAL_ENABLED` (set it in `deploy/homelab/.env` and recreate core only; roll back by setting it false); the owner's acceptance on their own deck and meeting. Release the `pre-034` images and the extra dump only after the owner accepts.
+Merging and enabling were later done on the owner's request (see below and the merge `94e7842`); remaining: the owner's acceptance on their own deck and meeting. Release the `pre-034` images and the extra dump only after the owner accepts.
 
 ## Activation (2026-10-14, owner: "turn the feature on")
 
