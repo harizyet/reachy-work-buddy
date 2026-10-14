@@ -1,13 +1,13 @@
 # Project state
 
-Snapshot: 2026-10-12 (the Phase 30 priority text and the hardware limits were last reviewed 2026-10-02; Phases 44 to 50 and the Android app 2026-10-12). This page owns current deployment and cross-phase
+Snapshot: 2026-10-14 (the Phase 30 priority text and the hardware limits were last reviewed 2026-10-02; Phases 44 to 50 2026-10-12; Phase 31, calendar, Home and the Android app 2026-10-14). This page owns current deployment and cross-phase
 acceptance limits. The [phase ledger](plan.md#6-implementation-roadmap)
 owns phase status and scope; dated [verification records](README.md#verification-records)
 own evidence. This snapshot is not a live health check.
 
 ## Current priority and next gates
 
-**Latest (2026-10-12):** the owner's order is Phase 50 document intelligence (deployed and accepted; remaining: 50F federation once the Phase 48 window permits, then Proxmox last). The Phase 30 text below was last reviewed 2026-10-02 and is kept for the stabilization work it still owns. Current work, rollback assets and machine state are in [HANDOVER](../HANDOVER.md).
+**Latest (2026-10-14):** the homelab database is at `033_calendar_feed`; the ICS calendar feed, Home dashboard and Android 0.19.0 are built and merged to `main` (see the bullets below). The owner's order for documents remains Phase 50 (deployed and accepted; remaining: 50F federation once the Phase 48 window permits, then Proxmox last). The Phase 30 text below was last reviewed 2026-10-02 and is kept for the stabilization work it still owns. Current work, rollback assets and machine state are in [HANDOVER](../HANDOVER.md).
 
 Phases 0–29 are the historical ledger; remaining work follows the
 [forward roadmap](plan.md#forward-roadmap-phases-30) (30 stabilization, then
@@ -22,10 +22,10 @@ Nano deployment and calibration, then the occupied-room wake check, the
 visible-false-activations metric and the fresh 24g held-out run (deferred by the
 owner on 2026-09-28); see [phase-30](phase-30.md).
 
-**Phase 31 (ENABLED 2026-10-12 for the owner-supervised trial, no analysis run yet; [Step B record](verification/phase-31-trial-step-b-activation-2026-10-12.md)):** (earlier: deployed with the feature OFF) structured meeting analysis, owner-reviewed actions
-and retrieval are built behind `MEETING_ANALYSIS_ENABLED=false`; migration `032` is applied ([deployment record](verification/phase-31-deployment-2026-10-12.md));
-see [phase-31](phase-31.md). Still open: the owner's decision to enable it, then a real 30–60 minute
-meeting reviewed by the owner and browser acceptance.
+**Phase 31 (ENABLED 2026-10-12 for the owner-supervised trial, no analysis run yet; [Step B record](verification/phase-31-trial-step-b-activation-2026-10-12.md)):** structured meeting analysis, owner-reviewed actions
+and retrieval are deployed (migration `032`, [deployment record](verification/phase-31-deployment-2026-10-12.md)) and
+`MEETING_ANALYSIS_ENABLED=true`; see [phase-31](phase-31.md). Still open: a real 30–60 minute
+meeting analysed and reviewed by the owner, and browser acceptance.
 
 **Earlier plan (Phase 31):** browser checks and a real 30–60 minute meeting through
 [Phase 27](phase-27.md) (alignment now exists), then analysis and retrieval. **After
@@ -52,11 +52,12 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
 ## Implemented but not fully accepted
 
 - **Document intelligence (50): DEPLOYED and owner-accepted 2026-10-12 on the MS-01** (schema `031_documents`, `DOCUMENT_LIBRARY_ENABLED=true`, the CPU-only `document-worker` with MinerU). Upload, processing, scoped cited Q&A, summaries, Advanced-tier escalation, the extraction inspector, the chat document picker, per-chat conversation-history isolation, worker OOM recovery and Android Documents (app 0.17.0) are live and were accepted by the owner. **Not started:** 50F federated retrieval (waits for the Phase 48 window), the rest of 50J, and the Proxmox worker move. Known minor item: core's reconcile loop rewrites a ready document's `updated_at` each cycle. Backups must include the `document-source` volume. See [Phase 50](phase-50.md), [deployment](verification/phase-50-deployment-2026-10-12.md) and [HANDOVER](../HANDOVER.md).
+- **Calendar feed, Home dashboard and meeting-recording command (ADR 0035/0036, Phases 51 and 52): DEPLOYED and merged to `main` (2026-10-13/14).** Schema `033_calendar_feed` (core, hub and coding-agent redeployed 2026-10-13, [record](verification/ics-calendar-deployment-2026-10-13.md); calendar sync [record](verification/ics-calendar-sync-deployment-2026-10-13.md)); core `GET /home` and the hub proxy deployed 2026-10-14 with no migration ([record](verification/home-dashboard-deployment-2026-10-14.md)). **No calendar feed URL is set in production.** The owner reported the Calendar and Home screens tested and accepted on the phone (2026-10-14, not itemised). Open: the browser check, the weather card (needs the persona location), the live owner-session Home path, and the Phase 48 counters of one segment that were not saved (accepted gap, recorded in the deployment record). Phase 52 is Android only (no server change): the owner reported the voice and typed recording command and short-recording handling working on a phone ([phase-52](phase-52.md)). Rollback images `reachy-rollback/*:pre-033`, `pre-calsync` and `pre-home` are kept until the owner accepts.
 - **Notepad (49) and note folders:** Phase 49 processing is deployed (migration 029, 2026-10-11) and **enabled** (`NOTEPAD_PROCESSING_ENABLED=true`); note folder tags (migration 030) are deployed. The web folder fix and the Android 0.16.0 processing panel were confirmed by the owner on 2026-10-12; no separate record. Task-query routing ("what's my task for next week?") was confirmed by the owner on 2026-10-12. See [Phase 49](phase-49.md) and the [note-tags record](verification/note-tags-deployment-2026-10-11.md).
 
 - **Hybrid intent router (not a numbered phase): DEPLOYED 2026-10-11 and ENABLED (`INTENT_ROUTER_ENABLED=true`); owner acceptance of everyday use is open.** The local 7B picks one existing read handler for natural-language questions about the owner's records; it is read-only, fail-closed for questions that need the owner's records, and deterministic about dates and access ([ADR 0033](adr/0033-llm-assisted-read-routing.md)). The same rollout fixed task-reply privacy (replies were labelled from the question and ignored the channel ceiling) and the title-only named note, and rotated the SearXNG secret ([privacy and rotation record](verification/privacy-remediation-and-searxng-rotation-2026-10-11.md)). Core runs commit `41a81a0`. Known limits, none a deployment blocker: substring search, titles containing write verbs, questions with no personal cue still reach ordinary chat, `tasks.capture` and `tasks.complete` ceilings verified by tests only. Rollback images before 2026-10-11 12:59 UTC carry the old privacy defect. Phase 48 cohorts: boundaries 4 and 5 in the [trial log](verification/phase-48b-capture-trial-2026-10-10.md).
 
-- **Semantic knowledge and selective answering (44): ENGINEERING COMPLETE and DEPLOYED (2026-10-10) with every new feature DISABLED pending activation; research acceptance outstanding.** The homelab database was at `028_memory_candidates` when this was written (now `031_documents`) and core, hub and coding-agent run commit `ca21d72` ([deployment record](verification/phase-44-deployment-2026-10-10.md)); indexing, retrieval, selective answering, shadow and memory-candidate capture are all OFF. The authoritative handover is the [Phase 44 closure report](phase-44-closure-report.md). Complete for the local milestone and pushed: selective answering integration, the selective shadow with hardened telemetry, and 44F memory-candidate capture and review (migration 028 is applied to production; every new flag is OFF and absent from Compose). Deferred by explicit decision: 44C and 44G. Blocked operationally: production indexing and retrieval (off-host backup, isolated restore, memory baseline, bulk-load contention, rehearsed rollback). Not done: dev16 acceptance and independent validation. Earlier deployed state:
+- **Semantic knowledge and selective answering (44): ENGINEERING COMPLETE and DEPLOYED (2026-10-10) with every new feature DISABLED pending activation; research acceptance outstanding.** The homelab database was at `028_memory_candidates` when this was written (now `033_calendar_feed`) and core, hub and coding-agent run commit `ca21d72` ([deployment record](verification/phase-44-deployment-2026-10-10.md)); indexing, retrieval, selective answering, shadow and memory-candidate capture are all OFF. The authoritative handover is the [Phase 44 closure report](phase-44-closure-report.md). Complete for the local milestone and pushed: selective answering integration, the selective shadow with hardened telemetry, and 44F memory-candidate capture and review (migration 028 is applied to production; every new flag is OFF and absent from Compose). Deferred by explicit decision: 44C and 44G. Blocked operationally: production indexing and retrieval (off-host backup, isolated restore, memory baseline, bulk-load contention, rehearsed rollback). Not done: dev16 acceptance and independent validation. Earlier deployed state:
   deployed, all with
   indexing, retrieval and shadow OFF: migrations 026 (source sensitivity) and
   027 (knowledge index and outbox), and the 44H unclaimed-action boundary in
@@ -91,14 +92,14 @@ Last-reported host revisions and temporary paths belong in [HANDOVER](../HANDOVE
   [the 2026-10-07 evidence](verification/clients-meetings-alarms-2026-10-07.md). The
   owner's one real recording is two thirds silent (the phone captured nothing),
   so alignment and summary quality on a clean multi-speaker recording are still
-  unjudged. Analysis and retrieval remain unimplemented. File-backed transfers and longer configurable inference
+  unjudged. Analysis and retrieval were built as [Phase 31](phase-31.md) (deployed, trial enabled, no analysis run yet). File-backed transfers and longer configurable inference
   waits have [isolated 65-minute synthetic checks](verification/phase-27-long-audio-2026-09-30.md);
   these changes have not been rolled out to the live stack. See [evidence](verification/phase-27-foundation-2026-09-30.md)
   and the [next diagnostic run](phase-27.md#before-alignment-representative-speech-acceptance).
 
 - **Android app and phone-facing screens (40, 38.8/38.9):** built through app
-  0.17.0. 0.16.0 and 0.17.0 (note folders, the processing panel, Documents and the chat
-  picker) were accepted by the owner on a physical phone on 2026-10-12, and 0.14.0 and
+  0.19.0 (Calendar, four then five destinations with Home, the voice command to start a meeting recording). 0.16.0 and 0.17.0 (note folders, the processing panel, Documents and the chat
+  picker) were accepted by the owner on a physical phone on 2026-10-12, and 0.19.0 (Calendar, Home, voice recording) on 2026-10-14 (reported, not itemised), and 0.14.0 and
   earlier were verified on an emulator (including the Fold's inner-screen size and a phone
   alarm firing with the app killed and the hub down), with the hub features deployed
   (see [Phase 40](phase-40.md)). Not accepted on a Pixel Fold. Open: spoken replies on the owner's

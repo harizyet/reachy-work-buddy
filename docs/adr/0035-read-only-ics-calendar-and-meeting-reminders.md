@@ -1,6 +1,6 @@
 # ADR 0035: Read-only ICS calendar feed, deterministic event classification and meeting recording reminders
 
-- Status: Accepted (built locally 2026-10-13, not deployed)
+- Status: Accepted (deployed 2026-10-13, merged to `main` 2026-10-14)
 - Date: 2026-10-13
 - Extends: [ADR 0010](0010-calendar.md) (the calendar tool boundary). Related: [ADR 0027](0027-alarms-and-presence-gated-delivery.md), [ADR 0029](0029-android-companion-app.md).
 

@@ -1,6 +1,6 @@
 # Phase 51: Home dashboard and daily briefing
 
-Decision record: [ADR 0036](adr/0036-home-dashboard.md). Evidence: [verification record](verification/home-dashboard-2026-10-13.md). **Built locally on `feature/home-dashboard` (branched from `feature/ics-calendar-meeting-reminders` at `087f695`); nothing deployed, no APK released.**
+Decision record: [ADR 0036](adr/0036-home-dashboard.md). Evidence: [verification record](verification/home-dashboard-2026-10-13.md). **Built on `feature/home-dashboard`, merged to `main` 2026-10-14 (`f6d659a`). Core and hub deployed 2026-10-14 ([record](verification/home-dashboard-deployment-2026-10-14.md)), no migration; APK 0.19.0 built, not separately released.**
 
 ## Scope
 

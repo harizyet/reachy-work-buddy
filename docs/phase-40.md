@@ -1,6 +1,6 @@
 # Phase 40: Android companion app
 
-Status: **built through app version 0.17.0 (2026-10-12); 0.16.0 and 0.17.0 accepted by the owner on a physical phone (2026-10-12); not yet accepted on a Fold.** Decision: [ADR 0029](adr/0029-android-companion-app.md). Build and run steps: [clients/android/README.md](../clients/android/README.md).
+Status: **built through app version 0.19.0 (2026-10-14: Calendar, Home, voice recording command; see [Phase 51](phase-51.md) and [Phase 52](phase-52.md)); 0.16.0 and 0.17.0 accepted by the owner on a physical phone (2026-10-12), as was 0.19.0 with Calendar, Home and voice recording (2026-10-14, reported); not yet accepted on a Fold.** Decision: [ADR 0029](adr/0029-android-companion-app.md). Build and run steps: [clients/android/README.md](../clients/android/README.md).
 
 User-centred phone client: Talk (voice and chat), Reminders (To Do and timed reminders), Notes, Meetings and Alarms. Configuration stays in the web control panel.
 

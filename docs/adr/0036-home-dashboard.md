@@ -1,6 +1,6 @@
 # ADR 0036: Home dashboard and the extended daily briefing
 
-- Status: Accepted (built locally 2026-10-13, not deployed)
+- Status: Accepted (deployed 2026-10-14, merged to `main`)
 - Date: 2026-10-13
 - Extends: [ADR 0015](0015-daily-briefing.md) (the daily briefing). Related: [ADR 0033](0033-llm-assisted-read-routing.md), [ADR 0035](0035-read-only-ics-calendar-and-meeting-reminders.md), [Phase 31](../phase-31.md), [Phase 49](../phase-49.md), [Phase 51](../phase-51.md).
 

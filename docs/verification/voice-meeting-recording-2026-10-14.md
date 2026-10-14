@@ -1,6 +1,6 @@
 # Voice-to-meeting-recording: local verification (2026-10-14)
 
-Scope: Android only, [Phase 52](../phase-52.md). **Labels: JVM unit tests and a compile only. No emulator run, no device, no APK installed, no recording started, no server touched.**
+Scope: Android only, [Phase 52](../phase-52.md). **Later (2026-10-14): the owner reported the voice command, the typed command and short-recording handling working on a phone and merged the branch; the statement below is the pre-install state.** **Labels: JVM unit tests and a compile only. No emulator run, no device, no APK installed, no recording started, no server touched.**
 
 | Check | Result |
 |---|---|
