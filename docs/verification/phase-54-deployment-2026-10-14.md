@@ -38,3 +38,7 @@ Counters were read with core's service token before the stop (documented route; 
 - Hub: `/web/` 200 and serves the build containing "Identify speakers"; `/meetings` and `/meetings/x/speakers/identify` answer 401 without a session.
 
 **Not verified:** an owner-session browser login (no credential used), the Android app, a new recording upload, transcription/diarization of a new meeting, Telegram, the robot, voice, a real document upload. No regression observed.
+
+## Owner acceptance (2026-10-14)
+
+The owner reported real-voice UAT "tested and passed" (not itemised). The deployment is accepted. Not yet done, each needing the owner's say: merge to `main`, and release of the `pre-035` rollback images and the stop-time dump.
