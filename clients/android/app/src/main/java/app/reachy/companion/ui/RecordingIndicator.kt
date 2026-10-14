@@ -57,3 +57,16 @@ fun RecordingBar(model: AppViewModel) {
         }
     }
 }
+
+/** Asks what to do with a recording stopped under 30 seconds. It stays until answered, and comes back after the app is reopened. */
+@Composable
+fun ShortRecordingDialog(model: AppViewModel) {
+    val held = app.reachy.companion.RecordingController.held ?: return
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = {},
+        title = { Text("Very short recording") },
+        text = { Text(app.reachy.companion.data.shortRecordingQuestion(held.seconds) + " Upload and analyse it anyway, or delete it?") },
+        confirmButton = { TextButton({ model.keepShortRecording() }) { Text("Upload and analyse") } },
+        dismissButton = { TextButton({ model.discardShortRecording() }) { Text("Delete it") } },
+    )
+}
