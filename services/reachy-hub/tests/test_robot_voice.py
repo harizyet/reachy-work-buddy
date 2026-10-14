@@ -704,11 +704,12 @@ def test_spoken_command_text_does_not_actuate_the_robot() -> None:
             socket.send_json({"type": "voice_state", "voice_session_id": sid, "state": "listening"})
             wait_for_state(client, "listening")
             upload(client, sid, 2, generation)
-            # Both went to the ordinary conversation branch (core's
-            # placeholder reply), not the command branch, which would have
-            # tried to reach the hub's standby route.
+            # The literal command syntax is refused as unknown (voice is not a
+            # command channel) and the plain sentence is an ordinary turn; neither
+            # reached the hub's standby route.
             assert len(tts.spoken) == 2
-            assert all("turn" in text and "reachy-hub" not in text for text in tts.spoken)
+            assert tts.spoken[0].startswith("Unknown or unavailable command")
+            assert all("reachy-hub" not in text and "standby" not in text.lower() for text in tts.spoken)
             assert embodiment.state.backend.connected is True
         finally:
             ws.__exit__(None, None, None)
