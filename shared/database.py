@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-SCHEMA_REVISION = "035_meeting_speaker_identity"
+SCHEMA_REVISION = "036_meeting_email"
 
 
 async def check_schema(conn) -> None:

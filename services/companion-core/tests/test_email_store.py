@@ -2,6 +2,7 @@
 pytest-asyncio/anyio plugin installed)."""
 
 import asyncio
+from datetime import UTC, datetime
 
 from companion_core.email.models import DraftStatus
 from companion_core.email.store import InMemoryEmailStore
@@ -68,6 +69,11 @@ def test_mark_sent() -> None:
         draft = await store.create_draft(to="a@example.com", subject="Hi", body="Hello")
         await store.approve_draft(draft.id)
 
+        # Phase 55: a draft is sent only after it was queued and claimed; marking an approved draft sent directly is refused.
+        assert await store.mark_sent(draft.id) is None
+        await store.queue_draft(draft.id, dispatch_at=datetime.now(UTC))
+        claimed = await store.claim_due(datetime.now(UTC))
+        assert claimed is not None and claimed.status == DraftStatus.SENDING
         sent = await store.mark_sent(draft.id)
         assert sent is not None
         assert sent.status == DraftStatus.SENT

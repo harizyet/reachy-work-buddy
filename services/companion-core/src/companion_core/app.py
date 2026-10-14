@@ -249,7 +249,12 @@ from companion_core.document_library.store import (
 from companion_core.document_library.worker_client import DocumentWorkerClient
 from companion_core.email.models import DraftStatus, EmailDraft, EmailMessage
 from companion_core.email.postgres_store import PostgresEmailStore
-from companion_core.email.sender import smtp_send
+from companion_core.email.sender import MailSender
+from companion_core.email.sender_config import (
+    InMemoryMailSenderStore,
+    MailSenderStore,
+    PostgresMailSenderStore,
+)
 from companion_core.email.store import EmailStore
 from companion_core.email.workflow import (
     DEFAULT_SEND_DELAY_SECONDS,
@@ -288,6 +293,13 @@ from companion_core.meeting_analysis.store import (
     InMemoryMeetingAnalysisStore,
     MeetingAnalysisStore,
 )
+from companion_core.meeting_distribution.groups import (
+    GroupStore,
+    InMemoryGroupStore,
+    PostgresGroupStore,
+)
+from companion_core.meeting_distribution.routes import install_meeting_email_routes
+from companion_core.meeting_distribution.service import MeetingEmailService
 from companion_core.meeting_multimodal import service as multimodal_service
 from companion_core.meeting_multimodal.postgres_store import PostgresMultimodalStore
 from companion_core.meeting_multimodal.routes import install_meeting_multimodal_routes
@@ -718,7 +730,11 @@ def create_app(
     memory_store: MemoryStore | None = None,
     rag_store: DocumentStore | None = None,
     email_store: EmailStore | None = None,
-    email_send_fn: SendFn = smtp_send,
+    email_send_fn: SendFn | None = None,
+    meeting_email_enabled: bool | None = None,
+    mail_sender_store: MailSenderStore | None = None,
+    recipient_group_store: GroupStore | None = None,
+    mail_tls_context=None,
     email_send_delay_seconds: int | None = None,
     confirmation_store: ConfirmationStore | None = None,
     meeting_store: MeetingStore | None = None,
@@ -757,6 +773,7 @@ def create_app(
 ) -> FastAPI:
     documents_on = document_library_service.enabled()  # Phase 50B: read once; with it off nothing is built, no table is read, no directory is created and the routes do not exist
     multimodal_on = documents_on and multimodal_service.enabled()  # Phase 53: needs the document library; read once; with it off nothing is built, no table is read and the routes do not exist
+    email_on = meeting_email_enabled if meeting_email_enabled is not None else os.environ.get("MEETING_EMAIL_ENABLED", "").strip().lower() in ("1", "true", "yes", "on")  # Phase 55: read once; off means no sender store, no routes, no service
     analysis_on = analysis_service.enabled()  # Phase 31: read once; with it off nothing is built, no table is read, the knowledge index adds nothing and the routes do not exist
     notepad_on = notepad_service.enabled()  # Phase 49: read once; with it off nothing is built, no table is read and the routes do not exist
     candidates_on, capture_on = candidate_service.candidates_enabled(), candidate_service.capture_enabled()  # read once: routes and lifespan always agree
@@ -947,13 +964,28 @@ def create_app(
             app.state.calendar_store = FeedCalendar(app.state.calendar_store, app.state.calendar_feed)
         feed_task = asyncio.create_task(run_refresh_loop(app.state.calendar_feed)) if app.state.calendar_feed is not None and run_calendar_feed_loop else None
 
+        # Phase 55: the dedicated sender and the meeting-minutes workflow, only when the flag is on. The sender is the one the dispatch loop uses for every draft; without the flag
+        # it is the deployment's environment sender, exactly as before.
+        if email_on:
+            if mail_sender_store is None and db is not None:
+                app.state.mail_sender_store = await PostgresMailSenderStore.connect(db)
+            elif mail_sender_store is None:
+                app.state.mail_sender_store = InMemoryMailSenderStore()
+            if recipient_group_store is None and db is not None:
+                app.state.recipient_group_store = await PostgresGroupStore.connect(db)
+            elif recipient_group_store is None:
+                app.state.recipient_group_store = InMemoryGroupStore()
+            if app.state.meeting_email is None:
+                app.state.meeting_email = build_meeting_email_service()
+        send_fn = email_send_fn or MailSender(app.state.mail_sender_store, tls_context=mail_tls_context)
+
         # Only actually dispatches drafts whose dispatch_at has passed —
         # queueing a draft doesn't send it, this loop noticing it's due
         # does. Same real-background-task pattern as reachy-hub's
         # heartbeat_loop.
         dispatch_task = (
             asyncio.create_task(
-                run_dispatch_loop(app.state.email_store, send_fn=email_send_fn, interval_seconds=email_dispatch_interval)
+                run_dispatch_loop(app.state.email_store, send_fn=send_fn, interval_seconds=email_dispatch_interval)
             )
             if run_email_dispatch_task
             else None
@@ -1225,6 +1257,29 @@ def create_app(
     install_accounts(app, accounts_service_token)
     install_calendar_routes(app)
 
+    # Phase 55 (ADR 0039): supervised meeting-minutes email. Everything below exists only while MEETING_EMAIL_ENABLED is true.
+    app.state.mail_sender_store = mail_sender_store
+    app.state.recipient_group_store = recipient_group_store
+    app.state.mail_tls_context = mail_tls_context
+    app.state.meeting_email = None
+
+    def build_meeting_email_service() -> MeetingEmailService:
+        async def owner_emails() -> list[str]:
+            feed = getattr(app.state, "calendar_feed", None)
+            return await feed.owner_emails() if feed is not None else []
+
+        async def attendees(meeting) -> list[str]:
+            feed = getattr(app.state, "calendar_feed", None)
+            return await feed.attendees_for(meeting.started_at or meeting.created_at) if feed is not None else []
+
+        return MeetingEmailService(
+            emails=app.state.email_store, meetings=app.state.meeting_store, senders=app.state.mail_sender_store, groups=app.state.recipient_group_store,
+            analysis=app.state.meeting_analysis_service, timezone=notepad_timezone, owner_emails=owner_emails, attendees=attendees,
+            delay_seconds=email_send_delay_seconds if email_send_delay_seconds is not None else DEFAULT_SEND_DELAY_SECONDS)
+
+    if email_on:
+        install_meeting_email_routes(app)
+
     @app.middleware("http")
     async def protect_account_data(request, call_next):
         import secrets
@@ -1375,6 +1430,9 @@ def create_app(
         app.state.email_store = AccountEmail(email_store, account_service)
     if calendar_feed_service is not None:
         app.state.calendar_store = FeedCalendar(app.state.calendar_store, calendar_feed_service)
+
+    if email_on and app.state.mail_sender_store is not None and app.state.recipient_group_store is not None:
+        app.state.meeting_email = build_meeting_email_service()  # injected stores (tests): no lifespan needed
 
     @app.get("/health")
     async def health() -> dict[str, str]:
@@ -1881,7 +1939,8 @@ def create_app(
             # actually calls email_send_fn later, once due.
             try:
                 require_text(turn.input_modality)
-                candidates = await app.state.email_store.list_drafts()
+                # Phase 55: only drafts written in conversation. A meeting package is queued from its own review screen (owner session), never from a chat or voice turn.
+                candidates = await app.state.email_store.list_drafts(kind="text")
                 matched = email_intent.find_draft_by_query(candidates, send_query)
                 if matched is None:
                     reply = email_intent.format_send_not_found_reply(send_query)
