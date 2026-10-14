@@ -12,8 +12,8 @@ android {
         applicationId = "app.reachy.companion"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.17.1"
+        versionCode = 3
+        versionName = "0.18.1"
     }
     buildTypes {
         release { isMinifyEnabled = false }

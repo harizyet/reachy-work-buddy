@@ -59,13 +59,16 @@ object AlarmScheduler {
             catch (e: SecurityException) { Log.w("PhoneAlarm", "cannot schedule exact alarms: ${e.message}") }
         }
         prefs.scheduledAlarmIds = wanted.map { it.id }.toSet()
-        scheduleBackgroundSync(context, prefs.phoneAlarms)
+        scheduleBackgroundSync(context, prefs.phoneAlarms || prefs.meetingReminders)
     }
 
     /**
      * Alarms set elsewhere (Telegram, the robot, the web) only reach the phone when it asks, so it asks about every 15 minutes
      * in the background as well as whenever the app opens, rings, or the phone restarts. The job survives a closed app and a reboot.
      */
+    /** The meeting reminders share this job: it must keep running when only they are switched on. */
+    fun ensureBackgroundSync(context: Context) = scheduleBackgroundSync(context, true)
+
     private fun scheduleBackgroundSync(context: Context, on: Boolean) {
         val scheduler = context.getSystemService(JobScheduler::class.java)
         if (!on) { scheduler.cancel(SYNC_JOB_ID); return }
@@ -91,11 +94,16 @@ object AlarmScheduler {
     }
 }
 
-/** The 15-minute background sync. */
+/** The 15-minute background sync: the phone alarms, and the meeting reminders (each only does anything when its own setting is on). */
 class AlarmSyncJob : JobService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     override fun onStartJob(params: JobParameters): Boolean {
-        scope.launch { try { AlarmScheduler.syncFromHub(applicationContext) } finally { jobFinished(params, false) } }
+        scope.launch {
+            try {
+                if (Prefs(applicationContext).phoneAlarms) AlarmScheduler.syncFromHub(applicationContext)
+                MeetingReminderScheduler.syncFromHub(applicationContext)
+            } finally { jobFinished(params, false) }
+        }
         return true
     }
     override fun onStopJob(params: JobParameters): Boolean { scope.cancel(); return true }

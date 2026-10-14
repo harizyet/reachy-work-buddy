@@ -57,7 +57,7 @@ export function renderApp(hash = '#/', client: QueryClient = testQueryClient()) 
 
 const NAV_GROUP: Record<string, string> = {
   Meetings: 'Library', Notes: 'Library', Documents: 'Library',
-  'To Do': 'Planner', Reminders: 'Planner', Alarms: 'Planner',
+  'To Do': 'Planner', Reminders: 'Planner', Alarms: 'Planner', Calendar: 'Planner',
   Memory: 'Assistant', Activity: 'Assistant', Brain: 'Assistant', 'Coding agents': 'Assistant',
 };
 

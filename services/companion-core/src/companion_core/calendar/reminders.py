@@ -23,7 +23,9 @@ async def due_reminders(store: CalendarStore, now: datetime, within_minutes: int
     # meetings already in progress; a reminder is only useful for events
     # that haven't started yet.
     candidates = await store.list_events(now, window_end)
-    return [event for event in candidates if now <= event.start <= window_end]
+    # Feed events (ADR 0035) are not part of this channel-routed path: their recording reminders go to the phone (calendar/feed.py `reminders`), and an all-day or
+    # leave event that starts at midnight must not produce a "starts in 5 minutes" message here.
+    return [event for event in candidates if event.source != "ics" and now <= event.start <= window_end]
 
 
 def reminder_urgency(event: CalendarEvent, now: datetime) -> Urgency:

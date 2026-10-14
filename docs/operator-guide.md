@@ -168,6 +168,23 @@ The **Activity** tab lists recent action receipts: what the assistant actually
 changed (alarms, tasks, reminders, memory) and whether an alarm was delivered,
 independent of how a reply was worded. It is read-only.
 
+## Calendar feed and meeting reminders (ADR 0035)
+
+**Settings > Accounts > Calendar feed (read-only)** takes the secret `.ics` link of your calendar (a `webcal://` link also works). The link is stored encrypted, is never shown again
+(only its host is), and only `https` links to public addresses are accepted. Reachy reads the feed every 15 minutes (you can change that), keeps the last good copy if a refresh fails and says how
+old it is. It never changes your calendar.
+
+Every event is classified by fixed rules, not by the model: **Meeting** (guests, a call link, or a title word such as "sync"), **Appointment** (dentist, doctor...), **Leave** (out of office,
+annual leave, vacation, holiday), **All day**, **Timed event** (could not tell; never treated as a meeting) and **Busy** (hidden details, which stay hidden). Add your own email addresses so your
+answer to an invitation is read and you are told apart from other guests. You can change the class of one event in the list.
+
+On the phone (Android app), a meeting gets a notification 5 minutes before (1 to 120 in the settings) with **Start recording** and **Dismiss**. Start recording opens Meetings with the meeting
+prepared; you still tap **Record**. Cancelled, declined, all-day, leave, personal, unidentified and hidden events never get one, and a leave day does not silence a meeting scheduled on it unless
+you tick that setting. The phone schedules the next 72 hours itself, so reminders arrive offline and after a restart. If notifications are off for the app, Meetings says so.
+**Calendar page** (Planner > Calendar on the web, the Calendar tab on the phone): a month with a mark on days that have meetings (dot), leave (square) or other events (ring), the agenda of the selected day in your time zone, the next meetings, and a Sync status card (state, source, event count, revision, last error, and two separate times: when the source was last refreshed successfully and when this page or phone last checked the server). **Refresh** downloads the source now. Hidden entries show as "Busy" with their time only; a missing title shows as "Untitled event". Uploading an `.ics` file (Settings > Accounts) or saving a new link replaces the calendar at once, after the whole file has been checked; a file that cannot be read changes nothing and the last good calendar stays, with the error shown. An empty but valid calendar clears everything. The phone follows within about 20 seconds while its Calendar tab is open, otherwise when the app opens or in its 15-minute check; there is no instant push.
+
+Ask in chat: "What's on my calendar today?" (grouped), "Do I have meetings tomorrow?" (meetings only), "Am I on leave next week?" (leave periods, with their real dates).
+
 ## Meeting recordings
 
 Open **Meetings** to record or upload audio with **Add meeting**. The left

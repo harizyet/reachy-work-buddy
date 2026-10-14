@@ -84,3 +84,28 @@ def test_today_window_spans_the_whole_calendar_day() -> None:
     start, end = today_window(datetime(2026, 1, 5, 14, 30, tzinfo=UTC))
     assert start == datetime(2026, 1, 5, 0, 0, 0, tzinfo=UTC)
     assert end == datetime(2026, 1, 5, 23, 59, 59, 999999, tzinfo=UTC)
+
+
+def test_meetings_and_leave_questions_are_claimed_only_when_they_are_about_the_owners_calendar() -> None:
+    from companion_core.calendar_intent import is_leave_query, is_meetings_query
+
+    for yes in ("Do I have meetings tomorrow?", "any meetings today", "What meetings do I have next week?", "Do I have any meetings next month?"):
+        assert is_meetings_query(yes), yes
+    for no in ("Which meetings mention the Lantern review?", "Summarize the meeting tomorrow", "start a meeting recording", "Do I have meetings", "Cancel my meeting tomorrow"):
+        assert not is_meetings_query(no), no
+    for yes in ("Am I on leave next week?", "Do I have any annual leave this week?", "Am I out of office tomorrow?", "am i on holiday"):
+        assert is_leave_query(yes), yes
+    for no in ("Book annual leave next week", "Request time off tomorrow", "What is the leave policy?"):
+        assert not is_leave_query(no), no
+
+
+def test_query_window_uses_whole_days_in_the_owners_zone_and_names_unsupported_ranges() -> None:
+    from companion_core.calendar_intent import query_window
+
+    now = datetime(2026, 10, 14, 20, 0, tzinfo=UTC)  # 04:00 Thursday 15 Oct in Singapore
+    today = query_window("what's on today", now, "Asia/Singapore")
+    assert (today.start.day, today.start.hour, today.end.day) == (15, 0, 16)
+    week = query_window("meetings next week", now, "Asia/Singapore")
+    assert week.start.strftime("%a %d") == "Mon 19" and week.end.strftime("%a %d") == "Mon 26" and week.label == "next week"
+    assert query_window("meetings next month", now, "UTC").problem and query_window("meetings today and tomorrow", now, "UTC").problem
+    assert query_window("am i on leave", now, "UTC", default_days=31).label == "in the next 31 days"

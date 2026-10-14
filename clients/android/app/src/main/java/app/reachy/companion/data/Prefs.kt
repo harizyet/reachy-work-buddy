@@ -25,6 +25,13 @@ class Prefs(context: Context) {
     var scheduledAlarmIds: Set<String>
         get() = store.getStringSet("scheduled_alarm_ids", emptySet()) ?: emptySet()
         set(value) = store.edit().putStringSet("scheduled_alarm_ids", value).apply()
+    /** Remind the owner before a meeting (from the calendar feed) with a shortcut to the recorder. The reminders themselves are kept in app-private storage, not here. */
+    var meetingReminders: Boolean
+        get() = store.getBoolean("meeting_reminders", true)
+        set(value) = store.edit().putBoolean("meeting_reminders", value).apply()
+    var askedReminderNotifications: Boolean
+        get() = store.getBoolean("asked_reminder_notifications", false)
+        set(value) = store.edit().putBoolean("asked_reminder_notifications", value).apply()
     /** Read replies in the phone's own voice instead of Reachy's streamed voice (chosen in voice mode). */
     var phoneVoice: Boolean
         get() = store.getBoolean("phone_voice", false)

@@ -22,6 +22,7 @@ export const NAV: Entry[] = [
       { to: '/todo', label: 'To Do' },
       { to: '/reminders', label: 'Reminders' },
       { to: '/alarms', label: 'Alarms' },
+      { to: '/calendar', label: 'Calendar' },
     ],
   },
   {

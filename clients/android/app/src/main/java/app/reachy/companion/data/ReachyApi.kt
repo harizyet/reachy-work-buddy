@@ -197,6 +197,24 @@ class ReachyApi(baseUrl: String, private val cookieJar: PersistentCookieJar, cli
             put("state", if (confirmed) "confirmed" else "rejected")
         })).build())).links
 
+    /** The recording reminders to schedule on this phone (the hub bounds the horizon), from the owner's calendar feed. */
+    suspend fun meetingReminders(): ReminderSet = json.decodeFromString(call(req("/calendar-feed/reminders").build()))
+
+    /** Calendar events in a window with their classification, for the schedule list. */
+    suspend fun calendarEvents(startIso: String, endIso: String): List<CalendarItem> {
+        val url = (base + "/calendar-feed/events").toHttpUrl().newBuilder().addQueryParameter("start", startIso).addQueryParameter("end", endIso).build()
+        return json.decodeFromString(ListSerializer(CalendarItem.serializer()), call(Request.Builder().url(url).build()))
+    }
+
+    /** Events and the feed's status from one revision of the calendar, for the Calendar screen. */
+    suspend fun calendarSchedule(startIso: String, endIso: String): ScheduleView {
+        val url = (base + "/calendar-feed/schedule").toHttpUrl().newBuilder().addQueryParameter("start", startIso).addQueryParameter("end", endIso).build()
+        return json.decodeFromString(call(Request.Builder().url(url).build()))
+    }
+
+    /** Asks the hub to download and publish the calendar source now (the owner's manual Refresh). */
+    suspend fun refreshCalendar() { call(req("/calendar-feed/refresh").post("{}".toRequestBody("application/json".toMediaType())).build()) }
+
     suspend fun meetings(): List<Meeting> =
         json.decodeFromString(ListSerializer(Meeting.serializer()), call(req("/meetings").build()))
 

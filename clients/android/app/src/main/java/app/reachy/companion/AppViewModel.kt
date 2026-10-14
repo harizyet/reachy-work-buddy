@@ -83,6 +83,92 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun startRecording() = RecordingController.start(getApplication())
     fun stopRecording() = RecordingController.stop(getApplication())
 
+    /** The meeting a reminder prepared. Nothing records until the owner taps Record. */
+    var prepared by mutableStateOf<app.reachy.companion.data.PreparedMeeting?>(null); private set
+    fun prepareMeeting(meeting: app.reachy.companion.data.PreparedMeeting) { prepared = meeting }
+    fun clearPrepared() { prepared = null }
+    fun preparedGate(): app.reachy.companion.data.RecordingGate? = prepared?.let { RecordingController.gate(getApplication(), it) }
+    fun startPreparedRecording() {
+        val meeting = prepared ?: return
+        if (RecordingController.gate(getApplication(), meeting) == app.reachy.companion.data.RecordingGate.Ready) RecordingController.start(getApplication(), meeting)
+    }
+
+    /** Meeting reminders: what is wrong with delivery, the upcoming events with their classification, and a refresh from the hub. */
+    var reminderIssues by mutableStateOf<List<app.reachy.companion.data.ReminderIssue>>(emptyList()); private set
+    val schedule = mutableStateListOf<app.reachy.companion.data.CalendarItem>()
+    var scheduleError by mutableStateOf<String?>(null); private set
+
+    fun refreshReminders() {
+        viewModelScope.launch {
+            // Opening the app re-arms what was stored first (a force-stop clears every alarm without telling the app), then asks the hub what is current.
+            MeetingReminderScheduler.restore(getApplication())
+            MeetingReminderScheduler.syncFromHub(getApplication())
+            reminderIssues = MeetingReminderScheduler.issues(getApplication())
+            loadSchedule()
+        }
+    }
+
+    fun setMeetingReminders(on: Boolean) {
+        prefs.meetingReminders = on
+        if (on) refreshReminders() else { MeetingReminderScheduler.disarm(getApplication()); reminderIssues = MeetingReminderScheduler.issues(getApplication()); schedule.clear() }
+    }
+
+    // --- the Calendar screen ---------------------------------------------------------------------------------------------------------------------------
+    var calendarView by mutableStateOf<app.reachy.companion.data.ScheduleView?>(null); private set
+    var calendarCheckedMs by mutableStateOf<Long?>(null); private set
+    /** True when the last attempt to reach the hub failed, so what is shown is the copy saved on this phone. */
+    var calendarOffline by mutableStateOf(false); private set
+    var calendarRefreshing by mutableStateOf(false); private set
+    var calendarMessage by mutableStateOf<String?>(null); private set
+    var calendarMonth by mutableStateOf(java.time.YearMonth.now())
+    var calendarDay by mutableStateOf(java.time.LocalDate.now())
+
+    /** Shows the saved copy at once (so the screen is never blank offline), then asks the hub for the current revision. */
+    fun openCalendar() {
+        if (calendarView == null) CalendarCache.read(getApplication())?.let { calendarView = it.view; calendarCheckedMs = it.checkedAtMs; calendarOffline = true }
+        loadCalendar()
+    }
+
+    /** Reads the current revision. A different revision than the phone's reminders were built from reconciles them straight away: moved meetings are rescheduled, removed ones cancelled. */
+    fun loadCalendar() {
+        viewModelScope.launch {
+            val zone = java.time.ZoneId.systemDefault()
+            val grid = app.reachy.companion.data.monthGrid(calendarMonth)
+            val today = java.time.LocalDate.now()
+            val from = minOf(grid.first(), today).atStartOfDay(zone).toOffsetDateTime().toString()
+            val to = maxOf(grid.last().plusDays(1), today.plusDays(14)).atStartOfDay(zone).toOffsetDateTime().toString()
+            try {
+                val view = api.calendarSchedule(from, to)
+                val now = System.currentTimeMillis()
+                calendarView = view; calendarCheckedMs = now; calendarOffline = false
+                CalendarCache.write(getApplication(), CachedSchedule(view, now))
+                if (prefs.meetingReminders && MeetingReminderScheduler.appliedGeneration(getApplication()) != view.generation) {
+                    MeetingReminderScheduler.syncFromHub(getApplication()); reminderIssues = MeetingReminderScheduler.issues(getApplication())
+                }
+            } catch (e: Exception) { calendarOffline = true }
+        }
+    }
+
+    /** The owner's Refresh: the hub downloads the source and publishes a new revision at once, then this phone reads it and reconciles its reminders. */
+    fun refreshCalendarSource() {
+        viewModelScope.launch {
+            calendarRefreshing = true; calendarMessage = null
+            try { api.refreshCalendar(); calendarMessage = null } catch (e: ApiException) { calendarMessage = if (e.unauthorized) "Sign in again" else "The hub could not refresh the calendar" } catch (e: Exception) { calendarMessage = "The hub could not be reached" }
+            loadCalendar()
+            calendarRefreshing = false
+        }
+    }
+
+    private suspend fun loadSchedule() {
+        if (!prefs.meetingReminders) return
+        val start = java.time.ZonedDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.DAYS)
+        scheduleError = try {
+            schedule.clear()
+            schedule.addAll(api.calendarEvents(start.toOffsetDateTime().toString(), start.plusDays(3).toOffsetDateTime().toString()).filter { app.reachy.companion.data.onSchedule(it) })
+            null
+        } catch (e: Exception) { "The calendar could not be loaded" }
+    }
+
     /** Retries clips whose upload failed earlier, then refreshes the list. */
     fun retryPendingUploads() {
         viewModelScope.launch {
@@ -97,7 +183,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun resume() {
         if (prefs.baseUrl.isBlank()) { session = Session.SignedOut; return }
         session = try { api.me(); userId = api.userId(); Session.SignedIn } catch (e: Exception) { Session.SignedOut }
-        if (session == Session.SignedIn) resumeDeepReview()
+        if (session == Session.SignedIn) { resumeDeepReview(); refreshReminders() }
     }
 
     fun signIn(url: String, username: String, password: String) {
@@ -113,6 +199,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 chat.clear(); chatId = null; attachedDocument = null; docs.clear()
                 session = Session.SignedIn
                 resumeDeepReview()
+                refreshReminders()
             } catch (e: ApiException) {
                 loginError = if (e.unauthorized) "Wrong username or password" else e.message
             } catch (e: Exception) {
@@ -122,7 +209,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun signOut() {
-        viewModelScope.launch { api.logout(); chat.clear(); attachedDocument = null; docs.clear(); chatHistory.clear(); tasks.clear(); notes.clear(); meetings.clear(); processing.clear(); meetingLinks.clear(); processingPoll?.cancel(); chatId = null; if (recording) stopRecording(); DeepReviewController.job = null; session = Session.SignedOut }
+        viewModelScope.launch { api.logout(); chat.clear(); attachedDocument = null; docs.clear(); chatHistory.clear(); tasks.clear(); notes.clear(); meetings.clear(); processing.clear(); meetingLinks.clear(); processingPoll?.cancel(); chatId = null; if (recording) stopRecording(); DeepReviewController.job = null
+            MeetingReminderScheduler.disarm(getApplication()); CalendarCache.clear(getApplication()); calendarView = null; calendarCheckedMs = null; schedule.clear(); prepared = null; reminderIssues = emptyList(); session = Session.SignedOut }
     }
 
     private fun failed(e: Exception): String {

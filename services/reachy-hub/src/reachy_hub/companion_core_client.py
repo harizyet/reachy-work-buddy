@@ -129,7 +129,8 @@ class CompanionCoreClient:
         right now", not "what's coming up"."""
         resp = await self._client.get(
             "/calendar/events",
-            params={"start": now.isoformat(), "end": (now + timedelta(seconds=1)).isoformat()},
+            # occupying=true: an all-day banner, a leave day, a cancelled or declined event or one shown as free does not mean the owner is busy (ADR 0035).
+            params={"start": now.isoformat(), "end": (now + timedelta(seconds=1)).isoformat(), "occupying": "true"},
             timeout=45,
         )
         resp.raise_for_status()
@@ -290,6 +291,15 @@ class CompanionCoreClient:
     ) -> Any:
         """Owner to-do/reminder/note passthrough to core's /tasks, /notes, /reminders."""
         resp = await self._client.request(method, path, json=json, params=params, timeout=timeout)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def calendar_upload(self, body: bytes, filename: str | None) -> Any:
+        """The owner's ICS file, passed on as the raw body (ADR 0035). Core validates the whole file and answers with the feed status."""
+        headers = {"Content-Type": "text/calendar"}
+        if filename:
+            headers["X-Filename"] = quote(filename[:200], safe="")
+        resp = await self._client.put("/calendar/feed/upload", content=body, headers=headers, timeout=90.0)
         resp.raise_for_status()
         return resp.json()
 

@@ -4,6 +4,7 @@ import { Spinner } from '../components/ui/Spinner';
 import { ActivityPage } from '../features/activity/ActivityPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { AlarmsPage } from '../features/alarms/AlarmsPage';
+import { CalendarPage } from '../features/calendar/CalendarPage';
 import { ChatPage } from '../features/chat/ChatPage';
 import { CodingPage } from '../features/coding/CodingPage';
 import { DocumentsPage } from '../features/documents/DocumentsPage';
@@ -53,6 +54,7 @@ export function AppRoutes() {
         <Route path="todo" element={<TodoPage />} />
         <Route path="reminders" element={<RemindersPage />} />
         <Route path="alarms" element={<AlarmsPage />} />
+        <Route path="calendar" element={<CalendarPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="settings/:tab" element={<SettingsPage />} />
         <Route path="notes" element={<NotesPage />} />
