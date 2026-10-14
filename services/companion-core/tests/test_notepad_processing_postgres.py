@@ -32,7 +32,8 @@ from shared.models.response import Privacy
 pytestmark = pytest.mark.skipif(not os.environ.get("DATABASE_MIGRATION_TEST_URL"), reason="requires explicitly disposable Postgres with pgvector")
 KEYS = Keyring("one", {"one": b"\x01" * 32})
 ROLLBACK = Path(__file__).resolve().parents[3] / "deploy" / "homelab" / "rollback-029.sql"
-ROLLBACK_033 = ROLLBACK.with_name("rollback-033.sql")  # the head is 033 now (calendar feed): the runbook undoes it first
+ROLLBACK_033 = ROLLBACK.with_name("rollback-033.sql")  # the head is 034 now (multimodal meetings): the runbook undoes 034, then 033, first
+ROLLBACK_034 = ROLLBACK.with_name("rollback-034.sql")
 ROLLBACK_032 = ROLLBACK.with_name("rollback-032.sql")  # the head is 032 now (meeting analysis): the runbook undoes it first
 ROLLBACK_031 = ROLLBACK.with_name("rollback-031.sql")  # the head is 031 now (documents): the runbook undoes it first
 ROLLBACK_030 = ROLLBACK.with_name("rollback-030.sql")  # the head is 030 now (note tags): the runbook undoes it first
@@ -73,7 +74,7 @@ def job(note_id="n1", body=BODY, **over):
 # ---- migration 029 ----------------------------------------------------------------------------------------------------------------------------
 
 def test_the_migration_creates_only_processing_bookkeeping_with_structural_guarantees(dsn):
-    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("033_calendar_feed",)]
+    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("034_meeting_multimodal",)]
     assert {r[0] for r in sql(dsn, "SELECT tablename FROM pg_tables WHERE tablename LIKE 'notepad_%' OR tablename = 'note_meeting_links'")} == {
         "notepad_jobs", "notepad_proposals", "notepad_proposal_notes", "notepad_provenance", "note_meeting_links"}
     for table in ("notepad_jobs", "notepad_proposals", "notepad_proposal_notes", "notepad_provenance", "note_meeting_links"):
@@ -110,6 +111,7 @@ def test_the_rollback_script_removes_only_bookkeeping_and_the_migration_applies_
     sql(dsn, "INSERT INTO tasks (id, text, status, created_at) VALUES ('t1','accepted from a proposal','open',now())")
     sql(dsn, "INSERT INTO notepad_provenance VALUES ('task','t1','n1','p1','h',now())")
     with psycopg.connect(dsn) as conn:
+        conn.execute(ROLLBACK_034.read_text())
         conn.execute(ROLLBACK_033.read_text())
         conn.execute(ROLLBACK_032.read_text())
         conn.execute(ROLLBACK_031.read_text())
@@ -119,7 +121,7 @@ def test_the_rollback_script_removes_only_bookkeeping_and_the_migration_applies_
     assert sql(dsn, "SELECT count(*) FROM pg_tables WHERE tablename LIKE 'notepad_%' OR tablename = 'note_meeting_links'") == [(0,)]
     assert sql(dsn, "SELECT count(*) FROM notes") == [(1,)] and sql(dsn, "SELECT text FROM tasks") == [("accepted from a proposal",)]  # authoritative data stays
     upgrade(dsn, KEYS)
-    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("033_calendar_feed",)]
+    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("034_meeting_multimodal",)]
     assert sql(dsn, "SELECT count(*) FROM notepad_provenance") == [(0,)]
 
 

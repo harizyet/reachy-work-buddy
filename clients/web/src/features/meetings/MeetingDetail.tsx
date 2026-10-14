@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { StaleSessionError } from '../../api/client';
 import {
@@ -24,12 +24,15 @@ import { Dialog } from '../../components/ui/Dialog';
 import { Spinner } from '../../components/ui/Spinner';
 import { useChat } from '../chat/ChatProvider';
 import { AnalysisPanel } from './AnalysisPanel';
+import { DocumentsPanel } from './DocumentsPanel';
+import { SlideSuggestion } from './SlideSuggestion';
+import { useMultimodalActions, useMultimodalEnabled, useOverview } from './useMeetingMultimodal';
 import { useDeepReview } from './DeepReview';
 import { DELETABLE, READY, TIER_LABEL, formatTimestamp, silentSeconds, silentSummary, speakerName, statusDescription, statusLabel } from './format';
 import { useAnalysisEnabled } from './useMeetingAnalysis';
 import { useAcceptMeeting, useMeeting } from './useMeetings';
 
-type Section = 'transcript' | 'summary' | 'minutes' | 'analysis';
+type Section = 'transcript' | 'summary' | 'minutes' | 'analysis' | 'documents';
 type Task = 'corrections' | 'summary' | 'minutes';
 
 const messageOf = (error: unknown) => (error instanceof Error ? error.message : 'Something went wrong');
@@ -41,6 +44,9 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
   const navigate = useNavigate();
   const deep = useDeepReview();
   const analysisOn = useAnalysisEnabled().data === true;
+  const multimodalOn = useMultimodalEnabled().data === true;
+  const overview = useOverview(id, multimodalOn);
+  const multimodal = useMultimodalActions(id);
   const [section, setSection] = useState<Section>('transcript');
   const [status, setStatus] = useState('');
   const [outputStatus, setOutputStatus] = useState('');
@@ -176,6 +182,25 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
   };
 
   const segments = m.transcript_segments ?? [];
+  // Phase 53: the page estimates, shown beside the first line of the stretch of transcript they are about (a window's segments are consecutive).
+  const windows = multimodalOn ? (overview.data?.windows ?? []) : [];
+  const slideAt = new Map(windows.map((w) => [w.segment_ids[0]!, w]));
+  const previousShown = (w: (typeof windows)[number]) => {
+    const at = windows.findIndex((x) => x.window_key === w.window_key);
+    for (let i = at - 1; i >= 0; i -= 1) {
+      if (windows[i]!.shown) return windows[i]!.shown;
+      if (windows[i]!.review_status === 'no_slide') return null;
+    }
+    return null;
+  };
+  const slideActions = {
+    documents: overview.data?.documents ?? [],
+    busy: multimodal.review.isPending || multimodal.withdraw.isPending,
+    onReview: (windowKey: string, decision: 'confirmed' | 'replaced' | 'no_slide' | 'removed', target?: { document_id: string; page: number }) =>
+      multimodal.review.mutate({ windowKey, decision, ...(target ?? {}) }),
+    onWithdraw: (windowKey: string) => multimodal.withdraw.mutate(windowKey),
+  };
+  const slideError = multimodal.review.error ?? multimodal.withdraw.error;
   const aligned = m.aligned_speakers && m.aligned_speakers.length === segments.length ? m.aligned_speakers : null;
   const output = shownSection === 'summary' || shownSection === 'minutes' ? m[shownSection] : null;
 
@@ -214,7 +239,7 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
 
       {ready && (
         <div role="group" aria-label="What to do with this meeting" className="my-3 flex flex-wrap gap-2">
-          {([ 'summary', 'minutes', ...(analysisOn ? (['analysis'] as const) : []), 'transcript'] as const).map((name) => (
+          {(['summary', 'minutes', ...(analysisOn ? (['analysis'] as const) : []), ...(multimodalOn ? (['documents'] as const) : []), 'transcript'] as const).map((name) => (
             <Button key={name} variant="secondary" aria-pressed={shownSection === name} className={shownSection === name ? 'ring-2 ring-[var(--accent)]' : ''} onClick={() => pick(name)}>
               {name[0]!.toUpperCase() + name.slice(1)}
             </Button>
@@ -290,6 +315,16 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
         />
       )}
 
+      {ready && shownSection === 'documents' && (
+        <DocumentsPanel
+          meetingId={id}
+          onShow={(seconds) => {
+            seekAfterShow.current = seconds;
+            setSection('transcript');
+          }}
+        />
+      )}
+
       {shownSection === 'transcript' && (
         <div>
           {segments.length > 0 && (
@@ -352,14 +387,23 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
           />
           <p className="text-sm text-[var(--muted)]">Select a transcript line to play from its start; use Edit on a line to fix it by hand.</p>
           <h4 className="mt-3 font-medium">Transcript</h4>
+          {windows.length > 0 && <p className="text-xs text-[var(--muted)]">Suggested pages are estimates from what was said. They do not show what was on a screen. Open Details on a suggestion to confirm or correct it.</p>}
+          {slideError instanceof Error && !(slideError instanceof StaleSessionError) && <p role="alert" className="text-sm text-[var(--bad)]">{slideError.message}</p>}
           {segments.length === 0 && <p className="text-sm text-[var(--muted)]">No transcript yet.</p>}
           <ul>
             {segments.map((segment, index) => {
+              const slide = slideAt.get(index);
               const label = aligned?.[index] ?? null;
               const previous = aligned && index > 0 ? aligned[index - 1] : null;
               const corrected = m.transcript_corrections[String(index)];
               return (
-                <li key={index} data-index={index} className={`py-1 ${playing === index ? 'bg-[var(--hover)]' : ''}`}>
+                <Fragment key={index}>
+                {slide && (
+                  <li aria-label={`Slide suggestion at ${formatTimestamp(slide.start)}`} className="list-none">
+                    <SlideSuggestion window={slide} continued={slide.shown !== null && slide.shown.page === previousShown(slide)?.page && slide.shown.document_id === previousShown(slide)?.document_id} actions={slideActions} />
+                  </li>
+                )}
+                <li data-index={index} className={`py-1 ${playing === index ? 'bg-[var(--hover)]' : ''}`}>
                   {m.audio_gaps?.segments.includes(index) && (
                     <span role="img" aria-label="No audio was recorded for most of this line" title="No audio was recorded for most of this line">⚠ </span>
                   )}
@@ -387,6 +431,7 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
                     Edit
                   </Button>
                 </li>
+                </Fragment>
               );
             })}
           </ul>

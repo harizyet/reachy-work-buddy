@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { StaleSessionError } from '../../api/client';
 import type { DocumentDto, Priority, Sensitivity } from '../../api/documents';
 import { EmptyState, ErrorState } from '../../components/shared/states';
@@ -136,8 +136,11 @@ function UploadForm() {
 function DocumentDetail({ doc }: { doc: DocumentDto }) {
   const { patch, reprocess, remove } = useDocumentActions();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const wanted = Number(params.get('page')); // a link from a meeting opens the inspector on that page
+  const initialPage = Number.isInteger(wanted) && wanted >= 1 ? wanted : undefined;
   const [confirm, setConfirm] = useState(false);
-  const [inspecting, setInspecting] = useState(false);
+  const [inspecting, setInspecting] = useState(initialPage !== undefined);
   const [title, setTitle] = useState(doc.title);
   const ready = doc.state === 'ready' || doc.state === 'partial';
   const failure = [patch, reprocess, remove].map((m) => m.error).find((e) => e && !(e instanceof StaleSessionError));
@@ -196,7 +199,7 @@ function DocumentDetail({ doc }: { doc: DocumentDto }) {
       )}
       {failure && <p role="alert" className="mt-2 text-sm text-[var(--bad)]">{failure.message}</p>}
 
-      {ready && inspecting && <InspectView doc={doc} improving={reprocess.isPending} onImprove={() => doc.next_tier && reprocess.mutate({ id: doc.id, tier: doc.next_tier })} />}
+      {ready && inspecting && <InspectView doc={doc} initialPage={initialPage} improving={reprocess.isPending} onImprove={() => doc.next_tier && reprocess.mutate({ id: doc.id, tier: doc.next_tier })} />}
       {ready ? <DocumentTools doc={doc} /> : doc.state !== 'failed' && <p className="mt-4 text-sm text-[var(--muted)]">Reachy is still reading this document. You can ask, search and summarise once it is ready.</p>}
     </article>
   );

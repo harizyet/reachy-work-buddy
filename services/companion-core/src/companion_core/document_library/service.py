@@ -14,7 +14,7 @@ import logging
 import os
 import re
 import zipfile
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from datetime import datetime
 from pathlib import Path
 
@@ -157,6 +157,7 @@ class DocumentService:
         self.provider = provider  # async () -> (ask(messages, max_tokens) -> str, model name) | None: the LOCAL model only; summaries never leave this host
         self._tasks: dict[str, asyncio.Task] = {}
         self.summary_max_pages = summary_max_pages()
+        self.deletion_listeners: list[Callable[[str], Awaitable[None]]] = []  # Phase 53: services holding derived data about a document are told, before the backend is asked, that it is going
 
     def _lock(self, document_id: str) -> asyncio.Lock:
         """One lock per document for submit, reprocess and delete, so a deletion can never finish before a submission it raced with (which would leave the worker holding a copy)."""
@@ -321,6 +322,9 @@ class DocumentService:
                     await task
 
     async def _finish(self, document: Document) -> bool:
+        for listener in self.deletion_listeners:
+            with contextlib.suppress(Exception):
+                await listener(document.id)  # idempotent: derived associations, estimates and findings are removed whether or not the backend confirms yet
         if document.backend_ref is not None:
             if self.worker is None:
                 return False
