@@ -1,6 +1,6 @@
 # Phase 53 — Multimodal meeting intelligence
 
-**Status (2026-10-14, after a browser UAT rehearsal on a disposable stack: [record](verification/phase-53-uat-rehearsal-2026-10-14.md)): BUILT LOCALLY on `feature/meeting-multimodal`; NOT merged, NOT deployed, flag OFF.** Core, hub and web are implemented and tested (mock, disposable PostgreSQL, one real-infrastructure trial). Android is not changed. Production needs the owner's approval (migration `034`). Evidence: [verification record](verification/phase-53-multimodal-meetings-2026-10-14.md). Decision record: [ADR 0037](adr/0037-multimodal-meeting-evidence-and-slide-alignment.md). Roadmap row: [plan.md](plan.md#6-implementation-roadmap).
+**Status (2026-10-14, after a browser UAT rehearsal on a disposable stack: [record](verification/phase-53-uat-rehearsal-2026-10-14.md)): DEPLOYED to the homelab 2026-10-14 with the feature OFF ([deployment record](verification/phase-53-deployment-2026-10-14.md): migration 034 applied; core, hub, coding-agent and document-worker recreated); branch `feature/meeting-multimodal` pushed, NOT merged. Enabling and merging each need separate authorization.** Core, hub and web are implemented and tested (mock, disposable PostgreSQL, one real-infrastructure trial). Android is not changed. Production needs the owner's approval (migration `034`). Evidence: [verification record](verification/phase-53-multimodal-meetings-2026-10-14.md). Decision record: [ADR 0037](adr/0037-multimodal-meeting-evidence-and-slide-alignment.md). Roadmap row: [plan.md](plan.md#6-implementation-roadmap).
 
 Extends [Phase 27](phase-27.md) (recording, transcript, timestamps), [Phase 31](phase-31.md) (analysis, evidence validation, owner-reviewed actions; unchanged), [Phase 49](phase-49.md) (patterns) and [Phase 50](phase-50.md) (documents, pages, MinerU) under [ADR 0034](adr/0034-source-evidence-and-derived-artifacts.md). Phase 50F federation, Phase 48 selective answering and Phase 44 indexing are not touched or enabled.
 
@@ -122,7 +122,7 @@ No new model, tier, service or index. One run at a time (concurrency 1) on the s
 
 ## 10. Deployment and rollback plan (nothing below is authorised)
 
-**Needs the owner's explicit approval; not started.** The wider file types also change the **document-worker** (its allowlist and content checks live in its image), so the worker image must be rebuilt and the worker recreated together with core, hub and coding-agent; rollback is the `pre-034` image set including the old worker. Same shape as [Phase 31's deployment](verification/phase-31-deployment-2026-10-12.md).
+**Executed 2026-10-14 through step 5, flag left off; see the [deployment record](verification/phase-53-deployment-2026-10-14.md). Step 6 (enable) is not authorised.** The wider file types also change the **document-worker** (its allowlist and content checks live in its image), so the worker image must be rebuilt and the worker recreated together with core, hub and coding-agent; rollback is the `pre-034` image set including the old worker. Same shape as [Phase 31's deployment](verification/phase-31-deployment-2026-10-12.md).
 
 1. Merge the branch (owner decision); record the commit.
 2. Backup: `pg_dump` of the homelab database and a copy of `deploy/homelab/.env`; keep the `document-source` volume in the backup set.
