@@ -4,6 +4,7 @@ import { ApiError, StaleSessionError } from '../../api/client';
 import {
   approveDraft,
   attachmentUrl,
+  delayText,
   cancelSend,
   discardDraft,
   editDraft,
@@ -101,7 +102,7 @@ export function ShareMinutes({ meeting }: { meeting: Meeting }) {
   return (
     <div>
       <p className="text-sm text-[var(--muted)]">
-        Prepare the summary and minutes as an email, review exactly what will go out, and approve it. Nothing is sent without your approval, and a message waits {Math.round((config.data.send_delay_seconds ?? 600) / 60)} minutes so you can still cancel it.
+        Prepare the summary and minutes as an email, review exactly what will go out, and approve it. Nothing is sent without your approval, and a message waits {delayText(config.data.send_delay_seconds ?? 600)} so you can still cancel it.
       </p>
       {!sender?.configured && <p role="status" className="my-2 rounded border border-[var(--warn)] bg-[var(--warn-bg)] p-2 text-sm text-[var(--warn)]">Set up the outbound sender first (Settings, Accounts, Outbound meeting email).</p>}
       {sender?.configured && !sender.enabled && <p role="status" className="my-2 text-sm text-[var(--warn)]">Sending is turned off. You can prepare and review a message, but it cannot be queued until sending is enabled in Settings.</p>}
@@ -281,7 +282,7 @@ function DraftView({ draft, meetingId, onChange, onClose, onRefresh }: { draft: 
         <div className="mt-3 rounded border border-[var(--border)] p-2">
           <h5 className="font-medium">Approve this exact message</h5>
           <p className="text-sm text-[var(--muted)]">
-            {`It will go from ${draft.sender ?? 'the configured sender'} to ${draft.recipient_count} recipient${draft.recipient_count === 1 ? '' : 's'} (listed above) after a ten-minute window. Any later change needs a new approval.`}
+            {`It will go from ${draft.sender ?? 'the configured sender'} to ${draft.recipient_count} recipient${draft.recipient_count === 1 ? '' : 's'} (listed above) after the waiting period. Any later change needs a new approval.`}
           </p>
           {!draft.sender_ready && <p className="text-sm text-[var(--warn)]">Sending is turned off, so approving will not queue it.</p>}
           <label className="mt-1 block text-sm">

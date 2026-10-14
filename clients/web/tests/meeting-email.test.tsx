@@ -28,6 +28,15 @@ async function prepare(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('Share minutes', () => {
+  it('states the undo window in plain words', async () => {
+    const { delayText } = await import('../src/api/meetingEmail');
+    expect([delayText(600), delayText(60), delayText(5), delayText(1), delayText(120)]).toEqual(['10 minutes', '1 minute', '5 seconds', '1 second', '2 minutes']);
+    hub();
+    renderApp('#/meetings/m1');
+    await openShare();
+    expect(await screen.findByText(/a message waits 10 minutes so you can still cancel it/)).toBeInTheDocument();
+  });
+
   it('is only offered when the server has the feature on', async () => {
     hub({ enabled: false });
     renderApp('#/meetings/m1');

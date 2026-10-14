@@ -128,3 +128,10 @@ fun reviewLines(draft: EmailDraft): List<String> = buildList {
     if (draft.attachments.isEmpty()) add("No attachment.")
     draft.attachments.forEach { add("Attachment: ${it.name} (${maxOf(1, it.size / 1024)} KB, fingerprint ${it.sha256.take(12)})") }
 }
+
+/** The undo window in plain words: "10 minutes", "1 minute", or for a short test window "5 seconds". */
+fun delayText(seconds: Int): String {
+    if (seconds < 60) { val n = maxOf(1, seconds); return "$n second${if (n == 1) "" else "s"}" }
+    val minutes = (seconds + 30) / 60
+    return "$minutes minute${if (minutes == 1) "" else "s"}"
+}

@@ -779,7 +779,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var emailEnabled by mutableStateOf(false); private set
     var emailSenderReady by mutableStateOf(false); private set
     var emailSenderConfigured by mutableStateOf(false); private set
-    var emailDelayMinutes by mutableStateOf(10); private set
+    var emailDelaySeconds by mutableStateOf(600); private set
     var emailDrafts by mutableStateOf<List<EmailDraft>>(emptyList()); private set
     var emailGroups by mutableStateOf<List<EmailGroup>>(emptyList()); private set
     var emailSuggestions by mutableStateOf<List<EmailSuggestion>>(emptyList()); private set
@@ -795,7 +795,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val config = api.emailConfig()
                 emailEnabled = config.enabled; emailSenderConfigured = config.sender?.configured == true; emailSenderReady = config.sender?.let { it.configured && it.enabled } == true
-                emailDelayMinutes = (config.sendDelaySeconds / 60).coerceAtLeast(1)
+                emailDelaySeconds = config.sendDelaySeconds
             } catch (e: Exception) { emailEnabled = false }
         }
     }

@@ -228,3 +228,10 @@ export const resolveDraft = async (draftId: string, delivered: boolean): Promise
   parseDraft(await request(`/meeting-email/drafts/${id(draftId)}/resolve`, { method: 'POST', body: { delivered } }));
 /** The attachment exactly as it will be sent, behind the owner cookie; a relative URL keeps it right under /hub/. */
 export const attachmentUrl = (draftId: string, name: string) => `${hubBase()}/meeting-email/drafts/${id(draftId)}/attachments/${id(name)}`;
+
+/** "10 minutes", "1 minute" or, for a short test window, "5 seconds": the undo window in words. */
+export function delayText(seconds: number): string {
+  if (seconds < 60) return `${Math.max(1, Math.round(seconds))} second${Math.round(seconds) === 1 ? '' : 's'}`;
+  const minutes = Math.round(seconds / 60);
+  return `${minutes} minute${minutes === 1 ? '' : 's'}`;
+}

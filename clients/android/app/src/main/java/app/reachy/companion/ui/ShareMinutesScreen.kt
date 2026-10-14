@@ -39,6 +39,7 @@ import app.reachy.companion.data.EmailDraft
 import app.reachy.companion.data.Meeting
 import app.reachy.companion.data.canApprove
 import app.reachy.companion.data.canCancelSend
+import app.reachy.companion.data.delayText
 import app.reachy.companion.data.emailEventLabel
 import app.reachy.companion.data.emailStatusLabel
 import app.reachy.companion.data.formOf
@@ -68,7 +69,7 @@ fun ShareMinutes(model: AppViewModel, meeting: Meeting, modifier: Modifier = Mod
         item {
             Text(
                 "Prepare the summary and minutes as an email, review exactly what will go out, and approve it. Nothing is sent without your approval, and a message waits " +
-                    "${model.emailDelayMinutes} minutes so you can still cancel it.",
+                    "${delayText(model.emailDelaySeconds)} so you can still cancel it.",
                 style = MaterialTheme.typography.bodySmall,
             )
             if (!model.emailSenderConfigured) Text("Set up the outbound sender first, in the web Settings (Accounts, Outbound meeting email).", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodySmall, color = GapText)
@@ -182,7 +183,7 @@ private fun DraftView(model: AppViewModel, draft: EmailDraft) {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(12.dp)) {
                     Text("Approve this exact message", style = MaterialTheme.typography.titleSmall)
-                    Text("It goes from ${draft.sender ?: "the configured sender"} to ${draft.recipientCount} recipient${if (draft.recipientCount == 1) "" else "s"} (listed above) after a ${model.emailDelayMinutes}-minute window. Any later change needs a new approval.", style = MaterialTheme.typography.bodySmall)
+                    Text("It goes from ${draft.sender ?: "the configured sender"} to ${draft.recipientCount} recipient${if (draft.recipientCount == 1) "" else "s"} (listed above) after the waiting period (${delayText(model.emailDelaySeconds)}). Any later change needs a new approval.", style = MaterialTheme.typography.bodySmall)
                     if (!draft.senderReady) Text("Sending is turned off, so approving will not queue it.", style = MaterialTheme.typography.bodySmall, color = GapText)
                     OutlinedTextField(typed, { typed = it }, Modifier.fillMaxWidth().padding(top = 4.dp), label = { Text("Type SEND to approve") }, singleLine = true)
                     Button({ model.approveEmail(draft, typed) }, Modifier.padding(top = 8.dp), enabled = canApprove(draft, form, typed, model.emailBusy)) {
