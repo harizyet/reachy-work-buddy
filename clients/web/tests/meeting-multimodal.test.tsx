@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createFakeHub, jsonResponse } from './fakeHub';
@@ -105,13 +105,13 @@ describe('Attached documents tab', () => {
     expect(screen.getByText(/does not delete it/)).toBeInTheDocument();
   });
 
-  it('refuses a PowerPoint file with the way forward and uploads nothing', async () => {
+  it('refuses an unreadable presentation format with the way forward and uploads nothing', async () => {
     const { server } = setup();
     const user = await openTab('Documents');
     const input = await screen.findByLabelText('Upload a document');
-    await user.upload(input, new File(['x'], 'deck.pptx'));
+    fireEvent.change(input, { target: { files: [new File(['x'], 'deck.key')] } }); // the picker would not offer this type; a drag or a changed filter can still hand it over
     await user.click(screen.getByRole('button', { name: 'Upload and attach' }));
-    expect(await screen.findByText(/Export the presentation as a PDF/)).toBeInTheDocument();
+    expect(await screen.findByText(/export it as a PDF/)).toBeInTheDocument();
     expect(server.calls.some((c) => c.call.includes('documents') && c.call.startsWith('POST'))).toBe(false);
   });
 

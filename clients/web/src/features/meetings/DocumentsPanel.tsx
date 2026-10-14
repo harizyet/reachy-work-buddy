@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ApiError, StaleSessionError } from '../../api/client';
-import { uploadDocument } from '../../api/documents';
+import { ACCEPTED_FILES, UNREAD_PRESENTATION, uploadDocument } from '../../api/documents';
 import type { Answer, FindingDto, Overview, Partial_, RunDto, RunState } from '../../api/meetingMultimodal';
 import { Button } from '../../components/ui/Button';
 import { StatusPill, type Tone } from '../../components/ui/StatusPill';
@@ -28,7 +28,6 @@ const FAILURE: Record<string, string> = {
 const KIND_LABEL: Record<FindingDto['kind'], string> = { discussion: 'Discussion points', decision: 'Decisions', disagreement: 'Where the pages and the discussion differ', open_question: 'Open questions', action: 'Actions to review' };
 const DOC_STATE: Record<string, string> = { uploaded: 'Uploaded', queued: 'Queued', processing: 'Reading', ready: 'Ready', partial: 'Partly read', failed: 'Failed', deleting: 'Deleting' };
 const message = (error: unknown): string | null => (error == null || error instanceof StaleSessionError ? null : error instanceof ApiError || error instanceof Error ? error.message : 'Something went wrong');
-const isPowerPoint = (name: string) => /\.(pptx?|ppsx?|key|odp)$/i.test(name);
 
 export function DocumentsPanel({ meetingId, onShow }: { meetingId: string; onShow: (seconds: number) => void }) {
   const query = useOverview(meetingId, true);
@@ -51,7 +50,7 @@ export function DocumentsPanel({ meetingId, onShow }: { meetingId: string; onSho
     <section aria-label="Attached documents" className="text-sm">
       <p className="text-xs text-[var(--muted)]">
         Attach a presentation or document to this meeting and Reachy will estimate which page was being discussed in each part of the transcript. It is an estimate from the words used; it cannot know what
-        was on a screen. Nothing becomes a task until you confirm it. Presentations should be exported as PDF first.
+        was on a screen. Nothing becomes a task until you confirm it. A PowerPoint or PDF presentation gives one page per slide; most other files read as a single page, and spreadsheets as one page per sheet.
       </p>
       <h3 className="mt-3 font-semibold">Attached documents</h3>
       {data.documents.length === 0 && <p className="mt-1 text-[var(--muted)]">Nothing is attached yet.</p>}
@@ -160,7 +159,7 @@ function Attach({ meetingId, attached, onAttach, busy }: { meetingId: string; at
 
   async function upload() {
     if (!file) return;
-    if (isPowerPoint(file.name)) return setNote('PowerPoint files are not read yet. Export the presentation as a PDF and upload that.');
+    if (UNREAD_PRESENTATION.test(file.name)) return setNote('That presentation format is not read. Save it as PowerPoint (.pptx) or export it as a PDF and upload that.');
     setUploading(true);
     setNote('');
     try {
@@ -189,8 +188,8 @@ function Attach({ meetingId, attached, onAttach, busy }: { meetingId: string; at
       </div>
       <div>
         <label className="block text-xs">
-          Or upload one now (PDF, Word, image)
-          <input aria-label="Upload a document" type="file" accept=".pdf,.docx,.png,.jpg,.jpeg,.ppt,.pptx" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="mt-1 block w-full text-xs" />
+          Or upload one now (PDF, PowerPoint, Word, Excel, …)
+          <input aria-label="Upload a document" type="file" accept={ACCEPTED_FILES} onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="mt-1 block w-full text-xs" />
         </label>
         <Button className="mt-1" variant="secondary" disabled={!file || uploading} onClick={() => void upload()}>{uploading ? 'Uploading…' : 'Upload and attach'}</Button>
         {note && <p role="status" className="mt-1 text-xs">{note}</p>}

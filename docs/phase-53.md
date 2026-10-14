@@ -6,7 +6,7 @@ Extends [Phase 27](phase-27.md) (recording, transcript, timestamps), [Phase 31](
 
 ## 1. What the owner can do
 
-1. Open a finished meeting, choose **Documents**, attach an existing library document or upload one (a PDF export of a presentation) and see its processing status.
+1. Open a finished meeting, choose **Documents**, attach an existing library document or upload one (PowerPoint, PDF, …) and see its processing status.
 2. **Estimate the pages**: Reachy estimates which page was being discussed in each part of the transcript.
 3. Read the **Transcript**: beside a part of it, a compact card says "Likely slide 7 — Edge Architecture · Certainty: High" with Details (reason, shared words, alternatives, a thumbnail, "Open the page"). Where nothing fits it says "No confident slide association".
 4. **Confirm**, **choose another page**, **mark "not about a slide"**, **remove a suggestion**, or withdraw a decision. Decisions are kept apart from the estimates and survive reruns.
@@ -25,7 +25,7 @@ Done before coding, from the code, not the documents (2026-10-14; `main` at `85f
 | Transcript, speaker labels, timestamps, corrections | `Meeting.transcript_segments` (raw, immutable), `transcript_corrections` overlay, `meeting_analysis.service.snapshot` | reused as is; segment index is the locator |
 | Analysis, evidence validation, owner-confirmed actions | Phase 31 `meeting_analysis` (frozen prompt, validator, 7B trial) | its span locator, support checks, instruction filter and confirmation primitives are **imported, not edited**; combined analysis is a separate run, table and prompt |
 | Document ingestion, pages, locators | `DocumentService` (`read(page_range)`, `search`, `evidence_for_question`, `authorize`, `require_usable`), page = one PDF page, worker locators `doc:<ref>/tier:<t>/page:<n>` | reused; Phase 53 names pages `doc:<document id>/page:<n>` (Reachy's id, not the backend's) |
-| **PPTX** | **Not accepted.** `FILE_TYPES` and the worker accept only pdf, png, jpg, docx; page images exist for pdf/png/jpg only. MinerU can read PPTX, but the pipeline does not expose it, and slide boundaries would have to be re-derived | **PDF-exported presentations are the supported path.** The attach screen refuses `.ppt/.pptx` with the way forward. No custom PowerPoint parser |
+| **PPTX and other formats** | At first assessment (from the allowlist) **not accepted**: only pdf, png, jpg, docx. MinerU in the worker image was then probed and shown to parse many more types; the allowlist was widened to the measured set (see [document types](verification/phase-53-document-types-2026-10-14.md)) | **PPTX, PPT and ODP keep one page per slide with headings**; XLSX/XLS/ODS one page per sheet; DOCX/DOC/RTF/ODT/EPUB/HTML/CSV/TSV one page; no page pictures except PDF/images. No custom parser. Plain text and Markdown are not parsed by MinerU and stay refused; PPSX/PPTM/Keynote are refused with "export it as a PDF or PPTX" |
 | Slide/page locators | reliable for PDF: one page = one slide, 1-based, `page_count` on the document; headings come out as `# Title` | page titles are the first heading line when short |
 | Revision tracking | no revision counter; `source_hash`, `backend_revision`, `tier`, `page_count`, `backend_ref` change on reprocess | `revision_of(document)` = hash of those five |
 | Sensitivity / project / authorization | `Document.authorize(access)`, hub-set `X-Reachy-Access-Ceiling`, `within_ceiling`, `scope_permits` | reused on every read; derived output is the stricter class |
@@ -116,13 +116,13 @@ No new model, tier, service or index. One run at a time (concurrency 1) on the s
 - Vocabulary overlap, not understanding: speech-to-text misspellings of a name defeat it (the trial's best example), figures-only slides give nothing to match, and talk about a slide in other words stays Unknown or Low.
 - Medium and High mean the evidence is strong, not that the slide was shown or that the estimate is right; the first real-meeting reading is one trial.
 - A decision check is by wording of the cited excerpt (a window of up to 900 characters), not proof that the participants agreed.
-- PowerPoint files are not accepted; export to PDF. Pages beyond 150 per document are refused for alignment.
+- Only PDF and images have page pictures: a PowerPoint attachment gives titles and text per slide but no thumbnail, and non-presentation types read as one page (a Word file or an HTML page cannot be aligned finer than the whole file). Pages beyond 150 per document are refused for alignment.
 - Android shows none of this yet.
 - The 7B sometimes writes generic answers and once returned an unusable analysis chunk (counted, others kept).
 
 ## 10. Deployment and rollback plan (nothing below is authorised)
 
-**Needs the owner's explicit approval; not started.** Same shape as [Phase 31's deployment](verification/phase-31-deployment-2026-10-12.md).
+**Needs the owner's explicit approval; not started.** The wider file types also change the **document-worker** (its allowlist and content checks live in its image), so the worker image must be rebuilt and the worker recreated together with core, hub and coding-agent; rollback is the `pre-034` image set including the old worker. Same shape as [Phase 31's deployment](verification/phase-31-deployment-2026-10-12.md).
 
 1. Merge the branch (owner decision); record the commit.
 2. Backup: `pg_dump` of the homelab database and a copy of `deploy/homelab/.env`; keep the `document-source` volume in the backup set.
@@ -135,6 +135,6 @@ No new model, tier, service or index. One run at a time (concurrency 1) on the s
 
 ## 11. Not done
 
-Android screens; PPTX acceptance; thumbnails beyond the existing page image route; any retrieval-index or Brain use of estimates; calibration of the labels; a held-out accuracy measurement; the owner's real-meeting acceptance (below).
+Android screens; page pictures for non-PDF types (the parser does not render them; a LibreOffice conversion would be a new component); thumbnails beyond the existing page image route; any retrieval-index or Brain use of estimates; calibration of the labels; a held-out accuracy measurement; the owner's real-meeting acceptance (below).
 
 **Acceptance owed by the owner:** attach a presentation exported from their own deck to a real recorded meeting, read the estimates, correct some, ask questions with answers that need both sources, review the combined findings, and delete a document to see its derived data go; plus a browser check of the new screens.

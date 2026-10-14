@@ -8,7 +8,7 @@ A browser rehearsal of the owner's acceptance on a **disposable stack**, before 
 
 | Step | Observed |
 |---|---|
-| Attach | a `.pptx` is refused with "Export the presentation as a PDF"; the PDF uploads and attaches from the meeting, shows Ready, 10 pages |
+| Attach | a `.pptx` was then refused (formats were widened afterwards, see [document types](phase-53-document-types-2026-10-14.md)); the PDF uploaded and attaches from the meeting, shows Ready, 10 pages |
 | Estimate | progress text appeared at once ("waiting its turn · 0 s…"); 21 windows done in 28.5 s |
 | Presentation | 21 windows: 5 boxed cards (High or Medium), 2 one-line Low hints, 13 "No confident slide association"; summary line "6 of 21 parts have a confident page (high 4, medium 2); 2 more have only a low-certainty hint and 13 have none, which is a valid result" |
 | Source navigation | Details opens the reason, shared words, the model's comment labelled model-written, the caveat and a page thumbnail (1 image); **Open the page** lands in the extraction inspector at page 2 of 10 with the page picture; the transcript citation in an answer switches to the transcript tab |

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { StaleSessionError } from '../../api/client';
-import type { DocumentDto, Priority, Sensitivity } from '../../api/documents';
+import { ACCEPTED_FILES, type DocumentDto, type Priority, type Sensitivity } from '../../api/documents';
 import { EmptyState, ErrorState } from '../../components/shared/states';
 import { Button } from '../../components/ui/Button';
 import { Spinner } from '../../components/ui/Spinner';
@@ -30,7 +30,7 @@ export function DocumentsPage() {
     <section aria-labelledby="documents-title">
       <h1 id="documents-title" className="text-xl font-semibold">Documents</h1>
       <p className="mt-1 text-sm text-[var(--muted)]">
-        Upload a PDF, Word file or image. Reachy keeps the original, reads it locally, and can answer questions about it, search it and summarise it. What it reads is a machine&apos;s reading and can contain mistakes; the original is what counts.
+        Upload a PDF, a presentation (PowerPoint, OpenDocument), a Word, Excel or other office file, an EPUB, an HTML page, a CSV or an image. Reachy keeps the original, reads it locally, and can answer questions about it, search it and summarise it. What it reads is a machine&apos;s reading and can contain mistakes; the original is what counts.
       </p>
       {enabled.isPending && <Spinner label="Checking the document library" />}
       {enabled.error && <ErrorState message={enabled.error.message} onRetry={() => void enabled.refetch()} />}
@@ -99,7 +99,7 @@ function UploadForm() {
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="text-sm sm:col-span-2">
           File
-          <input key={input} type="file" accept=".pdf,.docx,.png,.jpg,.jpeg" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="mt-1 block w-full text-sm" />
+          <input key={input} type="file" accept={ACCEPTED_FILES} onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="mt-1 block w-full text-sm" />
         </label>
         <label className="text-sm">
           Title (optional)

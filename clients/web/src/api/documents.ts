@@ -3,6 +3,11 @@ import { ApiError, ApiShapeError, request } from './client';
 // Document library (Phase 50). The owner uploads files to Reachy, which keeps the original, has them read by the document worker, and answers from them. The hub serves these routes to the
 // signed-in owner only and sets the access ceiling itself; the server decides everything, so this file shapes requests and checks that responses have the shape the pages rely on.
 
+/** The file types the library accepts (shared/models/document_types.py; a core test keeps this list identical to it). A type is accepted by its content, not its name. */
+export const ACCEPTED_FILES = '.pdf,.png,.jpg,.docx,.doc,.pptx,.ppt,.xlsx,.xls,.rtf,.odt,.odp,.ods,.epub,.html,.csv,.tsv,.jpeg,.htm';
+/** Presentation files the reader was not shown to parse: refused with the way forward. */
+export const UNREAD_PRESENTATION = /\.(pps|ppsx|pptm|key|pages|numbers)$/i;
+
 export type DocumentState = 'uploaded' | 'queued' | 'processing' | 'ready' | 'partial' | 'failed' | 'deleting';
 export type Sensitivity = 'public' | 'work-private' | 'sensitive';
 export type Priority = 'background' | 'normal' | 'interactive';
