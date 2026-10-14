@@ -36,28 +36,34 @@ class SpeechInput(
     private val onLevel: (Float) -> Unit = {},
 ) {
     private var recognizer: SpeechRecognizer? = null
+    /** Changes on every start and stop, so a callback from a recogniser that was stopped (or replaced) is ignored instead of acting on a conversation that has moved on. */
+    private var generation = 0
 
     fun start() {
         if (!SpeechRecognizer.isRecognitionAvailable(context)) { onEnd("Speech recognition is not available on this phone"); return }
         stop()
+        val mine = generation
         recognizer = SpeechRecognizer.createSpeechRecognizer(context).also { sr ->
             sr.setRecognitionListener(object : RecognitionListener {
                 override fun onResults(results: Bundle) {
+                    if (mine != generation) return
                     val text = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
                     if (text.isNotBlank()) onFinal(text)
                     onEnd(null)
                     release()
                 }
                 override fun onPartialResults(partial: Bundle) {
+                    if (mine != generation) return
                     partial.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let(onPartial)
                 }
                 override fun onError(error: Int) {
+                    if (mine != generation) return
                     onEnd(if (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) null else "Could not hear that (code $error)")
                     release()
                 }
                 override fun onReadyForSpeech(params: Bundle?) {}
                 override fun onBeginningOfSpeech() {}
-                override fun onRmsChanged(rmsdB: Float) { onLevel(((rmsdB + 2f) / 12f).coerceIn(0f, 1f)) }
+                override fun onRmsChanged(rmsdB: Float) { if (mine == generation) onLevel(((rmsdB + 2f) / 12f).coerceIn(0f, 1f)) }
                 override fun onBufferReceived(buffer: ByteArray?) {}
                 override fun onEndOfSpeech() {}
                 override fun onEvent(eventType: Int, params: Bundle?) {}
@@ -72,7 +78,7 @@ class SpeechInput(
     /** Frees the recogniser once it has finished (some phones keep the media volume muted until it is destroyed). */
     private fun release() { Handler(Looper.getMainLooper()).post { stop() } }
 
-    fun stop() { recognizer?.destroy(); recognizer = null }
+    fun stop() { generation++; recognizer?.destroy(); recognizer = null }
 }
 
 class SpeechOutput(private val context: Context) {
@@ -81,27 +87,42 @@ class SpeechOutput(private val context: Context) {
     private val tts: TextToSpeech = TextToSpeech(context) { status ->
         ready = status == TextToSpeech.SUCCESS
         // A freshly opened Talk screen can have a reply to read before the phone's engine is up; read it as soon as it is.
-        waiting?.let { text -> waiting = null; if (ready) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "reply") }
+        waiting?.let { text ->
+            waiting = null
+            if (!ready || tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "reply") != TextToSpeech.SUCCESS) failed()
+        }
     }
     private var spokenDone: (() -> Unit)? = null   // runs once when the phone's voice finishes; dropped when it is interrupted
+    private var spokenFailed: (() -> Unit)? = null   // runs instead when the phone's voice could not speak
     private var player: MediaPlayer? = null
     private val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private var focus: AudioFocusRequest? = null
 
     init {
-        val finished = { Handler(Looper.getMainLooper()).post { spokenDone?.let { spokenDone = null; it() } }; Unit }
+        val finished = { Handler(Looper.getMainLooper()).post { spokenFailed = null; spokenDone?.let { spokenDone = null; it() } }; Unit }
         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) {}
             override fun onDone(utteranceId: String?) { finished() }
-            @Deprecated("Deprecated in Java") override fun onError(utteranceId: String?) { finished() }
+            @Deprecated("Deprecated in Java") override fun onError(utteranceId: String?) { failed() }
         })
     }
 
+    /** A failure goes to [spokenFailed] when the caller asked to hear about one; otherwise it ends like a normal finish, as it always did. */
+    private fun failed() {
+        Handler(Looper.getMainLooper()).post {
+            val onFailed = spokenFailed
+            spokenFailed = null
+            if (onFailed != null) { spokenDone = null; onFailed() } else spokenDone?.let { spokenDone = null; it() }
+        }
+    }
+
     /** The phone's own voice: the fallback when Reachy's voice cannot be fetched or played. [onDone] runs when it has finished. */
-    fun speak(text: String, onDone: () -> Unit = {}) {
+    fun speak(text: String, onDone: () -> Unit = {}, onFailed: (() -> Unit)? = null) {
         stopPlayer()
         spokenDone = onDone
-        if (ready) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "reply") else waiting = text
+        spokenFailed = onFailed
+        if (!ready) waiting = text
+        else if (tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "reply") != TextToSpeech.SUCCESS) failed()
     }
 
     private var pcm: PcmPlayer? = null
@@ -130,7 +151,7 @@ class SpeechOutput(private val context: Context) {
         player?.release(); player = null
         focus?.let { audio.abandonAudioFocusRequest(it) }; focus = null
     }
-    fun stop() { spokenDone = null; tts.stop(); stopPlayer() }
+    fun stop() { spokenDone = null; spokenFailed = null; tts.stop(); stopPlayer() }
     fun shutdown() { stopPlayer(); tts.shutdown() }
 }
 

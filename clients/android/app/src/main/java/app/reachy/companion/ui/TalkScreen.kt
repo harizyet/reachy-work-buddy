@@ -66,6 +66,12 @@ import androidx.core.content.ContextCompat
 import app.reachy.companion.AppViewModel
 import app.reachy.companion.SpeechInput
 import app.reachy.companion.SpeechOutput
+import app.reachy.companion.RecordingController
+import app.reachy.companion.data.RECORDING_CONFIRMATION
+import app.reachy.companion.data.isMeetingRecordingCommand
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 @Composable
 fun TalkScreen(model: AppViewModel, speakReplies: Boolean, modifier: Modifier = Modifier) {
@@ -92,7 +98,15 @@ private fun TalkContent(model: AppViewModel, speakReplies: Boolean) {
         SpeechInput(
             context,
             onPartial = { heard = it },
-            onFinal = { heard = ""; seqAtSend = model.replySeq; phase = VoicePhase.Thinking; model.send(it, spoken = true) },
+            onFinal = { text ->
+                heard = ""
+                when {
+                    model.recordingHandoff.busy -> {}   // a recording handoff is running: stray speech is not a new turn
+                    // A whole-utterance command, matched here: it is not sent to the hub, and only this deliberate speech can start a recording.
+                    voiceMode && isMeetingRecordingCommand(text) -> { phase = VoicePhase.Speaking; model.startRecordingByVoice(text) }
+                    else -> { seqAtSend = model.replySeq; phase = VoicePhase.Thinking; model.send(text, spoken = true) }
+                }
+            },
             onEnd = { error ->
                 level = 0f
                 if (error != null) { micError = error; muted = true; phase = VoicePhase.Muted }
@@ -103,15 +117,20 @@ private fun TalkContent(model: AppViewModel, speakReplies: Boolean) {
         )
     }
     DisposableEffect(Unit) { onDispose { input.stop(); output.shutdown() } }
-    fun startListening() { output.stop(); micError = null; heard = ""; phase = VoicePhase.Listening; muted = false; input.start() }
-    listenAgain.value = { scope.launch { delay(300); if (voiceMode && phase == VoicePhase.Listening && !muted) input.start() } }
+    fun startListening() { if (model.recordingHandoff.busy) return; output.stop(); micError = null; heard = ""; phase = VoicePhase.Listening; muted = false; input.start() }
+    listenAgain.value = { scope.launch { delay(300); if (voiceMode && phase == VoicePhase.Listening && !muted && !model.recordingHandoff.busy) input.start() } }
     // After Reachy has spoken (or a turn failed) the conversation carries on, unless the microphone was switched off.
-    fun afterReply() { if (!voiceMode) return; if (muted) phase = VoicePhase.Muted else startListening() }
+    fun afterReply() { if (!voiceMode || model.recordingHandoff.busy) return; if (muted) phase = VoicePhase.Muted else startListening() }
     // The hub streams its voice sentence by sentence; the phone's own voice covers a hub that cannot speak.
     var phoneVoice by remember { mutableStateOf(model.prefs.phoneVoice) }
     fun speakReply(reply: String, done: () -> Unit) {
         if (phoneVoice) { output.speak(reply, done); return }
         output.playStream(scope, { onRate, onPcm -> model.replyStream(reply, onRate, onPcm) }, { output.speak(reply, done) }, done)
+    }
+    // Like speakReply, but says whether the words were really spoken: a recording must not start on a confirmation that failed.
+    fun speakChecked(text: String, finished: (spoken: Boolean) -> Unit) {
+        if (phoneVoice) { output.speak(text, { finished(true) }, { finished(false) }); return }
+        output.playStream(scope, { onRate, onPcm -> model.replyStream(text, onRate, onPcm) }, { output.speak(text, { finished(true) }, { finished(false) }) }, { finished(true) })
     }
     LaunchedEffect(model.replySeq, speakReplies) {
         val reply = model.lastReply
@@ -120,13 +139,15 @@ private fun TalkContent(model: AppViewModel, speakReplies: Boolean) {
         // phone, toggling the setting), and must not read an old reply again.
         val fresh = seq > model.spokenSeq
         model.spokenSeq = seq
+        // A reply that arrives while a recording is starting or running is not read aloud: it would be heard in the meeting, and must not reopen voice mode.
+        val quiet = model.recordingHandoff.busy || RecordingController.recording
         if (voiceMode) {
             // Replies are always spoken in voice mode, and the loop resumes when the voice has finished.
-            if (reply != null && fresh) {
+            if (reply != null && fresh && !quiet) {
                 phase = VoicePhase.Speaking
                 speakReply(reply) { afterReply() }
             }
-        } else if (speakReplies && reply != null && fresh) {
+        } else if (speakReplies && reply != null && fresh && !quiet) {
             // Reachy's own voice first, so replies sound like the robot; the phone's voice when the hub cannot speak or the
             // audio cannot be played.
             speakReply(reply) {}
@@ -138,6 +159,36 @@ private fun TalkContent(model: AppViewModel, speakReplies: Boolean) {
     }
     fun openVoice() { voiceMode = true; startListening() }
     fun closeVoice() { voiceMode = false; input.stop(); output.stop(); heard = ""; level = 0f }
+    // The owner closing voice mode (or leaving) before the recorder has been asked to start ends the handoff; nothing is recorded.
+    fun closeVoiceByOwner() { model.recordingHandoff.cancel("Voice mode was closed before recording started, so nothing was recorded."); closeVoice() }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        val side = object : AppViewModel.VoiceSide {
+            override fun inForeground() = lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+            override fun speakConfirmation(operation: Int): Boolean {
+                if (!voiceMode) return false
+                input.stop(); heard = ""; level = 0f; phase = VoicePhase.Speaking
+                speakChecked(RECORDING_CONFIRMATION) { spoken -> model.recordingHandoff.confirmationFinished(operation, spoken) }
+                return true
+            }
+            // Recogniser destroyed, playback stopped and audio focus released, voice screen closed: the microphone is free before the recorder is asked for it.
+            override fun endVoice() = closeVoice()
+            // After the recogniser has finished tearing down (the same 300 ms the normal loop waits), so it is not stopped straight after being restarted.
+            override fun resumeListening() { scope.launch { delay(300); afterReply() } }
+        }
+        model.voiceSide = side
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE && model.recordingHandoff.busy) {
+                if (model.recordingHandoff.cancel("The app left the screen before recording started, so nothing was recorded.")) { output.stop(); closeVoice() }
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose {
+            lifecycle.removeObserver(observer)
+            if (model.voiceSide === side) model.voiceSide = null
+            model.recordingHandoff.cancel("The Talk screen closed before recording started, so nothing was recorded.")
+        }
+    }
     fun toggleMute() {
         if (muted) { muted = false; if (phase == VoicePhase.Muted) startListening() }
         else { muted = true; if (phase == VoicePhase.Listening) { input.stop(); phase = VoicePhase.Muted; heard = "" } }
@@ -151,7 +202,7 @@ private fun TalkContent(model: AppViewModel, speakReplies: Boolean) {
     }
 
     if (voiceMode) {
-        VoiceModeScreen(phase, heard, level, micError ?: model.chatStatus, muted, phoneVoice, { phoneVoice = it; model.prefs.phoneVoice = it; output.stop() }, { toggleMute() }, { closeVoice() })
+        VoiceModeScreen(phase, heard, level, micError ?: model.chatStatus, muted, phoneVoice, { if (!model.recordingHandoff.busy) { phoneVoice = it; model.prefs.phoneVoice = it; output.stop() } }, { toggleMute() }, { closeVoiceByOwner() })
     }
 
     if (picking) DocumentPicker(model, onChosen = { model.attachDocument(it); picking = false }, onClose = { picking = false })

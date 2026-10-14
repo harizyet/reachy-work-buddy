@@ -81,6 +81,8 @@ fun Shell(model: AppViewModel) {
     val context = LocalContext.current
     // A meeting reminder's "Start recording" lands on the Meetings tab, where the recorder waits for the owner's tap.
     LaunchedEffect(model.prepared) { if (model.prepared != null) nav = nav.open(MEETING_DEEP_LINK) }
+    // A spoken "begin meeting recording" lands on Meetings once the recorder is running (or has failed), where the recording state and Stop are.
+    LaunchedEffect(model.openRequest) { model.openRequest?.let { nav = nav.open(it); model.openRequest = null } }
     // The phone's backup alarm needs notifications to show its Stop button (Android 13+); ask once.
     val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     LaunchedEffect(Unit) {
@@ -148,6 +150,7 @@ fun Shell(model: AppViewModel) {
         }
         Column(Modifier.weight(1f)) {
         RecordingBar(model)
+        ShortRecordingDialog(model)
         DeepReviewBanner()
         TailscaleBanner()
         if (hasSecondary(nav.primary)) SecondaryNav(nav.primary, section) { nav = nav.open(it) }

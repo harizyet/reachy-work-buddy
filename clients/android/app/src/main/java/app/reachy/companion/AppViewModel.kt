@@ -7,12 +7,20 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.reachy.companion.data.ApiException
 import app.reachy.companion.data.Meeting
 import app.reachy.companion.data.MeetingLink
+import app.reachy.companion.data.HandoffOutcome
+import app.reachy.companion.data.MEETING_DEEP_LINK
 import app.reachy.companion.data.Note
+import app.reachy.companion.data.RECORDING_CONFIRMATION
+import app.reachy.companion.data.RecorderResult
+import app.reachy.companion.data.RecordingHandoff
+import app.reachy.companion.data.Section
 import app.reachy.companion.data.PersistentCookieJar
 import app.reachy.companion.data.Processing
 import app.reachy.companion.data.Prefs
@@ -21,7 +29,9 @@ import app.reachy.companion.data.noteHash
 import app.reachy.companion.data.Task
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 
 data class ChatLine(
@@ -91,6 +101,74 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun startPreparedRecording() {
         val meeting = prepared ?: return
         if (RecordingController.gate(getApplication(), meeting) == app.reachy.companion.data.RecordingGate.Ready) RecordingController.start(getApplication(), meeting)
+    }
+
+    // --- "Reachy, begin meeting recording" (docs/phase-52.md). The state machine is pure (data/RecordingHandoff.kt); this wires it to the real recorder, the microphone permission and the Talk screen. ---
+    /** Navigation the screen should perform once (the Shell opens the section, then clears it). */
+    var openRequest by mutableStateOf<Section?>(null)
+
+    /** The Talk screen's side of the handoff while voice mode is open; null when it is not, which fails a handoff rather than starting a recording nobody can see. */
+    interface VoiceSide {
+        fun inForeground(): Boolean
+        fun speakConfirmation(operation: Int): Boolean
+        fun endVoice()
+        fun resumeListening()
+    }
+    var voiceSide: VoiceSide? = null
+    private var commandText = ""
+
+    val recordingHandoff = RecordingHandoff(viewModelScope, object : RecordingHandoff.Host {
+        override fun microphoneAllowed() = ContextCompat.checkSelfPermission(getApplication(), android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        override fun recordingActive() = RecordingController.recording
+        override fun appInForeground() = voiceSide?.inForeground() == true
+        override fun speakConfirmation(operation: Int) = voiceSide?.speakConfirmation(operation) ?: false
+        override fun endVoice() { voiceSide?.endVoice() }
+        override fun requestRecorderStart() = RecordingController.start(getApplication())
+        override suspend fun awaitRecorder(): RecorderResult {
+            // The service sets recording once the recorder is really running, or error when it could not start; a request being accepted proves neither.
+            val seen = withTimeoutOrNull(RECORDER_START_TIMEOUT_MS) { snapshotFlow { RecordingController.recording to RecordingController.error }.first { (on, error) -> on || error != null } }
+            return when {
+                seen == null -> RecorderResult.Failed("The recorder did not confirm that it started. Check the Meetings tab before relying on a recording.")
+                seen.first -> RecorderResult.Active
+                else -> RecorderResult.Failed(seen.second ?: "Could not start recording")
+            }
+        }
+        override fun finished(outcome: HandoffOutcome) {
+            val heard = commandText.also { commandText = "" }
+            val typed = commandTyped; commandTyped = false
+            when (outcome) {
+                is HandoffOutcome.Started -> {
+                    chatStatus = null
+                    if (typed) chat.add(ChatLine(false, "Recording the meeting. Stop and save it from Meetings."))
+                    else if (heard.isNotBlank()) { chat.add(ChatLine(true, heard)); chat.add(ChatLine(false, RECORDING_CONFIRMATION)) }
+                    openRequest = MEETING_DEEP_LINK
+                }
+                is HandoffOutcome.AlreadyRecording -> { chatStatus = "A meeting is already being recorded, so nothing new was started."; voiceSide?.resumeListening() }
+                is HandoffOutcome.Cancelled -> chatStatus = outcome.message
+                is HandoffOutcome.Failed -> {
+                    chatStatus = outcome.message
+                    if (outcome.resumeVoice) voiceSide?.resumeListening()
+                    else { if (RecordingController.error == null) RecordingController.error = outcome.message; openRequest = MEETING_DEEP_LINK }
+                }
+            }
+        }
+    })
+
+    /** A spoken command was recognised in voice mode. False when one is already in progress (a repeated or overlapping command is dropped). */
+    fun startRecordingByVoice(heard: String): Boolean {
+        if (recordingHandoff.busy) return false
+        commandText = heard.trim()
+        return recordingHandoff.begin()
+    }
+
+    private var commandTyped = false
+
+    /** The same command typed into the chat box: nothing is sent to the hub, and no voice is spoken or ended. */
+    private fun startRecordingByTyping(typed: String) {
+        if (recordingHandoff.busy) return
+        chatStatus = null; commandTyped = true; commandText = ""
+        chat.add(ChatLine(true, typed))
+        recordingHandoff.begin(speak = false)
     }
 
     /** Meeting reminders: what is wrong with delivery, the upcoming events with their classification, and a refresh from the hub. */
@@ -239,7 +317,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    init { viewModelScope.launch { resume() } }
+    init { RecordingController.loadHeld(getApplication()); viewModelScope.launch { resume() } }
+    fun keepShortRecording() = RecordingController.uploadHeld(getApplication())
+    fun discardShortRecording() = RecordingController.discardHeld()
 
     private suspend fun resume() {
         if (prefs.baseUrl.isBlank()) { session = Session.SignedOut; return }
@@ -270,7 +350,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun signOut() {
-        viewModelScope.launch { api.logout(); chat.clear(); attachedDocument = null; docs.clear(); chatHistory.clear(); tasks.clear(); notes.clear(); meetings.clear(); processing.clear(); meetingLinks.clear(); processingPoll?.cancel(); chatId = null; if (recording) stopRecording(); DeepReviewController.job = null
+        recordingHandoff.cancel("Signed out"); viewModelScope.launch { api.logout(); chat.clear(); attachedDocument = null; docs.clear(); chatHistory.clear(); tasks.clear(); notes.clear(); meetings.clear(); processing.clear(); meetingLinks.clear(); processingPoll?.cancel(); chatId = null; if (recording) stopRecording(); DeepReviewController.job = null
             MeetingReminderScheduler.disarm(getApplication()); CalendarCache.clear(getApplication()); HomeCache.clear(getApplication()); homeView = null; homeCheckedMs = null; homeBrief = null; homeBriefError = null; homeError = null; calendarView = null; calendarCheckedMs = null; schedule.clear(); prepared = null; reminderIssues = emptyList(); session = Session.SignedOut }
     }
 
@@ -283,6 +363,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val message = text.trim()
         val user = userId
         if (message.isEmpty() || sending || user == null) return
+        if (!spoken && app.reachy.companion.data.isMeetingRecordingCommand(message)) { startRecordingByTyping(message); return }
         sending = true; chatStatus = null
         val line = ChatLine(true, message)
         chat.add(line)
@@ -730,5 +811,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 }
+
+/** A failure guard only (never used to decide when to start): how long the recorder gets to report that it is running before the owner is told it did not confirm. */
+private const val RECORDER_START_TIMEOUT_MS = 15_000L
 
 private fun <T> MutableList<T>.replace(items: List<T>) { clear(); addAll(items) }

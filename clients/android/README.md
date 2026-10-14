@@ -14,6 +14,7 @@ Four primary destinations: **Talk**; **Planner** (Calendar, Reminders, Alarms); 
 
 - **Talk:** type, or tap the voice button for a full-screen voice mode (an animated ball, hands-free: it listens, sends, speaks the reply, then listens again; a voice-source choice, Mute and Close buttons). Replies are streamed and read aloud in Reachy's own voice (the phone's voice if the hub cannot speak), once each.
   Chat text is selectable. A history button (a side panel when unfolded) lists saved chats to open, start or delete.
+- **Voice command to record** ([Phase 52](../../docs/phase-52.md)): in voice mode, "Reachy, begin meeting recording" (also "start meeting recording", "record this meeting") is recognised on the phone, not sent to the hub; Reachy confirms aloud, voice mode closes, the existing recorder starts and Meetings opens once it is really recording. Not installed yet.
 - **Reminders:** an Apple-Reminders-style home with **To Do** and **Scheduled**; round check circles, inline add and rename,
   a collapsed Completed section, swipe left to delete, and a New Reminder sheet (title, date, time). A reminder cannot be reopened.
 - **Notes:** a month-grouped list with search; a note opens full screen and its first line is its title; it saves itself.

@@ -10,6 +10,11 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
+import app.reachy.companion.data.ASK_BELOW_SECONDS
+import app.reachy.companion.data.ShortVerdict
+import app.reachy.companion.data.discardedShortRecordingMessage
+import app.reachy.companion.data.shortRecordingVerdict
 import android.os.PowerManager
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -56,6 +61,42 @@ object RecordingController {
         ContextCompat.startForegroundService(context, intent)
     }
 
+    /** A clip stopped after 10 to 30 seconds, held back from the upload until the owner says whether it was a mistake. */
+    class HeldClip(val clip: File, val seconds: Long)
+    var held by mutableStateOf<HeldClip?>(null); internal set
+
+    fun heldDir(context: Context) = File(context.filesDir, "held-meetings").apply { mkdirs() }
+    private fun secondsFile(clip: File) = File(clip.parentFile, clip.name + ".secs")
+
+    /** Remembers a held clip's length beside it, so the question can be asked again after the app was closed. */
+    internal fun hold(clip: File, seconds: Long) { runCatching { secondsFile(clip).writeText(seconds.toString()) }; held = HeldClip(clip, seconds) }
+
+    /** Picks up a clip that was held when the app last closed. */
+    fun loadHeld(context: Context) {
+        if (held != null) return
+        val clip = heldDir(context).listFiles().orEmpty().filter { it.name.endsWith(".m4a") }.minByOrNull { it.name } ?: return
+        held = HeldClip(clip, runCatching { secondsFile(clip).readText().trim().toLong() }.getOrDefault(ASK_BELOW_SECONDS - 1))
+    }
+
+    /** "Yes, it was a mistake": the clip and its notes are deleted and nothing is uploaded. */
+    fun discardHeld() {
+        val h = held ?: return
+        held = null
+        h.clip.delete(); secondsFile(h.clip).delete(); planFile(h.clip).delete()
+    }
+
+    /** "No, keep it": the clip joins the normal queue and the service uploads it exactly as a longer recording. */
+    fun uploadHeld(context: Context) {
+        val h = held ?: return
+        held = null
+        val target = File(pendingDir(context), h.clip.name)
+        if (!h.clip.renameTo(target)) return
+        val plan = planFile(h.clip)
+        if (plan.exists()) plan.renameTo(planFile(target))
+        secondsFile(h.clip).delete()
+        ContextCompat.startForegroundService(context, Intent(context, RecordingService::class.java).setAction(RecordingService.UPLOAD))
+    }
+
     fun stop(context: Context) {
         context.startService(Intent(context, RecordingService::class.java).setAction(RecordingService.STOP))
     }
@@ -83,6 +124,7 @@ class RecordingService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private lateinit var recorder: MeetingRecorder
     private var wakeLock: PowerManager.WakeLock? = null
+    private var startedElapsed = 0L
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -95,6 +137,7 @@ class RecordingService : Service() {
         when (intent?.action) {
             START -> begin(intent.getStringExtra(PLAN_KEY)?.let { RecordingPlan(it, intent.getStringExtra(PLAN_TITLE), intent.getLongExtra(PLAN_START, 0L)) })
             STOP -> finish()
+            UPLOAD -> upload()
             else -> if (!RecordingController.recording) stopSelf()
         }
         return START_NOT_STICKY
@@ -114,6 +157,7 @@ class RecordingService : Service() {
         wakeLock = (getSystemService(POWER_SERVICE) as PowerManager)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "reachy:recording").apply { acquire(4 * 60 * 60 * 1000L) }
         RecordingController.startedAt = System.currentTimeMillis()
+        startedElapsed = SystemClock.elapsedRealtime()
         RecordingController.plan = plan
         RecordingController.recording = true
     }
@@ -127,9 +171,31 @@ class RecordingService : Service() {
             RecordingController.error = "Nothing was recorded"
             leaveForeground(); stopSelf(); return
         }
+        val seconds = (SystemClock.elapsedRealtime() - startedElapsed) / 1000
+        when (shortRecordingVerdict(seconds)) {
+            ShortVerdict.Discard -> {
+                clip.delete(); RecordingController.plan = null
+                RecordingController.error = discardedShortRecordingMessage(seconds)
+                leaveForeground(); stopSelf(); return
+            }
+            ShortVerdict.Ask -> {
+                // Held in its own folder, not pending-meetings, so no retry can upload it before the owner has answered.
+                val held = File(RecordingController.heldDir(this), clip.name)
+                if (!clip.renameTo(held)) { clip.copyTo(held, overwrite = true); clip.delete() }
+                keepPlan(held)
+                RecordingController.hold(held, seconds)
+                leaveForeground(); notifyHeld(seconds); stopSelf(); return
+            }
+            ShortVerdict.Keep -> {}
+        }
         val pending = File(RecordingController.pendingDir(this), clip.name)
         if (!clip.renameTo(pending)) { clip.copyTo(pending, overwrite = true); clip.delete() }
         keepPlan(pending)
+        upload()
+    }
+
+    /** Uploads whatever waits in pending-meetings, in the foreground so the work is not cut short. */
+    private fun upload() {
         enterForeground("Uploading meeting…", stoppable = false)
         RecordingController.uploading = true
         scope.launch {
@@ -138,6 +204,14 @@ class RecordingService : Service() {
             RecordingController.error = failure?.let { "Upload failed ($it). The recording is kept on this phone and will retry from the Meetings tab." }
             leaveForeground(); stopSelf()
         }
+    }
+
+    /** Stopped from the notification with the app away: the question waits in the app, so say so. */
+    private fun notifyHeld(seconds: Long) {
+        val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_IMMUTABLE)
+        val n = NotificationCompat.Builder(this, CHANNEL).setSmallIcon(android.R.drawable.ic_btn_speak_now).setContentTitle("Reachy")
+            .setContentText("Recording was only $seconds seconds. Open Reachy to keep or delete it.").setContentIntent(open).setAutoCancel(true).build()
+        runCatching { getSystemService(NotificationManager::class.java).notify(HELD_NOTIFICATION_ID, n) }
     }
 
     override fun onDestroy() {
@@ -182,11 +256,13 @@ class RecordingService : Service() {
     companion object {
         const val START = "app.reachy.companion.RECORD_START"
         const val STOP = "app.reachy.companion.RECORD_STOP"
+        const val UPLOAD = "app.reachy.companion.RECORD_UPLOAD_HELD"
         const val PLAN_KEY = "plan_key"
         const val PLAN_TITLE = "plan_title"
         const val PLAN_START = "plan_start"
         private const val CHANNEL = "recording"
         private const val NOTIFICATION_ID = 7
+        private const val HELD_NOTIFICATION_ID = 8
     }
 }
 
