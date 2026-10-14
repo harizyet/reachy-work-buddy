@@ -823,3 +823,37 @@ def test_a_test_email_never_falls_back_to_the_deployment_environment_sender(monk
     draft = EmailDraft(to="a@example.org", subject="Reachy test email", body="x", kind="sender_test", recipients=Recipients(to=["a@example.org"]))
     with pytest.raises(SendRefused, match="no outbound sender"):
         asyncio.run(MailSender(w.sender_store)(draft))
+
+
+# ---- sign-in mechanism (found on the first real Gmail attempt) ---------------------------------------------------------------------------------------
+
+class _AuthClient:
+    """What the sender sees of the SMTP client after TLS: the mechanisms the server advertises and the calls it makes."""
+
+    def __init__(self, advertised: str | None):
+        self.esmtp_extensions = {"auth": advertised} if advertised is not None else {}
+        self.calls: list[tuple] = []
+
+    async def auth_plain(self, user, password):
+        self.calls.append(("plain", user))
+
+    async def auth_login(self, user, password):
+        self.calls.append(("login", user))
+
+    async def login(self, user, password):  # the library's generic method must never be used: it tries other mechanisms first and Gmail drops the connection
+        raise AssertionError("login() must not be called")
+
+
+@pytest.mark.parametrize("advertised, expected", [("LOGIN PLAIN XOAUTH2 PLAIN-CLIENTTOKEN OAUTHBEARER", "plain"), ("login plain", "plain"), ("LOGIN", "login"), ("CRAM-MD5 LOGIN", "login")])
+def test_the_sender_signs_in_with_plain_else_login_from_what_the_server_advertises_and_never_the_generic_login(advertised, expected):
+    client = _AuthClient(advertised)
+    asyncio.run(MailSender._sign_in(client, "user@example.test", "pw"))
+    assert client.calls == [(expected, "user@example.test")]
+
+
+@pytest.mark.parametrize("advertised", ["CRAM-MD5 XOAUTH2", "", None])
+def test_a_server_with_no_password_sign_in_is_refused_with_a_clear_reason_and_nothing_is_attempted(advertised):
+    client = _AuthClient(advertised)
+    with pytest.raises(SendRefused, match="does not offer password sign-in"):
+        asyncio.run(MailSender._sign_in(client, "user@example.test", "pw"))
+    assert client.calls == []

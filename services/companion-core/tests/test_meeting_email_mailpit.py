@@ -229,6 +229,26 @@ def package(**over) -> EmailDraft:
     return EmailDraft(**base)
 
 
+def test_real_authentication_works_without_the_generic_login_that_gmail_drops_the_connection_on(mailpit, monkeypatch):
+    import aiosmtplib
+
+    async def forbidden(self, *args, **kwargs):
+        raise AssertionError("the generic login() must not be used")
+
+    monkeypatch.setattr(aiosmtplib.SMTP, "login", forbidden)
+
+    async def go():
+        good = await sender_store(mailpit)
+        ok = await MailSender(good, allow_env=False, tls_context=mailpit.tls).verify()
+        bad = await sender_store(mailpit, password="wrong-password")
+        refused = await MailSender(bad, allow_env=False, tls_context=mailpit.tls).verify()
+        return ok, refused
+
+    ok, refused = asyncio.run(go())
+    assert ok["ok"] is True and ok["stage"] == "authenticated"
+    assert refused["ok"] is False and "authentication failed" in refused["detail"] and "wrong-password" not in refused["detail"]
+
+
 # ---- connection verification ---------------------------------------------------------------------------------------------------------------------
 
 def test_verification_connects_negotiates_tls_and_signs_in_without_sending_anything(mailpit):

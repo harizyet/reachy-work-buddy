@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+from typing import ClassVar
 from uuid import uuid4
 
 import psycopg
@@ -426,7 +427,12 @@ def test_partial_updates_serialize_and_smtp_resolves(database, keys, monkeypatch
             async def starttls(self, **kwargs):
                 calls.append({"starttls": True})
 
-            async def login(self, username, password):
+            esmtp_extensions: ClassVar[dict] = {"auth": "LOGIN PLAIN"}
+
+            async def ehlo(self):
+                calls.append({"ehlo": True})
+
+            async def auth_plain(self, username, password):  # the sender signs in with an explicit mechanism (Gmail drops the connection on the library's generic login())
                 calls.append({"username": username, "password": password})
 
             async def send_message(self, message, sender=None, recipients=None):

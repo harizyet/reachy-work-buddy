@@ -107,14 +107,30 @@ class MailSender:
             if settings.security == "starttls":
                 await client.starttls(tls_context=self.tls_context or ssl.create_default_context())
             if settings.username and password is not None:
-                await client.login(settings.username, password)
+                await client.ehlo()  # after TLS the server's capabilities (including AUTH) are asked for again; the library refreshes them only lazily
+                await self._sign_in(client, settings.username, password)
         except aiosmtplib.SMTPAuthenticationError as exc:
             await _close(client)
             raise SendRefused(f"authentication failed: {exc.code} {_one_line(exc.message)}") from None
+        except SendRefused:
+            await _close(client)
+            raise
         except (aiosmtplib.SMTPException, OSError, TimeoutError, ssl.SSLError) as exc:
             await _close(client)
             raise SendTransient(f"could not connect or authenticate: {_safe(exc)}") from None
         return client
+
+    @staticmethod
+    async def _sign_in(client: aiosmtplib.SMTP, username: str, password: str) -> None:
+        """AUTH PLAIN, else AUTH LOGIN, chosen from what the server advertises after TLS. The library's generic `login()` tries other mechanisms first (CRAM-MD5 and others), and Gmail answers
+        an attempt it does not support by dropping the connection ("Connection lost") instead of refusing it, so a correct credential could never get through."""
+        offered = {m.upper() for m in str(client.esmtp_extensions.get("auth", "")).split()}
+        if "PLAIN" in offered:
+            await client.auth_plain(username, password)
+        elif "LOGIN" in offered:
+            await client.auth_login(username, password)
+        else:
+            raise SendRefused("the mail server does not offer password sign-in (PLAIN or LOGIN)")
 
     async def __call__(self, draft: EmailDraft) -> str | None:
         settings, password = await self._settings(draft)
