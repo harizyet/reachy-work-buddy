@@ -157,6 +157,7 @@ These are dated evidence, not startup instructions or current health checks.
 - [Phase 50 worker recovery 2026-10-12](verification/phase-50-worker-recovery-2026-10-12.md): document-worker backend recovery.
 - [Phase 50 history-isolation deployment 2026-10-12](verification/phase-50-history-isolation-deployment-2026-10-12.md): MS-01 deployment record (core and hub).
 - [Phase 50 Android Documents and history isolation 2026-10-12](verification/phase-50-android-documents-and-history-isolation-2026-10-12.md): conversation-history isolation design/tests and the Android Documents surface.
+- [Home dashboard deployment 2026-10-14](verification/home-dashboard-deployment-2026-10-14.md): MS-01 deployment record (core and hub), APK, Phase 48 gap.
 - [Home dashboard verification 2026-10-13](verification/home-dashboard-2026-10-13.md): acceptance table, test results and emulator evidence (local, not deployed).
 - [Phase 50 chat picker deployment 2026-10-12](verification/phase-50-chat-picker-deployment-2026-10-12.md): MS-01 deployment record.
 - [Phase 50 chat document picker 2026-10-12](verification/phase-50-chat-document-picker-2026-10-12.md): design and tests.
