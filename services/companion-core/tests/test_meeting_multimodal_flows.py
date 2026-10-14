@@ -554,9 +554,9 @@ def test_the_whole_flow_over_http(monkeypatch):
     with AppEnv(monkeypatch) as e:
         c, m = e.client, e.meeting.id
         assert c.get("/meeting-multimodal/config").json() == {"enabled": True}
-        linked = c.post(f"/meetings/{m}/multimodal/documents", json={"document_id": e.doc.id}, headers=sens("sensitive")).json()
+        linked = c.post(f"/meetings/{m}/multimodal/attachments", json={"document_id": e.doc.id}, headers=sens("sensitive")).json()
         assert linked["created"] and linked["document"]["ready"]
-        assert c.post(f"/meetings/{m}/multimodal/documents", json={"document_id": e.doc.id}, headers=sens("sensitive")).json()["created"] is False
+        assert c.post(f"/meetings/{m}/multimodal/attachments", json={"document_id": e.doc.id}, headers=sens("sensitive")).json()["created"] is False
         queued = c.post(f"/meetings/{m}/multimodal/alignment", json={}, headers=sens("sensitive")).json()
         assert queued["created"] and queued["alignment"]["state"] == "queued" and "segments" not in json.dumps(queued["alignment"]["run"])
         assert e.work()
@@ -566,7 +566,7 @@ def test_the_whole_flow_over_http(monkeypatch):
         review = c.put(f"/meetings/{m}/multimodal/windows/{key}/review", json={"decision": "no_slide"}, headers=sens("sensitive")).json()
         assert review["window"]["shown"] is None and review["window"]["review_status"] == "no_slide"
         assert c.delete(f"/meetings/{m}/multimodal/windows/{key}/review", headers=sens("sensitive")).json() == {"cleared": True}
-        assert c.delete(f"/meetings/{m}/multimodal/documents/{e.doc.id}", headers=sens("sensitive")).json() == {"unlinked": True}
+        assert c.delete(f"/meetings/{m}/multimodal/attachments/{e.doc.id}", headers=sens("sensitive")).json() == {"unlinked": True}
         assert c.get(f"/meetings/{m}/multimodal", headers=sens("sensitive")).json()["documents"] == []
 
 
@@ -584,10 +584,10 @@ def test_the_ceiling_header_is_the_only_way_to_a_higher_class_and_unknown_values
 def test_bodies_are_strict_and_errors_are_fixed_messages(monkeypatch):
     with AppEnv(monkeypatch) as e:
         c, m, h = e.client, e.meeting.id, sens("sensitive")
-        assert c.post(f"/meetings/{m}/multimodal/documents", json={"document_id": e.doc.id, "surprise": 1}, headers=h).status_code == 422
-        assert c.post(f"/meetings/{m}/multimodal/documents", json={"document_id": "../etc"}, headers=h).status_code == 422
-        assert c.post("/meetings/nope/multimodal/documents", json={"document_id": e.doc.id}, headers=h).json()["detail"] == "No such meeting"
-        assert c.post(f"/meetings/{m}/multimodal/documents", json={"document_id": "missing"}, headers=h).json()["detail"] == "No such document"
+        assert c.post(f"/meetings/{m}/multimodal/attachments", json={"document_id": e.doc.id, "surprise": 1}, headers=h).status_code == 422
+        assert c.post(f"/meetings/{m}/multimodal/attachments", json={"document_id": "../etc"}, headers=h).status_code == 422
+        assert c.post("/meetings/nope/multimodal/attachments", json={"document_id": e.doc.id}, headers=h).json()["detail"] == "No such meeting"
+        assert c.post(f"/meetings/{m}/multimodal/attachments", json={"document_id": "missing"}, headers=h).json()["detail"] == "No such document"
         assert c.post(f"/meetings/{m}/multimodal/alignment", json={}, headers=h).json()["detail"] == "Attach a processed document first"
         assert c.put(f"/meetings/{m}/multimodal/windows/0-2/review", json={"decision": "maybe"}, headers=h).status_code == 422
         assert c.post(f"/meetings/{m}/multimodal/ask", json={"question": "x"}, headers=h).status_code == 422
@@ -598,7 +598,7 @@ def test_bodies_are_strict_and_errors_are_fixed_messages(monkeypatch):
 def test_deleting_a_meeting_over_http_drops_its_multimodal_data(monkeypatch):
     with AppEnv(monkeypatch) as e:
         c, m, h = e.client, e.meeting.id, sens("sensitive")
-        c.post(f"/meetings/{m}/multimodal/documents", json={"document_id": e.doc.id}, headers=h)
+        c.post(f"/meetings/{m}/multimodal/attachments", json={"document_id": e.doc.id}, headers=h)
         assert c.delete(f"/meetings/{m}").json() == {"deleted": True}
         store = e.app.state.meeting_multimodal_store
         assert e.client.portal.call(lambda: store.list_links(m)) == []

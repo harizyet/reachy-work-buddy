@@ -338,10 +338,10 @@ export async function multimodalEnabled(signal?: AbortSignal): Promise<boolean> 
 
 export const getOverview = async (meetingId: string, signal?: AbortSignal): Promise<Overview> => parseOverview(await request(base(meetingId), { signal }));
 export const attachDocument = async (meetingId: string, documentId: string): Promise<void> => {
-  await request(`${base(meetingId)}/documents`, { method: 'POST', body: { document_id: documentId } });
+  await request(`${base(meetingId)}/attachments`, { method: 'POST', body: { document_id: documentId } });
 };
 export const detachDocument = async (meetingId: string, documentId: string): Promise<void> => {
-  await request(`${base(meetingId)}/documents/${id(documentId)}`, { method: 'DELETE' });
+  await request(`${base(meetingId)}/attachments/${id(documentId)}`, { method: 'DELETE' });
 };
 export const startAlignment = async (meetingId: string, force: boolean): Promise<Overview> => parseOverview(await request(`${base(meetingId)}/alignment`, { method: 'POST', body: { force } }));
 export const startCombinedAnalysis = async (meetingId: string, force: boolean): Promise<Overview> => parseOverview(await request(`${base(meetingId)}/analysis`, { method: 'POST', body: { force } }));

@@ -101,10 +101,10 @@ def test_only_the_owner_session_with_csrf_reaches_it(monkeypatch):
             assert getattr(client, method)(path).status_code == 401
             assert getattr(client, method)(path, headers={"Authorization": "Bearer test-token"}).status_code == 401  # the robot-control bearer is not accepted
         login(client)
-        assert client.post(f"/meetings/{m}/multimodal/documents", json={"document_id": client.doc.id}).status_code == 403  # no CSRF header
+        assert client.post(f"/meetings/{m}/multimodal/attachments", json={"document_id": client.doc.id}).status_code == 403  # no CSRF header
         assert client.post(f"/meetings/{m}/multimodal/ask", json={"question": "what?!"}).status_code == 403
         assert client.put(f"/meetings/{m}/multimodal/windows/0-2/review", json={"decision": "no_slide"}).status_code == 403
-        assert client.delete(f"/meetings/{m}/multimodal/documents/{client.doc.id}").status_code == 403
+        assert client.delete(f"/meetings/{m}/multimodal/attachments/{client.doc.id}").status_code == 403
         assert client.post("/meeting-multimodal/items/x/accept", json={}).status_code == 403
         assert client.get("/meeting-multimodal/config").json() == {"enabled": True}
 
@@ -118,7 +118,7 @@ def test_the_owner_flow_through_the_hub_and_the_trusted_ceiling(monkeypatch):
         assert all(headers.get("x-reachy-access-ceiling") == "sensitive" for _, path, headers in client.seen if "multimodal" in path)
         spoofed = client.get(f"/meetings/{m}/multimodal", headers={"X-Reachy-Access-Ceiling": "public"})
         assert spoofed.status_code == 200  # a header from the browser is overwritten by the hub's own
-        assert client.post(f"/meetings/{m}/multimodal/documents", json={"document_id": client.doc.id}, headers=CSRF).json()["created"]
+        assert client.post(f"/meetings/{m}/multimodal/attachments", json={"document_id": client.doc.id}, headers=CSRF).json()["created"]
         assert client.post(f"/meetings/{m}/multimodal/alignment", json={}, headers=CSRF).json()["alignment"]["state"] == "queued"
         assert asyncio.run(_work(client))
         view = client.get(f"/meetings/{m}/multimodal").json()
@@ -127,7 +127,7 @@ def test_the_owner_flow_through_the_hub_and_the_trusted_ceiling(monkeypatch):
         reviewed = client.put(f"/meetings/{m}/multimodal/windows/{key}/review", json={"decision": "confirmed"}, headers=CSRF).json()
         assert reviewed["window"]["review_status"] == "confirmed"
         assert client.delete(f"/meetings/{m}/multimodal/windows/{key}/review", headers=CSRF).json() == {"cleared": True}
-        assert client.delete(f"/meetings/{m}/multimodal/documents/{client.doc.id}", headers=CSRF).json() == {"unlinked": True}
+        assert client.delete(f"/meetings/{m}/multimodal/attachments/{client.doc.id}", headers=CSRF).json() == {"unlinked": True}
 
 
 async def _work(client):
@@ -139,12 +139,12 @@ def test_bad_input_is_refused_at_the_hub_and_core_refusals_are_fixed_messages(mo
         prepare(client)
         login(client)
         m = client.mid
-        assert client.post(f"/meetings/{m}/multimodal/documents", json={"document_id": "../x"}, headers=CSRF).status_code == 422
-        assert client.post(f"/meetings/{m}/multimodal/documents", json={"document_id": client.doc.id, "extra": 1}, headers=CSRF).status_code == 422
+        assert client.post(f"/meetings/{m}/multimodal/attachments", json={"document_id": "../x"}, headers=CSRF).status_code == 422
+        assert client.post(f"/meetings/{m}/multimodal/attachments", json={"document_id": client.doc.id, "extra": 1}, headers=CSRF).status_code == 422
         assert client.put(f"/meetings/{m}/multimodal/windows/abc/review", json={"decision": "no_slide"}, headers=CSRF).status_code == 422
         assert client.put(f"/meetings/{m}/multimodal/windows/0-2/review", json={"decision": "maybe"}, headers=CSRF).status_code == 422
         assert client.post(f"/meetings/{m}/multimodal/ask", json={"question": "x"}, headers=CSRF).status_code == 422
-        assert client.post("/meetings/nope/multimodal/documents", json={"document_id": client.doc.id}, headers=CSRF).json()["detail"] == "No such meeting"
+        assert client.post("/meetings/nope/multimodal/attachments", json={"document_id": client.doc.id}, headers=CSRF).json()["detail"] == "No such meeting"
         assert client.post(f"/meetings/{m}/multimodal/alignment", json={}, headers=CSRF).json()["detail"] == "Attach a processed document first"
 
 

@@ -95,8 +95,8 @@ def install_meeting_multimodal_routes(app: FastAPI) -> None:
         return await run(service().link(meeting_id, body.document_id, access_of(ceiling)))
 
     @app.delete(MEETING_MULTIMODAL_DOCUMENT)
-    async def unlink(meeting_id: str, document_id: str, ceiling: str | None = Header(default=None, alias=ACCESS_CEILING_HEADER)) -> dict:
-        return await run(service().unlink(meeting_id, document_id, access_of(ceiling)))
+    async def unlink(meeting_id: str, attached_id: str, ceiling: str | None = Header(default=None, alias=ACCESS_CEILING_HEADER)) -> dict:
+        return await run(service().unlink(meeting_id, attached_id, access_of(ceiling)))
 
     @app.post(MEETING_MULTIMODAL_ALIGN)
     async def align(meeting_id: str, body: RunBody | None = None, ceiling: str | None = Header(default=None, alias=ACCESS_CEILING_HEADER)) -> dict:

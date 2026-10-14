@@ -55,8 +55,8 @@ function setup(options: { enabled?: boolean; data?: Obj; answer?: Obj } = {}) {
     if (!url.pathname.includes('multimodal')) return base(input, init);
     server.calls.push({ call, body });
     if (call === 'GET /meetings/m1/multimodal') return jsonResponse(server.data);
-    if (call === 'POST /meetings/m1/multimodal/documents') return jsonResponse({ created: true, document: attached({ document_id: body.document_id }) });
-    if (call.startsWith('DELETE /meetings/m1/multimodal/documents/')) return jsonResponse({ unlinked: true });
+    if (call === 'POST /meetings/m1/multimodal/attachments') return jsonResponse({ created: true, document: attached({ document_id: body.document_id }) });
+    if (call.startsWith('DELETE /meetings/m1/multimodal/attachments/')) return jsonResponse({ unlinked: true });
     if (call === 'POST /meetings/m1/multimodal/alignment') { server.data = { ...server.data, alignment: { ...server.data.alignment, state: 'queued', run: { id: 'r2', status: 'queued', error: null, model: null, stats: {} } } }; return jsonResponse({ created: true, ...server.data }); }
     if (call === 'POST /meetings/m1/multimodal/analysis') return jsonResponse({ created: true, ...server.data });
     if (call === 'PUT /meetings/m1/multimodal/windows/0-0/review') return jsonResponse({ window: win({ review_status: body.decision === 'confirmed' ? 'confirmed' : body.decision }) });
@@ -98,10 +98,10 @@ describe('Attached documents tab', () => {
     expect(within(list).getByText('Reading')).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText('Document from your library'), 'd2');
     await user.click(screen.getByRole('button', { name: 'Attach' }));
-    await waitFor(() => expect(server.calls.map((c) => c.call)).toContain('POST /meetings/m1/multimodal/documents'));
-    expect(server.calls.find((c) => c.call === 'POST /meetings/m1/multimodal/documents')!.body).toEqual({ document_id: 'd2' });
+    await waitFor(() => expect(server.calls.map((c) => c.call)).toContain('POST /meetings/m1/multimodal/attachments'));
+    expect(server.calls.find((c) => c.call === 'POST /meetings/m1/multimodal/attachments')!.body).toEqual({ document_id: 'd2' });
     await user.click(screen.getByRole('button', { name: 'Remove Edge Platform Review from this meeting' }));
-    await waitFor(() => expect(server.calls.map((c) => c.call)).toContain('DELETE /meetings/m1/multimodal/documents/d1'));
+    await waitFor(() => expect(server.calls.map((c) => c.call)).toContain('DELETE /meetings/m1/multimodal/attachments/d1'));
     expect(screen.getByText(/does not delete it/)).toBeInTheDocument();
   });
 

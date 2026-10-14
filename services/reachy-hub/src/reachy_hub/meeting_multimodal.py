@@ -112,11 +112,11 @@ def install_meeting_multimodal_routes(app, require_owner_session, core) -> None:
 
     @app.post(MEETING_MULTIMODAL_DOCUMENTS, dependencies=owner_change)
     async def link(body: LinkBody, meeting_id: str = Path(pattern=_ID)):
-        return await forward("POST", f"/meetings/{m(meeting_id)}/multimodal/documents", json=body.model_dump())
+        return await forward("POST", f"/meetings/{m(meeting_id)}/multimodal/attachments", json=body.model_dump())
 
     @app.delete(MEETING_MULTIMODAL_DOCUMENT, dependencies=owner_change)
-    async def unlink(meeting_id: str = Path(pattern=_ID), document_id: str = Path(pattern=_ID)):
-        return await forward("DELETE", f"/meetings/{m(meeting_id)}/multimodal/documents/{quote(document_id, safe='')}")
+    async def unlink(meeting_id: str = Path(pattern=_ID), attached_id: str = Path(pattern=_ID)):
+        return await forward("DELETE", f"/meetings/{m(meeting_id)}/multimodal/attachments/{quote(attached_id, safe='')}")
 
     @app.post(MEETING_MULTIMODAL_ALIGN, dependencies=owner_change)
     async def align(body: RunBody, meeting_id: str = Path(pattern=_ID)):
