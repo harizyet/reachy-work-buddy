@@ -231,7 +231,7 @@ requires fresh reauthentication.
 | `GET /owner-recognition/status` | Enable state, sample lists and byte totals |
 | `POST /owner-recognition/reauth` | Confirm the owner password for five minutes |
 | `PUT /owner-recognition/benchmark/enabled` | Explicit benchmark capture opt-in |
-| `POST /owner-recognition/benchmark/{voice,face}/samples` | Upload a sample while benchmark mode is enabled |
+| `POST /owner-recognition/benchmark/{voice,face}/samples` | Upload a sample while benchmark mode is enabled. A voice clip may carry `X-Reachy-Benchmark-Label: role=enroll\|trial;speaker=<owner or alias>;condition=<word>` (validated, canonicalised, stored as plaintext metadata beside the encrypted clip, included in the export manifest as `label`); the Phase 32A.V evaluation tool reads it |
 | `DELETE /owner-recognition/benchmark/{voice,face}/samples/{sample_id}` | Delete a sample |
 | `GET /owner-recognition/benchmark/{voice,face}/export` | Decrypt a dataset into a zip with manifest |
 
@@ -241,6 +241,22 @@ These captures do not supply trust evidence; the separate speaker protocol,
 trust engine and sensitivity authorizer are described in
 [Phase 25](../phase-25.md#implementation-sequence) and
 [ADR 0024](../adr/0024-owner-recognition-trust.md).
+
+### Shared voice identity (Phase 32A.V, [ADR 0041](../adr/0041-shared-voice-identity.md))
+
+Off unless `VOICE_IDENTITY_ENABLED=true` (every route but `status` then 404s). Code: `reachy_hub/voice_identity.py` (service, evidence ledger, routes), `reachy_hub/voice_profiles.py` (AES-GCM sealed profiles; memory and PostgreSQL stores, table `voice_profiles`, migration 038), models in `shared/models/voice_identity.py`, route constants in `shared/protocols/voice_identity_api.py`. Embeddings come from the stateless `speaker` service (`deploy/homelab/speaker/`, `POST /embed` mono 16 kHz PCM16 WAV up to 2 MiB, `GET /health`, `SPEECH_SERVICE_TOKEN`). Every route needs the owner cookie session (no bearer) and, for writes, CSRF; clients send `X-Reachy-Client-Kind` (`android`/`web`/`robot`), `X-Reachy-Client-Id`, optional `X-Reachy-Device-Id` and `X-Reachy-Utterance-Id`. The audio body is a raw WAV.
+
+| Route | Purpose |
+|---|---|
+| `GET /voice-identity/status` | Enabled, service ready, profile metadata, draft progress, calibration state; never a vector or score |
+| `POST /voice-identity/enrollment/samples` | Add a draft sample (embedding held in memory only); returns quality verdict and reasons |
+| `DELETE /voice-identity/enrollment/samples/{id}`, `DELETE /voice-identity/enrollment` | Remove one draft sample, or the draft |
+| `POST /voice-identity/enrollment/commit` | `{"consent": true}`; fresh reauthentication; at least 5 usable, mutually consistent samples; seals and stores (replaces an existing profile, version + 1) |
+| `DELETE /voice-identity/profile` | Fresh reauthentication; deletes the profile and clears its evidence |
+| `POST /voice-identity/verify` | One utterance in, `{state, utterance_id, expires_at, expires_in_seconds, reasons, replay_protection}` out |
+| `POST /voice-identity/turn[?converse=false]` | One upload: the hub's STT and the verifier read the same bytes concurrently. By default the transcript then runs as a `web`/`voice` message and the answer comes back (`{transcript, message, voice}`); with `converse=false` (what the Android app uses) the hub stops after the transcript and the state (`message` is null) and the app sends the text through `/messages` itself. 422 if no speech. The conversation never depends on the voice result |
+
+States: `verified`, `uncertain`, `not_verified`, `unavailable`. With no approved thresholds (`VOICE_IDENTITY_ACCEPT_THRESHOLD`/`VOICE_IDENTITY_UNCERTAIN_THRESHOLD`) nothing is `verified`. Evidence lives about 10 s in a process-local ledger and is bound to its utterance and client; it never reaches Companion Core. Benchmark tool: `tools/voice_identity_benchmark.py`.
 
 ### Response routing
 
@@ -348,14 +364,15 @@ Physical camera/audio acceptance is still outstanding. Read
 [bring-up evidence](../verification/phase-22-bring-up.md) before treating the
 simulator's successful move lifecycle as validated real motion.
 
-## coding-agent-service (Phase 29, planned)
+## coding-agent-service (Phase 29)
 
 [Source](../../services/coding-agent-service/src/coding_agent_service/) owns
 coding-agent process/container lifecycle, provider adapters, session state,
 agent events and usage observations, behind the provider-neutral contract in
-[docs/phase-29.md](../phase-29.md). companion-core (not yet wired) would own
-the calling intent/authorization/notification policy; this service never
-reasons about owner intent itself.
+[docs/phase-29.md](../phase-29.md). It is deployed on the homelab; companion-core owns
+the calling intent/authorization/notification policy, and this service never
+reasons about owner intent itself. The paragraphs below are in stage order (29.1 first), not
+a list of what is missing; each states what that stage added.
 
 29.1 (contracts and session store) is implemented: `CodingAgentSupervisor`
 creates a `CodingProject`, starts/resumes/stops a `CodingAgentSession`
@@ -508,9 +525,10 @@ session done"/"what's my claude usage" question from any channel, and
 `GET /coding-agents/completions/due` (companion-core's own route, a pure
 claim-once query like `/calendar/reminders/due`, claims kept in Postgres) is what lets reachy-hub
 push a Telegram message when a session finishes — see reachy-hub's section
-below for that loop. Session *management* — registering a project,
-starting/resuming/stopping a session — still has no hub/companion-core
-path; only status/usage reads and completion notifications do.
+below for that loop. Session *management* (registering a project, starting, resuming
+and stopping a session) goes through the hub's owner-authenticated
+`/coding-agents/*` proxy and the web **Coding agents** tab; companion-core itself
+only reads status and usage and relays completion notifications.
 
 ## Shadow semantic router (Phase 37)
 
@@ -683,14 +701,16 @@ See [user workflows](../operator-guide.md#connect-gmail-and-google-calendar),
 
 companion-core `meeting_distribution/` and `email/` and routes `/meeting-email/*`, `/meetings/{id}/email/{prepare,suggestions}` ([ADR 0039](../adr/0039-supervised-meeting-minutes-email.md), [Phase 55](../phase-55.md)); constants in `shared/protocols/meeting_email_api.py`; the hub proxies them for the owner session only (cookie + CSRF, never the bearer) in `reachy_hub/meeting_email.py`. They exist only while `MEETING_EMAIL_ENABLED` is true. `GET /meeting-email/config` (feature and sender status), `GET/PUT/DELETE /meeting-email/sender` (write-only credential, never returned), `POST .../sender/verify` (signs in and quits: sends nothing), `PUT .../sender/enabled` (needs a verified connection), saved recipient `groups`, `POST /meetings/{id}/email/prepare`, `GET .../suggestions`, and per draft `GET/PUT /meeting-email/drafts/{id}`, `POST .../approve` (package hash + typed `SEND`), `.../queue`, `.../cancel-send`, `.../discard`, `.../resolve` (settle an unknown delivery), `GET .../attachments/{name}` (the exact bytes, `no-store`, `nosniff`). The older `POST /emails/drafts/*` routes and the conversational draft/approve/send keep working for plain text drafts only. States `draft, ready_for_review, approved, queued, sending, sent, cancelled, failed, unknown_delivery`; every state change is an event in `email_draft_events`. A draft's `body` is only the editable middle: the view also returns `text_before`, `text_after`, `rendered_body` (exactly what is sent) and `processing` (the verified provenance verdict), rendered by `email/frame.py` from records ([ADR 0040](../adr/0040-verified-processing-provenance-in-email.md)); `meetings/provenance.py` holds the event model, the endpoint classifier and `assess`. The sender settings carry `owner_name`.
 
+Verified processing provenance ([ADR 0040](../adr/0040-verified-processing-provenance-in-email.md), migration 037): every processing step appends a record of where it ran to `meetings.processing_events`, and `email/frame.py` renders the message's identity, accuracy, processing and delivery text from those records. The text is not editable, is covered by the hash-bound approval, and a changed verdict blocks queueing and makes the sender refuse. A meeting with no record is shown as unverified, never as private. `mail_sender.owner_name` (set in Settings) is required before a message can be prepared.
+
 ## Identify Speakers (Phase 54)
 
 companion-core `GET /meetings/{id}/speakers/identify` (each diarization label with the owner's decision, up to three deterministic samples plus alternates as time ranges of the recording, a `fingerprint`, name suggestions, `needs_review`, `stale_outputs`) and `PUT` (decisions `named`/`unknown`/`skipped`/`clear` per label, optional `contact_id`, `fingerprint` checked: 409 if the diarization changed); the older `PUT /meetings/{id}/speakers` writes the same record. Samples are played through `GET /meetings/{id}/audio`; nothing is generated or stored. `Meeting` gains `speaker_identity`, `stale_outputs`; `MeetingOutput` gains `speaker_basis`. Hub proxies behind the owner session (`MEETING_SPEAKERS_IDENTIFY`). [ADR 0038](../adr/0038-meeting-speaker-identification.md), [Phase 54](../phase-54.md).
 
 ## Multimodal meeting intelligence (Phase 53)
 
-companion-core `companion_core/meeting_multimodal/` and routes under `/meetings/{id}/multimodal` and `/meeting-multimodal` ([ADR 0037](adr/0037-multimodal-meeting-evidence-and-slide-alignment.md), [Phase 53](phase-53.md)); constants in `shared/protocols/meeting_multimodal_api.py`; the hub proxies them for the owner session only and sets the access ceiling (`reachy_hub/meeting_multimodal.py`). Flag `MEETING_MULTIMODAL_ENABLED` (default off, needs the document library); schema `034_meeting_multimodal` (five tables, no foreign keys, `deploy/homelab/rollback-034.sql`). Web: the Documents tab and slide cards in the transcript (`clients/web/src/features/meetings`). Not on Android. Not built on Phase 31's frozen files, Phase 44 indexing or Phase 48/50F.
+companion-core `companion_core/meeting_multimodal/` and routes under `/meetings/{id}/multimodal` and `/meeting-multimodal` ([ADR 0037](../adr/0037-multimodal-meeting-evidence-and-slide-alignment.md), [Phase 53](../phase-53.md)); constants in `shared/protocols/meeting_multimodal_api.py`; the hub proxies them for the owner session only and sets the access ceiling (`reachy_hub/meeting_multimodal.py`). Flag `MEETING_MULTIMODAL_ENABLED` (default off, needs the document library); schema `034_meeting_multimodal` (five tables, no foreign keys, `deploy/homelab/rollback-034.sql`). Web: the Documents tab and slide cards in the transcript (`clients/web/src/features/meetings`). Not on Android. Not built on Phase 31's frozen files, Phase 44 indexing or Phase 48/50F.
 
 ## Home dashboard (Phase 51)
 
-companion-core `GET /home[?sections=]` and `POST /home/brief` ([ADR 0036](adr/0036-home-dashboard.md), [Phase 51](phase-51.md)); the hub proxies both for the owner session (`reachy_hub/home.py`, CSRF on the POST). Read-only; sections `schedule`, `tasks`, `reminders`, `reviews`, `weather`, each with its own `status`; records are filtered by the caller's ceiling and scope before counting. Weather: `companion_core/weather.py` (Open-Meteo, `WEATHER_*` settings). Existing `GET /briefing` and `POST /briefing/{user_id}` are unchanged.
+companion-core `GET /home[?sections=]` and `POST /home/brief` ([ADR 0036](../adr/0036-home-dashboard.md), [Phase 51](../phase-51.md)); the hub proxies both for the owner session (`reachy_hub/home.py`, CSRF on the POST). Read-only; sections `schedule`, `tasks`, `reminders`, `reviews`, `weather`, each with its own `status`; records are filtered by the caller's ceiling and scope before counting. Weather: `companion_core/weather.py` (Open-Meteo, `WEATHER_*` settings). Existing `GET /briefing` and `POST /briefing/{user_id}` are unchanged.

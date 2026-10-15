@@ -1,8 +1,8 @@
 # Reachy Android companion app
 
-A user-centred phone client for reachy-hub (version 0.19.0): **Talk** (voice and chat, with previous
+A user-centred phone client for reachy-hub (version 0.20.0): **Talk** (voice and chat, with previous
 chats), **Reminders** (To Do and timed reminders), **Notes**, **Meetings** (record, review, play back, edit) and
-**Documents** and **Alarms**, grouped under four destinations (below). Settings and configuration stay in the [web control panel](../operator-ui/README.md).
+**Documents** and **Alarms**, grouped under five destinations with **Home** first (below). Settings and configuration stay in the [web control panel](../operator-ui/README.md).
 Decision: [ADR 0029](../../docs/adr/0029-android-companion-app.md); stages:
 [Phase 40](../../docs/phase-40.md).
 
@@ -14,15 +14,16 @@ Four primary destinations: **Talk**; **Planner** (Calendar, Reminders, Alarms); 
 
 - **Talk:** type, or tap the voice button for a full-screen voice mode (an animated ball, hands-free: it listens, sends, speaks the reply, then listens again; a voice-source choice, Mute and Close buttons). Replies are streamed and read aloud in Reachy's own voice (the phone's voice if the hub cannot speak), once each.
   Chat text is selectable. A history button (a side panel when unfolded) lists saved chats to open, start or delete.
-- **Voice command to record** ([Phase 52](../../docs/phase-52.md)): in voice mode, "Reachy, begin meeting recording" (also "start meeting recording", "record this meeting") is recognised on the phone, not sent to the hub; Reachy confirms aloud, voice mode closes, the existing recorder starts and Meetings opens once it is really recording. Not installed yet.
+- **Voice command to record** ([Phase 52](../../docs/phase-52.md)): in voice mode, "Reachy, begin meeting recording" (also "start meeting recording", "record this meeting") is recognised on the phone, not sent to the hub; Reachy confirms aloud, voice mode closes, the existing recorder starts and Meetings opens once it is really recording. Included in 0.19.0, accepted by the owner on a phone.
 - **Reminders:** an Apple-Reminders-style home with **To Do** and **Scheduled**; round check circles, inline add and rename,
   a collapsed Completed section, swipe left to delete, and a New Reminder sheet (title, date, time). A reminder cannot be reopened.
 - **Notes:** a month-grouped list with search; a note opens full screen and its first line is its title; it saves itself.
 - **Meetings:** record (survives standby and other apps), a list with titles and descriptions, a transcript with a speaker per line,
   a player (tap a line to play from it), per-line Edit, a warning where the phone captured no audio, editable title and
   description (or written again from the transcript), Summary, Minutes, Use as context, deep-model reruns, delete.
-- **Identify speakers** ([Phase 54](../../docs/phase-54.md)): a section in a completed meeting. Two or three short samples per detected speaker (play/pause, the time, "In recording", "Another sample"), a name field with names used before, Unknown and Skip, and one Save. Samples are time ranges of the recording played by the transcript's player. Not released: 0.19.0 is unchanged.
-- **Share minutes** ([Phase 55](../../docs/phase-55.md)): a section in a completed meeting (shown only when the hub has the feature on). Prepare a message from the summary and minutes, edit recipients and text, preview the PDF in the app, review the complete To/Cc/Bcc list, approve the exact saved message by typing SEND, and cancel while it waits. The phone holds no credential; the dedicated sender is set up in the web Settings. Not released.
+- **Identify speakers** ([Phase 54](../../docs/phase-54.md)): a section in a completed meeting. Two or three short samples per detected speaker (play/pause, the time, "In recording", "Another sample"), a name field with names used before, Unknown and Skip, and one Save. Samples are time ranges of the recording played by the transcript's player. Included in 0.19.0, accepted by the owner on a phone.
+- **Voice identity** ([Phase 32](../../docs/phase-32.md), [ADR 0041](../../docs/adr/0041-shared-voice-identity.md); menu → Voice identity; debug build 0.20.0, **not yet accepted on a phone**): when the hub has it on, voice mode records each utterance once in memory (mono 16 kHz) and uploads it; the hub's own speech recogniser and a speaker check read the same audio, then the text goes through the usual path. Enrol your voice (five good clips, consent, password), test it, delete it; a short "Owner match: unverified / inconclusive" line shows for about ten seconds and never changes what you can do. Until the owner approves a calibration nothing is shown as verified. "Use this phone's speech recognition" switches voice chat back to the phone's recogniser. A guided **Voice evaluation** session records labelled clips for measuring error rates ([protocol](../../docs/verification/phase-32a-gv-protocol.md), [UAT checklist](../../docs/verification/phase-32a-uat-checklist.md)). With the feature off at the hub the app behaves as 0.19.0.
+- **Share minutes** ([Phase 55](../../docs/phase-55.md)): a section in a completed meeting (shown only when the hub has the feature on). Prepare a message from the summary and minutes, edit recipients and text, preview the PDF in the app, review the complete To/Cc/Bcc list, approve the exact saved message by typing SEND, and cancel while it waits. The phone holds no credential; the dedicated sender is set up in the web Settings. Included in the current 0.19.0 builds.
 - **Documents:** the owner's document library ([Phase 50](../../docs/phase-50.md)). Upload a PDF, DOCX, PNG or JPEG through Android's own file picker (the app is given only the file you choose);
   a list with status that refreshes while a document is being read; rename, classification (public, work private, sensitive), project and delete; **Ask**, **Search** and **Summaries** for one document;
   *Read more carefully* to read the original again at the next extraction level; and **Inspect**: a page at a time, a toggle between MinerU's picture of the original (with its blocks outlined, tap one for
@@ -56,7 +57,7 @@ Needs JDK 17 and the Android SDK (platform 35, build-tools 35.0.0). Set
 `sdk.dir` in the gitignored `local.properties`.
 
 ```bash
-./gradlew :app:testDebugUnitTest   # 77 JVM tests (mock hub, pure logic)
+./gradlew :app:testDebugUnitTest   # JVM tests (mock hub, pure logic); the voice-identity hub integration test runs when REACHY_E2E_HUB is set (see below)
 ./gradlew :app:assembleDebug       # app/build/outputs/apk/debug/app-debug.apk
 ```
 

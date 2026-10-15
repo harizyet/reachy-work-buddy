@@ -2,8 +2,8 @@
 
 Open `/hub/web/` through Caddy (direct hub: `/web/`; the old `/ui/` redirects there and the legacy UI is at `/ui-legacy/`) after following
 [deployment setup](deployment.md#owner-login). The dashboard provides
-Overview, Chat, Meetings, To-do, Reminders, Notes, Coding agents, and Settings; the navigation links to telepresence. Both frontends
-are plain HTML/JS/CSS served by hub, with no build step or external assets.
+Home, Chat, Meetings, To-do, Reminders, Notes, Documents, Coding agents, and Settings; the navigation links to telepresence. The
+web client is a React app built into the hub image ([Phase 47](phase-47.md)); the legacy plain HTML/JS/CSS UI remains at `/ui-legacy/` only as a rollback.
 
 ## Home
 
@@ -252,6 +252,38 @@ sources as clickable links; questions about what was said stay on the meeting.
 Answers use the local model; tick **Use frontier model** (web) or **Ask the
 cloud model** (Android) to send the meeting text to your cloud provider for a
 stronger answer.
+
+### Identify speakers, analysis, slides and sharing minutes
+
+These actions appear in a completed meeting when the matching hub feature is on
+(each is a separate flag, so a missing button usually means its flag is off).
+
+- **Identify speakers** ([Phase 54](phase-54.md)). Listen to two or three short samples of
+  each detected speaker (play or pause, "Another sample"), then type a name, or mark
+  **Unknown** or **Skip**, and **Save**. Reachy never names a speaker itself. The names
+  carry into the transcript, summary, minutes and analysis; a summary or minutes written
+  before a name changed is marked stale until you rerun it.
+- **Analyse** ([Phase 31](phase-31.md), `MEETING_ANALYSIS_ENABLED`). Only you start it.
+  Reachy lists decisions, open questions and action candidates, each with the transcript
+  lines and a verified quote it comes from. An action becomes a task only when you confirm
+  it, and only confirmed actions are searchable later. The local model's recall is limited,
+  so treat an empty list as "nothing found", not "nothing happened".
+- **Documents on a meeting** ([Phase 53](phase-53.md), `MEETING_MULTIMODAL_ENABLED`, needs the
+  document library). Attach a presentation or other library document, then **Estimate the pages**:
+  beside part of the transcript a card says, for example, "Likely slide 7, certainty High", with
+  the reason and alternatives. **Confirm**, choose another page, or mark "not about a slide"; your
+  decisions are kept apart from the estimates and survive reruns. Ask questions that need both
+  sources, or **Analyse with documents**. Web only; the Android app does not show slides.
+- **Share minutes** ([Phase 55](phase-55.md), `MEETING_EMAIL_ENABLED`). Prepare a message from
+  the summary, minutes and confirmed actions (with a PDF), edit the recipients and text,
+  review the complete To, Cc and Bcc list, and approve the exact saved message by typing
+  `SEND`. It then waits ten minutes and can be cancelled. The closing disclosure (who
+  Reachy is, how reliable it is, where processing ran) is written by Reachy from records
+  and cannot be edited ([ADR 0040](adr/0040-verified-processing-provenance-in-email.md)).
+  A voice or chat request can only prepare a draft. The dedicated sender account is set up
+  once in **Settings > Accounts > Outbound meeting email** (web only), where you also enter
+  your own name; a message cannot be prepared without it. Use **Send a test email** to
+  check the sender.
 
 ### Suggested corrections and Deep local review
 

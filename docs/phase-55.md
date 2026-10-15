@@ -1,6 +1,6 @@
 # Phase 55: Supervised meeting-minutes email through a dedicated Gmail sender
 
-Status: **built on branch `feature/meeting-minutes-email`; not merged, not deployed, no production credential configured, no real email sent.** Decision: [ADR 0039](adr/0039-supervised-meeting-minutes-email.md). Evidence: [verification record](verification/phase-55-meeting-minutes-email-2026-10-14.md).
+Status: **deployed to the homelab 2026-10-14 15:30 UTC with the feature off (migration 036, [record](verification/phase-55-deployment-2026-10-14.md)), enabled 15:34 UTC, merged to `main` 2026-10-15, owner UAT accepted; later changes: Gmail sign-in and app-password fixes, and verified processing provenance ([ADR 0040](adr/0040-verified-processing-provenance-in-email.md), migration 037). A real Gmail send with the provenance text is still unrecorded.** Decision: [ADR 0039](adr/0039-supervised-meeting-minutes-email.md). Evidence: [verification record](verification/phase-55-meeting-minutes-email-2026-10-14.md).
 
 The owner opens a completed meeting, chooses **Share minutes**, reviews the package (speaker names, summary, minutes, confirmed actions, PDF), chooses recipients, approves the exact package with a typed confirmation, and the message waits ten minutes (cancellable) before the existing dispatch loop sends it through a dedicated sender account. Every message needs that manual approval. Nothing is scheduled or automatic.
 

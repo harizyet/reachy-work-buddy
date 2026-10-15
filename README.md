@@ -11,7 +11,6 @@ robot presence and fallback independent of homelab availability.
 - [Develop and test](docs/development.md)
 - [Find service APIs and source](docs/reference/services.md)
 - [Roadmap and release scope](docs/plan.md#6-implementation-roadmap)
-- [Shadow semantic router trial](docs/shadow-router.md) and [Phase 37](docs/phase-37.md): shadow-first routing and argument validation (decision: [ADR 0026](docs/adr/0026-semantic-routing-and-argument-validation.md))
 - [Coding-agent instructions](AGENTS.md) and [current handover](HANDOVER.md)
 
 ## Status
@@ -28,7 +27,12 @@ next gates. Operational instructions are in [deployment](docs/deployment.md).
 | `services/companion-core` | Reasoning, tools, work data, consent, inference |
 | `services/reachy-hub` | Sessions, channels, routing, auth, robot connectivity |
 | `services/reachy-embodiment` | Robot backend, semantic behaviour, local presence |
-| `clients` | Operator dashboard/chat and WebRTC clients |
+| `services/coding-agent-service` | Supervised coding-agent sessions in containers |
+| `services/document-worker` | Isolated MinerU document parsing |
+| `services/model-manager` | Host process that swaps local model tiers |
+| `clients/web` | React operator UI served by the hub at `/web/` |
+| `clients/android` | Native Android companion app |
+| `clients/operator-ui`, `clients/web-pwa` | Legacy operator UI (rollback only) and the WebRTC call client |
 | `shared` | Cross-service models and protocol constants |
 | `deploy`, `scripts` | Configuration, images, and host launchers |
 | `docs` | Guides, roadmap, decisions, and verification evidence |

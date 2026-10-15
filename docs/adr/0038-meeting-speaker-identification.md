@@ -1,7 +1,8 @@
 # ADR 0038: Owner-confirmed meeting speaker identities
 
-- Status: **Proposed 2026-10-14** for [Phase 54](../phase-54.md). Extends [ADR 0030](0030-meeting-speaker-names-and-reviewed-corrections.md).
+- Status: **Accepted 2026-10-14** (deployed 2026-10-14, merged to `main`, owner UAT passed) for [Phase 54](../phase-54.md). Extends [ADR 0030](0030-meeting-speaker-names-and-reviewed-corrections.md).
 - Date: 2026-10-14
+- **Amendment 2026-10-15 ([ADR 0041](0041-shared-voice-identity.md)):** decision 2's "no embedding is computed" describes the shipped Identify Speakers screen and stays true for it. Phase 32A.M may compute an embedding of a sample window, on request and without persisting it, only to compare against *consented* voice profiles. It may add reviewable suggestions beside, never inside, `speaker_identity`; confirmations, `unknown`/`skipped`, fingerprints, stale-output handling and the rule that identity is the owner's statement are unchanged. No profile is created from a meeting without a separate explicit consent action, and a typed name is not consent.
 
 ## Context
 

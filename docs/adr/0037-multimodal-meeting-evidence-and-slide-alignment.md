@@ -1,6 +1,6 @@
 # ADR 0037: Multimodal meeting evidence and slide alignment
 
-- Status: **Proposed 2026-10-14** (built on `feature/meeting-multimodal`, not deployed; accepted when the owner accepts Phase 53)
+- Status: **Proposed 2026-10-14; deployed and enabled 2026-10-14** (merged to `main`). It becomes Accepted when the owner accepts Phase 53 on their own deck and meeting; no acceptance is recorded yet.
 - Date: 2026-10-14
 - Relates to: [ADR 0001](0001-service-boundaries.md), [ADR 0006](0006-response-routing.md), [ADR 0011](0011-destructive-action-consent.md), [ADR 0018](0018-hybrid-llm-routing.md), [ADR 0034](0034-source-evidence-and-derived-artifacts.md), [Phase 31](../phase-31.md), [Phase 50](../phase-50.md), [Phase 53](../phase-53.md)
 

@@ -28,7 +28,7 @@ registered Claude Pro/Max subscription credential, completed successfully
 against the real Anthropic API — the first real completion this
 integration has produced. The owner's Telegram bot was also confirmed, via
 the completions-due endpoint, to be able to report that completion back.
-See [service reference](reference/services.md#coding-agent-service-phase-29-planned)
+See [service reference](reference/services.md#coding-agent-service-phase-29)
 for exactly what exists.
 
 ## Subscription-first revision (owner, 2026-10-02)

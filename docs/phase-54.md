@@ -1,6 +1,6 @@
 # Phase 54: Identify Speakers
 
-Status: **built on branch `feature/meeting-speaker-identification`, not merged, not deployed, no APK released.** Decision: [ADR 0038](adr/0038-meeting-speaker-identification.md). Evidence: [verification record](verification/phase-54-speaker-identification-2026-10-14.md).
+Status: **deployed to the homelab 2026-10-14 09:49 UTC (migration 035, [record](verification/phase-54-deployment-2026-10-14.md)), merged to `main`, owner UAT passed ("tested and passed", not itemised).** Android section shipped in app 0.19.0. Decision: [ADR 0038](adr/0038-meeting-speaker-identification.md). Evidence: [verification record](verification/phase-54-speaker-identification-2026-10-14.md).
 
 Open a completed meeting, choose **Identify speakers**, listen to two or three short samples of each detected speaker, name them (or mark Unknown / Skip), save. The names then appear in the transcript, summary, minutes and analysis.
 

@@ -145,6 +145,12 @@ instance is not an upgrade. No schema migration is required. The
 [long-audio verification](verification/phase-27-long-audio-2026-09-30.md)
 used isolated containers with mounted updated source, not a live rollout.
 
+## Shared voice identity (Phase 32A.V; deployed for UAT 2026-10-15, uncalibrated)
+
+**Deployed to the homelab for UAT on 2026-10-15** ([record](verification/phase-32a-deployment-2026-10-15.md): schema `038_voice_profiles`, the `speaker` container running, `VOICE_IDENTITY_ENABLED=true`, thresholds unset). `OWNER_RECOGNITION_CAPTURE_DIR` already defaults to the persistent `owner-recognition-captures` volume in Compose. What the deployment needed (kept as the procedure for a rebuild): migration `038_voice_profiles` (a schema step: backup, then core, hub and coding-agent together, as in [upgrades](#upgrades-and-verification-cleanup); `deploy/homelab/rollback-038.sql` drops every enrolled profile); the `speaker` Compose profile (`COMPOSE_PROFILES=speaker` or `--profile speaker`; `scripts/start-homelab.sh` has no flag for it yet), which builds `deploy/homelab/speaker/` (CPU, a `speaker-data` volume for the pinned SpeechBrain model, first start downloads it); `SECRET_KEY_FILE` on the hub (already provided for the benchmark store, see [key provisioning](#key-provisioning)); `VOICE_IDENTITY_ENABLED=true`. Thresholds stay unset until the owner approves a calibration from the benchmark tool; with them unset nothing is ever `verified`. Disabling the flag stops every route; deleting the profile removes the ciphertext row (backups keep ciphertext that is unreadable without the key).
+
+Transport and exposure (owner decision 2026-10-15, HTTPS deferred): the feature runs over the same HTTP as the rest of Reachy. Use the tailnet address; off the tailnet the session cookie, voice audio and results are readable on the network segment. Hub to speaker service and hub to core are plain HTTP on the Compose network. The speaker service publishes no host port, and the voice routes accept only the owner cookie session. Do not expose the Caddy port to the Internet (its own header says the same). TLS, certificates and `SESSION_COOKIE_SECURE` are a separate future task ([Phase 32](phase-32.md#future-hardening-task-https-not-scheduled)). Robot hosts are unaffected.
+
 ## Shadow semantic router
 
 ```bash
@@ -388,8 +394,8 @@ ID. Telegram voice notes are not wired into STT.
 **Meeting-minutes email (Phase 55, ADR 0039; off by default).** With `MEETING_EMAIL_ENABLED=true` the owner configures a *dedicated* sender in the web Settings (Accounts, Outbound meeting email), not in the environment: host, port, sender address, username and an app password. The password is stored encrypted in the SecretStore (`owner/mail-sender/password`), is write-only, and never appears in a response, event, log or plaintext backup row. Gmail: `smtp.gmail.com`, port 587 (STARTTLS), the dedicated account's address as both sender and username, an app password (the account needs 2-Step Verification); Gmail rewrites the sender to the account, so the configured address must be that account. An authenticated sender must use STARTTLS with certificate verification; verification signs in and quits and sends nothing; changing the sender or credential turns sending off until verified again; Remove sender deletes the credential. A meeting package never uses the `SMTP_*` environment below. Rotation of the SecretStore keys follows the credential-key procedure; the sender credential re-encrypts with the rest. Mailpit (`--profile simulation`) remains the test target.
 
 Simulation email goes to Mailpit. Production `SMTP_HOST`, `SMTP_PORT`, and
-`SMTP_FROM` select a relay; the current sender has no SMTP authentication
-support. Email approval and send requests require text, then enter an undo
+`SMTP_FROM` select a relay; this `SMTP_*` sender has no SMTP authentication
+support (the meeting-minutes sender above has its own). Email approval and send requests require text, then enter an undo
 window before dispatch. Production defaults to roughly ten minutes. For a
 disposable test only, `EMAIL_SEND_DELAY_SECONDS=10` and
 `EMAIL_DISPATCH_INTERVAL_SECONDS=2` shorten that wait. See
@@ -834,46 +840,40 @@ explicitly disposable project. Leave unrelated services such as OVMS alone.
 ## Schema upgrades and credential keys
 
 Core and hub require the revision declared in
-[`shared/database.py`](../shared/database.py) (now `033_calendar_feed`, applied to the homelab 2026-10-13, [record](verification/ics-calendar-deployment-2026-10-13.md); `032_meeting_analysis` was applied 2026-10-12, [record](verification/phase-31-deployment-2026-10-12.md); `031_documents` was applied to the homelab 2026-10-12 with the document library enabled, [record](verification/phase-50-deployment-2026-10-12.md); `030_note_tags` was applied 2026-10-11, [record](verification/note-tags-deployment-2026-10-11.md); `029_notepad_processing` was applied on 2026-10-11, [Phase 49 deployment](verification/phase-49-deployment-2026-10-11.md); the 028 upgrade was on 2026-10-10, [Phase 44 deployment](verification/phase-44-deployment-2026-10-10.md); older revisions are listed in the phase records).
+[`shared/database.py`](../shared/database.py), currently `038_voice_profiles`
+(applied to the homelab 2026-10-15). Each revision below carries its application date and
+deployment record; rollback SQL, where one exists, is `deploy/homelab/rollback-NNN.sql`.
 The ordered Alembic history ships
 in core's image; SQL stores perform compatibility checks, not startup DDL.
 Compose runs `migrate` before hub/core, including through
 `scripts/start-homelab.sh`. Launcher `--check` remains read-only and does not
 run migrations. Do not use `--no-deps` to bypass the migration gate.
 
-Revision `014_planner` adds the `notes` and `reminders` tables for the
-[To-do, Reminders and Notes tabs](operator-guide.md#to-do-reminders-and-notes). It is additive
-and core is its only client, but it still changes the required revision, so use
-the backup/stop-writers/migrate/rebuild procedure and rebuild `migrate`,
-`companion-core` and `reachy-hub` together.
+**Every revision changes the required head**, so a deploy is: backup (and the
+SecretStore key file when secrets are touched), stop core, hub and coding-agent,
+migrate, then rebuild and start `migrate`, core, hub and coding-agent together, on
+owner approval. Recreating core also ends a Phase 48 evidence segment (see the
+[48B trial log](verification/phase-48b-capture-trial-2026-10-10.md)). A revision with
+no paragraph (028, the Phase 44F memory-candidate tables) is covered by its
+[deployment record](verification/phase-44-deployment-2026-10-10.md).
 
-Revision `015_alarms` (Phase 38, [ADR 0027](adr/0027-alarms-and-presence-gated-delivery.md)) adds the `alarms` table. Same additive, core-only procedure. Deployed 2026-10-05 to the homelab stack (backup first, then migrate; `alarms` table verified).
+Revision `038_voice_profiles` ([ADR 0041](adr/0041-shared-voice-identity.md), **applied to the homelab 2026-10-15 12:49 UTC for UAT with the verifier uncalibrated**, [record](verification/phase-32a-deployment-2026-10-15.md)) adds `voice_profiles` (encrypted owner voice profile; at most one row). `deploy/homelab/rollback-038.sql` drops it (every enrolled profile is lost, nothing else). The migration job refuses while PgBouncer holds idle pooled connections: restart PgBouncer after stopping the three clients.
 
-Revision `016_alarm_volume` adds `alarms.volume` (percent gain, default 100). Same additive, core-only procedure. Deployed 2026-10-06 with 017 and 018.
+Revision `037_processing_provenance` ([ADR 0040](adr/0040-verified-processing-provenance-in-email.md), **applied to the homelab 2026-10-15 01:52 UTC**, [record](verification/processing-provenance-deployment-2026-10-15.md)) adds `meetings.processing_events` (the append-only record of where each processing step ran) and `mail_sender.owner_name`. Existing meetings start with an empty record, which the email treats as unverified, never as private. `deploy/homelab/rollback-037.sql` drops both columns and loses only that record and the name; cancel or discard unsent meeting-minutes drafts first, because the previous images cannot render their disclosure text.
 
-Revision `017_persona_tone` adds `persona_config.tone` (reply style preset, default `default`). Same additive, core-only procedure. Deployed 2026-10-06.
+Revision `036_meeting_email` ([ADR 0039](adr/0039-supervised-meeting-minutes-email.md), [Phase 55](phase-55.md), **applied to the homelab 2026-10-14 15:30 UTC with the feature off; enabled 15:34 UTC**, [record](verification/phase-55-deployment-2026-10-14.md)) adds columns to `email_drafts` and the tables `email_draft_attachments`, `email_draft_events`, `mail_sender` and `meeting_recipient_groups`; the dedicated sender's credential is a row in `secrets` (provider `mail-sender`). `deploy/homelab/rollback-036.sql` deletes meeting-minutes drafts, history, the sender settings, saved groups and the stored credential (a message already sent stays sent). Back up the SecretStore key file together with the dump. `MEETING_EMAIL_ENABLED` (default false) is the switch.
 
-Revision `018_action_receipts` (Phase 39, [ADR 0028](adr/0028-persona-responses-and-action-receipts.md)) adds the `action_receipts` table. Same additive, core-only procedure. Deployed 2026-10-06 (backup `reachy-before-phase39-20261006-1248.dump`; migrate, core, hub and coding-agent rebuilt; revision verified).
+Revision `035_meeting_speaker_identity` ([ADR 0038](adr/0038-meeting-speaker-identification.md), [Phase 54](phase-54.md), **applied to the homelab 2026-10-14 09:49 UTC**, [record](verification/phase-54-deployment-2026-10-14.md)) adds one nullable column `meetings.speaker_identity`; `deploy/homelab/rollback-035.sql` drops it (names in `speaker_names` stay).
 
-Revision `019_meeting_annotations` (Phase 41, [ADR 0030](adr/0030-meeting-speaker-names-and-reviewed-corrections.md)) adds `meetings.speaker_names` and `meetings.transcript_corrections`. Deployed 2026-10-07 (backup `reachy-before-phase41-20261007-1333.dump`; 5 existing meetings kept). Rebuild `migrate`, `companion-core`, `reachy-hub` and `coding-agent-service` together.
+Revision `034_meeting_multimodal` ([ADR 0037](adr/0037-multimodal-meeting-evidence-and-slide-alignment.md), [Phase 53](phase-53.md), **applied to the homelab 2026-10-14 07:44 UTC with the feature off; the owner turned it on later that day**, [record](verification/phase-53-deployment-2026-10-14.md)) adds `meeting_document_links`, `meeting_multimodal_runs`, `meeting_slide_alignments`, `meeting_slide_reviews` and `meeting_multimodal_items` (no foreign keys, no triggers). `deploy/homelab/rollback-034.sql` drops them and returns the revision to 033 (no meeting, document, transcript or task is lost; the owner's slide corrections and generated findings are). `MEETING_MULTIMODAL_ENABLED` (default false, passed by Compose from `.env`, also needs `DOCUMENT_LIBRARY_ENABLED`) was a separate approval. The step-by-step plan and rollback are in [phase-53 section 10](phase-53.md#10-deployment-and-rollback-plan-nothing-below-is-authorised).
 
-Revision `020_meeting_terms` (Phase 41) adds `meetings.key_terms` and the `meeting_terms` glossary table. Deployed 2026-10-07 (backup `reachy-before-meeting-terms-20261007-1456.dump`; 5 existing meetings kept).
+Revision `033_calendar_feed` ([ADR 0035](adr/0035-read-only-ics-calendar-and-meeting-reminders.md), **applied to the homelab 2026-10-13**, [record](verification/ics-calendar-deployment-2026-10-13.md)) adds the `calendar_feed` table (one owner row; the feed URL is kept in the encrypted secret store, never in this table). `deploy/homelab/rollback-033.sql` drops it and returns the revision to 032. The Home dashboard (2026-10-14) needed no migration.
 
-Revision `033_calendar_feed` ([ADR 0035](adr/0035-read-only-ics-calendar-and-meeting-reminders.md), **applied to the homelab 2026-10-13**, [record](verification/ics-calendar-deployment-2026-10-13.md)) adds the `calendar_feed` table (one owner row; the feed URL is kept in the encrypted secret store, never in this table). `deploy/homelab/rollback-033.sql` drops it and returns the revision to 032. `SCHEMA_REVISION` is `033_calendar_feed`, so a deploy is a backup, then core, hub and coding-agent together, on owner approval, with a new Phase 48 cohort boundary. The Home dashboard (2026-10-14) needed no migration.
+Revision `032_meeting_analysis` ([Phase 31](phase-31.md), **applied to the homelab 2026-10-12 with the feature off; enabled for the owner-supervised trial the same day**, [record](verification/phase-31-deployment-2026-10-12.md)) adds `meeting_analysis_runs` and `meeting_analysis_items` (generated decisions, open questions and action candidates with their evidence and review state) and one trigger that enqueues a meeting in the existing knowledge outbox when an item changes. `deploy/homelab/rollback-032.sql` drops both tables and the trigger function and returns the revision to 031 (no meeting, transcript or task is touched; a task made from a confirmed action stays, only its link back is lost). `MEETING_ANALYSIS_ENABLED` (default false, passed through by Compose from `.env`) turns the feature on.
 
-Revision `036_meeting_email` ([ADR 0039](adr/0039-supervised-meeting-minutes-email.md), [Phase 55](phase-55.md), **built on a branch, not applied anywhere**) adds columns to `email_drafts` and the tables `email_draft_attachments`, `email_draft_events`, `mail_sender` and `meeting_recipient_groups`; the dedicated sender's credential is a row in `secrets` (provider `mail-sender`). `deploy/homelab/rollback-036.sql` deletes meeting-minutes drafts, history, the sender settings, saved groups and the stored credential (a message already sent stays sent). Deploy = backup (including the SecretStore key file), then core, hub and coding-agent together, on owner approval; the feature stays off (`MEETING_EMAIL_ENABLED=false`) until separately enabled.
+Revision `031_documents` ([Phase 50](phase-50.md), **applied 2026-10-12**, [record](verification/phase-50-deployment-2026-10-12.md)) adds `documents` (the catalogue of uploaded documents: policy, state, hash, opaque backend reference) and `document_outputs` (summaries derived from them); the originals live on the volume `document-source`, not in the database. `deploy/homelab/rollback-031.sql` drops both tables and returns the revision to 030 (the originals are untouched; summaries are regenerable).
 
-Revision `037_processing_provenance` ([ADR 0040](adr/0040-verified-processing-provenance-in-email.md), **built on a branch, not applied anywhere**) adds `meetings.processing_events` (the append-only record of where each processing step ran) and `mail_sender.owner_name`. Existing meetings start with an empty record, which the email treats as unverified, never as private. `deploy/homelab/rollback-037.sql` drops both columns and loses only that record and the name; cancel or discard unsent meeting-minutes drafts first, because the previous images cannot render their disclosure text. Core, hub and coding-agent deploy together (the hub's sender body gained `owner_name`).
-
-Revision `035_meeting_speaker_identity` ([ADR 0038](adr/0038-meeting-speaker-identification.md), [Phase 54](phase-54.md), **built on a branch, not applied anywhere**) adds one nullable column `meetings.speaker_identity`; `deploy/homelab/rollback-035.sql` drops it (names in `speaker_names` stay). Deploy = backup, then core, hub and coding-agent together, on owner approval.
-
-Revision `034_meeting_multimodal` ([ADR 0037](adr/0037-multimodal-meeting-evidence-and-slide-alignment.md), [Phase 53](phase-53.md), **applied to the homelab 2026-10-14 with the feature OFF**, [record](verification/phase-53-deployment-2026-10-14.md)) adds `meeting_document_links`, `meeting_multimodal_runs`, `meeting_slide_alignments`, `meeting_slide_reviews` and `meeting_multimodal_items` (no foreign keys, no triggers). `deploy/homelab/rollback-034.sql` drops them and returns the revision to 033 (no meeting, document, transcript or task is lost; the owner's slide corrections and generated findings are). `SCHEMA_REVISION` is `034_meeting_multimodal` on the branch, so a deploy is a backup, then core, hub and coding-agent together, on owner approval, with a new Phase 48 cohort boundary. `MEETING_MULTIMODAL_ENABLED` (default false, passed by Compose from `.env`, also needs `DOCUMENT_LIBRARY_ENABLED`) is a separate approval. The step-by-step plan and rollback are in [phase-53 section 10](phase-53.md#10-deployment-and-rollback-plan-nothing-below-is-authorised).
-
-Revision `032_meeting_analysis` ([Phase 31](phase-31.md), **applied to the homelab 2026-10-12 with the feature OFF**, [record](verification/phase-31-deployment-2026-10-12.md)) adds `meeting_analysis_runs` and `meeting_analysis_items` (generated decisions, open questions and action candidates with their evidence and review state) and one trigger that enqueues a meeting in the existing knowledge outbox when an item changes. `deploy/homelab/rollback-032.sql` drops both tables and the trigger function and returns the revision to 031 (no meeting, transcript or task is touched; a task made from a confirmed action stays, only its link back is lost). `SCHEMA_REVISION` is now `032_meeting_analysis`, so a deploy means a backup, then core, hub and coding-agent together, on owner approval, plus a new Phase 48 cohort boundary because core is recreated. `MEETING_ANALYSIS_ENABLED` (default false, passed through by Compose from `.env`) turns the feature on.
-
-Revision `031_documents` ([Phase 50](phase-50.md), **applied 2026-10-12**, [record](verification/phase-50-deployment-2026-10-12.md)) adds `documents` (the catalogue of uploaded documents: policy, state, hash, opaque backend reference) and `document_outputs` (summaries derived from them); the originals live on the volume `document-source`, not in the database. `deploy/homelab/rollback-031.sql` drops both tables and returns the revision to 030 (the originals are untouched; summaries are regenerable). Every service checks the schema head, so it was deployed as a backup, then core, hub and coding-agent together.
-
-Revision `030_note_tags` adds one nullable column, `notes.tag` (the note's folder path, [`shared/models/note_tag.py`](../shared/models/note_tag.py)); no table, trigger or index changes and existing notes stay untagged. `deploy/homelab/rollback-030.sql` drops the column (tags are lost, no note or text is) and returns the revision to 029. Every service checks the schema head, so deploying it means a backup, then core, hub and coding-agent together, on owner approval. Applied 2026-10-11 with the same sequence as 029.
+Revision `030_note_tags` adds one nullable column, `notes.tag` (the note's folder path, [`shared/models/note_tag.py`](../shared/models/note_tag.py)); no table, trigger or index changes and existing notes stay untagged. `deploy/homelab/rollback-030.sql` drops the column (tags are lost, no note or text is) and returns the revision to 029. Applied 2026-10-11.
 
 Revision `029_notepad_processing` ([Phase 49](phase-49.md), **applied to the homelab 2026-10-11 06:38 UTC** with the feature OFF, [record](verification/phase-49-deployment-2026-10-11.md)) adds the bookkeeping tables `notepad_jobs`, `notepad_proposals`, `notepad_proposal_notes`, `notepad_provenance` and `note_meeting_links`; it changes no existing table and creates no authoritative data, and can be undone with `deploy/homelab/rollback-029.sql` (core, hub and coding-agent stopped; created tasks and reminders stay). `NOTEPAD_PROCESSING_ENABLED` (default `false`, passed by Compose) turns on the routes and the background runner; `NOTEPAD_PROCESSING_CONCURRENCY` (1 to 4) bounds it. Deployment notes from the first run: manual Compose needs `SEARXNG_SECRET_KEY` exported from `.env.searxng-secret`; the migration refuses while PgBouncer holds an idle pooled connection, so either wait out its 300 s idle timeout (done) or restart PgBouncer with the applications stopped; `docker compose run --rm --no-deps migrate` and `up -d --no-build --no-deps` leave unrelated services untouched.
 
@@ -893,6 +893,24 @@ Revision `022_meeting_alignment` (Phase 27.4) adds nullable `meetings.aligned_se
 
 Revision `021_meeting_outputs` (Phase 43) adds nullable `meetings.summary` and `meetings.minutes` JSON. Deployed 2026-10-07 (backup `reachy-before-meeting-outputs-20261007-1718.dump`; 5 existing meetings kept).
 
+Revision `020_meeting_terms` (Phase 41) adds `meetings.key_terms` and the `meeting_terms` glossary table. Deployed 2026-10-07 (backup `reachy-before-meeting-terms-20261007-1456.dump`; 5 existing meetings kept).
+
+Revision `019_meeting_annotations` (Phase 41, [ADR 0030](adr/0030-meeting-speaker-names-and-reviewed-corrections.md)) adds `meetings.speaker_names` and `meetings.transcript_corrections`. Deployed 2026-10-07 (backup `reachy-before-phase41-20261007-1333.dump`; 5 existing meetings kept). Rebuild `migrate`, `companion-core`, `reachy-hub` and `coding-agent-service` together.
+
+Revision `018_action_receipts` (Phase 39, [ADR 0028](adr/0028-persona-responses-and-action-receipts.md)) adds the `action_receipts` table. Same additive, core-only procedure. Deployed 2026-10-06 (backup `reachy-before-phase39-20261006-1248.dump`; migrate, core, hub and coding-agent rebuilt; revision verified).
+
+Revision `017_persona_tone` adds `persona_config.tone` (reply style preset, default `default`). Same additive, core-only procedure. Deployed 2026-10-06.
+
+Revision `016_alarm_volume` adds `alarms.volume` (percent gain, default 100). Same additive, core-only procedure. Deployed 2026-10-06 with 017 and 018.
+
+Revision `015_alarms` (Phase 38, [ADR 0027](adr/0027-alarms-and-presence-gated-delivery.md)) adds the `alarms` table. Same additive, core-only procedure. Deployed 2026-10-05 to the homelab stack (backup first, then migrate; `alarms` table verified).
+
+Revision `014_planner` adds the `notes` and `reminders` tables for the
+[To-do, Reminders and Notes tabs](operator-guide.md#to-do-reminders-and-notes). It is additive
+and core is its only client, but it still changes the required revision, so use
+the backup/stop-writers/migrate/rebuild procedure and rebuild `migrate`,
+`companion-core` and `reachy-hub` together.
+
 Revision `013_coding_agent` adds the coding-agent session tables and core's
 completion-notification ledger. coding-agent-service is now a database client:
 it needs `DATABASE_URL`, waits for `migrate`, and must be **stopped with core
@@ -910,6 +928,7 @@ below when deploying this UI change; copying static assets alone is insufficient
 The migration is additive and preserves existing sessions, meetings and work
 records. Chat transcripts and search evidence become durable database contents,
 so database backups include them. There is no archive backfill or deletion API.
+
 
 ### Key provisioning
 

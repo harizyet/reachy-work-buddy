@@ -1,6 +1,6 @@
 # ADR 0039: Supervised meeting-minutes email through a dedicated sender
 
-- Status: **Proposed 2026-10-14** for [Phase 55](../phase-55.md). Builds on [ADR 0011](0011-destructive-action-consent.md), [ADR 0020](0020-schema-and-secrets.md), [ADR 0032](0032-meeting-outputs-and-context.md) and [ADR 0038](0038-meeting-speaker-identification.md).
+- Status: **Accepted 2026-10-15** (deployed 2026-10-14, merged to `main`, owner UAT accepted; a real Gmail send is still unrecorded) for [Phase 55](../phase-55.md). Builds on [ADR 0011](0011-destructive-action-consent.md), [ADR 0020](0020-schema-and-secrets.md), [ADR 0032](0032-meeting-outputs-and-context.md) and [ADR 0038](0038-meeting-speaker-identification.md).
 - Date: 2026-10-14
 
 ## Context

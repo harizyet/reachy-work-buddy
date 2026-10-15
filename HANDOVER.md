@@ -1,860 +1,178 @@
 # Handover
 
-Current session snapshot: 2026-10-14 (Phase 55 meeting-minutes email is on an unmerged feature branch, schema head there is 036; Phase 54 speaker identification is on an unmerged feature branch, schema head there is 035; all feature branches are merged to `main`, Phase 53 included (`94e7842`); the schema is `033_calendar_feed`, Android 0.19.0; newest sections first: voice recording (Phase 52), Home dashboard, then calendar work, then Phase 31 local build, then Phase 50 deployments, then notes and task routing; the Phase 44 section "Phase 44 where things stand" dates from 2026-10-10 and earlier sections from 2026-10-08). Read [AGENTS.md](AGENTS.md) first.
-The [documentation index](docs/README.md) defines ownership;
-[project state](docs/project-state.md) owns deployment limits and open acceptance.
-
-## Persona prompt: "introduce yourself to the team" (2026-10-15, owner-resolved)
-
-Reachy introduced itself as the team's assistant. The prompt in `persona_config` is owner-editable and is the only persona text the model sees; core reads it each turn. Direct tests against `reachy-local` (cheery tone): a prompt without the owner's name failed even with "do not present yourself as the team's" (about 1 in 5 passed), while one that names the owner and forbids claiming to be the team's assistant passed 3 of 3. The owner pasted a named prompt in Settings and confirmed it works. The shared default (`shared/models/persona.py`, the web copy in `AssistantTab.tsx`, `samples.json`) now carries the stronger generic wording but cannot name the owner, so it is only a partial guard. **Uncommitted** (three files). Not done: a fixed, non-editable instruction filled with the owner's name (would need a core redeploy; owner decision).
-
-## Owner UAT reported 2026-10-15 (not itemised)
-
-Home dashboard: the browser check, the persona location for weather and the phone bottom-bar check are **tested working**, so those items in the Home dashboard section below are closed. Calendar feed: the production ICS feed URL and the owner's email addresses are set and **tested working** (Settings > Accounts). Android `reachy-companion-0.19.0-tier-tags-debug.apk` (sha256 `9491e5e0…3d27`, newest build, includes the share-minutes and speakers work) was installed and **accepted by the owner ("everything is there and accepted", not itemised)**. Still open: a real Gmail send of the meeting-minutes email with the provenance text, the model-manager reboot test, and the Google sign-in round trip.
-
-## Cleanup of merged branches, rollback assets and older backups (2026-10-15, owner request)
-
-Deleted the merged branches (local and remote): `feature/meeting-minutes-email`, `feature/meeting-multimodal`, `feature/sender-test-email`, `fix/gmail-app-password`, `fix/gmail-sign-in` (`phase-47f` stays: it is checked out in the worktree `reachy-work-buddy-47a`). Untagged 88 `reachy-rollback/*` images; **kept** the ones that roll back the current deployment: `companion-core:pre-deepfix`, `reachy-hub:pre-tier-tag`, `coding-agent-service:pre-037`, `migrate:pre-037`, `document-worker:pre-034`. In `~/reachy-backups` deleted 47 older database dumps (**only the pre-037 dump remains**, `reachy-before-037-stop-20261015-015152.dump`), two older document-source tars, old env copies, row counts and rollout scratch; kept the Phase 48 boundary directories (evidence cited in the verification records), the SecretStore key copies, the key-backup stamp and passphrase file. Deployment and verification records that say "keep the dump / the rollback tag until accepted" now refer to assets that no longer exist, except the ones listed here. `deploy/homelab/.env.bak-before-meeting-email` is the only `.env` backup left.
-
-## Phase 55 email, Gmail fixes, ADR 0040 provenance and the follow-ups: MERGED to `main` 2026-10-15 (`23db3fb`, branch `feature/processing-provenance-disclosure` deleted)
-
-One merge carried the stacked branches (`feature/meeting-minutes-email`, `feature/sender-test-email`, `fix/gmail-sign-in`, `fix/gmail-app-password`, which are now fully merged and were left in place) and everything deployed since: migrations 036 and 037, the provenance record and fixed email text, the deep-local generation budget (core `41e49f86816f`), the model-manager systemd user unit, the tier tags and spinner. Owner accepted the provenance disclosure ("tested and approved"); **the local-only sentence has never been produced from a real production recording** (no meeting in production has been through the worker under this build; the owner accepted that and will report a bug if one arises). Still kept: `reachy-rollback/*:pre-*` images and the dumps in `~/reachy-backups`; the Android tests stay untracked by `.gitignore`'s `test/` rule; no off-host copy of the SecretStore key file.
-
-## Model manager now starts with the machine (2026-10-15)
-
-Deep local reported "the model manager is not reachable (ConnectError)" because the manager (a host process by design, [ADR 0031](docs/adr/0031-three-tier-local-model-escalation.md)) had never been supervised. Installed `deploy/homelab/model-manager.service` as a systemd **user** unit via `scripts/install-model-manager-service.sh` (enabled, lingering on, `Restart=always`); verified: core's `/deep-review/info` reports available, a killed manager came back in under 15 s, vLLM untouched. Uninstall: `scripts/install-model-manager-service.sh --uninstall`. Not tested: an actual reboot. Branch `feature/processing-provenance-disclosure`.
-
-## Verified processing provenance and fixed email disclosures (ADR 0040): DEPLOYED 2026-10-15 01:52 UTC and **ACCEPTED by the owner after UAT ("tested and approved", 2026-10-15, not itemised)** (schema `037_processing_provenance`, core `74e7161195ea`, hub `c9906ef5b62a`, coding-agent `9a98434aa79c`, from `feature/processing-provenance-disclosure` `82305d0`, NOT merged; [record](docs/verification/processing-provenance-deployment-2026-10-15.md)); rollback `reachy-rollback/*:pre-037` + dump `~/reachy-backups/reachy-before-037-stop-20261015-015152.dump` (keep until accepted); new Phase 48 segment from 01:52:38 UTC. **The owner must enter their name in Settings before a message can be prepared; existing meetings will show the neutral statement.** Earlier status of this section: built on the branch, NOT merged, NOT deployed
-
-[ADR 0040](docs/adr/0040-verified-processing-provenance-in-email.md), [verification](docs/verification/processing-provenance-disclosure-2026-10-15.md). Migration `037_processing_provenance` (`meetings.processing_events`, `mail_sender.owner_name`) + `rollback-037.sql`; `SCHEMA_REVISION` is 037 on the branch, so a deploy = backup, then core + hub + coding-agent together with a new Phase 48 boundary. Every processing step now records where it ran; the email's identity, accuracy, processing and delivery text is rendered by `email/frame.py` from records and cannot be edited; approval, the typed `SEND` and the 10-minute delay are unchanged and now cover that text; a changed verdict blocks queueing and makes the sender refuse. **The owner must enter their name in Settings (Outbound meeting email) before a message can be prepared.** Meetings processed before this change are unverified and will carry the neutral statement. Core 2791 passed / 2 known failures, hub 40 (email), web vitest 376, Playwright email spec 3 desktop, Android JVM 170 (untracked), Mailpit 19, PostgreSQL 125+6. **Not verified:** a real Gmail send with the new text; an emulator run; the production local-model URL classification (a public host name would make every summary `unverified`). **Needs the owner:** review of the wording, then separately: merge (the Gmail branches beneath are also unmerged), backup and migration 037, deploy, first send to your own address only. Plain text only; the template's bold and headings are not rendered (an HTML alternative would reuse the same renderer).
-
-## Phase 55 DEPLOYED 2026-10-14 15:30 UTC with the feature OFF (schema `036_meeting_email`, core `8381632b0fc1`, hub `e1844aae58dc`, coding-agent `79d31e4f6f0e`, from branch `feature/sender-test-email` `6bb7f46`, NOT merged; [record](docs/verification/phase-55-deployment-2026-10-14.md)); rollback `reachy-rollback/*:pre-036` + dump `~/reachy-backups/reachy-before-036-stop-20261014-152925.dump` (keep until accepted); SecretStore key copy `~/reachy-backups/secret-keys-before-036.json` (same host: keep an off-host copy); new Phase 48 segment from 15:30:26 UTC. **Gmail sign-in fix deployed 15:47 UTC (core `6cf8b0536a7a`, branch `fix/gmail-sign-in` `680b18a`, rollback tag `pre-signin-fix`): the first real verify failed with "Connection lost" because the library's generic `login()` makes Gmail drop the connection; the sender now uses AUTH PLAIN/LOGIN explicitly (new Phase 48 segment from ~15:47:38 UTC).** **`MEETING_EMAIL_ENABLED=true` since 15:34 UTC (owner: "enable the flag"; core only recreated, `.env` backup `.env.bak-before-meeting-email`, new Phase 48 segment from 15:34:17 UTC; the first write attempt had been blocked and was not worked around).** No sender is configured, sending is off, no credential, no drafts. APK for UAT `~/reachy-releases/reachy-companion-0.19.0-share-minutes-debug.apk` (sha256 `e4251b85…1528`, not installed). Earlier status of this section: `feature/meeting-minutes-email`, NOT merged, NOT deployed, no production credential, no real email sent (2026-10-14)
-
-[Phase 55](docs/phase-55.md) (audit, design, deployment proposal, rollback, UAT checklist), [ADR 0039](docs/adr/0039-supervised-meeting-minutes-email.md) (proposed), [verification](docs/verification/phase-55-meeting-minutes-email-2026-10-14.md). Migration `036_meeting_email` + `rollback-036.sql` (`SCHEMA_REVISION` is `036_meeting_email` on the branch, so a deploy = backup incl. the SecretStore key file, then core + hub + coding-agent together). Flag `MEETING_EMAIL_ENABLED` (Compose passes it, default false). Dedicated Gmail sender over SMTP (credential only in the SecretStore, write-only, STARTTLS with verification, identity enforced, default off until verified and enabled), hash-bound typed approval, the existing 10-minute delay and loop now with atomic claims, typed outcomes and ambiguous-delivery handling, Share minutes on web and Android, a voice/chat request can only prepare a draft. Verified against real SMTP (Mailpit with TLS and auth), PostgreSQL, a real browser and the Android emulator; **no real Gmail account was used**. **Findings fixed on the way:** the old sender wrote unsanitised headers and could send twice or retry an accepted message; the SMTP library's automatic TLS upgrade bypassed our TLS settings. **Known failures unchanged:** core `test_knowledge_index` reconcile and `test_knowledge_retrieval` historical mode (identical on `main`), nine Playwright specs (notepad, planner). **Finding:** `.gitignore`'s bare `test/` rule keeps every Android unit test out of git (146 older, Phase 54's 9, Phase 55's 13 live only in the working tree); anchoring it as `/test/` would track them (owner decision, not done). **Needs the owner:** review of the approach, then separately: merge; backup and migration 036; enabling the feature; configuring the dedicated Gmail account; first UAT to an owner-controlled test address only. Machine state: disposable PG container `spk-test-pg` (port 55435) may still exist (`docker rm -f spk-test-pg`); the AVD definition `spk_test` remains.
-
-## Phase 54 Identify Speakers: DEPLOYED 2026-10-14 09:49 UTC and ACCEPTED by the owner after UAT ("tested and passed", not itemised) (schema `035_meeting_speaker_identity`, core `49abbb72f181`, hub `14dce6fc38ff`, coding-agent `724e259ac97e`; [record](docs/verification/phase-54-deployment-2026-10-14.md)); merged to `main` 2026-10-14 (`8c24dd4`, branch deleted); rollback assets `reachy-rollback/*:pre-035` + dump `~/reachy-backups/reachy-before-035-stop-20261014-094755.dump` (keep until accepted); new Phase 48 segment from 09:49:27 UTC (previous counters `{}` saved). Earlier status of this section:
-
-[Phase 54](docs/phase-54.md), [ADR 0038](docs/adr/0038-meeting-speaker-identification.md) (proposed), [verification](docs/verification/phase-54-speaker-identification-2026-10-14.md). Migration `035_meeting_speaker_identity` (+ `rollback-035.sql`; `SCHEMA_REVISION` is now 035, so a deploy = backup, then core + hub + coding-agent together, new Phase 48 boundary). Deterministic samples, owner-confirmed names/unknown/skipped, re-diarization supersede, stale summaries/minutes, web section and Android section. Debug APK for UAT: `~/reachy-releases/reachy-companion-0.19.0-speakers-debug.apk` (sha256 `d4483df6…2102`, not installed). Full Playwright: 131 passed, 9 failed, the same 9 fail on pristine `main` (stale notepad/planner specs; see the record). **Needs the owner:** UAT with a real diarized meeting in a browser and on a phone; decisions to merge, deploy and release an APK (all separate). Machine state: the disposable PG container and AVD processes were removed; the AVD `spk_test` definition remains in `~/.android/avd`. Production untouched.
-
-## Phase 53 multimodal meeting intelligence: DEPLOYED 2026-10-14 07:44 UTC and ENABLED later that day (`MEETING_MULTIMODAL_ENABLED=true`, only core recreated, `.env` backup `.env.bak-before-multimodal`; rollback = flag false + recreate core) ([record](docs/verification/phase-53-deployment-2026-10-14.md)): schema `034_meeting_multimodal`, core `e92463cc8334`, hub `a88e77f55dfc`, coding-agent `7d8773f1e006`, document-worker `25afdac34614` (all `p53-97fed63`); branch `feature/meeting-multimodal` merged to `main` (`94e7842`); rollback assets `reachy-rollback/*:pre-034` + dump `~/reachy-backups/reachy-before-034-stop-20261014-074007.dump` (keep until accepted); new Phase 48 segment from 07:44:07 UTC, previous counters not saved (permission denied; gap recorded). Owner UAT at the end
-
-[Phase 53](docs/phase-53.md), [ADR 0037](docs/adr/0037-multimodal-meeting-evidence-and-slide-alignment.md) (proposed), [verification](docs/verification/phase-53-multimodal-meetings-2026-10-14.md). New core package `meeting_multimodal/`, migration `034_meeting_multimodal` + `deploy/homelab/rollback-034.sql`, hub proxy `reachy_hub/meeting_multimodal.py`, web Documents tab + slide cards, `MEETING_MULTIMODAL_ENABLED` (Compose passes it, default false, needs the library). Phase 31 files, Phase 44/48 and 50F untouched; `DocumentService` only gained `deletion_listeners`. **Document types widened (owner request): the library and worker now accept every type MinerU was measured to parse (pptx/ppt/odp keep one page per slide; xlsx/xls/ods one page per sheet; doc/docx/rtf/odt/epub/html/csv/tsv one page; txt/md not parsed) via `shared/models/document_types.py`; the document-worker IMAGE must be rebuilt for production ([record](docs/verification/phase-53-document-types-2026-10-14.md)).** Android not changed. The older migration tests were updated for head 034. Two hub tests that already failed on `main` were fixed (shape-union ordering + stale `samples.json`; spoken-command expectation). **Machine state:** the disposable test container `mm-test-pg` (pgvector, port 55433) may still exist: `docker rm -f mm-test-pg`; the trial worker and volume were removed; scratch (transcript, deck, trial result) is in the session scratchpad only. **UAT rehearsal done 2026-10-14 ([record](docs/verification/phase-53-uat-rehearsal-2026-10-14.md)): 8 defects fixed (JSON tail, restart requeue, Low relied on, unchecked windows, partial banners, double click, progress/connection notes, card range); migration 034 amended (`unchecked` column; never applied anywhere); disposable stack removed.** **Next (owner decisions):** UAT in a browser with their own deck and meeting; then merge, backup, migrate (core+hub+coding-agent together, new Phase 48 boundary), later enable. Open: Android screens, a held-out accuracy check, behaviour while a live conversation shares the 7B.
-
-## Voice/typed command to start a meeting recording and short-recording handling (Android): owner-tested on a phone and merged to `main` 2026-10-14; version still 0.19.0
-
-[Phase 52](docs/phase-52.md), [verification](docs/verification/voice-meeting-recording-2026-10-14.md). Android only, no server change (an APK rebuild is enough; version still 0.19.0, bump at release). On-device recogniser plus a pure handoff state machine (`data/RecordingHandoff.kt`) wired in `AppViewModel`/`TalkScreen`; `SpeechInput` ignores stale callbacks and `SpeechOutput.speak` can report failure. Also: the command works typed in chat, and a recording stopped under 10 s is deleted, 10 to 30 s asks first (held in `held-meetings/`; `data/ShortRecording.kt`, `RecordingService`). JVM suite 146 passing. **Owner reported both features and short-recording handling tested and working on the phone** (the formal Phase 52 checklist was not itemised; the 30 s lock test and upload-content check are the owner's word). Not touched: upload path, Phase 31/50/48 files. APK `~/reachy-releases/reachy-companion-0.19.0-voice-recording-debug.apk` is not a versioned release; bump the version at the next release.
-
-## Home dashboard and extended daily briefing: core + hub DEPLOYED 2026-10-14 00:41 UTC (`4c0e2db`, no migration; [record](docs/verification/home-dashboard-deployment-2026-10-14.md)); APK 0.19.0 built; merged to `main` 2026-10-14 (`f6d659a`)
-
-[ADR 0036](docs/adr/0036-home-dashboard.md), [Phase 51](docs/phase-51.md), [verification](docs/verification/home-dashboard-2026-10-13.md). Core `GET /home` and `POST /home/brief` (read-only, privacy-filtered before counting, per-section status, optional checked local-model wording), Open-Meteo weather adapter (`WEATHER_*`, passed by Compose with defaults), hub owner-session proxy, web Home as landing (old status page is `#/system`), Android five destinations with Home default (0.19.0 in the tree). No schema, queue or scheduler; Phase 18 endpoints, Phase 31 extraction and frozen Phase 48 files untouched. **Deployed:** core `40bc6ba09ed9`, hub `567f16c77f0b`, rollback tags `reachy-rollback/*:pre-home` (keep until accepted), dump `~/reachy-backups/reachy-before-home-stop-20261014-084101.dump`; **Phase 48 counters of the previous segment were NOT saved (token read denied; accepted gap)**, new segment from 2026-10-14 00:41:19 UTC. APK `~/reachy-releases/reachy-companion-0.19.0-home-debug.apk`, sha256 `8f0257bb…c45a`. Live owner-session, weather and model paths unverified. Verified before deploy: core/hub tests, web vitest 328 and Playwright 62, Android JVM 126, emulator (Home, brief, tap-through, stale weather, offline copy, recording on Home, fold and narrow). Known failures unchanged (4). **Owner reported the Calendar and Home screens tested and accepted on the phone (2026-10-14; not itemised).** **Still open:** the browser check, the persona location for weather. **Finding:** on the emulator the bottom bar never shows even in 0.18.1 (`!imeOpen` guard in `Shell.kt`); confirm on the phone. Both this branch and the calendar branch beneath it are merged to `main` (`f6d659a`, `8612057`). Stage explicitly, never `git add -A`.
-
-## Calendar screens, immediate sync and four-destination navigation: core + hub DEPLOYED 2026-10-13 12:55 UTC (`69bb9f7`, no migration; [record](docs/verification/ics-calendar-sync-deployment-2026-10-13.md)); APK 0.18.0 built, NOT installed (gate 2 = the owner's physical phone); merged to `main` 2026-10-14
-
-core `0e962d744772`, hub `b8a5eab5220e`, rollback tags `reachy-rollback/*:pre-calsync`, new Phase 48 segment from 12:55:18 UTC. APK `~/reachy-releases/reachy-companion-0.18.0-calendar-debug.apk`, sha256 `c94fd166…8b18`. No feed URL is set yet in production. Branch merged to `main` 2026-10-14 (`8612057`). Owner accepted the Calendar screens on the phone 2026-10-14 (reported, not itemised). Checklist for the phone is in the deployment record; the release criterion (no obsolete notification after a move or cancel) was verified on the emulator.
-
-## ICS calendar feed, event classification and meeting reminders DEPLOYED 2026-10-13 05:10 UTC (branch `feature/ics-calendar-meeting-reminders` `7c681ea`, merged to `main` 2026-10-14; [deployment record](docs/verification/ics-calendar-deployment-2026-10-13.md); schema 033; no feed URL set yet; rollback tags `pre-033`; new Phase 48 segment from 05:10:57 UTC)
-
-[Verification record](docs/verification/ics-calendar-meeting-reminders-2026-10-13.md), [ADR 0035](docs/adr/0035-read-only-ics-calendar-and-meeting-reminders.md). Read-only HTTPS ICS feed (`icalendar` + `recurring-ical-events`), SSRF-safe downloader, URL in the encrypted secret store, deterministic classification (meeting, personal_appointment, leave_or_ooo, all_day, unknown_timed, busy_private) with owner override, phone reminders (default 5 min, local AlarmManager, reboot-safe, Start recording only prepares the recorder), web Settings card, assistant answers for today/meetings/leave. **Migration `033_calendar_feed` + `rollback-033.sql`; `SCHEMA_REVISION` is now `033_calendar_feed`**, so a deploy is backup, then core + hub + coding-agent together (new Phase 48 cohort boundary), on owner approval. Verified: unit/in-process, disposable PostgreSQL, real loopback download, Android JVM (98) and emulator (notification, Start recording, record, duplicate gate, change/cancel, reboot with the hub down). **Needs the owner:** a physical-phone check, the real calendar URL (Settings > Accounts; add your email addresses), a browser look at the card, then separately: deployment and an APK release. Never set `CALENDAR_FEED_ALLOW_LOCAL_FOR_TESTING` outside tests.
-
-## Overview vLLM card DEPLOYED 2026-10-13 (core + hub; owner browser check pending)
-
-[Deployment record](docs/verification/overview-vllm-card-deployment-2026-10-13.md). Commit `913c46e`; core `3f792ddf4d35` (was `df320da58e2f`), hub `bb72e8f83964` (was `ca1dd34bcede`); rollback tags `reachy-rollback/*:pre-vllm-card`, keep until accepted. New Overview card "Local model server (vLLM)": core `GET /llm/local-stats` reads vLLM `/health`, `/v1/models`, `/metrics`; verified live against the real vLLM. Core restart ended the Phase 48 segment that began 2026-10-12 14:27:44 UTC (counters `{}`, saved in `~/reachy-backups/phase48-boundary-vllm-card/`); new segment from this restart. Phase 31 trial flag unchanged.
-
-## Phase 31 trial ENABLED 2026-10-12 14:27 UTC (no analysis run yet): core `df320da58e2f` (`fa418f2`), `MEETING_ANALYSIS_ENABLED=true` in `deploy/homelab/.env` (backup `.env.bak-before-meeting-analysis`); [Step A](docs/verification/phase-31-trial-step-a-deployment-2026-10-12.md), [Step B](docs/verification/phase-31-trial-step-b-activation-2026-10-12.md); Phase 48 segment from 14:27:44 UTC, 8 `probe-031` turns to subtract in total; rollback: restore `.env` backup and recreate core. Prompt, validator, 7B frozen; do not start Deep Local jobs; only the owner starts an analysis. Earlier text: Phase 31 meeting analysis DEPLOYED 2026-10-12 14:06 UTC with the feature OFF (branch `phase-31-meeting-analysis` `d94293b`, not merged)
-
-**Deployed:** schema `032_meeting_analysis`, core `484b1495d55c`, hub `af30ec4c0a1e`, coding-agent `9c20355f64cc` (built from `e6b24d4`), `MEETING_ANALYSIS_ENABLED=false`; [deployment record](docs/verification/phase-31-deployment-2026-10-12.md). Downtime 5 min 22 s; no rollback; stop-time dump `~/reachy-backups/reachy-before-032-stop-20261012-220137.dump`; rollback images `reachy-rollback/*:pre-032` (keep until the owner accepts). **Phase 48:** new segment (cohort G) from 14:06:46 UTC; the previous segment's counters are in `~/reachy-backups/phase48-boundary-031/`; 5 `probe-031` turns to subtract. **Trial preparation done 2026-10-12 (not activated; [record](docs/verification/phase-31-trial-preparation-2026-10-12.md)):** retrieval narrowed so only an owner-confirmed action is indexed (`fa418f2`, needs a core image redeploy as Step A before the flag-only Step B), flag-off browser test passes, exact activation and rollback written. **Next, separate authorization:** enable the flag for the owner-supervised 30 to 60 minute trial ([protocol](docs/phase-31.md)), prompt/validator/7B frozen. The text below is the earlier local-build summary.
-
-(Earlier status: BUILT LOCALLY.)
-
-[Plan and architecture](docs/phase-31.md), [verification record](docs/verification/phase-31-meeting-analysis-2026-10-12.md). Owner-requested analysis of a finished meeting: decisions, open questions and action candidates, each with evidence (the transcript segment ids it spans, timestamps, first speaker label, a quote verified to be inside those segments); an action becomes a task only when the owner confirms it (idempotent, derived task id, existing receipt; the item row is the provenance); only an action the owner has confirmed is indexed for Phase 44 retrieval (a model-generated `meeting_minutes` entry, locator `analysis:<id>`); decisions, open questions and pending actions are never indexed (narrowed 2026-10-12 before enabling; the deployed core still has the earlier, wider rule until this change is deployed, but with the feature off nothing is indexed either way). It is a sibling of Phase 49 (shared code, own tables), not an extension of its tables. New: `companion_core/meeting_analysis/`, migration `032_meeting_analysis` + `deploy/homelab/rollback-032.sql` (`SCHEMA_REVISION` is now `032_meeting_analysis` in the working tree), hub proxy `reachy_hub/meeting_analysis.py`, `MeetingAdapter` analysis entries, web Analysis tab. Flag `MEETING_ANALYSIS_ENABLED`, default off (passed through by Compose). **A real recording found a defect the mocks could not** (STT fragments split sentences; fixed, see the record). Extraction-quality round done (prompt v2, `meeting_analysis/support.py`, weak findings collapsed; [record](docs/verification/phase-31-extraction-quality-2026-10-12.md)); 7B default view on the real recording is 3 supported of 3, but recall is low and the 7B's grounding weakness remains. Second-pass review done: `support` labels (`stated`/`uncertain`, a check not proof), `same_finding` identity, precise `source_changed`, undecided items refreshed on re-analysis, browser test `e2e/analysis.spec.ts` passing, python failure #4 confirmed baseline. Tests: 34 core in-process, 6 + 47 on a disposable PostgreSQL (removed), 15 hub, 7 web (286 total), ruff clean; full Python suite had only the known failures plus the unrelated, pre-existing `test_web_client` chat-sample failure. Real 7B on the real 24-minute recording (dev check): 17 to 19 items, every quote verified; usefulness not judged (private result files are in the session scratchpad, `0600`, not in the repo). Frozen Phase 48 files are unchanged. **Uncommitted: stage explicitly, never `git add -A`; `test/` stays out.** **Needs the owner:** review of the approach; browser check of the Analysis tab; a real 30 to 60 minute meeting reviewed by the owner (the acceptance criterion); then, each separately approved: backup, migration `032`, redeploy of core + hub + coding-agent (new Phase 48 cohort boundary), and enabling the flag. Not built: Android UI, automatic analysis on completion, concurrent STT/diarization (left until measurements demand it).
-
-## History isolation DEPLOYED and ACCEPTED 2026-10-12 (core and hub); worker recovery DEPLOYED; Android 0.17.0 ACCEPTED by the owner after physical-phone testing
-
-[Deployment record](docs/verification/phase-50-history-isolation-deployment-2026-10-12.md), [isolation and Android design/tests](docs/verification/phase-50-android-documents-and-history-isolation-2026-10-12.md), [worker recovery](docs/verification/phase-50-worker-recovery-2026-10-12.md). Commit `b3d3990`; core `92a81c773dd8` (was `7abec2fd5c32`), hub `d438f87dc181` (was `48bf81c3bb52`), rollback tags `pre-history-isolation`; no migration; document-worker, vLLM and coding-agent untouched. 33/33 live isolation checks passed (restoration after a real core restart, fresh chats, switching, deletion, sensitive, meetings, normal features); Phase 48 unchanged, 24 more web verification turns to subtract (53 in total), no candidates created. **Android 0.17.0 APK:** `~/reachy-releases/reachy-companion-0.17.0-debug.apk`, sha256 `5ee201ab…3253b`; accepted by the owner after testing uploads, inspector, Q&A, summaries, citations, attachment persistence and chat switching on their phone (2026-10-12). **Worker OOM recovery DEPLOYED 2026-10-12 08:31 UTC and ACCEPTED by the owner the same day** (worker image `2f601ff1df34`, commit `8dd36a5`; restart a dead MinerU server, restart one whose parse server MinerU gave up on, refuse parses while not ready; about 22 s without a ready worker, data and Phase 48 unchanged; the `pre-recovery` rollback image was released after acceptance; latest verified backups kept). **Rule:** preserve the running image by immutable ID before any rebuild and never rely on a mutable `latest` tag ([deployment](docs/deployment.md#upgrades-and-verification-cleanup)). **Minor maintenance item (not to be done now):** core's 300 s reconcile rewrites a ready document's `updated_at` each cycle even when nothing changed. No further MinerU recovery work unless real use shows another failure. The history-isolation deployment is accepted by the owner. Caution for probes: never phrase a probe "Remember …" (it created a real memory; cleaned up and recorded). Phase 50F and Proxmox stay deferred.
-
-## Chat document picker DEPLOYED 2026-10-12 (hub only; its history finding was fixed by history isolation, above; browser acceptance not separately recorded)
-
-[Deployment record](docs/verification/phase-50-chat-picker-deployment-2026-10-12.md), [design](docs/verification/phase-50-chat-document-picker-2026-10-12.md). Commit `b1fabcd`; hub `48bf81c3bb52` (was `7b8cf16b39ee`, kept as `reachy-rollback/reachy-hub:pre-chat-picker`); core, worker, vLLM, coding-agent untouched; no migration. Verified live over HTTP (auth/CSRF, attach, cited answer, follow-up, refresh, replace, remove, deleted/unprocessed/sensitive documents, meeting context). **Finding at the time (fixed by the history-isolation deployment above):** core's short-term history is per session, not per web chat, so a "new conversation" can still repeat or mis-tag content from earlier turns (the document store itself did not leak; pre-existing, a core change to fix). Phase 48 unchanged; 14 `web`-channel verification turns to subtract from 48B/48F windows (29 in total). Rollback assets kept until the owner accepts.
-
-## Extraction inspector DEPLOYED 2026-10-12 and ACCEPTED by the owner (their authenticated browser test passed)
-
-[Deployment record](docs/verification/phase-50-inspector-deployment-2026-10-12.md), [design and hardening](docs/verification/phase-50-extraction-inspector-2026-10-12.md). Commit `d316829`; core `7abec2fd5c32`, hub `7b8cf16b39ee`, document-worker `67931dbfc4e6`; no migration (schema `031_documents`); downtime 10 s. MinerU's HTML/CSS is allowlist-sanitised in the worker and shown only in a locked frame (real-browser hostile-markup check: nothing escaped). Verified live on the owner's existing document (read-only, unchanged) and probes (tables, figures, tiers to Advanced, ceilings, integrity). **Accepted 2026-10-12; no further inspector work unless real usage shows a problem.** Rollback image tags (`*:pre-inspector` and the Phase 50 `*:pre-031`) were released on the owner's instruction; the latest verified backups are kept: `~/reachy-backups/reachy-before-inspector-20261012-041721.dump` and `reachy-document-source-before-inspector-20261012-041721.tar` (older dumps, `.env.bak-before-phase50` and `rollback-031.sql` remain on disk, untouched). **Next, in the owner's order:** chat document picker (reusing the deployed library, Q&A, provenance and authorization), real-world testing with larger and more complex documents, Android Documents, 50F federation once Phase 48 permits, Proxmox last. Phase 48: new segment H from 04:30:07 UTC; 15 `probe-050` turns in total to subtract.
-
-## Phase 50 DEPLOYED 2026-10-12 (library ON; read this first)
-
-[Deployment record](docs/verification/phase-50-deployment-2026-10-12.md): schema `031_documents`; core `d53f23512f7f`, hub `6d98cd606d6e`, coding-agent `44b6fa237c0e`, document-worker `fbb760daf100` (CPU-only, hardened, internal network, telemetry off); `DOCUMENT_LIBRARY_ENABLED=true`. Commit `56cd1e1`. Deployed scope: 50A to 50E, 50G, 50H, 50D (Advanced), minimal 50J. **Not deployed or started: 50F federation, Android Documents, a chat document picker, Proxmox.** Verified live with the real worker, MinerU and the local model (lifecycle, ceilings, duplicate bytes across classes, escalation, integrity, three recovery scenarios, cleanup, no GPU use by the worker); anonymous browser smoke only. **Owner UAT passed 2026-10-12 ("tested and works fine"): the deployment is ACCEPTED.** The rollback assets listed below may now be released at the owner's discretion (not deleted by me). Rollback assets (keep until accepted): dump `~/reachy-backups/reachy-before-phase50-20261012-021442.dump`, `document-source` archive, images `reachy-rollback/*:pre-031`, `rollback-031.sql`, `.env.bak-before-phase50`. **Phase 48:** new segments F (02:19:51 to 02:20:24 UTC) and G (from 02:20:26, library on); 13 `probe-050` turns to subtract; frozen files hash-identical. Backups must now include the `reachy-homelab_document-source` volume with the database. One unexplained 106 MiB transient GPU process was seen once by a coarse sampler (not the worker; see the record). The earlier "Phase 50 (proposed, plan only)" text below is superseded.
-
-## Phase 50 (proposed 2026-10-11; plan only) — superseded by the section above
-
-[docs/phase-50.md](docs/phase-50.md) is the MinerU-backed Document Intelligence plan (stages 50A to 50J, gates G1 to G10), replacing the earlier build-it-ourselves multimodal design: MinerU is the selected backend, run self-hosted in an isolated container; Reachy keeps identity, sensitivity, scope and authorization and stores a `backend_ref`. [ADR 0034](docs/adr/0034-source-evidence-and-derived-artifacts.md) is ACCEPTED. **Owner said "start implementation of phase 50" (2026-10-11): 50A is started, spike step done** ([record](docs/verification/phase-50a-mineru-spike-2026-10-11.md): Flash-tier lifecycle verified against MinerU 4.0.12 in a disposable venv; six findings, notably shared-by-hash documents, global search with file paths, path-based library and a custom licence; nothing deployed). Owner decisions 2026-10-11 recorded in the spike record (licence accepted for private use, Basic+Standard approved, adapter-only integration, separate `reachy-source`/`reachy-mineru` storage, `document_id` is the policy unit). Basic and Standard verified on CPU; **the Standard VLM uses Vulkan and grabbed ~1.9 GiB of the production GPU unless `VK_LOADER_DRIVERS_DISABLE='*'` and `GGML_VK_VISIBLE_DEVICES=""` are set**. Model files cached in `~/.local/share/reachy-phase50a/models` (not in the repo). **2026-10-12: adapter, image and compose service BUILT and verified against the real engine** (record section "Adapter, image and compose service"; `services/document-worker`, profile `documents`, nothing deploys or calls it; GGUF accepted as is, licences closed). Open in 50A: image-file inputs, Proxmox worker deployment and limits, storage/backup. Uncommitted-work rule: stage explicitly. 50A CLOSED 2026-10-12 (PNG/JPEG passed). **50B BUILT locally 2026-10-12, committed, NOT deployed**: [record](docs/verification/phase-50b-document-library-2026-10-12.md) (document record, content-addressed source store, migration `031_documents` + `rollback-031.sql`, `SCHEMA_REVISION` now `031_documents` so a deploy = backup, then core+hub+coding-agent together, `/document-library/*` routes behind `DOCUMENT_LIBRARY_ENABLED`, worker client). Owner decision: Proxmox worker deployment waits for the first integrated gate after 50C. **50C BUILT locally 2026-10-12, committed, NOT deployed** ([record](docs/verification/phase-50c-integration-2026-10-12.md)): submit, sync loop, reprocess, read/locator/search by Reachy id with policy checks before every worker call; verified in-process and against the REAL MinerU worker image over HTTP (found and fixed: reprocess invalidated a sibling document's parse; the worker now invalidates one tier). **REVISED SEQUENCE (owner, 2026-10-12, [phase-50 section 0](docs/phase-50.md#0-revised-execution-sequence-owner-decision-2026-10-12)): Proxmox is deferred to the very end. The integrated gate now runs on the MS-01 with the worker as a Compose service (internal Docker network, CPU-only, hardened), and STOPS for the owner's explicit approval before any production backup-and-migrate or service recreation; local development of 50E to 50H, 50D and 50J continues meanwhile.** Sensitive documents are allowed on trusted owner surfaces via the hub-set ceiling header. **50H summaries, 50G provenance, 50D Advanced and a minimal 50J Documents page BUILT locally 2026-10-12, committed, not deployed** ([record](docs/verification/phase-50h-summaries-and-documents-ui-2026-10-12.md)): bounded local-model summaries, `document_outputs` folded into the undeployed migration 031, hub proxy that sets the sensitive ceiling for the owner session, web Documents page; verified against the real worker and the real local model (Q&A and summaries correct). The worker's in-document search was rewritten after the first real run (MinerU's own search cannot say which pages answer a question). **50F federation is next but stays isolated and OFF until the Phase 48 window permits; the MS-01 gate is still unapproved.** **50E (document-scoped conversation) BUILT locally, committed, not deployed** ([record](docs/verification/phase-50e-document-conversation-2026-10-12.md)); core joins the `documents` network in compose (takes effect only at the gate). The gate was rehearsed locally against the real worker (duplicate-bytes and restore scenarios passed; two defects fixed). Bundle: `deploy/document-worker/`; drill: `tools/document_gate_drill.py`; record: 50C record, "Gate status". Nothing deployed, no production change. **Earlier text:** stopped for owner review (checklist in the 50C record: Proxmox topology and cross-host route, `reachy-source`/`reachy-mineru` storage, backup + restore test, migration 031 deploy, CPU/RAM on Proxmox, telemetry, no GPU, end-to-end). No hub proxy/UI yet (50J). Sensitive documents are refused by the owner on-screen routes (work-private ceiling) until a trusted caller can say more: open decision for the hub step. **No Reachy code, migration, dependency or flag exists yet.** MinerU 4.0 integration assumptions (DoclibClient, stable page/block locators, the four tiers, `mineru-kit`, the `/v1/*` API) were checked by the owner against current upstream documentation; 50A must still run a local deployment spike to verify the exact APIs, persistence behaviour, resource requirements and version-specific contracts Reachy uses. Reachy's content-addressed source store is the system of record for originals; MinerU holds a derived copy and cache. 50F needs an explicit Phase 44-compatible retrieval adapter (authorization, sensitivity/scope, revalidation) before document retrieval can be enabled. Open at 50A start: physical storage and backup of Reachy's source store and of MinerU's data. Document retrieval stays off until Phase 48/49 acceptance no longer needs the frozen measurement window.
-
-## Android 0.16.0 (2026-10-11; committed `918af10`, APK installed and accepted on a physical phone 2026-10-12)
-
-Debug APK `clients/android/app/build/outputs/apk/debug/app-debug.apk` (gitignored; deliver by hand). Adds note folders (picker above the list, Folder… in the note menu, folder on each row) and the Phase 49 processing panel under a note (`ui/ProcessingSection.kt`, `data/NotepadProcessing.kt`, `ReachyApi` and `AppViewModel` calls): shown only when `GET /notepad-processing/config` says enabled, which production does (`NOTEPAD_PROCESSING_ENABLED=true` since the owner enabled it on 2026-10-11), so the panel will show on the phone. 63 JVM tests pass (mock hub for every route and body, parsing, hash). **Not exercised:** the UI on an emulator or phone (no AVD on this machine), the processing panel against a real hub. The web folder bug found by the owner (stacked folder fields, duplicate sibling keys) is fixed in `aa3887e` and **deployed** (hub-only, 2026-10-11 14:05 UTC, hub image `ab988bf52803`, rollback tag `reachy-rollback/reachy-hub:pre-webfix`; see the addendum in the [note-tags deployment record](docs/verification/note-tags-deployment-2026-10-11.md)). **Owner-confirmed 2026-10-12:** the web folder fix works in the browser and the Android 0.16.0 processing panel works on a physical phone (reported by the owner; no separate record).
-
-## Note folders / tags (2026-10-11; committed `db40560`, DEPLOYED 2026-10-11 13:53 UTC, migration 030 applied)
-
-[Deployment record](docs/verification/note-tags-deployment-2026-10-11.md): schema `030_note_tags`, core `60c024410173`, hub `a3da63b4f497` (now `ab988bf52803` after the web fix), coding-agent `197350dbcb4d`; rollback assets: dump `~/reachy-backups/reachy-before-notetags-20261011-214716.dump`, images `reachy-rollback/*:pre-030`, `rollback-030.sql` (keep until the owner accepts). New Phase 48 segment from 13:53:26 UTC. Owner browser check and the Android 0.16.0 phone check passed 2026-10-12. Open: no tagged write was exercised on production by a test. The paragraph below was written before the deploy.
-
-Owner request: tag notes and file them in a tree under All Notes (e.g. `All Notes/Projects/Project StarWars/Finance`), on web and Android. Built as one optional `tag` per note holding a slash path (rules in `shared/models/note_tag.py`, repeated in web `features/notes/folders.ts` and Android `NotesLogic.kt`; the same cases are tested in all three). The tree is derived from the tags; no folder table or endpoint. `PUT /notes/{id}` changes the tag only when the request names it. Migration `030_note_tags` (one nullable column) and `deploy/homelab/rollback-030.sql`; `SCHEMA_REVISION` is now `030_note_tags`, so a deploy means backup, then core, hub and coding-agent together, on owner approval. Verified: unit suites (core/hub 2,978 passed with the 3 known baseline failures; web 251; Android 57), plus migration, rollback chain 030 to 027 and a tag round trip on a disposable pgvector container (removed). **Not exercised:** the real UI in a browser or on an emulator/phone, the production database. Regenerated the Ossie golden file (new `tag` field) and added `tag` to `samples.json`. Not built: renaming or moving a whole folder, empty folders, several tags per note. Docs: operator guide Notes section, services reference, deployment. Stage explicitly (never `git add -A`); `clients/android/.kotlin/` is a build artefact.
-
-## Task-query routing correction (2026-10-11; committed `94d8ec7`; RESOLVED, owner-confirmed 2026-10-12)
-
-Owner confirmed 2026-10-12 that natural task queries such as "What's my task for next week?" respond normally; item closed. This was the owner's report, not a recorded production probe or deployment-image check.
-
-Defect: "whats my task for next week?" (also "what's my task…", singular "task") missed the Phase 49E inquiry (its patterns needed `what are my tasks` / `what's on my plate`), so the legacy matcher listed every open task with no window, or the turn reached the model. Fix, task querying only: `task_intent.normalise_question` / `time_scope` / `BARE_TASK_LIST` (contractions, curly apostrophes, singular/plural, "tasks for next week"); `notepad_processing/inquiry.py` uses them; the legacy branch in `app.py` passes the scope to `format_list_reply`. Tasks have **no due-date column** (schema `029`), so a window never filters tasks: the reply says they are undated and lists reminders (`due_at`) in the window in the persona timezone. Any other time wording (weekday, month, "last week", "in 3 days", "week after next") or two windows at once returns a fixed limitation and no list. A titled note reference still wins (`record_reference.parse` runs first). 15 new tests (exact wording included); core suite 2,022 passed, 2 known database failures; ruff clean.
-
-**Production check (read-only, 2026-10-11):** the core container (started 2026-10-11 10:08 UTC) has `NOTEPAD_PROCESSING_ENABLED=true`, `NOTEPAD_PROCESSING_CONCURRENCY=1`, and the Phase 48 flags (indexing, retrieval, shadow, candidates, capture) on. The earlier line "processing OFF, no task extracted" above (Phase 49 section) is superseded: tasks hold 2 open rows, both accepted Phase 49 proposals with provenance; 3 notes, 2 succeeded jobs, 2 accepted proposals, 0 reminders. Pre-existing and untouched: the legacy phrase "my tasks" also matches imperatives like "delete my tasks".
-
-## Daily-driver grounding fix (2026-10-11; local patch, NOT deployed)
-
-Named-record references (`record_reference.py`) now outrank generic task intent, read a named note/meeting verbatim, fail closed on interpretation, and a provenance backstop withholds invented "according to your notes" replies. Record, effective production flags and the stale-text resolution: [verification](docs/verification/record-reference-grounding-fix-2026-10-11.md). Committed in `14403a1` (the frozen `knowledge/routing.py` is NOT changed; the precedence guard is in `app.py`); production deploy pending review.
-
-## Phase 49 (DEPLOYED 2026-10-11 06:38 UTC with the feature OFF; commit `3e17ad3`)
-
-[Deployment record](docs/verification/phase-49-deployment-2026-10-11.md), [engineering record](docs/verification/phase-49-notepad-processing-2026-10-11.md), [docs/phase-49.md](docs/phase-49.md). Production: schema `029_notepad_processing`; core `cbf13868a429`, hub `eac6a24e3c6f`, coding-agent `3d48b066b1bf` (all `p49-3e17ad3`); **`NOTEPAD_PROCESSING_ENABLED=false`** (routes 404, hub routes owner-session-only); notepad tables empty; no production note processed (the note "My Task for next week" is untouched); no task or reminder created. Downtime about 3 min 55 s. **Rollback assets (keep until the owner accepts):** dump `~/reachy-backups/reachy-before-phase49-20261011-143534.dump` (sha256 prefix `964163c4`), images `reachy-rollback/{companion-core,reachy-hub,coding-agent-service,migrate}:pre-049`, `deploy/homelab/rollback-029.sql`. **Phase 48 boundary:** the 48B/48F windows have two cohorts, A (to 2026-10-11 06:34:54 UTC) and B (from 06:38:44); do not merge them; 20 deployment probes (channel `probe-049`) are in cohort B and are subtracted; the cohort A telemetry copy is `~/reachy-backups/phase48-boundary-049/`. The core now includes the grounding fix (`14403a1`). Phase 48 flags unchanged (indexing, retrieval, shadow, candidates and capture on; selective answering absent). **Next, each needing separate owner approval:** enable `NOTEPAD_PROCESSING_ENABLED` (a core recreate = another boundary for the 48 cohorts) and process a note; owner browser/phone smoke test. Known failures that are not Phase 49's, identical at the pre-49 commit: `test_knowledge_index` reconcile, `test_knowledge_retrieval` historical mode, `test_robot_voice` spoken command, and the mobile Overview overflow (7 px, LLM-utilization table).
-
-## Phase 48 (proposed 2026-10-10; read with the Phase 44 section below)
-
-[docs/phase-48.md](docs/phase-48.md) activates the disabled Phase 44 flags in stages 48A to 48H (no new features). **Production: `MEMORY_CANDIDATES_ENABLED=true` since 2026-10-10 13:43 UTC (review only, queue empty; [48A record](docs/verification/phase-48a-review-activation-2026-10-10.md)); capture and all knowledge flags are OFF.** Rollback: set the flag false in `deploy/homelab/.env` and `up -d --no-build --no-deps companion-core`. **Capture is ON in production since 2026-10-10 14:06 UTC** (core `d899e14`, image `15ce11cf8ad9`; typed Web/Android/owner-Telegram only; **robot voice ineligible** until Phase 32 via `ROBOT_VOICE_ELIGIBLE = False`). The supervised trial is open and **the capture code and rules are FROZEN** (hashes in the trial log; only a privacy/security/data-integrity defect justifies a change; do not tune; do not edit `memory/candidate_*.py`) with an end-of-window procedure in the same log (graceful `docker stop -t 30` of core to capture the in-memory summary before restart). **48D is DONE: `KNOWLEDGE_INDEXING_ENABLED=true` since 2026-10-10 14:35 UTC** (83 rows; off-host backup waived by the owner for this small activation only; [record](docs/verification/phase-48d-indexing-activation-2026-10-10.md)); retrieval, selective answering and shadow are OFF; **do not start 48E without the owner's approval**. Rollback: `KNOWLEDGE_INDEXING_ENABLED=false` and recreate core; `DELETE FROM knowledge_items` removes the index (rebuilt from sources on the next enabled start). **48B counters route DONE** (`GET /memory-candidates/capture-counters`, core only, service token; read it BEFORE every restart and sum the segments; the 14:06 to 14:34 tally is an accepted gap). **48E EXECUTED:** `KNOWLEDGE_RETRIEVAL_ENABLED=true` since 14:46 UTC (inert for replies; selective answering and shadow absent); retrieval validated, 0 leakage ([record](docs/verification/phase-48e-retrieval-validation-2026-10-10.md)); **48F WINDOW OPEN since 2026-10-10 14:56 UTC** (shadow on, `KNOWLEDGE_SELECTIVE_ANSWERING_ENABLED` NOT set and not passed by Compose; frozen: do not tune router, registry, retrieval, evidence rules or answerer; record, protocol and end-of-window procedure in [the 48F record](docs/verification/phase-48f-selective-shadow-2026-10-10.md); before reading telemetry gracefully stop core to flush; repeat the frozen offline probe `tools/knowledge_selective_probe.py` with the private cases in `~/.local/share/reachy-phase48e/`). Do not enable answering without approval. (Earlier text: 48F needed approval) (and the 2026-10-12 note that shadow was not to start until the groundedness revisit is superseded only by that approval). The production case file and results with text are in `~/.local/share/reachy-phase48e/` (0700, private; never commit). [trial log and tally](docs/verification/phase-48b-capture-trial-2026-10-10.md); report with `python3 tools/memory_candidate_trial_report.py --since 2026-10-10T14:06:00Z`. Rollback: capture flag false and recreate core; image rollback `reachy-rollback/companion-core:pre-48b`. 48A completes once the owner finishes the production Memory page smoke test (page loaded; confirm render). The robot is not a gate until the 48H regression. Duplicate/exclusion tallies are only in core's shutdown log line.
-
-## Phase 44 where things stand (2026-10-10; background only, the newer sections above take precedence)
-
-- **Production:** unchanged. Qwen2.5-7B is the default; the 44H unclaimed-action boundary is live; indexing, retrieval and shadow are OFF; Phase 44F is not implemented; nothing from the selective-answering work is wired, deployed or activated. No database migration is pending.
-- **Git:** `origin/main` is at `d813193` (the failed scorer-v3 validation). Three later commits are **local, not pushed**: absence semantics + integration plan, I-1/I-2, and the docs update. The **I-2 follow-up and the final development pass (both 2026-10-10) are in the working tree, NOT COMMITTED** (edited B-1 source `admission.py`, `states.py`, `contract.py`, `types.py`; new B-1 modules `registry.py`, `questions.py`, `transitions.py`; benchmark scripts and freezes; test files; docs; results): stage explicitly, never `git add -A`. Untracked `results/DONE-pilot` and `results/pilot-dev15.err` must stay out of every commit.
-- **Scorer research is STOPPED (owner, 2026-10-10).** Scorer v3 failed its formal validation (all six scored categories fail; leaked value coverage insufficient; single author-rater, NO INDEPENDENT HUMAN REVIEW): [result](docs/verification/phase-44-scorer-v3-formal-validation-2026-10-10.md). No v4, no tuning on the consumed set, v3 research-only and not a validated detector. All acceptance artifacts (`selective/acceptance/`, `ACCEPTANCE_FREEZE_v3.sha256`, hashes in `acceptance/ARTIFACTS.sha256`) are preserved and must not change. Do not launch another scorer or leaked-value campaign. Any claim of independently validated severe-error detection needs a second blinded reviewer and a reported inter-rater agreement; none is confirmed.
-- **Primary release candidate: deterministic, cited selective answering (Stage B-1)**, source in `services/companion-core/src/companion_core/knowledge/answerability_b1/` (imported by nothing in production). Rubric v5 absence semantics (scoped-search negative / authoritative absence / unknown) are in [Stage B design 3.1](docs/phase-44-selective-stage-b-design.md#31-absence-semantics-rubric-v5-2026-10-10-evidence-contract). I-1 (scoped-search renderer) and I-2 (offline dev15 evaluation) are done: [record](docs/verification/phase-44-selective-i1-i2-2026-10-10.md). **I-2 follow-up (owner-approved 2026-10-10, [record](docs/verification/phase-44-selective-i2-followup-2026-10-10.md)):** a typed entity registry (entities typed by form, so unseen names are known types; replies identical on 173/173 after renaming every name) and a gold-independent relation registry (held-out relations deliberately undefined), the model-name collision fixed by typing, and a deterministic question decomposer (labelled set of 164 questions, frozen before it existed: 79.3% exact at first contact, 93.9% after one tuning pass, 1 invented structure). Repeat of I-2 on dev15: gold-spec 282/307, question-text-only 280/307 (was 145/307). **Final development pass ([record](docs/verification/phase-44-selective-final-dev-pass-2026-10-10.md), owner-approved 2026-10-10):** rendering fixed (a record's relative time quoted, a decision reported as a decision, agreement, question order kept); explicit value transitions read from a closed grammar (configured / deployed / decided / planned / retired / rolled back; a decision is not a deployment, a retirement never resolves a conflict, record timestamps never order anything); `release_day`, `escalation_contact` and `approver` defined from their domain meaning (labelled question set written and hash-frozen before they existed: 96.2% first contact, 1 invented structure; the held-out-*relation* claim is now given up for this path) and the candidate frozen by hash (`selective/CANDIDATE_FREEZE_2026-10-10.sha256`, test-checked; dev16 not listed). dev15 now: gold-spec **296/307**, question-text-only **294/307**, **160/173 questions fully correct**, **13 false abstentions** (was 27: 7 deliberate decision-only withholdings, 4 no admitted record, 2 untyped), still 0 unsupported claims, 0 wrong values, 0 spurious structures, 0 citation or authorization errors. Manual review (**single reader, no independent review**): the previously inspected 51 items 31→50 clear, 9→2 incomplete, 15→7 minor implications; a new prospective sample of 28 plus 14 fresh probes found one real defect (a false "not in place" note on historical answers), fixed. **Not ready for formal acceptance; the dev15 dry-run pass of the ten criteria is not an acceptance pass** (criterion 4 sits exactly at its minimum 26/30; criterion 6 is 95.8% with all 8 misses true claims citing an unregistered record).
-- **Owner decisions of 2026-10-10 after the final development pass:** commit and push approved (commit `272572c` plus the documentation commit); decision-versus-default rule kept; relative time only as quoted source wording; criterion-6 manifest-discrepancy adjudication approved in the prospective form of the [preflight](docs/phase-44-dev16-preflight.md) (threshold unchanged, mechanical and adjudicated verdicts both kept); candidate freeze approved and not to be modified during acceptance; P0 baseline and blinded adjudication **preparation** approved, **the P0 run and the dev16 freeze/run are NOT approved yet** (stop for the owner's approval of the formal execution; reviewer B unnamed; no independence claim). No further B-1 feature work.
-- **Acceptance infrastructure (reviewed by the owner 2026-10-10; committed and pushed):** guarded one-shot dev16 runner (`selective/dev16_runner.py`), exact P0 configuration, locked criterion-6 rules (v2), PASS/FAIL/INDETERMINATE reporting (criteria 7–9 INDETERMINATE below 29 independent opportunities, bound verified), proposed freeze manifest and final checklist: [execution checklist](docs/phase-44-dev16-execution-checklist.md). Verified by a full synthetic end-to-end CLI rehearsal against a disposable mock service and git repository (rehearsals cannot use an acceptance authorisation or write to `dev16_acceptance_runs`). **Formal acceptance execution is NOT authorised: no production P0 inference, no dev16 freeze or run; candidate and evaluator unchanged; reviewer B unassigned, no independence or kappa claim.** Full suite 1,709 passed, 77 skipped, 5 failed (the five known failures, reproduced on a clean checkout of the parent commit). Still open: reviewer B, seed, freeze commit/date, and the separate decision to authorise formal execution.
-- **P0 execution-path smoke test (owner-approved 2026-10-10; development-only, UNCOMMITTED):** the real runner, real PostgreSQL retrieval (disposable container, removed), local 7B, 10 fixed consumed dev15 cases (seed 16044): completed 10/10 first time in 34 s, schema and access enforcement verified, duplicate-run guard held. **Finding: P0 retrieval is not reproducible across fresh database builds** (identical ordered evidence in 2 of 10 cases across two builds; 0 of 8 vs the dev15 pilot), probably equal-rank ties broken by build-assigned ids; P0 is one draw. Records: [smoke test](docs/verification/phase-44-dev16-p0-smoke-test-2026-10-10.md), [freeze recommendation](docs/phase-44-dev16-freeze-recommendation.md) (R1/R2/R3 corrections proposed, none applied). **dev16 not accessed, frozen or run; stopped for explicit owner approval.**
-- **P0 reproducibility correction (R1–R3, owner-approved 2026-10-10; verified without any model call):** hypothesis confirmed in isolation (equal-rank ties broken by build-time random store ids); `kbench/pg_env.py` now builds with stable record ids (opt-in, used by the P0 executor); two independent builds of the identical corpus give identical ordered evidence, manifests and prompt hashes in 865/865 question×profile comparisons, the random-id negative control fails as a blocker; P0 environment pinned and recorded (`p0_environment.json`: image digest required and docker-verified, PostgreSQL/pgvector versions, embedding revision and weights hash, `/v1/models` response); offline mode with fail-closed missing assets. The fix changes P0's tied-record order in 513/865 preparations vs an uncorrected build, so **one small development-only model smoke test is recommended (not run, needs approval)**. Records: [correction](docs/verification/phase-44-dev16-p0-reproducibility-correction-2026-10-10.md), [final freeze-readiness recommendation](docs/phase-44-dev16-freeze-recommendation.md). Seed 16044 approved; reviewer B unassigned; no independence claim; dev16 not accessed, frozen or run; formal execution not authorised.
-- **Corrected P0 smoke test (owner-approved 2026-10-10; PASSED; development-only; UNCOMMITTED):** one run of the corrected stable-id executor on the same ten hashed dev15 cases (disposable PostgreSQL, cached MiniLM offline, local 7B, temperature 0, seed 44): 10/10 rows in 25 s, schema, citations and access enforcement verified, environment record complete (image digest docker-verified, PostgreSQL 16.15, pgvector 0.8.6, embedding revision and weights hash, `/v1/models`), prepared evidence and prompt hashes identical to the deterministic re-preparation in 10/10 cases, downstream packets/evaluate without labels, duplicate run refused. Records: [smoke test](docs/verification/phase-44-dev16-p0-smoke-test-corrected-2026-10-10.md), [freeze command and recommendation](docs/phase-44-dev16-freeze-command.md) (seed 16044 recorded; freeze commit = the commit that adds this evidence on top of `9fa658f`, once approved). **Key risk for acceptance: criteria 7–9 need ≥29 independent facts each; dev15 offers 16/3/9, so they would be INDETERMINATE if dev16 resembles it.** Reviewer B unassigned, no independence claim. dev16/bank D not inspected, nothing frozen or run; stopped for owner approval.
-- **Direction change (owner, 2026-10-10): engineering first.** The dev16/scorer research track is **PAUSED** pending independent adjudication and adequate statistical coverage (nothing frozen, run or changed; no criterion altered). The [engineering completion plan](docs/phase-44-engineering-completion-plan.md) (PROPOSAL, nothing implemented) covers the smallest 44E integration of the frozen B-1 path behind `KNOWLEDGE_SELECTIVE_ANSWERING_ENABLED=false`, the minimum 44F build, integration-test acceptance checks and requirement status. Key finding: no retrieval-to-reply path exists in the conversation route yet. Waiting on owner decisions D1–D4.
-- **44E integration E1–E5 DONE locally (owner-approved 2026-10-10; UNCOMMITTED code; nothing deployed):** `knowledge/selective_answer.py` adapter + one `elif` in `conversation_turn` (after the 44H boundary), flags `KNOWLEDGE_RETRIEVAL_ENABLED` and `KNOWLEDGE_SELECTIVE_ANSWERING_ENABLED` (both default off, both needed, not passed by compose). Eligible knowledge questions get B-1's cited deterministic answer or one fixed failure reply with no model call; ineligible turns are unchanged. 34 new tests (incl. real PostgreSQL and the production lifespan); full core suite 1,824 passed with only the 5 known failures; ruff clean; candidate freeze intact. [Record, limitations and proposed deployment gate](docs/verification/phase-44e-selective-integration-2026-10-10.md). 44F (migration 028, UI) needs a separate decision. Plan docs committed and pushed as `e9ed243`.
-- **44E integration COMMITTED AND PUSHED (`b34d366`, owner-accepted 2026-10-10 as engineering-complete for the local milestone; not a deployment approval).** Next, proposal only: [deployment-readiness proposal](docs/phase-44-deployment-readiness-proposal.md) (safeguard for unrecognised personal-knowledge requests, zero-evidence wording, privacy-preserving selective-shadow design, production-indexing gate). Not implemented; flags stay off and out of Compose.
-- **44E selective shadow + zero-evidence qualification COMMITTED AND PUSHED (`26b16f0`, owner-approved 2026-10-10; nothing deployed; all flags default off and absent from Compose):** `knowledge/selective_shadow.py`, `classify()`/`assess()` and the approved zero-evidence wording in `selective_answer.py`, 30 added lines in `app.py`; flag `KNOWLEDGE_SELECTIVE_SHADOW_ENABLED` (default off, needs retrieval flag and a log path). Full core suite 1,844 passed with only the 5 known failures; ruff clean; freeze intact. [Record: tests, routing metrics, activation blockers](docs/verification/phase-44e-selective-shadow-2026-10-10.md); the proposal (`docs/phase-44-deployment-readiness-proposal.md`, committed `6170c2b`) now records the decisions D1 to D4 and derived indexing ceilings.
-- **Follow-ups after `26b16f0` (UNCOMMITTED docs and three extra tests):** [shadow telemetry policy](docs/phase-44e-selective-shadow-telemetry-policy.md) (retention, deletion, intervals, shutdown, low-frequency disclosure; finding: several flushes per hour give several rows, so row structure leaks ~5-minute timing, hardening proposed not built), failure-containment tests (a crashing `submit` cannot alter a reply; offers cost ~3 µs; longest event-loop gap while shadow jobs ran ≈ 30 ms), and the [44F implementation proposal](docs/phase-44f-implementation-proposal.md) (proposal only; migration 028, code and UI need a separate owner approval). The two-anchor rule is descriptive telemetry only; no refusal safeguard is active.
-- **PHASE 44 DEPLOYED, FEATURES DISABLED (2026-10-10, commit `ca21d72`; migration 028 APPLIED; core/hub/coding-agent recreated, ~65 s downtime; backup waived by the owner for disposable data; [record](docs/verification/phase-44-deployment-2026-10-10.md); rollback images `reachy-rollback/*:027-pre-phase44-028`, schema step `deploy/homelab/rollback-028.sql` first). Engineering complete, verified from a fresh clone:** [closure report](docs/phase-44-closure-report.md) (engineering complete / deferred / operationally blocked / research outstanding). Included: the telemetry hardening (one row per hour, suppressed report command), and **44F** (migration 028 + `rollback-028.sql`, `memory/candidate*.py`, hub proxy + `GET /privacy/state`, React `features/memory/`; flags `MEMORY_CANDIDATES_ENABLED` / `MEMORY_CANDIDATES_CAPTURE_ENABLED` default off and not in Compose; `SCHEMA_REVISION` now `028_memory_candidates`, so deploying it means redeploying core, hub and coding-agent together after a backup). [44F record](docs/verification/phase-44f-implementation-2026-10-10.md). Suites: core 1,911 passed (2 known baseline failures), hub 463 (1 known), web 209; ruff clean; freeze intact. All Phase 44 development is stopped; any migration or deployment needs separate owner approval, and the operational prerequisites in the closure report remain open.
-- **Approved scope now:** nothing further. The final development pass stopped at the updated results and the [acceptance-readiness report](docs/phase-44-dev16-deterministic-criteria-draft.md) (ten criteria unchanged, split into exact checks and human adjudication; a P0 plan with blinded adjudication tooling and a rehearsal packet, nothing labelled). I-3 stays deferred. dev16 is NOT frozen, run or opened (`cases_dev16.json` and bank D unread, unlisted, unhashed). **Waiting on the owner** ([decisions](docs/phase-44-dev16-deterministic-criteria-draft.md#8-decisions-requested)): keep the decision-versus-default rule (7 dev15 atoms, 2.3%) or not; how criterion 6 treats a true citation to an unregistered record; approve the P0 plan, one guarded P0 run, the second blind rater and the agreement rule; the candidate freeze list and when to freeze dev16; accept that a record's relative time is quoted but unanchored; commit and push.
-- **Known unrelated test failures:** core `test_knowledge_index` reconcile and `test_knowledge_retrieval` historical mode (both fail on a clean tree; they need a database), plus the `test_knowledge_index` **contention-tool tests, which are intermittent** (a different one fails per run, also on a clean HEAD worktree; they pass in isolation). Final companion-core run after the final development pass: **1,633 passed, 77 skipped, 2 failed** (the two database ones, as before; no new failure; the contention tests passed that time and failed in three earlier runs).
-- **Where the detail lives:** [integration plan](docs/phase-44-selective-answering-integration-plan.md) (approved with amendments), [Stage B design](docs/phase-44-selective-stage-b-design.md), [protocol](docs/phase-44-selective-answering-protocol.md), [rubric v5](services/companion-core/benchmarks/answer_quality/selective/adjudication_rubric_v5_addendum.md). The dated bullets in the Phase 44 section below are a chronological log; where they say "waiting on the owner" for an earlier step, the owner's decisions are recorded in the later bullets.
-
-## Current work
-
-### State at 2026-10-08
-
-- **Repository:** `main` at `c4cc7a8` (code) was pushed with a clean tree; the documentation sweep that follows it is committed on top. Earlier entries below the
-  next heading date from before this session and may describe state that has since been committed or deployed.
-- **Homelab (compose project `reachy-homelab`):** core, hub and coding-agent rebuilt and running after the last deploy; database at revision
-  `025_meeting_description`; vLLM (Qwen2.5-7B) healthy; the model manager is still the host process; nothing on the robot host changed.
-  Backups of every upgrade are in `~/reachy-backups` (names in the [evidence record](docs/verification/clients-meetings-alarms-2026-10-07.md)).
-- **Android:** version 0.15.1 (local, uncommitted: full-screen voice mode with an animated ball, `ui/VoiceModeScreen.kt`; JVM tests and the debug build pass, replies now stream from the new hub route `POST /speech/stream` (hub tests with a fake voice pass; real Piper and the real phone not exercised, hub not rebuilt or deployed, no schema change); **not yet seen on an emulator or phone**; no Info/Share/Change-voice buttons because the hub has no voice selection; an on-phone neural voice was considered and declined, the fallback is the phone's built-in voice). 0.14.0 is the last delivered APK (debug builds delivered by hand, not stored in the repo). Verified on an emulator only.
-
-### Delivered 2026-10-07 to 2026-10-08
-
-| What | Canonical documentation |
-|---|---|
-| Meeting alignment, silent-recording check and flags, recording playback with click-a-line and per-line edit, automatic titles and descriptions, longer summaries and minutes | [Phase 27](docs/phase-27.md), [41](docs/phase-41.md), [43](docs/phase-43.md), [services reference](docs/reference/services.md), [operator guide](docs/operator-guide.md) |
-| Alarm clock screens (repeat days, on/off) and the phone backup alarm (the app rings when Reachy is offline, finds nobody or fails) | [Phase 38](docs/phase-38.md), [ADR 0027 addenda](docs/adr/0027-alarms-and-presence-gated-delivery.md) |
-| Android: Alarms, Notes, Reminders (Apple-style), Pixel Fold layouts, Reachy-voice replies read once, chat history with delete | [Phase 40](docs/phase-40.md), [ADR 0029 addendum](docs/adr/0029-android-companion-app.md), [Android README](clients/android/README.md) |
-| Web: Apple-style Notes, To Do and Reminders, Alarms; delete saved chats; meeting speaker chips, player, line edit, title edit | [operator guide](docs/operator-guide.md) |
-| Hub routes: `/speech`, `/meetings/{id}/audio`, `PUT /meetings/{id}/title`, `POST /meetings/{id}/describe`, `PATCH /planner/alarms/{id}`, `DELETE /chats/{id}`; alarm creation by clock time; wake-phrase acknowledgement mid-conversation | [services reference](docs/reference/services.md), [operator guide](docs/operator-guide.md) |
-| Migrations 022 to 025 | [deployment](docs/deployment.md#schema-upgrades-and-credential-keys) |
-
-### Phase 44 (44A closed for development, 2026-10-08)
-
-[docs/phase-44.md](docs/phase-44.md) holds decisions D1 to D11, the 44A acceptance table and readiness assessment; evidence is in [the verification record](docs/verification/phase-44a-2026-10-08.md) and the [case-level review of the 44 holdout cases](docs/verification/phase-44a-holdout-case-review-2026-10-08.md). **Committed and pushed:** `bdc9efd` (44A), `0c146f0` (voice test fixture), `5d64d82` (runbook and closure), `cdf36b1` (rehearsal record, debt note). **Deployed to the homelab 2026-10-08 11:15 to 11:18 SGT** from the pinned code `5d64d82` (docs-only difference): database at `026_source_sensitivity`, core, hub and coding-agent rebuilt, 2 minutes of downtime, 13 smoke checks passed ([record](docs/verification/phase-44a-deployment-2026-10-08.md)). Backup `~/reachy-backups/reachy-before-phase44a-20261008-111605.dump`; rollback images `reachy-rollback/*:025` (and `*:025-container`); keep both until the owner accepts the deployment. The owner **accepted the software deployment** and confirmed the Telegram test reminder arrived. **Pending, not waived:** the robot acceptance (the Nano's embodiment service did not answer on its tailnet address during the deployment, so `nano-1` is offline and nothing was tested on it) and a browser pass through the web UI. A separate off-host copy of the keyring files (`.env.secret-keys.json`, `.env.coding-agent-secret-key.json`) is advisable; none is in `~/reachy-backups`. Phase 44B was approved to start on 2026-10-08.
-
-Benchmark: the frozen holdout was scored once per track (`44A-baseline` synthetic, `44A-production-embedding-baseline` real MiniLM); both recorded and logged, nothing tuned on them. The labels are **provisionally reviewed, pending the owner's independent inspection**, and the corpus is synthetic, so the figures are not evidence of real-world retrieval quality. Real MiniLM raised today's document recall (recall@5 0.16 to 0.25, intervals overlapping) while nearly tripling unauthorized exposed hits (11 to 30): relevance and access control must be judged separately.
-
-**Next decision (owner):** accept the software deployment (leaving the robot gate open), then start 44B. 44B needs approval, and retrieval-time source revalidation is non-negotiable for it; 44E must add action-boundary probes for every new path that puts retrieved text in a prompt. No UI control for classification exists yet.
-
-Tests (disposable `pgvector/pgvector:pg16` container, removed afterwards): final state `pytest services shared` 1567 passed, 22 skipped, 1 failed (hub `test_spoken_command_text_does_not_actuate_the_robot`, known, reproduces on the clean base). Embodiment `test_wake.py` is timing-flaky on every tree tried. `jsonschema` was installed into `.venv` with `uv pip`, not `uv sync`.
-
-### Phase 44B (built 2026-10-08, committed and pushed; migration 027 DEPLOYED 2026-10-08 13:20 with indexing off)
-
-The unified index, transactional outbox (filled by database triggers), indexing worker, reconciliation and retrieval-time revalidation: [phase record](docs/phase-44.md#11b-44b-unified-index-outbox-and-revalidation-2026-10-08), [verification](docs/verification/phase-44b-2026-10-08.md), and the [rehearsal and readiness record](docs/verification/phase-44b-rehearsal-2026-10-08.md). Commit `a6e1979` (message "Add comprehensive tests for migration 027 on Postgres", made from the shared checkout) contains all of 44B; `57713c6` is the security fix (failures never copy indexed content into the outbox or logs). **Deployed 2026-10-08 13:19 to 13:21 SGT** from pinned commit `5f7f3ab` (images built from a clean worktree): the live database is at `027_knowledge_index`, `KNOWLEDGE_INDEXING_ENABLED=false` (index empty, one outbox row for the existing meeting), about 77 s downtime, smoke tests passed ([record](docs/verification/phase-44b-deployment-2026-10-08.md)). Backup `~/reachy-backups/reachy-before-phase44b-20261008-131937.dump`; rollback images `reachy-rollback/*:026` and `*:026-container`; keep until the owner accepts. Robot acceptance, a browser pass and Telegram receipt of the smoke reminder are pending, and the keyring still has no off-host copy. Rehearsed on a restored production copy: migration 1.75 s, trigger overhead 0.2 to 0.4 ms per write, about 4.5 KB of index per part, rollback in 0.09 s (`deploy/homelab/rollback-027.sql`; run it before restoring an older dump), every real write path checked. `KNOWLEDGE_INDEXING_ENABLED` stays `false` in production until separately approved. The bounded contention test was **run 2026-10-08 13:34** (real worker, MiniLM, small.en Whisper, vLLM chat; no abort): chat +10%, speech p95 +28%, indexer 30.6 items/s beside the foreground vs 71.5 alone, recovered to baseline, no extra CPU or memory limit needed at 2 embed threads ([result](docs/verification/phase-44b-contention-result-2026-10-08.md)). A supervised indexing trial the same day built the whole backfill (80 rows for the one meeting; validated read-only against the source; revalidation controls verified on the live index) and was reverted early when it hit the Postgres connection limit: **the flag is `false`, the 80 index rows remain, retrieval is off** ([trial record](docs/verification/phase-44b-indexing-trial-2026-10-08.md)). Plans only, for review: [44E](docs/phase-44e-plan.md) and the 44F candidate/review memory capture in phase-44 section 3.1; no 44E or 44F code. Not done: 44D retrieval (local development authorised, benchmarked on the dev split only; the frozen holdout is not to be rerun until a candidate and decision point are approved), the context builder (44E).
-
-**Shared checkout:** another session is working in this tree (Android voice mode, hub `/speech/stream`) and its uncommitted edits sit beside mine; it once committed and pushed my uncommitted 44B work in one commit. Stage files explicitly (never `git add -A`) and commit promptly.
-
-### Phase 44D (local development authorised 2026-10-08; benchmarked on the development split only)
-
-Three retrieval configurations over the 44B index, each ending in retrieval-time revalidation under the trusted `AccessContext`: B1a lexical (PostgreSQL full-text), B1b lexical + pgvector fused by reciprocal rank, B1c with a cross-encoder rerank of the authorised survivors. Code in `companion_core/knowledge/search.py` and `retrieval.py`, benchmark adapters in `benchmarks/knowledge_retrieval/kbench/b1.py`; comparison in [the 44D record](docs/verification/phase-44d-dev-2026-10-08.md). On the dev split B1a reaches R@5 0.86 (MRR 0.66, 8 ms median), B1b R@5 0.79 (MRR 0.80, 28 ms, several times the CPU and memory), B1c is not justified; **no variant exposed anything unauthorised** (with the pre-filter off, revalidation alone dropped every proposed row). Nothing is wired into a route, the conversation or a flag. **Frozen holdout, decision point `44D-first-look` (owner decision D12, frozen at `0117c6e` before scoring, B1a and B1b scored once each, B1c excluded):** R@5 0.83 and 0.86 against 0.84 for keyword overlap over everything and 0.25 for today's lookups, **zero exposure** for both (the baselines expose 104 and 30), B1b's MRR +0.076 over B1a (interval just excluding zero), nothing else separating them; relationship is the weak category; [record](docs/verification/phase-44d-first-look-2026-10-08.md). The harness still refuses any other B1 holdout run until a new decision point is approved (`KBENCH_HOLDOUT_APPROVAL`). Answer quality is not evaluated. Not started: entities, extraction, production activation, the context builder (44E).
-
-### Phase 47 React web platform and Brain visualization (47A to 47D and 47F merged and deployed 2026-10-08)
-
-[docs/phase-47.md](docs/phase-47.md): owner decisions D1 to D6, the migration matrix, the 47A record (section 13) and the 47B record (section 14: parity table, deliberate differences, known limits). Evidence: [47A](docs/verification/phase-47a-2026-10-08.md), [47B](docs/verification/phase-47b-2026-10-08.md). The whole legacy operator UI is rebuilt in `clients/web` (React, TypeScript, Vite, HashRouter) and served by the hub at `/web/`; `/app/` is unchanged. The hub image builds it in a digest-pinned Node stage (no Node in the runtime). Not migrated: Call Reachy/telepresence (`clients/web-pwa`, decision D5); not built: memory and document screens (backend gaps in section 7a). The worktree `../reachy-work-buddy-47a` is the working area for Phase 47; run `npm ci` in `clients/web` after a fresh checkout. **47C** (3D Brain), **47D** (real records through a read-only owner-only Brain API in core and hub, plus a bloom toggle in Settings > Display) and **47F** (the legacy `/ui/` retired) are merged to main and **deployed to the homelab 2026-10-08** ([47D deployment](docs/verification/phase-47d-deployment-2026-10-08.md), [47F](docs/verification/phase-47f-2026-10-08.md)); the owner confirmed the React client works. `/web/` (Caddy `/hub/web/`) is the operator UI; `/ui/` redirects to it and the old files are the `/ui-legacy/` rollback; Google sign-in returns to `#/settings/accounts` (the live round trip is not yet exercised). Call Reachy stays at `/app/`. Rollback images `reachy-rollback/*:027-pre47d`, dump `~/reachy-backups/reachy-before-phase47d-20261008-220617.dump`. Pre-existing unrelated test failures: core `test_knowledge_index` reconcile, hub `test_robot_voice` spoken-command. **Next, needs approval:** 47E (relationships) depends on Phase 44C/44F decisions; deleting `clients/operator-ui` after a settled period; memory/document screens need backend work (phase-47 section 7a).
-
-### Phase 44, 2026-10-12 owner decisions and work (ONE production change: the 44H boundary in core; everything else local)
-
-**Deployed 2026-10-12: the 44H unclaimed-action boundary** (core only, commit `c77402e`, image `3c1d48c3c873`, reply "I can't perform that action here, so I haven't made any changes."); probes in text and voice verified, no mutation; rollback `reachy-rollback/companion-core:pre-44h-boundary`; indexing false, retrieval and shadow off, the coverage mechanism NOT wired. [Record](docs/verification/phase-44h-boundary-deployment-2026-10-12.md). The paragraphs below were written before it; where they say "local, not deployed" for the boundary, read the record.
-
-Pushed this session: `99b4857`, `198c24d`, `c2169c4` (`origin/main` at `c2169c4` before today's work). **Everything below is local and uncommitted until the owner approves a push.**
-
-- **Human review:** the submitted ratings are the frozen human assessment; the key is unsealed, so no substantive revision. The confirmation sheet may be used only for transcription or documented clerical errors. Originals and comparison artifacts preserved.
-- **Larger-model comparison: RUN and the 7B RESTORED (healthy).** Qwen3-14B-AWQ via the model manager on identical stored prompts, 285 per model on fresh sets dev6/dev7: no significant gain except on perfect evidence (unsupported claims 3 to 0), and the 14B fabricates far more with no records (12 vs 4 of 53). Replay defect found and corrected (empty-bundle frame). Swap cost 110 to 136 s load, 75 to 91 s restore. [Record](docs/verification/phase-44e-larger-model-comparison-2026-10-12.md). Recommendation: keep the 7B.
-- **Evidence sufficiency (the immediate quality priority):** `knowledge/sufficiency.py` (deterministic, 13 tests) with a coverage note and a bounded retry; on fresh dev6/dev7 the wrong-entity group went 5/9 to 9/9, no-evidence 8/9 to 9/9, overall 5 better 0 worse (p = 0.0625), no over-abstention added on the 113 older cases. The abstention gate added nothing and cost one answerable case: note only. Post-generation checks have 19% precision: measurement, never enforcement. Retry rarely helps on this corpus (6 of 30). Not wired into any route. [Record](docs/verification/phase-44e-evidence-sufficiency-2026-10-12.md).
-- **44H unclaimed-action boundary (DEPLOYED, see above; original local note):** `companion_core/action_boundary.py` plus one `elif` in `conversation_turn`: an action request no handler claims gets a fixed truthful reply and no model answer. The 7 former fall-through probes (text and voice) and the H-001 prompt now pass; the live-route xfails are gone; one existing test changed on purpose (`test_command_suggestion.py`). Residual: a success claim inside the answer to a non-request question. [Section](docs/phase-44h.md#unclaimed-action-boundary-deployed-2026-10-12).
-- **Shadow rollout: owner said NOT yet.** Do not deploy the shadow-capable core or start the B1a shadow window; revisit after the groundedness milestone. The readiness package stays intact.
-- **44F:** not implemented. Curiosity accepted with three categories (clarifying, personal, continuity); private-channel only, rate-capped, dismissible, never an action; flow curiosity, conversation, candidate, review, durable memory ([slice 8](docs/phase-44f-implementation-slices.md)).
-- **Machine notes:** the scratch Postgres `aq-scratch-pg` (port 55444, `--rm`, recreated by hand per the benchmark README) is STOPPED. New cases `cases_dev6.json` (32), `cases_dev7.json` (21); the consumed holdout is untouched (hash `e546188ccecfc9ce`). The model manager runs as a host process on 172.17.0.1:8090 (token in `deploy/homelab/.env.model-manager`).
-- **dev8 CONSUMED 2026-10-12 (run once; all 4 pre-registered criteria met, narrowly: 29 vs 28, one paired win, 0 losses; [record](docs/verification/phase-44e-dev8-acceptance-2026-10-12.md)):** do not develop against it. The mechanism qualifies only for a scoped measure-only integration-readiness review; nothing deployed. Original freeze note: 39 untouched cases + frozen mechanism/scorer/harness hashes + one-shot guard: [protocol](docs/phase-44e-dev8-acceptance-protocol.md).  Owner decisions recorded: keep the 7B (14B comparison complete, no larger-model change), coverage note/retry experimental and NOT wired, hard gate = negative experiment, post-checks measurement-only, retrospective claims ("Did you finish X?") left to receipt-backed 44H.
-- **2026-10-12 owner decisions after dev10 (pushed `dfb6be1`):** section-level experiment recorded as a NEGATIVE RESULT; lexical/question-side coverage stopped as an enforcement mechanism and not advanced to production (dev10: B1a 25/41 with 14 unsupported claims, oracle 40/41 with 0, all coverage variants identical to baseline). Evidence selection and answerability are the groundedness direction: [design only](docs/phase-44-groundedness-milestone-design.md) (C1 proposition-aware selection, C2 answerability state, C3 structured-store routing, C4 atomic claims, C5 claim-to-evidence validation; separable; no graph; no LLM verification pass; not implemented). Backup hardening: choices made (Synology NAS if a separate failure domain, encrypted artifacts, 7/4/6 retention, Telegram on failure only, monthly isolated restore test); [implementation plan](docs/postgres-backup-implementation-plan.md) written, NOT implemented, no credential created; the 44H dump and the `pre-44h-boundary` image are still kept. Production unchanged.
-- **Groundedness milestone, local (2026-10-12; nothing deployed):** corpus v2 + C1 to C5 built and ablated on dev11 ([record](docs/phase-44-groundedness-dev11-ablation-2026-10-12.md)): C1 filter + C2 note meets all five owner guardrails on dev11 (31 -> 35 fully correct, unsupported 8 -> 7, no regression); the C2 deterministic reply gives 0 unsupported claims but +6 false abstentions; C4/C5 do not help the 7B. **dev12 was run ONCE and is CONSUMED (2026-10-12)** ([acceptance record](docs/verification/phase-44-groundedness-dev12-acceptance-2026-10-12.md)): C1 filter + C2 note passes all five owner guardrails (fully correct 60 -> 70 of 91, unsupported claims 15 -> 9, false abstention 6 -> 4, 17 wins / 7 losses); the deterministic reply and C4+C5 fail; qualifies narrowly for a scoped integration-readiness review (conditions in the record); nothing deployed. Deferred: partial-reply policy (needs its own protocol); C4 optimisation paused; C5 kept. The scratch Postgres is stopped.
-- **Scoped readiness review of revised C1+C2 DONE (2026-10-12; nothing deployed):** [protocol](docs/phase-44-scoped-readiness-protocol.md), dev14 run ONCE and CONSUMED ([record](docs/verification/phase-44-scoped-readiness-dev14-2026-10-12.md)): candidate fully correct 67 -> 80 of 101, unsupported 11 -> 3, p = 0.015 vs baseline, not distinguishable from the old v1 (p = 0.65), but it FAILS guardrail 2 (+5 false abstentions) and guardrail 5 (14 citations to a nonexistent id: the quarantine block invited use). Relation recall on unseen paraphrases 84% vs 85% target (missed by one question); gold retention target met; full path timing measured (selection 2.5 ms median; end-to-end 954 vs 1,169 ms). Does not qualify as built. [Selective-answering protocol](docs/phase-44-selective-answering-protocol.md) written as a PROPOSAL (not implemented). Corpus v3 fixes the duplicate-gold defect (a semantic overlap storage-limit vs message-size was introduced: documented). dev12 stats unchanged.
-- **Owner decisions after dev14 (2026-10-12):** the revised C1 quarantine + C2 candidate is NOT approved for integration; quarantine/lexicon optimisation PAUSED; C1/C2 kept as experimental comparators. Design principle: discovery evidence is not admissible answer evidence (uncitable labelling is not a trust boundary). Selective-answering STAGE A only is approved (generator, gold annotations, deterministic sub-claim scorer, validation, protocols); no new response policy. **Stage A is built and committed locally (2026-10-12), awaiting owner review:** corpus v4 + registry, dev15 (173 design questions), dev16 (218 acceptance candidates, NOT frozen, no manifest), deterministic scorer (98.0% first-pass agreement on 64 adjudicated pilot outcomes, 100% after fixes = in-sample), 7B pilot taxonomy (B1a 91/173 fully correct, oracle 142/173), protocols in sections 12 and 13 of the protocol page, measurability gaps for criteria 4, 6, 7, 8, 9 and the decisions requested: [Stage A record](docs/verification/phase-44-selective-stage-a-2026-10-12.md). Nothing deployed; no response policy; do not freeze dev16 before the owner approves the amendments and a fresh scorer adjudication is done.
-- **Stage A pushed; owner decisions of 2026-10-12 applied (2026-10-13; local commit, not pushed; nothing deployed):** 14f7efd, bd050ec, 0045ca4 are on origin/main. dev16 is NOT approved for freezing or execution and has not been run. Fresh scorer adjudication on 142 new outcomes (rubric frozen by hash first; rater A = scorer's author, **second blinded reviewer still needed**; scorer NOT modified so the outcomes stay independent): rubric-applicable flag agreement 98.7%, **severe-event sensitivity 6/9 (misses unsupported conflict resolution and invented ordering, clause split at "but")**: [adjudication record](docs/verification/phase-44-selective-adjudication-2026-10-13.md). Evaluator updated to the owner's forms (one-sided bounds, criterion 4 NOT EVALUABLE until the owner fixes the lower bound, criterion 6 floor of 40, `fully_correct_v2`); date-semantics test added. **Stage B is DESIGN ONLY:** [mechanism design](docs/phase-44-selective-stage-b-design.md) (nothing implemented). Waiting on the owner: second reviewer, criterion 4 bound, citation granularity, scorer-revision path, Stage B-1 (deterministic parts only) or not, push of the new commit.
-- **Owner decisions of 2026-10-13 applied (local commit; not pushed; nothing deployed):** dcbf90b pushed. Scorer v1 + the 142-item adjudication SEALED (`SEAL_adjudication_1_scorer_v1.sha256`, tag `scorer-v1-sealed`). Scorer v2 prepared (`scorer_v2.py`, 4 mechanism fixes; fitted to the 142 items so those are development data, not validation) and a fresh severe-enriched validation protocol: [protocol](docs/phase-44-scorer-v2-validation-protocol.md) (not executed; needs owner go-ahead for 7B runs and a second reviewer, else "no independent human review"). Evaluator v3: criterion 4 = one-sided 95% lower bound >= 70% + paired non-regression, criterion 6/`fully_correct_v3` claim-level support; older scores keep their versions. **Stage B-1 implemented (deterministic only, no model, not wired anywhere):** `knowledge/answerability_b1/`, 68 tests, [record](docs/verification/phase-44-selective-stage-b1-2026-10-13.md); offline dev15 check: state = gold on 239/307, zero over-assertion, 38% of supported/historical atoms withheld (recall gaps documented). dev16 unfrozen, unrun, not used. Waiting on the owner: B-1 recall extensions or evaluate as is, reviewer availability, go-ahead for validation-set 7B runs, push of the new commits.
-- **B-1 recall extension and scorer-v2 validation DONE (2026-10-13; local commits, not pushed; nothing deployed; dev16 untouched):** 52e5f23 and 19350a0 pushed. [B-1 extension](docs/verification/phase-44-selective-stage-b1-extension-2026-10-13.md): authoritative structured attendee/speaker input, one-sentence same-paragraph subject context, reviewed-pattern free text, ambiguity applied at the smallest proposition; 105 tests; offline dev15 state = gold 282/307 (was 239), zero unsupported answered, zero wrong values; a speaker-path leak was caught and fixed; **open finding: the third-person text path admits "X owns the Ferry queue schedule" as the owner of the queue (not changed, owner decision).** [Scorer v2 validation](docs/verification/phase-44-scorer-v2-validation-2026-10-13.md) (val17 corpus, 2,180 real 7B replies, 415 rater-A labels, **NO INDEPENDENT HUMAN REVIEW**, 870 synthetic probes kept separate): **v2 fails the owner's gate** (natural any-severe sensitivity lower bound 85%, conflict resolution 0 of 3 detected; provoked 89.9%; synthetic 60 to 97%); do not use for enforcement; criteria 7 and 9 need human reading. Scratch Postgres container removed. Waiting on the owner: scorer revision on a new set, second reviewer, third-person-text-path tightening, rare-event data plan, push of the new commit.
-- **B-1 qualified-object tightening and scorer-v3 development DONE (2026-10-14; local commits, not pushed; nothing deployed; dev16 untouched):** c025b24 pushed. [B-1 tightening](docs/verification/phase-44-selective-b1-qualified-object-2026-10-14.md): "owns the Ferry queue schedule" no longer admits the queue's owner (structural rule, authoritative-equivalence override, 23 tests, 128 B-1 tests); no atom lost recall in dev15 or val17. [Scorer v3 development](docs/verification/phase-44-scorer-v3-development-2026-10-14.md): separate module (v1 sealed, v2 and its validation unchanged), structural-inversion detector; development probes A/B/C with semantic contrasts (first-run generalisation: B 46% detected, C 98% detected but 14% of contrasts flagged); all in-sample, NOT validation. [Validation readiness plan](docs/phase-44-scorer-v3-validation-readiness.md): 12 fresh worlds (seeds 19-30, hashes only), opportunities by category, sample sizes (29 events with no miss for a 90% bound), blinded protocol with a v4 rubric addendum. **No formal validation launched.** (Resolved 2026-10-15/10-10: 18 worlds, provoked population kept separate, the validation was run and failed; see the later bullets.)
-- **Scorer-v3 validation package PREPARED (2026-10-15; local commit, not pushed; nothing run; dev16 untouched):** dae4479 and ee27050 pushed. [Corpus v5 + bank E + coverage inventory](docs/verification/phase-44-corpus-v5-coverage-2026-10-15.md): four existence families x six evidence conditions (explicit absence, incomplete scope, source disagreement, other authorised source, unauthorised-only, silent), 18 NEW worlds (seeds 31-48, new manifest; the seed 19-30 manifest untouched), question bank E and a 1,458-probe matched-contrast bank E, both frozen by hash and never run through v3; opportunities: conflict 378, ordering 378 (same facts), absence/presence 342, leak 576; natural conflict resolution (and absence at 46 events) will be "naturalistic coverage insufficient". [Formal protocol](docs/phase-44-scorer-v3-formal-validation-protocol.md): separate natural / adversarial-robustness / synthetic populations, unchanged gate, pre-registered expansion rules, cluster-aware analysis (`cluster_analysis.py`), freeze list. **Acceptance run NOT executed at that time** (run and consumed 2026-10-10, next bullet). v3 is research-only.
-- **Scorer-v3 formal validation RUN, CONSUMED, STOPPED for owner review (2026-10-10; local commits, not pushed; nothing deployed; dev16 untouched):** d44563b froze the protocol, plan and hashes before any reply; 3,748 replies generated on a throwaway Postgres (container removed); 2,752 labelled blind by one rater, **NO INDEPENDENT HUMAN REVIEW** (the rater is the scorer's author); labels frozen, scorer v3 and probe bank E run once. **Result: all six scored categories FAIL** (natural: sensitivity lower bound 90.3 to 94.0%, precision lower bound 60.2 to 68.6%; provoked: sensitivity lower bound 68.0%, 84.0%, 88.4%, precision passes); leaked value is COVERAGE INSUFFICIENT in both populations (13 and 17 events of 576 opportunities; the 7B nearly always refuses). Cluster adjustment changed no verdict (provoked ordering 84.0 to 82.5%). No expansion triggered. Probe bank E: ordering and leaked value pass, conflict sensitivity 83.3% and absence precision 76.2% fail. [Result record](docs/verification/phase-44-scorer-v3-formal-validation-2026-10-10.md); artifact hashes in `acceptance/ARTIFACTS.sha256`. Per the owner's rule v3 is **not** to be tuned on these failures and re-run on this set. Waiting on the owner: stop at v3 or author v4 on fresh worlds, settle the record-level versus world-level absence convention in the rubric, whether a naturalistic leaked-value gate is worth a new design, a second reviewer, push of the new commits.
-- **Owner decisions 2026-10-10 after the failed validation:** d813193 pushed (origin/main). **Scorer-v3 cycle STOPPED**: no v4, no tuning on the consumed set, v3 research-only and not a validated detector; all acceptance records preserved. **Rubric v5 addendum** (absence semantics: scoped-search negative / authoritatively established absence / unknown; a scoped search never implies world-level nonexistence) in `selective/adjudication_rubric_v5_addendum.md` and [Stage B design 3.1](docs/phase-44-selective-stage-b-design.md#31-absence-semantics-rubric-v5-2026-10-10-evidence-contract); not retroactive. **Committed locally, not pushed:** the [B-1 integration and evaluation plan](docs/phase-44-selective-answering-integration-plan.md) (structured states, claim ledger, deterministic admissible-proposition checks, manual adjudication of the residual, typed-template slice first for the daily driver; dev16 untouched). Nothing implemented or deployed; 7B default, 44H active, 44F unimplemented, indexing/retrieval/shadow off. A second blinded reviewer with inter-rater agreement is required for any independent-validation claim. **Waiting on the owner:** review of the plan (decisions in its section 10).
-- **I-1 and I-2 DONE (2026-10-10; local commit, not pushed; no model, nothing wired, dev16 untouched):** plan approved with amendments (deterministic cited answering is the primary release candidate; I-3 model phrasing deferred). I-1: scoped-search negative in B-1 (`ScopedFinding`, authoritative vs attributed vs unknown absence, renderer, `compose`), 27 tests. I-2 on dev15 (gold-derived specs, circular): exact 267/307 (87.0%), **0 unsupported claims, 0 wrong values, 0 citation errors, 0 authorization failures**, 162/162 template purity, 40/178 false abstentions (model names in the known-subject list; 282/307 with a caller-side fix), partial answers 69/73; 64/64 on fresh existence worlds (seeds 101, 102). Decomposition from question text falls back on 124/173. **Recommendation: not ready for formal acceptance; keep as primary release candidate; needs a typed entity list, a gold-independent spec registry, a decomposer.** [Record](docs/verification/phase-44-selective-i1-i2-2026-10-10.md). Pre-existing unrelated failures: core `test_knowledge_index` reconcile, `test_knowledge_retrieval` historical mode. Waiting on the owner: review of the record and the next-step list (its section 5).
-- **Backup is to become its own, larger phase (owner, 2026-10-12; number not yet assigned) and is PAUSED**; Stage 0 findings (DS920+ / DSM 7.3 at 10.180.1.101; SFTP and rsync disabled; Tailscale node key expired; immutable snapshots unverified) are in the [plan](docs/postgres-backup-implementation-plan.md). The partial, untested draft was moved out of the repository (kept in the session scratchpad only) and is not part of any commit.
-- **Section-level coverage experiment DONE 2026-10-12 (local; nothing deployed; stopped as instructed):** dev10 (41 cases, frozen, consumed) shows baseline = existing coverage = section-level = descriptors, 41 ties, 14 unsupported claims in every arm (oracle 40/41 with 0): the passage unit adds nothing (100% verdict agreement) and the existing signal did not replicate on dev10. [Record](docs/verification/phase-44e-section-coverage-2026-10-12.md), [protocol](docs/phase-44e-section-coverage-protocol.md). Owner decision pending: advance (not supported) or stop lexical coverage signals and pick another groundedness approach. dev8 recorded as PASSED (marginal, 28 vs 29). The hardening proposal for backups is in [docs/postgres-backup-hardening-proposal.md](docs/postgres-backup-hardening-proposal.md) (proposal only).
-- **Next decisions (owner):** push approval; review the unclaimed-action boundary wording and deployment; whether to deploy the sufficiency note into a measured shadow-with-answers evaluation; the shadow rollout after the groundedness milestone.
-
-### Open, unverified or worth watching
-
-- **Phase 45 (database connections) is deployed and accepted at the infrastructure level (2026-10-08).** Core, hub and coding-agent each use one shared pool and reach PostgreSQL through PgBouncer 1.25.2 (transaction pooling; `.env` has `DB_HOST=pgbouncer`, `DB_PORT=6432`, `DB_PREPARE_THRESHOLD=off`); migrations and recovery stay direct. 8 backends at rest (was 98), 19 at 32 concurrent workers, 73 s downtime ([record](docs/verification/phase-45e-deployment-2026-10-08.md), [Phase 45](docs/phase-45.md)). Rollback: remove those three `.env` lines and `up -d --no-build --no-deps` the three applications; images `reachy-rollback/*:027-pre45`, dump `~/reachy-backups/reachy-before-phase45e-20261008-154338.dump`; do not roll back merely because the open items below are pending. Encrypted key backup at `USB Storage/reachy-keys/` (accepted by the owner as sufficient). **Telegram reminder delivery confirmed by the owner (2026-10-08, the Phase 45E smoke reminder arrived).** **Still open (not waived):** browser UI interaction, voice integration, physical robot testing. **Availability observation:** a PgBouncer restart interrupts for up to about 10 s (one call took 7.4 s; no errors, no loss or duplicates) because it waits for pooled clients on SIGTERM until Docker kills it; options to test are in the record. **Next, priority:** [Phase 46](docs/phase-46.md), least-privilege roles (plan only; no credential changes or deployment yet). **Separate plan:** persistent hub speech-model cache ([Phase 45 section 11](docs/phase-45.md#11-follow-up-persistent-speech-model-cache-for-the-hub-plan-not-started), not started). **Phase 44 resumed 2026-10-08 (evening):** the supervised indexing re-trial passed ([record](docs/verification/phase-44b-indexing-retrial-2026-10-08.md), pushed `8ded707`) for connection stability, PgBouncer behaviour, source consistency and access filtering under an idle indexer; the flag is `false`, and a **production indexing-workload gate stays open** (real MiniLM and the outbox claim/lease/complete path unexercised; never satisfy it by hand-inserting outbox rows). **Phase 44E local development is done up to its gate (2026-10-09, commits `ac74604`, `adb2f8d`, local until pushed):** `knowledge/context.py` (builder) and `benchmarks/answer_quality/` (68 cases, 6 conditions, scratch Postgres `aq-scratch-pg` on 127.0.0.1:55444 started by hand, stop it with `docker stop aq-scratch-pg`); results in [the development record](docs/verification/phase-44e-development-2026-10-09.md) (retrieval 21 to 22 of 25 full-correct vs 1 with none and 3 with Phase 43; fabrication 0 of 10 vs 3; B1a and B1b not separable; zero leaks; one planted-instruction case swayed the 7B's reasoning). **The single `44E-first-look` holdout scoring was run and is spent (2026-10-09):** [report](docs/verification/phase-44e-first-look-2026-10-09.md) (full-correct of 25: none 1, Phase 43 4, B1a 18, B1b 19, oracle 23; B1a vs B1b not separable, p = 1.0; zero leaks into any prompt, no action taken on injected text; losses are generic status/relationship retrieval and attached-meeting questions, where Phase 43 wins). Recommendation: B1a may go to measure-only shadow mode if the owner wants it (a cost tie-break, not a quality finding); B1b not; neither activated. **Follow-up development 2026-10-09 (local, not deployed):** B1a provisionally selected for future measure-only shadow (tie-break only); built deterministic status routing (`knowledge/routing.py`, tasks/reminders from the stores; Phase 43 attached-meeting path kept), a disabled-by-default measure-only shadow (`knowledge/shadow.py`, `KNOWLEDGE_SHADOW_ENABLED`, numbers-only telemetry, bounded, reversible), scorer v2 with first-look annotations (originals untouched), a 21-answer blind review package (`benchmarks/answer_quality/blind_review/phase-44e`, **the owner's review is pending; do not open the KEY file first**), 12 live-route security regression tests, and 22 new dev cases; results in [the follow-up record](docs/verification/phase-44e-followup-2026-10-09.md) (routing 11 to 12 of 14 vs 5 full-correct, p = 0.016; stricter header and conflict hint gave no net gain; unsupported inference still unsolved; shadow job p50 7 ms, p95 17 ms). A scratch Postgres `aq-scratch-pg` may be stopped. **2026-10-10 (local, shadow NOT approved for production):** qualification (`knowledge/qualify.py`), aggregate-only telemetry with a reconciled funnel and 30-day retention (`knowledge/shadow_telemetry.py`), shadow lifecycle (`start`/`stop`), a constant restricted-channel reply, 7 production-lifespan integration tests on a disposable Postgres (`DATABASE_MIGRATION_TEST_URL`), a real-model live-route security run, a claim-verification experiment (no usable gate; conflict warning promising), and a sealed blind-review workflow whose key is gitignored (only `KEY.sha256` is committed) — record: [shadow readiness](docs/verification/phase-44e-shadow-readiness-2026-10-10.md). **The pushed commit is `22d408d`** (the two approved commits rebuilt as one to keep the key out of git). **2026-10-10 (later):** the supervised production indexing-workload trial was APPROVED and is PREPARED, NOT RUN: [plan and runbook](docs/verification/phase-44b-indexing-workload-trial-plan-2026-10-10.md), tooling `tools/knowledge_indexing_trial.py` (read-only preflight, monitor with abort gates, 4 Hz outbox watch, verify) and `tools/knowledge_index_validate.py`; it needs the owner present and a pre-trial dump (`reachy-before-phase44e-indexing-trial-*.dump`, not yet taken). The blind-review answer key now lives OUTSIDE the repository at `~/.local/share/reachy-blind-review/phase-44e/` (0600; `KEY.sha256` committed as a seal). Shadow telemetry retention default is 30 days (owner). Local conflict-omission detector findings: [record](docs/verification/phase-44e-conflict-detector-2026-10-10.md) (v2 precision 1.00 recall 0.43; not a gate). [Phase 44H](docs/phase-44h.md) holds regression case H-001 (false robot-standby claim) and the receipt-boundary investigation (no reply-path code). **Receipt-boundary architecture proposal (for review, no code):** [phase-44h-receipt-boundary-proposal.md](docs/phase-44h-receipt-boundary-proposal.md). `da07f33` is pushed. **The supervised production indexing-workload trial was RUN on 2026-10-09 and PASSED** ([record](docs/verification/phase-44b-indexing-workload-trial-2026-10-09.md)): one genuine owner note (written through the Android client; the trigger itself verified indirectly from timestamps) was claimed, leased (13.2 s including the cold MiniLM load, +516 MB), embedded and indexed; index 81 rows consistent with the stores; no abort condition from the work; flag restored to `false` and recovery clean. **Accepted by the owner 2026-10-10; the basic Phase 44B production indexing-workload gate is CLOSED** (no permission for continuous indexing, retrieval or shadow). The production index now holds the owner's note row (81 rows, to be preserved); retrieval, shadow and permanent indexing remain off. Pre-trial dump: `~/reachy-backups/reachy-before-phase44e-indexing-trial-20261009-1015.dump`. **Pending outbox (account for it at the next authorised indexing activation):** a second genuine owner note produced one outbox row (`note`, generation 30 from repeated edits, 0 attempts, not failed, enqueued 2026-10-09 02:42:52 UTC) while indexing is off; the worker will claim it when indexing is next enabled. Do not insert, delete or edit outbox rows by hand. Follow-ups: offline model-cache [proposal](docs/phase-44-model-cache-proposal.md) (design only; vector equivalence of the pinned revision to the 81 stored vectors verified read-only, max difference 1.2e-7, so no re-embed or relabel is needed to pin it; nothing changed in production); monitor-tool regression tests added (`test_knowledge_indexing_trial_tool.py`); the **21-answer blind review is DONE as submitted (file named `reachy_phase44e_ai_blind_ratings.csv`: apparently an AI rater, single rater; ask the owner whether to count it as their review)**: agreement with the scorer 9 of 21; 11 of 21 answers judged to contain unsupported claims (scorer flagged 3); no fabricated success claims; no injection followed, 4 repeat planted text; B1a/B1b not separable ([report](docs/verification/phase-44e-blind-review-2026-10-10.md)); the answer key is now unsealed (still outside the repo), and the generator now names the attached meeting (R02 gap) (`benchmarks/answer_quality/blind_review/phase-44e/`, instructions in its README; the key is sealed outside the repository, verified by `test_blind_review_workflow.py`). Conflict detector v2/v3: kept as experiments, further implementation deferred. **2026-10-11 controlled-use milestone (local, nothing deployed):** owner broadly agrees with the blind assessment; rating-finalization helper (`blind_finalize.py`, owner confirms/overrides without key disclosure; the key was already unsealed so the review is informed, not blind); [failure taxonomy](docs/verification/phase-44e-failure-taxonomy-2026-10-11.md); [answer-quality improvements](docs/verification/phase-44e-answer-quality-2026-10-11.md) (person routing: person cases 1/6 -> 6/6 on new dev5 cases, B1a 12/18 -> 17/18 = oracle; deterministic checks: recency/subject-property/source-label useful but thin, actor_swapped and value_in_cited_item to drop; larger-model comparison NOT run, needs an owner-approved model swap, replay harness validated: 57/60 identical on the 7B); [44H review](docs/phase-44h-receipt-boundary-proposal.md) + live-route matrix `test_phase44h_live_route.py` (stores/hub/drafts never change; 7 of 12 probe requests reach the model branch where an unbacked success claim is released; first fix proposed: fixed reply for unclaimed action requests); [shadow readiness assessment](docs/phase-44e-shadow-readiness-assessment.md) (ready for an observed measure-only window via two approvals: deploy core with shadow off, then enable; production core image predates the shadow code); [44F implementation slices](docs/phase-44f-implementation-slices.md) (not authorized, not started; 'curiosity' definition is my proposal). **Remaining 44E gates:** owner blind review, real-world qualification precision check, 44H security review (receipt-boundary proposal pending architectural review), separate authorization for any shadow deployment; the production indexing-workload gate is CLOSED by the trial above. 44F not started. 44F selection mechanisms are proposed in [phase-44 section 3.1a](docs/phase-44.md#31a-44f-candidate-selection-mechanisms-proposed-2026-10-08-plan-only-evaluated-before-any-use) (plan only).
-- **Reminder delivery lateness (reliability issue, recorded 2026-10-08, not fixed).** A planner reminder reaches Telegram up to about 60 s after it is due, and after a hub restart the first check comes a minute after start. `reminder_notify_loop` in `reachy_hub/app.py` sleeps first, then polls core every `coding_agent_notify_interval` (60 s). The smoke reminder in the 027 deployment was claimed 57 s late for exactly that reason (hub started :41, reminder due :47, next poll :41). Reminders due during a hub restart are still claimed and delivered late, with no staleness cutoff. Alarms are polled every 5 s and are not affected. Not a regression and not part of Phase 44. A fix would be its own small change (a shorter reminder poll, or a poll right at start); it was deliberately not started here.
-- **Alarm delivery gap (technical debt, found 2026-10-08, deliberately not fixed in 44A).** `claim_due_alarms` marks an alarm fired before the hub delivers it, and there is no staleness cutoff. An alarm claimed but not yet delivered when the hub stops is lost, and after a long outage old alarms ring at restart. Deployments avoid it by timing (nothing due within 45 minutes, core stopped before hub); a real fix is a separate change to the delivery semantics (claim with a lease, then confirm; skip or label alarms that are hours late).
-
-- **Spoken replies on the owner's phone.** After app 0.12.1 the owner reported replies not playing at all. It could not be reproduced (emulator: reply detected, voice fetched, playback started;
-  production Piper works). Version 0.12.2 hardened playback (audio focus, fallback to the phone voice, recogniser released). Ask the owner whether it was the typed or mic path, whether any voice is heard, and the media volume.
-- **Silent recordings.** The one real recording is two thirds silent; the old build without a foreground service is the likely cause but this is unconfirmed on the current build. Test: record five minutes with the screen locked and look for the yellow warning.
-- **Phone alarm** has only run on an emulator. Needs a physical test with a real "robot unavailable" and "nobody detected" outcome and Doze. Alarms set elsewhere reach the phone within about 15 minutes.
-- **Alarm time zone:** the server reads clock times in the assistant's (persona) time zone; the screens show the device's. Keep them the same.
-- **Summaries and minutes** were lengthened but not rerun on the real 7B; a deep-tier run on the GPU is unverified. Reminders cannot be reopened (no hub route).
-- **Not exercised against production:** the web UI (no owner session in development) and the app on a physical phone or Fold.
-- **Failing before this work, still failing:** hub `test_spoken_command_text_does_not_actuate_the_robot`, the browser fixture "Hey Reachy" label test (`voice.test.cjs`); embodiment `test_wake.py` is timing-flaky.
-
-### Cautions for the next session
-
-- Run `ruff check .` from the repository root (running it inside a service directory, or with a relative `..` path from one, reformats unrelated files: it rewrote the imports of 194 files once on 2026-10-09; they were restored with `git restore` after checking the diffs were import order only).
-- Never print `docker compose config`: it expands secrets (a token was rotated once for this). Deploy with `SEARXNG_SECRET_KEY` read from `deploy/homelab/.env.searxng-secret` and the sequence in
-  [deployment](docs/deployment.md): dump, stop core, hub and coding-agent, build `migrate` with them, run `migrate ... upgrade --adopt-legacy`, `up -d`. The owner approves each deploy and each commit.
-- Postgres tests need a disposable pgvector container and `DATABASE_MIGRATION_TEST_URL`; browser tests need Playwright on `NODE_PATH`. Emulator checks use a throwaway in-process hub, never production. None of these helper scripts are in the repository.
-- Do not use `git checkout -- <file>` to drop debug code: it reverted an uncommitted fix once (re-applied).
-- Core now depends on PyAV (`av`, decodes recordings for the silence check); `uv.lock` was updated.
-
-### Earlier entries (before 2026-10-07)
-
-**Phase 38 alarm clock + presence-gated delivery (started 2026-10-05, uncommitted):** docs done ([phase-38](docs/phase-38.md), [ADR 0027](docs/adr/0027-alarms-and-presence-gated-delivery.md), roadmap row). 38.1 core alarm domain implemented: `Alarm` model, in-memory/Postgres methods on `PlannerStore`, migration `015_alarms`, `SCHEMA_REVISION` bumped, routes `/alarms*` in core, tests in `test_planner.py` (core suite green, ruff clean). 38.2 occupancy sweep implemented and tested against simulation (embodiment `/sweep*`, `MotionController.sweep_to/sweep_home`, hub `occupancy.py` with MediaPipe face detector, hub Dockerfile pins the model, `PRESENCE_SWEEP_ENABLED` default off; real-model test via `FACE_MODEL_PATH`, optional `FACE_PHOTO`; never run on the real robot, face detection untested on real camera frames). 38.3 implemented: core stations (table in migration 015), hub `alarm_audio.py` (TuneIn search/resolve, SSRF guard with residual DNS-rebind risk noted in the module, PyAV chunked decode, chime, chunk playback), embodiment `/audio/stop`; live TuneIn+decode verified with SWR3, no robot playback. 38.4 implemented: hub `alarm_delivery.py` + `alarm_loop`/`alarm_tick` in `app.py` (order privacy=no wake arm, robot unavailable, DND/meeting, sweep; Telegram fallback with reason; outcome recorded; linked-reminder dedupe), `AlarmDeliverer.stop()` exists but no route yet; tests `test_alarm_delivery.py`, `test_alarm_loop.py`. 38.5 implemented: core `alarm_intent.py`, `/alarm` and `/alarms` commands (shared/protocols/commands.py, Telegram menu), weekday parsing in `reminder_time.split_reminder_when`, in-memory session-scoped reminder->alarm offer in `process_conversation_turn`; tests in `test_planner.py`. Not yet: 38.4 live check (sweep sentence kept for context: owner asked 2026-10-05 for a room sweep rather than one forward frame; sweep idea: owner asked 2026-10-05 for a room sweep rather than one forward frame, recorded in ADR 0027 and gated by owner approval for unattended production motion), UI tab and stop route are done (38.6, `alarms.test.cjs`; fixture whitelists in the other operator-ui tests were stale and were fixed; `voice.test.cjs` 'Hey Reachy' toggle label assertion fails and is unrelated). Migration 015 and the core/hub/coding-agent images were deployed 2026-10-05 (backup taken, schema verified, Postgres durability test passes); Live 2026-10-05: Telegram alarm, sweep (embodiment now on by default, head yaw follows body), station matching, 5 s hub alarm poll interval, and an incremental PyAV stream decoder in `alarm_audio.py` (uncommitted; hub redeploy needed). Still owed (38.7): re-run in-room `/alarm class 95 fm in 2 minutes` for full-length playback plus Stop, and an empty-room Telegram fallback. Unattended per AGENTS.md alarm exception. Per-alarm volume (migration `016_alarm_volume`, Volume slider in the Alarms tab, gain applied in the hub) is implemented and tested but uncommitted and undeployed: needs the backup/migrate/rebuild procedure for core, migrate and hub. Reply tone preset (migration `017_persona_tone`, Tone select on the persona card, one style-only system message in core) is implemented and tested, uncommitted and undeployed; deploy together with 016. Phase 39 (receipts + persona templates, uncommitted; 016-018 deployed to the homelab 2026-10-06): [phase-39](docs/phase-39.md), [ADR 0028](docs/adr/0028-persona-responses-and-action-receipts.md); stages 39.0-39.2, 39.4-39.6 done (migration 018, core `/receipts*`, `persona/render.py`, hub `receipt_notify_loop`, Activity tab); 39.3 verbalizer, 39.7, 39.8 not started, 39.9 acceptance pending; deploy together with 016/017. Phase 40 Android app (uncommitted): [phase-40](docs/phase-40.md), [ADR 0029](docs/adr/0029-android-companion-app.md), `clients/android` builds and its 7 JVM tests pass; sign-in, chat-created task, To-do/Notes/Meetings tabs and record+upload verified in an emulator against a throwaway in-memory hub; mic/TTS and a real phone not verified. SDK and JDK were installed under ~/Android (not on PATH). Also fixed this session: the hub operator proxy dropped the alarm `volume` field (`PlannerAlarmBody`); the fix is uncommitted and the hub needs a rebuild to take effect. Phase 41 meeting speaker names + LLM correction suggestions (uncommitted; migration 019, core and hub deployed 2026-10-07, which also deployed the alarm volume proxy fix): [phase-41](docs/phase-41.md), [ADR 0030](docs/adr/0030-meeting-speaker-names-and-reviewed-corrections.md); core migration 019, routes, hub proxies, Android UI done and tested (core, hub, Postgres, 16 Android JVM tests, emulator run with a stubbed model); needs migrate/core/hub rebuild; suggestion quality on a real recording unjudged; web panel does not show names yet. NOTE: running `ruff --fix` from services/companion-core ignores the repo config and reorders imports in every test file; run ruff from the repo root. Phase 41 key terms (migration 020, deployed 2026-10-07 with core and hub; app 0.3.0): global glossary + per-meeting terms + attendees as vocabulary, candidate generation then a model that only chooses; benchmark in services/companion-core/benchmarks/meeting_corrections and docs/verification/meeting-corrections-benchmark-2026-10-07.md. Production vLLM was stopped for model tests and restored with scripts/start-vllm.sh (Qwen2.5-7B, unchanged). On the real recording the production 7B still misses germanite->Gemini (Qwen3-14B-AWQ and batched Gemma-4-12B find it); changing the production local model is undecided. Phase 42 three-tier model escalation (docs + ADR 0031 proposed; Phase 42A swap benchmark measured, nothing built): 7B to 14B to 7B round trip is about 3.5 min, 14B ready in ~115 s, 7B restore ~81 s; manager prototype (42B) is next and not started. Phase 42B/42C (uncommitted): model manager `services/model-manager` (host process, stable `reachy-local` identity, retry-then-fallback recovery, 54 tests, acceptance on real hardware in docs/phase-42.md) and Deep local review in core/hub/Android/web (Reachy unavailable warning, banner, app notification, Telegram notices via receipts). Production vLLM now serves `reachy-local` and core local model = reachy-local. The manager is started by hand (`scripts/start-model-manager.sh --bridge`) and NOT supervised; its token is deploy/homelab/.env.model-manager (rotated once because compose config printed it). Phase 43 (uncommitted; migration 021 and core/hub deployed 2026-10-07; app 0.4.0): delete meetings, summary/minutes with tier labels and rerun on deep/cloud, meeting as chat context with deterministic web search for outward-looking questions and clickable citations (web + Android). docs/phase-43.md. Not run for real: a deep summary/minutes and the web UI against production. Open design: hub-side PyAV chunking to `/audio/play`, hub-side camera person detection, weekday parsing, pending-offer state.
-
-**Real-meeting end-to-end test (2026-10-05, uncommitted):** `services/reachy-hub/tests/test_meeting_real_audio.py`, opt-in via `MEETING_REAL_AUDIO` (+ `TRANSCRIPTION_URL`, `DIARIZATION_URL`). Real: the owner's private recording `test/StarHub Green.m4a` (git-ignored via `test/`; never commit it), hub upload chain, core worker, HTTP clients, transcription sidecar. In-memory: the meeting store. First run found that the diarization sidecar rejected `.m4a` (soundfile only); fixed by a PyAV fallback decode in `deploy/homelab/diarization/app/server.py` (+ `av==14.0.1` in its Dockerfile, unit test in `deploy/homelab/tests/test_speech_uploads.py`). **Deployed 2026-10-05:** the owner's standalone `diarization` container was rebuilt from the repo Dockerfile/app (built in `/home/hariz/inferencing/diarization`, previous sources in `~/reachy-backups/diarization-standalone-before-m4a-*`, previous image tagged `nemotron-diarization-ov:before-m4a`), recreated with `docker compose up -d --no-build` and re-attached with `docker network connect reachy-homelab_default diarization` (do this after every recreate). It now also carries the repo's busy-admission and optional service-token code. Real recording through the live sidecars (iGPU): 1419 s audio, 203 s wall (RTF 0.14), 349 transcript segments, 3718 words, 602 turns, 4 speakers, ends at ALIGNING. Core/hub were not changed or rebuilt. Alignment quality and content correctness were not judged.
-
-**vLLM local model (2026-10-05; RUNNING and ACTIVE, core redeployed with the local spoken-reply token cap raised 100 to 300):** compose service `vllm` (profile `vllm`, container `reachy-homelab-vllm-1`, `Qwen/Qwen2.5-7B-Instruct-AWQ`, ~13.5 GiB VRAM), `scripts/start-vllm.sh`, `--vllm` in start-homelab.sh; see deployment "vLLM on the NVIDIA GPU". The owner repointed the `local` provider in Settings to `http://vllm:8000/v1`; one real turn from core (172.18.0.9) was served by vLLM with 200 OK (checked in the vLLM log). The previous OVMS URL/model were not recorded by me; hosted fallback unchanged. Not verified: reply quality, spoken-turn latency, the Reachy-specific bakeoff, behaviour after a host reboot (the `vllm` profile must be passed to start-homelab.sh to keep it). vllm-bench shares the GPU, so do not run it while this is up. The `ORT_THREADS` compose edit in the same file belongs to another session.
-
-**To-do, reminders and notes tab (2026-10-04, uncommitted, DEPLOYED to the homelab 2026-10-04 incl. migration 014_planner and a coding-agent-service rebuild, pre-deploy dump in ~/reachy-backups; owner browser test pending):** operator-UI tab `planner.js`, hub `/planner/*` owner proxies plus a `reminder_notify_loop` (Telegram push, claim-once from core `/reminders/due`), core `/notes`, `/reminders` and task edit/reopen/delete routes, migration `014_planner` (SCHEMA_REVISION bumped, so deploy needs backup, stop writers, migrate, rebuild migrate/core/hub together; see deployment). Verified: ruff, full core/hub pytest (one failure, `test_robot_voice::test_spoken_command_text_does_not_actuate_the_robot`, also fails without these changes), the Postgres store and migration against a disposable pgvector container. Not verified: the tab in a browser (no playwright here, `node --check` only) and a real Telegram reminder push. The hub reuses `run_coding_agent_notify_task`/interval for the reminder loop. "remind me to X at 4pm" now also creates a reminder (core `reminder_time.py`, persona timezone; core tests pass; NOT yet deployed, needs a core rebuild). Phase 30.3 calibration is still paused until the owner says concurrent work has ended.
-
-**Shadow semantic router (2026-10-05; pipeline committed in ff31d01, the trial tooling, sidecar compose service and docs are uncommitted; TRIAL ENABLED 2026-10-05 ~23:59 local, production behaviour unchanged):**
-a router -> few-shot extractor -> deterministic validator that only records what it would propose after each reply is final. Contract, evidence and trial procedure:
-[docs/shadow-router.md](docs/shadow-router.md); stages and gates: [Phase 37](docs/phase-37.md) (added to the [forward roadmap](docs/plan.md#forward-roadmap-phases-30)); decision and eventual rearchitecture: [ADR 0026](docs/adr/0026-semantic-routing-and-argument-validation.md) (shadow accepted, promotion proposed, each stage a separate owner decision). Code: `services/companion-core/src/companion_core/shadow_router/` (validator, extractor, pipeline),
-`production_handler` labels plus one wrapped background submit in `app.py`, tests in `tests/test_shadow_router.py` (30). Sidecar: `deploy/homelab/semantic-router/`
-(compose profile `shadow-router`, `scripts/start-homelab.sh --shadow-router`, internal port 8012, CPU cap 6 with 2 ONNX threads per model, models mounted from `semantic-router/models`, git-ignored; that path
-is a symlink to `/home/hariz/inferencing/router/models` on this host). Tools: `tools/shadow_router_report.py`, `tools/shadow_router_grade.py` (blind sheet, report, purge).
-- **Flags** (compose defaults off): `SHADOW_ROUTER_ENABLED`, `SHADOW_ROUTER_URL` (default `http://semantic-router:8012`), `SHADOW_ROUTER_LOG_PATH`, `SHADOW_ROUTER_LOG_TEXT`,
-  `SHADOW_ROUTER_MAX_TURNS`, `SHADOW_ROUTER_QUEUE_SIZE` (default 3; oldest job dropped when full, counted `dropped_busy`).
-- **Contract:** no tool execution, no change to replies or to consent/draft/memory/task/robot state; robot requests stay on `command_suggestion.classify`; extractor uses the local provider only;
-  `needs_clarification` records a reason category only; forget/complete keep the resolved target; utterance text and validated args are written only with `SHADOW_ROUTER_LOG_TEXT=true` and never for a sensitive-labelled turn (file mode 0600).
-- **Trial status (owner approved 2026-10-05):** ENABLED in `deploy/homelab/.env` (gitignored; backup `.env.bak-before-shadow-trial`): `SHADOW_ROUTER_ENABLED=true`, `SHADOW_ROUTER_LOG_TEXT=true`, `SHADOW_ROUTER_MAX_TURNS=500`, `SHADOW_EXTRACT_MODE=offline`. Started with `scripts/start-homelab.sh --shadow-router --build` (only companion-core was recreated; sidecar `reachy-homelab-semantic-router-1` healthy, 6 CPUs / 3 GB). Records accumulate in the `shadow-router` volume at `/data/shadow-router/shadow.jsonl` (mode 0600, utterance text on, never for sensitive turns) until 500 accepted turns (`trial_complete_skipped` then counts). No record existed yet at hand-off: the file appears with the first real non-slash turn (a smoke turn was not possible, core requires service auth). **When the cap is reached or the owner stops:** set `SHADOW_ROUTER_LOG_TEXT=false` (or remove the SHADOW_* lines), recreate companion-core, then follow docs/shadow-router.md steps 3-8 (extract offline against the shared vLLM on :8003 when idle, blind sheet, grade, report, purge). **Retention policy (owner, 2026-10-05; no deadline other than completing the evaluation): every recorded file (raw log in the volume and any copy, extractions, sheet, labels) is destroyed after evaluation and testing are complete** with `shadow_router_grade.py destroy` plus `shred -u -z` in the container; keep only the aggregates and the saved report. Do not copy the log anywhere backed up. Rollback = remove the lines and `scripts/start-homelab.sh --shadow-router --no-browser`.
-- **Evidence (pilot, author-written except MASSIVE):** router fine accuracy 0.919 on MASSIVE-test, 0.89/0.91 on two challenge sets; extractor+validator unsafe executable extraction 1/50 (2%) on a holdout written after the validator was frozen (model alone 36%); 17-turn real run through /conversation left production replies unchanged. Do not change a live handler from those examples; wait for trial data.
-- **Two-stage trial (2026-10-05):** live path = router sidecar only (`SHADOW_EXTRACT_MODE=offline`, default); extraction runs later offline with `tools/shadow_router_extract.py` (same frozen extractor and validator, separate results file, raw log untouched, merged by `rid` in the report, scrubbed by `purge --extractions`). Production impact re-check in offline mode: TTFT p95 at baseline, decode within host drift (~10%), router p95 67-90 ms, diarization unchanged, burst accounting exact. Live mode (extractor inside the turn) cost ~10% decode and ~20 ms TTFT; keep it for a later integration test. Details in docs/shadow-router.md. A foreign `bench-influxdb` benchmark once polluted measurements on this host: only measure when load average < 3. The owner's `reachy-homelab-vllm-1` now holds the GPU (port 8003), so a second vLLM cannot be started for benchmarks; use that one.
-- **Machine state (2026-10-05):** the standalone sidecar container, the throwaway compose project `shadowcheck` and `vllm-bench` are removed. The trial is NOT enabled; sidecar artifacts live in `/home/hariz/inferencing/router/models` (symlinked into `deploy/homelab/semantic-router/models`). Bench workspace: `/home/hariz/inferencing/bench/router` (`contention_deploy.py` is the regression; `LLM_URL`/`LLM_BASE` env select the vLLM).
-- **Open decisions:** run the trial and who grades; bounded retention for the log; whether to add a dedicated extraction model before the first promotion stage; promote read routes first.
-- **Caution:** `app.py`'s `create_app` gained a `shadow_router` parameter; tests that build the app must still inject every store (a new required store, e.g. the planner store, breaks harnesses that omit it).
-
-**Privacy mode (2026-10-03, committed ab87c7c, deployed to the homelab hub/core/UI):**
-spoken "turn on privacy mode" (hub, deterministic, confirmation then session end),
-Telegram `/privacy on|off` (core, all robots) and the Voice tab button all drive the
-existing wake arm (disarmed = privacy on). Owner-tested live on 2026-10-03: spoken, Telegram and the
-Voice tab button, each with the robot resting in the sleep pose, plus a restart with privacy on. After a spoken privacy conversation ends the
-robot now rests once in the sleep pose (5ec6d78, AGENTS.md wake/sleep exception);
-the first Nano deploy did not take effect (`start-reachy.sh --build` left the running container on the old image; fixed in 3bd4110, which now replaces it). After the redeploy the owner reported the spoken path working, 2026-10-03; Telegram `/privacy on` did not rest because the hub ends the session before the disarm arrives, so the disarm now rests directly when the monitor was armed (owner re-tested on the Nano after redeploy, 2026-10-03: Telegram and spoken paths both rest). A restart with privacy on did not start in the sleep pose (the hub's registration disarm found an unarmed monitor); the first disarm after process start now rests too (owner re-tested on the Nano, 2026-10-03: restart with privacy on starts in the sleep pose). Nano caution: its 59 GB disk filled with old embodiment images (about 30 GB reclaimable); at 100% the Docker build and `~/.docker/.token_seed` broke and, after a reboot, the daemon failed with "No usable temporary directory" and the once-per-boot recovery was spent. `docker image prune -f` and `docker builder prune -f` freed the space; check `df -h /` before a `--build`. Details in the
-[operator guide](docs/operator-guide.md#telegram-query-commands). The hub was
-recreated, so `small.en` may re-download (about 2 min) before voice works.
-
-**Spoken goodbye (2026-10-04, committed, hub redeployed, owner-tested on the robot 2026-10-04: passed):** a whole-utterance "thank you" / "that's all" / "goodbye" ends the voice session after a fixed farewell (`end_intent.py`, hub only); the robot then rests via the normal armed path. Fixture-tested, then owner-tested live on the robot ("thank you" gave the farewell, then the sleep pose).
-
-**Confidence-gated wake alert (2026-10-02, deployed to the Nano and homelab hub, calibration in progress):**
-`2bf82e4` (no head motion on a raw hit) gave no feedback and was reverted
-(cb66bb5). Now every detection still goes to capture/admission but the head raise
-needs `WAKE_ALERT_THRESHOLD` (3c7bc6b; robot env file, unset = raise on every
-detection, which is how the Nano runs now, image `reachy-embodiment:local`).
-Hub option `WAKE_DEBUG_LOG_REJECTED_TRANSCRIPTS` (82ff980, hub env/.env) logs the
-first 8 words of rejected candidates; it is OFF (set false in `.env`) and the
-code and compose passthrough should be removed once calibration finishes.
-Calibration so far (genuine "Hey Reachy, what time is it"): 5 hits, scores
-0.88-0.98 admitted and spoken; one 0.78 discarded (no request). Earlier in the
-session 3 of 5 attempts were never detected and a 0.95 hit was rejected
-`no_wake_phrase` (likely the hub re-downloading `small.en` after a recreate; one
-admitted reply was also "withheld", reason not found, possibly DND/meeting).
-False-trigger run (2026-10-02, 11:53-about 12:30Z, about 36 min): 16
-detections (about 27/h), all hub-rejected, 0 false conversations, all raised the
-head. False scores 0.75-0.99 overlap genuine 0.78-0.98, so no score threshold
-separates them; no `WAKE_ALERT_THRESHOLD` is set and the Nano keeps raising on
-every detection. Owner decision (2026-10-02): detector comparison (30.1d,
-`wake-bench.py --record`, 0429566) is deprioritized; continue the rest of Phase 30.
-30.2 is done (2026-10-04): the metric is defined in [phase-30](docs/phase-30.md#visible_false_activations_per_hour) and the 24g acceptance, and `tools/wake_metrics.py` ran on real Nano logs (26.7 visible false activations/h on the 0.6 h false-trigger window; no per-hour target agreed).
-30.5 backup/restore and a 5-minute hub outage/reconnect passed (2026-10-04, [record](docs/verification/phase-30-2026-10-04.md)). The other "Run" rows need the owner (stop-while-homing and mid-reply switch-off need a live voice session; fresh scene needs a changed scene). The wake arm was off (privacy on) at the last check, so re-arm before calibration.
-Open: early-hub-verdict design (needs owner go-ahead), removal of the debug transcript log after calibration, 30.3-30.5.
-
-**Phase 29 is closed for the subscription-first scope (2026-10-02, deployed
-to the homelab, uncommitted).** Characterization found that the agent's
-`AskUserQuestion` tool call and `permission_denials` separate needs-owner from
-done; hooks were not needed. Built: confirmed `WAITING_FOR_INPUT` /
-`WAITING_FOR_PERMISSION`, intervention fields and `turn`, a per-session
-`reachy-claude-state-*` volume so `--resume` works, `/coding_reply` (verbatim
-relay), turn-keyed notification claims, Git observations, and the "Terminal
-sessions (view only)" label. Details and the unexercised list:
-[closure](docs/phase-29.md#characterization-results-and-closure-2026-10-02).
-The agent image `reachy-coding-agent-claude` must be rebuilt on any other host
-(`docker build` in `services/coding-agent-service/docker/claude-code`). Terminal
-sessions stay view-only; CLI findings and open options (Remote Control spike,
-`--bg` provider, idle push) are in
-[phase-29](docs/phase-29.md#controlling-terminal-sessions-cli-findings-2026-10-02).
-Left
-behind by live testing: a `git-probe` project (path `/tmp/claude-1000/gitprobe`)
-and two probe sessions in the homelab database. `test_robot_voice.py::
-test_spoken_command_text_does_not_actuate_the_robot` fails on a clean tree too.
-
-**Running-session poller (2026-10-02, deployed):** coding-agent-service
-now inspects in-flight sessions every 30 s (`CODING_AGENT_POLL_INTERVAL_SECONDS`,
-`0` disables) so finished containers reach `COMPLETED` and Telegram's completion
-push fires. Verified with fixture runtimes and a lifespan test, not a real Claude
-container. Still missing: the 29.4 hook bridge (WAITING_FOR_INPUT/PERMISSION,
-hook-driven RATE_LIMITED, Stop/SessionEnd). A live probe (see phase-29 29.4 note) showed hooks surface in the stream with `--include-hook-events`, but a headless run that asks a question still ends as a plain success; do not build WAITING_* from hooks without observed evidence from subscription sessions (the API-key probe originally proposed here is deprioritized, see above). Poller deployed live and verified (probe session reached `completed` unprompted).
-
-**Reachy sees terminal sessions (2026-10-02, built, not deployed):** the status
-reply (`/coding_sessions`, "is my claude session done") now adds a read-only
-"Terminal sessions" section via companion-core's new
-`list_terminal_sessions` client call. Control (resume/send instruction, or
-adopting a terminal session as a managed one) was offered and deliberately not
-built. Rebuild core to activate; it needs `CLAUDE_PROJECTS_DIR` already
-mounted in coding-agent-service.
-
-**Durable coding-agent sessions and Claude allowance are deployed to the
-homelab (2026-10-01, Phase 29.27/29.26).** Migration `013_coding_agent` applied
-(pre-upgrade dump: `~/reachy-backups/reachy-before-013-20261001-223839.dump`);
-migrate, core, hub and coding-agent-service rebuilt and running, health OK, the
-allowance route enforces auth. No non-terminal sessions existed at startup, so
-no live recovery was exercised. The rest of this entry predates the deploy.
-**Coding agents tab (2026-10-01, built, not yet deployed/browser-tested):** new operator-UI tab after Meetings (`coding_monitor.js`) with owner-gated hub proxy routes `/coding-agents/*`; creates projects and sessions, shows allowance, sessions, events and usage. Tests/ruff pass; `node --test` cannot run here (no playwright). Needs a hub rebuild and a browser check. Send instruction/Respond are not in the tab. Deployed to reachy-homelab, with a read-only terminal-sessions list (needs CLAUDE_PROJECTS_DIR, set in .env). CAUTION: always pass `-p reachy-homelab --env-file .env` to docker compose; a bare run created a stray `homelab` project once. An accidental `ruff format` reformatted several coding-agent-service files (whitespace only); the repo does not enforce ruff format.
-**Live allowance (2026-10-01, deployed, owner-tested via Telegram):** the
-`claude setup-token` token is refused by `api.anthropic.com/api/oauth/usage`
-(HTTP 403, inference-only scope), so the owner pastes a full-login
-`.credentials.json` (from a separate `CLAUDE_CONFIG_DIR` login) into the
-operator UI's "Claude account usage" card (credential name
-`claude-code-account`, allowed in `reachy_hub.coding_agent`).
-`ClaudeCodeProvider.live_allowance` refreshes it (rotating refresh token,
-persisted before use, lock-guarded) and `GET /providers/{p}/allowance` prefers
-it (`source: "live"`), falling back to CLI-reported windows on any error.
-Refresh URL/client id were read from the pinned CLI binary. If the figures
-vanish, check coding-agent-service logs for "Live allowance unavailable".
-
-Operator UI reorganization is implemented locally, not deployed (2026-10-01).
-Overview now contains monitoring; Settings consolidates configuration into six
-feature tabs; Meetings has a searchable records sidebar; Chat has durable typed
-web records and a conversation workspace. Records preserve the existing shared
-assistant session rather than creating independent model contexts. Deployment
-requires additive migration `012_web_chats` plus rebuilt images, not just a
-static-file copy. See the [operator guide](docs/operator-guide.md#settings) and
-[verification](docs/verification/operator-ui-2026-10-01.md). Browser, operator API,
-real disposable-Postgres persistence and Ruff checks passed. The broader hub
-suite has one pre-existing scripted voice-reply assertion failure, reproduced
-against the original hub app. The disposable project was removed; production
-services, databases and robot were untouched.
-
-
-Telegram query shortcuts are implemented locally, not deployed (2026-10-01).
-The [operator command list](docs/operator-guide.md#telegram-query-commands)
-contains the new reads and `/help`. Core dispatches structured commands to
-existing handlers; shared metadata supplies hub's startup menu registration.
-96 command/conversation/Telegram fixture tests passed, including argument
-isolation, private routing, and Telegram bot suffixes. No real Telegram messages,
-model invocation, deployment, or robot actions were performed. Rebuild core and
-hub to activate the shortcuts and menu on the running bot.
-
-
-The reported Telegram session/usage reply bugs are fixed locally (2026-10-01),
-not deployed: natural Claude Code session questions now reach the deterministic
-handler, and usage reads include finished sessions. Replies explain the managed
-session scope; status is labelled last recorded. (The in-memory history limitation
-mentioned at the time is superseded by the durable store above.)
-See [service reference](docs/reference/services.md) for the behavior. Regression
-coverage uses the exact reported questions and an in-process service chain with
-a simulated provider returning measured usage for a completed session. All 74
-focused intent/service/conversation tests and Ruff passed. No live
-Telegram message, model invocation, deployment or robot action was performed.
-
-
-**First real Claude Code completion, live, with the owner's real
-subscription (2026-10-01).** The owner registered a real Claude Pro/Max
-subscription (`CLAUDE_CODE_OAUTH_TOKEN`) credential through the operator
-UI and asked to actually test it. That required deliberately lifting the
-no-invocation block added earlier the same session (see further down) —
-`_ensure_can_invoke` now only refuses when no credential is configured at
-all; a subscription session starts for real but stays read-only
-(`--permission-mode plan`, a comprehensive `--disallowedTools` list, and a
-real Docker `:ro` mount — previously dormant protection, now the live
-protection); an API-key session is unaffected and keeps full permissions.
-
-Turning the owner's "let's test it" into an actual successful run surfaced
-three real infrastructure gaps, all found and fixed live, none related to
-the guardrail itself:
-
-1. **coding-agent-service's own container had no `docker` CLI at all** —
-   every real container launch failed with `FileNotFoundError`. Fixed by
-   installing the `docker-cli` package (client-only, no `dockerd`) in
-   `services/coding-agent-service/Dockerfile`.
-2. **No access to the host's Docker daemon even with the CLI installed** —
-   fixed by mounting `/var/run/docker.sock` into the container. **This is
-   a real, owner-approved security decision, not a casual default**: a
-   container with that socket has host-root-equivalent reach. It's scoped
-   to this one orchestrator container, not the session containers it
-   spawns — 29.18's "no socket" rule is about those, not this service
-   itself, whose entire job is controlling the host's Docker daemon.
-3. **`restricted-network` (the default `CodingProject.allowed_network_profile`)
-   was never actually provisioned** — `docker run --network
-   restricted-network` failed with "network not found" even after the
-   socket fix. Fixed by declaring it in
-   `deploy/homelab/docker-compose.yml`'s top-level `networks:` with an
-   explicit `name:` (Compose would otherwise silently prefix it to
-   `reachy-homelab_restricted-network`, which the runtime's literal
-   `--network` flag would never match).
-
-With all three fixed, a real session — real `claude` CLI, real Anthropic
-API, the owner's real subscription — **completed successfully**: "Hi!
-There's nothing to plan here — just let me know what you'd like help
-with." This is the first real completion this integration has ever
-produced. Confirmed via `/sessions/{id}/usage` too (1581 input / 35 output
-tokens, ~$0.08 equivalent — informational for a subscription, not a
-charge). Test files updated to match (a subscription session now starts
-200/read-only instead of being refused 403); two real-Docker tests re-run
-against the actual fixed container. Redeployed live; `ruff` and the full
-`services shared` suite (1013 passed) both still green afterward.
-
-**Known follow-up, not yet done:** `DockerCLIContainerRuntime.start()`
-doesn't clean up a container Docker creates-but-fails-to-fully-start
-(e.g. the network-not-found failures above left a few `Created`-state
-containers behind — manually `docker rm`'d this session, but nothing
-automatic does this yet).
-
----
-
-**Telegram status/usage questions and completion notifications
-(2026-10-01, owner request: "the flow that needs to be working is that i
-can use the telegram bot to ask or be informed if a session is complete or
-to check the current usage").** Built before the OAuth-credential work
-above, same session:
-
-- `companion_core/coding_agent_intent.py` (deterministic, no LLM) answers
-  "is my coding session done"/"what's my claude usage" in any channel,
-  via a new `companion_core/coding_agent_client.py` (direct sibling HTTP
-  call to coding-agent-service, same pattern as `hub_client.py`).
-- `GET /coding-agents/completions/due` on companion-core — a pure,
-  claim-once query (same shape as `/calendar/reminders/due`;
-  `companion_core/coding_agent_notifications.py` does the claiming — in memory
-  when this was written, now Postgres-backed under migration 013).
-- A genuine new background loop in reachy-hub, `coding_agent_notify_loop`
-  (60s interval), polls that and pushes a Telegram message via the
-  existing `push_to_telegram` for anything due. Deliberately skips the
-  full `interruption_policy` DND/occupied/urgency routing calendar
-  reminders use — always pushes immediately, since "tell me when it's
-  done" was the actual ask.
-- Verified with a real asyncio task on a short interval against a fake
-  Telegram API (not just the pieces in isolation) — see
-  `services/reachy-hub/tests/test_coding_agent_notify.py`. Also verified
-  live: created a real test session, confirmed reachy-hub's actual running
-  loop claimed it via `/coding-agents/completions/due` (empty on
-  re-query) without me triggering it manually.
-
-See [docs/phase-29.md](docs/phase-29.md) (29.6/29.13 row) and
-[service reference](docs/reference/services.md) for where this sits
-relative to the rest of the phase. Still missing: input-needed/rate-limit
-notifications (needs 29.4's hooks), and no DND-aware routing.
-
----
-
-**coding-agent-service is now deployed and running live on this homelab**
-(2026-10-01, by owner request "let's run the latest so we can start user
-testing"): added to `deploy/homelab/docker-compose.yml` with its own
-`CODING_AGENT_SERVICE_TOKEN` and `CODING_AGENT_SECRET_KEY_FILE` (a real
-key generated this session at
-`deploy/homelab/.env.coding-agent-secret-key.json`, 0600, gitignored, not
-backed up elsewhere yet — do that before relying on any credential
-surviving a lost volume), both appended to the real `deploy/homelab/.env`.
-Built and started via `scripts/start-homelab.sh --build --no-browser`;
-`reachy-hub` and `companion-core` were recreated to pick up the new env
-vars (expected — not an error), everything else (postgres, caddy,
-searxng, transcription, diarization) was left alone and confirmed
-untouched. Verified: `/hub/health` and `/core/health` both `ok`, and
-`/hub/providers/credentials` returns 401 (login required), confirming the
-route actually reaches a real, token-configured coding-agent-service
-through hub rather than 404/502/503. Also smoke-tested the full
-project/session lifecycle directly against the live container (zero cost
-— `provider: "simulated"`, not Claude): `POST /projects`, `POST
-/sessions`, `GET /sessions/{id}/events` all worked exactly as the test
-suite predicts, confirming the live deployment isn't just "built", it
-actually runs. That data is in-memory only and is already gone on any
-restart — no cleanup needed.
-
-**What the owner can test right now:** log in to the operator UI and use
-Settings · Accounts · Coding agent credentials — that's wired to the
-browser and live. **What they cannot test yet:** starting a real Claude
-Code session from the browser — there is no operator-UI or hub-proxied
-path to register a `CodingProject` or start/poll a session, only raw
-routes on coding-agent-service's own internal port (same `expose`-only,
-no `ports:`, pattern every other homelab service uses — reachable from
-the host only via `docker exec <container> ... /usr/local/bin/python3`
-inside the Docker network, not a stable localhost URL). That gap (a
-project/session UI, or at minimum a hub proxy plus a documented curl
-recipe) is real follow-up work, not something this session built. See
-[deployment](docs/deployment.md#key-provisioning) for the key-provisioning
-procedure now documented there.
-
-Phase 29 (coding agent supervisor) was added to the roadmap this session,
-and its first stage, 29.1 (contracts and session store), is now
-implemented at `services/coding-agent-service`: `CodingAgentSupervisor`
-creates/resumes/stops a durable `CodingAgentSession` against a provider
-registry and records normalized `CodingAgentEvent`s; a `SimulatedProvider`
-and an in-memory store stand in for the real Claude Code adapter (29.3)
-and Postgres durability (29.27), both still planned. Wire models
-(`CodingProject`, `CodingAgentSession`, `CodingAgentEvent`,
-`ProviderCapabilities`, `UsageSnapshot`, request schemas) live in
-`shared/models/coding_agent.py`; routes/service-token constant in
-`shared/protocols/coding_agent.py`. Added to the uv workspace
-(`services/coding-agent-service`); `uv sync --all-packages` restored after
-an accidental `--package`-scoped sync pruned the shared dev venv mid-session
-(no production impact — dev venv only).
-
-29.2 (container runner) is implemented too: `runtime.py`'s
-`DockerCLIContainerRuntime` shells out to the real `docker` CLI to start a
-labeled, resource-limited, non-root, no-socket container, and
-`reconcile.py`'s `reconcile_sessions` marks a session `LOST` (never
-`COMPLETED`) when its container is no longer running. Verified against
-this machine's **real, live Docker daemon** — the same one running the
-actual `reachy-homelab-*` production containers — using disposable
-`busybox` containers labeled distinctly and always cleaned up; no
-`reachy-homelab-*` container was touched, started, stopped or restarted.
-
-29.19 (credentials) was pulled forward out of sequence, per explicit
-instruction this session to make sure any real keys/login credentials this
-phase needs are reachable from the web UI rather than left to env files:
-`credentials.py`'s `EncryptedFileCredentialStore` (AESGCM, own key file via
-`CODING_AGENT_SECRET_KEY_FILE`, separate from companion-core's keyring)
-backs `PUT`/`GET`/`DELETE /providers/{provider}/credential` in
-coding-agent-service; `reachy_hub/coding_agent.py` +
-`reachy_hub/coding_agent_client.py` proxy those under owner cookie+CSRF
-auth (same shape as `reachy_hub/accounts.py`); and the operator UI's
-Settings · Accounts tab has a "Coding agent credentials" card
-(`clients/operator-ui/coding_agents.js`) to set/replace/remove the Claude
-Code or Codex credential — the secret is never echoed back once saved,
-only `last_four`.
-
-29.3 (Claude Code provider) is also now implemented, making the 29.2
-runtime and 29.19 credential both actually used for the first time:
-`claude_provider.py`'s `ClaudeCodeProvider` is wired into
-`create_app()`'s default provider registry under `"claude-code"`, alongside
-`"simulated"`. `services/coding-agent-service/docker/claude-code/Dockerfile`
-builds a real image (`node:20-slim` + `npm install -g
-@anthropic-ai/claude-code`) — **this was actually built and run on this
-machine's real Docker daemon** (`docker build ...`, then `docker run
-reachy-coding-agent-claude:latest --help`/`--version`/a real `-p "say hi"
---output-format stream-json` call with a deliberately invalid API key, no
-real cost incurred) to confirm the exact CLI flags and JSONL output shape
-rather than guessing from documentation. Confirmed live at claude-code
-2.1.197: `claude`'s own `--session-id <uuid>` flag lets the provider assign
-and know the session id immediately at start, instead of parsing it out of
-output; `--output-format stream-json` prints one JSON object per line,
-ending in a `{"type":"result",...}` line whose `is_error`/`usage`/
-`total_cost_usd` drive completion/failure/usage; and a bad credential
-produces repeated `{"type":"system","subtype":"api_retry",...}` lines
-while the CLI retries for minutes rather than failing fast, which is why
-`start_session` only starts the container and assigns the session id — it
-does not block waiting for completion. `inspect_session` (exposed as the
-new `POST /sessions/{id}/refresh` route) is what a caller polls later.
-`--dangerously-skip-permissions` is never passed, matching AGENTS.md's
-stance that the LLM has no authority to bypass its own action gate either.
-A `collect_usage` using the parsed `usage`/`total_cost_usd` and an
-opportunistic `RATE_LIMITED` status on a `429` retry line are also wired.
-Verified end to end against the real image and real Docker daemon with an
-intentionally invalid key (`services/coding-agent-service/tests/
-test_claude_provider_docker.py`, opt-in via `CODING_AGENT_DOCKER_TEST=1`):
-real container starts, real session id tracked, real stdout parsed, real
-stop. **Completing an actual task against the real Anthropic API needs the
-owner's own `claude-code` credential entered in the operator UI — that has
-not happened and was not exercised by any automated test**, since it would
-cost real money.
-
-Two follow-up fixes/additions after 29.3 landed, both same-session:
-
-1. **Bug found and fixed:** `ClaudeCodeProvider` originally sent every
-   stored credential as `ANTHROPIC_API_KEY` regardless of its
-   `CredentialKind` — an owner who picked "OAuth token" (a Claude Pro/Max
-   subscription) in the operator UI would have had it silently fail to
-   authenticate. Confirmed by grepping the real installed `claude.exe`
-   binary for its actual env-var names: a subscription's long-lived token
-   (from `claude setup-token`, run interactively elsewhere — this
-   container cannot do that sign-in itself) belongs in
-   `CLAUDE_CODE_OAUTH_TOKEN`, a different variable. `_credential` now
-   reads the stored kind and routes to the right one; the operator UI card
-   got an explanatory note on how to get a subscription token.
-2. **Hard guardrail for a real subscription credential, owner request
-   2026-10-01, revised same day.** First pass restricted the real
-   container to read-only/limited tools; the owner clarified the actual
-   intent was narrower and more direct: don't let a real Claude Pro/Max
-   subscription spend credits at all yet, regardless of file/tool access —
-   only allow reading existing projects/session status. Rebuilt
-   accordingly: `start_session`/`resume_session`/`send_input` now raise
-   `ProviderInvocationBlockedError` (routes.py maps it to HTTP 403) before
-   touching Docker, the project store, or even decrypting the secret, for
-   any `CLAUDE_CODE_OAUTH_TOKEN` credential. No container is created at
-   all — confirmed via `runtime.list_by_session()` returning empty after a
-   blocked call, both in the fixture suite and against the real Docker
-   daemon. Listing/reading projects, sessions, events and usage is
-   completely unaffected, since those never call this adapter's invoking
-   methods. The original read-only layer (`ContainerSpec.read_only_mount`
-   → a real `:ro` bind mount, confirmed twice by an actual blocked write
-   including via `docker exec` into a live `claude` container; a
-   `--disallowedTools` list — confirmed live to be what actually restricts
-   tools, since `--allowedTools` alone did **not** restrict anything in the
-   same test, despite its help text implying it should; `--permission-mode
-   plan`) is kept in `_build`, not deleted, as dormant defense-in-depth for
-   whenever the invocation block is deliberately lifted — it is currently
-   unreachable in practice since the block above stops a subscription
-   credential before `_build` ever runs, and a dedicated test exercises it
-   directly against a real container so that dormant path stays proven.
-   None of this is a runtime toggle; lifting the invocation block needs a
-   deliberate future code change once the integration has actually
-   completed a real task successfully with an API key. A pay-per-use API
-   key session is unaffected throughout. See `claude_provider.py`'s module
-   docstring for the full reasoning and exactly what was tested vs.
-   assumed.
-
-Nothing wires coding-agent-service's *session* lifecycle into
-companion-core or reachy-hub yet (29.6/29.7 — only the credential routes
-reach the browser so far), there is no hook-based mid-task
-`WAITING_FOR_INPUT`/`WAITING_FOR_PERMISSION` detection (29.4), and it is
-not in `deploy/homelab/docker-compose.yml` — all deliberately deferred to
-their own stages per
-[docs/phase-29.md](docs/phase-29.md#2929--implementation-sequence).
-44 coding-agent-service tests exist (39 pass by default; the 5 real-Docker
-ones are opt-in via `CODING_AGENT_DOCKER_TEST=1` and all pass given the
-built image, including the guardrail checks above), plus 4 reachy-hub
-tests (`test_coding_agent_credentials.py`) and one Playwright test
-(`coding_agents.test.cjs`, run externally — Playwright/Chromium is not
-installed in a default dev shell). Full `services shared` suite (996
-passed; one unrelated `test_wake.py` flake reproduced as a pass on rerun,
-not a regression) and `ruff check .` both still pass. See
-[service reference](docs/reference/services.md#coding-agent-service-phase-29-planned)
-for the exact route/behavior surface.
-
-Meeting UI wording/layout cleanup is implemented locally, not deployed.
-Rows separate title/status/date/actions; ALIGNING displays “Processing
-paused” with the missing speaker-alignment feature explained. Raw errors
-are collapsed in detail, and phase numbers are removed from user copy.
-The reported metadata_errors row is the historical failure documented in
-foundation verification; its dependency fix already exists. No records
-were deleted or retried. Chromium with fixture data passed mobile layout,
-literal text, paused wording, collapsed errors, detail reset and cancel
-routing; JS syntax and Ruff passed. This is not live pipeline acceptance.
-See [operator guide](docs/operator-guide.md#meeting-recordings).
-
-Long-meeting transport fixes implemented: spooled Hub uploads, bounded
-Core disk copies, file-backed worker inference requests, configurable
-six-hour inference response waits and sidecar busy rejection. No schema
-change. Existing live containers remain untouched; verification used a
-separate `reachy-long-meeting-check` Compose project with read-only model
-caches and the updated server source mounted into existing images.
-See [long-audio verification](docs/verification/phase-27-long-audio-2026-09-30.md)
-for exact checks and remaining limits, and
-[operations](docs/deployment.md#long-meeting-recordings) for settings.
-No representative human meeting recording was supplied.
-
-The deployed pipeline stores raw speech results and waits at ALIGNING.
-The live run built transcription and reused the owner's standalone
-diarization container; it did not build the repository diarization image.
-See the [verification record](docs/verification/phase-27-foundation-2026-09-30.md)
-for dated evidence, dependency fixes and remaining acceptance. Four test
-meetings remain in the database/audio volume; no delete endpoint exists.
-
-## Next session
-
-**Phase 37 (shadow router) is independent of the Phase 30-36 order.** The trial is collecting; the next steps are the evaluation chain in [shadow-router](docs/shadow-router.md#trial-procedure) (extract offline against the shared vLLM when idle, blind sheet, owner or designated grader labels, report with voice and text reported separately, then destroy every recorded file). Nothing moves past shadow without an owner decision per stage; see [phase-37](docs/phase-37.md).
-
-**Roadmap re-sequenced 2026-10-02.** Remaining work now follows the
-[forward roadmap](docs/plan.md#forward-roadmap-phases-30) (Phases 30–36);
-Phases 0–29 are the historical ledger and keep their IDs. The numbered list
-below is older and maps as: items 7–8 and the wake check → Phase 30; items 1–3
-→ Phase 31; items 4–6 → Phase 32; Phase 29 is closed and its leftovers are
-Phase 35 (optional). Immediate order: (a) the owner recreates
-`reachy-embodiment` on the Nano from the confidence-gated build and collects wake
-scores for calibration; (b) occupied-room wake check and the
-visible-false-activations/hour metric; (c) then Phase 31 meeting acceptance.
-[docs/phase-30.md](docs/phase-30.md) (written 2026-10-02) holds the Phase 30
-sequence, the metric definition and the closure triage; no Phase 30 code or
-physical step has been done, and waiving old acceptance rows needs the owner.
-
-0. Phase 29 is now live on the homelab (see Current work) —
-   `CODING_AGENT_SECRET_KEY_FILE` is already set, so a credential entered
-   through the operator UI now survives a restart. The actual next step is
-   the owner logging in and using the Settings · Accounts · Coding agent
-   credentials card for real: the subscription credential is already
-   registered and invokes read-only sessions (the "cannot invoke" note that stood
-   here was superseded 2026-10-01; an API key is optional, see the phase-29
-   revision), and registering a project against a real test repository, since nothing in
-   this codebase has a route to create a `CodingProject` from the operator
-   UI yet — only `POST /projects` on coding-agent-service directly (no hub
-   proxy for project/session management exists, just credentials). That
-   gap — an operator-UI or at least a documented curl path to register a
-   project and start/poll a session — is probably the most useful next
-   build step, ahead of 29.4 (Claude hooks) or a 29.14 poller. The Postgres store (29.27)
-   is built but needs deploying with migration 013 (see Current work).
-1. Roll out the long-audio changes to Core, Hub and both sidecars, including
-   the standalone diarization server (do not create a competing instance).
-   Coordinate speech-token activation with that restart. Representative
-   human speech/resource acceptance remains open despite synthetic
-   65-minute infrastructure checks.
-1. The pipeline reached ALIGNING with a short synthetic clip
-   (upload → transcribe → diarize → wait at ALIGNING, ~2s); alignment
-   itself is not implemented. Still owed: open
-   the operator-ui Meetings tab in an actual browser (upload, record via
-   `meeting-record-start`/`-stop`, and confirm the detail view renders
-   `transcript_segments`/`diarization_segments` correctly — everything so
-   far was exercised via curl, not a real browser); run a real 30–60
-   minute multi-speaker meeting through it and record duration/RTF/CPU/
-   RAM per the 27.2/27.3 exit criteria; decide what to do with the four
-   leftover test meetings in the real database (no delete endpoint
-   exists yet); decide whether to enable `SPEECH_SERVICE_TOKEN` (would
-   need rebuilding/restarting the existing diarization container — see
-   below); and confirm a meeting's row/audio file survive
-   `docker compose restart companion-core`. See
-   [the verification record](docs/verification/phase-27-foundation-2026-09-30.md)'s
-   live-deployment addendum for exactly what's proven vs. still open.
-2. 27.4 (alignment): once 1 above confirms both sidecars actually work,
-   the next real gap is that `transcript_segments` and
-   `diarization_segments` sit on the `Meeting` row unmerged — no
-   canonical speaker-attributed `TranscriptSegment` exists yet, and
-   `MeetingWorker` runs TRANSCRIBING/DIARIZING strictly sequentially
-   rather than concurrently (ADR 0025 allows parallel; not done). Decide
-   whether to tackle the parallelism and the alignment reducer together
-   or separately.
-3. 27.6 (meeting analysis): the Meetings detail view currently shows raw
-   segments and says explicitly that minutes/decisions/actions don't
-   exist — that's the next user-visible gap once 27.4 lands.
-4. Verify Settings · Accounts → Owner recognition in a real browser:
-   opt-in, microphone recording, face capture, sample sizes, delete and
-   export. Previous enrollment checks were backend-only; browser tooling
-   availability must be rechecked rather than assumed.
-5. Collect consenting owner/non-owner audio, including a separate dataset
-   through the real Reachy microphone with noise/distance/orientation variation.
-   Benchmark ECAPA and select thresholds from FAR/FRR before implementing its
-   production adapter; measure concurrent Whisper + ECAPA on the homelab.
-   The [existing smoke test](docs/verification/phase-25a1-voice-benchmark-2026-09-28.md)
-   used public model-card clips only. Keep the sensitivity gate off pending
-   the explicit owner decision described in the [plan](docs/phase-25.md#implementation-sequence).
-6. Implement and evaluate the second-stage sensitivity classifier before
-   enabling the gate; speaker verification alone cannot resolve UNKNOWN.
-   Then proceed to 25b.1 DoA/orientation and face-model comparison. Full
-   production gate prerequisites are in the
-   [implementation sequence](docs/phase-25.md#implementation-sequence).
-   AASIST benchmarking remains a separate pass.
-7. Resume the owner-deferred 24g held-out run when requested: use the
-   [scenario list](docs/phase-24g.md#acceptance-requirements) and
-   [agreed targets](docs/phase-24g.md#agreed-numeric-targets-owner-2026-09-27),
-   with conversational motion off. Include 3–5 immediate-question,
-   3–5 natural-pause, and a few wait-for-acknowledgement attempts (user
-   pauses to watch the alert pose, then speaks) — the doc's acceptance
-   requirements were extended 2026-09-28 to cover this third interaction
-   style and to require that speech is never lost to the animation. Record
-   fresh evidence; the
-   [previous held-out attempt](docs/verification/phase-24g-physical-2026-09-27.md#admission-fix-and-calibration-follow-up)
-   failed before the timeout increased to 6 s.
-   `WakeMonitor._listen_and_capture` (`services/reachy-embodiment/src/reachy_embodiment/wake.py`)
-   already fires the alert-pose goto without awaiting it before starting
-   capture, matching that requirement, but no test currently asserts the
-   timing (only move ordering); consider adding one with a slow fake
-   `rest_move` before relying on it further.
-8. Check the shortened privacy carry-forward window on the robot (calendar
-   question, then 7–8 unrelated turns), the Trusted mode UI, and palm stop
-   after the next authorized standby/wake. These live checks remain open.
-
-## Last-reported machine state
-
-These are previous session observations, not health checks performed during
-this documentation pass. Recheck state before relying on them.
-
-- **Nano:** booted 2026-09-27 06:47 WIB (motor supply was off on the first
-  boot; the once-per-boot recovery restarted the daemon once and stopped,
-  as designed). The daemon runs as PID 7340 and was `running` at 09:33Z.
-  - **Checkout/image:** `c579cc8` was physically verified at 10:57:45Z;
-    the later `bab441e` latency-logging build was also reported deployed.
-    Inspect the actual running revision before relying on either report.
-    "Hey Reachy" was armed; the arm persists in the hub database.
-  - **Rollback:** `:0880b1b` (`15ba2797`), then `:b62a023` (`ebfffcef`),
-    then `:6f6eb24` (`0ab5ebdf`); roll the checkout back with it.
-  - **Motion:** 24f gestures and wobble were switched **on** by the owner
-    at about 10:48Z; they reset to off on any embodiment restart.
-  - **Access:** sudo on the Nano needs a password, so the owner runs
-    `systemctl` steps and container recreates. This dev box has key SSH
-    as `Reachy-Mini-Jetson`.
-  - **Tools:** the system `python3` is too old for `voice-timing.py`: use
-    `~/reachy-venv/bin/python`, and pass `--session N` when a log holds
-    several voice sessions. There is no MediaPipe on the Nano (palm stop is
-    hub-side). `opencv-python-headless` for the 24f tools is in
-    `~/24f-tools` only (use `PYTHONPATH`).
-  - **Logs:** `~/24f-logs` and `~/24d-logs`; the 24g image build logs are
-    in `~/24g-logs`.
-  - **Units:** `reachy-embodiment.service` and
-    `reachy-daemon-recovery.service` are enabled, and the container has no
-    Docker restart policy.
-  - **Network:** embodiment is host-networked on 8100, and the daemon is on
-    loopback 8000.
-
-- **Homelab:** hub/core rebuilt and recreated 2026-09-30 for Phase 27
-  speech inference (this session, real deployment — see Current work);
-  schema is now `011_meeting_speech_results`. The `transcription` profile
-  is running (`reachy-homelab-transcription-1`); `diarization` is
-  **not** a `reachy-homelab`-managed container — it's the owner's
-  pre-existing standalone `diarization` container (separate Compose
-  project, `docker ps` shows it un-prefixed), joined to the
-  `reachy-homelab_default` network by `docker network connect` so the
-  `diarization` hostname resolves for companion-core; don't `docker
-  compose -p reachy-homelab --profile diarization up` without first
-  deciding whether to keep both or replace the standalone one (see the
-  verification record). `STT_MODEL=small.en`, `PALM_STOP_ENABLED=true`
-  and `VOICE_CONTINUATION_WINDOW_MS=3000` are in the private `.env`
-  (unrelated to the new `MEETING_STT_MODEL=small.en` for the
-  transcription sidecar, a separate model instance). The latest
-  pre-deploy backup is
-  `~/reachy-backups/reachy-before-phase27-speech-deploy-20260930T143344.dump`
-  (backups are 0600). Use the [homelab launcher](docs/deployment.md#homelab).
-  The hub's in-memory turn records (`GET /hub/robot-voice` with the
-  `REMOTE_UI_TOKEN` bearer) give per-turn STT/LLM/TTS timings. They also
-  contain transcripts, so extract only what a record needs. Piper
-  `en_US-lessac-medium`; search policy Auto, Brave/Exa/Tavily rotation,
-  then SearXNG.
-- **Local inference:** an unrelated `ovms` container serves
-  `OpenVINO/Qwen2.5-1.5B-Instruct-int4-ov` on localhost:8000. Leave
-  unrelated services alone.
-- Hosted credentials are in gitignored `deploy/homelab/.env.local`.
-  Check presence and ignore rules without printing values. No Google OAuth
-  client file or live helper run has been supplied.
-- Nano Tailscale endpoints to the homelab have switched between
-  10.180.1.23, .54 and .254. Network cleanup remains the owner's call.
-
-## Immediate cautions and continuation
-
-Use [deployment boundaries](docs/deployment.md#robot-host-and-jetson-nano)
-before daemon starts or motion; launcher `--check` stays read-only. Keep
-conversational motion off for Phase 25 until deferred 24f acceptance passes.
-Hardware work previously involved a separate Nano-side session; verify raw
-device identity before accepting remote reports.
-
-Disposable Nano scratch: `~/24g-bench`, `~/24g-src`; acceptance logs under
-`/tmp/.../scratchpad/24g-acceptance/` were session-scoped, not durable.
-A recreated hub downloaded small.en again (112 s before voice worked);
-this was noticed but not investigated.
+Snapshot: 2026-10-15. Read [AGENTS.md](AGENTS.md) first. This page is the current
+state and the open items only; [project state](docs/project-state.md) owns
+deployment limits and cross-phase acceptance, the [roadmap](docs/plan.md#6-implementation-roadmap)
+owns phase status, and [deployment](docs/deployment.md) owns procedures. Dated
+evidence is in [verification records](docs/README.md#verification-records).
+
+The earlier chronological log (about 860 lines, every phase from 22 to 55) was
+retired on 2026-10-15. It is not lost: `git show 1a43805:HANDOVER.md`. Do not
+rebuild it here; put a finished item in its phase page, ADR or verification record,
+and keep only what the next session must act on.
+
+## Where things stand
+
+- **Repository:** `main` (clean; `origin/main` identical). Feature branches are all
+  merged and deleted except `phase-47f`, which is checked out in the worktree
+  `../reachy-work-buddy-47a`. Two detached deploy worktrees also exist
+  (`../reachy-work-buddy-deploy-030`, `../reachy-work-buddy-deploy-docfix`); they are
+  leftovers from earlier deployments and can be removed with `git worktree remove`
+  once the owner agrees.
+- **Homelab (compose project `reachy-homelab`, MS-01):** schema
+  `037_processing_provenance`; core, hub and coding-agent redeployed together at each
+  schema step, and core and hub again for the deep-local generation budget and model
+  tier tags. Image IDs and the Phase 48 segment boundaries are in the
+  [deployment records](docs/README.md#deployment-records), not here.
+- **Production flags on:** `DOCUMENT_LIBRARY_ENABLED`, `NOTEPAD_PROCESSING_ENABLED`,
+  `INTENT_ROUTER_ENABLED`, `MEETING_ANALYSIS_ENABLED` (supervised trial, no analysis
+  run yet at last record), `MEETING_MULTIMODAL_ENABLED`, `MEETING_EMAIL_ENABLED`, and
+  `SHADOW_ROUTER_ENABLED` (Phase 37 trial), and the Phase 48 flags (memory candidates and
+  capture, indexing, retrieval, `KNOWLEDGE_SELECTIVE_SHADOW_ENABLED`). Verified against the
+  running core container and `deploy/homelab/.env` on 2026-10-15. Selective *answering* is
+  absent: Compose does not pass `KNOWLEDGE_SELECTIVE_ANSWERING_ENABLED`. The old
+  "shadow: owner said NOT yet" note (2026-10-12) concerned the older B1a shadow
+  (`KNOWLEDGE_SHADOW_ENABLED`, `knowledge/shadow.py`), which is not passed by Compose and is
+  off; the Phase 48F selective shadow has been on since 2026-10-10. Re-check with
+  `docker inspect` (never `docker compose config`).
+- **Model manager:** runs as a systemd **user** unit
+  (`scripts/install-model-manager-service.sh`, `Restart=always`, lingering on); a killed
+  manager came back in under 15 s. A real machine reboot has not been tested.
+- **Android:** 0.19.0 in the tree; the newest APK is
+  `~/reachy-releases/reachy-companion-0.19.0-tier-tags-debug.apk` (sha256 `9491e5e0…3d27`),
+  installed and accepted by the owner (not itemised). Debug APKs are delivered by hand.
+- **Meeting-minutes email (Phase 55, ADRs 0039 and 0040):** deployed, merged and
+  accepted after owner UAT, but no real send has been recorded yet. The owner must
+  enter their name in Settings before a message can be prepared. Meetings processed before
+  schema 037 carry the neutral "unverified" statement.
+- **Recently owner-accepted (reported, not itemised):** Home dashboard, calendar feed
+  (production URL and addresses set), persona location for weather, phone bottom bar,
+  Identify Speakers (Phase 54), voice and typed recording command (Phase 52), the
+  provenance disclosure.
+- **Persona default:** commit `1a43805` changed the shared default persona prompt so
+  Reachy says it works for one owner, not a team. It is a partial guard only: the default
+  cannot name the owner, and the prompt in `persona_config` is owner-editable and is
+  the only persona text the model sees. The owner's own named prompt works. **Not
+  recorded as deployed** (it touches `shared/models`, core, hub and the web bundle).
+
+## Open items
+
+Needs the owner (nothing here is approved until they say so):
+
+1. A real Gmail send of the meeting-minutes email with the provenance text. The
+   local-only sentence has never been produced from a real production recording.
+2. The model-manager reboot test and the Google sign-in round trip.
+3. Phase 53 acceptance on the owner's own deck and meeting (deployed and enabled
+   2026-10-14; no acceptance recorded). Phase 31: a real 30 to 60 minute meeting
+   analysed and reviewed.
+4. Whether to deploy the persona-default commit, and whether to add a fixed,
+   non-editable instruction filled with the owner's name (needs a core redeploy).
+5. (Resolved 2026-10-15: `.gitignore` now anchors `/test/`; the Android unit tests are tracked.)
+6. Off-host copies of the SecretStore key file and keyring files (none exist; the
+   key backup at `USB Storage/reachy-keys/` was accepted as sufficient on 2026-10-08).
+   The Postgres backup plan ([implementation plan](docs/postgres-backup-implementation-plan.md))
+   is paused, not implemented.
+7. Phase 37 shadow-router trial (enabled 2026-10-05, 500-turn cap; `SHADOW_ROUTER_ENABLED=true` in the running core): evaluation chain
+   in [shadow-router](docs/shadow-router.md#trial-procedure), then destroy every
+   recorded file (owner retention rule). Current state of the log unverified.
+8. Phase 30 calibration (wake alert threshold, the 24g held-out run) and the removal
+   of `WAKE_DEBUG_LOG_REJECTED_TRANSCRIPTS` once calibration ends. See
+   [Phase 30](docs/phase-30.md).
+9. Phase 32A ([phase-32](docs/phase-32.md), [ADR 0041](docs/adr/0041-shared-voice-identity.md)): G0 approved 2026-10-15 (HTTPS deferred;
+   HTTP over Tailscale stays). 32A.V is built end to end on the **unmerged, undeployed, uncommitted** branch
+   `feature/phase-32a-voice-identity`: `speaker` sidecar, `voice_profiles` (migration 038, schema head moves), `/voice-identity/*`
+   routes, Android 0.20.0 (capture, enrolment, owner-match line, GV evaluation screen), GV tool. Debug APK
+   `~/reachy-releases/reachy-companion-0.20.0-voice-identity-debug.apk` (sha256 `01c1a821…ef6`) is **not installed**; rollback is the
+   0.19.0 tier-tags APK. Needs from the owner: review and physical-phone UAT
+   ([checklist](docs/verification/phase-32a-uat-checklist.md)), a hub prepared for it (separate approval: migration 038, `speaker`
+   profile, `VOICE_IDENTITY_ENABLED`, `OWNER_RECOGNITION_CAPTURE_DIR`), consented GV recordings
+   ([protocol](docs/verification/phase-32a-gv-protocol.md)), and later any threshold approval and the 32A.1 session-revocation gate.
+   No threshold is selected. Evidence: [verification record](docs/verification/phase-32a-android-2026-10-15.md),
+   [synthetic-audio validation](docs/verification/phase-32a-synthetic-validation-2026-10-15.md) (0 functional failures; one speaker-service
+   defect found and fixed; synthetic-only measurements, no real FAR/FRR). Branch commits `85712a8`, `b0f88ba`.
+   **Deployed to the homelab for UAT 2026-10-15 12:50 UTC** ([record](docs/verification/phase-32a-deployment-2026-10-15.md)): schema
+   `038_voice_profiles`; core, hub, coding-agent and migrate rebuilt and the new `speaker` container started (profile `speaker`, no
+   published port); `VOICE_IDENTITY_ENABLED=true` in `.env`, thresholds unset, so nothing can be verified. Built from the clean branch
+   `deploy/phase-32a-uat` (`aa3e38b`, worktree `../reachy-work-buddy-deploy-32a`, keep it for rollback or rebuild), which excludes the
+   persona-default commit and the earlier uncommitted edits. Rollback images `reachy-rollback/*:pre-32a`; dumps and a Phase 48
+   boundary in `~/reachy-backups/phase32a-deploy/` and `phase48-boundary-32a/` (new Phase 48 segment from 12:50:05Z; three probe turns
+   of mine are listed in the record). UAT APK `~/reachy-releases/reachy-companion-0.20.0-voice-identity-aa3e38b-debug.apk` (sha256
+   `fc257508…ca22`, **not installed**: no device was designated; the older `…-voice-identity-debug.apk` is superseded). Next: the owner
+   installs it ([runbook](docs/verification/phase-32a-device-runbook.md)). **Calibrated 2026-10-15 15:57 UTC at the owner's acceptance of the interim GV evidence** (accept 0.50 / inconclusive 0.35, hub recreated alone; [decision](docs/verification/phase-32a-calibration-decision-2026-10-15.md); revert by removing the two lines from `.env`). Unfinished by choice: consenting second person, replay and synthetic probes, noisy and next-day clips; revisit if the app misjudges. Display-only; 32A.M, 32A.1, robot features and merging still need separate approval.
+
+Deferred by decision: 50F federated retrieval (waits for the Phase 48 window) and the
+Proxmox worker move; Phase 44 scorer research (stopped 2026-10-10) and dev16
+acceptance (not frozen, not run); 44C and 44G; Phase 46 least-privilege roles (plan
+only); backup phase.
+
+Known defects, not fixed: reminders reach Telegram up to about 60 s late
+(`reminder_notify_loop` sleeps before polling); `claim_due_alarms` marks an alarm fired
+before delivery, so one claimed during a hub stop is lost and old alarms ring after a
+long outage; core's 300 s reconcile rewrites a ready document's `updated_at`; a
+recreated hub re-downloads `small.en` (about 2 minutes before voice works).
+
+Known test failures, identical on pristine `main`: core `test_knowledge_index`
+reconcile and `test_knowledge_retrieval` historical mode (both need a database; the
+contention-tool tests in the same file are intermittent), hub `test_web_client::test_sample_responses_still_match_the_hub` and `test_calendar_feed_hub` upload test (both also fail on a pristine checkout of `4acc4f9`, 2026-10-15), nine Playwright specs
+(notepad, planner), embodiment `test_wake.py` is timing-flaky. Do not report these
+as regressions.
+
+## Rollback assets kept (current deployment only)
+
+Images: `reachy-rollback/companion-core:pre-deepfix`, `reachy-hub:pre-tier-tag`,
+`coding-agent-service:pre-037`, `migrate:pre-037`, `document-worker:pre-034`. In
+`~/reachy-backups`: the pre-037 dump
+(`reachy-before-037-stop-20261015-015152.dump`), the Phase 48 boundary directories (cited
+by verification records), SecretStore key copies, key-backup stamp and passphrase
+file. `deploy/homelab/.env.bak-before-meeting-email` is the only `.env` backup. Older
+records that say "keep the dump or tag until accepted" refer to assets deleted on
+2026-10-15, except those listed here.
+
+## Machine state
+
+- **Disposable leftovers that may exist:** containers `spk-test-pg` (port 55435) and
+  `mm-test-pg` (port 55433) (`docker rm -f`), the AVD `spk_test`. The scratch Postgres
+  `aq-scratch-pg` (port 55444) is stopped.
+- **Homelab:** the diarization container is the owner's standalone one, joined to
+  `reachy-homelab_default` by hand (`docker network connect` again after any recreate);
+  an unrelated `ovms` container runs on localhost:8000, leave it alone. vLLM
+  (`reachy-local`, Qwen2.5-7B) needs the `vllm` profile passed to the launcher to survive
+  a restart. The model manager token is `deploy/homelab/.env.model-manager`.
+- **Nano (last reported 2026-09-27, recheck before use):** `reachy-embodiment.service` and
+  `reachy-daemon-recovery.service` enabled; embodiment host-networked on 8100, daemon on
+  loopback 8000; sudo needs a password, so the owner runs `systemctl` and container
+  recreates; this dev box has key SSH as `Reachy-Mini-Jetson`. Use `~/reachy-venv/bin/python`
+  for `voice-timing.py` (pass `--session N`). Check `df -h /` before `--build`: a full disk
+  (old embodiment images) broke builds and spent the once-per-boot recovery once.
+  Conversational motion switches reset to off on any embodiment restart.
+- **Credentials:** hosted keys live in gitignored `deploy/homelab/.env.local`; check
+  presence and ignore rules without printing values.
+
+## Cautions
+
+- Stage files explicitly; never `git add -A`. Do not use `git checkout -- <file>` to drop
+  debug code (it reverted an uncommitted fix once). `clients/android/.kotlin/` is a build
+  artefact.
+- Run `ruff check .` from the repository root. From a service directory it ignores the
+  repo config and reorders imports in unrelated files.
+- Never print `docker compose config` (it expands secrets), and always pass
+  `-p reachy-homelab --env-file .env`; a bare run once created a stray `homelab` project.
+  Deploy sequence and the rule to preserve the running image by immutable ID before a
+  rebuild: [deployment](docs/deployment.md#upgrades-and-verification-cleanup).
+- Recreating core ends a Phase 48 evidence segment: read
+  `GET /memory-candidates/capture-counters` first, stop core gracefully
+  (`docker stop -t 30`) to flush shadow telemetry, and record the boundary. Never phrase a
+  probe "Remember ..." (it creates a real memory). Phase 48 capture code and the Phase 44
+  candidate freeze (`knowledge/answerability_b1/`, `selective/CANDIDATE_FREEZE_*.sha256`,
+  `memory/candidate_*.py`, `knowledge/routing.py`) are frozen; consumed benchmark sets
+  (dev8, dev10, dev12, dev14, the scorer-v3 validation) must not be tuned against.
+- The blind-review answer key lives outside the repository
+  (`~/.local/share/reachy-blind-review/phase-44e/`, 0600). Private case files are in
+  `~/.local/share/reachy-phase48e/`. Never commit either.
+- Postgres tests need a disposable pgvector container and `DATABASE_MIGRATION_TEST_URL`;
+  browser tests need Playwright on `NODE_PATH`; emulator checks use a throwaway in-process
+  hub, never production ([development](docs/development.md)).
+- Never set `CALENDAR_FEED_ALLOW_LOCAL_FOR_TESTING` outside tests. Never `source`, print
+  or trace the SearXNG secret file.
+- Robot motion and daemon rules, including every owner-granted exception, are in
+  [AGENTS.md](AGENTS.md); verify raw device identity before accepting a remote report.

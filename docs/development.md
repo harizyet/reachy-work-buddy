@@ -176,6 +176,21 @@ build uses repository-root context; add large/generated directories there as
 well as to `.gitignore`. The homelab simulation profile is testing convenience,
 not a change in physical service placement.
 
+## Working-tree pitfalls
+
+- Stage files explicitly; never `git add -A` (several sessions share one checkout and untracked
+  scratch, key and benchmark files sit beside tracked work).
+- Run `ruff check .` from the repository root. Inside a service directory ruff ignores the repo
+  config and reorders imports in unrelated files; if that happens, `git restore` after checking
+  the diff is import order only.
+- Do not drop debug code with `git checkout -- <file>`; it can discard an uncommitted fix.
+- Never print `docker compose config` (it expands secrets) and always name the project and env
+  file (`-p reachy-homelab --env-file .env`).
+
+### Voice identity tests (Phase 32A.V)
+
+`uv run --group dev pytest services/reachy-hub/tests/test_voice_identity.py` runs hermetically with a fake embedder. The PostgreSQL store test (`test_voice_profile_store_postgres.py`) and the core migration tests need a disposable pgvector container and `DATABASE_MIGRATION_TEST_URL`. The speaker service contract test runs without a model: `TEST_SPEAKER_SERVER=deploy/homelab/speaker/app/server.py uv run --group dev python deploy/homelab/tests/test_speaker_service.py`. A real-model run needs `torch` and `speechbrain`, which are deliberately outside the workspace (use the isolated environment in `benchmarks/phase-25a-speaker/`). The Android client is tested against a real in-process hub with a fixture: start `uv run python clients/android/e2e/android_voice_identity_hub_server.py PORT [calibrated]` and run `REACHY_E2E_HUB=http://127.0.0.1:PORT [REACHY_E2E_CALIBRATED=true] ./gradlew :app:testDebugUnitTest --tests '*VoiceIdentityHubIntegrationTest'` in `clients/android` with `JAVA_HOME` set to a JDK 17 (without the variable the test is skipped). Do not run `ruff check --fix .` from the root: it rewrites the e2e hub servers under `clients/`; fix only the files you changed.
+
 ## Live verification discipline
 
 Passing tests is necessary but does not prove deployment behavior. Exercise
@@ -208,7 +223,7 @@ alone missed those historical failures.
 `clients/android` needs JDK 17 and the Android SDK (platform 35, build-tools
 35.0.0); see its [README](../clients/android/README.md). `./gradlew
 :app:testDebugUnitTest` runs the JVM tests against a mock hub;
-`:app:assembleDebug` builds the APK (63 JVM tests at version 0.16.0). Emulator checks need KVM and a throwaway
+`:app:assembleDebug` builds the APK (about 170 JVM tests at 0.19.0; the count moves, so the Gradle report is the authority). `.gitignore` anchors its private-recordings rule as `/test/` (repo root only), so `clients/android/app/src/test` is tracked. Emulator checks need KVM and a throwaway
 hub, never the production stack; an in-process hub with in-memory stores serves them. The unfolded Pixel Fold layout is checked by switching
 the emulator with `adb shell wm size 2208x1840` and `wm density 380` (then `reset`). The emulator has no audio output.
 

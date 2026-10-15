@@ -1,7 +1,10 @@
 # Documentation
 
 Start here to find the authoritative page for a topic. Directory READMEs
-point into this index rather than maintaining parallel instructions.
+point into this index rather than maintaining parallel instructions. This page
+is an index: it names and links, and does not carry status. Phase status lives
+in the [roadmap](plan.md#6-implementation-roadmap), current limits in
+[project state](project-state.md), and evidence in the dated records.
 
 ## Guides and reference
 
@@ -19,105 +22,73 @@ point into this index rather than maintaining parallel instructions.
 ## Plans
 
 The [roadmap](plan.md#6-implementation-roadmap) owns phase order and status.
-Phases 0–29 are its historical ledger; remaining work is sequenced by
-dependency in the [forward roadmap (Phases 30+)](plan.md#forward-roadmap-phases-30),
-and the phase plans below keep their original numbers (remaining work from
-27 continues as Phase 31, 25 as 32, 26 as 33, 28 as 34, 29's extensions as 35,
-and open 22b–24g rows as 30).
-Detailed future requirements remain in their dedicated plans; they are not
-claims that those features already work. Paths stay stable: completed phase
-records are historical design/implementation references. The mixed 22–23 document retains open acceptance matrices.
-Use the ledger for current status, deployment for procedures, and dated
-verification records for empirical results. Historical records change only to
-correct facts or links, not to track each new phase dependency.
+Phases 0–29 are its historical ledger; remaining work follows the
+[forward roadmap (Phases 30+)](plan.md#forward-roadmap-phases-30). The plans
+below keep their original numbers (remaining work from 27 continues as Phase 31,
+25 as 32, 26 as 33, 28 as 34, 29's extensions as 35, and open 22b–24g rows as 30).
+A plan states requirements; it is not a claim that the feature works. Completed
+phase pages are historical design records, not operating instructions, and change
+only to correct facts or links. The mixed 22–23 page retains open acceptance matrices.
 
-- [Phase 22a/22b and Phase 23](phase-22-23.md): deployment, physical acceptance,
-  migrations, SecretStore, and Google Accounts.
+### Platform, robot and conversation
+
+- [Phase 22a/22b and 23](phase-22-23.md): deployment, physical acceptance, migrations, SecretStore, Google Accounts.
 - [Phase 24a](phase-24a.md): search-assisted, freshness-aware assistant.
-- [Phase 24b](phase-24b.md): structured command and intent authorization —
-  explicit structured commands or existing consent/confirmation paths
-  authorize consequential actions; natural-language intent only suggests
-  them, never authorizes.
-- [Phases 24c–24d](phase-24cd.md): complete the robot conversation workflow,
-  then prove the core physical conversation workflow; deferred acceptance
-  continues in 24e.
-- [Phase 24e](phase-24e.md): conversation hardening (adaptive end of turn,
-  search-trigger fixes, a correctness set) and the 24d rows the owner
-  deferred, plus Nano diagnostics. Its
-  [24e conversation-path prerequisites](phase-24e.md#prerequisites-for-phase-25) gated
-  Phase 25; they passed or were waived by the owner on 2026-09-27, and
-  the phase closed by re-scope.
-- [Phase 24f](phase-24f.md): motion conformance and local conversational
-  embodiment; closed by re-scope with deferred physical acceptance.
-- [Phase 24g](phase-24g.md): local wake admission and silent false-trigger
-  rejection; requirements and acceptance scenarios.
-- [Phase 25](phase-25.md): tiered owner verification and progressive trust
-  (voice verification, then visual verification, gating voice access by
-  request sensitivity).
-- [Phase 26](phase-26.md): security hardening and assurance — inserted
-  2026-09-28 between owner verification and meeting transcription to
-  review and harden the whole system, not just the new biometric surface,
-  before it expands.
-- [Phase 27](phase-27.md): meeting intelligence — upload-first processing,
-  speaker-attributed transcripts, evidence-linked notes, reviewed actions
-  and searchable meeting history; independent of physical embodiment.
-  27.1–27.3 (durable job store/worker, upload API, transcription and
-  diarization sidecars wired via [ADR 0025](adr/0025-speech-inference-service.md)'s
-  client interfaces, operator-ui recording and detail view) landed
-  2026-09-30; the live service path passed a short single-speaker smoke test.
-  Real meeting acceptance remains open. Alignment
-  (27.4) landed 2026-10-07; analysis and retrieval continue as [Phase 31](phase-31.md) (deployed, trial enabled 2026-10-12).
-- [Phase 28](phase-28.md): embodied meeting secretary — owner-present
-  companion, then physical secretary attendance, then bounded delegation;
-  virtual/cloud attendance is deferred. (Formerly Phase 27; renumbered
-  2026-09-28.)
-- [Phase 29](phase-29.md): coding agent supervisor — a `coding-agent-service`
-  runs and observes containerized Claude Code (then Codex) sessions behind a
-  provider-neutral contract, feeding lifecycle/usage events into Reachy's
-  existing notification pipeline; observation and relay only, no automatic
-  permission approval or push/merge. 29.1–29.3 (contracts/session store,
-  real-Docker container runner, real Claude Code provider) implemented
-  2026-10-01, plus an early encrypted-credential store and operator-UI card
-  for provider credentials (29.19); deployed to the homelab the same day.
-  Revised 2026-10-02 to be subscription-first: acceptance uses the Claude
-  Pro/Max path, and the next step is characterizing owner-input detection.
-  See
-  [service reference](reference/services.md#coding-agent-service-phase-29-planned).
-- [Phase 37](phase-37.md): semantic routing and argument validation — stage sequence and gates for replacing the phrase-matcher fall-through; decision in [ADR 0026](adr/0026-semantic-routing-and-argument-validation.md).
-- [Phase 38](phase-38.md): alarm clock and presence-gated delivery — stage sequence and gates; decision in [ADR 0027](adr/0027-alarms-and-presence-gated-delivery.md).
-- [Phase 39](phase-39.md): persona-aware responses and action receipts — stage sequence and gates; decision in [ADR 0028](adr/0028-persona-responses-and-action-receipts.md).
-- [Phase 40](phase-40.md): Android companion app (built through version 0.19.0) — stage sequence and gates; decision in [ADR 0029](adr/0029-android-companion-app.md).
-- [Phase 41](phase-41.md): meeting speaker names and reviewed transcript corrections — stage sequence and gates; decision in [ADR 0030](adr/0030-meeting-speaker-names-and-reviewed-corrections.md).
-- [Phase 42](phase-42.md): three-tier model escalation — stage sequence and gates; decision in [ADR 0031](adr/0031-three-tier-local-model-escalation.md).
-- [Phase 43](phase-43.md): meeting deletion, summaries, minutes and meeting context — decision in [ADR 0032](adr/0032-meeting-outputs-and-context.md).
-- [Phase 44](phase-44.md): Reachy Brain, a semantic knowledge and context layer over memory, documents, meetings and planner data (proposed; 44A schema reconciliation written, no code).
-- [Phase 45](phase-45.md): database connection architecture and pooling (shared pools, PgBouncer evaluation, direct admin path); audit, shared-pool refactor, PgBouncer evaluation and failure exercises done on disposable infrastructure ([evidence](verification/phase-45-2026-10-08.md)); homelab cutover done ([deployment record](verification/phase-45e-deployment-2026-10-08.md)).
-- [Phase 46](phase-46.md): least-privilege database roles (plan only, written 2026-10-08; no credential or production change authorised).
-- [Phase 47](phase-47.md): React web platform and Brain visualization. Owner decisions D1 to D6 recorded 2026-10-08; 47A (foundation at `/web/`) and 47B (the whole operator UI in React) built, merged and deployed (the owner tested it); 47C (3D Brain) merged; 47D (real records through a read-only Brain API, bloom toggle) merged and deployed; 47F retired `/ui/` (redirects to `/web/`, legacy at `/ui-legacy/`).
-- [Phase 48](phase-48.md) ([48D record](verification/phase-48d-indexing-activation-2026-10-10.md), [48E record](verification/phase-48e-retrieval-validation-2026-10-10.md)): Phase 44 activation and operational acceptance (proposed 2026-10-10): staged, evidence-gated activation of the memory-candidate and knowledge flags, each with a rollback gate; no new features.
-- [Phase 31](phase-31.md): meeting intelligence completion (deployed 2026-10-12 with migration 032; `MEETING_ANALYSIS_ENABLED=true` for the owner-supervised trial since 2026-10-12, no analysis run yet: structured analysis with evidence-linked decisions, open questions and owner-reviewed action candidates, reusing Phase 49).
-- [Phase 49](phase-49.md) ([verification](verification/phase-49-notepad-processing-2026-10-11.md)): Intelligent Notepad processing (engineering-complete 2026-10-11; deployed with the flag OFF, migration 029 applied, [deployment record](verification/phase-49-deployment-2026-10-11.md); enabled in production later that day, [activation record](verification/phase-49-activation-2026-10-11.md)): optional AI extraction of tasks, reminders and event candidates from a saved note, owner review, idempotent commit with provenance, a task inquiry that separates confirmed from pending, and note-to-meeting links with labelled transcript evidence. Phase 44 closure is unchanged; relates to the [grounding defect record](verification/record-reference-grounding-fix-2026-10-11.md).
-- [Phase 51](phase-51.md): Home dashboard and the extended daily briefing (core and hub deployed 2026-10-14, merged to `main`, no migration; [deployment record](verification/home-dashboard-deployment-2026-10-14.md); [ADR 0036](adr/0036-home-dashboard.md)): one read-only snapshot of the day for the web and Android landing screens, optional checked local-model wording, weather from Open-Meteo.
-- [Phase 52](phase-52.md): spoken "begin meeting recording" in Android voice mode (Android only, no server change; merged to `main` 2026-10-14; the owner reported it and short-recording handling working on a phone): on-device command, spoken confirmation, voice ended, existing recorder started and confirmed.
-- [Phase 53](phase-53.md) ([verification](verification/phase-53-multimodal-meetings-2026-10-14.md)): multimodal meeting intelligence: attach presentation PDFs to a meeting, estimate which page was discussed (with certainty and owner corrections), questions and combined findings across transcript and documents (deployed and enabled 2026-10-14, [record](verification/phase-53-deployment-2026-10-14.md); branch `feature/meeting-multimodal` merged to `main`; migration 034; [ADR 0037](adr/0037-multimodal-meeting-evidence-and-slide-alignment.md)).
-- [Phase 54](phase-54.md) ([verification](verification/phase-54-speaker-identification-2026-10-14.md)): Identify Speakers: listen to deterministic samples of each diarized speaker and confirm names that flow into the transcript, summaries and analysis (branch, not deployed).
-- [Phase 55](phase-55.md) ([verification](verification/phase-55-meeting-minutes-email-2026-10-14.md)): supervised meeting-minutes email: a dedicated Gmail sender (credential in the SecretStore, default off), owner-reviewed packages with a PDF, hash-bound typed approval, the existing ten-minute delay and loop with atomic claims and ambiguous-delivery handling, Share minutes on web and Android (branch, not deployed).
-- [Phase 50](phase-50.md): MinerU-backed document intelligence (accepted for implementation 2026-10-11; deployed to the homelab 2026-10-12 with the library on, [deployment record](verification/phase-50-deployment-2026-10-12.md); 50F federation and Proxmox not started): an isolated, self-hosted MinerU service owns parsing, OCR and the document library; Reachy keeps identity, policy and reasoning with a `backend_ref` to each document; scoped cited Q&A, summaries, CPU-background versus GPU-priority processing; governed by [ADR 0034](adr/0034-source-evidence-and-derived-artifacts.md).
-- [Phase 44E plan](phase-44e-plan.md): context builder and end-to-end answer-quality evaluation with the local 7B (plan for review; no code).
-- [Hybrid intent routing](verification/intent-router-2026-10-11.md) (decision: [ADR 0033](adr/0033-llm-assisted-read-routing.md); [deployment record](verification/intent-router-deployment-2026-10-11.md): deployed 2026-10-11 with `INTENT_ROUTER_ENABLED=true`; then the [task-reply privacy and title-only note fix](verification/task-privacy-named-note-2026-10-11.md), deployed with the [SearXNG secret rotation](verification/privacy-remediation-and-searxng-rotation-2026-10-11.md); not a numbered phase): the local model chooses one of the existing read handlers from a closed schema for natural-language questions the deterministic chain did not claim; reads only, fail closed, dates and access deterministic.
-- [Phase 44 selective answering](phase-44-selective-answering-protocol.md): Stage A record ([verification](verification/phase-44-selective-stage-a-2026-10-12.md)), the fresh scorer [adjudication](verification/phase-44-selective-adjudication-2026-10-13.md) the Stage B [mechanism design](phase-44-selective-stage-b-design.md), the [scorer v2 validation protocol](phase-44-scorer-v2-validation-protocol.md) the [Stage B-1 record](verification/phase-44-selective-stage-b1-2026-10-13.md) and its [recall extension](verification/phase-44-selective-stage-b1-extension-2026-10-13.md) (deterministic components only, unreferenced source), the [scorer v2 validation](verification/phase-44-scorer-v2-validation-2026-10-13.md), the [B-1 qualified-object tightening](verification/phase-44-selective-b1-qualified-object-2026-10-14.md), [scorer v3 development](verification/phase-44-scorer-v3-development-2026-10-14.md) the [validation readiness plan](phase-44-scorer-v3-validation-readiness.md), and its 2026-10-15 revision: the [corpus v5 and coverage record](verification/phase-44-corpus-v5-coverage-2026-10-15.md) and the [formal validation protocol](phase-44-scorer-v3-formal-validation-protocol.md) (dev16 unfrozen) and its [consumed result: all scored categories fail, leaked value coverage insufficient](verification/phase-44-scorer-v3-formal-validation-2026-10-10.md). Scorer research is stopped (owner, 2026-10-10); absence semantics are recorded as [rubric v5](../services/companion-core/benchmarks/answer_quality/selective/adjudication_rubric_v5_addendum.md) and [Stage B design section 3.1](phase-44-selective-stage-b-design.md#31-absence-semantics-rubric-v5-2026-10-10-evidence-contract); the research track is paused and the current priority is the [engineering completion plan](phase-44-engineering-completion-plan.md) (44E integration, minimum 44F, integration-test acceptance checks; approved) and its [local integration record](verification/phase-44e-selective-integration-2026-10-10.md), the [selective shadow record](verification/phase-44e-selective-shadow-2026-10-10.md) and its [telemetry policy](phase-44e-selective-shadow-telemetry-policy.md), the [deployment-readiness proposal](phase-44-deployment-readiness-proposal.md) and the [44F implementation proposal](phase-44f-implementation-proposal.md), the [44F verification record](verification/phase-44f-implementation-2026-10-10.md) and the [Phase 44 closure report](phase-44-closure-report.md); earlier milestone: the [B-1 integration and evaluation plan](phase-44-selective-answering-integration-plan.md) (approved with amendments; I-1 and I-2 done: [record](verification/phase-44-selective-i1-i2-2026-10-10.md); follow-up with the gold-independent registry, the question decomposer and the repeat of I-2: [record](verification/phase-44-selective-i2-followup-2026-10-10.md); final development pass (rendering, explicit value transitions, the three held-out relations defined and frozen, P0 plan): [record](verification/phase-44-selective-final-dev-pass-2026-10-10.md); acceptance readiness and the deterministic dev16 criteria: [readiness report](phase-44-dev16-deterministic-criteria-draft.md); the dev16 [freeze command and final recommendation](phase-44-dev16-freeze-command.md) (after the passed [corrected P0 smoke test](verification/phase-44-dev16-p0-smoke-test-corrected-2026-10-10.md)), the dev16 [final freeze-readiness recommendation](phase-44-dev16-freeze-recommendation.md) (with the [P0 reproducibility correction](verification/phase-44-dev16-p0-reproducibility-correction-2026-10-10.md) and the development-only [P0 smoke test](verification/phase-44-dev16-p0-smoke-test-2026-10-10.md)), the dev16 [execution checklist and acceptance infrastructure](phase-44-dev16-execution-checklist.md) and the consolidated dev16 [preflight](phase-44-dev16-preflight.md): hashes, P0 method, criteria calculations, citation-discrepancy adjudication, review packets, one-shot rules, awaiting owner approval).
-- [Phase 44H](phase-44h.md): security regression cases (H-001, a false robot-standby claim), the **unclaimed-action boundary (deployed to the homelab core 2026-10-12)** and the answer/action receipt boundary investigation (the receipt rule is not built). [Receipt-boundary architecture proposal](phase-44h-receipt-boundary-proposal.md) for robot, email and calendar actions (for review). [Offline model-cache proposal](phase-44-model-cache-proposal.md) for the embedding model (for review). [Blind review of 21 answers 2026-10-10](verification/phase-44e-blind-review-2026-10-10.md), [failure taxonomy](verification/phase-44e-failure-taxonomy-2026-10-11.md), [answer-quality improvements](verification/phase-44e-answer-quality-2026-10-11.md), [shadow readiness assessment](phase-44e-shadow-readiness-assessment.md) and [44F implementation slices](phase-44f-implementation-slices.md). 2026-10-12: [evidence sufficiency and groundedness](verification/phase-44e-evidence-sufficiency-2026-10-12.md) and the [local larger-model comparison](verification/phase-44e-larger-model-comparison-2026-10-12.md) (complete; the 7B stays). Also 2026-10-12: [44H boundary deployment record](verification/phase-44h-boundary-deployment-2026-10-12.md) and the [dev8 acceptance protocol](phase-44e-dev8-acceptance-protocol.md) and its [consumed one-shot result](verification/phase-44e-dev8-acceptance-2026-10-12.md); the [section-level coverage experiment](verification/phase-44e-section-coverage-2026-10-12.md) ([protocol](phase-44e-section-coverage-protocol.md)); the [PostgreSQL backup hardening proposal](postgres-backup-hardening-proposal.md) and its [implementation plan](postgres-backup-implementation-plan.md) (plan only); and the **[groundedness milestone design](phase-44-groundedness-milestone-design.md)** (evidence selection and answerability, after the dev10 negative result); its [dev11 ablation](phase-44-groundedness-dev11-ablation-2026-10-12.md) and [dev12 protocol](phase-44-groundedness-dev12-protocol.md) and its consumed [acceptance record](verification/phase-44-groundedness-dev12-acceptance-2026-10-12.md); then the [scoped readiness protocol](phase-44-scoped-readiness-protocol.md) with its consumed [dev14 record](verification/phase-44-scoped-readiness-dev14-2026-10-12.md), and the [selective-answering protocol](phase-44-selective-answering-protocol.md) (proposal; Stage A built, see its [Stage A record](verification/phase-44-selective-stage-a-2026-10-12.md)).
-- [Phase 44E conflict-omission detector 2026-10-10](verification/phase-44e-conflict-detector-2026-10-10.md) and [indexing-workload trial plan 2026-10-10](verification/phase-44b-indexing-workload-trial-plan-2026-10-10.md) and [its result 2026-10-09 (passed)](verification/phase-44b-indexing-workload-trial-2026-10-09.md).
-- [Shadow semantic router](shadow-router.md): shadow-mode router, extractor and validator that only records what it would propose; contract, flags, trial procedure, retention and evidence.
-- [Phase 30](phase-30.md): platform stabilization and acceptance — verify the
-  no-alert-pose wake build, add the visible-false-activations metric, run the
-  held-out 24g session and triage the open 22b/22c/24e/24f rows.
+- [Phase 24b](phase-24b.md): structured command and intent authorization (natural language only suggests; structured commands or existing consent paths authorize).
+- [Phases 24c–24d](phase-24cd.md): robot conversation workflow and its physical proof.
+- [Phase 24e](phase-24e.md): conversation hardening and the deferred 24d rows ([prerequisites for Phase 25](phase-24e.md#prerequisites-for-phase-25)).
+- [Phase 24f](phase-24f.md): motion conformance and local conversational embodiment.
+- [Phase 24g](phase-24g.md): local wake admission and silent false-trigger rejection.
+- [Phase 25](phase-25.md): tiered owner verification and progressive trust.
+- [Phase 32](phase-32.md): shared voice identity, phone-first (32A); robot recognition (32B) deferred. [32A.0 inventory](verification/phase-32a0-inventory-2026-10-15.md).
+- [Phase 26](phase-26.md): security hardening and assurance.
+- [Phase 30](phase-30.md): platform stabilization and acceptance.
+- [Phase 37](phase-37.md) and [shadow semantic router](shadow-router.md): shadow-first semantic routing and argument validation.
+- [Phase 38](phase-38.md): alarm clock and presence-gated delivery.
+- [Phase 39](phase-39.md): persona-aware responses and action receipts.
+- [Hybrid intent routing](verification/intent-router-2026-10-11.md) (not a numbered phase; [deployment](verification/intent-router-deployment-2026-10-11.md), [task-reply privacy fix](verification/task-privacy-named-note-2026-10-11.md), [privacy remediation and SearXNG rotation](verification/privacy-remediation-and-searxng-rotation-2026-10-11.md)).
+- [Phase 29](phase-29.md): coding agent supervisor ([service reference](reference/services.md#coding-agent-service-phase-29)).
+- [Phase 28](phase-28.md): embodied meeting secretary.
+
+### Meetings, documents and notes
+
+- [Phase 27](phase-27.md): meeting intelligence foundation (upload, transcription, diarization, alignment; see [ADR 0025](adr/0025-speech-inference-service.md)).
+- [Phase 31](phase-31.md): meeting analysis, decisions, open questions, owner-reviewed actions.
+- [Phase 41](phase-41.md): speaker names and reviewed transcript corrections.
+- [Phase 42](phase-42.md): three-tier model escalation and the model manager.
+- [Phase 43](phase-43.md): meeting deletion, summaries, minutes and meeting context.
+- [Phase 49](phase-49.md): Intelligent Notepad processing ([verification](verification/phase-49-notepad-processing-2026-10-11.md), [grounding defect record](verification/record-reference-grounding-fix-2026-10-11.md)).
+- [Phase 50](phase-50.md): MinerU-backed document intelligence ([ADR 0034](adr/0034-source-evidence-and-derived-artifacts.md)).
+- [Phase 52](phase-52.md): spoken "begin meeting recording" in Android voice mode.
+- [Phase 53](phase-53.md): multimodal meeting intelligence (slides aligned to a meeting).
+- [Phase 54](phase-54.md): Identify Speakers.
+- [Phase 55](phase-55.md): supervised meeting-minutes email.
+
+### Knowledge layer (Phase 44 and 48)
+
+- [Phase 44](phase-44.md): Reachy Brain, the semantic knowledge and context layer; the [closure report](phase-44-closure-report.md) is its authoritative handover.
+- [Phase 48](phase-48.md): activation and operational acceptance of the Phase 44 flags.
+- [Phase 44H](phase-44h.md): security regression cases and the unclaimed-action boundary; [receipt-boundary proposal](phase-44h-receipt-boundary-proposal.md).
+- Design and plans: [44E plan](phase-44e-plan.md), [engineering completion plan](phase-44-engineering-completion-plan.md), [deployment-readiness proposal](phase-44-deployment-readiness-proposal.md), [44F implementation proposal](phase-44f-implementation-proposal.md) and [slices](phase-44f-implementation-slices.md), [offline model-cache proposal](phase-44-model-cache-proposal.md), [shadow readiness assessment](phase-44e-shadow-readiness-assessment.md), [shadow telemetry policy](phase-44e-selective-shadow-telemetry-policy.md).
+- Groundedness and selective answering: [groundedness design](phase-44-groundedness-milestone-design.md), [dev11 ablation](phase-44-groundedness-dev11-ablation-2026-10-12.md), [dev12 protocol](phase-44-groundedness-dev12-protocol.md), [scoped readiness protocol](phase-44-scoped-readiness-protocol.md), [section coverage protocol](phase-44e-section-coverage-protocol.md), [dev8 acceptance protocol](phase-44e-dev8-acceptance-protocol.md), [selective-answering protocol](phase-44-selective-answering-protocol.md), [Stage B design](phase-44-selective-stage-b-design.md), [B-1 integration plan](phase-44-selective-answering-integration-plan.md).
+- Scorer research (stopped 2026-10-10): [v2 validation protocol](phase-44-scorer-v2-validation-protocol.md), [v3 readiness plan](phase-44-scorer-v3-validation-readiness.md), [v3 formal protocol](phase-44-scorer-v3-formal-validation-protocol.md); rubric v5 absence semantics in [Stage B design 3.1](phase-44-selective-stage-b-design.md#31-absence-semantics-rubric-v5-2026-10-10-evidence-contract) and the [rubric addendum](../services/companion-core/benchmarks/answer_quality/selective/adjudication_rubric_v5_addendum.md).
+- dev16 acceptance (not run): [deterministic criteria](phase-44-dev16-deterministic-criteria-draft.md), [execution checklist](phase-44-dev16-execution-checklist.md), [preflight](phase-44-dev16-preflight.md), [freeze recommendation](phase-44-dev16-freeze-recommendation.md), [freeze command](phase-44-dev16-freeze-command.md).
+
+### Infrastructure and clients
+
+- [Phase 45](phase-45.md): database connections and PgBouncer.
+- [Phase 46](phase-46.md): least-privilege database roles (plan only).
+- [Phase 47](phase-47.md): React web platform and Brain visualization.
+- [Phase 40](phase-40.md): Android companion app ([ADR 0029](adr/0029-android-companion-app.md), [client README](../clients/android/README.md)).
+- [Phase 51](phase-51.md): Home dashboard and the extended daily briefing.
+- Backups (plan only): [hardening proposal](postgres-backup-hardening-proposal.md), [implementation plan](postgres-backup-implementation-plan.md).
 - [Jarvis baseline](jarvis-baseline.md): upstream reuse/reference notes.
 
 ## Architecture decisions
 
 ADRs are binding design decisions. Later dated amendments take precedence
-over the original decision where they explicitly change it.
+over the original decision where they explicitly change it. Each ADR carries
+its own status line.
 
 | ADR | Decision |
 |---|---|
@@ -141,222 +112,94 @@ over the original decision where they explicitly change it.
 | [0022](adr/0022-web-search-grounding.md) | Web-search grounding for the generic conversation branch |
 | [0023](adr/0023-robot-voice-conversation.md) | Robot microphone/speaker conversation transport |
 | [0024](adr/0024-owner-recognition-trust.md) | Owner recognition trust boundary (evidence/trust/authorization split) |
-| [0025](adr/0025-speech-inference-service.md) | Generalized speech inference service (target architecture and migration path) |
-| [0026](adr/0026-semantic-routing-and-argument-validation.md) | Semantic routing with deterministic argument validation (shadow accepted; promotion proposed) |
+| [0025](adr/0025-speech-inference-service.md) | Generalized speech inference service |
+| [0026](adr/0026-semantic-routing-and-argument-validation.md) | Semantic routing with deterministic argument validation (only the shadow stage accepted) |
 | [0027](adr/0027-alarms-and-presence-gated-delivery.md) | Alarms with presence-gated, privacy-aware delivery |
 | [0028](adr/0028-persona-responses-and-action-receipts.md) | Persona-aware responses and authoritative action receipts |
 | [0029](adr/0029-android-companion-app.md) | Native Android companion app |
 | [0030](adr/0030-meeting-speaker-names-and-reviewed-corrections.md) | Meeting speaker names and reviewed transcript corrections |
-| [0031](adr/0031-three-tier-local-model-escalation.md) | Three-tier model escalation (proposed) |
+| [0031](adr/0031-three-tier-local-model-escalation.md) | Three-tier model escalation (lifecycle manager accepted; tier routing proposed) |
 | [0032](adr/0032-meeting-outputs-and-context.md) | Meeting deletion, generated outputs and meeting context |
 | [0033](adr/0033-llm-assisted-read-routing.md) | LLM-assisted read routing with deterministic grounding |
 | [0034](adr/0034-source-evidence-and-derived-artifacts.md) | Source evidence and derived artifacts |
 | [0035](adr/0035-read-only-ics-calendar-and-meeting-reminders.md) | Read-only ICS calendar feed, event classification and meeting recording reminders |
 | [0036](adr/0036-home-dashboard.md) | Home dashboard and the extended daily briefing |
-| [0037](adr/0037-multimodal-meeting-evidence-and-slide-alignment.md) | Multimodal meeting evidence and slide alignment (proposed) |
-| [0038](adr/0038-meeting-speaker-identification.md) | Owner-confirmed meeting speaker identities (proposed) |
-| [0039](adr/0039-supervised-meeting-minutes-email.md) | Supervised meeting-minutes email through a dedicated sender (proposed) |
-| [0040](adr/0040-verified-processing-provenance-in-email.md) | Verified processing provenance and fixed disclosures in meeting email (proposed) |
+| [0037](adr/0037-multimodal-meeting-evidence-and-slide-alignment.md) | Multimodal meeting evidence and slide alignment |
+| [0038](adr/0038-meeting-speaker-identification.md) | Owner-confirmed meeting speaker identities |
+| [0039](adr/0039-supervised-meeting-minutes-email.md) | Supervised meeting-minutes email through a dedicated sender |
+| [0040](adr/0040-verified-processing-provenance-in-email.md) | Verified processing provenance and fixed disclosures in meeting email |
+| [0041](adr/0041-shared-voice-identity.md) | Shared voice identity (phone-first): evidence, not authority; one capture path; encrypted profiles; HTTP transport limits |
 
 ## Verification records
 
-These are dated evidence, not startup instructions or current health checks.
+Dated evidence, not startup instructions or current health checks. Each
+record states what was and was not verified. Newest areas first; within an
+area, oldest first.
 
-- [Phase 50 worker recovery 2026-10-12](verification/phase-50-worker-recovery-2026-10-12.md): document-worker backend recovery.
-- [Phase 50 history-isolation deployment 2026-10-12](verification/phase-50-history-isolation-deployment-2026-10-12.md): MS-01 deployment record (core and hub).
-- [Phase 50 Android Documents and history isolation 2026-10-12](verification/phase-50-android-documents-and-history-isolation-2026-10-12.md): conversation-history isolation design/tests and the Android Documents surface.
-- [Home dashboard deployment 2026-10-14](verification/home-dashboard-deployment-2026-10-14.md): MS-01 deployment record (core and hub), APK, Phase 48 gap.
-- [Home dashboard verification 2026-10-13](verification/home-dashboard-2026-10-13.md): acceptance table, test results and emulator evidence (written before the 2026-10-14 deployment).
-- [Phase 50 chat picker deployment 2026-10-12](verification/phase-50-chat-picker-deployment-2026-10-12.md): MS-01 deployment record.
-- [Phase 50 chat document picker 2026-10-12](verification/phase-50-chat-document-picker-2026-10-12.md): design and tests.
-- [Phase 50 inspector deployment 2026-10-12](verification/phase-50-inspector-deployment-2026-10-12.md): MS-01 deployment of the extraction inspector.
-- [Phase 50 extraction inspector 2026-10-12](verification/phase-50-extraction-inspector-2026-10-12.md): MinerU extraction inspector in the Documents tab.
-- [Phase 50 deployment 2026-10-12](verification/phase-50-deployment-2026-10-12.md): document library and minimal Documents page on the MS-01.
-- [Phase 50H/50D/50G/50J 2026-10-12](verification/phase-50h-summaries-and-documents-ui-2026-10-12.md): summaries, Advanced escalation, provenance and the minimal Documents UI.
-- [Phase 50E 2026-10-12](verification/phase-50e-document-conversation-2026-10-12.md): document-scoped conversation.
-- [Phase 50C 2026-10-12](verification/phase-50c-integration-2026-10-12.md): Reachy to document-worker integration.
-- [Phase 50B 2026-10-12](verification/phase-50b-document-library-2026-10-12.md): Reachy document ownership.
-- [Phase 50A 2026-10-11](verification/phase-50a-mineru-spike-2026-10-11.md): MinerU local deployment spike.
-- [Note folder tags deployment 2026-10-11](verification/note-tags-deployment-2026-10-11.md): migration 030 and coordinated cutover.
-- [Brain provenance deployment 2026-10-11](verification/phase-49-brain-provenance-deployment-2026-10-11.md): production deployment of the `derived_from` edges.
-- [Brain provenance 2026-10-11](verification/phase-49-brain-provenance-2026-10-11.md): Phase 47 Brain x Phase 49 `derived_from` edges.
-- [Phase 49 activation 2026-10-11](verification/phase-49-activation-2026-10-11.md): controlled activation and owner acceptance test.
-- [Phase 49 deployment 2026-10-11](verification/phase-49-deployment-2026-10-11.md): migration 029 and the coordinated cutover with the Phase 48 boundary; backup, rollback inventory, verification; feature OFF.
-- [Phase 49 2026-10-11](verification/phase-49-notepad-processing-2026-10-11.md): Notepad processing, review, task inquiry and meeting correlation (mock, real PostgreSQL on a disposable server, real browser, real 7B); deployed 2026-10-11 (feature enabled later that day).
-- [Phase 48F 2026-10-10](verification/phase-48f-selective-shadow-2026-10-10.md): selective shadow, frozen evidence window.
-- [Phase 48C 2026-10-10](verification/phase-48c-baseline-2026-10-10.md): read-only operational baseline.
-- [Phase 48B trial 2026-10-10](verification/phase-48b-capture-trial-2026-10-10.md): production capture activation and supervised trial log.
-- [Phase 48B eligibility 2026-10-10](verification/phase-48b-capture-eligibility-2026-10-10.md): capture eligibility from channel trust.
-- [Phase 48A 2026-10-10](verification/phase-48a-review-activation-2026-10-10.md): memory candidate review, rehearsal and activation.
-- [Phase 44 deployment 2026-10-10](verification/phase-44-deployment-2026-10-10.md): migration 028; all new features disabled.
-- [Phase 44E shadow readiness 2026-10-10](verification/phase-44e-shadow-readiness-2026-10-10.md): readiness record.
-- [Phase 44E holdout review 2026-10-09](verification/phase-44e-holdout-review-2026-10-09.md): case review for the owner.
-- [Phase 44E follow-up 2026-10-09](verification/phase-44e-followup-2026-10-09.md): development record.
-- [Phase 44E first look 2026-10-09](verification/phase-44e-first-look-2026-10-09.md): frozen holdout, decision point `44E-first-look`.
-- [Phase 44E development 2026-10-08 to 2026-10-09](verification/phase-44e-development-2026-10-09.md): context builder and answer-quality evaluation.
-- [Phase 44B re-trial 2026-10-08](verification/phase-44b-indexing-retrial-2026-10-08.md): supervised indexing re-trial.
-- [Phase 44A holdout review 2026-10-08](verification/phase-44a-holdout-case-review-2026-10-08.md): case-level review.
-- [Meeting corrections benchmark 2026-10-07](verification/meeting-corrections-benchmark-2026-10-07.md): transcript-correction model benchmark.
-- [Phase 30 closure checks 2026-10-04](verification/phase-30-2026-10-04.md): closure checks.
-- [Phase 24e physical run 2026-09-25](verification/phase-24e-physical-2026-09-25.md): robot run with the owner.
-- [Phase 47F 2026-10-08](verification/phase-47f-2026-10-08.md): retiring `/ui/` (redirect, rollback mount, Google return, tests). Deployed.
-- [Phase 47D deployment 2026-10-08](verification/phase-47d-deployment-2026-10-08.md): homelab deployment of 47D, backup and rollback tags.
-- [Phase 47D 2026-10-08](verification/phase-47d-2026-10-08.md): Brain API tests (visibility, pagination, mutation checks), hub contract, 128 browser tests, bloom measurements. Not deployed when written; [deployed the same day](verification/phase-47d-deployment-2026-10-08.md).
-- [Phase 47C 2026-10-08](verification/phase-47c-2026-10-08.md): the 3D Brain foundation on synthetic data (component and real-WebGL browser tests, software-renderer baseline, context release, bundle split). Deployed with 47D.
+### Meetings, email and calendar (2026-10)
 
-- [Phase 47B 2026-10-08](verification/phase-47b-2026-10-08.md): the operator UI in React (169 component tests, 100 browser tests against a real hub, hub characterisation tests, session-isolation mutation checks, bugs found, bundle growth). Deployed with 47D.
+- Calendar feed: [verification](verification/ics-calendar-meeting-reminders-2026-10-13.md), [deployment](verification/ics-calendar-deployment-2026-10-13.md), [screens and sync](verification/ics-calendar-screens-and-sync-2026-10-13.md), [navigation](verification/ics-calendar-navigation-2026-10-13.md), [sync deployment](verification/ics-calendar-sync-deployment-2026-10-13.md).
+- Home dashboard: [verification](verification/home-dashboard-2026-10-13.md), [deployment](verification/home-dashboard-deployment-2026-10-14.md). [Overview vLLM card deployment](verification/overview-vllm-card-deployment-2026-10-13.md).
+- [Voice recording command (Phase 52)](verification/voice-meeting-recording-2026-10-14.md).
+- Phase 53: [verification](verification/phase-53-multimodal-meetings-2026-10-14.md), [document types](verification/phase-53-document-types-2026-10-14.md), [UAT rehearsal](verification/phase-53-uat-rehearsal-2026-10-14.md), [deployment](verification/phase-53-deployment-2026-10-14.md).
+- Phase 54: [verification](verification/phase-54-speaker-identification-2026-10-14.md), [deployment](verification/phase-54-deployment-2026-10-14.md).
+- Phase 55: [verification](verification/phase-55-meeting-minutes-email-2026-10-14.md), [deployment](verification/phase-55-deployment-2026-10-14.md). Processing provenance (ADR 0040): [verification](verification/processing-provenance-disclosure-2026-10-15.md), [deployment](verification/processing-provenance-deployment-2026-10-15.md).
+- Phase 32: [32A.0 inventory](verification/phase-32a0-inventory-2026-10-15.md) (G0 approved), [Android slice verification](verification/phase-32a-android-2026-10-15.md), [GV protocol](verification/phase-32a-gv-protocol.md), [physical-phone UAT checklist](verification/phase-32a-uat-checklist.md).
+- Phase 31: [local build](verification/phase-31-meeting-analysis-2026-10-12.md), [extraction quality](verification/phase-31-extraction-quality-2026-10-12.md), [model diagnostic](verification/phase-31-model-diagnostic-2026-10-12.md), [deployment preparation](verification/phase-31-deployment-preparation-2026-10-12.md), [deployment](verification/phase-31-deployment-2026-10-12.md), [trial preparation](verification/phase-31-trial-preparation-2026-10-12.md), [trial step A](verification/phase-31-trial-step-a-deployment-2026-10-12.md), [trial step B](verification/phase-31-trial-step-b-activation-2026-10-12.md).
+- [Android, meetings and alarms 2026-10-07/08](verification/clients-meetings-alarms-2026-10-07.md); [meeting corrections benchmark](verification/meeting-corrections-benchmark-2026-10-07.md).
+- Phase 27: [foundation](verification/phase-27-foundation-2026-09-30.md), [long-audio transport](verification/phase-27-long-audio-2026-09-30.md).
 
-- [Phase 47A 2026-10-08](verification/phase-47a-2026-10-08.md): React foundation tests (Vitest, Playwright against a real hub), hub image build, bundle sizes, API compatibility. Deployed with 47D.
+### Documents and notes (2026-10-11 and 12)
 
-- [Phase 44D first look at the frozen holdout 2026-10-08](verification/phase-44d-first-look-2026-10-08.md): B1a and B1b frozen then scored once each; paired
-  case-level differences, zero exposure, development-only investigation of lexical versus hybrid.
+- Phase 50: [A spike](verification/phase-50a-mineru-spike-2026-10-11.md), [B library](verification/phase-50b-document-library-2026-10-12.md), [C integration](verification/phase-50c-integration-2026-10-12.md), [E conversation](verification/phase-50e-document-conversation-2026-10-12.md), [H/D/G/J summaries and UI](verification/phase-50h-summaries-and-documents-ui-2026-10-12.md), [deployment](verification/phase-50-deployment-2026-10-12.md), [extraction inspector](verification/phase-50-extraction-inspector-2026-10-12.md) and [deployment](verification/phase-50-inspector-deployment-2026-10-12.md), [chat picker](verification/phase-50-chat-document-picker-2026-10-12.md) and [deployment](verification/phase-50-chat-picker-deployment-2026-10-12.md), [Android Documents and history isolation](verification/phase-50-android-documents-and-history-isolation-2026-10-12.md) and [deployment](verification/phase-50-history-isolation-deployment-2026-10-12.md), [worker recovery](verification/phase-50-worker-recovery-2026-10-12.md), [summary buttons deployment](verification/documents-summary-buttons-deployment-2026-10-12.md), [web top-nav deployment](verification/web-top-nav-deployment-2026-10-12.md).
+- Phase 49: [processing](verification/phase-49-notepad-processing-2026-10-11.md), [deployment](verification/phase-49-deployment-2026-10-11.md), [activation](verification/phase-49-activation-2026-10-11.md), [Brain provenance](verification/phase-49-brain-provenance-2026-10-11.md) and [deployment](verification/phase-49-brain-provenance-deployment-2026-10-11.md). [Note folder tags deployment](verification/note-tags-deployment-2026-10-11.md).
 
-- [Phase 44D development comparison 2026-10-08](verification/phase-44d-dev-2026-10-08.md): lexical, hybrid and reranked retrieval against the baselines on the
-  development split, with authorization, latency, CPU and memory. Holdout not scored; nothing wired.
+### Knowledge layer (Phase 44 and 48)
 
-- [Phase 44B rehearsal 2026-10-08](verification/phase-44b-rehearsal-2026-10-08.md): migration 027 on a restored production copy, trigger overhead,
-  storage, rollback, the real write paths and the retention review. Nothing deployed.
+- Phase 44A: [contracts and migration 026](verification/phase-44a-2026-10-08.md), [holdout case review](verification/phase-44a-holdout-case-review-2026-10-08.md), [rehearsal](verification/phase-44a-rehearsal-2026-10-08.md), [deployment](verification/phase-44a-deployment-2026-10-08.md).
+- Phase 44B: [index and outbox](verification/phase-44b-2026-10-08.md), [rehearsal](verification/phase-44b-rehearsal-2026-10-08.md), [deployment](verification/phase-44b-deployment-2026-10-08.md), [contention plan](verification/phase-44b-contention-test-plan-2026-10-08.md) and [result](verification/phase-44b-contention-result-2026-10-08.md), [indexing trial](verification/phase-44b-indexing-trial-2026-10-08.md), [re-trial](verification/phase-44b-indexing-retrial-2026-10-08.md), [workload trial plan](verification/phase-44b-indexing-workload-trial-plan-2026-10-10.md) and [result](verification/phase-44b-indexing-workload-trial-2026-10-09.md).
+- Phase 44D: [development comparison](verification/phase-44d-dev-2026-10-08.md), [first look at the frozen holdout](verification/phase-44d-first-look-2026-10-08.md).
+- Phase 44E: [development](verification/phase-44e-development-2026-10-09.md), [first look](verification/phase-44e-first-look-2026-10-09.md), [follow-up](verification/phase-44e-followup-2026-10-09.md), [holdout review](verification/phase-44e-holdout-review-2026-10-09.md), [blind review](verification/phase-44e-blind-review-2026-10-10.md), [conflict detector](verification/phase-44e-conflict-detector-2026-10-10.md), [shadow readiness](verification/phase-44e-shadow-readiness-2026-10-10.md), [selective integration](verification/phase-44e-selective-integration-2026-10-10.md), [selective shadow](verification/phase-44e-selective-shadow-2026-10-10.md), [failure taxonomy](verification/phase-44e-failure-taxonomy-2026-10-11.md), [answer-quality improvements](verification/phase-44e-answer-quality-2026-10-11.md), [evidence sufficiency](verification/phase-44e-evidence-sufficiency-2026-10-12.md), [larger-model comparison](verification/phase-44e-larger-model-comparison-2026-10-12.md), [dev8 acceptance](verification/phase-44e-dev8-acceptance-2026-10-12.md), [section coverage](verification/phase-44e-section-coverage-2026-10-12.md).
+- Phase 44F and 44H: [44F implementation](verification/phase-44f-implementation-2026-10-10.md), [44H boundary deployment](verification/phase-44h-boundary-deployment-2026-10-12.md), [Phase 44 deployment](verification/phase-44-deployment-2026-10-10.md).
+- Groundedness and selective answering: [dev12 acceptance](verification/phase-44-groundedness-dev12-acceptance-2026-10-12.md), [dev14 scoped readiness](verification/phase-44-scoped-readiness-dev14-2026-10-12.md), [Stage A](verification/phase-44-selective-stage-a-2026-10-12.md), [adjudication](verification/phase-44-selective-adjudication-2026-10-13.md), [B-1](verification/phase-44-selective-stage-b1-2026-10-13.md) and [extension](verification/phase-44-selective-stage-b1-extension-2026-10-13.md), [qualified-object tightening](verification/phase-44-selective-b1-qualified-object-2026-10-14.md), [scorer v2 validation](verification/phase-44-scorer-v2-validation-2026-10-13.md), [scorer v3 development](verification/phase-44-scorer-v3-development-2026-10-14.md), [corpus v5 coverage](verification/phase-44-corpus-v5-coverage-2026-10-15.md), [scorer v3 formal validation](verification/phase-44-scorer-v3-formal-validation-2026-10-10.md), [I-1/I-2](verification/phase-44-selective-i1-i2-2026-10-10.md), [I-2 follow-up](verification/phase-44-selective-i2-followup-2026-10-10.md), [final development pass](verification/phase-44-selective-final-dev-pass-2026-10-10.md), [P0 smoke test](verification/phase-44-dev16-p0-smoke-test-2026-10-10.md), [P0 reproducibility correction](verification/phase-44-dev16-p0-reproducibility-correction-2026-10-10.md), [corrected P0 smoke test](verification/phase-44-dev16-p0-smoke-test-corrected-2026-10-10.md).
+- Phase 48: [48A review activation](verification/phase-48a-review-activation-2026-10-10.md), [48B eligibility](verification/phase-48b-capture-eligibility-2026-10-10.md), [48B trial log](verification/phase-48b-capture-trial-2026-10-10.md), [48C baseline](verification/phase-48c-baseline-2026-10-10.md), [48D indexing](verification/phase-48d-indexing-activation-2026-10-10.md), [48E retrieval](verification/phase-48e-retrieval-validation-2026-10-10.md), [48F selective shadow](verification/phase-48f-selective-shadow-2026-10-10.md).
 
-- [Phase 44B 2026-10-08](verification/phase-44b-2026-10-08.md): the knowledge index, transactional outbox, worker, reconciliation and retrieval-time
-  revalidation on disposable Postgres; mutation checks; the embedding load measurement. Local only.
+### Infrastructure and web (2026-10-01 to 10-08)
 
-- [Phase 44B production deployment 2026-10-08](verification/phase-44b-deployment-2026-10-08.md): migration 027 on the homelab with indexing off,
-  backup, rollback readiness and smoke tests. [Contention test plan](verification/phase-44b-contention-test-plan-2026-10-08.md) and [result](verification/phase-44b-contention-result-2026-10-08.md) (run 2026-10-08, no abort). [Indexing trial 2026-10-08](verification/phase-44b-indexing-trial-2026-10-08.md): production backfill, validation, early revert and the connection-limit finding.
+- Phase 45: [connection architecture](verification/phase-45-2026-10-08.md), [homelab cutover](verification/phase-45e-deployment-2026-10-08.md).
+- Phase 47: [47A](verification/phase-47a-2026-10-08.md), [47B](verification/phase-47b-2026-10-08.md), [47C](verification/phase-47c-2026-10-08.md), [47D](verification/phase-47d-2026-10-08.md) and [deployment](verification/phase-47d-deployment-2026-10-08.md), [47F](verification/phase-47f-2026-10-08.md).
+- [Operator UI reorganization](verification/operator-ui-2026-10-01.md) (later rebuilt in React, Phase 47).
+- [Phase 30 closure checks](verification/phase-30-2026-10-04.md).
 
-- [Phase 44A production deployment 2026-10-08](verification/phase-44a-deployment-2026-10-08.md): migration 026 on the homelab, backup
-  and restore check, rollback assets, thirteen smoke checks, downtime; the robot gate is pending.
+### Robot, voice and platform (2026-09)
 
-- [Phase 44A migration 026 rehearsal 2026-10-08](verification/phase-44a-rehearsal-2026-10-08.md): live read-only preflight, an isolated
-  restored copy migrated with the real keyring, the rollback proven, disposal; nothing on the live stack changed.
+- [Implementation history](verification/history.md); [Phase 22a bring-up](verification/phase-22-bring-up.md); [physical inventory](verification/phase-22-inventory-2026-09-22.md).
+- Phase 22b: [first motion](verification/phase-22b-first-motion-2026-09-23.md), [camera](verification/phase-22b-camera-2026-09-24.md).
+- Phase 23: [foundation](verification/phase-23-foundation-2026-09-23.md), [Accounts](verification/phase-23-accounts-2026-09-23.md), [Desktop OAuth](verification/phase-23b-desktop-oauth-2026-09-24.md).
+- [Phase 24a search](verification/phase-24a-search-assisted-2026-09-24.md); [24b command authorization](verification/phase-24b-command-authorization-2026-09-24.md); [24c robot voice](verification/phase-24c-conversation-2026-09-24.md); [24d physical conversation](verification/phase-24d-conversation-2026-09-24.md).
+- Phase 24e: [correctness set](verification/phase-24e-correctness-2026-09-25.md), [palm stop](verification/phase-24e-palm-stop-2026-09-25.md), [physical run](verification/phase-24e-physical-2026-09-25.md).
+- Phase 24f: [source trace](verification/phase-24f-source-2026-09-25.md), [conformance](verification/phase-24f-conformance-2026-09-25.md), [physical 2026-09-26](verification/phase-24f-physical-2026-09-26.md), [physical 2026-09-27](verification/phase-24f-physical-2026-09-27.md).
+- Phase 24g: [detector bench](verification/phase-24g-detector-bench-2026-09-27.md), [first physical run](verification/phase-24g-physical-2026-09-27.md).
+- [Clock, reply labelling and small.en](verification/clock-routing-stt-physical-2026-09-27.md); [STT model comparison](verification/stt-model-comparison-2026-09-26.md); [portal search and animation controls](verification/portal-controls-2026-09-25.md).
+- Phase 25: [foundation and benchmark portal](verification/phase-25-foundation-2026-09-28.md), [speaker-verification smoke test](verification/phase-25a1-voice-benchmark-2026-09-28.md).
 
-- [Phase 44A 2026-10-08](verification/phase-44a-2026-10-08.md): knowledge-layer contracts, migration 026 on a disposable database,
-  the pinned Ossie export, hub forwarding of classification and the retrieval benchmark baseline; the failing tests
-  classified as baseline or regression. Fixture evidence only; nothing deployed.
+## Deployment records
 
-- [Android, meetings and alarms 2026-10-07/08](verification/clients-meetings-alarms-2026-10-07.md):
-  deploys with their backups, the real silent recording, emulator checks (including the
-  unfolded Fold layout and the phone alarm with the app killed), test counts and what is
-  still unverified.
-
-- [Operator UI reorganization](verification/operator-ui-2026-10-01.md): feature
-  settings tabs, dashboard, meeting sidebar and durable web records; Chromium
-  fixtures, in-process API and isolated real-Postgres checks, with one existing
-  hub voice-test failure recorded. Not deployed when written; the operator UI was later rebuilt in React (Phase 47, deployed).
-
-- [Implementation history](verification/history.md): phase-level verification,
-  including the real hosted-cloud follow-up.
-- [Phase 22a bring-up](verification/phase-22-bring-up.md): consolidated backend,
-  launcher, WS, Nano, and simulator results, with unverified items explicit.
-- [Physical inventory](verification/phase-22-inventory-2026-09-22.md): original
-  raw hardware/runtime findings and subsequent dependency/device/memory checks.
-- [Phase 22b first motion](verification/phase-22b-first-motion-2026-09-23.md):
-  first real WSS registration and first-ever real-motor command, which found
-  a head-motion hardware fault; session stopped for physical inspection.
-- [Phase 22b camera](verification/phase-22b-camera-2026-09-24.md): a daemon
-  error-state finding and recovery, first real camera capture, and the
-  subsequent refactor to reachy_mini's recommended LOCAL media backend
-  (LOCAL-backend captures since exercised on the Nano; deliberate fresh-scene
-  acceptance still open).
-
-- [Phase 23 foundation](verification/phase-23-foundation-2026-09-23.md): migrations,
-  SecretStore, isolated database recovery and built-image checks.
-
-- [Phase 23 Accounts](verification/phase-23-accounts-2026-09-23.md): OAuth, read-only
-  adapters, browser and database checks; external production gates remain open.
-
-- [Phase 23b Desktop OAuth](verification/phase-23b-desktop-oauth-2026-09-24.md):
-  loopback helper transport, fixture and real-Postgres checks; no live
-  Google Desktop-client consent run performed.
-
-- [Phase 24a search-assisted assistant](verification/phase-24a-search-assisted-2026-09-24.md):
-  fixture/deterministic-stub-model checks plus a real self-hosted SearXNG
-  container live-verified against real internet results; hosted cloud
-  provider and running-homelab-stack production acceptance remain open.
-
-- [Phase 24c robot voice conversation](verification/phase-24c-conversation-2026-09-24.md):
-  automated, browser and real-process checks with a simulated robot
-  microphone, real Whisper, OVMS and TTS; no physical robot.
-
-- [Phase 24d physical conversation acceptance](verification/phase-24d-conversation-2026-09-24.md):
-  the real Nano/Reachy conversation run passed (context, latency, owner
-  usability, cold-reboot recovery); closed by owner re-scope, with the
-  remaining matrix rows and Nano diagnostics deferred to Phase 24e; motor
-  inspection remains the owner's separate follow-up.
-
-- [Phase 24e correctness set](verification/phase-24e-correctness-2026-09-25.md):
-  in-process run of the voice-turn correctness set on the local model;
-  passed the owner's pre-agreed threshold, with grounded-number and
-  statement-length failures recorded.
-
-- [Phase 24e open-palm stop](verification/phase-24e-palm-stop-2026-09-25.md):
-  in-process tests, the real MediaPipe model on still photos and an amd64
-  image build; the Nano build and physical rows are open.
-
-- [Phase 24f motion source trace](verification/phase-24f-source-2026-09-25.md):
-  pinned 1.8.4 daemon source plus a mockup-sim probe; overlapping REST moves
-  both run, real UUID stop exists, `running` follows wake-up; no robot.
-
-- [Phase 24f physical run](verification/phase-24f-physical-2026-09-26.md):
-  motion-off baseline, gestures on (daemon stop 500 reset the next request;
-  fixed); the acceptance rows continued on 2026-09-27.
-
-- [Phase 24f physical run, 2026-09-27](verification/phase-24f-physical-2026-09-27.md):
-  first real once-per-boot recovery (motor power off), `b36736d` swap,
-  step C stopped by the owner; recorded gestures replaced by silent poses,
-  then the step C rerun with them passed, as did wobble, stops, palm stop
-  and switch-off; a standby wake leaves the camera socket stale.
-
-- [Clock, reply labelling and small.en on the robot](verification/clock-routing-stt-physical-2026-09-27.md):
-  clock answers, a public "start the morning" reply and the known
-  mishearings pass; open-ended replies take 7.8–9.9 s (model length).
-
-- [Phase 24g detector cost on the Nano](verification/phase-24g-detector-bench-2026-09-27.md):
-  file-driven benchmark; openWakeWord takes 23% of one core continuously,
-  YAMNet 30 ms per 0.96 s patch; the community Edge Impulse "Hey Reachy"
-  model is cheap but caught 4 of 15 synthetic phrases; after a live session
-  with the owner it was selected as the initial detector.
-
-- [Phase 24g first physical run](verification/phase-24g-physical-2026-09-27.md):
-  first wake/pose runs and later calibration; the held-out attempt found
-  a pause-timeout failure, with fresh acceptance still owed after its fix.
-
-- [Phase 24f motion conformance](verification/phase-24f-conformance-2026-09-25.md):
-  Nano versions, predeclared tolerances, supervised REST vs SDK run; paths
-  agree; robot stops 2–5° short on both, normal vs fault still open.
-
-- [Phase 25 foundation and benchmark portal](verification/phase-25-foundation-2026-09-28.md):
-  consolidated local checks and encrypted-capture backend deployment; browser
-  and biometric acceptance remain open.
-
-- [Phase 25a.1 speaker-verification pipeline smoke test](verification/phase-25a1-voice-benchmark-2026-09-28.md):
-  dev-box only, SpeechBrain ECAPA-TDNN scoring pipeline confirmed sane
-  (same/different speaker separation) on the model card's own example
-  clips; no owner/non-owner recording, homelab run, or AASIST anti-spoof
-  evaluation yet.
-
-- [Phase 24b command authorization](verification/phase-24b-command-authorization-2026-09-24.md):
-  isolated-fixture checks for the retired substring matcher's replacement
-  (structured `/reachy` commands, the fail-closed suggestion classifier,
-  Telegram alias/menu registration, and operator-UI command autocomplete/
-  action buttons); no live Telegram bot run or real robot actuation
-  performed.
-
-- [Portal search and animation controls](verification/portal-controls-2026-09-25.md):
-  homelab redeploy, live search/browser checks and powered-off robot UI;
-  Nano deployment and physical animation remain open.
-
-- [STT model comparison](verification/stt-model-comparison-2026-09-26.md):
-  synthetic noisy-speech comparison of Whisper models on the homelab CPU;
-  small.en is more accurate but adds about 0.55 s per turn.
-
-- [Phase 27.1 foundation](verification/phase-27-foundation-2026-09-30.md):
-  automated companion-core/reachy-hub checks for meeting upload/tracking/
-  restart-recovery and the owner-authenticated proxy, plus a live homelab
-  speech smoke test. Real multi-speaker meeting and browser acceptance remain open.
-
-- [Phase 27 long-audio transport](verification/phase-27-long-audio-2026-09-30.md):
-  bounded audio-transfer regressions and isolated real-model 65-minute WAV
-  checks; representative meeting quality and live rollout remain open.
+Every production deployment has its own record, linked from its area above
+(for example [Phase 55](verification/phase-55-deployment-2026-10-14.md),
+[provenance](verification/processing-provenance-deployment-2026-10-15.md),
+[Phase 54](verification/phase-54-deployment-2026-10-14.md),
+[Phase 53](verification/phase-53-deployment-2026-10-14.md),
+[Home dashboard](verification/home-dashboard-deployment-2026-10-14.md),
+[calendar feed](verification/ics-calendar-deployment-2026-10-13.md),
+[Phase 31](verification/phase-31-deployment-2026-10-12.md),
+[Phase 50](verification/phase-50-deployment-2026-10-12.md),
+[Phase 49](verification/phase-49-deployment-2026-10-11.md),
+[Phase 44](verification/phase-44-deployment-2026-10-10.md)). A record holds
+the image IDs, backup, rollback assets, Phase 48 boundary and downtime of one
+deployment; [HANDOVER](../HANDOVER.md) lists only the rollback assets still kept.
+The schema-revision history is in
+[deployment](deployment.md#schema-upgrades-and-credential-keys).
 
 ## Where information belongs
 
@@ -372,9 +215,9 @@ These are dated evidence, not startup instructions or current health checks.
 | How to develop, test, or troubleshoot tooling | Development guide | Link |
 | Service/API navigation | Service reference; code/OpenAPI for exact schemas | Link |
 | Why a boundary or policy exists | ADR | Link rather than copied decision text |
-| What was actually verified | Dated verification record | Brief result/link |
+| What was actually verified, image IDs, backups, rollback assets of one deployment | Dated verification or deployment record | Brief result/link |
 | Agent conduct and required reading | AGENTS.md | Link |
-| Current task, next session steps, transient host state | HANDOVER.md | Do not turn it into a changelog or duplicate project state |
+| Current task, open owner items, kept rollback assets, transient host state | HANDOVER.md | Never a changelog; finished work moves to its phase page or record |
 
 Update the canonical home first. Keep source/config files authoritative for
 exact defaults and schemas, and label future plans versus implemented behavior.
