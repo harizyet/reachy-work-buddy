@@ -78,3 +78,19 @@ The benchmark tool's candidates over the same data: *no observed false accept* a
 - Windows are clean single-speaker stretches from the diarization; overlapped speech, which is harder, is excluded.
 - Still unmeasured, and the main open gaps: **replay and synthetic-owner probes** (they likely score near the owner's own range, so a threshold cannot help against them and the UI must not imply it does), a **consenting second person** recorded on the phone, **noisy-room and next-day owner clips**, (the owner's label confirmation is done).
 - Candidates are measured on the same data that picks them; held-out clips will probably score lower.
+
+## Update: a public-event recording the owner did not speak in (owner-absent control)
+
+The second recording (a public event; the owner confirms they were not a speaker), scored the same way with `tools/voice_identity_meeting_negatives.sh` run by the owner; scores only (`~/reachy-backups/phase32a-deploy/meeting2-scores.json`). The speakers did not individually consent and no per-person result is reported.
+
+| Anonymous label | Diarization turns | Clean windows scored | Score range |
+|---|---|---|---|
+| speaker_0 | 11 | 3 | 0.13 to 0.24 |
+| speaker_2 | 7 | 3 | -0.01 to 0.05 |
+| speaker_3 | 10 | 4 | 0.02 to 0.10 |
+| speaker_5 | 1 | 1 | -0.04 |
+| speaker_1, speaker_4 | 13, 4 | 0 (no turn long and clean enough) | not evaluated |
+
+**Absence test: passed on what could be scored.** All 11 scored windows are between -0.035 and **0.235** (median 0.09), far below the owner's lowest live score in any setting (0.446 in a meeting, 0.754 on the phone). Nobody in the recording was detected as the owner, and no label approached the owner's range. **Limits:** only 11 windows from 4 labels, because the recording is short and conversational; two labels (17 turns) had no clean window of 2.5 s or more and are therefore unexamined, so this does not prove that no unscored stretch resembles the owner.
+
+**Combined human non-owner evidence** (both recordings): 130 windows from 10 labels (roughly ten people), maximum score **0.235**. Accepted at an accept threshold of 0.20: 5; at 0.25 and above: 0. The owner's lowest live scores are 0.446 (meeting microphone) and 0.754 (phone). So the observed gap between the highest non-owner (0.235) and the lowest owner window (0.446) is about 0.21, and the candidate range identified earlier (no observed false accept from about 0.25) still holds with ten people instead of six. Same caveats: about ten independent voices, no similar-voice or sibling test, no overlapped speech, no replay or synthetic probes, candidates measured on the data that picks them.
