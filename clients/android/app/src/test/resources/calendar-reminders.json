@@ -1,0 +1,76 @@
+{
+ "generated_at": "2026-10-12T01:00:00+00:00",
+ "horizon_end": "2026-10-19T01:00:00+00:00",
+ "lead_minutes": 5,
+ "snapshot_revision": "38ce1393752ddb08",
+ "feed": {
+  "configured": true,
+  "host": "calendar.example.com",
+  "source": "url",
+  "freshness": "fresh",
+  "sync_state": "ok",
+  "last_success_at": "2026-10-12T01:00:00+00:00",
+  "last_attempt_at": "2026-10-12T01:00:00+00:00",
+  "age_seconds": 0,
+  "error": null,
+  "consecutive_failures": 0,
+  "event_count": 22,
+  "truncated": false,
+  "generation": 2,
+  "snapshot_revision": "38ce1393752ddb08"
+ },
+ "reminders": [
+  {
+   "event_key": "ics:fb7ab1582b573837:20261012T013000Z",
+   "series_key": "ics:fb7ab1582b573837",
+   "revision": "dc18d7be03cc",
+   "title": "Weekly sync",
+   "start": "2026-10-12T09:30:00+08:00",
+   "end": "2026-10-12T10:00:00+08:00",
+   "notify_at": "2026-10-12T09:25:00+08:00",
+   "lead_minutes": 5,
+   "classification": "meeting",
+   "basis": "explicit",
+   "recurring": true
+  },
+  {
+   "event_key": "ics:f5dc0d6660ba4395:0",
+   "series_key": "ics:f5dc0d6660ba4395",
+   "revision": "e91f3863f5e4",
+   "title": "Design review",
+   "start": "2026-10-13T14:00:00+08:00",
+   "end": "2026-10-13T15:00:00+08:00",
+   "notify_at": "2026-10-13T13:55:00+08:00",
+   "lead_minutes": 5,
+   "classification": "meeting",
+   "basis": "explicit",
+   "recurring": false
+  },
+  {
+   "event_key": "ics:1810d86ec1bd3303:0",
+   "series_key": "ics:1810d86ec1bd3303",
+   "revision": "e851e0ccd170",
+   "title": "Vendor call",
+   "start": "2026-10-14T10:00:00+08:00",
+   "end": "2026-10-14T10:30:00+08:00",
+   "notify_at": "2026-10-14T09:55:00+08:00",
+   "lead_minutes": 5,
+   "classification": "meeting",
+   "basis": "explicit",
+   "recurring": false
+  },
+  {
+   "event_key": "ics:1dcd3451ddd5009c:0",
+   "series_key": "ics:1dcd3451ddd5009c",
+   "revision": "6378d7c3febe",
+   "title": null,
+   "start": "2026-10-16T10:00:00+08:00",
+   "end": "2026-10-16T11:00:00+08:00",
+   "notify_at": "2026-10-16T09:55:00+08:00",
+   "lead_minutes": 5,
+   "classification": "meeting",
+   "basis": "explicit",
+   "recurring": false
+  }
+ ]
+}
