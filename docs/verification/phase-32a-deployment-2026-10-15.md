@@ -53,6 +53,18 @@ Counters of the previous segment (`process_started_at` 2026-10-15T03:06:44Z, end
 
 **Not verified (needs the owner):** the owner's browser or phone login, documents upload and Q&A with real files, a reminder or alarm firing, Telegram, Gmail, a real meeting through the worker, any physical-phone behaviour, and the production `/voice-identity/turn` path (it needs an owner session, which I did not mint; it was exercised against the restored copy with the same images).
 
+## Android APK 0.20.0 rebuilt from the clean commit
+
+Built in the clean worktree at `aa3e38b8de87f71f49c83ef92667231d3bd51508` (`./gradlew :app:testDebugUnitTest :app:assembleDebug`): **198 tests, 0 failures, 1 skipped** (the hub integration test, which runs only against a fixture hub; it passed on the feature branch against both fixture modes). The unreviewed `RecordingHandoff` pattern change is absent from the tree.
+
+| Artifact | sha256 | Note |
+|---|---|---|
+| `reachy-companion-0.20.0-voice-identity-aa3e38b-debug.apk` | `fc257508042ebe429af8458ceb9b69f1c334ddd71d595eeadf010a92a046ca22` | **UAT build**, 17,664,689 bytes, version 0.20.0 / code 5 |
+| `reachy-companion-0.20.0-voice-identity-debug.apk` | `01c1a821b35aa80ad1d3374ebbc30d03d62b387162297963f0ade795e628fef6` | superseded (built from the dirty tree) |
+| `reachy-companion-0.19.0-tier-tags-debug.apk` | `9491e5e0f566e9d44abe70a580972771de9e2059c7f9271a3c04c3294c8c3d27` | rollback, unchanged, matches the digest recorded in the handover |
+
+Comparison of the new and the superseded 0.20.0: same size, same 147 entries, the same manifest and permissions; **only `classes4.dex` and `classes5.dex` differ**, and the string of the unreviewed pattern ("go ahead and") is in the superseded build's `classes5.dex` and in no `.dex` of the new one. **Not installed anywhere:** `adb devices` listed no device on the build machine and no test device was designated.
+
 ## Rollback (not invoked)
 
 With the four services stopped: `docker exec -i reachy-homelab-postgres-1 psql -U reachy -d reachy_hub -v ON_ERROR_STOP=1 --single-transaction < deploy/homelab/rollback-038.sql` (drops `voice_profiles`, i.e. every enrolled profile; the last line must print `037_processing_provenance`); retag `reachy-rollback/<svc>:pre-32a` as the service images and recreate core, hub and coding-agent (`up -d --no-deps --no-build`); stop and remove `reachy-homelab-speaker-1`; remove the `VOICE_IDENTITY_ENABLED` line from `.env`. The stop-time dump is the full-restore fallback. Keep every asset until the owner accepts.
