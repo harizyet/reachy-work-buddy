@@ -55,7 +55,8 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
   const [section, setSection] = useState<Section>('transcript');
   const [status, setStatus] = useState('');
   const [outputStatus, setOutputStatus] = useState('');
-  const generating = useGenerating(id);
+  const running = useGenerating(id);
+  const generating = running?.kind ?? null;
   const [outputModel, setOutputModel] = useState('local');
   const [titleOpen, setTitleOpen] = useState(false);
   const [speakerFor, setSpeakerFor] = useState<string | null>(null);
@@ -96,6 +97,7 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
   const m = meeting;
   const ready = Boolean(m.transcript_segments?.length) && READY.includes(m.status);
   const shownSection: Section = ready ? section : 'transcript';
+  const deepRunning = Boolean(job && job.meeting_id === id && job.task === shownSection && job.status !== 'done' && job.status !== 'failed');
 
   function showResult(result: SuggestionResult) {
     setSuggestions(result.suggestions);
@@ -113,7 +115,7 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
 
   async function run(kind: 'summary' | 'minutes', model: string) {
     if (model === 'deep') return void askDeep(kind);
-    if (!beginGeneration(id, kind)) return;
+    if (!beginGeneration(id, kind, model)) return;
     setOutputStatus('');
     try {
       accept(await writeOutput(id, kind, model));
@@ -303,11 +305,24 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
 
       {ready && (shownSection === 'summary' || shownSection === 'minutes') && (
         <div>
-          <p role="status" className="text-sm">
+          <p role="status" className="text-sm font-medium">
             {generating === shownSection
-              ? `Writing the ${shownSection} again… this can take a couple of minutes. You can leave this page; the new ${shownSection} appears here when it is done.`
-              : outputStatus || (output ? '' : `No ${shownSection} yet.`)}
+              ? `Writing the ${shownSection} on ${TIER_LABEL[running?.model ?? 'local'] ?? running?.model}…`
+              : deepRunning
+                ? `Writing the ${shownSection} on the larger local model…`
+                : output
+                  ? `Written by ${TIER_LABEL[output.tier] ?? output.tier}${output.generated_at ? ' · ' + new Date(output.generated_at).toLocaleString() : ''}`
+                  : `No ${shownSection} yet.`}
           </p>
+          {generating === shownSection && (
+            <p className="text-sm text-[var(--muted)]">
+              {`This can take a couple of minutes${running?.model === 'cloud' ? ' and sends the transcript text to your cloud provider' : ''}. You can leave this page; the new ${shownSection} appears here when it is done.`}
+            </p>
+          )}
+          {deepRunning && generating !== shownSection && (
+            <p className="text-sm text-[var(--muted)]">Reachy is unavailable until it finishes. The new text appears here when it is done.</p>
+          )}
+          {outputStatus && <p role="status" className="text-sm">{outputStatus}</p>}
           <div className={`whitespace-pre-wrap break-words${generating === shownSection ? ' opacity-50' : ''}`}>{output?.text ?? ''}</div>
           {output && generating !== shownSection && m.stale_outputs.includes(shownSection) && (
             <p role="status" className="my-1 rounded border border-[var(--warn)] bg-[var(--warn-bg)] p-2 text-sm text-[var(--warn)]">
@@ -316,7 +331,7 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
           )}
           {output && generating !== shownSection && (
             <p className="text-sm text-[var(--muted)]">
-              {`Written by ${TIER_LABEL[output.tier] ?? output.tier}${output.generated_at ? ' · ' + new Date(output.generated_at).toLocaleString() : ''}. A model wrote this from a speech-to-text transcript, so check it; if it is not accurate enough, rerun it on a stronger model.`}
+              A model wrote this from a speech-to-text transcript, so check it; if it is not accurate enough, rerun it on a stronger model.
             </p>
           )}
           <label className="mt-2 block text-sm">

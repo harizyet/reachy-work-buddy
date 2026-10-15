@@ -282,21 +282,24 @@ describe('Summary and minutes', () => {
     const user = setup();
     await user.click(await screen.findByRole('button', { name: 'Summary' }));
     expect(await screen.findByText('Old summary text')).toBeInTheDocument();
+    expect(screen.getByText(/Written by the local model/)).toBeInTheDocument(); // the model tier is stated first, above the text
     const held = h.hold((c) => c === 'POST /meetings/m1/outputs/summary');
+    await user.selectOptions(screen.getByLabelText(/Rerun with/), 'cloud');
     await user.click(screen.getByRole('button', { name: 'Rerun' }));
-    expect(await screen.findByText(/Writing the summary again/)).toBeInTheDocument();
+    expect(await screen.findByText(/Writing the summary on the cloud model/)).toBeInTheDocument();
     expect(screen.getByText('Old summary text')).toBeInTheDocument(); // nothing disappears while it works
     expect(screen.getByRole('button', { name: 'Rerun' })).toBeDisabled(); // and a second run cannot be started on top of it
     await user.click(screen.getByRole('button', { name: 'Close' }));
     await screen.findByRole('heading', { name: 'Add a meeting' });
     window.location.hash = '#/meetings/m1';
     await user.click(await screen.findByRole('button', { name: 'Summary' }));
-    expect(await screen.findByText(/Writing the summary again/)).toBeInTheDocument(); // the run is still known after coming back
+    expect(await screen.findByText(/Writing the summary on the cloud model/)).toBeInTheDocument(); // the run is still known after coming back
     expect(held).toHaveLength(1);
-    h.data.meetings[0]!.summary = { text: 'New summary text', tier: 'local', generated_at: '2030-01-02T09:00:00Z' };
+    h.data.meetings[0]!.summary = { text: 'New summary text', tier: 'cloud', generated_at: '2030-01-02T09:00:00Z' };
     held[0]!.resolve(await fetch('/meetings/m1'));
     expect(await screen.findByText('New summary text')).toBeInTheDocument();
-    expect(screen.queryByText(/Writing the summary again/)).toBeNull();
+    expect(screen.queryByText(/Writing the summary on the cloud model/)).toBeNull();
+    expect(screen.getByText(/Written by the cloud model/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Rerun' })).toBeInTheDocument();
   });
 

@@ -33,6 +33,8 @@ import androidx.compose.material3.TextButton
 import app.reachy.companion.data.countOccurrences
 import app.reachy.companion.data.outputIsStale
 import app.reachy.companion.data.speakerReviewNeeded
+import app.reachy.companion.data.writingLine
+import app.reachy.companion.data.writtenByLine
 import app.reachy.companion.data.lineAt
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Warning
@@ -586,9 +588,23 @@ private fun OutputPanel(model: AppViewModel, meeting: Meeting, kind: String, onR
     val name = if (kind == "summary") "summary" else "minutes"
     Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
         when {
-            model.generatingKind == kind -> Row(verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(Modifier.size(24.dp))
-                Text("  Writing the $name with the local model…")
+            model.generatingKind == kind -> Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(Modifier.size(24.dp))
+                    Text("  ${writingLine(name, model.generatingModel)}", style = MaterialTheme.typography.titleSmall)
+                }
+                Text(
+                    "This can take a couple of minutes" + (if (model.generatingModel == "cloud") " and sends the transcript text to your cloud provider" else "") + ".",
+                    Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodySmall,
+                )
+                output?.let { Text(it.text, Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline) }
+            }
+            DeepReviewController.job?.let { !it.finished && it.meetingId == meeting.id && it.task == kind } == true -> Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(Modifier.size(24.dp))
+                    Text("  ${writingLine(name, "deep")}", style = MaterialTheme.typography.titleSmall)
+                }
+                Text("Reachy is unavailable until it finishes. The new text appears here when it is done.", Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodySmall)
             }
             output == null -> {
                 Text("No $name yet.")
@@ -599,15 +615,8 @@ private fun OutputPanel(model: AppViewModel, meeting: Meeting, kind: String, onR
                     "This $name was written before the speaker names changed, so it may attribute things to the wrong person. Rerun it to update it.",
                     Modifier.padding(bottom = 8.dp), style = MaterialTheme.typography.bodySmall, color = GapText,
                 )
+                Text(writtenByLine(output.tier, output.generatedAt), Modifier.padding(bottom = 8.dp), style = MaterialTheme.typography.titleSmall)
                 SelectionContainer { Text(output.text) }
-                Text(
-                    when (output.tier) {
-                        "deep" -> "Written by the larger local model"
-                        "cloud" -> "Written by the cloud model"
-                        else -> "Written by the local model"
-                    } + if (output.generatedAt.length >= 16) " · ${output.generatedAt.take(16).replace('T', ' ')}" else "",
-                    style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 12.dp),
-                )
                 Text("A model wrote this from a speech-to-text transcript, so check it. If it is not accurate enough, rerun it on a stronger model.", style = MaterialTheme.typography.bodySmall)
                 Row {
                     TextButton({ onRerun(kind) }, enabled = !DeepReviewController.reachyUnavailable) { Text("Rerun with another model…") }

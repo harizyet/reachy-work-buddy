@@ -638,11 +638,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- deleting, summaries and minutes ------------------------------------------------------------------------
     var generatingKind by mutableStateOf<String?>(null); private set
+    var generatingModel by mutableStateOf("local"); private set
 
     fun generateOutput(kind: String, model: String) {
         val id = openMeeting?.id ?: return
         if (generatingKind != null) return
         generatingKind = kind
+        generatingModel = model
         viewModelScope.launch {
             try { openMeeting = api.generateOutput(id, kind, model); listError = null }
             catch (e: Exception) { listError = failed(e) } finally { generatingKind = null }
