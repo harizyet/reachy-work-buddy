@@ -65,6 +65,10 @@ Built in the clean worktree at `aa3e38b8de87f71f49c83ef92667231d3bd51508` (`./gr
 
 Comparison of the new and the superseded 0.20.0: same size, same 147 entries, the same manifest and permissions; **only `classes4.dex` and `classes5.dex` differ**, and the string of the unreviewed pattern ("go ahead and") is in the superseded build's `classes5.dex` and in no `.dex` of the new one. **Not installed anywhere:** `adb devices` listed no device on the build machine and no test device was designated.
 
+## Update: calibration applied (15:57 UTC)
+
+The owner accepted the interim GV evidence and the thresholds 0.50 / 0.35 were applied by recreating the hub alone. See the [calibration decision](phase-32a-calibration-decision-2026-10-15.md). Everything stated above about the uncalibrated state is true up to this point; voice results remain display-only.
+
 ## Rollback (not invoked)
 
 With the four services stopped: `docker exec -i reachy-homelab-postgres-1 psql -U reachy -d reachy_hub -v ON_ERROR_STOP=1 --single-transaction < deploy/homelab/rollback-038.sql` (drops `voice_profiles`, i.e. every enrolled profile; the last line must print `037_processing_provenance`); retag `reachy-rollback/<svc>:pre-32a` as the service images and recreate core, hub and coding-agent (`up -d --no-deps --no-build`); stop and remove `reachy-homelab-speaker-1`; remove the `VOICE_IDENTITY_ENABLED` line from `.env`. The stop-time dump is the full-restore fallback. Keep every asset until the owner accepts.
