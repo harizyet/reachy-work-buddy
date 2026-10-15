@@ -30,6 +30,7 @@ pytestmark = pytest.mark.skipif(not os.environ.get("DATABASE_MIGRATION_TEST_URL"
 
 ROLLBACK = Path(__file__).resolve().parents[3] / "deploy" / "homelab" / "rollback-036.sql"
 ROLLBACK_037 = ROLLBACK.with_name("rollback-037.sql")  # the head is 037 now (processing provenance): it is undone first
+ROLLBACK_038 = ROLLBACK_037.with_name("rollback-038.sql")  # the head is 038 now (voice profiles): it is undone first
 KEYS = Keyring("one", {"one": os.urandom(32)})
 SENDER = "reachy.minutes@example.test"
 PDF = b"%PDF-1.4 fixture \x00\x01 bytes"
@@ -72,7 +73,7 @@ async def queued(store: PostgresEmailStore, **over) -> EmailDraft:
 # ---- migration 036 -------------------------------------------------------------------------------------------------------------------------------
 
 def test_the_migration_adds_columns_and_tables_without_touching_existing_drafts_and_is_repeatable(dsn):
-    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("037_processing_provenance",)]
+    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("038_voice_profiles",)]
     cols = {r[0] for r in sql(dsn, "SELECT column_name FROM information_schema.columns WHERE table_name = 'email_drafts'")}
     assert {"kind", "recipients", "source", "package_hash", "approved_hash", "message_id", "sender", "attempts", "claimed_at", "last_error", "provider_response"} <= cols
     tables = {r[0] for r in sql(dsn, "SELECT tablename FROM pg_tables")}
@@ -111,6 +112,7 @@ def test_the_rollback_script_removes_meeting_drafts_and_the_credential_but_keeps
     keep, gone = asyncio.run(seed())
     assert sql(dsn, "SELECT count(*) FROM secrets WHERE provider = 'mail-sender'") == [(1,)]
     with psycopg.connect(dsn) as conn:
+        conn.execute(ROLLBACK_038.read_text())
         conn.execute(ROLLBACK_037.read_text())
         conn.execute(ROLLBACK.read_text())  # one transaction, as the script's own instructions require
     assert sql(dsn, "SELECT version_num FROM alembic_version") == [("035_meeting_speaker_identity",)]
@@ -119,7 +121,7 @@ def test_the_rollback_script_removes_meeting_drafts_and_the_credential_but_keeps
     assert sql(dsn, "SELECT count(*) FROM pg_tables WHERE tablename IN ('mail_sender','email_draft_events','email_draft_attachments','meeting_recipient_groups')") == [(0,)]
     assert gone not in [r[0] for r in sql(dsn, "SELECT id FROM email_drafts")]
     upgrade(dsn, KEYS)
-    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("037_processing_provenance",)]
+    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("038_voice_profiles",)]
 
 
 # ---- the store -----------------------------------------------------------------------------------------------------------------------------------

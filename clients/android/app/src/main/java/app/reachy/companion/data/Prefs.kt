@@ -39,4 +39,11 @@ class Prefs(context: Context) {
     var speakReplies: Boolean
         get() = store.getBoolean("speak_replies", true)
         set(value) = store.edit().putBoolean("speak_replies", value).apply()
+    /** A random id for this install, sent as provenance with voice audio (not a secret and not an authentication). */
+    val installId: String
+        get() = store.getString("install_id", null) ?: java.util.UUID.randomUUID().toString().also { store.edit().putString("install_id", it).apply() }
+    /** Use the phone's own speech recogniser for voice chat instead of sending the audio to Reachy's. Off by default. */
+    var phoneRecognizer: Boolean
+        get() = store.getBoolean("phone_recognizer", false)
+        set(value) = store.edit().putBoolean("phone_recognizer", value).apply()
 }

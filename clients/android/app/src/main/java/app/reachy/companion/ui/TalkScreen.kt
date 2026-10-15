@@ -64,6 +64,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import app.reachy.companion.AppViewModel
+import app.reachy.companion.PcmCapture
 import app.reachy.companion.SpeechInput
 import app.reachy.companion.SpeechOutput
 import app.reachy.companion.RecordingController
@@ -94,19 +95,21 @@ private fun TalkContent(model: AppViewModel, speakReplies: Boolean) {
     val scope = rememberCoroutineScope()
     val output = remember { SpeechOutput(context) }
     val listenAgain = remember { mutableStateOf({}) }
+    // What was heard, from either recogniser: the phone's own, or Reachy's (the same audio that the speaker check reads, see hubInput below).
+    val handleHeard: (String) -> Unit = { text ->
+        heard = ""
+        when {
+            model.recordingHandoff.busy -> {}   // a recording handoff is running: stray speech is not a new turn
+            // A whole-utterance command, matched here: it is not sent to the hub, and only this deliberate speech can start a recording.
+            voiceMode && isMeetingRecordingCommand(text) -> { phase = VoicePhase.Speaking; model.startRecordingByVoice(text) }
+            else -> { seqAtSend = model.replySeq; phase = VoicePhase.Thinking; model.send(text, spoken = true) }
+        }
+    }
     val input = remember {
         SpeechInput(
             context,
             onPartial = { heard = it },
-            onFinal = { text ->
-                heard = ""
-                when {
-                    model.recordingHandoff.busy -> {}   // a recording handoff is running: stray speech is not a new turn
-                    // A whole-utterance command, matched here: it is not sent to the hub, and only this deliberate speech can start a recording.
-                    voiceMode && isMeetingRecordingCommand(text) -> { phase = VoicePhase.Speaking; model.startRecordingByVoice(text) }
-                    else -> { seqAtSend = model.replySeq; phase = VoicePhase.Thinking; model.send(text, spoken = true) }
-                }
-            },
+            onFinal = { text -> handleHeard(text) },
             onEnd = { error ->
                 level = 0f
                 if (error != null) { micError = error; muted = true; phase = VoicePhase.Muted }
@@ -116,9 +119,36 @@ private fun TalkContent(model: AppViewModel, speakReplies: Boolean) {
             onLevel = { level = it },
         )
     }
-    DisposableEffect(Unit) { onDispose { input.stop(); output.shutdown() } }
-    fun startListening() { if (model.recordingHandoff.busy) return; output.stop(); micError = null; heard = ""; phase = VoicePhase.Listening; muted = false; input.start() }
-    listenAgain.value = { scope.launch { delay(300); if (voiceMode && phase == VoicePhase.Listening && !muted && !model.recordingHandoff.busy) input.start() } }
+    // Phase 32A.V: when the hub has voice identity on, one in-memory capture is uploaded once; the hub transcribes it and checks the speaker from the
+    // same bytes. The transcript then goes through exactly the path above, so voice chat behaves as before whatever the speaker check says.
+    val hubInput = remember {
+        PcmCapture(
+            onLevel = { level = it },
+            onUtterance = { wav ->
+                phase = VoicePhase.Thinking
+                scope.launch {
+                    try {
+                        val text = model.voiceIdentity.transcribe(wav)
+                        if (text.isBlank()) { phase = VoicePhase.Listening; listenAgain.value() } else handleHeard(text)
+                    } catch (e: app.reachy.companion.data.ApiException) {
+                        // 422: nothing intelligible in the clip; carry on listening. Anything else stops the loop with a message, like a recogniser error.
+                        if (e.code == 422) { phase = VoicePhase.Listening; listenAgain.value() }
+                        else { micError = if (e.unauthorized) "Please sign in again" else "Reachy could not hear that (${e.message})"; muted = true; phase = VoicePhase.Muted }
+                    } catch (e: Exception) { micError = "Could not reach the hub to understand that"; muted = true; phase = VoicePhase.Muted }
+                }
+            },
+            onEnd = { error ->
+                level = 0f
+                if (error != null) { micError = error; muted = true; phase = VoicePhase.Muted }
+                else if (voiceMode && phase == VoicePhase.Listening) listenAgain.value()
+            },
+        )
+    }
+    fun beginCapture() { if (model.voiceIdentity.hubCapture) hubInput.start() else input.start() }
+    fun stopCapture() { input.stop(); hubInput.stop() }
+    DisposableEffect(Unit) { onDispose { stopCapture(); output.shutdown() } }
+    fun startListening() { if (model.recordingHandoff.busy) return; output.stop(); micError = null; heard = ""; phase = VoicePhase.Listening; muted = false; beginCapture() }
+    listenAgain.value = { scope.launch { delay(300); if (voiceMode && phase == VoicePhase.Listening && !muted && !model.recordingHandoff.busy) beginCapture() } }
     // After Reachy has spoken (or a turn failed) the conversation carries on, unless the microphone was switched off.
     fun afterReply() { if (!voiceMode || model.recordingHandoff.busy) return; if (muted) phase = VoicePhase.Muted else startListening() }
     // The hub streams its voice sentence by sentence; the phone's own voice covers a hub that cannot speak.
@@ -158,7 +188,7 @@ private fun TalkContent(model: AppViewModel, speakReplies: Boolean) {
         if (!model.sending && voiceMode && phase == VoicePhase.Thinking && model.replySeq == seqAtSend) afterReply()
     }
     fun openVoice() { voiceMode = true; startListening() }
-    fun closeVoice() { voiceMode = false; input.stop(); output.stop(); heard = ""; level = 0f }
+    fun closeVoice() { voiceMode = false; stopCapture(); output.stop(); heard = ""; level = 0f }
     // The owner closing voice mode (or leaving) before the recorder has been asked to start ends the handoff; nothing is recorded.
     fun closeVoiceByOwner() { model.recordingHandoff.cancel("Voice mode was closed before recording started, so nothing was recorded."); closeVoice() }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -167,7 +197,7 @@ private fun TalkContent(model: AppViewModel, speakReplies: Boolean) {
             override fun inForeground() = lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
             override fun speakConfirmation(operation: Int): Boolean {
                 if (!voiceMode) return false
-                input.stop(); heard = ""; level = 0f; phase = VoicePhase.Speaking
+                stopCapture(); heard = ""; level = 0f; phase = VoicePhase.Speaking
                 speakChecked(RECORDING_CONFIRMATION) { spoken -> model.recordingHandoff.confirmationFinished(operation, spoken) }
                 return true
             }
@@ -191,7 +221,7 @@ private fun TalkContent(model: AppViewModel, speakReplies: Boolean) {
     }
     fun toggleMute() {
         if (muted) { muted = false; if (phase == VoicePhase.Muted) startListening() }
-        else { muted = true; if (phase == VoicePhase.Listening) { input.stop(); phase = VoicePhase.Muted; heard = "" } }
+        else { muted = true; if (phase == VoicePhase.Listening) { stopCapture(); phase = VoicePhase.Muted; heard = "" } }
     }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) openVoice() else micError = "Microphone permission is needed to talk"
@@ -201,8 +231,11 @@ private fun TalkContent(model: AppViewModel, speakReplies: Boolean) {
         else permission.launch(Manifest.permission.RECORD_AUDIO)
     }
 
+    // The owner-match line is shown only while the result is current (about ten seconds); this clock makes it disappear without a new event.
+    var clock by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(voiceMode) { while (voiceMode) { delay(1000); clock = System.currentTimeMillis() } }
     if (voiceMode) {
-        VoiceModeScreen(phase, heard, level, micError ?: model.chatStatus, muted, phoneVoice, { if (!model.recordingHandoff.busy) { phoneVoice = it; model.prefs.phoneVoice = it; output.stop() } }, { toggleMute() }, { closeVoiceByOwner() })
+        VoiceModeScreen(phase, heard, level, micError ?: model.chatStatus, muted, phoneVoice, { if (!model.recordingHandoff.busy) { phoneVoice = it; model.prefs.phoneVoice = it; output.stop() } }, { toggleMute() }, { closeVoiceByOwner() }, ownerMatch = model.voiceIdentity.match(clock)?.label)
     }
 
     if (picking) DocumentPicker(model, onChosen = { model.attachDocument(it); picking = false }, onClose = { picking = false })

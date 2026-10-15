@@ -19,6 +19,7 @@ from companion_core.secrets import Keyring
 pytestmark = pytest.mark.skipif(not os.environ.get("DATABASE_MIGRATION_TEST_URL"), reason="requires explicitly disposable Postgres")
 
 ROLLBACK = Path(__file__).resolve().parents[3] / "deploy" / "homelab" / "rollback-037.sql"
+ROLLBACK_038 = ROLLBACK.with_name("rollback-038.sql")  # the head is 038 now (voice profiles): it is undone first
 KEYS = Keyring("one", {"one": os.urandom(32)})
 
 
@@ -44,7 +45,7 @@ def sql(url, query, args=()):
 
 
 def test_the_migration_adds_an_empty_record_to_existing_meetings_and_is_repeatable(dsn):
-    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("037_processing_provenance",)]
+    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("038_voice_profiles",)]
     assert sql(dsn, "SELECT column_name FROM information_schema.columns WHERE table_name = 'meetings' AND column_name = 'processing_events'") == [("processing_events",)]
     assert sql(dsn, "SELECT column_name FROM information_schema.columns WHERE table_name = 'mail_sender' AND column_name = 'owner_name'") == [("owner_name",)]
     upgrade(dsn, KEYS)
@@ -134,10 +135,11 @@ def test_the_rollback_script_drops_both_columns_keeps_meetings_and_the_migration
 
     meeting_id = asyncio.run(seed())
     with psycopg.connect(dsn) as conn:
+        conn.execute(ROLLBACK_038.read_text())
         conn.execute(ROLLBACK.read_text())  # one transaction, as the script's own instructions require
     assert sql(dsn, "SELECT version_num FROM alembic_version") == [("036_meeting_email",)]
     assert sql(dsn, "SELECT count(*) FROM information_schema.columns WHERE (table_name, column_name) IN (('meetings','processing_events'),('mail_sender','owner_name'))") == [(0,)]
     assert sql(dsn, "SELECT title FROM meetings WHERE id = %s", (meeting_id,)) == [("Keep me",)]
     upgrade(dsn, KEYS)
-    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("037_processing_provenance",)]
+    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("038_voice_profiles",)]
     assert sql(dsn, "SELECT processing_events FROM meetings WHERE id = %s", (meeting_id,)) == [([],)]  # the dropped record is not resurrected

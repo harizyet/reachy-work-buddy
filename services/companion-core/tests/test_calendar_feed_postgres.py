@@ -28,6 +28,7 @@ ROLLBACK_034 = ROLLBACK.with_name("rollback-034.sql")  # the head is 034 now: it
 ROLLBACK_035 = ROLLBACK.with_name("rollback-035.sql")  # the head is 035 now (speaker identity): it is undone first
 ROLLBACK_036 = ROLLBACK.with_name("rollback-036.sql")  # the head is 036 now (meeting email): it is undone first
 ROLLBACK_037 = ROLLBACK_036.with_name("rollback-037.sql")  # the head is 037 now (processing provenance): it is undone first
+ROLLBACK_038 = ROLLBACK_037.with_name("rollback-038.sql")  # the head is 038 now (voice profiles): it is undone first
 FIXTURE = (Path(__file__).parent / "fixtures" / "calendar" / "work-calendar.ics").read_bytes()
 URL = "https://calendar.example.com/private/abcdef-secret-token/basic.ics"
 NOW = datetime(2026, 10, 12, 1, 0, tzinfo=UTC)
@@ -78,7 +79,7 @@ def with_store(dsn, body, keys=KEYS):
 
 
 def test_the_migration_adds_one_table_with_one_empty_row(dsn):
-    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("037_processing_provenance",)]
+    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("038_voice_profiles",)]
     assert sql(dsn, "SELECT id, secret_ref, snapshot FROM calendar_feed") == [("owner", None, None)]
     assert sql(dsn, "SELECT count(*) FROM pg_constraint WHERE conrelid = 'calendar_feed'::regclass AND contype = 'c'") == [(1,)]  # only the owner row can exist
     with pytest.raises(psycopg.errors.CheckViolation):
@@ -154,6 +155,7 @@ def test_the_rollback_script_removes_the_feed_and_its_secret_and_nothing_else(ds
     with_store(dsn, go)
     sql(dsn, "INSERT INTO calendar_events (id, title, start_at, end_at) VALUES ('e1', 'Local', now(), now())")
     with psycopg.connect(dsn) as conn:
+        conn.execute(ROLLBACK_038.read_text())
         conn.execute(ROLLBACK_037.read_text())
         conn.execute(ROLLBACK_036.read_text())
         conn.execute(ROLLBACK_035.read_text())
@@ -164,7 +166,7 @@ def test_the_rollback_script_removes_the_feed_and_its_secret_and_nothing_else(ds
     assert sql(dsn, "SELECT provider FROM secrets") == [("google",)]
     assert sql(dsn, "SELECT count(*) FROM calendar_events") == [(1,)]
     upgrade(dsn, KEYS)  # applies again after a rollback
-    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("037_processing_provenance",)] and sql(dsn, "SELECT id FROM calendar_feed") == [("owner",)]
+    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("038_voice_profiles",)] and sql(dsn, "SELECT id FROM calendar_feed") == [("owner",)]
 
 
 def test_an_uploaded_file_is_stored_encrypted_and_survives_a_restart_with_the_same_revision(dsn):

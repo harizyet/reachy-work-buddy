@@ -35,6 +35,7 @@ from reachy_hub.enrollment_store import (
     MAX_SAMPLE_BYTES,
     EnrollmentStore,
     SampleRejected,
+    parse_label,
 )
 from reachy_hub.operator import require_csrf
 from shared.models.enrollment import (
@@ -54,6 +55,7 @@ from shared.protocols.operator_api import (
     OWNER_RECOGNITION_STATUS,
 )
 
+BENCHMARK_LABEL_HEADER = "X-Reachy-Benchmark-Label"  # Phase 32A.V GV protocol; voice clips only
 REAUTH_WINDOW_SECONDS = 300.0
 _SESSION_REAUTH_KEY = "owner_recognition_reauth_at"
 
@@ -71,6 +73,11 @@ def _reauth_remaining(request: Request) -> float | None:
     if reauth_at is None:
         return None
     return REAUTH_WINDOW_SECONDS - (time.time() - reauth_at)
+
+
+def reauth_remaining(request: Request) -> float | None:
+    """Seconds left in the owner's fresh-reauthentication window, or None. Shared with voice identity (ADR 0041)."""
+    return _reauth_remaining(request)
 
 
 def install_owner_recognition_routes(app, require_owner_session, store: EnrollmentStore) -> None:
@@ -138,7 +145,9 @@ def install_owner_recognition_routes(app, require_owner_session, store: Enrollme
                     raise HTTPException(413, "Sample too large")
                 data = await request.body()
                 try:
-                    return await store.add_sample(kind, request.headers.get("content-type", ""), data)
+                    raw_label = request.headers.get(BENCHMARK_LABEL_HEADER)
+                    label = parse_label(raw_label) if raw_label and kind == EnrollmentSampleKind.VOICE else None
+                    return await store.add_sample(kind, request.headers.get("content-type", ""), data, label)
                 except SampleRejected as exc:
                     raise HTTPException(422, str(exc)) from None
 

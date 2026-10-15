@@ -35,6 +35,9 @@ class ApiException(val code: Int, message: String, val reason: String? = null) :
     val unauthorized get() = code == 401
 }
 
+/** Who is capturing: sent as provenance with voice audio. */
+data class ClientIdentity(val installId: String, val deviceName: String)
+
 /** Persists the owner's session cookie so the app stays signed in across launches. */
 class PersistentCookieJar(private val load: () -> String?, private val save: (String?) -> Unit) : CookieJar {
     private var cookies: List<Cookie>? = null
@@ -109,6 +112,51 @@ class ReachyApi(baseUrl: String, private val cookieJar: PersistentCookieJar, cli
         runCatching { call(req("/auth/logout").post("{}".toRequestBody("application/json".toMediaType())).build()) }
         cookieJar.clear()
     }
+
+    // ---- shared voice identity (Phase 32A.V): audio goes only to these routes, as a raw WAV body ----
+
+    private fun wavBody(wav: ByteArray): RequestBody = wav.toRequestBody("audio/wav".toMediaType())
+
+    private fun voiceReq(path: String, who: ClientIdentity, utteranceId: String? = null) =
+        Request.Builder().url(base + path).also { b -> provenanceHeaders(who.installId, who.deviceName, utteranceId).forEach { (k, v) -> b.header(k, v) } }
+
+    suspend fun voiceIdentityStatus(): VoiceIdentityStatus = json.decodeFromString(call(req("/voice-identity/status").build()))
+
+    suspend fun reauthenticate(password: String) {
+        call(req("/owner-recognition/reauth").post(jsonBody(buildJsonObject { put("password", password) })).build())
+    }
+
+    suspend fun addEnrollmentSample(wav: ByteArray, who: ClientIdentity): DraftSample =
+        json.decodeFromString(call(voiceReq("/voice-identity/enrollment/samples", who).post(wavBody(wav)).build()))
+
+    suspend fun removeEnrollmentSample(id: String) { call(req("/voice-identity/enrollment/samples/$id").delete().build()) }
+
+    suspend fun discardEnrollment() { call(req("/voice-identity/enrollment").delete().build()) }
+
+    suspend fun commitEnrollment(consent: Boolean, who: ClientIdentity): VoiceProfileInfo =
+        json.decodeFromString(call(voiceReq("/voice-identity/enrollment/commit", who).post(jsonBody(buildJsonObject { put("consent", consent) })).build()))
+
+    suspend fun deleteVoiceProfile() { call(req("/voice-identity/profile").delete().build()) }
+
+    suspend fun verifyVoice(wav: ByteArray, who: ClientIdentity, utteranceId: String): VoiceStateView =
+        json.decodeFromString(call(voiceReq("/voice-identity/verify", who, utteranceId).post(wavBody(wav)).build()))
+
+    /** One upload feeds the hub's speech recogniser and the speaker check. `converse=false`: the hub does not answer; the app sends the text itself, as it always has. */
+    suspend fun voiceTurn(wav: ByteArray, who: ClientIdentity, utteranceId: String): VoiceTurnResult =
+        json.decodeFromString(call(voiceReq("/voice-identity/turn?converse=false", who, utteranceId).post(wavBody(wav)).build()))
+
+    // ---- GV evaluation clips (the owner-recognition benchmark store; explicit opt-in on the hub) ----
+
+    suspend fun benchmarkStatus(): BenchmarkStatus = json.decodeFromString(call(req("/owner-recognition/status").build()))
+
+    suspend fun setBenchmarkEnabled(enabled: Boolean) {
+        call(req("/owner-recognition/benchmark/enabled").put(jsonBody(buildJsonObject { put("enabled", enabled) })).build())
+    }
+
+    suspend fun uploadBenchmarkClip(wav: ByteArray, label: String): BenchmarkClip =
+        json.decodeFromString(call(req("/owner-recognition/benchmark/voice/samples").header("X-Reachy-Benchmark-Label", label).post(wavBody(wav)).build()))
+
+    suspend fun deleteBenchmarkClips() { call(req("/owner-recognition/benchmark/voice/samples").delete().build()) }
 
     suspend fun userId(): String =
         json.decodeFromString<StatusInfo>(call(req("/status").build())).defaultUserId

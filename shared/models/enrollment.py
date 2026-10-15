@@ -34,6 +34,8 @@ class EnrollmentSample(BaseModel):
     captured_at: datetime
     content_type: str
     size_bytes: int
+    # Phase 32A.V GV protocol: `role=trial;speaker=owner;condition=quiet` (see enrollment_store.parse_label). Plaintext metadata: use aliases, never names.
+    label: str | None = None
 
 
 class EnrollmentStatus(BaseModel):
