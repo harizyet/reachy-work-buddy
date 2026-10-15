@@ -276,6 +276,30 @@ describe('Summary and minutes', () => {
     expect(await screen.findByText('No summary yet.')).toBeInTheDocument();
   });
 
+  it('keeps the old text visible while a rerun is written, and still shows it as running after leaving the meeting and coming back', async () => {
+    const h = hub([meeting({ summary: { text: 'Old summary text', tier: 'local', generated_at: '2030-01-02T07:30:00Z' } })]);
+    renderApp('#/meetings/m1');
+    const user = setup();
+    await user.click(await screen.findByRole('button', { name: 'Summary' }));
+    expect(await screen.findByText('Old summary text')).toBeInTheDocument();
+    const held = h.hold((c) => c === 'POST /meetings/m1/outputs/summary');
+    await user.click(screen.getByRole('button', { name: 'Rerun' }));
+    expect(await screen.findByText(/Writing the summary again/)).toBeInTheDocument();
+    expect(screen.getByText('Old summary text')).toBeInTheDocument(); // nothing disappears while it works
+    expect(screen.getByRole('button', { name: 'Rerun' })).toBeDisabled(); // and a second run cannot be started on top of it
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    await screen.findByRole('heading', { name: 'Add a meeting' });
+    window.location.hash = '#/meetings/m1';
+    await user.click(await screen.findByRole('button', { name: 'Summary' }));
+    expect(await screen.findByText(/Writing the summary again/)).toBeInTheDocument(); // the run is still known after coming back
+    expect(held).toHaveLength(1);
+    h.data.meetings[0]!.summary = { text: 'New summary text', tier: 'local', generated_at: '2030-01-02T09:00:00Z' };
+    held[0]!.resolve(await fetch('/meetings/m1'));
+    expect(await screen.findByText('New summary text')).toBeInTheDocument();
+    expect(screen.queryByText(/Writing the summary again/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Rerun' })).toBeInTheDocument();
+  });
+
   it('does not rewrite an existing output on opening, and reports a generation failure', async () => {
     const h = hub([meeting({ minutes: { text: 'Existing minutes', tier: 'deep', generated_at: '2030-01-02T08:00:00Z' } })]);
     renderApp('#/meetings/m1');

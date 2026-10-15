@@ -27,6 +27,7 @@ import { AnalysisPanel } from './AnalysisPanel';
 import { DocumentsPanel } from './DocumentsPanel';
 import { SlideSuggestion } from './SlideSuggestion';
 import { ShareMinutes } from './ShareMinutes';
+import { beginGeneration, endGeneration, useGenerating } from './generation';
 import { SpeakerIdentify } from './SpeakerIdentify';
 import { useEmailConfig } from './useMeetingEmail';
 import { useMultimodalActions, useMultimodalEnabled, useOverview } from './useMeetingMultimodal';
@@ -54,7 +55,7 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
   const [section, setSection] = useState<Section>('transcript');
   const [status, setStatus] = useState('');
   const [outputStatus, setOutputStatus] = useState('');
-  const [generating, setGenerating] = useState<'summary' | 'minutes' | null>(null);
+  const generating = useGenerating(id);
   const [outputModel, setOutputModel] = useState('local');
   const [titleOpen, setTitleOpen] = useState(false);
   const [speakerFor, setSpeakerFor] = useState<string | null>(null);
@@ -112,14 +113,14 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
 
   async function run(kind: 'summary' | 'minutes', model: string) {
     if (model === 'deep') return void askDeep(kind);
-    setGenerating(kind);
+    if (!beginGeneration(id, kind)) return;
     setOutputStatus('');
     try {
       accept(await writeOutput(id, kind, model));
     } catch (e) {
       if (!(e instanceof StaleSessionError)) setOutputStatus(messageOf(e));
     } finally {
-      setGenerating(null);
+      endGeneration(id, kind);
     }
   }
 
@@ -303,9 +304,11 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
       {ready && (shownSection === 'summary' || shownSection === 'minutes') && (
         <div>
           <p role="status" className="text-sm">
-            {generating === shownSection ? `Writing the ${shownSection} with the local model…` : outputStatus || (output ? '' : `No ${shownSection} yet.`)}
+            {generating === shownSection
+              ? `Writing the ${shownSection} again… this can take a couple of minutes. You can leave this page; the new ${shownSection} appears here when it is done.`
+              : outputStatus || (output ? '' : `No ${shownSection} yet.`)}
           </p>
-          <div className="whitespace-pre-wrap break-words">{generating === shownSection ? '' : (output?.text ?? '')}</div>
+          <div className={`whitespace-pre-wrap break-words${generating === shownSection ? ' opacity-50' : ''}`}>{output?.text ?? ''}</div>
           {output && generating !== shownSection && m.stale_outputs.includes(shownSection) && (
             <p role="status" className="my-1 rounded border border-[var(--warn)] bg-[var(--warn-bg)] p-2 text-sm text-[var(--warn)]">
               {`This ${shownSection} was written before the speaker names changed, so it may attribute things to the wrong person. Rerun it to update it.`}
