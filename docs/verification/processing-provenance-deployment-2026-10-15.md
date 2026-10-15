@@ -40,3 +40,11 @@ Counters read with core's token before the stop: previous segment (started 2026-
 2. Share minutes on a meeting and Prepare. For the existing meetings the message must show the **neutral** statement, never the local-only one, plus the Gmail delivery sentence. The fixed opening and closing text appears read-only around the message box.
 3. To see the local-only sentence, process a new recording (or write its summary and minutes again after it has been transcribed under this build) and prepare again. To see the external wording, write a summary with the cloud model once.
 4. Approve with `SEND` to your own address only, wait the delay, and compare the delivered email with the preview.
+
+## Fix during UAT: deep local minutes cut off (2026-10-15, commit `08160e7`)
+
+**Finding.** A deep minutes run on the 7-part "AI & Data Team Weekly Update" failed with "the model took too long". The manager log showed the 14B ready at 10:44:45 (local time) and the restore at 10:49:57; core's traceback was `504` from the 220 s budget (`OVERALL_DEADLINE_SECONDS + 20`) that was written for the quick model in a waiting request, applied unchanged to the deep tier. The work is 7 sequential note calls plus the final pass, which the 7B alone needs about 100 s for.
+
+**Fix.** The deep tier has its own budget (`DEEP_OUTPUT_DEADLINE_SECONDS`, 840 s, inside the manager's 1200 s lease); the quick and cloud tiers keep 220 s (the hub waits 270 s for them); the estimate shown is 600 s. A test runs the same slow model through both paths. **Not verified:** a real deep rerun on this meeting after the fix.
+
+**Redeploy (core only, no schema or hub change).** Rollback tag `reachy-rollback/companion-core:pre-deepfix` (= `74e7161195ea`); core `41e49f86816f` (tag `deepfix-08160e7`); stopped 03:06:40 UTC, running 03:06:42 (about 20 s with the start-up); environment identical before and after; no errors in the logs; `/deep-review/info` available with eta 600; schema still `037_processing_provenance`. **New Phase 48 segment from 03:06:44 UTC**, previous counters `{}` saved in `~/reachy-backups/phase48-boundary-deepfix/`. No meeting job, queued email, reminder or deep job was active.
