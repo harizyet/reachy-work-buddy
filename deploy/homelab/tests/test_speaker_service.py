@@ -68,6 +68,15 @@ class SpeakerServiceTests(unittest.TestCase):
                 server.embed(upload(data))
             self.assertEqual(caught.exception.status_code, 422)
 
+    def test_a_truncated_upload_is_handled_not_a_server_error(self):
+        data = wav_bytes(tone(2.0))
+        for cut in (len(data) - 1, len(data) // 2 + 1, 45, 44):
+            try:
+                body = server.embed(upload(data[:cut]))
+                self.assertEqual(len(body["embedding"]), 3)
+            except HTTPException as caught:
+                self.assertIn(caught.status_code, (400, 422))
+
     def test_too_short_empty_and_oversize(self):
         for data, code in ((wav_bytes(tone(0.2)), 422), (b"", 400), (b"x" * (server.MAX_AUDIO_BYTES + 1), 413)):
             with self.assertRaises(HTTPException) as caught:

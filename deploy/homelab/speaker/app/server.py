@@ -92,7 +92,8 @@ def decode_wav(data: bytes) -> np.ndarray:
             frames = wav.readframes(wav.getnframes())
     except (wave.Error, EOFError):
         raise HTTPException(422, "audio is not a readable WAV file") from None
-    return np.frombuffer(frames, dtype="<i2").astype(np.float32) / 32768.0
+    # A truncated upload can end mid-sample; drop the stray byte rather than fail on it.
+    return np.frombuffer(frames[: len(frames) // 2 * 2], dtype="<i2").astype(np.float32) / 32768.0
 
 
 def quality(samples: np.ndarray) -> dict:
