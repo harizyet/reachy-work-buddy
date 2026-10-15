@@ -1,0 +1,21 @@
+[Unit]
+Description=Reachy model manager (Deep local tier switching, ADR 0031)
+# A systemd USER unit, installed by scripts/install-model-manager-service.sh. It runs as the owner with the owner's own Docker access, which is why the manager is a host process and not a
+# container with the Docker socket mounted (ADR 0031, decision 9). With lingering enabled it starts at boot, in step with the Docker stack (whose containers have restart: unless-stopped),
+# and systemd restarts it if it dies. It listens on the Docker bridge address only, behind its token.
+Wants=default.target
+# Docker is a system service this user unit cannot order after, so the script's own checks (the Docker daemon, the docker0 address) fail fast and Restart= retries until they pass.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+# %h is the owner's home. The repository is expected at %h/reachy-work-buddy; the install script refuses to install if it is not.
+WorkingDirectory=%h/reachy-work-buddy
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+ExecStart=%h/reachy-work-buddy/scripts/start-model-manager.sh --bridge
+# Restarting or stopping the manager never changes which vLLM tier is loaded by itself; a deep job's lease restores the fast tier (Phase 42). Always retry, slowly.
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=default.target

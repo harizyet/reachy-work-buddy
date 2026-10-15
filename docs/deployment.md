@@ -231,7 +231,7 @@ The hosted-provider evidence and reasoning-model token-budget caveat are in
 
 The model manager swaps the vLLM tiers and always restores the fast one
 ([ADR 0031](adr/0031-three-tier-local-model-escalation.md),
-[Phase 42](phase-42.md)). It is a **host process**, started by hand:
+[Phase 42](phase-42.md)). It is a **host process**; the commands below run it by hand, and the unit described after them starts it with the machine:
 
 ```bash
 scripts/start-model-manager.sh --check    # read-only
@@ -246,9 +246,18 @@ printed); compose reads that file for companion-core as an optional env file, so
 without it the Deep local option reports "the model manager is not configured".
 After creating or rotating the token, recreate companion-core (`docker compose
 up -d companion-core`). Do not run `docker compose config` into logs: it prints
-interpolated environment values. The manager is not supervised: if it is not
-running, Deep local is disabled and nothing else changes. Whoever can call it can
+interpolated environment values. Whoever can call it can
 take the local model offline for minutes, so treat its token like Docker access.
+
+**Start with the machine.** `scripts/install-model-manager-service.sh` installs
+`deploy/homelab/model-manager.service` as a systemd **user** unit (no root: it runs as you, with your
+own Docker access, which is the reason the manager is a host process at all) and enables
+lingering so it starts at boot without a login, in step with the Docker stack. systemd restarts it
+if it dies (`Restart=always`, 10 s). `--check` is read-only and runs the manager's own check with the
+unit's minimal `PATH`; `--uninstall` removes it. Status: `systemctl --user status model-manager`,
+logs: `journalctl --user -u model-manager`. If it is stopped, Deep local is disabled and nothing
+else changes. The unit expects the repository at `$HOME/reachy-work-buddy`. Restarting the manager
+does not change which tier is loaded; a running deep job's lease still restores the fast tier.
 
 ## Web search
 
