@@ -44,4 +44,6 @@ export const silentSeconds = (meeting: Meeting) => meeting.audio_gaps?.seconds ?
 export const silentSummary = (meeting: Meeting) =>
   `${formatTimestamp(Math.round(silentSeconds(meeting)))} of this recording has no audio — the phone stopped capturing sound (for example when it locked or another app used the microphone). Lines marked ⚠ may be missing or unreliable.`;
 
+/** The tag attached to a generated text: which model tier wrote it. */
+export const TIER_TAG: Record<string, string> = { local: 'Quick local', deep: 'Deep local', cloud: 'Cloud' };
 export const TIER_LABEL: Record<string, string> = { local: 'the local model', deep: 'the larger local model', cloud: 'the cloud model' };

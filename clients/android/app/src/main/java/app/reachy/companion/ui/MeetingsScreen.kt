@@ -19,6 +19,10 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
@@ -34,7 +38,8 @@ import app.reachy.companion.data.countOccurrences
 import app.reachy.companion.data.outputIsStale
 import app.reachy.companion.data.speakerReviewNeeded
 import app.reachy.companion.data.writingLine
-import app.reachy.companion.data.writtenByLine
+import app.reachy.companion.data.tierTag
+import app.reachy.companion.data.writtenAt
 import app.reachy.companion.data.lineAt
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Warning
@@ -597,7 +602,6 @@ private fun OutputPanel(model: AppViewModel, meeting: Meeting, kind: String, onR
                     "This can take a couple of minutes" + (if (model.generatingModel == "cloud") " and sends the transcript text to your cloud provider" else "") + ".",
                     Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodySmall,
                 )
-                output?.let { Text(it.text, Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline) }
             }
             DeepReviewController.job?.let { !it.finished && it.meetingId == meeting.id && it.task == kind } == true -> Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -615,7 +619,13 @@ private fun OutputPanel(model: AppViewModel, meeting: Meeting, kind: String, onR
                     "This $name was written before the speaker names changed, so it may attribute things to the wrong person. Rerun it to update it.",
                     Modifier.padding(bottom = 8.dp), style = MaterialTheme.typography.bodySmall, color = GapText,
                 )
-                Text(writtenByLine(output.tier, output.generatedAt), Modifier.padding(bottom = 8.dp), style = MaterialTheme.typography.titleSmall)
+                Row(Modifier.padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Surface(
+                        shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                        modifier = Modifier.semantics { contentDescription = "Model: ${tierTag(output.tier)}" },
+                    ) { Text(tierTag(output.tier), Modifier.padding(horizontal = 10.dp, vertical = 2.dp), style = MaterialTheme.typography.labelMedium) }
+                    writtenAt(output.generatedAt).takeIf { it.isNotEmpty() }?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline) }
+                }
                 SelectionContainer { Text(output.text) }
                 Text("A model wrote this from a speech-to-text transcript, so check it. If it is not accurate enough, rerun it on a stronger model.", style = MaterialTheme.typography.bodySmall)
                 Row {

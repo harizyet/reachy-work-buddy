@@ -8,9 +8,16 @@ fun tierLabel(tier: String): String = when (tier) {
     else -> tier
 }
 
-/** The line above the text of a finished summary or minutes. */
-fun writtenByLine(tier: String, generatedAt: String): String =
-    "Written by ${tierLabel(tier)}" + if (generatedAt.length >= 16) " · ${generatedAt.take(16).replace('T', ' ')}" else ""
+/** The tag attached to a finished summary or minutes: which tier wrote it. */
+fun tierTag(tier: String): String = when (tier) {
+    "local" -> "Quick local"
+    "deep" -> "Deep local"
+    "cloud" -> "Cloud"
+    else -> tier
+}
+
+/** When it was written, next to the tag; empty when the server gave no time. */
+fun writtenAt(generatedAt: String): String = if (generatedAt.length >= 16) generatedAt.take(16).replace('T', ' ') else ""
 
 /** The line shown while one is being written, on the tier the owner picked. */
 fun writingLine(name: String, model: String): String = "Writing the $name on ${tierLabel(model)}…"

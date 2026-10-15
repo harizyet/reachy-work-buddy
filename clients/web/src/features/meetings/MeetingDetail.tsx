@@ -32,7 +32,7 @@ import { SpeakerIdentify } from './SpeakerIdentify';
 import { useEmailConfig } from './useMeetingEmail';
 import { useMultimodalActions, useMultimodalEnabled, useOverview } from './useMeetingMultimodal';
 import { useDeepReview } from './DeepReview';
-import { DELETABLE, READY, TIER_LABEL, formatTimestamp, silentSeconds, silentSummary, speakerName, statusDescription, statusLabel } from './format';
+import { DELETABLE, READY, TIER_LABEL, TIER_TAG, formatTimestamp, silentSeconds, silentSummary, speakerName, statusDescription, statusLabel } from './format';
 import { useAnalysisEnabled } from './useMeetingAnalysis';
 import { useAcceptMeeting, useMeeting } from './useMeetings';
 
@@ -305,25 +305,36 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
 
       {ready && (shownSection === 'summary' || shownSection === 'minutes') && (
         <div>
-          <p role="status" className="text-sm font-medium">
-            {generating === shownSection
-              ? `Writing the ${shownSection} on ${TIER_LABEL[running?.model ?? 'local'] ?? running?.model}…`
-              : deepRunning
-                ? `Writing the ${shownSection} on the larger local model…`
-                : output
-                  ? `Written by ${TIER_LABEL[output.tier] ?? output.tier}${output.generated_at ? ' · ' + new Date(output.generated_at).toLocaleString() : ''}`
-                  : `No ${shownSection} yet.`}
-          </p>
-          {generating === shownSection && (
-            <p className="text-sm text-[var(--muted)]">
-              {`This can take a couple of minutes${running?.model === 'cloud' ? ' and sends the transcript text to your cloud provider' : ''}. You can leave this page; the new ${shownSection} appears here when it is done.`}
-            </p>
-          )}
-          {deepRunning && generating !== shownSection && (
-            <p className="text-sm text-[var(--muted)]">Reachy is unavailable until it finishes. The new text appears here when it is done.</p>
+          {generating === shownSection || deepRunning ? (
+            <div role="status" aria-label={`Writing the ${shownSection}`} className="flex flex-col items-center gap-2 py-10 text-center">
+              <span aria-hidden="true" className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--border)] border-t-[var(--accent)]" />
+              <p className="font-medium">
+                {generating === shownSection
+                  ? `Writing the ${shownSection} on ${TIER_LABEL[running?.model ?? 'local'] ?? running?.model}…`
+                  : `Writing the ${shownSection} on the larger local model…`}
+              </p>
+              <p className="max-w-md text-sm text-[var(--muted)]">
+                {generating === shownSection
+                  ? `This can take a couple of minutes${running?.model === 'cloud' ? ' and sends the transcript text to your cloud provider' : ''}. You can leave this page; the new ${shownSection} appears here when it is done.`
+                  : 'Reachy is unavailable until it finishes. The new text appears here when it is done.'}
+              </p>
+            </div>
+          ) : (
+            <>
+              {output ? (
+                <p className="flex flex-wrap items-center gap-2 text-sm">
+                  <span aria-label={`Model: ${TIER_TAG[output.tier] ?? output.tier}`} className="rounded-full border border-[var(--accent)] px-2 py-0.5 text-xs font-medium">
+                    {TIER_TAG[output.tier] ?? output.tier}
+                  </span>
+                  {output.generated_at && <span className="text-[var(--muted)]">{new Date(output.generated_at).toLocaleString()}</span>}
+                </p>
+              ) : (
+                <p role="status" className="text-sm">{`No ${shownSection} yet.`}</p>
+              )}
+              <div className="whitespace-pre-wrap break-words">{output?.text ?? ''}</div>
+            </>
           )}
           {outputStatus && <p role="status" className="text-sm">{outputStatus}</p>}
-          <div className={`whitespace-pre-wrap break-words${generating === shownSection ? ' opacity-50' : ''}`}>{output?.text ?? ''}</div>
           {output && generating !== shownSection && m.stale_outputs.includes(shownSection) && (
             <p role="status" className="my-1 rounded border border-[var(--warn)] bg-[var(--warn-bg)] p-2 text-sm text-[var(--warn)]">
               {`This ${shownSection} was written before the speaker names changed, so it may attribute things to the wrong person. Rerun it to update it.`}
