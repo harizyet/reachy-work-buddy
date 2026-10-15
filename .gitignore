@@ -20,7 +20,7 @@ build/
 vendor/
 
 # Private real-meeting recordings used by the opt-in end-to-end meeting test
-test/
+/test/
 
 # Blind-review answer keys stay local until the owner has rated (the matching KEY.sha256 is committed as a seal)
 services/companion-core/benchmarks/answer_quality/blind_review/*/KEY-*.json
