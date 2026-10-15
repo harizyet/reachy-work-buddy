@@ -28,6 +28,9 @@ CLOUD_REQUEST_TIMEOUT_SECONDS = 90.0
 # Whatever has finished by then is returned; the rest is reported as not checked. Stays under the hub (240 s)
 # and app (260 s) limits.
 OVERALL_DEADLINE_SECONDS = 200.0
+# The deep tier is the larger, slower model and runs as a background job with no waiting request, so it gets a long budget for the same sequence of calls (about 840 s: it must end well inside the
+# manager's 1200 s lease). Its 220 s predecessor ended a 7-part meeting's minutes after about 3.5 minutes of work on the larger model (2026-10-15).
+DEEP_OUTPUT_DEADLINE_SECONDS = 840.0
 
 SYSTEM_PROMPT = (
     "You fix speech-to-text mistakes in a meeting transcript. Propose a change only when a word or short phrase "

@@ -3232,7 +3232,7 @@ def create_app(
                 raise HTTPException(status_code=503, detail="the language model is unavailable right now") from None
 
         try:
-            async with asyncio.timeout(meeting_corrections.OVERALL_DEADLINE_SECONDS + 20):
+            async with asyncio.timeout(meeting_corrections.DEEP_OUTPUT_DEADLINE_SECONDS if tier == "deep" else meeting_corrections.OVERALL_DEADLINE_SECONDS + 20):
                 text, truncated = await meeting_outputs.generate(meeting, kind, ask)
         except TimeoutError:
             raise HTTPException(status_code=504, detail="the model took too long; try again or use a smaller meeting") from None
