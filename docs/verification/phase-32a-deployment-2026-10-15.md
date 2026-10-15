@@ -2,6 +2,8 @@
 
 Owner authorization: "Approve resuming the controlled homelab deployment preflight" with conditions (coordinated deploy of migration 038 with core, hub, coding-agent and the speaker sidecar; fresh restore rehearsal; Phase 48 boundary; rebuild the APK from the committed branch). **Not merged. No threshold set. Voice evidence is non-authoritative. Calibrated verification, meeting speaker identification, new session management and robot features are not enabled.** Evidence before deploy: [synthetic validation](phase-32a-synthetic-validation-2026-10-15.md), [Android slice](phase-32a-android-2026-10-15.md).
 
+> **Commit ids (2026-10-16).** Before anything was pushed, the local commits were rewritten to remove content that should not have been committed (meeting titles and ids, the owner's phone model). The commit ids quoted in this record and in the runbook (`aa3e38b`, `85712a8`, `b0f88ba`) are the pre-rewrite ids; the deployed revision is now `8f9ab8a` on `deploy/phase-32a-uat`. Its tree differs from the deployed one only in placeholder device names in two test files; no product code differs, so the running images and the APK built from `aa3e38b` are unchanged.
+
 ## What was deployed
 
 | | Before | After |
