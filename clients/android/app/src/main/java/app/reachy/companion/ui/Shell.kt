@@ -73,6 +73,7 @@ fun Shell(model: AppViewModel) {
     val section = nav.current
     val saveable = rememberSaveableStateHolder()  // each screen keeps its saved state (a selected page, a chosen tab) while another one is shown
     var menu by remember { mutableStateOf(false) }
+    var voiceIdentityOpen by remember { mutableStateOf(false) }
     var speak by remember { mutableStateOf(model.prefs.speakReplies) }
     val wide = isWide()
     val imeOpen = WindowInsets.isImeVisible
@@ -127,6 +128,7 @@ fun Shell(model: AppViewModel) {
                             }
                         },
                     )
+                    DropdownMenuItem({ Text("Voice identity") }, { menu = false; voiceIdentityOpen = true })
                     DropdownMenuItem({ Text("Sign out") }, { menu = false; model.signOut() })
                 }
             })
@@ -150,6 +152,7 @@ fun Shell(model: AppViewModel) {
         }
         Column(Modifier.weight(1f)) {
         RecordingBar(model)
+        if (voiceIdentityOpen) VoiceIdentityScreen(model) { voiceIdentityOpen = false }
         ShortRecordingDialog(model)
         DeepReviewBanner()
         TailscaleBanner()

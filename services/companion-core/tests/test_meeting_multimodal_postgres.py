@@ -47,6 +47,7 @@ ROLLBACK = Path(__file__).resolve().parents[3] / "deploy" / "homelab" / "rollbac
 ROLLBACK_035 = ROLLBACK.with_name("rollback-035.sql")  # the head is 035 now (speaker identity): it is undone first
 ROLLBACK_036 = ROLLBACK.with_name("rollback-036.sql")  # the head is 036 now (meeting email): it is undone first
 ROLLBACK_037 = ROLLBACK_036.with_name("rollback-037.sql")  # the head is 037 now (processing provenance): it is undone first
+ROLLBACK_038 = ROLLBACK_037.with_name("rollback-038.sql")  # the head is 038 now (voice profiles): it is undone first
 NOW = datetime(2026, 10, 14, 10, 0, tzinfo=UTC)
 OWNER = access_from_ceiling("sensitive")
 CHOICES = [("jetson edge node", None, "Edge Architecture"), ("certificate rotation", None, "Security Posture")]
@@ -103,7 +104,7 @@ def item_of(run, quote, kind=ItemKind.ACTION, *, document_id=None, **over):
 # ---- migration 034 ------------------------------------------------------------------------------------------------------------------------------
 
 def test_the_migration_creates_only_its_own_tables_with_no_foreign_keys_and_no_triggers(dsn):
-    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("037_processing_provenance",)]
+    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("038_voice_profiles",)]
     assert {r[0] for r in sql(dsn, "SELECT tablename FROM pg_tables WHERE tablename LIKE 'meeting_%' OR tablename = 'meeting_slide_alignments'")} >= TABLES
     for table in TABLES:
         assert sql(dsn, f"SELECT count(*) FROM pg_constraint WHERE conrelid = '{table}'::regclass AND contype = 'f'") == [(0,)]  # no key into meetings, documents or tasks
@@ -145,6 +146,7 @@ def test_the_rollback_script_removes_only_this_phase_and_the_migration_applies_a
     sql(dsn, "INSERT INTO meetings (id, title, source_filename, content_type, audio_path, status) VALUES ('m1','x','a','b','c','complete')")
     sql(dsn, "INSERT INTO meeting_document_links (meeting_id, document_id, linked_by, created_at, updated_at) VALUES ('m1','d1','owner',now(),now())")
     with psycopg.connect(dsn) as conn:
+        conn.execute(ROLLBACK_038.read_text())
         conn.execute(ROLLBACK_037.read_text())
         conn.execute(ROLLBACK_036.read_text())
         conn.execute(ROLLBACK_035.read_text())
@@ -153,7 +155,7 @@ def test_the_rollback_script_removes_only_this_phase_and_the_migration_applies_a
     assert sql(dsn, "SELECT count(*) FROM pg_tables WHERE tablename = ANY(%s)", (list(TABLES),)) == [(0,)]
     assert sql(dsn, "SELECT text FROM tasks") == [("confirmed from a meeting and a deck",)] and sql(dsn, "SELECT count(*) FROM meetings") == [(1,)]  # authoritative data stays
     upgrade(dsn, KEYS)
-    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("037_processing_provenance",)] and sql(dsn, "SELECT count(*) FROM meeting_document_links") == [(0,)]
+    assert sql(dsn, "SELECT version_num FROM alembic_version") == [("038_voice_profiles",)] and sql(dsn, "SELECT count(*) FROM meeting_document_links") == [(0,)]
 
 
 # ---- the real store -----------------------------------------------------------------------------------------------------------------------------

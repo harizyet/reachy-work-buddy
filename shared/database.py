@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-SCHEMA_REVISION = "037_processing_provenance"
+SCHEMA_REVISION = "038_voice_profiles"
 
 
 async def check_schema(conn) -> None:

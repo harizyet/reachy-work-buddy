@@ -70,6 +70,8 @@ fun VoiceModeScreen(
     onPhoneVoice: (Boolean) -> Unit,
     onToggleMute: () -> Unit,
     onClose: () -> Unit,
+    /** The last spoken turn's owner-match wording while it is current. Identity evidence only; shown, never acted on. */
+    ownerMatch: String? = null,
 ) {
     Dialog(
         onDismissRequest = onClose,
@@ -84,8 +86,9 @@ fun VoiceModeScreen(
                 Text(
                     error ?: heard.ifBlank { phase.caption },
                     color = if (error != null) Color(0xFFFF8A80) else Color(0xFFBBBBBB),
-                    modifier = Modifier.padding(horizontal = 32.dp).padding(bottom = 24.dp),
+                    modifier = Modifier.padding(horizontal = 32.dp).padding(bottom = if (ownerMatch == null) 24.dp else 4.dp),
                 )
+                if (ownerMatch != null) Text(ownerMatch, color = Color(0xFF90A4AE), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 32.dp).padding(bottom = 24.dp))
             }
             var picking by remember { mutableStateOf(false) }
             IconButton(onClose, Modifier.align(Alignment.TopStart).padding(8.dp)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to chat", tint = Color.White) }

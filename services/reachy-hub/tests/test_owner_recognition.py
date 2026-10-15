@@ -6,6 +6,7 @@ yet."""
 
 import asyncio
 import io
+import json
 import zipfile
 
 from fastapi.testclient import TestClient
@@ -220,3 +221,19 @@ def test_export_without_fresh_reauth_is_rejected():
     login(client)
     response = client.get('/owner-recognition/benchmark/voice/export')
     assert response.status_code == 401
+
+
+def test_voice_clips_carry_a_validated_gv_label_into_the_export_manifest():
+    client = make_client()
+    login(client)
+    reauth(client)
+    enable_benchmark(client)
+    wav = {"Content-Type": "audio/wav", **CSRF}
+    good = client.post(VOICE, content=b"RIFFxxxxWAVE", headers={**wav, "X-Reachy-Benchmark-Label": "speaker=owner;role=trial;condition=held_out"})
+    assert good.status_code == 200 and good.json()["label"] == "role=trial;speaker=owner;condition=held_out"  # canonical order
+    plain = client.post(VOICE, content=b"RIFFxxxxWAVE", headers=wav)
+    assert plain.status_code == 200 and plain.json()["label"] is None  # unlabelled uploads still work
+    for bad in ("role=maybe;speaker=owner;condition=x", "role=trial;speaker=Jane Doe;condition=x", "role=trial;speaker=a", "role=trial;speaker=a;condition=x;extra=1", "garbage"):
+        assert client.post(VOICE, content=b"RIFFxxxxWAVE", headers={**wav, "X-Reachy-Benchmark-Label": bad}).status_code == 422, bad
+    manifest = json.loads(zipfile.ZipFile(io.BytesIO(client.get("/owner-recognition/benchmark/voice/export").content)).read("manifest.json"))
+    assert sorted(entry["label"] or "" for entry in manifest) == ["", "role=trial;speaker=owner;condition=held_out"]

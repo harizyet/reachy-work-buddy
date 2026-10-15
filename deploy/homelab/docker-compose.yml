@@ -257,6 +257,31 @@ services:
     expose:
       - "8011"
 
+  speaker:
+    # Phase 32A.V (ADR 0041): stateless speaker-embedding service for shared voice
+    # identity. CPU-only, profile-gated like the speech sidecars: a bare `up` does not
+    # start it, and reachy-hub only calls it when VOICE_IDENTITY_ENABLED=true. It keeps
+    # no audio or embedding; profiles live encrypted in PostgreSQL via the hub.
+    build: ./speaker
+    image: reachy-speaker:latest
+    restart: unless-stopped
+    profiles: ["speaker"]
+    cpus: ${SPEAKER_CPUS:-4}
+    mem_limit: 3g
+    environment:
+      SPEAKER_TORCH_THREADS: ${SPEAKER_TORCH_THREADS:-2}
+      SPEECH_SERVICE_TOKEN: ${SPEECH_SERVICE_TOKEN:-}
+    volumes:
+      - speaker-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8012/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 180s
+    expose:
+      - "8012"
+
   reachy-embodiment:
     # Phase 22: gated behind the "simulation" profile, matching the
     # module docstring above this file — production reachy-embodiment
@@ -304,6 +329,13 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-reachy}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@${DB_HOST:-postgres}:${DB_PORT:-5432}/${POSTGRES_DB:-reachy_hub}
       DB_PREPARE_THRESHOLD: ${DB_PREPARE_THRESHOLD:-}
       DB_POOL_MAX_SIZE: ${DB_POOL_MAX_SIZE:-8}
+      # Phase 32A.V (ADR 0041): shared voice identity. Off by default; needs the
+      # "speaker" profile. Thresholds stay unset until the owner approves a calibration.
+      VOICE_IDENTITY_ENABLED: ${VOICE_IDENTITY_ENABLED:-false}
+      SPEAKER_SERVICE_URL: http://speaker:8012
+      SPEECH_SERVICE_TOKEN: ${SPEECH_SERVICE_TOKEN:-}
+      VOICE_IDENTITY_ACCEPT_THRESHOLD: ${VOICE_IDENTITY_ACCEPT_THRESHOLD:-}
+      VOICE_IDENTITY_UNCERTAIN_THRESHOLD: ${VOICE_IDENTITY_UNCERTAIN_THRESHOLD:-}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       SESSION_SECRET_KEY: ${SESSION_SECRET_KEY:-}
@@ -684,6 +716,7 @@ volumes:
   # Phase 27.2: the transcription service's downloaded Whisper model.
   # Same re-download-not-data-loss reasoning as diarization-data above.
   transcription-data:
+  speaker-data:
   # Phase 29.19: coding-agent-service's encrypted provider credentials
   # (e.g. a Claude Code API key/subscription token). Losing this volume
   # loses the stored credential, not anything recoverable from Postgres.

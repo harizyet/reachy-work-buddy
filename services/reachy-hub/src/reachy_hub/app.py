@@ -182,7 +182,10 @@ from reachy_hub.notepad_processing import install_notepad_processing_routes
 from reachy_hub.notification_queue import NotificationQueue, QueuedNotification
 from reachy_hub.occupancy import MediaPipeFaceDetector, PersonDetector, check_occupancy
 from reachy_hub.operator import install_operator_routes, require_csrf
-from reachy_hub.owner_recognition import install_owner_recognition_routes
+from reachy_hub.owner_recognition import (
+    install_owner_recognition_routes,
+    reauth_remaining,
+)
 from reachy_hub.palm_stop import (
     DEFAULT_PALM_MODEL_PATH,
     MediaPipePalmDetector,
@@ -220,6 +223,13 @@ from reachy_hub.telegram_client import TelegramClient
 from reachy_hub.telegram_health import TelegramPollHealth, poll_updates
 from reachy_hub.tts import TextToSpeech, default_tts, spoken_text
 from reachy_hub.user_store import PostgresUserStore, UserStore
+from reachy_hub.voice_identity import (
+    SidecarEmbeddingClient,
+    VoiceIdentityConfig,
+    VoiceIdentityService,
+    install_voice_identity_routes,
+)
+from reachy_hub.voice_profiles import PostgresVoiceProfileStore, VoiceProfileStore
 from reachy_hub.wake_arm_store import WakeArmStore
 from reachy_hub.webrtc import CallTurnHandler, negotiate_call, negotiate_telepresence
 from shared.database import DatabaseManager
@@ -464,6 +474,10 @@ def create_app(
     run_voice_watchdog_task: bool = True,
     wake_arm_store: WakeArmStore | None = None,
     enrollment_store: EnrollmentStore | None = None,
+    voice_identity_config: VoiceIdentityConfig | None = None,
+    voice_embedder=None,
+    voice_profile_store: VoiceProfileStore | None = None,
+    voice_keyring: Keyring | None = None,
 ) -> FastAPI:
     # Phase 16/ADR 0013: fail closed. Unset means the whole remote-control
     # surface below 503s rather than silently allowing unauthenticated
@@ -772,6 +786,15 @@ def create_app(
     # Phase 24g: the persisted wake arm follows the other Postgres stores;
     # with injected in-memory stores (tests) the manager keeps its own.
     owns_wake_arm_store = wake_arm_store is None and owns_session_store
+    # Phase 32A.V (ADR 0041): shared voice identity, off unless VOICE_IDENTITY_ENABLED. Profiles are ciphertext in PostgreSQL under the
+    # SECRET_KEY_FILE keyring; the embedding model runs in the separate `speaker` service. Fails closed at startup if enabled without the key.
+    voice_identity_config = voice_identity_config or VoiceIdentityConfig.from_env()
+    owns_voice_profile_store = voice_identity_config.enabled and voice_profile_store is None
+    voice_identity = VoiceIdentityService(
+        voice_identity_config,
+        voice_embedder or SidecarEmbeddingClient(os.environ.get("SPEAKER_SERVICE_URL", "http://speaker:8012"), os.environ.get("SPEECH_SERVICE_TOKEN") or None),
+        store=voice_profile_store, keyring=(voice_keyring or Keyring.from_file()) if voice_identity_config.enabled else None,
+    )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -785,7 +808,7 @@ def create_app(
         # Phase 45: one pool for the whole service, shared by every Postgres-backed store below and closed last.
         db = None
         if any((owns_user_store, owns_registry, owns_chat_store, owns_session_store, owns_telegram_chat_registry, owns_audit_log,
-                owns_notification_queue, owns_wake_arm_store)):
+                owns_notification_queue, owns_wake_arm_store, owns_voice_profile_store)):
             db = await DatabaseManager(database_url or os.environ["DATABASE_URL"]).start()
         if owns_user_store:
             app.state.user_store = await PostgresUserStore.connect(db)
@@ -803,6 +826,8 @@ def create_app(
             app.state.audit_log = await PostgresAuditLog.connect(db)
         if owns_notification_queue:
             app.state.notification_queue = await PostgresNotificationQueue.connect(db)
+        if owns_voice_profile_store:
+            voice_identity.store = await PostgresVoiceProfileStore.connect(db)
         if owns_wake_arm_store:
             robot_voice_manager.wake_store = await PostgresWakeArmStore.connect(db)
         elif wake_arm_store is not None:
@@ -889,6 +914,8 @@ def create_app(
                 await app.state.telegram_chat_registry.close()
             if owns_audit_log:
                 await app.state.audit_log.close()
+            if owns_voice_profile_store and voice_identity.store is not None:
+                await voice_identity.store.close()
             if owns_wake_arm_store:
                 await robot_voice_manager.wake_store.close()
             if owns_notification_queue:
@@ -996,6 +1023,12 @@ def create_app(
         FilesystemEnrollmentStore(capture_dir, Keyring.from_file()) if capture_dir else InMemoryEnrollmentStore()
     )
     install_owner_recognition_routes(app, require_owner_session, app.state.enrollment_store)
+    app.state.voice_identity = voice_identity
+    install_voice_identity_routes(
+        app, require_owner_session, voice_identity, owner_user_id=owner_user_id, reauth_remaining=reauth_remaining,
+        transcribe=lambda wav: voice_transcribe(wav),
+        converse=lambda user_id, text: handle_inbound_message(InboundMessage(user_id=user_id, channel=Channel.WEB, text=text, input_modality=InputModality.VOICE)),
+    )
     install_brain_routes(app, require_owner_session, companion_core_client)  # Phase 47D: read-only, owner session only
     install_document_library_routes(app, require_owner_session, companion_core_client)  # Phase 50J: owner session plus CSRF; sets the trusted ceiling; core decides (and 404s) when the feature is off
     install_notepad_processing_routes(app, require_owner_session, companion_core_client)  # Phase 49: owner session plus CSRF; core decides (and 404s) when the feature is off

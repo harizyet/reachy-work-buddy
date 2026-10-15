@@ -1,5 +1,7 @@
 package app.reachy.companion
 
+import app.reachy.companion.data.ClientIdentity
+import app.reachy.companion.data.VoiceIdentityModel
 import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -67,6 +69,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val prefs = Prefs(app)
     private val cookieJar = PersistentCookieJar({ prefs.cookies }, { prefs.cookies = it })
     private var api = ReachyApi(prefs.baseUrl.ifBlank { "http://localhost" }, cookieJar)
+    /** Voice enrolment, the owner-match display and the GV evaluation clips (Phase 32A.V, ADR 0041). Identity evidence only: it grants nothing. */
+    val voiceIdentity = VoiceIdentityModel(
+        viewModelScope, { api }, { ClientIdentity(prefs.installId, android.os.Build.MODEL.orEmpty()) }, { prefs.phoneRecognizer },
+    )
     private var userId: String? = null
     val player = MeetingPlayer(File(app.cacheDir, "meeting-audio")) { id, file -> api.downloadAudio(id, file) }
     private var chatId: String? = null
@@ -331,7 +337,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun resume() {
         if (prefs.baseUrl.isBlank()) { session = Session.SignedOut; return }
         session = try { api.me(); userId = api.userId(); Session.SignedIn } catch (e: Exception) { Session.SignedOut }
-        if (session == Session.SignedIn) { resumeDeepReview(); refreshReminders(); loadEmailConfig() }
+        if (session == Session.SignedIn) { resumeDeepReview(); refreshReminders(); loadEmailConfig(); voiceIdentity.refresh() }
     }
 
     fun signIn(url: String, username: String, password: String) {
@@ -349,6 +355,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 resumeDeepReview()
                 refreshReminders()
                 loadEmailConfig()
+                voiceIdentity.refresh()
             } catch (e: ApiException) {
                 loginError = if (e.unauthorized) "Wrong username or password" else e.message
             } catch (e: Exception) {
@@ -358,7 +365,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun signOut() {
-        recordingHandoff.cancel("Signed out"); viewModelScope.launch { api.logout(); chat.clear(); attachedDocument = null; docs.clear(); chatHistory.clear(); tasks.clear(); notes.clear(); meetings.clear(); processing.clear(); meetingLinks.clear(); processingPoll?.cancel(); chatId = null; if (recording) stopRecording(); DeepReviewController.job = null
+        voiceIdentity.clear(); recordingHandoff.cancel("Signed out"); viewModelScope.launch { api.logout(); chat.clear(); attachedDocument = null; docs.clear(); chatHistory.clear(); tasks.clear(); notes.clear(); meetings.clear(); processing.clear(); meetingLinks.clear(); processingPoll?.cancel(); chatId = null; if (recording) stopRecording(); DeepReviewController.job = null
             MeetingReminderScheduler.disarm(getApplication()); CalendarCache.clear(getApplication()); HomeCache.clear(getApplication()); homeView = null; homeCheckedMs = null; homeBrief = null; homeBriefError = null; homeError = null; calendarView = null; calendarCheckedMs = null; schedule.clear(); prepared = null; reminderIssues = emptyList(); session = Session.SignedOut }
     }
 

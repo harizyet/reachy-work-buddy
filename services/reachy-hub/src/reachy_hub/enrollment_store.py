@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import secrets
 from datetime import UTC, datetime
 from pathlib import Path
@@ -52,12 +53,29 @@ class EnrollmentStore(Protocol):
     async def is_benchmark_enabled(self) -> bool: ...
     async def set_benchmark_enabled(self, enabled: bool) -> None: ...
     async def add_sample(
-        self, kind: EnrollmentSampleKind, content_type: str, data: bytes
+        self, kind: EnrollmentSampleKind, content_type: str, data: bytes, label: str | None = None
     ) -> EnrollmentSample: ...
     async def list_samples(self, kind: EnrollmentSampleKind) -> list[EnrollmentSample]: ...
     async def read_sample(self, kind: EnrollmentSampleKind, sample_id: str) -> bytes | None: ...
     async def delete_sample(self, kind: EnrollmentSampleKind, sample_id: str) -> bool: ...
     async def delete_all(self, kind: EnrollmentSampleKind) -> int: ...
+
+
+LABEL_KEYS = {"role": {"enroll", "trial"}, "speaker": None, "condition": None}
+_LABEL_VALUE = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
+
+
+def parse_label(raw: str) -> str:
+    """The GV evaluation label for a voice clip: `role=enroll|trial;speaker=<owner|alias>;condition=<word>` (all three keys, no others).
+    Aliases only: the label is stored as plaintext metadata beside the encrypted clip. Raises SampleRejected."""
+    parts = dict(item.split("=", 1) for item in raw.split(";") if "=" in item)
+    if set(parts) != set(LABEL_KEYS) or raw.count(";") != len(LABEL_KEYS) - 1:
+        raise SampleRejected("Label must be role=...;speaker=...;condition=...")
+    for key, value in parts.items():
+        allowed = LABEL_KEYS[key]
+        if not _LABEL_VALUE.match(value) or (allowed is not None and value not in allowed):
+            raise SampleRejected(f"Invalid label value for {key}")
+    return ";".join(f"{key}={parts[key]}" for key in LABEL_KEYS)
 
 
 def _validate(kind: EnrollmentSampleKind, content_type: str, data: bytes) -> None:
@@ -98,7 +116,7 @@ class InMemoryEnrollmentStore:
         self._benchmark_enabled = enabled
 
     async def add_sample(
-        self, kind: EnrollmentSampleKind, content_type: str, data: bytes
+        self, kind: EnrollmentSampleKind, content_type: str, data: bytes, label: str | None = None
     ) -> EnrollmentSample:
         _validate(kind, content_type, data)
         sample = EnrollmentSample(
@@ -107,6 +125,7 @@ class InMemoryEnrollmentStore:
             captured_at=datetime.now(UTC),
             content_type=content_type,
             size_bytes=len(data),
+            label=label,
         )
         self._samples[kind][sample.sample_id] = (sample, data)
         return sample
@@ -161,7 +180,7 @@ class FilesystemEnrollmentStore:
             marker.unlink(missing_ok=True)
 
     async def add_sample(
-        self, kind: EnrollmentSampleKind, content_type: str, data: bytes
+        self, kind: EnrollmentSampleKind, content_type: str, data: bytes, label: str | None = None
     ) -> EnrollmentSample:
         _validate(kind, content_type, data)
         sample_id = secrets.token_urlsafe(16)
@@ -172,6 +191,7 @@ class FilesystemEnrollmentStore:
             captured_at=captured_at,
             content_type=content_type,
             size_bytes=len(data),
+            label=label,
         )
         record = self._keyring.encrypt(_sample_aad(kind, sample_id, content_type), data)
         directory = self._dir(kind)
