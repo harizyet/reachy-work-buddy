@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+from typing import ClassVar
 from uuid import uuid4
 
 import psycopg
@@ -414,18 +415,50 @@ def test_partial_updates_serialize_and_smtp_resolves(database, keys, monkeypatch
         monkeypatch.setenv("SMTP_PASSWORD", "must-not-override-reference")
         calls = []
 
-        async def capture(*args, **kwargs):
-            calls.append(kwargs)
-        monkeypatch.setattr("companion_core.email.sender.aiosmtplib.send", capture)
+        class FakeSMTP:  # the sender's SMTP client (Phase 55 replaced the one-shot aiosmtplib.send): records what it is asked to do
+            is_connected = True
+
+            def __init__(self, **kwargs):
+                calls.append({"init": kwargs})
+
+            async def connect(self):
+                calls.append({"connect": True})
+
+            async def starttls(self, **kwargs):
+                calls.append({"starttls": True})
+
+            esmtp_extensions: ClassVar[dict] = {"auth": "LOGIN PLAIN"}
+
+            async def ehlo(self):
+                calls.append({"ehlo": True})
+
+            async def auth_plain(self, username, password):  # the sender signs in with an explicit mechanism (Gmail drops the connection on the library's generic login())
+                calls.append({"username": username, "password": password})
+
+            async def send_message(self, message, sender=None, recipients=None):
+                calls.append({"sent": True, "sender": sender, "recipients": recipients})
+
+                class Response:
+                    message = "OK"
+
+                return {}, Response()
+
+            async def quit(self):
+                calls.append({"quit": True})
+
+        monkeypatch.setattr("companion_core.email.sender.aiosmtplib.SMTP", FakeSMTP)
         await smtp_send(EmailDraft(to="fixture@example.org", subject="fixture", body="fixture"))
-        assert len(calls) == 1
-        assert calls[0]["password"] == "smtp-fixture"
-        assert calls[0]["username"] == "fixture"
-        assert calls[0]["start_tls"] is True
+        flat = {k: v for call in calls for k, v in call.items()}
+        assert flat["password"] == "smtp-fixture"  # the SecretStore reference wins over SMTP_PASSWORD
+        assert flat["username"] == "fixture"
+        assert flat["starttls"] is True  # authenticated delivery negotiates TLS before the credential is sent
+        assert [next(iter(c)) for c in calls].index("starttls") < [next(iter(c)) for c in calls].index("username")
+        assert flat["recipients"] == ["fixture@example.org"]
+        sent_before = len([c for c in calls if "sent" in c])
         monkeypatch.setenv("SMTP_SECRET_REF", "missing")
         with pytest.raises(SecretUnavailable):
             await smtp_send(EmailDraft(to="fixture@example.org", subject="fixture", body="fixture"))
-        assert len(calls) == 1
+        assert len([c for c in calls if "sent" in c]) == sent_before  # an unavailable reference fails closed: nothing is sent
     asyncio.run(check())
 
 

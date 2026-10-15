@@ -26,6 +26,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, computed_field
 
+from companion_core.meetings.provenance import Location, ProcessingEvent
 from shared.models.response import Privacy
 
 
@@ -97,6 +98,8 @@ class MeetingOutput(BaseModel):
     # Fingerprint of the owner's speaker names when this was written (`speaker_basis`). None: written before names were
     # tracked, so whether it matches the current names cannot be told.
     speaker_basis: str | None = None
+    # Where the model that wrote this ran, recorded when it was written (ADR 0040). None: written before this was recorded, which can never be shown to be private.
+    location: Location | None = None
 
 
 def speaker_basis(names: dict[str, str]) -> str:
@@ -171,6 +174,8 @@ class Meeting(BaseModel):
     # Phase 54: the owner's decision per label, with the diarization it was made against. `speaker_names` stays the
     # one overlay every reader uses; it is the `named` identities of this state (plus any name set before Phase 54).
     speaker_identity: SpeakerIdentityState = Field(default_factory=SpeakerIdentityState)
+    # ADR 0040: append-only record of where each step that read this meeting's content ran. Never rewritten, so a regeneration cannot hide an earlier external step.
+    processing_events: list[ProcessingEvent] = Field(default_factory=list)
     # Meeting-specific vocabulary (product, project and people names) that corrections are matched against.
     key_terms: list[str] = Field(default_factory=list)
     # Owner-accepted text for a transcript segment, keyed by its index as a

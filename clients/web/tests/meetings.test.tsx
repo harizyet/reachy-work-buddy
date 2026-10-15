@@ -266,14 +266,43 @@ describe('Summary and minutes', () => {
     await user.click(await screen.findByRole('button', { name: 'Summary' }));
     await waitFor(() => expect(h.bodies.find((b) => b.call === 'POST /meetings/m1/outputs/summary')?.body).toEqual({ model: 'local' }));
     expect(await screen.findByText('Generated summary via local')).toBeInTheDocument();
-    expect(screen.getByText(/Written by the local model/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Model: Quick local')).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText(/Rerun with/), 'cloud');
     await user.click(screen.getByRole('button', { name: 'Rerun' }));
     expect(await screen.findByText('Generated summary via cloud')).toBeInTheDocument();
-    expect(screen.getByText(/Written by the cloud model/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Model: Cloud')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Clear' }));
     await waitFor(() => expect(h.calls).toContain('DELETE /meetings/m1/outputs/summary'));
     expect(await screen.findByText('No summary yet.')).toBeInTheDocument();
+  });
+
+  it('keeps the old text visible while a rerun is written, and still shows it as running after leaving the meeting and coming back', async () => {
+    const h = hub([meeting({ summary: { text: 'Old summary text', tier: 'local', generated_at: '2030-01-02T07:30:00Z' } })]);
+    renderApp('#/meetings/m1');
+    const user = setup();
+    await user.click(await screen.findByRole('button', { name: 'Summary' }));
+    expect(await screen.findByText('Old summary text')).toBeInTheDocument();
+    expect(screen.getByLabelText('Model: Quick local')).toBeInTheDocument(); // the tier is a tag on the text
+    const held = h.hold((c) => c === 'POST /meetings/m1/outputs/summary');
+    await user.selectOptions(screen.getByLabelText(/Rerun with/), 'cloud');
+    await user.click(screen.getByRole('button', { name: 'Rerun' }));
+    expect(await screen.findByText(/Writing the summary on the cloud model/)).toBeInTheDocument();
+    expect(screen.queryByText('Old summary text')).toBeNull(); // a spinner takes the text's place while it is written
+    expect(screen.getByRole('status', { name: 'Writing the summary' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Model: Quick local')).toBeNull(); // and no tag until there is a finished text
+    expect(screen.getByRole('button', { name: 'Rerun' })).toBeDisabled(); // and a second run cannot be started on top of it
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    await screen.findByRole('heading', { name: 'Add a meeting' });
+    window.location.hash = '#/meetings/m1';
+    await user.click(await screen.findByRole('button', { name: 'Summary' }));
+    expect(await screen.findByText(/Writing the summary on the cloud model/)).toBeInTheDocument(); // the run is still known after coming back
+    expect(held).toHaveLength(1);
+    h.data.meetings[0]!.summary = { text: 'New summary text', tier: 'cloud', generated_at: '2030-01-02T09:00:00Z' };
+    held[0]!.resolve(await fetch('/meetings/m1'));
+    expect(await screen.findByText('New summary text')).toBeInTheDocument();
+    expect(screen.queryByText(/Writing the summary on the cloud model/)).toBeNull();
+    expect(screen.getByLabelText('Model: Cloud')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rerun' })).toBeInTheDocument();
   });
 
   it('does not rewrite an existing output on opening, and reports a generation failure', async () => {
@@ -282,7 +311,7 @@ describe('Summary and minutes', () => {
     const user = setup();
     await user.click(await screen.findByRole('button', { name: 'Minutes' }));
     expect(await screen.findByText('Existing minutes')).toBeInTheDocument();
-    expect(screen.getByText(/Written by the larger local model/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Model: Deep local')).toBeInTheDocument();
     expect(h.calls.some((c) => c.startsWith('POST /meetings/m1/outputs'))).toBe(false);
     h.respond((c) => c.startsWith('POST /meetings/m1/outputs'), () => jsonResponse({ detail: 'the language model is unavailable right now' }, 503));
     await user.click(screen.getByRole('button', { name: 'Rerun' }));

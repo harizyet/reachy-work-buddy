@@ -12,7 +12,12 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.reachy.companion.data.ApiException
+import app.reachy.companion.data.EmailDraft
+import app.reachy.companion.data.EmailForm
+import app.reachy.companion.data.EmailGroup
+import app.reachy.companion.data.EmailSuggestion
 import app.reachy.companion.data.IdentifyScreen
+import app.reachy.companion.data.isActive
 import app.reachy.companion.data.Meeting
 import app.reachy.companion.data.SpeakerDecision
 import app.reachy.companion.data.MeetingLink
@@ -326,7 +331,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun resume() {
         if (prefs.baseUrl.isBlank()) { session = Session.SignedOut; return }
         session = try { api.me(); userId = api.userId(); Session.SignedIn } catch (e: Exception) { Session.SignedOut }
-        if (session == Session.SignedIn) { resumeDeepReview(); refreshReminders() }
+        if (session == Session.SignedIn) { resumeDeepReview(); refreshReminders(); loadEmailConfig() }
     }
 
     fun signIn(url: String, username: String, password: String) {
@@ -343,6 +348,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 session = Session.SignedIn
                 resumeDeepReview()
                 refreshReminders()
+                loadEmailConfig()
             } catch (e: ApiException) {
                 loginError = if (e.unauthorized) "Wrong username or password" else e.message
             } catch (e: Exception) {
@@ -632,11 +638,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- deleting, summaries and minutes ------------------------------------------------------------------------
     var generatingKind by mutableStateOf<String?>(null); private set
+    var generatingModel by mutableStateOf("local"); private set
 
     fun generateOutput(kind: String, model: String) {
         val id = openMeeting?.id ?: return
         if (generatingKind != null) return
         generatingKind = kind
+        generatingModel = model
         viewModelScope.launch {
             try { openMeeting = api.generateOutput(id, kind, model); listError = null }
             catch (e: Exception) { listError = failed(e) } finally { generatingKind = null }
@@ -768,6 +776,89 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun playSample(id: String, start: Double, end: Double) { viewModelScope.launch { player.playRange(id, start, end) } }
+
+    // Share minutes (Phase 55): the server's state of the owner's meeting emails. The phone holds no credential and sends nothing by itself; every message needs the owner's typed approval.
+    var emailEnabled by mutableStateOf(false); private set
+    var emailSenderReady by mutableStateOf(false); private set
+    var emailSenderConfigured by mutableStateOf(false); private set
+    var emailDelaySeconds by mutableStateOf(600); private set
+    var emailDrafts by mutableStateOf<List<EmailDraft>>(emptyList()); private set
+    var emailGroups by mutableStateOf<List<EmailGroup>>(emptyList()); private set
+    var emailSuggestions by mutableStateOf<List<EmailSuggestion>>(emptyList()); private set
+    var emailNote by mutableStateOf<String?>(null); private set
+    var emailNeedsAck by mutableStateOf(false); private set
+    var emailBusy by mutableStateOf(false); private set
+    var openEmailId by mutableStateOf<String?>(null)
+    private var emailPoll: Job? = null
+
+    /** Whether the hub has the feature on. A hub without it (or an older one) simply makes the section absent. */
+    fun loadEmailConfig() {
+        viewModelScope.launch {
+            try {
+                val config = api.emailConfig()
+                emailEnabled = config.enabled; emailSenderConfigured = config.sender?.configured == true; emailSenderReady = config.sender?.let { it.configured && it.enabled } == true
+                emailDelaySeconds = config.sendDelaySeconds
+            } catch (e: Exception) { emailEnabled = false }
+        }
+    }
+
+    fun loadEmail(meetingId: String) {
+        viewModelScope.launch {
+            try {
+                emailDrafts = api.emailDrafts(meetingId); emailNote = null
+                runCatching { emailGroups = api.emailGroups(); emailSuggestions = api.emailSuggestions(meetingId) }
+            } catch (e: Exception) { emailNote = failed(e) }
+        }
+        emailPoll?.cancel()
+        emailPoll = viewModelScope.launch {
+            // While a message waits or is being sent the server says where it is; nothing is polled otherwise.
+            while (true) {
+                delay(5000)
+                if (emailDrafts.none { isActive(it) }) continue
+                try { emailDrafts = api.emailDrafts(meetingId) } catch (e: Exception) { break }
+            }
+        }
+    }
+
+    fun openMeetingId(): String? = openMeeting?.id
+
+    fun clearEmail() { emailPoll?.cancel(); emailDrafts = emptyList(); emailNote = null; emailNeedsAck = false; openEmailId = null }
+
+    private fun emailAction(after: (EmailDraft) -> Unit = {}, call: suspend () -> EmailDraft) {
+        emailBusy = true; emailNote = null
+        viewModelScope.launch {
+            try {
+                val draft = call()
+                emailDrafts = listOf(draft) + emailDrafts.filter { it.id != draft.id }
+                openEmailId = draft.id; after(draft)
+            } catch (e: Exception) {
+                emailNote = failed(e)
+                if (e is ApiException && e.reason == "sensitive_meeting") emailNeedsAck = true
+                openMeeting?.id?.let { id -> runCatching { emailDrafts = api.emailDrafts(id) } }  // show what the server holds now
+            } finally { emailBusy = false }
+        }
+    }
+
+    fun prepareEmail(meetingId: String, includePdf: Boolean, allowSensitive: Boolean) = emailAction({ emailNeedsAck = false }) { api.prepareEmail(meetingId, includePdf, allowSensitive) }
+    fun saveEmail(id: String, form: EmailForm) = emailAction { api.editEmail(id, form) }
+    fun refreshEmail(id: String) = emailAction { api.refreshEmail(id) }
+
+    /** Approve the exact saved package with the typed word, then queue it when sending is on. The server checks the hash, the word, the sender and that the meeting has not changed. */
+    fun approveEmail(draft: EmailDraft, typed: String) = emailAction {
+        val approved = api.approveEmail(draft.id, draft.packageHash.orEmpty(), typed)
+        if (approved.senderReady) api.queueEmail(draft.id) else approved
+    }
+    fun queueEmail(id: String) = emailAction { api.queueEmail(id) }
+    fun cancelEmailSend(id: String) = emailAction { api.cancelEmailSend(id) }
+    fun discardEmail(id: String) = emailAction({ openEmailId = null }) { api.discardEmail(id) }
+    fun resolveEmail(id: String, delivered: Boolean) = emailAction { api.resolveEmail(id, delivered) }
+
+    /** Downloads the attachment as it will be sent into the app's cache for the in-app preview. */
+    suspend fun fetchEmailAttachment(id: String, name: String): File {
+        val dir = File(getApplication<Application>().cacheDir, "email-preview").also { it.mkdirs() }
+        dir.listFiles()?.forEach { it.delete() }
+        return File(dir, "preview.pdf").also { api.downloadEmailAttachment(id, name, it) }
+    }
     /** Streams a reply in Reachy's voice; false (nothing played) when the hub cannot speak. */
     suspend fun replyStream(text: String, onRate: (Int) -> Unit, onPcm: (ByteArray, Int) -> Unit): Boolean =
         try { api.speechStream(text, onRate, onPcm) } catch (e: Exception) { false }

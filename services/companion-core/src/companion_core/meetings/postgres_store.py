@@ -30,6 +30,7 @@ from companion_core.meetings.models import (
     MeetingOutput,
     SpeakerIdentityState,
 )
+from companion_core.meetings.provenance import ProcessingEvent
 from companion_core.meetings.speaker_identity import supersede
 from companion_core.meetings.store import MeetingNotCancellableError
 from shared.database import check_schema, close_pool, open_pool
@@ -39,7 +40,7 @@ _COLUMNS = (
     "id, title, project_scope, context, participants, started_at, source_filename, content_type, "
     "audio_path, normalized_audio_path, duration_seconds, transcript_segments, diarization_segments, "
     "status, error_detail, created_at, updated_at, speaker_names, transcript_corrections, key_terms, summary, minutes, "
-    "aligned_segments, audio_gaps, description, title_source, sensitivity, speaker_identity"
+    "aligned_segments, audio_gaps, description, title_source, sensitivity, speaker_identity, processing_events"
 )
 
 
@@ -73,7 +74,13 @@ def _from_row(row: tuple) -> Meeting:
         title_source=row[25],
         sensitivity=Privacy(row[26]),
         speaker_identity=SpeakerIdentityState(**row[27]) if row[27] else SpeakerIdentityState(),
+        processing_events=[ProcessingEvent(**e) for e in (row[28] or [])],
     )
+
+
+def _event_json(event: ProcessingEvent | None) -> Json:
+    """A one-element (or empty) JSON array to append to `processing_events` with `||`."""
+    return Json([event.model_dump(mode="json")] if event else [])
 
 
 class PostgresMeetingStore:
@@ -138,14 +145,14 @@ class PostgresMeetingStore:
         async with self._pool.connection() as conn:
             await conn.execute(
                 f"INSERT INTO meetings ({_COLUMNS}) VALUES "
-                "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     meeting.id, meeting.title, meeting.project_scope, meeting.context, meeting.participants,
                     meeting.started_at, meeting.source_filename, meeting.content_type, meeting.audio_path,
                     meeting.normalized_audio_path, meeting.duration_seconds, None, None,
                     meeting.status.value, meeting.error_detail, meeting.created_at, meeting.updated_at,
                     Json({}), Json({}), Json([]), None, None, None, None, None, meeting.title_source,
-                    meeting.sensitivity.value, Json(meeting.speaker_identity.model_dump(mode="json")),
+                    meeting.sensitivity.value, Json(meeting.speaker_identity.model_dump(mode="json")), Json([]),
                 ),
             )
         return meeting
@@ -241,22 +248,28 @@ class PostgresMeetingStore:
             row = await cur.fetchone()
             return _from_row(row) if row else None
 
+    async def record_processing(self, meeting_id: str, processing: ProcessingEvent) -> None:
+        async with self._pool.connection() as conn:
+            await conn.execute(
+                "UPDATE meetings SET processing_events = processing_events || %s::jsonb WHERE id = %s", (_event_json(processing), meeting_id)
+            )
+
     async def mark_transcribed(
-        self, meeting_id: str, *, transcript_segments: list[dict[str, Any]]
+        self, meeting_id: str, *, transcript_segments: list[dict[str, Any]], processing: ProcessingEvent | None = None
     ) -> Meeting | None:
         async with self._pool.connection() as conn:
             cur = await conn.execute(
                 f"""
-                UPDATE meetings SET status = %s, transcript_segments = %s, updated_at = now()
+                UPDATE meetings SET status = %s, transcript_segments = %s, processing_events = processing_events || %s::jsonb, updated_at = now()
                 WHERE id = %s AND status = %s RETURNING {_COLUMNS}
                 """,
-                (MeetingJobStatus.DIARIZING.value, Json(transcript_segments), meeting_id, MeetingJobStatus.TRANSCRIBING.value),
+                (MeetingJobStatus.DIARIZING.value, Json(transcript_segments), _event_json(processing), meeting_id, MeetingJobStatus.TRANSCRIBING.value),
             )
             row = await cur.fetchone()
             return _from_row(row) if row else await self.get_meeting(meeting_id)
 
     async def mark_diarized(
-        self, meeting_id: str, *, diarization_segments: list[dict[str, Any]]
+        self, meeting_id: str, *, diarization_segments: list[dict[str, Any]], processing: ProcessingEvent | None = None
     ) -> Meeting | None:
         existing = await self.get_meeting(meeting_id)
         # A different diarization must not inherit names confirmed against the old one (Phase 54).
@@ -264,10 +277,11 @@ class PostgresMeetingStore:
         async with self._pool.connection() as conn:
             cur = await conn.execute(
                 f"""
-                UPDATE meetings SET status = %s, diarization_segments = %s, speaker_identity = %s, speaker_names = %s, updated_at = now()
+                UPDATE meetings SET status = %s, diarization_segments = %s, speaker_identity = %s, speaker_names = %s,
+                processing_events = processing_events || %s::jsonb, updated_at = now()
                 WHERE id = %s AND status = %s RETURNING {_COLUMNS}
                 """,
-                (MeetingJobStatus.ALIGNING.value, Json(diarization_segments), Json(state.model_dump(mode="json")), Json(names), meeting_id, MeetingJobStatus.DIARIZING.value),
+                (MeetingJobStatus.ALIGNING.value, Json(diarization_segments), Json(state.model_dump(mode="json")), Json(names), _event_json(processing), meeting_id, MeetingJobStatus.DIARIZING.value),
             )
             row = await cur.fetchone()
             return _from_row(row) if row else await self.get_meeting(meeting_id)
@@ -281,14 +295,14 @@ class PostgresMeetingStore:
             row = await cur.fetchone()
             return _from_row(row) if row else None
 
-    async def mark_aligned(self, meeting_id: str, *, aligned_segments: list[dict[str, Any]]) -> Meeting | None:
+    async def mark_aligned(self, meeting_id: str, *, aligned_segments: list[dict[str, Any]], processing: ProcessingEvent | None = None) -> Meeting | None:
         async with self._pool.connection() as conn:
             cur = await conn.execute(
                 f"""
-                UPDATE meetings SET status = %s, aligned_segments = %s, updated_at = now()
+                UPDATE meetings SET status = %s, aligned_segments = %s, processing_events = processing_events || %s::jsonb, updated_at = now()
                 WHERE id = %s AND status = %s RETURNING {_COLUMNS}
                 """,
-                (MeetingJobStatus.COMPLETE.value, Json(aligned_segments), meeting_id, MeetingJobStatus.ALIGNING.value),
+                (MeetingJobStatus.COMPLETE.value, Json(aligned_segments), _event_json(processing), meeting_id, MeetingJobStatus.ALIGNING.value),
             )
             row = await cur.fetchone()
             return _from_row(row) if row else await self.get_meeting(meeting_id)
@@ -303,12 +317,12 @@ class PostgresMeetingStore:
             row = await cur.fetchone()
             return _from_row(row) if row else None
 
-    async def set_title(self, meeting_id: str, *, title: str | None, description: str | None, source: str) -> Meeting | None:
+    async def set_title(self, meeting_id: str, *, title: str | None, description: str | None, source: str, processing: ProcessingEvent | None = None) -> Meeting | None:
         async with self._pool.connection() as conn:
             cur = await conn.execute(
                 f"UPDATE meetings SET title = COALESCE(%s, title), description = COALESCE(%s, description), title_source = %s, "
-                f"updated_at = now() WHERE id = %s RETURNING {_COLUMNS}",
-                (title, description, source, meeting_id),
+                f"processing_events = processing_events || %s::jsonb, updated_at = now() WHERE id = %s RETURNING {_COLUMNS}",
+                (title, description, source, _event_json(processing), meeting_id),
             )
             row = await cur.fetchone()
             return _from_row(row) if row else None
@@ -431,9 +445,10 @@ class PostgresMeetingStore:
         if kind not in ("summary", "minutes"):
             raise ValueError(kind)
         async with self._pool.connection() as conn:
+            written = ProcessingEvent(step=kind, location=output.location, at=output.generated_at, subject=output.generated_at.isoformat()) if output and output.location else None
             cur = await conn.execute(
-                f"UPDATE meetings SET {kind} = %s, updated_at = now() WHERE id = %s RETURNING {_COLUMNS}",
-                (Json(output.model_dump(mode="json")) if output else None, meeting_id),
+                f"UPDATE meetings SET {kind} = %s, processing_events = processing_events || %s::jsonb, updated_at = now() WHERE id = %s RETURNING {_COLUMNS}",
+                (Json(output.model_dump(mode="json")) if output else None, _event_json(written), meeting_id),
             )
             row = await cur.fetchone()
             return _from_row(row) if row else None

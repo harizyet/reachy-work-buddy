@@ -71,6 +71,7 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
     secrets: [] as string[], // every key the page ever sent, so a test can assert none came back
     saves: [] as { call: string; body: any }[],
     deepJobs: [] as any[],
+    email: { enabled: false, sender: { enabled: true, configured: true, host: 'smtp.example.test', port: 587, security: 'starttls', from_address: 'reachy.minutes@example.test', username: 'reachy.minutes@example.test', owner_name: 'Hariz', has_credential: true, verified_at: null, verified_ok: true, verified_detail: '' } as any, drafts: [] as any[], groups: [] as any[], suggestions: [] as any[], passwords: [] as string[], tests: [] as string[], testFails: null as string | null, counter: 0, calls: [] as string[], processing: null as any, sensitive: false, failApprove: null as any },
     suggestions: { suggestions: [], terms_used: 0, truncated: false } as any,
     sessions: new Map<string, { interaction_mode: string; dnd: boolean; active_channel: string }>(),
     messages: [] as any[],
@@ -83,6 +84,99 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
   const overrides: { matcher: (call: string) => boolean; make: () => Response }[] = [];
   let user: string | null = 'owner';
   const nextId = (p: string) => `${p}${++counter}`;
+
+  // Phase 55: a stateful stand-in for core's meeting-email routes (the real state machine is tested in core; here the page's behaviour is).
+  const emailRoute = (method: string, path: string, body: any, query: URLSearchParams): Response => {
+    const e = data.email;
+    e.calls.push(`${method} ${path}`);
+    if (!e.enabled) return path === '/meeting-email/config' ? jsonResponse({ enabled: false }) : jsonResponse({ detail: 'Not found' }, 404);
+    const err = (status: number, code: string, message: string) => jsonResponse({ detail: { message, code } }, status);
+    if (path === '/meeting-email/config') return jsonResponse({ enabled: true, sender: e.sender, send_delay_seconds: 600, confirm_word: 'SEND' });
+    if (path === '/meeting-email/sender' && method === 'GET') return jsonResponse(e.sender);
+    if (path === '/meeting-email/sender' && method === 'PUT') {
+      if (body.password) e.passwords.push(body.password);
+      e.sender = { ...e.sender, host: body.host, port: body.port, security: body.security, from_address: body.from_address, username: body.username, owner_name: body.owner_name ?? '', configured: true, has_credential: e.sender.has_credential || Boolean(body.password), enabled: false, verified_ok: null, verified_at: null, verified_detail: '' };
+      return jsonResponse(e.sender);
+    }
+    if (path === '/meeting-email/sender' && method === 'DELETE') {
+      e.sender = { ...e.sender, configured: false, enabled: false, has_credential: false, host: '', from_address: '', username: '', verified_ok: null };
+      return jsonResponse(e.sender);
+    }
+    if (path === '/meeting-email/sender/verify') {
+      e.sender = { ...e.sender, verified_ok: true, verified_detail: 'ok', verified_at: '2030-01-02T08:00:00Z' };
+      return jsonResponse({ ok: true, stage: 'authenticated', detail: 'connected to smtp.example.test:587 and signed in', sender: e.sender });
+    }
+    if (path === '/meeting-email/sender/test') {
+      e.calls.push(`TEST ${body.to}`);
+      if (!e.sender.enabled) return err(409, 'sending_off', 'Sending is turned off. Verify the connection and turn sending on first.');
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(body.to)) return err(422, 'bad_recipient', `not a valid email address: ${body.to}`);
+      if (e.testFails) return jsonResponse({ id: 't1', status: 'failed', to: body.to.toLowerCase(), provider_response: null, error: e.testFails });
+      e.tests = [...(e.tests ?? []), body.to];
+      return jsonResponse({ id: `t${e.tests.length}`, status: 'sent', to: body.to.toLowerCase(), provider_response: '2.0.0 OK queued', error: null });
+    }
+    if (path === '/meeting-email/sender/enabled') {
+      if (body.enabled && !e.sender.verified_ok) return err(409, 'not_verified', 'verify the connection before enabling sending');
+      e.sender = { ...e.sender, enabled: body.enabled };
+      return jsonResponse(e.sender);
+    }
+    if (path === '/meeting-email/groups' && method === 'GET') return jsonResponse(e.groups);
+    if (path === '/meeting-email/groups' && method === 'POST') {
+      const g = { id: `g${++e.counter}`, name: body.name, addresses: body.addresses.map((a: string) => a.toLowerCase()) };
+      e.groups.push(g);
+      return jsonResponse(g);
+    }
+    const g = path.match(/^\/meeting-email\/groups\/([^/]+)$/);
+    if (g) {
+      const group = e.groups.find((x: any) => x.id === g[1]);
+      if (!group) return jsonResponse({ detail: 'No such group' }, 404);
+      if (method === 'DELETE') { e.groups = e.groups.filter((x: any) => x !== group); return jsonResponse({ deleted: true }); }
+      Object.assign(group, { name: body.name, addresses: body.addresses });
+      return jsonResponse(group);
+    }
+    if (path === '/meeting-email/drafts') return jsonResponse(e.drafts.filter((d: any) => d.source.meeting_id === query.get('meeting_id')).map((d: any) => ({ ...d, recipient_count: new Set([...d.recipients.to, ...d.recipients.cc, ...d.recipients.bcc]).size, sender_ready: e.sender.enabled })));
+    const d = path.match(/^\/meeting-email\/drafts\/([^/]+)(\/(approve|queue|cancel-send|discard|resolve|attachments\/.+))?$/);
+    if (!d) return jsonResponse({ detail: 'Not found' }, 404);
+    const draft = e.drafts.find((x: any) => x.id === d[1]);
+    if (!draft) return err(404, 'not_found', 'No such draft');
+    const view = () => ({ ...draft, recipient_count: new Set([...draft.recipients.to, ...draft.recipients.cc, ...draft.recipients.bcc]).size, events: draft.events, warnings: draft.warnings ?? [], sender_ready: e.sender.enabled });
+    const rehash = () => { draft.package_hash = `hash-${++e.counter}-${draft.subject.length}-${draft.body.length}`; draft.status = 'ready_for_review'; draft.approved_hash = null; draft.dispatch_at = null; };
+    const event = (name: string) => draft.events.push({ at: '2030-01-02T08:00:00Z', event: name, detail: {} });
+    const action = d[3];
+    if (!action) {
+      if (method === 'GET') return jsonResponse(view());
+      if (!['draft', 'ready_for_review', 'approved'].includes(draft.status)) return err(409, 'not_editable', 'A message that is queued cannot be edited. Cancel it first.');
+      if (body.refresh) { draft.meeting_changed = false; draft.body = `${draft.body} (refreshed)`; }
+      for (const k of ['to', 'cc', 'bcc'] as const) if (body[k]) draft.recipients[k] = body[k].map((a: string) => a.toLowerCase());
+      if (body.subject !== undefined) draft.subject = body.subject;
+      if (body.body !== undefined) draft.body = body.body;
+      if (body.include_pdf !== undefined) draft.attachments = body.include_pdf ? [{ name: 'Weekly-sync-minutes.pdf', content_type: 'application/pdf', sha256: 'a'.repeat(64), size: 4096 }] : [];
+      rehash(); event('edited');
+      return jsonResponse(view());
+    }
+    if (action === 'approve') {
+      if (e.failApprove) return e.failApprove;
+      if (String(body.confirmation).trim().toUpperCase() !== 'SEND') return err(422, 'confirmation_required', 'Type SEND to approve this message.');
+      if (draft.status !== 'ready_for_review') return err(409, 'bad_state', 'A message that is approved cannot be approved.');
+      if (body.package_hash !== draft.package_hash) return err(409, 'changed', 'The message changed since you reviewed it. Review it again.');
+      draft.status = 'approved'; draft.approved_hash = draft.package_hash; event('approved');
+      return jsonResponse(view());
+    }
+    if (action === 'queue') {
+      if (draft.status !== 'approved') return err(409, 'bad_state', `A message that is ${draft.status} cannot be queued.`);
+      if (!e.sender.enabled) return err(409, 'sending_off', 'Sending is turned off. Enable the outbound sender in Settings first.');
+      draft.status = 'queued'; draft.dispatch_at = '2030-01-02T08:10:00Z'; event('queued');
+      return jsonResponse(view());
+    }
+    if (action === 'cancel-send') { if (draft.status !== 'queued') return err(409, 'bad_state', 'This message is not waiting to be sent.'); draft.status = 'approved'; draft.dispatch_at = null; event('cancelled_before_send'); return jsonResponse(view()); }
+    if (action === 'discard') { draft.status = 'cancelled'; event('discarded'); return jsonResponse(view()); }
+    if (action === 'resolve') {
+      if (draft.status !== 'unknown_delivery') return err(409, 'bad_state', 'Only a message with an unknown delivery can be settled.');
+      if (body.delivered) draft.status = 'sent'; else { draft.status = 'ready_for_review'; draft.approved_hash = null; }
+      event(body.delivered ? 'owner_confirmed_delivered' : 'owner_reopened');
+      return jsonResponse(view());
+    }
+    return new Response('%PDF-1.4 fake', { status: 200, headers: { 'Content-Type': 'application/pdf' } });
+  };
 
   const meetingRoute = (method: string, path: string, body: any): Response => {
     const full = (m: FakeMeeting) => ({
@@ -106,6 +200,23 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
     const meeting = m && data.meetings.find((x) => x.id === decodeURIComponent(m[1]!));
     if (!m || !meeting) return jsonResponse({ detail: 'Meeting not found' }, 404);
     const rest = m[2] ?? '';
+    if (rest === '/email/prepare') {
+      const e = data.email;
+      e.calls.push(`POST ${path}`);
+      if (!e.enabled) return jsonResponse({ detail: 'Not found' }, 404);
+      if (e.sensitive && !body.allow_sensitive) return jsonResponse({ detail: { message: 'This meeting is marked sensitive. Confirm that you want to prepare a message from it.', code: 'sensitive_meeting' } }, 409);
+      const draft: any = {
+        id: `d${++e.counter}`, subject: `Meeting minutes: ${meeting.title}`, body: 'Summary and minutes of the meeting\n\nSUMMARY\nPriya Shah proposed shipping on Friday.\n', status: 'ready_for_review', kind: 'meeting_minutes',
+        recipients: { to: [...(body.to ?? [])], cc: [...(body.cc ?? [])], bcc: [...(body.bcc ?? [])] }, attachments: body.include_pdf === false ? [] : [{ name: 'Weekly-sync-minutes.pdf', content_type: 'application/pdf', sha256: 'a'.repeat(64), size: 4096 }],
+        package_hash: `hash-${++e.counter}`, approved_hash: null, sender: e.sender.from_address, message_id: null, dispatch_at: null, sent_at: null, created_at: '2030-01-02T07:00:00Z', attempts: 0, last_error: null,
+        provider_response: null, source: { meeting_id: meeting.id }, meeting_title: meeting.title, meeting_changed: false,
+        text_before: "Hi everyone,\n\nI'm Reachy, Hariz's personal AI assistant.\n\nMeeting: Weekly sync\n", text_after: '\nA note about accuracy: I can make mistakes.\n\nThis meeting was processed entirely on private infrastructure. No meeting content was sent to external AI services. Email delivery is separate from AI processing: this message is delivered through Gmail.\n',
+        rendered_body: 'FULL TEXT', processing: { status: e.processing ?? 'local', external_steps: [], rest_local: true }, warnings: ['1 action candidate not included: you have not confirmed it.'], events: [{ at: '2030-01-02T07:00:00Z', event: 'prepared', detail: {} }],
+      };
+      e.drafts.unshift(draft);
+      return jsonResponse({ ...draft, recipient_count: 0, sender_ready: e.sender.enabled });
+    }
+    if (rest === '/email/suggestions') return jsonResponse(data.email.suggestions);
     if (rest === '' && method === 'GET') return jsonResponse(full(meeting));
     if (rest === '' && method === 'DELETE') {
       if (!['complete', 'failed', 'cancelled', 'aligning'].includes(meeting.status)) return jsonResponse({ detail: 'Meeting is still being processed' }, 409);
@@ -280,6 +391,7 @@ export function createFakeHub(seed: { tasks?: FakeTask[]; reminders?: FakeRemind
       const info = data.sessions.get(decodeURIComponent(m[1]!));
       return info ? jsonResponse(info) : jsonResponse({ detail: `no session for user '${m[1]}'` }, 404);
     }
+    if (path.startsWith('/meeting-email')) return emailRoute(method, path, body, query);
     if (path.startsWith('/meetings') || path.startsWith('/deep-review')) return meetingRoute(method, path, body);
     if (path === '/settings/llm') {
       if (method === 'PUT') {

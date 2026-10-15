@@ -231,7 +231,7 @@ The hosted-provider evidence and reasoning-model token-budget caveat are in
 
 The model manager swaps the vLLM tiers and always restores the fast one
 ([ADR 0031](adr/0031-three-tier-local-model-escalation.md),
-[Phase 42](phase-42.md)). It is a **host process**, started by hand:
+[Phase 42](phase-42.md)). It is a **host process**; the commands below run it by hand, and the unit described after them starts it with the machine:
 
 ```bash
 scripts/start-model-manager.sh --check    # read-only
@@ -246,9 +246,18 @@ printed); compose reads that file for companion-core as an optional env file, so
 without it the Deep local option reports "the model manager is not configured".
 After creating or rotating the token, recreate companion-core (`docker compose
 up -d companion-core`). Do not run `docker compose config` into logs: it prints
-interpolated environment values. The manager is not supervised: if it is not
-running, Deep local is disabled and nothing else changes. Whoever can call it can
+interpolated environment values. Whoever can call it can
 take the local model offline for minutes, so treat its token like Docker access.
+
+**Start with the machine.** `scripts/install-model-manager-service.sh` installs
+`deploy/homelab/model-manager.service` as a systemd **user** unit (no root: it runs as you, with your
+own Docker access, which is the reason the manager is a host process at all) and enables
+lingering so it starts at boot without a login, in step with the Docker stack. systemd restarts it
+if it dies (`Restart=always`, 10 s). `--check` is read-only and runs the manager's own check with the
+unit's minimal `PATH`; `--uninstall` removes it. Status: `systemctl --user status model-manager`,
+logs: `journalctl --user -u model-manager`. If it is stopped, Deep local is disabled and nothing
+else changes. The unit expects the repository at `$HOME/reachy-work-buddy`. Restarting the manager
+does not change which tier is loaded; a running deep job's lease still restores the fast tier.
 
 ## Web search
 
@@ -375,6 +384,8 @@ shred -u .env.searxng-secret.prev /tmp/started-before.txt
 `TELEGRAM_DEFAULT_USER_ID` to the same conversational ID used in web/robot
 channels. The user must message the bot first so it can learn a reply chat
 ID. Telegram voice notes are not wired into STT.
+
+**Meeting-minutes email (Phase 55, ADR 0039; off by default).** With `MEETING_EMAIL_ENABLED=true` the owner configures a *dedicated* sender in the web Settings (Accounts, Outbound meeting email), not in the environment: host, port, sender address, username and an app password. The password is stored encrypted in the SecretStore (`owner/mail-sender/password`), is write-only, and never appears in a response, event, log or plaintext backup row. Gmail: `smtp.gmail.com`, port 587 (STARTTLS), the dedicated account's address as both sender and username, an app password (the account needs 2-Step Verification); Gmail rewrites the sender to the account, so the configured address must be that account. An authenticated sender must use STARTTLS with certificate verification; verification signs in and quits and sends nothing; changing the sender or credential turns sending off until verified again; Remove sender deletes the credential. A meeting package never uses the `SMTP_*` environment below. Rotation of the SecretStore keys follows the credential-key procedure; the sender credential re-encrypts with the rest. Mailpit (`--profile simulation`) remains the test target.
 
 Simulation email goes to Mailpit. Production `SMTP_HOST`, `SMTP_PORT`, and
 `SMTP_FROM` select a relay; the current sender has no SMTP authentication
@@ -849,6 +860,10 @@ Revision `019_meeting_annotations` (Phase 41, [ADR 0030](adr/0030-meeting-speake
 Revision `020_meeting_terms` (Phase 41) adds `meetings.key_terms` and the `meeting_terms` glossary table. Deployed 2026-10-07 (backup `reachy-before-meeting-terms-20261007-1456.dump`; 5 existing meetings kept).
 
 Revision `033_calendar_feed` ([ADR 0035](adr/0035-read-only-ics-calendar-and-meeting-reminders.md), **applied to the homelab 2026-10-13**, [record](verification/ics-calendar-deployment-2026-10-13.md)) adds the `calendar_feed` table (one owner row; the feed URL is kept in the encrypted secret store, never in this table). `deploy/homelab/rollback-033.sql` drops it and returns the revision to 032. `SCHEMA_REVISION` is `033_calendar_feed`, so a deploy is a backup, then core, hub and coding-agent together, on owner approval, with a new Phase 48 cohort boundary. The Home dashboard (2026-10-14) needed no migration.
+
+Revision `036_meeting_email` ([ADR 0039](adr/0039-supervised-meeting-minutes-email.md), [Phase 55](phase-55.md), **built on a branch, not applied anywhere**) adds columns to `email_drafts` and the tables `email_draft_attachments`, `email_draft_events`, `mail_sender` and `meeting_recipient_groups`; the dedicated sender's credential is a row in `secrets` (provider `mail-sender`). `deploy/homelab/rollback-036.sql` deletes meeting-minutes drafts, history, the sender settings, saved groups and the stored credential (a message already sent stays sent). Deploy = backup (including the SecretStore key file), then core, hub and coding-agent together, on owner approval; the feature stays off (`MEETING_EMAIL_ENABLED=false`) until separately enabled.
+
+Revision `037_processing_provenance` ([ADR 0040](adr/0040-verified-processing-provenance-in-email.md), **built on a branch, not applied anywhere**) adds `meetings.processing_events` (the append-only record of where each processing step ran) and `mail_sender.owner_name`. Existing meetings start with an empty record, which the email treats as unverified, never as private. `deploy/homelab/rollback-037.sql` drops both columns and loses only that record and the name; cancel or discard unsent meeting-minutes drafts first, because the previous images cannot render their disclosure text. Core, hub and coding-agent deploy together (the hub's sender body gained `owner_name`).
 
 Revision `035_meeting_speaker_identity` ([ADR 0038](adr/0038-meeting-speaker-identification.md), [Phase 54](phase-54.md), **built on a branch, not applied anywhere**) adds one nullable column `meetings.speaker_identity`; `deploy/homelab/rollback-035.sql` drops it (names in `speaker_names` stay). Deploy = backup, then core, hub and coding-agent together, on owner approval.
 

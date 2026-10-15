@@ -26,14 +26,17 @@ import { useChat } from '../chat/ChatProvider';
 import { AnalysisPanel } from './AnalysisPanel';
 import { DocumentsPanel } from './DocumentsPanel';
 import { SlideSuggestion } from './SlideSuggestion';
+import { ShareMinutes } from './ShareMinutes';
+import { beginGeneration, endGeneration, useGenerating } from './generation';
 import { SpeakerIdentify } from './SpeakerIdentify';
+import { useEmailConfig } from './useMeetingEmail';
 import { useMultimodalActions, useMultimodalEnabled, useOverview } from './useMeetingMultimodal';
 import { useDeepReview } from './DeepReview';
-import { DELETABLE, READY, TIER_LABEL, formatTimestamp, silentSeconds, silentSummary, speakerName, statusDescription, statusLabel } from './format';
+import { DELETABLE, READY, TIER_LABEL, TIER_TAG, formatTimestamp, silentSeconds, silentSummary, speakerName, statusDescription, statusLabel } from './format';
 import { useAnalysisEnabled } from './useMeetingAnalysis';
 import { useAcceptMeeting, useMeeting } from './useMeetings';
 
-type Section = 'transcript' | 'summary' | 'minutes' | 'analysis' | 'documents' | 'speakers';
+type Section = 'transcript' | 'summary' | 'minutes' | 'analysis' | 'documents' | 'speakers' | 'share';
 type Task = 'corrections' | 'summary' | 'minutes';
 
 const messageOf = (error: unknown) => (error instanceof Error ? error.message : 'Something went wrong');
@@ -46,12 +49,14 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
   const deep = useDeepReview();
   const analysisOn = useAnalysisEnabled().data === true;
   const multimodalOn = useMultimodalEnabled().data === true;
+  const emailOn = useEmailConfig().data?.enabled === true;
   const overview = useOverview(id, multimodalOn);
   const multimodal = useMultimodalActions(id);
   const [section, setSection] = useState<Section>('transcript');
   const [status, setStatus] = useState('');
   const [outputStatus, setOutputStatus] = useState('');
-  const [generating, setGenerating] = useState<'summary' | 'minutes' | null>(null);
+  const running = useGenerating(id);
+  const generating = running?.kind ?? null;
   const [outputModel, setOutputModel] = useState('local');
   const [titleOpen, setTitleOpen] = useState(false);
   const [speakerFor, setSpeakerFor] = useState<string | null>(null);
@@ -92,6 +97,7 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
   const m = meeting;
   const ready = Boolean(m.transcript_segments?.length) && READY.includes(m.status);
   const shownSection: Section = ready ? section : 'transcript';
+  const deepRunning = Boolean(job && job.meeting_id === id && job.task === shownSection && job.status !== 'done' && job.status !== 'failed');
 
   function showResult(result: SuggestionResult) {
     setSuggestions(result.suggestions);
@@ -109,14 +115,14 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
 
   async function run(kind: 'summary' | 'minutes', model: string) {
     if (model === 'deep') return void askDeep(kind);
-    setGenerating(kind);
+    if (!beginGeneration(id, kind, model)) return;
     setOutputStatus('');
     try {
       accept(await writeOutput(id, kind, model));
     } catch (e) {
       if (!(e instanceof StaleSessionError)) setOutputStatus(messageOf(e));
     } finally {
-      setGenerating(null);
+      endGeneration(id, kind);
     }
   }
 
@@ -245,6 +251,11 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
               {name[0]!.toUpperCase() + name.slice(1)}
             </Button>
           ))}
+          {emailOn && (
+            <Button variant="secondary" aria-pressed={shownSection === 'share'} className={shownSection === 'share' ? 'ring-2 ring-[var(--accent)]' : ''} onClick={() => setSection('share')}>
+              Share minutes
+            </Button>
+          )}
           {Boolean(m.diarization_segments?.length) && (
             <Button variant="secondary" aria-pressed={shownSection === 'speakers'} className={shownSection === 'speakers' ? 'ring-2 ring-[var(--accent)]' : ''} onClick={() => setSection('speakers')}>
               Identify speakers
@@ -279,6 +290,8 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
         </p>
       )}
 
+      {ready && emailOn && shownSection === 'share' && <ShareMinutes meeting={m} />}
+
       {ready && shownSection === 'speakers' && (
         <SpeakerIdentify
           meeting={m}
@@ -292,10 +305,36 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
 
       {ready && (shownSection === 'summary' || shownSection === 'minutes') && (
         <div>
-          <p role="status" className="text-sm">
-            {generating === shownSection ? `Writing the ${shownSection} with the local model…` : outputStatus || (output ? '' : `No ${shownSection} yet.`)}
-          </p>
-          <div className="whitespace-pre-wrap break-words">{generating === shownSection ? '' : (output?.text ?? '')}</div>
+          {generating === shownSection || deepRunning ? (
+            <div role="status" aria-label={`Writing the ${shownSection}`} className="flex flex-col items-center gap-2 py-10 text-center">
+              <span aria-hidden="true" className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--border)] border-t-[var(--accent)]" />
+              <p className="font-medium">
+                {generating === shownSection
+                  ? `Writing the ${shownSection} on ${TIER_LABEL[running?.model ?? 'local'] ?? running?.model}…`
+                  : `Writing the ${shownSection} on the larger local model…`}
+              </p>
+              <p className="max-w-md text-sm text-[var(--muted)]">
+                {generating === shownSection
+                  ? `This can take a couple of minutes${running?.model === 'cloud' ? ' and sends the transcript text to your cloud provider' : ''}. You can leave this page; the new ${shownSection} appears here when it is done.`
+                  : 'Reachy is unavailable until it finishes. The new text appears here when it is done.'}
+              </p>
+            </div>
+          ) : (
+            <>
+              {output ? (
+                <p className="flex flex-wrap items-center gap-2 text-sm">
+                  <span aria-label={`Model: ${TIER_TAG[output.tier] ?? output.tier}`} className="rounded-full border border-[var(--accent)] px-2 py-0.5 text-xs font-medium">
+                    {TIER_TAG[output.tier] ?? output.tier}
+                  </span>
+                  {output.generated_at && <span className="text-[var(--muted)]">{new Date(output.generated_at).toLocaleString()}</span>}
+                </p>
+              ) : (
+                <p role="status" className="text-sm">{`No ${shownSection} yet.`}</p>
+              )}
+              <div className="whitespace-pre-wrap break-words">{output?.text ?? ''}</div>
+            </>
+          )}
+          {outputStatus && <p role="status" className="text-sm">{outputStatus}</p>}
           {output && generating !== shownSection && m.stale_outputs.includes(shownSection) && (
             <p role="status" className="my-1 rounded border border-[var(--warn)] bg-[var(--warn-bg)] p-2 text-sm text-[var(--warn)]">
               {`This ${shownSection} was written before the speaker names changed, so it may attribute things to the wrong person. Rerun it to update it.`}
@@ -303,7 +342,7 @@ export function MeetingDetail({ id, onClose, onDelete }: { id: string; onClose: 
           )}
           {output && generating !== shownSection && (
             <p className="text-sm text-[var(--muted)]">
-              {`Written by ${TIER_LABEL[output.tier] ?? output.tier}${output.generated_at ? ' · ' + new Date(output.generated_at).toLocaleString() : ''}. A model wrote this from a speech-to-text transcript, so check it; if it is not accurate enough, rerun it on a stronger model.`}
+              A model wrote this from a speech-to-text transcript, so check it; if it is not accurate enough, rerun it on a stronger model.
             </p>
           )}
           <label className="mt-2 block text-sm">

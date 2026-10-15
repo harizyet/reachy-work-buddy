@@ -33,6 +33,7 @@ from companion_core.meeting_analysis.models import (
     utcnow,
 )
 from companion_core.meeting_analysis.store import OPEN_ITEMS, MeetingAnalysisStore
+from companion_core.meetings import provenance
 from companion_core.meetings.corrections import current_text
 from companion_core.meetings.models import READY_FOR_OUTPUTS, Meeting
 from companion_core.meetings.outputs import display_name, speakers
@@ -112,6 +113,8 @@ class MeetingAnalysisService:
     planner: object  # receipts
     timezone: Callable[[], Awaitable[str]]
     provider: Provider | None = None
+    # Where the provider's model runs, asked per run so a changed setting is seen (ADR 0040). Without it a run is recorded as "unverified".
+    location: Callable[[], Awaitable[str]] | None = None
     clock: Callable[[], datetime] = utcnow
     counters: dict[str, int] = None  # type: ignore[assignment]
     wake: asyncio.Event = None  # type: ignore[assignment]
@@ -230,8 +233,13 @@ class MeetingAnalysisService:
             if offered is None:
                 raise extraction.ExtractionFailed("model_unavailable")
             ask, model = offered
+            where = await self.location() if self.location is not None else "unverified"
+            if where != "local":
+                await self.meetings.record_processing(run.meeting_id, provenance.event("analysis", where, subject=run.id))  # recorded before the transcript leaves, so a failed attempt still counts
             async with asyncio.timeout(RUN_TIMEOUT_SECONDS):
                 items, rejected = await extraction.extract(run, ask, model=model)
+            if where == "local":
+                await self.meetings.record_processing(run.meeting_id, provenance.event("analysis", where, subject=run.id))
             added = await self.store.complete_run(run.id, items, model=model, rejected=rejected, now=self.clock())
             self._count("succeeded")
             self._count("items", added)

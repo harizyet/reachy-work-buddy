@@ -5,10 +5,13 @@
 
 export class ApiError extends Error {
   readonly status: number;
-  constructor(message: string, status: number) {
+  /** A stable machine-readable reason when the server gave one ({"detail": {"message", "code"}}), for example "stale_outputs". */
+  readonly code: string | null;
+  constructor(message: string, status: number, code: string | null = null) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -103,9 +106,11 @@ export async function request<T = unknown>(path: string, options: RequestOptions
       if (started !== generation) throw new StaleSessionError();
       // Only a 401 for the current session ends it; a late 401 for an older one must not sign out a newer login.
       if (response.status === 401 && !options.expectUnauthorized) unauthorizedHandler?.();
+      const structured = typeof detail === 'object' && detail !== null ? (detail as { message?: unknown; code?: unknown }) : null;
       throw new ApiError(
-        typeof detail === 'string' && detail ? detail : `Request failed (${response.status})`,
+        typeof detail === 'string' && detail ? detail : typeof structured?.message === 'string' && structured.message ? structured.message : `Request failed (${response.status})`,
         response.status,
+        typeof structured?.code === 'string' ? structured.code : null,
       );
     }
     const data = (options.asBlob ? await response.blob() : response.status === 204 ? undefined : await response.json()) as T;

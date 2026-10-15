@@ -403,6 +403,24 @@ class CalendarFeedService:
         leave = [(f.start, f.end) for f, c in rows if c.event_class is EventClass.LEAVE_OR_OOO and f.status != "cancelled"]
         return [(f, c, reminder_decision(f, c, rules, leave)) for f, c in rows]
 
+    async def owner_emails(self) -> list[str]:
+        """The owner's own addresses as configured for classification (never returned by any calendar route)."""
+        return [a.lower() for a in (await self._load()).config.rules.owner_emails]
+
+    async def attendees_for(self, moment: datetime, *, window_minutes: int = 20) -> list[str]:
+        """Invitee addresses of the ONE calendar event that starts nearest `moment` (within the window), the owner's own addresses left out. Used only to SUGGEST recipients of a meeting
+        email (Phase 55): the owner chooses; nothing is emailed from this. Redacted and cancelled events contribute nothing, and no other route exposes attendee addresses."""
+        state = await self._load()
+        if state.snapshot is None:
+            return []
+        owners = {a.lower() for a in state.config.rules.owner_emails}
+        slack = timedelta(minutes=window_minutes)
+        near = [f for f in state.snapshot.facts if not f.redacted and f.status != "cancelled" and f.start - slack <= moment <= f.end + slack]
+        if not near:
+            return []
+        best = min(near, key=lambda f: abs((f.start - moment).total_seconds()))
+        return sorted({a for a in best.attendees if a and a not in owners})
+
     async def events(self, start: datetime, end: datetime, *, include_cancelled: bool = False, state: FeedState | None = None) -> list[CalendarEvent]:
         state = state or await self._load()
         out = []

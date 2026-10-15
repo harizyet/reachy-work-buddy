@@ -25,6 +25,32 @@ _CANCEL_SEND_PREFIXES = ("cancel send ", "cancel the send to ", "undo send ")
 _SEND_PREFIXES = ("send draft ", "send the draft to ", "send email to ")
 
 
+# Phase 55: a spoken or typed request may ask Reachy to PREPARE a meeting-minutes email. That only creates a draft for review (no recipients, nothing sent). Approving and sending are never
+# reachable from a conversation: they need the owner's typed approval in the app (ADR 0039), and the matcher below deliberately has no send or approve wording.
+_MINUTES_EMAIL = re.compile(
+    r"^(?:please\s+)?(?:prepare|draft|create|make)\s+(?:an?\s+|the\s+)?(?:(?:e-?mail|message)\s+(?:with|of|for|containing)\s+(?:the\s+)?(?:meeting\s+)?(?:summary\s+and\s+)?minutes|minutes\s+e-?mail)"
+    r"\s+(?:of|for|from)\s+(?:the\s+)?(?P<title>.+?)(?:\s+meeting)?[.!?]*$",
+    re.IGNORECASE,
+)
+
+
+def match_prepare_minutes(text: str) -> str | None:
+    """The meeting named in "prepare an email with the minutes of <title>" (and a few close wordings), else None."""
+    match = _MINUTES_EMAIL.match(text.strip().replace(",", ""))
+    return match.group("title").strip() or None if match else None
+
+
+def format_minutes_draft_reply(title: str) -> str:
+    return (
+        f"I prepared a draft of the minutes email for “{title}”. It has no recipients yet and nothing has been sent. "
+        "Open the meeting in the app and choose Share minutes to review it and approve it by typing. I can't approve or send it by voice or chat."
+    )
+
+
+def format_minutes_draft_problem(reason: str) -> str:
+    return f"I couldn't prepare that draft: {reason} Nothing has been sent."
+
+
 def match_list_inbox(text: str) -> bool:
     return text.strip().lower() in _INBOX_PHRASES
 

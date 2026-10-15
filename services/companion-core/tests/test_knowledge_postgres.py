@@ -159,7 +159,7 @@ def test_migration_adds_the_index_the_outbox_and_the_triggers_and_queues_existin
     sql(database, "INSERT INTO memories VALUES ('m1','working','fact','s',NULL,1.0,'work-private',now(),NULL,NULL,NULL)")
     sql(database, "INSERT INTO meetings (id, title, source_filename, content_type, audio_path, status) VALUES ('mt1','x','a','b','c','complete')")
     upgrade(database, KEYS)
-    assert sql(database, "SELECT version_num FROM alembic_version")[0][0] == SCHEMA_REVISION == "035_meeting_speaker_identity"
+    assert sql(database, "SELECT version_num FROM alembic_version")[0][0] == SCHEMA_REVISION == "037_processing_provenance"
     assert {r[0] for r in sql(database, "SELECT tgname FROM pg_trigger WHERE tgname LIKE 'knowledge_%'")} == {
         "knowledge_memories", "knowledge_chunks", "knowledge_meetings", "knowledge_notes", "knowledge_tasks", "knowledge_reminders"}
     assert set(outbox_rows(database)) == {("note", "n1"), ("task", "t1"), ("memory", "m1"), ("meeting", "mt1")}
@@ -196,7 +196,7 @@ def test_027_can_be_undone_without_touching_authoritative_data_and_applied_again
     if how == "alembic":
         downgrade_to(database, "026_source_sensitivity")
     else:
-        for name in ("rollback-035.sql", "rollback-034.sql", "rollback-033.sql", "rollback-032.sql", "rollback-031.sql", "rollback-030.sql", "rollback-029.sql", "rollback-028.sql", "rollback-027.sql"):  # the head is 032 now: undo it first, as the runbook would
+        for name in ("rollback-037.sql", "rollback-036.sql", "rollback-035.sql", "rollback-034.sql", "rollback-033.sql", "rollback-032.sql", "rollback-031.sql", "rollback-030.sql", "rollback-029.sql", "rollback-028.sql", "rollback-027.sql"):  # the head is 032 now: undo it first, as the runbook would
             script = (Path(__file__).parents[3] / "deploy" / "homelab" / name).read_text()
             with psycopg.connect(database) as conn:
                 conn.execute(script)  # one transaction per script, as each script's own instructions require

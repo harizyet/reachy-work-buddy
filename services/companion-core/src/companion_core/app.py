@@ -151,6 +151,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import dataclasses
 import logging
 import os
 import re
@@ -249,7 +250,12 @@ from companion_core.document_library.store import (
 from companion_core.document_library.worker_client import DocumentWorkerClient
 from companion_core.email.models import DraftStatus, EmailDraft, EmailMessage
 from companion_core.email.postgres_store import PostgresEmailStore
-from companion_core.email.sender import smtp_send
+from companion_core.email.sender import MailSender
+from companion_core.email.sender_config import (
+    InMemoryMailSenderStore,
+    MailSenderStore,
+    PostgresMailSenderStore,
+)
 from companion_core.email.store import EmailStore
 from companion_core.email.workflow import (
     DEFAULT_SEND_DELAY_SECONDS,
@@ -288,6 +294,16 @@ from companion_core.meeting_analysis.store import (
     InMemoryMeetingAnalysisStore,
     MeetingAnalysisStore,
 )
+from companion_core.meeting_distribution.groups import (
+    GroupStore,
+    InMemoryGroupStore,
+    PostgresGroupStore,
+)
+from companion_core.meeting_distribution.routes import install_meeting_email_routes
+from companion_core.meeting_distribution.service import (
+    DistributionError,
+    MeetingEmailService,
+)
 from companion_core.meeting_multimodal import service as multimodal_service
 from companion_core.meeting_multimodal.postgres_store import PostgresMultimodalStore
 from companion_core.meeting_multimodal.routes import install_meeting_multimodal_routes
@@ -298,6 +314,7 @@ from companion_core.meeting_multimodal.store import (
 from companion_core.meetings import corrections as meeting_corrections
 from companion_core.meetings import describe as meeting_describe
 from companion_core.meetings import outputs as meeting_outputs
+from companion_core.meetings import provenance as meeting_provenance
 from companion_core.meetings import speaker_identity as meeting_identity
 from companion_core.meetings import speaker_samples as meeting_samples
 from companion_core.meetings.models import (
@@ -718,7 +735,11 @@ def create_app(
     memory_store: MemoryStore | None = None,
     rag_store: DocumentStore | None = None,
     email_store: EmailStore | None = None,
-    email_send_fn: SendFn = smtp_send,
+    email_send_fn: SendFn | None = None,
+    meeting_email_enabled: bool | None = None,
+    mail_sender_store: MailSenderStore | None = None,
+    recipient_group_store: GroupStore | None = None,
+    mail_tls_context=None,
     email_send_delay_seconds: int | None = None,
     confirmation_store: ConfirmationStore | None = None,
     meeting_store: MeetingStore | None = None,
@@ -757,6 +778,7 @@ def create_app(
 ) -> FastAPI:
     documents_on = document_library_service.enabled()  # Phase 50B: read once; with it off nothing is built, no table is read, no directory is created and the routes do not exist
     multimodal_on = documents_on and multimodal_service.enabled()  # Phase 53: needs the document library; read once; with it off nothing is built, no table is read and the routes do not exist
+    email_on = meeting_email_enabled if meeting_email_enabled is not None else os.environ.get("MEETING_EMAIL_ENABLED", "").strip().lower() in ("1", "true", "yes", "on")  # Phase 55: read once; off means no sender store, no routes, no service
     analysis_on = analysis_service.enabled()  # Phase 31: read once; with it off nothing is built, no table is read, the knowledge index adds nothing and the routes do not exist
     notepad_on = notepad_service.enabled()  # Phase 49: read once; with it off nothing is built, no table is read and the routes do not exist
     candidates_on, capture_on = candidate_service.candidates_enabled(), candidate_service.capture_enabled()  # read once: routes and lifespan always agree
@@ -783,6 +805,20 @@ def create_app(
             return max(1, min(4, int(os.environ.get(notepad_service.CONCURRENCY_ENV, "1"))))
         except ValueError:
             return 1
+
+    def llm_location(config, *, cloud: bool) -> str:
+        """Where the chosen model runs, from the configuration in force now (ADR 0040): the cloud role is external; the local role is local only when its endpoint is on a private address or name."""
+        if cloud:
+            return "external"
+        return meeting_provenance.endpoint_location(config.local.base_url) if config.local is not None else "unverified"
+
+    async def local_llm_location() -> str:
+        return llm_location(await app.state.llm_settings_store.get(), cloud=False)
+
+    async def note_meeting_processing(meeting_id: str, step: str, where: str, *, subject: str | None = None) -> None:
+        """Record, before content is sent, that a step runs somewhere other than a confirmed-private model. Local steps are recorded with their result instead."""
+        if where != "local":
+            await app.state.meeting_store.record_processing(meeting_id, meeting_provenance.event(step, where, subject=subject))
 
     async def notepad_local_provider():
         """The local model only: private notes are never sent to a cloud model for extraction (Phase 49). None when no local provider is configured."""
@@ -928,7 +964,7 @@ def create_app(
             app.state.meeting_analysis_store = analysis_store
             if app.state.meeting_analysis_service is None:
                 app.state.meeting_analysis_service = analysis_service.MeetingAnalysisService(
-                    analysis_store, app.state.meeting_store, app.state.task_store, app.state.planner_store, notepad_timezone, provider=meeting_analysis_provider or notepad_local_provider)
+                    analysis_store, app.state.meeting_store, app.state.task_store, app.state.planner_store, notepad_timezone, provider=meeting_analysis_provider or notepad_local_provider, location=local_llm_location)
             if run_meeting_analysis_runner:
                 analysis_task = asyncio.create_task(notepad_service.run_loop(app.state.meeting_analysis_service, concurrency=1))  # the same bounded runner: process_next, reconcile, wake
 
@@ -947,13 +983,30 @@ def create_app(
             app.state.calendar_store = FeedCalendar(app.state.calendar_store, app.state.calendar_feed)
         feed_task = asyncio.create_task(run_refresh_loop(app.state.calendar_feed)) if app.state.calendar_feed is not None and run_calendar_feed_loop else None
 
+        # Phase 55: the dedicated sender and the meeting-minutes workflow, only when the flag is on. The sender is the one the dispatch loop uses for every draft; without the flag
+        # it is the deployment's environment sender, exactly as before.
+        if email_on:
+            if mail_sender_store is None and db is not None:
+                app.state.mail_sender_store = await PostgresMailSenderStore.connect(db)
+            elif mail_sender_store is None:
+                app.state.mail_sender_store = InMemoryMailSenderStore()
+            if recipient_group_store is None and db is not None:
+                app.state.recipient_group_store = await PostgresGroupStore.connect(db)
+            elif recipient_group_store is None:
+                app.state.recipient_group_store = InMemoryGroupStore()
+            if app.state.meeting_email is None:
+                app.state.meeting_email = build_meeting_email_service()
+        send_fn = email_send_fn or MailSender(app.state.mail_sender_store, tls_context=mail_tls_context)
+        if app.state.meeting_email is not None:
+            send_fn = app.state.meeting_email.guard_send(send_fn)  # ADR 0040: a meeting message is refused if where the meeting was processed changed after approval
+
         # Only actually dispatches drafts whose dispatch_at has passed —
         # queueing a draft doesn't send it, this loop noticing it's due
         # does. Same real-background-task pattern as reachy-hub's
         # heartbeat_loop.
         dispatch_task = (
             asyncio.create_task(
-                run_dispatch_loop(app.state.email_store, send_fn=email_send_fn, interval_seconds=email_dispatch_interval)
+                run_dispatch_loop(app.state.email_store, send_fn=send_fn, interval_seconds=email_dispatch_interval)
             )
             if run_email_dispatch_task
             else None
@@ -1225,6 +1278,30 @@ def create_app(
     install_accounts(app, accounts_service_token)
     install_calendar_routes(app)
 
+    # Phase 55 (ADR 0039): supervised meeting-minutes email. Everything below exists only while MEETING_EMAIL_ENABLED is true.
+    app.state.mail_sender_store = mail_sender_store
+    app.state.recipient_group_store = recipient_group_store
+    app.state.mail_tls_context = mail_tls_context
+    app.state.meeting_email = None
+
+    def build_meeting_email_service() -> MeetingEmailService:
+        async def owner_emails() -> list[str]:
+            feed = getattr(app.state, "calendar_feed", None)
+            return await feed.owner_emails() if feed is not None else []
+
+        async def attendees(meeting) -> list[str]:
+            feed = getattr(app.state, "calendar_feed", None)
+            return await feed.attendees_for(meeting.started_at or meeting.created_at) if feed is not None else []
+
+        return MeetingEmailService(
+            emails=app.state.email_store, meetings=app.state.meeting_store, senders=app.state.mail_sender_store, groups=app.state.recipient_group_store,
+            analysis=app.state.meeting_analysis_service, timezone=notepad_timezone, owner_emails=owner_emails, attendees=attendees,
+            delay_seconds=email_send_delay_seconds if email_send_delay_seconds is not None else DEFAULT_SEND_DELAY_SECONDS,
+            send_fn=email_send_fn or MailSender(app.state.mail_sender_store, tls_context=mail_tls_context))
+
+    if email_on:
+        install_meeting_email_routes(app)
+
     @app.middleware("http")
     async def protect_account_data(request, call_next):
         import secrets
@@ -1266,7 +1343,7 @@ def create_app(
     app.state.meeting_analysis_service = None  # built in the lifespan only when the flag is on (or at once when a store is injected)
     if analysis_on and meeting_analysis_store is not None and meeting_store is not None and task_store is not None and planner_store is not None:
         app.state.meeting_analysis_service = analysis_service.MeetingAnalysisService(
-            meeting_analysis_store, meeting_store, task_store, planner_store, notepad_timezone, provider=meeting_analysis_provider or notepad_local_provider)
+            meeting_analysis_store, meeting_store, task_store, planner_store, notepad_timezone, provider=meeting_analysis_provider or notepad_local_provider, location=local_llm_location)
     app.state.meeting_multimodal_store = meeting_multimodal_store
     app.state.meeting_multimodal_service = None  # Phase 53: built in the lifespan when the flag and the document library are on (or at once when a store is injected)
     if multimodal_on and meeting_multimodal_store is not None and meeting_store is not None and task_store is not None and planner_store is not None and app.state.document_library is not None:
@@ -1376,6 +1453,9 @@ def create_app(
     if calendar_feed_service is not None:
         app.state.calendar_store = FeedCalendar(app.state.calendar_store, calendar_feed_service)
 
+    if email_on and app.state.mail_sender_store is not None and app.state.recipient_group_store is not None:
+        app.state.meeting_email = build_meeting_email_service()  # injected stores (tests): no lifespan needed
+
     @app.get("/health")
     async def health() -> dict[str, str]:
         return {"status": "ok"}
@@ -1474,6 +1554,7 @@ def create_app(
         restore_query = memory_intent.match_restore(intent_text)
         rag_query = rag_intent.match_query(intent_text)
         draft_request = email_intent.match_draft(intent_text)
+        minutes_email_query = email_intent.match_prepare_minutes(intent_text) if app.state.meeting_email is not None else None  # Phase 55: only when the feature is on
         approve_query = email_intent.match_approve(intent_text)
         cancel_send_query = email_intent.match_cancel_send(intent_text)
         send_query = email_intent.match_send(intent_text)
@@ -1841,6 +1922,22 @@ def create_app(
             messages = await app.state.email_store.list_received()
             reply = email_intent.format_inbox_reply(messages)
             privacy = Privacy.WORK_PRIVATE
+        elif minutes_email_query is not None:
+            production_handler = "email.minutes_draft"
+            # Prepares a draft for review and nothing else. No recipients are chosen, nothing is approved or queued, and the reply says so (ADR 0039).
+            wanted = minutes_email_query.casefold()
+            matches = [m for m in await app.state.meeting_store.list_meetings() if wanted in m.title.casefold() and m.transcript_segments]
+            if not matches:
+                reply = email_intent.format_minutes_draft_problem("I couldn't find a finished meeting with that name.")
+            elif len(matches) > 1:
+                reply = email_intent.format_minutes_draft_problem(f"{len(matches)} meetings match that name; say more of the title.")
+            else:
+                try:
+                    await app.state.meeting_email.prepare(matches[0].id)
+                    reply = email_intent.format_minutes_draft_reply(matches[0].title)
+                except DistributionError as exc:
+                    reply = email_intent.format_minutes_draft_problem(exc.detail)
+            privacy = Privacy.WORK_PRIVATE  # it names one of the owner's meetings: never spoken on a shared speaker
         elif draft_request:
             production_handler = "email.draft"
             to, body = draft_request
@@ -1881,7 +1978,8 @@ def create_app(
             # actually calls email_send_fn later, once due.
             try:
                 require_text(turn.input_modality)
-                candidates = await app.state.email_store.list_drafts()
+                # Phase 55: only drafts written in conversation. A meeting package is queued from its own review screen (owner session), never from a chat or voice turn.
+                candidates = await app.state.email_store.list_drafts(kind="text")
                 matched = email_intent.find_draft_by_query(candidates, send_query)
                 if matched is None:
                     reply = email_intent.format_send_not_found_reply(send_query)
@@ -2113,6 +2211,8 @@ def create_app(
                             call_config = config.model_copy(
                                 update={"routing": config.routing.model_copy(update={"mode": LLMRoutingMode.LOCAL_ONLY})}
                             )
+                        if attached is not None and turn.force_frontier and document_reply is None:
+                            await note_meeting_processing(attached.id, "conversation", "external")  # the owner chose the cloud model for a question that carries this meeting's content
                         if document_reply is not None:
                             reply = document_reply  # fixed: nothing found, not available, not ready; the model is not called
                         else:
@@ -2994,6 +3094,7 @@ def create_app(
         local_only = config.model_copy(
             update={"routing": config.routing.model_copy(update={"mode": LLMRoutingMode.LOCAL_ONLY})}
         )
+        await note_meeting_processing(meeting.id, "corrections", llm_location(config, cloud=use_cloud))
         groups = meeting_corrections.windows(
             meeting, meeting_corrections.CLOUD_WINDOW_CHARS if use_cloud else meeting_corrections.WINDOW_CHARS
         )
@@ -3117,6 +3218,8 @@ def create_app(
         local_only = config.model_copy(
             update={"routing": config.routing.model_copy(update={"mode": LLMRoutingMode.LOCAL_ONLY})}
         )
+        where = llm_location(config, cloud=use_cloud)
+        await note_meeting_processing(meeting.id, kind, where)  # before the transcript leaves, so a failed attempt still counts
 
         async def ask(messages: list[dict[str, str]], max_tokens: int) -> str:
             try:
@@ -3129,7 +3232,7 @@ def create_app(
                 raise HTTPException(status_code=503, detail="the language model is unavailable right now") from None
 
         try:
-            async with asyncio.timeout(meeting_corrections.OVERALL_DEADLINE_SECONDS + 20):
+            async with asyncio.timeout(meeting_corrections.DEEP_OUTPUT_DEADLINE_SECONDS if tier == "deep" else meeting_corrections.OVERALL_DEADLINE_SECONDS + 20):
                 text, truncated = await meeting_outputs.generate(meeting, kind, ask)
         except TimeoutError:
             raise HTTPException(status_code=504, detail="the model took too long; try again or use a smaller meeting") from None
@@ -3137,7 +3240,7 @@ def create_app(
             raise HTTPException(status_code=409, detail=str(exc)) from None
         if truncated:
             text += "\n\n(This meeting is very long: only the first part was covered.)"
-        updated = await app.state.meeting_store.set_output(meeting.id, kind, MeetingOutput(text=text, tier=tier, speaker_basis=speaker_basis(meeting.speaker_names) if meeting.speaker_names else None))
+        updated = await app.state.meeting_store.set_output(meeting.id, kind, MeetingOutput(text=text, tier=tier, speaker_basis=speaker_basis(meeting.speaker_names) if meeting.speaker_names else None, location=where))
         if updated is None:
             raise HTTPException(status_code=404, detail=f"no meeting '{meeting.id}'")
         return updated
@@ -3151,6 +3254,8 @@ def create_app(
         local_only = config.model_copy(
             update={"routing": config.routing.model_copy(update={"mode": LLMRoutingMode.LOCAL_ONLY})}
         )
+        where = llm_location(config, cloud=use_cloud)
+        await note_meeting_processing(meeting.id, "title", where)
 
         async def ask(messages: list[dict[str, str]], max_tokens: int) -> str:
             return await route_completion(
@@ -3160,7 +3265,8 @@ def create_app(
             )
 
         try:
-            return await meeting_describe.describe(meeting, ask)
+            described = await meeting_describe.describe(meeting, ask)
+            return dataclasses.replace(described, location=where) if described is not None else None
         except ProviderUnavailable:
             return None
 
@@ -3193,6 +3299,7 @@ def create_app(
         updated = await app.state.meeting_store.set_title(
             meeting.id, title=result.title, description=result.description or None,
             source="generated" if result.title else meeting.title_source,
+            processing=meeting_provenance.event("title", result.location),
         )
         if updated is None:
             raise HTTPException(status_code=404, detail=f"no meeting '{meeting_id}'")

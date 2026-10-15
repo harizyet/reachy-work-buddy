@@ -30,8 +30,10 @@ CLICKHOUSE = [
 SPEAKERS = [{"start": 0.0, "end": 11.0, "speaker": "SPEAKER_00"}, {"start": 11.0, "end": 16.0, "speaker": "SPEAKER_01"}]
 
 
-def llm_factory(seen: list[httpx.Request]):
-    def respond(request: httpx.Request) -> httpx.Response:
+def llm_factory(seen: list[httpx.Request], delay: dict | None = None):
+    async def respond(request: httpx.Request) -> httpx.Response:
+        if delay:
+            await asyncio.sleep(delay["s"])  # a model that answers slowly
         seen.append(request)
         system = json.loads(request.content)["messages"][0]["content"]
         host = request.url.host
@@ -50,7 +52,7 @@ def llm_factory(seen: list[httpx.Request]):
     return respond
 
 
-def make_client(*, status="aligning", segments=None, manager=None, cloud=False):
+def make_client(*, status="aligning", segments=None, manager=None, cloud=False, delay: dict | None = None):
     seen: list[httpx.Request] = []
     store = InMemoryMeetingStore()
 
@@ -69,7 +71,7 @@ def make_client(*, status="aligning", segments=None, manager=None, cloud=False):
         rag_store=InMemoryDocumentStore(), email_store=InMemoryEmailStore(), confirmation_store=InMemoryConfirmationStore(),
         llm_settings_store=InMemoryLLMSettingsStore(), llm_usage_store=InMemoryLLMUsageStore(),
         persona_store=InMemoryPersonaStore(), search_settings_store=InMemorySearchSettingsStore(),
-        run_email_dispatch_task=False, llm_transport=httpx.MockTransport(llm_factory(seen)), model_manager_client=manager,
+        run_email_dispatch_task=False, llm_transport=httpx.MockTransport(llm_factory(seen, delay)), model_manager_client=manager,
     ))
     body = {"local": {"base_url": "http://ovms/v1", "model": "reachy-local"}}
     if cloud:
@@ -214,6 +216,30 @@ def test_minutes_on_the_deep_tier_run_as_a_job_store_the_tier_and_tell_telegram_
         assert any("deep minutes" in t and "Reachy is unavailable" in t for t in texts)
         assert any("deep minutes" in t and "Reachy is back online" in t for t in texts)
         assert client.post(f"/meetings/{ids['queued']}/outputs/minutes/deep").status_code == 409
+
+
+def test_the_deep_tier_gets_a_longer_budget_than_the_quick_tiers_for_the_same_slow_model(monkeypatch) -> None:
+    """2026-10-15: a 7-part meeting's deep minutes were cut off by the 220 s budget meant for the quick model ("the model took too long")."""
+    from companion_core.meetings import corrections
+
+    monkeypatch.setattr(corrections, "DEEP_OUTPUT_DEADLINE_SECONDS", 30.0)
+    delay = {"s": 0.0}
+    client, ids, _store, _seen = make_client(manager=FakeManager(), delay=delay)
+    with client:
+        # the quick tier keeps its own short budget: a model that overruns it is reported, not waited for
+        monkeypatch.setattr(corrections, "OVERALL_DEADLINE_SECONDS", -19.95)  # budget = -19.95 + 20 = 0.05 s
+        delay["s"] = 0.3
+        assert client.post(f"/meetings/{ids['main']}/outputs/summary").status_code == 504
+        # the deep job on the same slow model finishes inside its own, longer budget
+        started = client.post(f"/meetings/{ids['main']}/outputs/minutes/deep")
+        job_id = started.json()["id"]
+        for _ in range(600):
+            job = client.get(f"/deep-review/{job_id}").json()
+            if job["status"] in ("done", "failed"):
+                break
+            time.sleep(0.05)
+        assert job["status"] == "done", job
+        assert client.get(f"/meetings/{ids['main']}").json()["minutes"]["tier"] == "deep"
 
 
 def test_a_meeting_cannot_be_deleted_while_a_deep_job_runs_on_it() -> None:

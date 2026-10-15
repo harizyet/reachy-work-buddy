@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 from companion_core.meetings.models import Meeting
 from companion_core.meetings.outputs import header, transcript_lines
+from companion_core.meetings.provenance import Location
 
 Ask = Callable[[list[dict[str, str]], int], Awaitable[str]]
 
@@ -33,6 +34,8 @@ PROMPT = (
 class Described:
     title: str | None
     description: str
+    # Where the model that wrote this ran; set by whoever chose the model, "unverified" until then (ADR 0040).
+    location: Location = "unverified"
 
 
 def looks_default(title: str) -> bool:

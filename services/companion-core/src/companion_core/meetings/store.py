@@ -19,6 +19,7 @@ from companion_core.meetings.models import (
     MeetingOutput,
     SpeakerIdentityState,
 )
+from companion_core.meetings.provenance import ProcessingEvent
 from companion_core.meetings.speaker_identity import supersede
 from shared.models.response import Privacy
 
@@ -75,18 +76,24 @@ class MeetingStore(Protocol):
         ...
 
     async def mark_transcribed(
-        self, meeting_id: str, *, transcript_segments: list[dict[str, Any]]
-    ) -> Meeting | None: ...
+        self, meeting_id: str, *, transcript_segments: list[dict[str, Any]], processing: ProcessingEvent | None = None
+    ) -> Meeting | None:
+        """`processing` (here and on mark_diarized, mark_aligned and set_title) is appended to the meeting's processing record in the same write (ADR 0040)."""
+        ...
 
     async def mark_diarized(
-        self, meeting_id: str, *, diarization_segments: list[dict[str, Any]]
+        self, meeting_id: str, *, diarization_segments: list[dict[str, Any]], processing: ProcessingEvent | None = None
     ) -> Meeting | None: ...
+
+    async def record_processing(self, meeting_id: str, processing: ProcessingEvent) -> None:
+        """Append one event to the meeting's processing record. Events are never changed or removed; a meeting that no longer exists is ignored."""
+        ...
 
     async def claim_next_alignment(self) -> Meeting | None:
         """The oldest ALIGNING job, or None. Same non-transitioning shape as claim_next_diarization."""
         ...
 
-    async def mark_aligned(self, meeting_id: str, *, aligned_segments: list[dict[str, Any]]) -> Meeting | None:
+    async def mark_aligned(self, meeting_id: str, *, aligned_segments: list[dict[str, Any]], processing: ProcessingEvent | None = None) -> Meeting | None:
         """Store the aligned transcript and complete the job. A no-op unless the job is still ALIGNING."""
         ...
 
@@ -94,7 +101,7 @@ class MeetingStore(Protocol):
         """A finished meeting with a transcript that has no description yet, or None."""
         ...
 
-    async def set_title(self, meeting_id: str, *, title: str | None, description: str | None, source: str) -> Meeting | None:
+    async def set_title(self, meeting_id: str, *, title: str | None, description: str | None, source: str, processing: ProcessingEvent | None = None) -> Meeting | None:
         """Change the title and/or description (None leaves a field alone) and record who named it."""
         ...
 
@@ -129,7 +136,7 @@ class MeetingStore(Protocol):
         ...
 
     async def set_output(self, meeting_id: str, kind: str, output: MeetingOutput | None) -> Meeting | None:
-        """Store (or with None clear) the generated summary or minutes."""
+        """Store (or with None clear) the generated summary or minutes. A stored output also records where it was written (`output.location`) in the processing record; clearing one removes nothing from it."""
         ...
 
     async def delete_meeting(self, meeting_id: str) -> bool:
@@ -236,8 +243,16 @@ class InMemoryMeetingStore:
         candidates = [m for m in self._meetings.values() if m.status == MeetingJobStatus.DIARIZING]
         return min(candidates, key=lambda m: m.created_at) if candidates else None
 
+    def _with(self, meeting: Meeting, processing: ProcessingEvent | None) -> list[ProcessingEvent]:
+        return [*meeting.processing_events, *([processing] if processing else [])]
+
+    async def record_processing(self, meeting_id: str, processing: ProcessingEvent) -> None:
+        meeting = self._meetings.get(meeting_id)
+        if meeting is not None:
+            self._meetings[meeting_id] = meeting.model_copy(update={"processing_events": self._with(meeting, processing)})
+
     async def mark_transcribed(
-        self, meeting_id: str, *, transcript_segments: list[dict[str, Any]]
+        self, meeting_id: str, *, transcript_segments: list[dict[str, Any]], processing: ProcessingEvent | None = None
     ) -> Meeting | None:
         meeting = self._meetings.get(meeting_id)
         if meeting is None:
@@ -245,20 +260,20 @@ class InMemoryMeetingStore:
         if meeting.status != MeetingJobStatus.TRANSCRIBING:  # see mark_preprocessed's comment
             return meeting
         return self._touch(
-            meeting, status=MeetingJobStatus.DIARIZING, transcript_segments=transcript_segments
+            meeting, status=MeetingJobStatus.DIARIZING, transcript_segments=transcript_segments, processing_events=self._with(meeting, processing)
         )
 
     async def claim_next_alignment(self) -> Meeting | None:
         candidates = [m for m in self._meetings.values() if m.status == MeetingJobStatus.ALIGNING]
         return min(candidates, key=lambda m: m.created_at) if candidates else None
 
-    async def mark_aligned(self, meeting_id: str, *, aligned_segments: list[dict[str, Any]]) -> Meeting | None:
+    async def mark_aligned(self, meeting_id: str, *, aligned_segments: list[dict[str, Any]], processing: ProcessingEvent | None = None) -> Meeting | None:
         meeting = self._meetings.get(meeting_id)
         if meeting is None:
             return None
         if meeting.status != MeetingJobStatus.ALIGNING:
             return meeting
-        return self._touch(meeting, status=MeetingJobStatus.COMPLETE, aligned_segments=aligned_segments)
+        return self._touch(meeting, status=MeetingJobStatus.COMPLETE, aligned_segments=aligned_segments, processing_events=self._with(meeting, processing))
 
     async def claim_next_description(self) -> Meeting | None:
         candidates = [
@@ -267,11 +282,11 @@ class InMemoryMeetingStore:
         ]
         return min(candidates, key=lambda m: m.created_at) if candidates else None
 
-    async def set_title(self, meeting_id: str, *, title: str | None, description: str | None, source: str) -> Meeting | None:
+    async def set_title(self, meeting_id: str, *, title: str | None, description: str | None, source: str, processing: ProcessingEvent | None = None) -> Meeting | None:
         meeting = self._meetings.get(meeting_id)
         if meeting is None:
             return None
-        changes: dict = {"title_source": source}
+        changes: dict = {"title_source": source, "processing_events": self._with(meeting, processing)}
         if title is not None:
             changes["title"] = title
         if description is not None:
@@ -287,7 +302,7 @@ class InMemoryMeetingStore:
         return self._touch(meeting, audio_gaps=gaps) if meeting else None
 
     async def mark_diarized(
-        self, meeting_id: str, *, diarization_segments: list[dict[str, Any]]
+        self, meeting_id: str, *, diarization_segments: list[dict[str, Any]], processing: ProcessingEvent | None = None
     ) -> Meeting | None:
         meeting = self._meetings.get(meeting_id)
         if meeting is None:
@@ -296,7 +311,8 @@ class InMemoryMeetingStore:
             return meeting
         state, names = supersede(meeting, diarization_segments)  # a different diarization must not inherit confirmed names
         return self._touch(
-            meeting, status=MeetingJobStatus.ALIGNING, diarization_segments=diarization_segments, speaker_identity=state, speaker_names=names
+            meeting, status=MeetingJobStatus.ALIGNING, diarization_segments=diarization_segments, speaker_identity=state, speaker_names=names,
+            processing_events=self._with(meeting, processing),
         )
 
     async def mark_failed(self, meeting_id: str, *, error_detail: str) -> Meeting | None:
@@ -354,7 +370,10 @@ class InMemoryMeetingStore:
 
     async def set_output(self, meeting_id: str, kind: str, output: MeetingOutput | None) -> Meeting | None:
         meeting = self._meetings.get(meeting_id)
-        return None if meeting is None else self._touch(meeting, **{kind: output})
+        if meeting is None:
+            return None
+        written = ProcessingEvent(step=kind, location=output.location, at=output.generated_at, subject=output.generated_at.isoformat()) if output and output.location else None
+        return self._touch(meeting, **{kind: output, "processing_events": self._with(meeting, written)})
 
     async def delete_meeting(self, meeting_id: str) -> bool:
         self._audio.pop(meeting_id, None)

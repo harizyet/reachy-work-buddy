@@ -6,6 +6,7 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -30,7 +31,7 @@ import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-class ApiException(val code: Int, message: String) : IOException(message) {
+class ApiException(val code: Int, message: String, val reason: String? = null) : IOException(message) {
     val unauthorized get() = code == 401
 }
 
@@ -80,14 +81,19 @@ class ReachyApi(baseUrl: String, private val cookieJar: PersistentCookieJar, cli
     private suspend fun call(request: Request): String = withContext(Dispatchers.IO) {
         http.newCall(request).execute().use { response ->
             val text = response.body?.string().orEmpty()
-            if (!response.isSuccessful) throw ApiException(response.code, errorDetail(text) ?: "Request failed (${response.code})")
+            if (!response.isSuccessful) throw ApiException(response.code, errorDetail(text) ?: "Request failed (${response.code})", errorCode(text))
             text
         }
     }
 
+    /** FastAPI's `detail`: a plain string, or (the meeting-email routes) an object with a fixed `message` and a stable `code`. */
     private fun errorDetail(body: String): String? = runCatching {
         val detail = json.parseToJsonElement(body).jsonObject["detail"]
-        (detail as? JsonPrimitive)?.contentOrNull
+        (detail as? JsonPrimitive)?.contentOrNull ?: (detail as? JsonObject)?.get("message")?.jsonPrimitive?.contentOrNull
+    }.getOrNull()
+
+    private fun errorCode(body: String): String? = runCatching {
+        (json.parseToJsonElement(body).jsonObject["detail"] as? JsonObject)?.get("code")?.jsonPrimitive?.contentOrNull
     }.getOrNull()
 
     private fun req(path: String) = Request.Builder().url(base + path)
@@ -254,6 +260,53 @@ class ReachyApi(baseUrl: String, private val cookieJar: PersistentCookieJar, cli
                 decisions.forEach { (label, d) -> put(label, buildJsonObject { put("status", d.status); if (d.name != null) put("name", d.name) }) }
             })
         })).build()))
+
+    // -- Share minutes (Phase 55) ---------------------------------------------------------------------------------------------------------------------
+
+    /** `enabled` is false when the hub's server has the feature off; the section is then not offered at all. */
+    suspend fun emailConfig(): EmailConfig = json.decodeFromString(call(req("/meeting-email/config").build()))
+
+    suspend fun emailDrafts(meetingId: String): List<EmailDraft> =
+        json.decodeFromString(ListSerializer(EmailDraft.serializer()), call(req("/meeting-email/drafts?meeting_id=$meetingId").build()))
+
+    suspend fun emailGroups(): List<EmailGroup> = json.decodeFromString(ListSerializer(EmailGroup.serializer()), call(req("/meeting-email/groups").build()))
+
+    suspend fun emailSuggestions(meetingId: String): List<EmailSuggestion> =
+        json.decodeFromString(ListSerializer(EmailSuggestion.serializer()), call(req("/meetings/$meetingId/email/suggestions").build()))
+
+    suspend fun prepareEmail(meetingId: String, includePdf: Boolean, allowSensitive: Boolean): EmailDraft =
+        json.decodeFromString(call(req("/meetings/$meetingId/email/prepare").post(jsonBody(buildJsonObject { put("include_pdf", includePdf); put("allow_sensitive", allowSensitive) })).build()))
+
+    /** Saves the whole form. Any change returns the message to review on the server, so a fresh approval is needed. */
+    suspend fun editEmail(id: String, form: EmailForm, refresh: Boolean = false): EmailDraft =
+        json.decodeFromString(call(req("/meeting-email/drafts/$id").put(jsonBody(buildJsonObject {
+            put("to", JsonArray(splitAddresses(form.to).map(::JsonPrimitive)))
+            put("cc", JsonArray(splitAddresses(form.cc).map(::JsonPrimitive)))
+            put("bcc", JsonArray(splitAddresses(form.bcc).map(::JsonPrimitive)))
+            put("subject", form.subject)
+            put("body", form.body)
+            put("include_pdf", form.attachPdf)
+            put("refresh", refresh)
+        })).build()))
+
+    suspend fun refreshEmail(id: String): EmailDraft = json.decodeFromString(call(req("/meeting-email/drafts/$id").put(jsonBody(buildJsonObject { put("refresh", true) })).build()))
+
+    suspend fun approveEmail(id: String, packageHash: String, typed: String): EmailDraft =
+        json.decodeFromString(call(req("/meeting-email/drafts/$id/approve").post(jsonBody(buildJsonObject { put("package_hash", packageHash); put("confirmation", typed) })).build()))
+
+    suspend fun queueEmail(id: String): EmailDraft = json.decodeFromString(call(req("/meeting-email/drafts/$id/queue").post(jsonBody(buildJsonObject {})).build()))
+    suspend fun cancelEmailSend(id: String): EmailDraft = json.decodeFromString(call(req("/meeting-email/drafts/$id/cancel-send").post(jsonBody(buildJsonObject {})).build()))
+    suspend fun discardEmail(id: String): EmailDraft = json.decodeFromString(call(req("/meeting-email/drafts/$id/discard").post(jsonBody(buildJsonObject {})).build()))
+    suspend fun resolveEmail(id: String, delivered: Boolean): EmailDraft =
+        json.decodeFromString(call(req("/meeting-email/drafts/$id/resolve").post(jsonBody(buildJsonObject { put("delivered", delivered) })).build()))
+
+    /** The attachment exactly as it will be sent, fetched with the owner's session, for the in-app preview. */
+    suspend fun downloadEmailAttachment(id: String, name: String, target: File) = withContext(Dispatchers.IO) {
+        http.newCall(req("/meeting-email/drafts/$id/attachments/${java.net.URLEncoder.encode(name, "UTF-8")}").build()).execute().use { response ->
+            if (!response.isSuccessful) throw ApiException(response.code, "The attachment is unavailable (${response.code})")
+            target.outputStream().use { out -> response.body!!.byteStream().copyTo(out) }
+        }
+    }
 
     /** Asks the local model for likely mis-heard words. Nothing is changed until a suggestion is applied. */
     suspend fun suggestCorrections(id: String, model: String = "local"): Suggestions {

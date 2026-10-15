@@ -21,7 +21,7 @@ from shared.models.receipt import ActionReceipt
 log = logging.getLogger(__name__)
 
 # Measured 2026-10-07 (docs/phase-42.md): about 115 s to load the 14B, a short review, about 80 s to restore the 7B.
-ETA_SECONDS = 330
+ETA_SECONDS = 600  # switching the model took about 2.5 minutes on 2026-10-15, and the work on a long meeting needs several more
 LEASE_SECONDS = 1200.0
 KEPT_JOBS = 10
 

@@ -19,6 +19,10 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
@@ -33,6 +37,9 @@ import androidx.compose.material3.TextButton
 import app.reachy.companion.data.countOccurrences
 import app.reachy.companion.data.outputIsStale
 import app.reachy.companion.data.speakerReviewNeeded
+import app.reachy.companion.data.writingLine
+import app.reachy.companion.data.tierTag
+import app.reachy.companion.data.writtenAt
 import app.reachy.companion.data.lineAt
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Warning
@@ -274,6 +281,7 @@ private fun MeetingDetail(model: AppViewModel, meeting: Meeting, modifier: Modif
                 FilterChip(section == "minutes", { section = "minutes"; if (meeting.minutes == null && model.generatingKind == null) model.generateOutput("minutes", "local") }, { Text("Minutes") })
                 FilterChip(section == "transcript", { section = "transcript" }, { Text("Transcript") })
                 if (meeting.speakers.orEmpty().isNotEmpty()) FilterChip(section == "speakers", { section = "speakers" }, { Text("Identify speakers") })
+                if (model.emailEnabled) FilterChip(section == "share", { section = "share" }, { Text("Share minutes") })
                 AssistChip({ model.useAsContext(meeting); onUseAsContext() }, { Text("Use as context") })
             }
         }
@@ -283,6 +291,11 @@ private fun MeetingDetail(model: AppViewModel, meeting: Meeting, modifier: Modif
         ) {
             Text("Speaker detection was run again, so the speaker names you gave before are not applied.", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = GapText)
             TextButton({ section = "speakers" }) { Text("Identify again") }
+        }
+        if (section == "share") {
+            DisposableEffect(meeting.id) { onDispose { model.clearEmail() } }
+            ShareMinutes(model, meeting)
+            return@Column
         }
         if (section == "speakers") {
             DisposableEffect(meeting.id) { onDispose { model.clearIdentify() } }
@@ -580,9 +593,22 @@ private fun OutputPanel(model: AppViewModel, meeting: Meeting, kind: String, onR
     val name = if (kind == "summary") "summary" else "minutes"
     Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
         when {
-            model.generatingKind == kind -> Row(verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(Modifier.size(24.dp))
-                Text("  Writing the $name with the local model…")
+            model.generatingKind == kind -> Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(Modifier.size(24.dp))
+                    Text("  ${writingLine(name, model.generatingModel)}", style = MaterialTheme.typography.titleSmall)
+                }
+                Text(
+                    "This can take a couple of minutes" + (if (model.generatingModel == "cloud") " and sends the transcript text to your cloud provider" else "") + ".",
+                    Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            DeepReviewController.job?.let { !it.finished && it.meetingId == meeting.id && it.task == kind } == true -> Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(Modifier.size(24.dp))
+                    Text("  ${writingLine(name, "deep")}", style = MaterialTheme.typography.titleSmall)
+                }
+                Text("Reachy is unavailable until it finishes. The new text appears here when it is done.", Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodySmall)
             }
             output == null -> {
                 Text("No $name yet.")
@@ -593,15 +619,14 @@ private fun OutputPanel(model: AppViewModel, meeting: Meeting, kind: String, onR
                     "This $name was written before the speaker names changed, so it may attribute things to the wrong person. Rerun it to update it.",
                     Modifier.padding(bottom = 8.dp), style = MaterialTheme.typography.bodySmall, color = GapText,
                 )
+                Row(Modifier.padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Surface(
+                        shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                        modifier = Modifier.semantics { contentDescription = "Model: ${tierTag(output.tier)}" },
+                    ) { Text(tierTag(output.tier), Modifier.padding(horizontal = 10.dp, vertical = 2.dp), style = MaterialTheme.typography.labelMedium) }
+                    writtenAt(output.generatedAt).takeIf { it.isNotEmpty() }?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline) }
+                }
                 SelectionContainer { Text(output.text) }
-                Text(
-                    when (output.tier) {
-                        "deep" -> "Written by the larger local model"
-                        "cloud" -> "Written by the cloud model"
-                        else -> "Written by the local model"
-                    } + if (output.generatedAt.length >= 16) " · ${output.generatedAt.take(16).replace('T', ' ')}" else "",
-                    style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 12.dp),
-                )
                 Text("A model wrote this from a speech-to-text transcript, so check it. If it is not accurate enough, rerun it on a stronger model.", style = MaterialTheme.typography.bodySmall)
                 Row {
                     TextButton({ onRerun(kind) }, enabled = !DeepReviewController.reachyUnavailable) { Text("Rerun with another model…") }
