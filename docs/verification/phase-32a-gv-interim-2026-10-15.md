@@ -24,11 +24,11 @@ All 20 clips embedded without error. Length 2.9 to 6.0 s, speech 1.5 to 3.5 s, l
 
 | Set | n | min | median | max |
 |---|---|---|---|---|
-| Owner, live trials (10 quiet + 1 noisy) | 11 | 0.754 | 0.809 | 0.862 |
+| Owner, live trials (10 quiet + 1 noisy) | 11 | 0.754 | 0.790 | 0.862 |
 | Owner enrolment clips, leave-one-out | 9 | 0.805 | 0.837 | 0.871 |
-| Machine-generated voices (Piper, espeak; **not people**) | 156 | -0.1 | 0.10 | 0.32 |
+| Machine-generated voices (Piper, espeak; **not people**) | 156 | -0.08 | 0.12 | 0.32 |
 
-The single noisy-room clip scored 0.772, within the quiet range. The owner's real-phone scores sit slightly below the synthetic Piper-identity genuine scores (median 0.81 vs 0.81 here, floor 0.40 there), i.e. the model recognises a real voice from a real phone about as well as it recognised a clean generated one. The machine voices were all far from the template, but they were never a test of discrimination between people.
+The single noisy-room clip scored 0.772, within the quiet range. The owner's real-phone scores (median 0.79, floor 0.75) are close to the synthetic Piper-identity genuine scores (median 0.81, but a floor of 0.40 from short clips), i.e. the model recognises a real voice from a real phone about as well as it recognised a clean generated one. The machine voices were all far from the template, but they were never a test of discrimination between people.
 
 ## What this does and does not support
 
