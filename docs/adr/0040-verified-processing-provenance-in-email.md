@@ -1,6 +1,6 @@
 # ADR 0040: Verified processing provenance and fixed disclosures in meeting email
 
-Status: proposed (built on a branch with [ADR 0039](0039-supervised-meeting-minutes-email.md); not merged or deployed).
+Status: proposed; deployed 2026-10-15 with [ADR 0039](0039-supervised-meeting-minutes-email.md), accepted by the owner after UAT and merged to `main`.
 
 ## Context
 

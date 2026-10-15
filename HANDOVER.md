@@ -4,6 +4,10 @@ Current session snapshot: 2026-10-14 (Phase 55 meeting-minutes email is on an un
 The [documentation index](docs/README.md) defines ownership;
 [project state](docs/project-state.md) owns deployment limits and open acceptance.
 
+## Phase 55 email, Gmail fixes, ADR 0040 provenance and the follow-ups: MERGED to `main` 2026-10-15 (`23db3fb`, branch `feature/processing-provenance-disclosure` deleted)
+
+One merge carried the stacked branches (`feature/meeting-minutes-email`, `feature/sender-test-email`, `fix/gmail-sign-in`, `fix/gmail-app-password`, which are now fully merged and were left in place) and everything deployed since: migrations 036 and 037, the provenance record and fixed email text, the deep-local generation budget (core `41e49f86816f`), the model-manager systemd user unit, the tier tags and spinner. Owner accepted the provenance disclosure ("tested and approved"); **the local-only sentence has never been produced from a real production recording** (no meeting in production has been through the worker under this build; the owner accepted that and will report a bug if one arises). Still kept: `reachy-rollback/*:pre-*` images and the dumps in `~/reachy-backups`; the Android tests stay untracked by `.gitignore`'s `test/` rule; no off-host copy of the SecretStore key file.
+
 ## Model manager now starts with the machine (2026-10-15)
 
 Deep local reported "the model manager is not reachable (ConnectError)" because the manager (a host process by design, [ADR 0031](docs/adr/0031-three-tier-local-model-escalation.md)) had never been supervised. Installed `deploy/homelab/model-manager.service` as a systemd **user** unit via `scripts/install-model-manager-service.sh` (enabled, lingering on, `Restart=always`); verified: core's `/deep-review/info` reports available, a killed manager came back in under 15 s, vLLM untouched. Uninstall: `scripts/install-model-manager-service.sh --uninstall`. Not tested: an actual reboot. Branch `feature/processing-provenance-disclosure`.
