@@ -44,7 +44,7 @@ Complete the noisy block (9 more), record a consenting second person (alias, 10 
 
 **Interim, not a calibration. No threshold is selected or active.** With the owner's agreement, one team-meeting recording (made on a different device and in a different room) was scored against the owner's template by `tools/voice_identity_meeting_negatives.sh`, which the owner ran. It kept **scores only** per anonymous diarization label (no audio, embeddings, names or text; nothing written to the hub). The speakers did not individually consent; no per-person result is reported and none should be. Scores: `~/reachy-backups/phase32a-deploy/meeting-scores.json`.
 
-**Owner label.** Of 8 labels, `speaker_4` (22 clean windows, median 0.57) is the owner by score; every other label has median at most 0.11. This is an inference from the score itself (circular); the gap is large, but the owner has not confirmed the label.
+**Owner label.** Of 8 labels, `speaker_4` (22 clean windows, median 0.57) is the owner by score; every other label has median at most 0.11. The label was inferred from the score, then **confirmed by the owner (2026-10-15): `speaker_4` is the owner**, so the owner-in-meeting row is no longer circular.
 
 | Set | n | min | median | p95 | max |
 |---|---|---|---|---|---|
@@ -76,5 +76,5 @@ The benchmark tool's candidates over the same data: *no observed false accept* a
 **What it does not show.**
 - It is a handful of people: 119 windows from six speakers, strongly correlated within a speaker, so the effective number of independent impostors is about six, not 275. Zero false accepts here does not bound the rate for a sibling, a similar voice, a different language or accent, or an attacker choosing a voice.
 - Windows are clean single-speaker stretches from the diarization; overlapped speech, which is harder, is excluded.
-- Still unmeasured, and the main open gaps: **replay and synthetic-owner probes** (they likely score near the owner's own range, so a threshold cannot help against them and the UI must not imply it does), a **consenting second person** recorded on the phone, **noisy-room and next-day owner clips**, and the owner's label confirmation.
+- Still unmeasured, and the main open gaps: **replay and synthetic-owner probes** (they likely score near the owner's own range, so a threshold cannot help against them and the UI must not imply it does), a **consenting second person** recorded on the phone, **noisy-room and next-day owner clips**, (the owner's label confirmation is done).
 - Candidates are measured on the same data that picks them; held-out clips will probably score lower.
